@@ -3,40 +3,39 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.sqlite3
-.env
+*.log
+
+# Virtual env
 .venv/
 venv/
 
-# Logs
-*.log
-LOG/
+# Claude / AI junk
+.claude/
+*.bak*
+*.jsonl
 
-# OS
+# Generated engine outputs
+backend/engine/*.pdf
+backend/engine/*.xlsx
+backend/engine/*.json
+
+# OS junk
 .DS_Store
 Thumbs.db
+nul
 
-# IDE
-.vscode/
-.idea/
+# Frontend build junk
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
+frontend/build/
 
-# Node / Next
-node_modules/
-.next/
-out/
-dist/
-build/
+# Infra temp
+infra/.terraform/
 
-# Tests / coverage
+# Test artifacts
 .coverage
 htmlcov/
-.pytest_cache/
 
-# Secrets
-.env*
-secrets.json
-
-# Misc
-*.zip
-*.tar
-*.bak
+# Docker overrides
+docker-compose.override.yml
