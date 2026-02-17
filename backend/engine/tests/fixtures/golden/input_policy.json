@@ -1,0 +1,12 @@
+{
+  "bucket_mode": "CALENDAR_MONTH",
+  "hedge_ratios": {
+    "confirmed": 1.0,
+    "forecast": 0.5
+  },
+  "cost_assumptions": {
+    "spread_bps": 5.0
+  },
+  "execution_product": "NDF",
+  "min_trade_size_usd": 50000
+}

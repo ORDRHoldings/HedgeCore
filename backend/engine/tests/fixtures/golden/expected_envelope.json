@@ -1,0 +1,8 @@
+{
+  "inputs_hash": "f9197df7e85a6d539f14835a535952954f75d90ca5765b73601547d5896abd66",
+  "outputs_hash": "92575a6e307d427ad35e6571fc6630e9ea56e12d1429bfeeec3bb3c7fd1d04d9",
+  "trades_hash": "f6b24dc0a61c329f9b813fafa85fc4a6669fe5ccde1aa78da39476c56969e07a",
+  "hedges_hash": "e9cadaf9158bff79feb66fce3f48e544b764364ba3044c9642c0b8fe5fdfdd6b",
+  "market_hash": "c60fa183a7c7af9e58acec6b415d53bccf1e622fb6a6cf9050f562f21db31d1a",
+  "policy_hash": "7b3e122ec04298699e1551431f9a0b3d25dd32b683228e47474f0dc368254153"
+}

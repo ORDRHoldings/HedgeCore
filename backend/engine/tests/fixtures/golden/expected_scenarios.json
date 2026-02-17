@@ -1,0 +1,136 @@
+{
+  "sigmas": [
+    -0.1,
+    -0.05,
+    0.05,
+    0.1
+  ],
+  "per_bucket": [
+    {
+      "bucket": "2025-07",
+      "sigma": -0.1,
+      "shocked_spot": 15.434999999999999,
+      "unhedged_usd": -1166180.7580174927,
+      "hedged_usd": 801468.8757861792,
+      "hedge_benefit_usd": 1967649.633803672
+    },
+    {
+      "bucket": "2025-08",
+      "sigma": -0.1,
+      "shocked_spot": 15.434999999999999,
+      "unhedged_usd": -1230968.5779073534,
+      "hedged_usd": 1288003.6874299117,
+      "hedge_benefit_usd": 2518972.265337265
+    },
+    {
+      "bucket": "2025-09",
+      "sigma": -0.1,
+      "shocked_spot": 15.434999999999999,
+      "unhedged_usd": -259151.27955944286,
+      "hedged_usd": 109175.64778192822,
+      "hedge_benefit_usd": 368326.9273413711
+    },
+    {
+      "bucket": "2025-07",
+      "sigma": -0.05,
+      "shocked_spot": 16.292499999999997,
+      "unhedged_usd": -1104802.8233849932,
+      "hedged_usd": 808288.6463009013,
+      "hedge_benefit_usd": 1913091.4696858944
+    },
+    {
+      "bucket": "2025-08",
+      "sigma": -0.05,
+      "shocked_spot": 16.292499999999997,
+      "unhedged_usd": -1166180.758017493,
+      "hedged_usd": 1282888.8595438702,
+      "hedge_benefit_usd": 2449069.617561363
+    },
+    {
+      "bucket": "2025-09",
+      "sigma": -0.05,
+      "shocked_spot": 16.292499999999997,
+      "unhedged_usd": -245511.73852999852,
+      "hedged_usd": 112585.53303928931,
+      "hedge_benefit_usd": 358097.2715692878
+    },
+    {
+      "bucket": "2025-07",
+      "sigma": 0.05,
+      "shocked_spot": 18.0075,
+      "unhedged_usd": -999583.5068721366,
+      "hedged_usd": 819979.6814689966,
+      "hedge_benefit_usd": 1819563.1883411333
+    },
+    {
+      "bucket": "2025-08",
+      "sigma": 0.05,
+      "shocked_spot": 18.0075,
+      "unhedged_usd": -1055115.9239205886,
+      "hedged_usd": 1274120.5831677988,
+      "hedge_benefit_usd": 2329236.5070883874
+    },
+    {
+      "bucket": "2025-09",
+      "sigma": 0.05,
+      "shocked_spot": 18.0075,
+      "unhedged_usd": -222129.66819380815,
+      "hedged_usd": 118431.0506233369,
+      "hedge_benefit_usd": 340560.71881714504
+    },
+    {
+      "bucket": "2025-07",
+      "sigma": 0.1,
+      "shocked_spot": 18.865,
+      "unhedged_usd": -954147.8929234032,
+      "hedged_usd": 825028.0830188558,
+      "hedge_benefit_usd": 1779175.975942259
+    },
+    {
+      "bucket": "2025-08",
+      "sigma": 0.1,
+      "shocked_spot": 18.865,
+      "unhedged_usd": -1007156.1091969257,
+      "hedged_usd": 1270334.2820054044,
+      "hedge_benefit_usd": 2277490.39120233
+    },
+    {
+      "bucket": "2025-09",
+      "sigma": 0.1,
+      "shocked_spot": 18.865,
+      "unhedged_usd": -212032.8650940896,
+      "hedged_usd": 120955.25139826654,
+      "hedge_benefit_usd": 332988.1164923561
+    }
+  ],
+  "totals": [
+    {
+      "sigma": -0.1,
+      "shocked_spot": 15.434999999999999,
+      "total_unhedged_usd": -2656300.615484289,
+      "total_hedged_usd": 2198648.210998019,
+      "total_hedge_benefit_usd": 4854948.826482308
+    },
+    {
+      "sigma": -0.05,
+      "shocked_spot": 16.292499999999997,
+      "total_unhedged_usd": -2516495.3199324845,
+      "total_hedged_usd": 2203763.038884061,
+      "total_hedge_benefit_usd": 4720258.358816545
+    },
+    {
+      "sigma": 0.05,
+      "shocked_spot": 18.0075,
+      "total_unhedged_usd": -2276829.0989865335,
+      "total_hedged_usd": 2212531.3152601323,
+      "total_hedge_benefit_usd": 4489360.414246665
+    },
+    {
+      "sigma": 0.1,
+      "shocked_spot": 18.865,
+      "total_unhedged_usd": -2173336.8672144185,
+      "total_hedged_usd": 2216317.616422527,
+      "total_hedge_benefit_usd": 4389654.4836369455
+    }
+  ]
+}
