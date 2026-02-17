@@ -1,0 +1,19 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "services": {
+    "backend": {
+      "rootDirectory": "backend",
+      "build": {
+        "builder": "NIXPACKS"
+      },
+      "start": "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT"
+    },
+    "frontend": {
+      "rootDirectory": "frontend",
+      "build": {
+        "builder": "NIXPACKS"
+      },
+      "start": "npm run start"
+    }
+  }
+}
