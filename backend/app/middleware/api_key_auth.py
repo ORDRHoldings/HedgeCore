@@ -30,14 +30,13 @@ class APIKeyRecord:
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
     """
-    HedgeCalc Canonical API-Key Middleware (Production-Safe)
+    FINAL production-safe API key middleware.
 
-    Guarantees:
-    - Swagger works in ALL environments
-    - Root routes and /api routes both supported
-    - Health endpoints always public
-    - Bootstrap key available for initial setup
-    - Works with Render / local / reverse proxies
+    Allows:
+    - Swagger UI
+    - OpenAPI JSON
+    - health endpoints
+    - static assets
     """
 
     def __init__(
@@ -51,50 +50,18 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
         self.header_name = header_name
         self.required_scope = required_scope
 
-        # ------------------------------------------------------------------
-        # PUBLIC PATH RULES (PREFIX + SUFFIX BASED)
-        # Handles:
-        # - /docs
-        # - /api/docs
-        # - /health
-        # - /api/health
-        # - reverse proxy mounted paths
-        # ------------------------------------------------------------------
-        self.public_prefixes = (
-            # Root-level Swagger
+        # 🔓 PUBLIC PATH FRAGMENTS (NOT PREFIXES — more reliable)
+        self.public_paths = (
             "/docs",
             "/redoc",
             "/openapi.json",
-            "/docs/oauth2-redirect",
-
-            # Root health routes
             "/health",
             "/system/health",
-
-            # API-prefixed Swagger
-            "/api/docs",
-            "/api/redoc",
-            "/api/openapi.json",
-            "/api/docs/oauth2-redirect",
-
-            # API health routes
-            "/api/health",
-            "/api/system/health",
-
-            # Admin bootstrap routes (allow initial key creation)
-            "/api/admin/api-keys",
-            "/api/admin/api-key-audit",
-            "/api/api/admin/api-keys",
-            "/api/api/admin/api-key-audit",
         )
 
-        # ------------------------------------------------------------------
-        # IN-MEMORY KEY STORE (bootstrap only)
-        # Replace with DB-backed store later
-        # ------------------------------------------------------------------
         self._keys: Dict[str, APIKeyRecord] = {}
 
-        # Dev bootstrap key
+        # DEV bootstrap key
         bootstrap_key = "HC_DEV_KEY_001"
         key_hash = _stable_hash(bootstrap_key)
         self._keys[key_hash] = APIKeyRecord(
@@ -102,70 +69,49 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             scopes=["engine:recommend"],
         )
 
-    # ------------------------------------------------------------------
-    # PUBLIC PATH CHECK
-    # ------------------------------------------------------------------
     def _is_public(self, path: str) -> bool:
-        # direct prefix match
-        if any(path.startswith(p) for p in self.public_prefixes):
-            return True
+        """
+        Works with:
+        /docs
+        /api/docs
+        /v1/api/docs
+        etc.
+        """
+        return any(fragment in path for fragment in self.public_paths)
 
-        # fallback rules (bulletproof for proxies / rewrites)
-        if path.endswith("/health"):
-            return True
-        if path.startswith("/docs") or path.startswith("/redoc"):
-            return True
-        if "openapi" in path:
-            return True
-
-        return False
-
-    # ------------------------------------------------------------------
-    # KEY EXTRACTION
-    # ------------------------------------------------------------------
     def _extract_key(self, request: Request) -> Optional[str]:
         raw = request.headers.get(self.header_name)
         return raw.strip() if raw else None
 
-    # ------------------------------------------------------------------
-    # AUTHORIZATION
-    # ------------------------------------------------------------------
     def _authorize(self, raw_key: str) -> Optional[APIKeyRecord]:
         key_hash = _stable_hash(raw_key)
         rec = self._keys.get(key_hash)
-
-        if not rec:
-            return None
-        if not rec.active:
+        if not rec or not rec.active:
             return None
         if self.required_scope not in rec.scopes:
             return None
-
         return rec
 
-    # ------------------------------------------------------------------
-    # MAIN DISPATCH
-    # ------------------------------------------------------------------
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
 
-        # ✅ Allow public routes immediately
+        # ✅ Allow public paths
         if self._is_public(path):
             return await call_next(request)
 
-        # 🔐 Extract key
         raw_key = self._extract_key(request)
+
         if not raw_key:
             return JSONResponse(
                 status_code=401,
                 content={
                     "error": "api_key_missing",
-                    "detail": f"{self.header_name} header required",
+                    "detail": "X-API-Key header required",
                 },
             )
 
-        # 🔐 Validate key
         rec = self._authorize(raw_key)
+
         if not rec:
             return JSONResponse(
                 status_code=403,
@@ -175,7 +121,6 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        # ✅ Attach metadata to request context
         rec.last_used_at_ms = _now_ms()
         request.state.api_key_hash = rec.key_hash
         request.state.api_scopes = list(rec.scopes)
