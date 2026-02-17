@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.env
+.venv/
+venv/
+
+# Logs
+*.log
+LOG/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Node / Next
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Tests / coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Secrets
+.env*
+secrets.json
+
+# Misc
+*.zip
+*.tar
+*.bak

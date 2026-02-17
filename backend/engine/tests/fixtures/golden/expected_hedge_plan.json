@@ -1,0 +1,64 @@
+{
+  "buckets": [
+    {
+      "bucket": "2025-07",
+      "confirmed_flow_mxn": -14000000.0,
+      "forecast_flow_mxn": -4000000.0,
+      "commercial_exposure_mxn": -18000000.0,
+      "existing_hedges_mxn": -10000000.0,
+      "target_signed_mxn": 16000000.0,
+      "action_mxn": 26000000.0,
+      "action_direction": "BUY_MXN_SELL_USD",
+      "forward_rate": 17.185,
+      "carry_note": "Forward points embedded (curve carry). Points=0.035 vs spot.",
+      "action_usd": 1512947.3377945884,
+      "friction_usd": 758.0174927113703,
+      "suppressed": false,
+      "hedge_position_mxn": 16000000.0,
+      "residual_mxn": -2000000.0
+    },
+    {
+      "bucket": "2025-08",
+      "confirmed_flow_mxn": -22000000.0,
+      "forecast_flow_mxn": 3000000.0,
+      "commercial_exposure_mxn": -19000000.0,
+      "existing_hedges_mxn": -8000000.0,
+      "target_signed_mxn": 20500000.0,
+      "action_mxn": 28500000.0,
+      "action_direction": "BUY_MXN_SELL_USD",
+      "forward_rate": 17.215,
+      "carry_note": "Forward points embedded (curve carry). Points=0.065 vs spot.",
+      "action_usd": 1655532.965437119,
+      "friction_usd": 830.9037900874637,
+      "suppressed": false,
+      "hedge_position_mxn": 20500000.0,
+      "residual_mxn": 1500000.0
+    },
+    {
+      "bucket": "2025-09",
+      "confirmed_flow_mxn": -2000000.0,
+      "forecast_flow_mxn": -2000000.0,
+      "commercial_exposure_mxn": -4000000.0,
+      "existing_hedges_mxn": -5000000.0,
+      "target_signed_mxn": 3000000.0,
+      "action_mxn": 8000000.0,
+      "action_direction": "BUY_MXN_SELL_USD",
+      "forward_rate": 17.244999999999997,
+      "carry_note": "Forward points embedded (curve carry). Points=0.095 vs spot.",
+      "action_usd": 463902.58045810385,
+      "friction_usd": 233.23615160349857,
+      "suppressed": false,
+      "hedge_position_mxn": 3000000.0,
+      "residual_mxn": -1000000.0
+    }
+  ],
+  "summary": {
+    "total_commercial_exposure_mxn": -41000000.0,
+    "total_existing_hedges_mxn": -23000000.0,
+    "total_action_mxn": 62500000.0,
+    "total_action_usd": 3632382.883689811,
+    "total_friction_usd": 1822.1574344023325,
+    "total_hedge_position_mxn": 39500000.0,
+    "total_residual_mxn": -1500000.0
+  }
+}
