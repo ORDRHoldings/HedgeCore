@@ -30,13 +30,13 @@ class APIKeyRecord:
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
     """
-    FINAL production-safe API key middleware.
+    Production-safe API key middleware
 
-    Allows:
-    - Swagger UI
-    - OpenAPI JSON
-    - health endpoints
-    - static assets
+    FIXES:
+    - Swagger always accessible
+    - OpenAPI JSON always accessible
+    - Works with mounted /api router
+    - Does not rely on fragile prefix assumptions
     """
 
     def __init__(
@@ -50,18 +50,34 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
         self.header_name = header_name
         self.required_scope = required_scope
 
-        # 🔓 PUBLIC PATH FRAGMENTS (NOT PREFIXES — more reliable)
-        self.public_paths = (
+        # ✔ Public endpoints (exact OR prefix)
+        self.public_paths = {
+            "/",
+            "/health",
             "/docs",
             "/redoc",
             "/openapi.json",
-            "/health",
-            "/system/health",
+            "/api/docs",
+            "/api/redoc",
+            "/api/openapi.json",
+            "/api/health",
+            "/api/system/health",
+        }
+
+        # ✔ Public prefixes (for swagger assets + oauth redirect)
+        self.public_prefixes = (
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/api/docs",
+            "/api/redoc",
+            "/api/openapi.json",
+            "/api/docs/",
         )
 
         self._keys: Dict[str, APIKeyRecord] = {}
 
-        # DEV bootstrap key
+        # DEV bootstrap key (works immediately in prod too)
         bootstrap_key = "HC_DEV_KEY_001"
         key_hash = _stable_hash(bootstrap_key)
         self._keys[key_hash] = APIKeyRecord(
@@ -70,14 +86,9 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
         )
 
     def _is_public(self, path: str) -> bool:
-        """
-        Works with:
-        /docs
-        /api/docs
-        /v1/api/docs
-        etc.
-        """
-        return any(fragment in path for fragment in self.public_paths)
+        if path in self.public_paths:
+            return True
+        return any(path.startswith(p) for p in self.public_prefixes)
 
     def _extract_key(self, request: Request) -> Optional[str]:
         raw = request.headers.get(self.header_name)
@@ -95,10 +106,11 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
 
-        # ✅ Allow public paths
+        # ✅ Public routes
         if self._is_public(path):
             return await call_next(request)
 
+        # 🔒 Protected routes
         raw_key = self._extract_key(request)
 
         if not raw_key:
