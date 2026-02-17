@@ -54,25 +54,27 @@ async def _seed_roles():
         ("supervisor", "Approve/reject staged artifacts"),
         ("risk_analyst", "Create proposals and run sandbox calculations"),
     ]
+
     async with async_session_maker() as session:
         for name, description in default_roles:
             result = await session.execute(select(Role).where(Role.name == name))
             if not result.scalar_one_or_none():
                 session.add(Role(name=name, description=description))
         await session.commit()
+
     logger.info("✅ Default roles seeded")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_engine()
-    rebuild_all_schemas()   # ✅ SAFE HERE (NOT at import time)
+    rebuild_all_schemas()
+
     try:
         await _seed_roles()
     except Exception as e:
-        # Non-fatal: DB schema may not be initialised (fresh deploy without migrations).
-        # The v1/calculate engine is fully stateless and does not depend on RBAC tables.
         logger.warning(f"⚠️ _seed_roles skipped (DB may be uninitialised): {e}")
+
     try:
         yield
     finally:
@@ -90,6 +92,25 @@ app = FastAPI(
     redoc_url=None,
     openapi_url="/api/openapi.json",
 )
+
+
+# -------------------------------------------------------------------
+# Root Redirect (PRODUCTION SAFE)
+# -------------------------------------------------------------------
+@app.get("/", include_in_schema=False)
+def root_redirect():
+    return HTMLResponse(
+        """
+        <html>
+            <head>
+                <meta http-equiv="refresh" content="0; url=/api/docs" />
+            </head>
+            <body>
+                Redirecting to API docs...
+            </body>
+        </html>
+        """
+    )
 
 
 # -------------------------------------------------------------------
@@ -118,10 +139,7 @@ app.add_middleware(
 app.add_middleware(AuditHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
 
-
-# -------------------------------------------------------------------
-# API KEY AUTH (public paths defined in middleware itself)
-# -------------------------------------------------------------------
+# API key auth last in stack
 app.add_middleware(APIKeyAuthMiddleware)
 
 
@@ -162,6 +180,7 @@ def custom_openapi() -> dict[str, Any]:
         description="SynexFund HedgeCalc API",
         routes=app.routes,
     )
+
     schema["servers"] = [{"url": "/api"}]
     app.openapi_schema = schema
     return schema
