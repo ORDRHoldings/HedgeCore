@@ -1,19 +1,3 @@
-"""
-app/core/db.py
-HedgeCalc – Async Database Core (Canonical, Alembic-Governed)
-------------------------------------------------------------
-STRICT POLICY:
-- Runtime MUST NOT create or mutate database schema.
-- Alembic is the sole authority for tables, indexes, and constraints.
-- This module performs connectivity + session lifecycle only.
-
-Optimized for:
-- Windows pytest stability
-- asyncpg teardown safety
-- FastAPI lifespan management
-- Multi-worker (Gunicorn) safety
-"""
-
 from __future__ import annotations
 
 import os
@@ -33,22 +17,53 @@ from sqlalchemy import text
 logger = logging.getLogger("hedgecalc.db")
 
 # ---------------------------------------------------------------------
-# Configuration
+# DATABASE URL RESOLUTION (PRODUCTION SAFE)
 # ---------------------------------------------------------------------
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/hedgecalc",
-)
+
+def resolve_database_url() -> str:
+    """
+    Determine database URL with strict priority:
+
+    1) DATABASE_URL env var (Render / production)
+    2) SQLite demo fallback (if explicitly allowed)
+    3) Fail hard (never silently connect to localhost)
+    """
+
+    url = os.getenv("DATABASE_URL")
+
+    if url:
+        # Render gives sync postgres URL → convert to asyncpg
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+        return url
+
+    # Optional demo fallback
+    demo = os.getenv("ALLOW_SQLITE_DEMO", "false").lower() == "true"
+    if demo:
+        logger.warning("⚠ Using SQLite demo fallback database")
+        return "sqlite+aiosqlite:///./demo.db"
+
+    # HARD FAIL — prevents accidental localhost usage
+    raise RuntimeError(
+        "DATABASE_URL not configured. "
+        "Set it in environment variables or enable ALLOW_SQLITE_DEMO=true."
+    )
+
+
+DATABASE_URL = resolve_database_url()
 
 # ---------------------------------------------------------------------
-# Base ORM class (metadata ONLY, no runtime DDL)
+# Base ORM class
 # ---------------------------------------------------------------------
 Base = declarative_base()
 
 # ---------------------------------------------------------------------
 # Async Engine
 # ---------------------------------------------------------------------
-# NullPool avoids "event loop closed" errors on teardown in Windows pytest
 async_engine: AsyncEngine = create_async_engine(
     DATABASE_URL,
     echo=False,
@@ -67,10 +82,9 @@ async_session_maker = async_sessionmaker(
 )
 
 # ---------------------------------------------------------------------
-# Dependencies for FastAPI endpoints
+# Dependencies for FastAPI
 # ---------------------------------------------------------------------
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Legacy dependency for FastAPI routes (backward compatible)."""
     async with async_session_maker() as session:
         try:
             yield session
@@ -79,10 +93,6 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Primary dependency for async SQLAlchemy operations in routes/services.
-    Explicitly identical to get_session for clarity and future refactors.
-    """
     async with async_session_maker() as session:
         try:
             yield session
@@ -91,17 +101,9 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 # ---------------------------------------------------------------------
-# Lifespan Hooks (NO SCHEMA MUTATION)
+# Lifespan Hooks
 # ---------------------------------------------------------------------
 async def init_engine() -> AsyncEngine:
-    """
-    Initialize DB engine.
-
-    Responsibilities:
-    - Verify database connectivity
-    - Log readiness
-    - NEVER create tables or indexes
-    """
     try:
         async with async_engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
@@ -113,7 +115,6 @@ async def init_engine() -> AsyncEngine:
 
 
 async def shutdown_engine() -> None:
-    """Dispose engine cleanly during FastAPI shutdown."""
     try:
         await async_engine.dispose()
         logger.info("✅ Async engine disposed cleanly.")
