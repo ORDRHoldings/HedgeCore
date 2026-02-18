@@ -13,6 +13,7 @@ interface StageConfig {
   path: string;
   color: string;
   bgActive: string;
+  enabled: boolean;
 }
 
 const STAGES: StageConfig[] = [
@@ -22,6 +23,7 @@ const STAGES: StageConfig[] = [
     path: "/sandbox",
     color: "text-[var(--text-secondary)]",
     bgActive: "bg-[var(--bg-sub)]",
+    enabled: true,
   },
   {
     key: "STAGING",
@@ -29,6 +31,7 @@ const STAGES: StageConfig[] = [
     path: "/staging",
     color: "text-[var(--accent-amber)]",
     bgActive: "bg-[var(--accent-amber)]/10",
+    enabled: false,
   },
   {
     key: "LEDGER",
@@ -36,6 +39,7 @@ const STAGES: StageConfig[] = [
     path: "/ledger",
     color: "text-[var(--accent-cyan)]",
     bgActive: "bg-[var(--accent-cyan)]/10",
+    enabled: false,
   },
 ];
 
@@ -46,6 +50,7 @@ export default function PipelineNav() {
   const { activeState } = useSelector((s: RootState) => s.pipeline);
 
   const handleClick = (stage: StageConfig) => {
+    if (!stage.enabled) return;
     dispatch(setActiveState(stage.key));
     router.push(stage.path);
   };
@@ -55,6 +60,7 @@ export default function PipelineNav() {
       {STAGES.map((stage, i) => {
         const isActive =
           pathname?.startsWith(stage.path) || activeState === stage.key;
+        const isDisabled = !stage.enabled;
 
         return (
           <div key={stage.key} className="flex items-center">
@@ -77,11 +83,15 @@ export default function PipelineNav() {
             )}
             <button
               onClick={() => handleClick(stage)}
+              disabled={isDisabled}
+              title={isDisabled ? `${stage.label} — coming soon` : undefined}
               className={[
                 "px-3 py-1.5 rounded text-xs font-medium transition-colors",
-                isActive
-                  ? `${stage.bgActive} ${stage.color}`
-                  : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-sub)]/50",
+                isDisabled
+                  ? "text-[var(--text-tertiary)]/40 cursor-not-allowed opacity-40"
+                  : isActive
+                    ? `${stage.bgActive} ${stage.color}`
+                    : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-sub)]/50",
               ].join(" ")}
             >
               {stage.label}
