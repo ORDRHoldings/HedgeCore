@@ -703,11 +703,17 @@ export default function InputPage() {
             const data = await res.json();
             if (data.market) {
               activeMarket = data.market;
-              setMarket(data.market); // keep state in sync for results page
+              setMarket(data.market);
             }
+          } else {
+            setBackendErrorMsg(`Market autofill failed (HTTP ${res.status}). Add market data manually or retry.`);
+            setLoading(false);
+            return;
           }
-        } catch {
-          // Market fetch failed — proceed anyway; backend will return 422 with clear error
+        } catch (e) {
+          setBackendErrorMsg(`Market autofill unavailable: ${String(e)}. Add market data manually or retry.`);
+          setLoading(false);
+          return;
         }
       }
       const result = await calculate({ trades, hedges, market: activeMarket, policy });
