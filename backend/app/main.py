@@ -124,23 +124,23 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 
 # -------------------------------------------------------------------
-# Middleware (CANONICAL ORDER)
+# Middleware (CANONICAL ORDER — Starlette LIFO: last added = outermost)
+# Inner → Outer: GZip → AuditHeaders → RateLimit → APIKeyAuth → CORS
+# CORS must be outermost to handle OPTIONS preflight before auth blocks it.
 # -------------------------------------------------------------------
 app.add_middleware(GZipMiddleware, minimum_size=512)
+app.add_middleware(AuditHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+app.add_middleware(APIKeyAuthMiddleware)
 
+# CORS outermost — added last so it runs first (intercepts OPTIONS preflight)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ALLOW_ORIGINS,
+    allow_origins=[str(o) for o in settings.CORS_ALLOW_ORIGINS],
     allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
-
-app.add_middleware(AuditHeadersMiddleware)
-app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
-
-# API key auth last in stack
-app.add_middleware(APIKeyAuthMiddleware)
 
 
 # -------------------------------------------------------------------

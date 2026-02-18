@@ -1,7 +1,12 @@
 import axios from 'axios';
 import type { CalculateRequest, CalculateResponse } from './types';
 
-const api = axios.create({ baseURL: '/api/v1' });
+// ── Base URL resolution ─────────────────────────────────────────────────────
+// In production (Vercel): NEXT_PUBLIC_API_URL = https://hedgecore.onrender.com/api
+// In development: falls back to "/api" (Next.js rewrites proxy to localhost:8000)
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
+
+const api = axios.create({ baseURL: `${API_BASE}/v1` });
 
 // Attach X-API-Key header on every request.
 // In local/demo the bootstrap key HC_DEV_KEY_001 is always accepted by the backend.
@@ -36,5 +41,5 @@ export async function uploadHedgesCsv(file: File) {
 }
 
 export function getExportUrl(type: 'pdf' | 'excel' | 'zip', runId: string) {
-  return `/api/v1/export/${type}/${runId}`;
+  return `${API_BASE}/v1/export/${type}/${runId}`;
 }

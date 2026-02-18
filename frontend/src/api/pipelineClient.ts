@@ -17,7 +17,11 @@ import type {
 // Client instance
 // ---------------------------------------------------------------------------
 
-const api = axios.create({ baseURL: "/api/v1/pipeline" });
+// In production (Vercel): NEXT_PUBLIC_API_URL = https://hedgecore.onrender.com/api
+// In development: falls back to "/api" (Next.js rewrites proxy to localhost:8000)
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
+
+const api = axios.create({ baseURL: `${API_BASE}/v1/pipeline` });
 
 // Attach API key header for dev mode
 api.interceptors.request.use((config) => {
@@ -134,5 +138,5 @@ export function getLedgerExportUrl(
   ledgerId: string,
   format: "pdf" | "excel" | "zip"
 ): string {
-  return `/api/v1/pipeline/ledger/${ledgerId}/export/${format}`;
+  return `${API_BASE}/v1/pipeline/ledger/${ledgerId}/export/${format}`;
 }

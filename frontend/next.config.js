@@ -1,19 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {
-    root: __dirname,
-  },
   eslint: {
     // Pre-existing lint issues in source — do not block build
     ignoreDuringBuilds: true,
   },
+  typescript: {
+    // Type checking already done via tsc --noEmit in CI
+    ignoreBuildErrors: false,
+  },
   async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:8000/api/:path*',
-      },
-    ];
+    // Only proxy to local backend in development
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/api/:path*',
+          destination: 'http://localhost:8000/api/:path*',
+        },
+      ];
+    }
+    return [];
   },
 };
 
