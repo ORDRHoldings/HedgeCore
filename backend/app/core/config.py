@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     CORS_ALLOW_ORIGINS: List[AnyHttpUrl] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://hedgecore.vercel.app",
     ]
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: List[str] = ["*"]
