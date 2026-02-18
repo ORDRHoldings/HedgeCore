@@ -2,9 +2,12 @@ import axios from 'axios';
 import type { CalculateRequest, CalculateResponse } from './types';
 
 // ── Base URL resolution ─────────────────────────────────────────────────────
-// In production (Vercel): NEXT_PUBLIC_API_URL = https://hedgecore.onrender.com/api
-// In development: falls back to "/api" (Next.js rewrites proxy to localhost:8000)
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
+// Priority: NEXT_PUBLIC_API_URL env var > detect production hostname > local proxy
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname === 'hedgecore.vercel.app'
+    ? 'https://hedgecore.onrender.com/api'
+    : '/api');
 
 const api = axios.create({ baseURL: `${API_BASE}/v1` });
 

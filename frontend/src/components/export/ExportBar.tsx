@@ -89,16 +89,20 @@ interface ExportBtnProps {
 function ExportBtn({ icon, label, title, onClick }: ExportBtnProps) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState(false);
 
   const handleClick = async () => {
     if (busy) return;
     setBusy(true);
+    setError(false);
     try {
       await onClick();
       setDone(true);
       setTimeout(() => setDone(false), 2200);
     } catch (e) {
       console.error('Export failed:', e);
+      setError(true);
+      setTimeout(() => setError(false), 3000);
     } finally {
       setBusy(false);
     }
@@ -112,7 +116,9 @@ function ExportBtn({ icon, label, title, onClick }: ExportBtnProps) {
       className={[
         'flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono',
         'border transition-all duration-150 select-none',
-        done
+        error
+          ? 'border-[var(--accent-red)]/40 text-[var(--accent-red)] bg-[var(--accent-red)]/5'
+          : done
           ? 'border-[var(--accent-green)]/40 text-[var(--accent-green)] bg-[var(--accent-green)]/5'
           : 'border-[var(--border-rim)] text-[var(--text-secondary)] bg-transparent hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)]',
         busy ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
@@ -121,7 +127,7 @@ function ExportBtn({ icon, label, title, onClick }: ExportBtnProps) {
       <span className="shrink-0">
         {busy ? <IconSpinner /> : icon}
       </span>
-      <span>{done ? 'Saved ✓' : label}</span>
+      <span>{error ? 'Failed' : done ? 'Saved' : label}</span>
     </button>
   );
 }

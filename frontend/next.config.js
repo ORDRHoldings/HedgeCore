@@ -10,14 +10,11 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   async rewrites() {
-    // Proxy /api/v1/* to backend in all environments.
-    // Dev: falls back to local backend. Prod (Vercel): uses BACKEND_URL or Render.
-    // /api/market-autofill and other Next.js API routes are NOT affected (no /v1/ prefix).
-    const backendUrl = process.env.BACKEND_URL || (
-      process.env.NODE_ENV === 'development'
-        ? 'http://localhost:8000/api'
-        : 'https://hedgecore.onrender.com/api'
-    );
+    // DEV ONLY: proxy /api/v1/* to local backend.
+    // In production the frontend API client calls Render directly (see api/client.ts).
+    // Vercel rewrites do not reliably forward POST bodies to external origins.
+    if (process.env.NODE_ENV !== 'development') return [];
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000/api';
     return [
       {
         source: '/api/v1/:path*',
