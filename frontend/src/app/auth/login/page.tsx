@@ -229,7 +229,7 @@ export default function LoginPage() {
               lineHeight: 1.2,
             }}
           >
-            <span>Hedge</span>{" "}
+            <span>ORDR</span>{" "}
             <span style={{ color: T.accent }}>Terminal</span>
           </div>
           <div

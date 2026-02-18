@@ -13,64 +13,181 @@ interface Props {
   activeStep: StepKey;
   onActivate: (s: StepKey) => void;
   lockedSteps: Set<StepKey>;
+  onGenerate?: () => void;
+  canGenerate?: boolean;
+  generateLoading?: boolean;
 }
 
 const STEP_NUMBERS: Record<StepKey, string> = {
-  exposure: '01',
-  hedges: '02',
-  market: '03',
-  policy: '04',
+  exposure:      '01',
+  hedges:        '02',
+  market:        '03',
+  policy:        '04',
   authorization: '05',
 };
 
 const statusColor: Record<string, string> = {
-  complete: 'var(--accent-green)',
-  partial: 'var(--accent-amber)',
-  error: 'var(--accent-red)',
-  pending: 'var(--text-secondary)',
+  complete: 'var(--status-pass)',
+  partial:  'var(--accent-amber)',
+  error:    'var(--accent-red)',
+  pending:  'var(--text-secondary)',
 };
 
-export default function StepProgress({ steps, activeStep, onActivate, lockedSteps }: Props) {
+const mono = "'IBM Plex Mono', monospace";
+
+export default function StepProgress({
+  steps,
+  activeStep,
+  onActivate,
+  lockedSteps,
+  onGenerate,
+  canGenerate = false,
+  generateLoading = false,
+}: Props) {
   return (
-    <div className="bg-[var(--bg-sub)] border-b border-[var(--border-rim)] px-4 py-2">
-      <div className="max-w-7xl mx-auto flex items-center gap-0 text-[10px] font-mono tracking-wide">
+    <div
+      style={{
+        background: 'var(--bg-sub)',
+        borderBottom: '1px solid var(--border-rim)',
+        padding: '0 16px',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1280,
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0,
+          height: 38,
+        }}
+      >
         {steps.map((step, i) => {
-          const isActive = step.key === activeStep;
-          const isLocked = lockedSteps.has(step.key);
-          const color = statusColor[step.status];
-          const opacity = step.status === 'pending' ? 0.4 : 1;
+          const isActive  = step.key === activeStep;
+          const isLocked  = lockedSteps.has(step.key);
+          const color     = statusColor[step.status];
+          const opacity   = step.status === 'pending' ? 0.4 : 1;
+          const num       = STEP_NUMBERS[step.key];
 
           return (
-            <div key={step.key} className="flex items-center gap-0">
+            <div key={step.key} style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+
+              {/* Separator before this step */}
               {i > 0 && (
-                <span className="px-2 text-[var(--text-secondary)] opacity-20 select-none">&mdash;</span>
+                <span style={{
+                  padding: '0 8px',
+                  color: 'var(--text-secondary)',
+                  opacity: 0.2,
+                  fontFamily: mono,
+                  fontSize: '0.625rem',
+                  userSelect: 'none',
+                }}>—</span>
               )}
+
+              {/* Inject Generate node BEFORE the policy step */}
+              {step.key === 'policy' && onGenerate !== undefined && (
+                <>
+                  <span style={{
+                    padding: '0 8px',
+                    color: 'var(--text-secondary)',
+                    opacity: 0.2,
+                    fontFamily: mono,
+                    fontSize: '0.625rem',
+                    userSelect: 'none',
+                  }}>—</span>
+
+                  <button
+                    type="button"
+                    onClick={canGenerate && !generateLoading ? onGenerate : undefined}
+                    disabled={!canGenerate || generateLoading}
+                    style={{
+                      fontFamily: mono,
+                      fontSize: '0.5rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.1em',
+                      padding: '4px 14px',
+                      height: 26,
+                      background: canGenerate
+                        ? 'var(--accent-cyan)'
+                        : 'transparent',
+                      border: `1px solid ${canGenerate ? 'var(--accent-cyan)' : 'var(--border-rim)'}`,
+                      color: canGenerate ? 'var(--bg-deep)' : 'var(--text-tertiary)',
+                      cursor: canGenerate && !generateLoading ? 'pointer' : 'not-allowed',
+                      opacity: canGenerate ? 1 : 0.35,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      whiteSpace: 'nowrap',
+                      transition: 'background 0.1s, opacity 0.1s',
+                    }}
+                  >
+                    {generateLoading ? (
+                      <>
+                        <svg
+                          style={{ width: 10, height: 10, animation: 'spin 1s linear infinite', flexShrink: 0 }}
+                          viewBox="0 0 24 24" fill="none"
+                        >
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="15 45" />
+                        </svg>
+                        COMPUTING…
+                      </>
+                    ) : (
+                      '03 ▶ GENERATE HEDGE PLAN'
+                    )}
+                  </button>
+
+                  <span style={{
+                    padding: '0 8px',
+                    color: 'var(--text-secondary)',
+                    opacity: 0.2,
+                    fontFamily: mono,
+                    fontSize: '0.625rem',
+                    userSelect: 'none',
+                  }}>—</span>
+                </>
+              )}
+
+              {/* Regular step button */}
               <button
                 type="button"
                 onClick={() => !isLocked && onActivate(step.key)}
                 disabled={isLocked}
-                className={`no-scale flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm transition-colors ${
-                  isLocked ? 'opacity-40 cursor-not-allowed' : ''
-                } ${
-                  isActive
-                    ? 'text-[var(--text-primary)] border-b border-[var(--text-primary)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
+                style={{
+                  fontFamily: mono,
+                  fontSize: '0.5625rem',
+                  letterSpacing: '0.04em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '2px 6px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: isActive ? '2px solid var(--text-primary)' : '2px solid transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  cursor: isLocked ? 'not-allowed' : 'pointer',
+                  opacity: isLocked ? 0.35 : 1,
+                  whiteSpace: 'nowrap',
+                  height: 38,
+                  transition: 'color 0.1s',
+                }}
               >
                 {step.status === 'complete' ? (
-                  <span className="text-xs" style={{ color: statusColor.complete }}>&#10003;</span>
+                  <span style={{ color: statusColor.complete, fontSize: '0.625rem' }}>✓</span>
                 ) : (
-                  <span
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: color, opacity }}
-                  />
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: color, opacity, flexShrink: 0,
+                    display: 'inline-block',
+                  }} />
                 )}
-                <span>{STEP_NUMBERS[step.key]} {step.label}</span>
+                {num} {step.label}
               </button>
             </div>
           );
         })}
       </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

@@ -338,7 +338,7 @@ export default function TerminalPage() {
       {/* ── Identity Bar ── */}
       <div className="hc-identity-bar">
         <div className="hc-identity-left">
-          <span className="hc-product-name">HedgeCalc</span>
+          <span className="hc-product-name">ORDR Terminal</span>
           <span className="hc-env-badge" data-state="sandbox">
             TERMINAL
           </span>
@@ -478,7 +478,7 @@ export default function TerminalPage() {
 
       {/* ── Footer ── */}
       <div className="hc-footer">
-        <span>HEDGECALC TERMINAL</span>
+        <span>ORDR TERMINAL</span>
         <span className="hc-footer-sep">|</span>
         <span>Institutional FX Risk Infrastructure</span>
         <span className="hc-footer-sep">|</span>
