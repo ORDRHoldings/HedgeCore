@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// build: 2026-02-18T17:00Z — force cache bust
 const nextConfig = {
   eslint: {
     // Pre-existing lint issues in source — do not block build
