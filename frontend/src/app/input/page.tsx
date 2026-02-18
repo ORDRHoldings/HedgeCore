@@ -8,7 +8,9 @@ import type {
   MarketSnapshot,
   PolicyConfig,
   ValidationErrorDetail,
+  FuturesCurrency,
 } from '../../api/types';
+import { FUTURES_CURRENCY_LIST } from '../../api/types';
 import { useHedge } from '../../lib/hedgeContext';
 import { calculate, uploadTradesCsv, uploadHedgesCsv } from '../../api/client';
 import {
@@ -433,6 +435,11 @@ export default function InputPage() {
   const [toastMsg, setToastMsg]       = useState('');
   const [toastVisible, setToastVisible] = useState(false);
 
+  // ── Inline trade entry form ───────────────────────────────────────────────
+  const EMPTY_INLINE: TradeRow = { record_id: '', entity: '', type: 'AP', currency: 'MXN', amount: 0, value_date: '', status: 'CONFIRMED', description: '' };
+  const [inlineForm, setInlineForm]       = useState<TradeRow>(EMPTY_INLINE);
+  const [inlineTouched, setInlineTouched] = useState<Record<string, boolean>>({});
+
   // ── Step (progressive disclosure) ─────────────────────────────────────────
   const [activeStep, setActiveStep] = useState<StepKey>('exposure');
 
@@ -649,6 +656,33 @@ export default function InputPage() {
     clearFixture(); setHedges(prev => prev.filter((_, j) => j !== i));
   }, [clearFixture]);
 
+  // ── Inline trade form handler ──────────────────────────────────────────────
+  const inlineIdDuplicate = inlineForm.record_id !== '' && existingTradeIds.has(inlineForm.record_id);
+  const inlineValid = (
+    inlineForm.record_id.trim() !== '' &&
+    !inlineIdDuplicate &&
+    inlineForm.entity.trim() !== '' &&
+    inlineForm.amount > 0 &&
+    inlineForm.value_date !== ''
+  );
+
+  const handleInlineSave = useCallback(() => {
+    setInlineTouched({ record_id: true, entity: true, amount: true, value_date: true });
+    if (!inlineValid) return;
+    clearFixture();
+    setTrades(prev => [...prev, inlineForm]);
+    setInlineForm({ record_id: '', entity: '', type: 'AP', currency: 'MXN', amount: 0, value_date: '', status: 'CONFIRMED', description: '' });
+    setInlineTouched({});
+  }, [inlineForm, inlineValid, clearFixture]);
+
+  const setInlineField = useCallback(<K extends keyof TradeRow>(field: K, value: TradeRow[K]) => {
+    setInlineForm(f => ({ ...f, [field]: value }));
+  }, []);
+
+  const touchInline = useCallback((field: string) => {
+    setInlineTouched(t => ({ ...t, [field]: true }));
+  }, []);
+
   const handleSelectPreset = useCallback((preset: PolicyPreset) => {
     clearFixture(); setPolicy(preset.policy); setActivePresetId(preset.id);
   }, [clearFixture]);
@@ -691,7 +725,12 @@ export default function InputPage() {
         const d = detail as { parse_error: string; errors?: Array<{ msg?: unknown }> };
         setBackendErrorMsg(`Parse error in ${d.parse_error}: ${JSON.stringify(d.errors?.[0]?.msg || d.errors)}`);
       } else {
-        setBackendErrorMsg(typeof detail === 'string' ? detail : JSON.stringify(detail || String(err)));
+        const msg = typeof detail === 'string'
+          ? detail
+          : detail
+          ? JSON.stringify(detail)
+          : `Network or server error — ${String(err)}`;
+        setBackendErrorMsg(msg);
       }
     } finally {
       setLoading(false);
@@ -759,10 +798,13 @@ export default function InputPage() {
         <div style={{ marginTop: 12 }}>
           <StepProgress
             steps={[
-              { key: 'exposure', label: 'Exposure Intake', status: stepStatuses.exposure },
-              { key: 'policy',   label: 'Hedge Policy',   status: stepStatuses.policy },
+              { key: 'exposure', label: 'Exposure Hedge Plan', status: stepStatuses.exposure },
+              { key: 'policy',   label: 'Hedge Policy',        status: stepStatuses.policy },
             ]}
             activeStep={activeStep} onActivate={setActiveStep} lockedSteps={lockedSteps}
+            onGenerate={handleCalculate}
+            canGenerate={canCalculate}
+            generateLoading={loading}
           />
         </div>
 
@@ -810,7 +852,7 @@ export default function InputPage() {
 
               {visibleStepKeys.includes('exposure') && (
                 <StepSection
-                  stepNumber="01" title="Commercial Exposure" stepKey="exposure"
+                  stepNumber="01" title="Exposure Intake" stepKey="exposure"
                   activeStep={activeStep} onActivate={setActiveStep} locked={false}
                   badge={trades.length > 0 ? { label: `${trades.length} positions`, variant: 'info' } : undefined}
                   summary={trades.length > 0 ? (
@@ -827,11 +869,301 @@ export default function InputPage() {
                   actions={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <CsvUploader label="Import CSV" onFile={handleTradesCsv} schemaType="trades" />
-                      <button onClick={openAddTrade} style={btnStyle(true)}>+ New Exposure Line</button>
                     </div>
                   }
                 >
                   <TradeTable trades={trades} onEdit={openEditTrade} onRemove={handleRemoveTrade} baseCcy={currencyCtx.baseCcy} />
+
+                  {/* ── Inline Trade Entry Form ───────────────────────────── */}
+                  <div style={{
+                    marginTop: 1,
+                    borderTop: `1px solid ${S.border}`,
+                    background: S.bgSub,
+                  }}>
+                    {/* Section header */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '7px 14px',
+                      borderBottom: `1px solid ${S.borderSoft}`,
+                    }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.textTertiary, letterSpacing: '0.1em' }}>
+                        ADD EXPOSURE LINE
+                      </span>
+                      <span style={{
+                        width: 1, height: 10, background: S.borderSoft, display: 'inline-block',
+                      }} />
+                      <span style={{ fontFamily: S.fontUI, fontSize: '0.625rem', color: S.textTertiary }}>
+                        Enter a new trade position directly
+                      </span>
+                    </div>
+
+                    {/* Form grid */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: 1,
+                      background: S.border,
+                      padding: 0,
+                    }}>
+                      {/* RECORD ID */}
+                      {(() => {
+                        const err = inlineTouched.record_id && !inlineForm.record_id.trim()
+                          ? 'Required'
+                          : inlineTouched.record_id && inlineIdDuplicate
+                          ? 'ID exists'
+                          : null;
+                        return (
+                          <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                              RECORD ID {err && <span style={{ color: S.red }}>— {err}</span>}
+                            </label>
+                            <input
+                              type="text"
+                              value={inlineForm.record_id}
+                              onChange={e => setInlineField('record_id', e.target.value)}
+                              onBlur={() => touchInline('record_id')}
+                              placeholder="e.g. TXN-001"
+                              style={{
+                                fontFamily: S.fontMono, fontSize: '0.6875rem',
+                                background: 'transparent',
+                                border: 'none',
+                                borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
+                                color: S.textPrimary,
+                                padding: '2px 0',
+                                outline: 'none',
+                                width: '100%',
+                              }}
+                            />
+                          </div>
+                        );
+                      })()}
+
+                      {/* ENTITY */}
+                      {(() => {
+                        const err = inlineTouched.entity && !inlineForm.entity.trim() ? 'Required' : null;
+                        return (
+                          <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                              ENTITY {err && <span style={{ color: S.red }}>— {err}</span>}
+                            </label>
+                            <input
+                              type="text"
+                              value={inlineForm.entity}
+                              onChange={e => setInlineField('entity', e.target.value)}
+                              onBlur={() => touchInline('entity')}
+                              placeholder="e.g. Acme Corp"
+                              style={{
+                                fontFamily: S.fontMono, fontSize: '0.6875rem',
+                                background: 'transparent',
+                                border: 'none',
+                                borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
+                                color: S.textPrimary,
+                                padding: '2px 0',
+                                outline: 'none',
+                                width: '100%',
+                              }}
+                            />
+                          </div>
+                        );
+                      })()}
+
+                      {/* FLOW TYPE */}
+                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
+                          FLOW TYPE
+                        </label>
+                        <select
+                          value={inlineForm.type}
+                          onChange={e => setInlineField('type', e.target.value as TradeRow['type'])}
+                          style={{
+                            fontFamily: S.fontMono, fontSize: '0.6875rem',
+                            background: S.bgPanel,
+                            border: 'none',
+                            borderBottom: `1px solid ${S.borderSoft}`,
+                            color: S.textPrimary,
+                            padding: '2px 0',
+                            outline: 'none',
+                            width: '100%',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <option value="AP">AP — Accounts Payable</option>
+                          <option value="AR">AR — Accounts Receivable</option>
+                        </select>
+                      </div>
+
+                      {/* CURRENCY */}
+                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
+                          CURRENCY
+                        </label>
+                        <select
+                          value={inlineForm.currency}
+                          onChange={e => setInlineField('currency', e.target.value as FuturesCurrency)}
+                          style={{
+                            fontFamily: S.fontMono, fontSize: '0.6875rem',
+                            background: S.bgPanel,
+                            border: 'none',
+                            borderBottom: `1px solid ${S.borderSoft}`,
+                            color: S.textPrimary,
+                            padding: '2px 0',
+                            outline: 'none',
+                            width: '100%',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {FUTURES_CURRENCY_LIST.map(c => (
+                            <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* AMOUNT */}
+                      {(() => {
+                        const err = inlineTouched.amount && !(inlineForm.amount > 0) ? 'Must be > 0' : null;
+                        return (
+                          <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                              AMOUNT ({inlineForm.currency}) {err && <span style={{ color: S.red }}>— {err}</span>}
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              step={1000}
+                              value={inlineForm.amount || ''}
+                              onChange={e => setInlineField('amount', parseFloat(e.target.value) || 0)}
+                              onBlur={() => touchInline('amount')}
+                              placeholder="0"
+                              style={{
+                                fontFamily: S.fontMono, fontSize: '0.6875rem',
+                                background: 'transparent',
+                                border: 'none',
+                                borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
+                                color: S.textPrimary,
+                                padding: '2px 0',
+                                outline: 'none',
+                                width: '100%',
+                              }}
+                            />
+                          </div>
+                        );
+                      })()}
+
+                      {/* VALUE DATE */}
+                      {(() => {
+                        const err = inlineTouched.value_date && !inlineForm.value_date ? 'Required' : null;
+                        return (
+                          <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                              VALUE DATE {err && <span style={{ color: S.red }}>— {err}</span>}
+                            </label>
+                            <input
+                              type="date"
+                              value={inlineForm.value_date}
+                              onChange={e => setInlineField('value_date', e.target.value)}
+                              onBlur={() => touchInline('value_date')}
+                              style={{
+                                fontFamily: S.fontMono, fontSize: '0.6875rem',
+                                background: 'transparent',
+                                border: 'none',
+                                borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
+                                color: S.textPrimary,
+                                padding: '2px 0',
+                                outline: 'none',
+                                width: '100%',
+                                colorScheme: 'dark',
+                              }}
+                            />
+                          </div>
+                        );
+                      })()}
+
+                      {/* STATUS */}
+                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
+                          STATUS
+                        </label>
+                        <select
+                          value={inlineForm.status}
+                          onChange={e => setInlineField('status', e.target.value as TradeRow['status'])}
+                          style={{
+                            fontFamily: S.fontMono, fontSize: '0.6875rem',
+                            background: S.bgPanel,
+                            border: 'none',
+                            borderBottom: `1px solid ${S.borderSoft}`,
+                            color: S.textPrimary,
+                            padding: '2px 0',
+                            outline: 'none',
+                            width: '100%',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <option value="CONFIRMED">CONFIRMED</option>
+                          <option value="FORECAST">FORECAST</option>
+                        </select>
+                      </div>
+
+                      {/* DESCRIPTION */}
+                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
+                          DESCRIPTION
+                        </label>
+                        <input
+                          type="text"
+                          value={inlineForm.description ?? ''}
+                          onChange={e => setInlineField('description', e.target.value)}
+                          placeholder="Optional note"
+                          style={{
+                            fontFamily: S.fontMono, fontSize: '0.6875rem',
+                            background: 'transparent',
+                            border: 'none',
+                            borderBottom: `1px solid ${S.borderSoft}`,
+                            color: S.textPrimary,
+                            padding: '2px 0',
+                            outline: 'none',
+                            width: '100%',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Submit row */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                      gap: 10, padding: '8px 14px',
+                      borderTop: `1px solid ${S.borderSoft}`,
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInlineForm({ record_id: '', entity: '', type: 'AP', currency: 'MXN', amount: 0, value_date: '', status: 'CONFIRMED', description: '' });
+                          setInlineTouched({});
+                        }}
+                        style={{
+                          fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                          padding: '4px 12px',
+                          border: `1px solid ${S.border}`,
+                          color: S.textTertiary,
+                          background: 'transparent',
+                          cursor: 'pointer',
+                        }}
+                      >CLEAR</button>
+                      <button
+                        type="button"
+                        onClick={handleInlineSave}
+                        style={{
+                          fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                          fontWeight: 700,
+                          padding: '4px 18px',
+                          border: `1px solid ${inlineValid ? S.cyan : S.border}`,
+                          color: inlineValid ? S.cyan : S.textTertiary,
+                          background: inlineValid ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : 'transparent',
+                          cursor: 'pointer',
+                          transition: 'all 0.1s',
+                        }}
+                      >+ ADD POSITION</button>
+                    </div>
+                  </div>
                 </StepSection>
               )}
 
