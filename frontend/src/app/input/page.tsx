@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type {
   TradeRow,
@@ -45,7 +45,7 @@ const EMPTY_MARKET: MarketSnapshot = {
   provider_metadata: { source: 'manual_user_input' },
 };
 
-const STEP_ORDER: StepKey[] = ['exposure', 'hedges', 'market', 'policy', 'authorization'];
+const STEP_ORDER: StepKey[] = ['exposure', 'market', 'policy', 'hedges', 'authorization'];
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const S = {
@@ -472,18 +472,19 @@ export default function InputPage() {
     const marketValid = market.spot_usdmxn > 0;
     return {
       exposure:      true,
-      hedges:        hasTrades,
+      // New order: exposure → market → policy → hedges → authorization
       market:        hasTrades,
       policy:        hasTrades && marketValid,
+      hedges:        hasTrades && marketValid,
       authorization: true,
     };
   }, [trades.length, market.spot_usdmxn]);
 
   const lockedSteps = useMemo(() => {
     const locked = new Set<StepKey>();
-    if (!stepUnlocked.hedges)  locked.add('hedges');
     if (!stepUnlocked.market)  locked.add('market');
     if (!stepUnlocked.policy)  locked.add('policy');
+    if (!stepUnlocked.hedges)  locked.add('hedges');
     return locked;
   }, [stepUnlocked]);
 
@@ -594,6 +595,19 @@ export default function InputPage() {
       setAutofillLoading(false);
     }
   }, [detectedCurrencies, clearFixture]);
+
+  // ── Auto-trigger market autofill when market step is entered (Step 2 in new order) ──
+  useEffect(() => {
+    if (
+      activeStep === 'market' &&
+      detectedCurrencies.length > 0 &&
+      market.spot_usdmxn === 0 &&
+      !autofillLoading
+    ) {
+      handleMarketAutofill();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStep]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSelectFixture = useCallback((selectedId: string | null) => {
@@ -746,9 +760,9 @@ export default function InputPage() {
           <StepProgress
             steps={[
               { key: 'exposure',      label: 'Commercial Exposure', status: stepStatuses.exposure },
-              { key: 'hedges',        label: 'Risk Mitigation',     status: stepStatuses.hedges },
               { key: 'market',        label: 'Market Conditions',   status: stepStatuses.market },
               { key: 'policy',        label: 'Hedge Policy',        status: stepStatuses.policy },
+              { key: 'hedges',        label: 'Risk Mitigation',     status: stepStatuses.hedges },
               { key: 'authorization', label: 'Authorization',       status: stepStatuses.authorization },
             ]}
             activeStep={activeStep} onActivate={setActiveStep} lockedSteps={lockedSteps}
@@ -824,33 +838,9 @@ export default function InputPage() {
                 </StepSection>
               )}
 
-              {visibleStepKeys.includes('hedges') && (
-                <StepSection
-                  stepNumber="02" title="Risk Mitigation" stepKey="hedges"
-                  activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.hedges}
-                  badge={hedges.length > 0 ? { label: `${hedges.length} instruments`, variant: 'info' } : undefined}
-                  summary={hedges.length > 0 ? (
-                    <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
-                      <span>{hedges.length} instruments</span>
-                      <span>{fmtCompact(hedgeSummary.totalNotional)} MXN notional</span>
-                      <span>{hedgeSummary.active} active</span>
-                      <span>{hedgeSummary.locked} locked</span>
-                    </div>
-                  ) : undefined}
-                  actions={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <CsvUploader label="Import CSV" onFile={handleHedgesCsv} schemaType="hedges" />
-                      <button onClick={openAddHedge} style={btnStyle(true)}>+ New Hedge Instrument</button>
-                    </div>
-                  }
-                >
-                  <HedgeTable hedges={hedges} onEdit={openEditHedge} onRemove={handleRemoveHedge} baseCcy={currencyCtx.baseCcy} />
-                </StepSection>
-              )}
-
               {visibleStepKeys.includes('market') && (
                 <StepSection
-                  stepNumber="03" title="Market Conditions" stepKey="market"
+                  stepNumber="02" title="Market Conditions" stepKey="market"
                   activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.market}
                   badge={{ label: marketMode, variant: marketMode === 'DEMO' ? 'warning' : 'neutral' }}
                   summary={
@@ -891,7 +881,7 @@ export default function InputPage() {
 
               {visibleStepKeys.includes('policy') && (
                 <StepSection
-                  stepNumber="04" title="Hedge Policy" stepKey="policy"
+                  stepNumber="03" title="Hedge Policy" stepKey="policy"
                   activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.policy}
                   badge={
                     activePresetName && activePresetId !== 'custom'
@@ -915,6 +905,30 @@ export default function InputPage() {
                     onSelectPreset={handleSelectPreset}
                     onCustom={handleCustomPolicy}
                   />
+                </StepSection>
+              )}
+
+              {visibleStepKeys.includes('hedges') && (
+                <StepSection
+                  stepNumber="04" title="Risk Mitigation" stepKey="hedges"
+                  activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.hedges}
+                  badge={hedges.length > 0 ? { label: `${hedges.length} instruments`, variant: 'info' } : undefined}
+                  summary={hedges.length > 0 ? (
+                    <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
+                      <span>{hedges.length} instruments</span>
+                      <span>{fmtCompact(hedgeSummary.totalNotional)} MXN notional</span>
+                      <span>{hedgeSummary.active} active</span>
+                      <span>{hedgeSummary.locked} locked</span>
+                    </div>
+                  ) : undefined}
+                  actions={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <CsvUploader label="Import CSV" onFile={handleHedgesCsv} schemaType="hedges" />
+                      <button onClick={openAddHedge} style={btnStyle(true)}>+ New Hedge Instrument</button>
+                    </div>
+                  }
+                >
+                  <HedgeTable hedges={hedges} onEdit={openEditHedge} onRemove={handleRemoveHedge} baseCcy={currencyCtx.baseCcy} />
                 </StepSection>
               )}
 
