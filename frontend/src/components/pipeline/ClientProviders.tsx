@@ -22,6 +22,7 @@
 import type { ReactNode } from "react";
 import { Provider } from "react-redux";
 import { store } from "../../lib/store";
+import { AuthProvider } from "../../lib/authContext";
 import { HedgeProvider } from "../../lib/hedgeContext";
 import SystemBar from "./SystemBar";
 import PipelineNav from "./PipelineNav";
@@ -35,16 +36,18 @@ interface Props {
 export default function ClientProviders({ children }: Props) {
   return (
     <Provider store={store}>
-      <HedgeProvider>
-        {/* SessionLoader dispatches loadSessionThunk on client mount — renders nothing */}
-        <SessionLoader />
-        <div className="min-h-screen bg-[var(--bg-deep)] flex flex-col">
-          <SystemBar />
-          <PipelineNav />
-          <StaleSnapshotBanner />
-          <main className="flex-1 min-h-0">{children}</main>
-        </div>
-      </HedgeProvider>
+      <AuthProvider>
+        <HedgeProvider>
+          {/* SessionLoader — renders nothing; auth session auto-restores via AuthProvider */}
+          <SessionLoader />
+          <div className="min-h-screen bg-[var(--bg-deep)] flex flex-col">
+            <SystemBar />
+            <PipelineNav />
+            <StaleSnapshotBanner />
+            <main className="flex-1 min-h-0">{children}</main>
+          </div>
+        </HedgeProvider>
+      </AuthProvider>
     </Provider>
   );
 }

@@ -1,0 +1,92 @@
+version: "3.8"
+
+networks:
+  hedgecalc_backend:
+    driver: bridge
+  hedgecalc_public:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+  hedgecalc_nginx:
+    image: nginx:stable-alpine
+    container_name: hedgecalc_nginx
+    volumes:
+      # 🔒 CORRECT: mount virtual host config (NOT nginx.conf)
+      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - hedgecalc_api
+      - hedgecalc_frontend
+    networks:
+      - hedgecalc_public
+      - hedgecalc_backend
+
+  hedgecalc_api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: hedgecalc_api
+    env_file: .env
+    command: >
+      /usr/local/bin/gunicorn app.main:app
+      --workers 3
+      --worker-class uvicorn.workers.UvicornWorker
+      --bind 0.0.0.0:8000
+    depends_on:
+      - hedgecalc_db
+      - hedgecalc_redis
+    networks:
+      - hedgecalc_backend
+
+  hedgecalc_celery_worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: hedgecalc_celery_worker
+    env_file: .env
+    user: "1000:1000"
+    command: >
+      celery -A app.core.celery_app.celery
+      worker
+      -l info
+      -Q high_priority,calc_queue
+    depends_on:
+      - hedgecalc_redis
+    networks:
+      - hedgecalc_backend
+
+  hedgecalc_db:
+    image: postgres:16-alpine
+    container_name: hedgecalc_db
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hedgecalc_backend
+
+  hedgecalc_redis:
+    image: redis:7-alpine
+    container_name: hedgecalc_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - hedgecalc_backend
+
+  hedgecalc_frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hedgecalc_frontend
+    env_file: .env.nextjs
+    networks:
+      - hedgecalc_backend

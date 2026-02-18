@@ -1,25 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import Button from "../../../components/ui/Button";
 import Card from "../../../components/ui/Card";
-import { loginThunk } from "../../../lib/store/slices/authSlice";
-import type { RootState, AppDispatch } from "../../../lib/store";
+import { useAuth } from "../../../lib/authContext";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const dispatch = useDispatch<AppDispatch>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { login } = useAuth();
   const router = useRouter();
-  const { loading, error } = useSelector((s: RootState) => s.auth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await dispatch(loginThunk({ username, password }));
-    if (loginThunk.fulfilled.match(result)) {
-      router.push("/");  // Redirect to landing page instead of dashboard
+    setLoading(true);
+    setError(null);
+    const result = await login(username, password);
+    setLoading(false);
+    if (result.success) {
+      router.push("/");  // Redirect to landing page
+    } else {
+      setError(result.error ?? "Login failed");
     }
   };
 
