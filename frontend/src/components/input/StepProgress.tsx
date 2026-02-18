@@ -109,11 +109,11 @@ export default function StepProgress({
                       height: 26,
                       background: canGenerate
                         ? 'var(--accent-cyan)'
-                        : 'transparent',
-                      border: `1px solid ${canGenerate ? 'var(--accent-cyan)' : 'var(--border-rim)'}`,
-                      color: canGenerate ? 'var(--bg-deep)' : 'var(--text-tertiary)',
-                      cursor: canGenerate && !generateLoading ? 'pointer' : 'not-allowed',
-                      opacity: canGenerate ? 1 : 0.35,
+                        : 'color-mix(in srgb, var(--accent-cyan) 6%, transparent)',
+                      border: `1px solid ${canGenerate ? 'var(--accent-cyan)' : 'var(--accent-cyan)'}`,
+                      color: canGenerate ? 'var(--bg-deep)' : 'var(--accent-cyan)',
+                      cursor: canGenerate && !generateLoading ? 'pointer' : 'default',
+                      opacity: canGenerate ? 1 : 0.45,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,

@@ -33,7 +33,6 @@ import HedgeModal from '../../components/input/HedgeModal';
 import PolicyForm from '../../components/input/PolicyForm';
 import CsvUploader from '../../components/input/CsvUploader';
 import GovernanceStrip from '../../components/input/GovernanceStrip';
-import StickyActionBar from '../../components/input/StickyActionBar';
 import SnapshotSummary from '../../components/input/SnapshotSummary';
 import Toast from '../../components/shared/Toast';
 
@@ -1201,14 +1200,42 @@ export default function InputPage() {
         )}
       </div>
 
-      {/* Sticky action bar — wizard mode only */}
+      {/* Sticky gate bar — wizard mode only (Generate is in the step rail) */}
       {!summaryMode && (
-        <StickyActionBar
-          loading={loading}
-          onCalculate={handleCalculate}
-          canCalculate={canCalculate}
-          gates={validationGates}
-        />
+        <div
+          className="sticky bottom-0 z-40 shrink-0 no-print"
+          style={{
+            borderTop: `1px solid ${S.border}`,
+            background: S.bgSub,
+            fontFamily: S.fontMono,
+          }}
+        >
+          <div style={{ maxWidth: 1280, margin: '0 auto', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>GATE CHECK</span>
+            {validationGates.filter(g => !g.met).map((g, i) => (
+              <span
+                key={i}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  fontSize: '0.5625rem',
+                  color: S.red,
+                  border: `1px solid ${S.red}`,
+                  padding: '1px 6px',
+                }}
+              >
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: S.red, display: 'inline-block' }} />
+                {g.label}
+                {g.message && <span style={{ color: S.textTertiary, fontSize: '0.5rem' }}> — {g.message}</span>}
+              </span>
+            ))}
+            {validationGates.every(g => g.met) && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.5625rem', color: S.green }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: S.green, display: 'inline-block' }} />
+                ALL GATES PASSED — CLICK GENERATE HEDGE PLAN IN THE RAIL ABOVE
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Modals */}
