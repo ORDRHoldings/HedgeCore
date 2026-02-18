@@ -1,13 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useSelector, useDispatch } from "react-redux";
-import type { RootState } from "../lib/store";
-import { logout } from "../lib/store/slices/authSlice";
+import { useAuth } from "../lib/authContext";
 
 export default function Nav() {
-  const token = useSelector((s: RootState) => s.auth.token);
-  const dispatch = useDispatch();
+  const { token, logout } = useAuth();
 
   return (
     <nav className="border-b border-gray-200 bg-white">
@@ -30,7 +27,7 @@ export default function Nav() {
           </Link>
           {token ? (
             <button
-              onClick={() => dispatch(logout())}
+              onClick={() => logout()}
               className="text-sm text-red-600 hover:text-red-800"
             >
               Logout
