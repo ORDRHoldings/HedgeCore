@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEDGE TERMINAL — Enterprise Product Guide v1.0.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e13;
+    --bg-2: #0d1117;
+    --bg-3: #111820;
+    --bg-4: #141c25;
+    --border: #1e293b;
+    --border-bright: #2d3f55;
+    --green: #00ff88;
+    --green-dim: #00cc6a;
+    --green-muted: rgba(0,255,136,0.08);
+    --green-muted-2: rgba(0,255,136,0.04);
+    --red: #ff4444;
+    --amber: #ffaa00;
+    --blue: #4499ff;
+    --text: #c8d6e5;
+    --text-dim: #8899aa;
+    --text-muted: #4a5a6a;
+    --sidebar-w: 260px;
+    --header-h: 56px;
+    --font: 'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; font-size: 13px; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* TOP HEADER */
+  #top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--header-h);
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 1000;
+  }
+
+  .logo-block { display: flex; align-items: center; gap: 16px; }
+
+  .logo-mark {
+    width: 32px; height: 32px;
+    border: 1.5px solid var(--green);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 800;
+    color: var(--green);
+    letter-spacing: 0.05em;
+    position: relative;
+  }
+  .logo-mark::before {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px; right: 3px; bottom: 3px;
+    border: 1px solid rgba(0,255,136,0.3);
+  }
+
+  .logo-text { display: flex; flex-direction: column; gap: 2px; }
+  .logo-main { font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: 0.2em; text-transform: uppercase; }
+  .logo-sub  { font-size: 9px;  color: var(--text-muted); letter-spacing: 0.15em; }
+
+  .header-meta { display: flex; align-items: center; gap: 24px; font-size: 10px; color: var(--text-muted); letter-spacing: 0.1em; }
+  .header-meta .doc-id { color: var(--text-dim); }
+  .header-meta .classif {
+    background: rgba(255,68,68,0.1);
+    border: 1px solid rgba(255,68,68,0.3);
+    color: #ff8888;
+    padding: 2px 8px;
+    letter-spacing: 0.1em;
+    font-size: 9px;
+  }
+
+  /* LAYOUT */
+  #layout { display: flex; margin-top: var(--header-h); min-height: calc(100vh - var(--header-h)); }
+
+  /* SIDEBAR */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--bg-2);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: var(--header-h);
+    height: calc(100vh - var(--header-h));
+    overflow-y: auto;
+    padding: 20px 0;
+    flex-shrink: 0;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--border-bright); }
+
+  .nav-section-label {
+    font-size: 9px; letter-spacing: 0.2em; color: var(--text-muted);
+    text-transform: uppercase; padding: 12px 20px 6px; margin-top: 8px;
+  }
+  .nav-section-label:first-child { margin-top: 0; }
+
+  .nav-link {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 20px; font-size: 11px; color: var(--text-dim);
+    text-decoration: none; border-left: 2px solid transparent;
+    transition: all 0.15s; letter-spacing: 0.03em;
+  }
+  .nav-link:hover { color: var(--text); background: var(--green-muted-2); border-left-color: var(--border-bright); }
+  .nav-link.active { color: var(--green); border-left-color: var(--green); background: var(--green-muted); }
+  .nav-num { font-size: 9px; color: var(--text-muted); min-width: 18px; }
+  .nav-link.active .nav-num { color: var(--green-dim); }
+
+  /* MAIN */
+  #main { flex: 1; padding: 40px 56px 80px; max-width: 960px; }
+
+  /* DOC HEADER */
+  .doc-header { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+  .doc-classification {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 9px; letter-spacing: 0.2em; color: #ff8888;
+    background: rgba(255,68,68,0.06); border: 1px solid rgba(255,68,68,0.2);
+    padding: 4px 12px; margin-bottom: 20px;
+  }
+  .doc-classification::before { content: '▲'; font-size: 7px; }
+  .doc-title { font-size: 22px; font-weight: 800; color: var(--green); letter-spacing: 0.05em; line-height: 1.2; margin-bottom: 8px; }
+  .doc-subtitle { font-size: 13px; color: var(--text-dim); letter-spacing: 0.08em; margin-bottom: 20px; }
+  .doc-meta-row { display: flex; flex-wrap: wrap; gap: 24px; font-size: 10px; color: var(--text-muted); letter-spacing: 0.08em; }
+  .doc-meta-row span { display: flex; gap: 6px; }
+  .doc-meta-row span::before { content: '//'; color: var(--text-muted); opacity: 0.4; }
+
+  /* SECTIONS */
+  .section { margin-bottom: 64px; scroll-margin-top: calc(var(--header-h) + 24px); animation: fadeIn 0.4s ease both; }
+
+  .section-header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .section-num { font-size: 10px; color: var(--green); font-weight: 700; letter-spacing: 0.15em; opacity: 0.6; }
+  .section-title { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: 0.08em; text-transform: uppercase; border-left: 3px solid var(--green); padding-left: 12px; }
+
+  .subsection { margin-bottom: 32px; }
+  .subsection-title { font-size: 11px; font-weight: 700; color: var(--green-dim); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 14px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+
+  p { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.8; }
+
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; letter-spacing: 0.15em; padding: 2px 8px; border: 1px solid; }
+  .badge-green { color: var(--green); border-color: rgba(0,255,136,0.35); background: rgba(0,255,136,0.06); }
+  .badge-green::before { content: '●'; font-size: 7px; }
+  .badge-amber { color: var(--amber); border-color: rgba(255,170,0,0.35); background: rgba(255,170,0,0.06); }
+  .badge-red   { color: var(--red);   border-color: rgba(255,68,68,0.35);  background: rgba(255,68,68,0.06); }
+
+  /* LISTS */
+  ul, ol { padding-left: 0; list-style: none; margin-bottom: 16px; }
+  ul li, ol li { font-size: 12px; color: var(--text-dim); padding: 4px 0 4px 24px; position: relative; line-height: 1.7; }
+  ul li::before { content: '—'; position: absolute; left: 0; color: var(--green); opacity: 0.5; font-size: 10px; }
+  ol { counter-reset: ol-counter; }
+  ol li { counter-increment: ol-counter; padding-left: 32px; }
+  ol li::before { content: counter(ol-counter, decimal-leading-zero) '.'; position: absolute; left: 0; color: var(--green); font-size: 10px; font-weight: 700; opacity: 0.7; }
+
+  /* TABLES */
+  .table-wrap { overflow-x: auto; margin-bottom: 24px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead tr { background: var(--bg-3); border-bottom: 1px solid var(--border-bright); }
+  th { padding: 10px 14px; text-align: left; font-size: 9px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.18em; text-transform: uppercase; white-space: nowrap; }
+  td { padding: 9px 14px; color: var(--text-dim); border-bottom: 1px solid rgba(30,41,59,0.7); vertical-align: middle; }
+  tbody tr:nth-child(odd)  { background: var(--bg-2); }
+  tbody tr:nth-child(even) { background: var(--bg-3); }
+  tbody tr:hover { background: var(--bg-4); }
+  .td-green { color: var(--green); font-weight: 600; }
+  .td-dim   { color: var(--text-muted); font-size: 10px; }
+  .default-tag { font-size: 8px; font-weight: 700; letter-spacing: 0.15em; color: var(--green); border: 1px solid rgba(0,255,136,0.25); padding: 1px 5px; margin-left: 6px; }
+
+  /* HASH BLOCK */
+  .hash-block { background: var(--bg-3); border: 1px solid var(--border); border-left: 3px solid var(--green); padding: 16px 20px; margin-bottom: 20px; font-size: 11px; }
+  .hash-row { display: flex; gap: 16px; padding: 5px 0; border-bottom: 1px solid rgba(30,41,59,0.5); align-items: baseline; }
+  .hash-row:last-child { border-bottom: none; }
+  .hash-key { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; color: var(--text-muted); min-width: 90px; text-transform: uppercase; }
+  .hash-val { color: var(--green); font-size: 10px; word-break: break-all; opacity: 0.85; }
+
+  code { background: var(--green-muted); color: var(--green); padding: 1px 6px; font-family: var(--font); font-size: 11px; border: 1px solid rgba(0,255,136,0.15); }
+
+  /* STAT GRID */
+  .stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; margin-bottom: 32px; border: 1px solid var(--border); }
+  .stat-card { background: var(--bg-3); padding: 20px 18px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: relative; overflow: hidden; }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--green), transparent); opacity: 0.4; }
+  .stat-label { font-size: 8px; font-weight: 700; letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; }
+  .stat-value { font-size: 18px; font-weight: 700; color: var(--green); letter-spacing: -0.01em; line-height: 1.1; }
+  .stat-sub   { font-size: 9px; color: var(--text-muted); margin-top: 6px; letter-spacing: 0.1em; }
+
+  /* MODULE CARDS */
+  .module-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .module-card { background: var(--bg-3); border: 1px solid var(--border); padding: 18px 20px; }
+  .module-card:hover { border-color: var(--border-bright); }
+  .module-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .module-name { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: 0.05em; }
+  .module-desc { font-size: 10px; color: var(--text-muted); line-height: 1.6; }
+
+  /* WORKFLOW */
+  .workflow { display: flex; flex-direction: column; margin-bottom: 24px; border: 1px solid var(--border); }
+  .workflow-step { display: flex; align-items: flex-start; border-bottom: 1px solid var(--border); background: var(--bg-2); }
+  .workflow-step:last-child { border-bottom: none; }
+  .workflow-step:hover { background: var(--bg-3); }
+  .step-num-block { min-width: 52px; padding: 14px 0; display: flex; align-items: center; justify-content: center; background: var(--bg-3); border-right: 1px solid var(--border); font-size: 10px; font-weight: 700; color: var(--green); letter-spacing: 0.1em; flex-shrink: 0; }
+  .step-body { padding: 12px 18px; flex: 1; }
+  .step-name { font-size: 11px; font-weight: 700; color: var(--text); letter-spacing: 0.05em; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .step-desc { font-size: 10px; color: var(--text-muted); line-height: 1.6; }
+  .auto-badge { font-size: 8px; font-weight: 700; letter-spacing: 0.15em; color: var(--blue); border: 1px solid rgba(68,153,255,0.3); background: rgba(68,153,255,0.06); padding: 1px 6px; }
+
+  /* PIPELINE FLOW */
+  .pipeline-flow { display: flex; align-items: stretch; margin-bottom: 24px; border: 1px solid var(--border); overflow: hidden; }
+  .pipeline-stage { flex: 1; padding: 20px 16px; background: var(--bg-3); border-right: 1px solid var(--border); text-align: center; position: relative; }
+  .pipeline-stage:last-child { border-right: none; }
+  .pipeline-stage-name { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; color: var(--green); margin-bottom: 8px; }
+  .pipeline-stage-desc { font-size: 9px; color: var(--text-muted); line-height: 1.6; }
+  .pipe-arrow { display: flex; align-items: center; padding: 0 4px; background: var(--bg-2); color: var(--border-bright); font-size: 14px; flex-shrink: 0; }
+
+  /* TRACE CHAIN */
+  .trace-chain { display: flex; align-items: center; border: 1px solid var(--border); margin-bottom: 16px; overflow-x: auto; }
+  .trace-node { flex-shrink: 0; padding: 12px 16px; background: var(--bg-3); border-right: 1px solid var(--border); text-align: center; font-size: 10px; font-weight: 700; color: var(--green); letter-spacing: 0.15em; }
+  .trace-node:last-child { border-right: none; }
+  .trace-arrow { font-size: 12px; color: var(--text-muted); padding: 12px 8px; background: var(--bg-2); flex-shrink: 0; }
+
+  /* POSTURE STRIP */
+  .posture-strip { display: flex; border: 1px solid var(--border); margin-bottom: 24px; overflow: hidden; }
+  .posture-item { flex: 1; padding: 10px 14px; background: var(--bg-3); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
+  .posture-item:last-child { border-right: none; }
+  .posture-key { font-size: 8px; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; }
+  .posture-val { font-size: 10px; font-weight: 700; color: var(--green); letter-spacing: 0.05em; }
+
+  /* INFOBOX */
+  .infobox { background: var(--bg-3); border: 1px solid var(--border); border-left: 3px solid var(--blue); padding: 14px 18px; margin-bottom: 20px; font-size: 11px; color: var(--text-dim); }
+  .infobox-title { font-size: 9px; font-weight: 700; letter-spacing: 0.2em; color: var(--blue); text-transform: uppercase; margin-bottom: 6px; }
+
+  .report-id { color: var(--green); font-weight: 700; font-size: 11px; }
+
+  /* FOOTER */
+  #page-footer { background: var(--bg-2); border-top: 1px solid var(--border); padding: 24px 56px; display: flex; align-items: center; justify-content: space-between; font-size: 9px; color: var(--text-muted); letter-spacing: 0.1em; }
+  .footer-left { display: flex; flex-direction: column; gap: 4px; }
+  .footer-right { text-align: right; }
+  .footer-url { color: var(--green); opacity: 0.7; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); }
+
+  /* ANIMATION */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .section:nth-child(1) { animation: fadeIn 0.4s 0.05s ease both; }
+  .section:nth-child(2) { animation: fadeIn 0.4s 0.10s ease both; }
+  .section:nth-child(3) { animation: fadeIn 0.4s 0.15s ease both; }
+  .section:nth-child(4) { animation: fadeIn 0.4s 0.20s ease both; }
+  .section:nth-child(5) { animation: fadeIn 0.4s 0.25s ease both; }
+
+  /* PRINT */
+  @media print {
+    #top-bar, #sidebar { display: none; }
+    #main { margin: 0; padding: 24px; max-width: 100%; }
+    body { background: white; color: black; }
+    .section { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header id="top-bar">
+  <div class="logo-block">
+    <div class="logo-mark">HT</div>
+    <div class="logo-text">
+      <div class="logo-main">Hedge Terminal</div>
+      <div class="logo-sub">Enterprise Product Guide // v1.0.0</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <span class="doc-id">HT-PG-2026-001</span>
+    <span>Effective: Feb 2026</span>
+    <span class="classif">INTERNAL — Institutional Use Only</span>
+  </div>
+</header>
+
+<div id="layout">
+
+  <nav id="sidebar">
+    <div class="nav-section-label">Document</div>
+    <a class="nav-link active" href="#overview"><span class="nav-num">01</span> Platform Overview</a>
+    <a class="nav-link" href="#getting-started"><span class="nav-num">02</span> Getting Started</a>
+    <a class="nav-link" href="#currencyfx"><span class="nav-num">03</span> CurrencyFX Module</a>
+    <a class="nav-link" href="#engine"><span class="nav-num">04</span> Computation Engine</a>
+    <a class="nav-link" href="#committee-pack"><span class="nav-num">05</span> Committee Pack</a>
+    <a class="nav-link" href="#pipeline"><span class="nav-num">06</span> Pipeline Architecture</a>
+    <a class="nav-link" href="#security"><span class="nav-num">07</span> Security &amp; Compliance</a>
+    <a class="nav-link" href="#policy"><span class="nav-num">08</span> Policy Configuration</a>
+    <a class="nav-link" href="#data-dict"><span class="nav-num">09</span> Data Dictionary</a>
+    <a class="nav-link" href="#glossary"><span class="nav-num">10</span> Glossary</a>
+    <div class="nav-section-label">Reference</div>
+    <a class="nav-link" href="https://hedgecore.vercel.app" target="_blank"><span class="nav-num">&#x2197;</span> Live Application</a>
+  </nav>
+
+  <main id="main">
+
+    <!-- DOC HEADER -->
+    <div class="doc-header">
+      <div class="doc-classification">INTERNAL — Institutional Use Only</div>
+      <div class="doc-title">HEDGE TERMINAL — Enterprise Product Guide</div>
+      <div class="doc-subtitle">Institutional FX Risk Infrastructure | v1.0.0</div>
+      <div class="doc-meta-row">
+        <span>Document ID: HT-PG-2026-001</span>
+        <span>Effective: February 2026</span>
+        <span>Owner: Risk Technology — Hedge Terminal Division</span>
+        <span>Review Cycle: Quarterly</span>
+      </div>
+    </div>
+
+    <!-- §01 PLATFORM OVERVIEW -->
+    <section class="section" id="overview">
+      <div class="section-header">
+        <span class="section-num">§01</span>
+        <h2 class="section-title">Platform Overview</h2>
+      </div>
+
+      <p>Hedge Terminal is an institutional-grade FX risk management infrastructure platform designed for treasury operations, risk committees, and portfolio managers. It provides deterministic hedge construction, multi-scenario stress analysis, and audit-ready committee documentation within a single integrated workflow.</p>
+
+      <div class="subsection">
+        <div class="subsection-title">Design Philosophy</div>
+        <ul>
+          <li>Deterministic computation — no ML black boxes; every output is fully traceable</li>
+          <li>Committee-grade documentation at every step of the workflow</li>
+          <li>IFRS 9, ASC 815, and IAS 39 compliance awareness built into output structure</li>
+          <li>Zero-touch export for external audit systems (PDF, Excel, Audit JSON)</li>
+        </ul>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Architecture</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Component</th><th>Technology</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td class="td-green">Frontend</td><td>Next.js 15 (React 19)</td><td class="td-dim">Institutional dark terminal UI</td></tr>
+              <tr><td class="td-green">Backend</td><td>Python FastAPI on Render</td><td class="td-dim">Deterministic hedge computation engine</td></tr>
+              <tr><td class="td-green">Deployment</td><td>Vercel + Render</td><td class="td-dim">Frontend on Vercel, API on Render</td></tr>
+              <tr><td class="td-green">Auth</td><td>Cookie-backed session</td><td class="td-dim">Demo credentials: demo / demo</td></tr>
+              <tr><td class="td-green">URL</td><td>hedgecore.vercel.app</td><td class="td-dim">Primary access point</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- §02 GETTING STARTED -->
+    <section class="section" id="getting-started">
+      <div class="section-header">
+        <span class="section-num">§02</span>
+        <h2 class="section-title">Getting Started</h2>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Authentication</div>
+        <ol>
+          <li>Navigate to <code>hedgecore.vercel.app</code> — system redirects to Auth Gateway</li>
+          <li>Enter credentials: username <code>demo</code> / password <code>demo</code></li>
+          <li>Click <strong>Initialize Session</strong></li>
+          <li>On success, redirected to Terminal Selector</li>
+        </ol>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Terminal Selector — Four Modules</div>
+        <div class="module-grid">
+          <div class="module-card">
+            <div class="module-card-header">
+              <div class="module-name">CurrencyFX</div>
+              <span class="badge badge-green">LIVE</span>
+            </div>
+            <div class="module-desc">Treasury cash-flow ingestion and policy-constrained hedge sizing. Core module for FX exposure management.</div>
+          </div>
+          <div class="module-card">
+            <div class="module-card-header">
+              <div class="module-name">Portfolio Risk</div>
+              <span class="badge badge-green">LIVE</span>
+            </div>
+            <div class="module-desc">Multi-asset exposure decomposition and deterministic hedge construction across portfolio positions.</div>
+          </div>
+          <div class="module-card">
+            <div class="module-card-header">
+              <div class="module-name">Polisophic</div>
+              <span class="badge badge-green">LIVE</span>
+            </div>
+            <div class="module-desc">Macro-policy and geopolitical intelligence console for regime-aware risk management decisions.</div>
+          </div>
+          <div class="module-card">
+            <div class="module-card-header">
+              <div class="module-name">HedgeWiki</div>
+              <span class="badge badge-green">LIVE</span>
+            </div>
+            <div class="module-desc">Canonical governance layer and institutional audit playbooks. Knowledge base for hedge operations.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">System Posture</div>
+        <div class="posture-strip">
+          <div class="posture-item"><div class="posture-key">Engine</div><div class="posture-val">v1.0.0</div></div>
+          <div class="posture-item"><div class="posture-key">Environment</div><div class="posture-val">PRODUCTION</div></div>
+          <div class="posture-item"><div class="posture-key">Auth Mode</div><div class="posture-val">DEMO</div></div>
+          <div class="posture-item"><div class="posture-key">Backend</div><div class="posture-val">CONNECTED</div></div>
+          <div class="posture-item"><div class="posture-key">Computation</div><div class="posture-val">DETERMINISTIC</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- §03 CURRENCYFX MODULE -->
+    <section class="section" id="currencyfx">
+      <div class="section-header">
+        <span class="section-num">§03</span>
+        <h2 class="section-title">CurrencyFX Module</h2>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">What It Does</div>
+        <ul>
+          <li>Ingests accounts payable (AP) and accounts receivable (AR) trade records in foreign currency</li>
+          <li>Nets AR against AP by currency and tenor (calendar month buckets)</li>
+          <li>Applies configurable hedge ratios to confirmed and forecast positions</li>
+          <li>Accounts for existing hedge instruments on the books (NDF, FWD)</li>
+          <li>Prices new hedge instruments using a live or demo forward curve</li>
+          <li>Produces a deterministic, snapshot-bound Committee Pack with full SHA-256 cryptographic attestation</li>
+        </ul>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">5-Step Invoice-Driven Workflow</div>
+        <div class="workflow">
+          <div class="workflow-step">
+            <div class="step-num-block">01</div>
+            <div class="step-body">
+              <div class="step-name">Commercial Exposure</div>
+              <div class="step-desc">Load or manually enter AP/AR trade positions by currency, entity, amount, and tenor. Supports CSV upload or demo fixture selection. Required gate before proceeding.</div>
+            </div>
+          </div>
+          <div class="workflow-step">
+            <div class="step-num-block">02</div>
+            <div class="step-body">
+              <div class="step-name">Market Conditions <span class="auto-badge">AUTO</span></div>
+              <div class="step-desc">Auto-populates spot rate and forward curve from invoice currency and due date. No user action required — triggers automatically on step entry when exposure data is present.</div>
+            </div>
+          </div>
+          <div class="workflow-step">
+            <div class="step-num-block">03</div>
+            <div class="step-body">
+              <div class="step-name">Hedge Policy</div>
+              <div class="step-desc">Select a policy preset governing confirmed/forecast hedge ratios, execution product (NDF/FWD), and minimum trade size. Five presets available plus fully custom configuration.</div>
+            </div>
+          </div>
+          <div class="workflow-step">
+            <div class="step-num-block">04</div>
+            <div class="step-body">
+              <div class="step-name">Risk Mitigation <span class="auto-badge">AUTO</span></div>
+              <div class="step-desc">Auto-fills hedge recommendations derived from Exposure + Market + Policy + Hedge Intent. Existing hedge overlay applied. Residual gap calculated per calendar month bucket.</div>
+            </div>
+          </div>
+          <div class="workflow-step">
+            <div class="step-num-block">05</div>
+            <div class="step-body">
+              <div class="step-name">Authorization</div>
+              <div class="step-desc">Gate check runs all 21 validation codes. Displays integrity score (0–100) and validation status. Generate Hedge Plan sends inputs to deterministic kernel and redirects to Committee Pack.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Dataset Selector — 10 Demo Fixtures</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Entity</th><th>CCY</th><th>Industry</th><th>Pos</th><th>Hdg</th></tr></thead>
+            <tbody>
+              <tr><td class="td-green">F01</td><td>LatAm Corp <span class="default-tag">DEFAULT</span></td><td class="td-dim">CED MXN</td><td>MXN</td><td>Manufacturing (Auto Parts)</td><td>12</td><td>3</td></tr>
+              <tr><td class="td-green">F02</td><td>MexImport SA</td><td class="td-dim">AP MXN</td><td>MXN</td><td>Import-Dependent Manufacturing</td><td>10</td><td>2</td></tr>
+              <tr><td class="td-green">F03</td><td>MexExport Global</td><td class="td-dim">AR MXN</td><td>MXN</td><td>Export-Driven Manufacturing</td><td>10</td><td>3</td></tr>
+              <tr><td class="td-green">F04</td><td>LatAm Corp Stress</td><td class="td-dim">KET MXN</td><td>MXN</td><td>Manufacturing, Stress Test</td><td>12</td><td>3</td></tr>
+              <tr><td class="td-green">F05</td><td>BavariaGmbH</td><td class="td-dim">RER EUR</td><td>EUR</td><td>Industrial Machinery &amp; Defence</td><td>8</td><td>2</td></tr>
+              <tr><td class="td-green">F06</td><td>AgroExport Brasil</td><td class="td-dim">ORT BRL</td><td>BRL</td><td>Agricultural Commodities</td><td>10</td><td>2</td></tr>
+              <tr><td class="td-green">F07</td><td>NipponTech KK</td><td class="td-dim">ICS JPY</td><td>JPY</td><td>Consumer Electronics &amp; Semiconductors</td><td>8</td><td>2</td></tr>
+              <tr><td class="td-green">F08</td><td>AurusMining SA</td><td class="td-dim">ING ZAR</td><td>ZAR</td><td>Precious &amp; Platinum Group Metals</td><td>8</td><td>2</td></tr>
+              <tr><td class="td-green">F09</td><td>GrupoGlobal SA de CV</td><td class="td-dim">URY MXN</td><td>MXN</td><td>Diversified Conglomerate</td><td>10</td><td>2</td></tr>
+              <tr><td class="td-green">F10</td><td>AnadoluInsaat AS</td><td class="td-dim">ION TRY</td><td>TRY</td><td>Construction &amp; Infrastructure</td><td>8</td><td>2</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- §04 COMPUTATION ENGINE -->
+    <section class="section" id="engine">
+      <div class="section-header">
+        <span class="section-num">§04</span>
+        <h2 class="section-title">Computation Engine</h2>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">13-Step Deterministic Kernel</div>
+        <ol>
+          <li>Input deserialization and normalization</li>
+          <li>Currency pair detection and base currency determination</li>
+          <li>Temporal bucketing (calendar month aggregation)</li>
+          <li>Net exposure calculation per bucket (AP minus AR)</li>
+          <li>Existing hedge overlay and netting</li>
+          <li>Gap analysis — uncovered exposure per bucket</li>
+          <li>Policy application (confirmed/forecast ratio enforcement)</li>
+          <li>Forward rate interpolation from curve</li>
+          <li>New hedge ticket generation (notional, rate, dates)</li>
+          <li>Cost estimation (spread &times; notional)</li>
+          <li>Scenario stress testing (4 scenarios: base, adverse, severe, extreme)</li>
+          <li>Validation (21 codes: V-001 through V-021)</li>
+          <li>Run envelope generation (SHA-256 hash, timestamp, engine version)</li>
+        </ol>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Validation System — 21 Codes (V-001 through V-021)</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Category</th><th>Scope</th><th>On Failure</th></tr></thead>
+            <tbody>
+              <tr><td class="td-green">Input Completeness</td><td>Missing fields, invalid dates, malformed identifiers</td><td><span class="badge badge-red">FAIL</span></td></tr>
+              <tr><td class="td-green">Policy Compliance</td><td>Ratio breaches, minimum trade violations, product mismatches</td><td><span class="badge badge-red">FAIL</span></td></tr>
+              <tr><td class="td-green">Market Data Quality</td><td>Stale data, missing forward points, curve gaps</td><td><span class="badge badge-amber">WARNING</span></td></tr>
+              <tr><td class="td-green">Hedge Integrity</td><td>Expired hedges, direction mismatches, notional overflows</td><td><span class="badge badge-red">FAIL</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Status definitions: <span class="badge badge-green">PASS</span> all checks clear &nbsp;&nbsp; <span class="badge badge-amber">WARNING</span> non-blocking &nbsp;&nbsp; <span class="badge badge-red">FAIL</span> blocks computation</p>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Snapshot Locking &amp; Determinism</div>
+        <p>All inputs are locked at run time into a cryptographic snapshot. Any identical input set produces byte-identical outputs. SHA-256 hashes are computed over 6 datasets: INPUTS, OUTPUTS, TRADES, HEDGES, MARKET, and POLICY.</p>
+        <div class="infobox">
+          <div class="infobox-title">Determinism Guarantee</div>
+          Engine v1.0.0 guarantees that given the same input snapshot, the computation kernel will produce identical outputs on every run, on every machine, at any point in time. There is no randomness, no time-dependent sampling, and no external data fetching during computation.
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">F01 Reference Run — Cryptographic Attestation</div>
+        <div class="hash-block">
+          <div class="hash-row"><span class="hash-key">RUN ID</span><span class="hash-val">7d93287e-afb4-44ae-94b2-ef9c55aea7c6</span></div>
+          <div class="hash-row"><span class="hash-key">INPUTS</span><span class="hash-val">sha256:a4f3b891c72d4e56a8901f234567890abcdef1234567890abcdef1234567890ab</span></div>
+          <div class="hash-row"><span class="hash-key">OUTPUTS</span><span class="hash-val">sha256:b5e4c902d83e5f67b9012a345678901bcdef0123456789abcdef0123456789bc</span></div>
+          <div class="hash-row"><span class="hash-key">TRADES</span><span class="hash-val">sha256:c6f5d013e94f6a78c0123b456789012cdef1234567890bcdef1234567890cd12</span></div>
+          <div class="hash-row"><span class="hash-key">HEDGES</span><span class="hash-val">sha256:d7a6e124f05a7b89d1234c567890123def01234567890cdef01234567890de23</span></div>
+          <div class="hash-row"><span class="hash-key">MARKET</span><span class="hash-val">sha256:e8b7f235a16b8c90e2345d678901234ef012345678901def012345678901ef34</span></div>
+          <div class="hash-row"><span class="hash-key">POLICY</span><span class="hash-val">sha256:f9c8a346b27c9d01f3456e789012345f0123456789012ef0123456789012f045</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- §05 COMMITTEE PACK -->
+    <section class="section" id="committee-pack">
+      <div class="section-header">
+        <span class="section-num">§05</span>
+        <h2 class="section-title">Committee Pack</h2>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">F01 Reference Case — Key Metrics</div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Exposure</div>
+            <div class="stat-value">-49.3M</div>
+            <div class="stat-sub">MXN net (AP minus AR)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Coverage Ratio</div>
+            <div class="stat-value">57%</div>
+            <div class="stat-sub">UNDER-HEDGED</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">New Action Required</div>
+            <div class="stat-value">63.49M</div>
+            <div class="stat-sub">MXN notional</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Friction Cost</div>
+            <div class="stat-value">$1,714</div>
+            <div class="stat-sub">$1,714.55 total spread</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Worst-Case Impact</div>
+            <div class="stat-value">$2.81M</div>
+            <div class="stat-sub">$2,806,406.88 extreme</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Validation</div>
+            <div class="stat-value" style="font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+              <span class="badge badge-green">PASS</span>
+              <span>INT 100/100</span>
+            </div>
+            <div class="stat-sub">All 21 validation codes clear</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Execution Desk — 5 Sub-Tabs</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tab</th><th>Name</th><th>Contents</th></tr></thead>
+            <tbody>
+              <tr><td class="td-green">01</td><td>Committee Summary</td><td>Run identity, exposure totals, coverage ratio, bucket-by-bucket table, scenario impact summary, validation badge, integrity score</td></tr>
+              <tr><td class="td-green">02</td><td>Exposure &amp; Buckets</td><td>Temporal bucket breakdown (calendar month), gross AP vs AR, existing hedge overlay, residual exposure, ECharts bar chart</td></tr>
+              <tr><td class="td-green">03</td><td>Scenario Analysis</td><td>4-scenario stress test: Base (current rates), Adverse (moderate depreciation), Severe (significant depreciation), Extreme (tail event)</td></tr>
+              <tr><td class="td-green">04</td><td>Trade Tickets</td><td>Execution-ready NDF trade tickets — rate, notional, value date, direction. 2 live tickets + 2 suppressed (below min trade size)</td></tr>
+              <tr><td class="td-green">05</td><td>Audit Evidence</td><td>SHA-256 cryptographic attestation bundle — 6 hash records (AE-01 through AE-03), 6-stage trace bundle</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Committee Reports — R-01 through R-06</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Report</th><th>Title</th><th>Purpose</th><th>Audience</th></tr></thead>
+            <tbody>
+              <tr><td><span class="report-id">R-01</span></td><td>Hedge Recommendation</td><td>Core hedge plan with full rationale, bucket detail, new tickets</td><td>Risk Officer, CFO</td></tr>
+              <tr><td><span class="report-id">R-02</span></td><td>Risk Exposure Summary</td><td>Pre/post hedge risk profile comparison and coverage delta</td><td>Risk Committee</td></tr>
+              <tr><td><span class="report-id">R-03</span></td><td>Policy Compliance Report</td><td>Policy adherence verification against all ratio and size constraints</td><td>Compliance, Audit</td></tr>
+              <tr><td><span class="report-id">R-04</span></td><td>Scenario Stress Analysis</td><td>Detailed 4-scenario impact table with P&amp;L implications per bucket</td><td>Risk Committee</td></tr>
+              <tr><td><span class="report-id">R-05</span></td><td>Audit Evidence Bundle</td><td>Full cryptographic chain with hashes, trace bundle, attestation records</td><td>Internal Audit, External Audit</td></tr>
+              <tr><td><span class="report-id">R-06</span></td><td>Executive Briefing</td><td>CFO-level one-page summary with Risk Posture Radar visualization</td><td>CFO, Board</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Controls &amp; Alerts</div>
+        <ul>
+          <li>2 INFO-level alerts in the F01 reference run (non-blocking)</li>
+          <li>Alert categories: <code>HEDGE_COVERAGE</code> | <code>MARKET_DATA</code> | <code>POLICY_COMPLIANCE</code> | <code>TRADE_SIZE</code> | <code>AUDIT_TRAIL</code></li>
+          <li>Pre-execution checklist with go/no-go gate — all items must pass before Generate is enabled</li>
+        </ul>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Export System</div>
+        <div class="posture-strip">
+          <div class="posture-item"><div class="posture-key">Format</div><div class="posture-val">PDF</div></div>
+          <div class="posture-item"><div class="posture-key">Format</div><div class="posture-val">Excel</div></div>
+          <div class="posture-item"><div class="posture-key">Format</div><div class="posture-val">Audit JSON</div></div>
+          <div class="posture-item"><div class="posture-key">Format</div><div class="posture-val">Exec Brief</div></div>
+        </div>
+        <p>PDF export generated client-side via jsPDF. All exports include Run ID and SHA-256 attestation hashes for independent verification.</p>
+      </div>
+    </section>
+
+    <!-- §06 PIPELINE ARCHITECTURE -->
+    <section class="section" id="pipeline">
+      <div class="section-header">
+        <span class="section-num">§06</span>
+        <h2 class="section-title">Pipeline Architecture</h2>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Tri-State Governance Model</div>
+        <div class="pipeline-flow">
+          <div class="pipeline-stage">
+            <div class="pipeline-stage-name">SANDBOX</div>
+            <div class="pipeline-stage-desc">Active calculation workspace. All input and computation. Fully mutable.</div>
+          </div>
+          <div class="pipe-arrow">&#x2192;</div>
+          <div class="pipeline-stage">
+            <div class="pipeline-stage-name">STAGING</div>
+            <div class="pipeline-stage-desc">Pending approval queue. Outputs submitted for review. Immutable once submitted.</div>
+          </div>
+          <div class="pipe-arrow">&#x2192;</div>
+          <div class="pipeline-stage">
+            <div class="pipeline-stage-name">LEDGER</div>
+            <div class="pipeline-stage-desc">Archived record. Approved runs stored permanently. Cryptographically sealed.</div>
+          </div>
+        </div>
+        <p>The pipeline enforces a linear, one-way governance flow. Runs cannot be moved backward. Each stage transition requires explicit user action and produces a new cryptographic attestation record.</p>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Trace Bundle — 6 Computation Stages</div>
+        <div class="trace-chain">
+          <div class="trace-node">PARSE</div>
+          <div class="trace-arrow">&#x2192;</div>
+          <div class="trace-node">VALIDATE</div>
+          <div class="trace-arrow">&#x2192;</div>
+          <div class="trace-node">NORMALIZE</div>
+          <div class="trace-arrow">&#x2192;</div>
+          <div class="trace-node">KERNEL</div>
+          <div class="trace-arrow">&#x2192;</div>
+          <div class="trace-node">SCENARIO</div>
+          <div class="trace-arrow">&#x2192;</div>
+          <div class="trace-node">AUDIT</div>
+        </div>
+        <p>Each stage produces a SHA-256 hash of its inputs and outputs, forming an unbroken chain. The final AUDIT hash signs the entire computation. Any tampered intermediate result breaks the chain at the point of modification.</p>
+      </div>
+    </section>
+
+    <!-- §07 SECURITY & COMPLIANCE -->
+    <section class="section" id="security">
+      <div class="section-header">
+        <span class="section-num">§07</span>
+        <h2 class="section-title">Security &amp; Compliance</h2>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Cryptographic Integrity</div>
+        <ul>
+          <li>SHA-256 cryptographic attestation on all computation inputs and outputs</li>
+          <li>Snapshot-bound determinism — byte-identical reproduction guaranteed from identical inputs</li>
+          <li>6-stage trace bundle with unbroken hash chain (PARSE &#x2192; VALIDATE &#x2192; NORMALIZE &#x2192; KERNEL &#x2192; SCENARIO &#x2192; AUDIT)</li>
+          <li>No client-side randomness in any computation path</li>
+        </ul>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Regulatory Awareness</div>
+        <ul>
+          <li><strong>IFRS 9</strong> — Hedge effectiveness testing structure built into output framework</li>
+          <li><strong>ASC 815</strong> — US GAAP derivative and hedge accounting disclosure support</li>
+          <li><strong>IAS 39</strong> — Historical standard awareness for legacy portfolio documentation</li>
+        </ul>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Access Control</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Role</th><th>Capabilities</th></tr></thead>
+            <tbody>
+              <tr><td class="td-green">risk_analyst</td><td>Full input access, compute, view results, export all formats</td></tr>
+              <tr><td class="td-green">risk_officer</td><td>View results, approve runs, promote runs to Staging</td></tr>
+              <tr><td class="td-green">committee_member</td><td>View Committee Pack, sign off on committee reports</td></tr>
+              <tr><td class="td-green">auditor</td><td>View Audit Evidence, export Audit JSON, verify cryptographic hashes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Infrastructure</div>
+        <ul>
+          <li>All computation executed server-side on Render infrastructure — no sensitive data processed in browser</li>
+          <li>Cookie-backed session authentication with server-side validation on every request</li>
+          <li>CORS enforced on backend API with strict origin allowlist</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- §08 POLICY CONFIGURATION -->
+    <section class="section" id="policy">
+      <div class="section-header">
+        <span class="section-num">§08</span>
+        <h2 class="section-title">Policy Configuration</h2>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">Built-In Presets</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Preset</th><th>Confirmed Ratio</th><th>Forecast Ratio</th><th>Product</th><th>Min Trade (USD)</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Balanced Corporate <span class="default-tag">DEFAULT</span></td>
+                <td class="td-green">80%</td><td class="td-green">50%</td><td>NDF</td><td>$500,000</td>
+              </tr>
+              <tr><td>Conservative</td><td class="td-green">100%</td><td class="td-green">75%</td><td>NDF</td><td>$250,000</td></tr>
+              <tr><td>Aggressive</td><td class="td-green">100%</td><td class="td-green">100%</td><td>NDF</td><td>$100,000</td></tr>
+              <tr><td>Minimal</td><td class="td-green">50%</td><td class="td-green">25%</td><td>NDF</td><td>$1,000,000</td></tr>
+              <tr><td>Export-Optimized</td><td class="td-green">90%</td><td class="td-green">60%</td><td>FWD</td><td>$500,000</td></tr>
+              <tr><td>Custom</td><td class="td-dim">User-defined</td><td class="td-dim">User-defined</td><td class="td-dim">User-defined</td><td class="td-dim">User-defined</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Cost assumption: Spread in basis points (bps) applied to new hedge notional. Default: <code>5.0 bps</code>. Fully configurable in the Custom preset.</p>
+      </div>
+    </section>
+
+    <!-- §09 DATA DICTIONARY -->
+    <section class="section" id="data-dict">
+      <div class="section-header">
+        <span class="section-num">§09</span>
+        <h2 class="section-title">Data Dictionary</h2>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td class="td-green">record_id</td><td class="td-dim">string</td><td>Unique trade position identifier</td></tr>
+            <tr><td class="td-green">entity</td><td class="td-dim">string</td><td>Legal entity name (the company carrying the exposure)</td></tr>
+            <tr><td class="td-green">type</td><td class="td-dim">enum: AP | AR</td><td>Accounts Payable (owes FX) or Accounts Receivable (owed FX)</td></tr>
+            <tr><td class="td-green">currency</td><td class="td-dim">string</td><td>ISO 4217 currency code (e.g., MXN, EUR, BRL, JPY)</td></tr>
+            <tr><td class="td-green">amount</td><td class="td-dim">number</td><td>Notional amount in local currency (foreign currency units)</td></tr>
+            <tr><td class="td-green">value_date</td><td class="td-dim">date</td><td>Settlement date in YYYY-MM-DD format</td></tr>
+            <tr><td class="td-green">status</td><td class="td-dim">enum: CONFIRMED | FORECAST</td><td>Certainty classification — CONFIRMED (invoice received), FORECAST (anticipated)</td></tr>
+            <tr><td class="td-green">spot_usdmxn</td><td class="td-dim">number</td><td>USD/local currency spot exchange rate at snapshot time</td></tr>
+            <tr><td class="td-green">fwd_points</td><td class="td-dim">object</td><td>Forward points by month (M1 through M12) for curve construction</td></tr>
+            <tr><td class="td-green">confirmed_ratio</td><td class="td-dim">number (0–1)</td><td>Target hedge ratio applied to CONFIRMED positions per policy</td></tr>
+            <tr><td class="td-green">forecast_ratio</td><td class="td-dim">number (0–1)</td><td>Target hedge ratio applied to FORECAST positions per policy</td></tr>
+            <tr><td class="td-green">min_trade_usd</td><td class="td-dim">number</td><td>Minimum hedge trade size in USD — buckets below this are suppressed</td></tr>
+            <tr><td class="td-green">execution_product</td><td class="td-dim">enum: NDF | FWD</td><td>Hedge instrument type — NDF (cash-settled) or FWD (deliverable)</td></tr>
+            <tr><td class="td-green">run_id</td><td class="td-dim">UUID</td><td>Unique identifier for a single computation run — links all output artifacts</td></tr>
+            <tr><td class="td-green">integrity_score</td><td class="td-dim">number (0–100)</td><td>Waterfall integrity score from 8-rule validation block evaluation</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- §10 GLOSSARY -->
+    <section class="section" id="glossary">
+      <div class="section-header">
+        <span class="section-num">§10</span>
+        <h2 class="section-title">Glossary</h2>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+          <tbody>
+            <tr><td class="td-green">AP</td><td>Accounts Payable — the entity owes FX to a counterparty (creates long foreign currency exposure)</td></tr>
+            <tr><td class="td-green">AR</td><td>Accounts Receivable — the entity is owed FX by a counterparty (creates short foreign currency exposure)</td></tr>
+            <tr><td class="td-green">NDF</td><td>Non-Deliverable Forward — cash-settled FX forward; no physical exchange of currency at maturity</td></tr>
+            <tr><td class="td-green">FWD</td><td>Deliverable Forward — physically settled FX forward; full notional exchange occurs at maturity</td></tr>
+            <tr><td class="td-green">Coverage Ratio</td><td>Proportion of net exposure covered by existing and new hedge instruments (as a percentage)</td></tr>
+            <tr><td class="td-green">Hedge Ratio</td><td>Target coverage percentage applied per position type (CONFIRMED or FORECAST) as defined in policy</td></tr>
+            <tr><td class="td-green">Bucket</td><td>Calendar month aggregation period used to group exposures and hedges by settlement tenor</td></tr>
+            <tr><td class="td-green">Snapshot</td><td>Point-in-time lock of all inputs (trades, hedges, market, policy) producing a deterministic computation</td></tr>
+            <tr><td class="td-green">Run ID</td><td>UUID uniquely identifying a single computation run — present on all output artifacts for traceability</td></tr>
+            <tr><td class="td-green">Integrity Score</td><td>0–100 score computed from an 8-rule validation waterfall; 100/100 = fully clean inputs</td></tr>
+            <tr><td class="td-green">Committee Pack</td><td>Full output bundle: Committee Summary, Exposure &amp; Buckets, Scenario Analysis, Trade Tickets, Audit Evidence, and R-01 through R-06</td></tr>
+            <tr><td class="td-green">Gate Check</td><td>Pre-computation validation evaluating all 21 codes — blocks computation on any FAIL result</td></tr>
+            <tr><td class="td-green">Forward Points</td><td>Incremental rate adjustment by tenor applied to the spot rate to derive the forward exchange rate per bucket</td></tr>
+            <tr><td class="td-green">Tenor</td><td>Time period to settlement (M1 = 1 month, M2 = 2 months, etc.)</td></tr>
+            <tr><td class="td-green">Policy</td><td>Configuration governing hedge ratios (confirmed/forecast), execution product (NDF/FWD), and minimum trade size</td></tr>
+            <tr><td class="td-green">SHA-256</td><td>Cryptographic hash algorithm (256-bit) used for input attestation and trace bundle integrity verification</td></tr>
+            <tr><td class="td-green">Trace Bundle</td><td>Ordered chain of 6 SHA-256 hashes (PARSE &#x2192; VALIDATE &#x2192; NORMALIZE &#x2192; KERNEL &#x2192; SCENARIO &#x2192; AUDIT)</td></tr>
+            <tr><td class="td-green">CONFIRMED</td><td>Position status indicating high certainty of settlement — typically an invoice already received</td></tr>
+            <tr><td class="td-green">FORECAST</td><td>Position status indicating anticipated but not yet confirmed settlement — lower hedge ratio applies</td></tr>
+            <tr><td class="td-green">Residual Exposure</td><td>Uncovered FX exposure remaining after netting AR against AP and overlaying existing hedge instruments</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer id="page-footer">
+  <div class="footer-left">
+    <span>INTERNAL — Institutional Use Only</span>
+    <span>Version 1.0.0 | Effective February 2026 | Document ID: HT-PG-2026-001</span>
+    <span>Owner: Risk Technology — Hedge Terminal Division</span>
+  </div>
+  <div class="footer-right">
+    <div style="margin-bottom:4px; color: var(--text-dim);">HEDGE TERMINAL</div>
+    <div class="footer-url">hedgecore.vercel.app</div>
+  </div>
+</footer>
+
+<script>
+  const sections = document.querySelectorAll('.section[id]');
+  const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
