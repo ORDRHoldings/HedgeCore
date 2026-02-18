@@ -146,6 +146,16 @@ export default function ResultsPage() {
             </div>
           </div>
           <div className="no-print flex items-center gap-2">
+            <Link
+              href="/input"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium border border-[var(--border-rim)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)] transition-colors"
+              style={{ fontFamily: 'var(--font-terminal, var(--font-ui))' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              New Calculation
+            </Link>
             <ExportBar result={result} baseCcy={baseCcy} />
           </div>
         </div>

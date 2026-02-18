@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useHedge } from "../lib/hedgeContext";
 import { useAuth } from "../lib/authContext";
 
 // ── Hydration-safe timestamp ────────────────────────────────────────────────
@@ -11,7 +10,6 @@ const TS_PLACEHOLDER = "—";
 
 export default function LandingPage() {
   const router = useRouter();
-  const { result } = useHedge();
   const { isAuthenticated } = useAuth();
   const [, setRenderTs] = useState(TS_PLACEHOLDER);
 
@@ -26,13 +24,9 @@ export default function LandingPage() {
       router.replace("/auth/login");
       return;
     }
-    // Authenticated — go to results if we have them, otherwise input (product selection)
-    if (result) {
-      router.replace("/results");
-    } else {
-      router.replace("/input");
-    }
-  }, [isAuthenticated, result, router]);
+    // Authenticated — route to terminal selector
+    router.replace("/terminal");
+  }, [isAuthenticated, router]);
 
   return null;
 }
