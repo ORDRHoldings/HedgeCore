@@ -136,7 +136,7 @@ app.add_middleware(APIKeyAuthMiddleware)
 # CORS outermost — added last so it runs first (intercepts OPTIONS preflight)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(o) for o in settings.CORS_ALLOW_ORIGINS],
+    allow_origins=[str(o).rstrip("/") for o in settings.CORS_ALLOW_ORIGINS],
     allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
     allow_methods=settings.CORS_ALLOW_METHODS,
     allow_headers=settings.CORS_ALLOW_HEADERS,
