@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type {
   TradeRow,
@@ -26,13 +26,10 @@ import StepSection from '../../components/input/StepSection';
 import StepProgress from '../../components/input/StepProgress';
 import type { StepKey } from '../../components/input/StepSection';
 import TradeTable from '../../components/input/TradeTable';
-import HedgeTable from '../../components/input/HedgeTable';
 import TradeModal from '../../components/input/TradeModal';
 import HedgeModal from '../../components/input/HedgeModal';
-import MarketForm from '../../components/input/MarketForm';
 import PolicyForm from '../../components/input/PolicyForm';
 import CsvUploader from '../../components/input/CsvUploader';
-import ValidationSummary from '../../components/input/ValidationSummary';
 import GovernanceStrip from '../../components/input/GovernanceStrip';
 import StickyActionBar from '../../components/input/StickyActionBar';
 import SnapshotSummary from '../../components/input/SnapshotSummary';
@@ -45,7 +42,7 @@ const EMPTY_MARKET: MarketSnapshot = {
   provider_metadata: { source: 'manual_user_input' },
 };
 
-const STEP_ORDER: StepKey[] = ['exposure', 'market', 'policy', 'hedges', 'authorization'];
+const STEP_ORDER: StepKey[] = ['exposure', 'policy'];
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const S = {
@@ -468,23 +465,19 @@ export default function InputPage() {
   }, [trades.length, validation.errors.length]);
 
   const stepUnlocked = useMemo(() => {
-    const hasTrades   = trades.length > 0;
-    const marketValid = market.spot_usdmxn > 0;
+    const hasTrades = trades.length > 0;
     return {
       exposure:      true,
-      // New order: exposure → market → policy → hedges → authorization
-      market:        hasTrades,
-      policy:        hasTrades && marketValid,
-      hedges:        hasTrades && marketValid,
+      market:        true,   // not a visible step — keep key to avoid TS errors
+      policy:        hasTrades,
+      hedges:        true,   // not a visible step
       authorization: true,
     };
-  }, [trades.length, market.spot_usdmxn]);
+  }, [trades.length]);
 
   const lockedSteps = useMemo(() => {
     const locked = new Set<StepKey>();
-    if (!stepUnlocked.market)  locked.add('market');
-    if (!stepUnlocked.policy)  locked.add('policy');
-    if (!stepUnlocked.hedges)  locked.add('hedges');
+    if (!stepUnlocked.policy) locked.add('policy');
     return locked;
   }, [stepUnlocked]);
 
@@ -540,7 +533,7 @@ export default function InputPage() {
 
   const validationGates = useMemo(() => [
     { label: 'Exposure data',     met: trades.length > 0,         message: trades.length === 0 ? 'No positions loaded' : undefined },
-    { label: 'Market snapshot',   met: market.spot_usdmxn > 0,    message: market.spot_usdmxn === 0 ? 'Spot rate required' : undefined },
+    { label: 'Market snapshot',   met: true,                      message: market.spot_usdmxn > 0 ? undefined : 'Auto-fetched on generate' },
     { label: 'No critical errors',met: !validation.errors.some(e => e.severity === 'CRITICAL'),
       message: validation.errors.some(e => e.severity === 'CRITICAL')
         ? `${validation.errors.filter(e => e.severity === 'CRITICAL').length} critical`
@@ -596,19 +589,6 @@ export default function InputPage() {
     }
   }, [detectedCurrencies, clearFixture]);
 
-  // ── Auto-trigger market autofill when market step is entered (Step 2 in new order) ──
-  useEffect(() => {
-    if (
-      activeStep === 'market' &&
-      detectedCurrencies.length > 0 &&
-      market.spot_usdmxn === 0 &&
-      !autofillLoading
-    ) {
-      handleMarketAutofill();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep]);
-
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSelectFixture = useCallback((selectedId: string | null) => {
     if (!selectedId || selectedId === '__CLEAR__') {
@@ -625,7 +605,7 @@ export default function InputPage() {
     setTrades(fixture.trades); setHedges(fixture.hedges); setMarket(fixture.market);
     setPolicy(fixture.policy); setActivePresetId(fixture.presetId);
     setMarketMode('DEMO'); setFixtureId(fixture.id);
-    setSummaryMode(true); setActiveStep('authorization');
+    setSummaryMode(true); setActiveStep('policy');
     setBackendErrors([]); setBackendErrorMsg('');
     setAutofillMsg('');
     setToastMsg(`Dataset loaded: ${fixture.label}`); setToastVisible(true);
@@ -677,8 +657,28 @@ export default function InputPage() {
   const handleCalculate = async () => {
     setLoading(true); setBackendErrors([]); setBackendErrorMsg('');
     try {
-      const result = await calculate({ trades, hedges, market, policy });
-      setCalculation(result, { policy, trades, hedges, market, fixtureId });
+      // Auto-fetch market if not already populated
+      let activeMarket = market;
+      if (activeMarket.spot_usdmxn === 0 && detectedCurrencies.length > 0) {
+        try {
+          const res = await fetch('/api/market-autofill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currencies: detectedCurrencies }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.market) {
+              activeMarket = data.market;
+              setMarket(data.market); // keep state in sync for results page
+            }
+          }
+        } catch {
+          // Market fetch failed — proceed anyway; backend will return 422 with clear error
+        }
+      }
+      const result = await calculate({ trades, hedges, market: activeMarket, policy });
+      setCalculation(result, { policy, trades, hedges, market: activeMarket, fixtureId });
       router.push('/results');
     } catch (err: unknown) {
       const anyErr = err as { response?: { data?: { detail?: unknown } } };
@@ -759,11 +759,8 @@ export default function InputPage() {
         <div style={{ marginTop: 12 }}>
           <StepProgress
             steps={[
-              { key: 'exposure',      label: 'Commercial Exposure', status: stepStatuses.exposure },
-              { key: 'market',        label: 'Market Conditions',   status: stepStatuses.market },
-              { key: 'policy',        label: 'Hedge Policy',        status: stepStatuses.policy },
-              { key: 'hedges',        label: 'Risk Mitigation',     status: stepStatuses.hedges },
-              { key: 'authorization', label: 'Authorization',       status: stepStatuses.authorization },
+              { key: 'exposure', label: 'Exposure Intake', status: stepStatuses.exposure },
+              { key: 'policy',   label: 'Hedge Policy',   status: stepStatuses.policy },
             ]}
             activeStep={activeStep} onActivate={setActiveStep} lockedSteps={lockedSteps}
           />
@@ -838,50 +835,9 @@ export default function InputPage() {
                 </StepSection>
               )}
 
-              {visibleStepKeys.includes('market') && (
-                <StepSection
-                  stepNumber="02" title="Market Conditions" stepKey="market"
-                  activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.market}
-                  badge={{ label: marketMode, variant: marketMode === 'DEMO' ? 'warning' : 'neutral' }}
-                  summary={
-                    <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
-                      <span>Spot: {market.spot_usdmxn > 0 ? market.spot_usdmxn.toFixed(4) : '--'}</span>
-                      <span>{bucketCount} forward buckets</span>
-                      <span>Age: {ageMinutes}</span>
-                      <span style={{ color: marketMode === 'DEMO' ? S.amber : undefined }}>{marketMode}</span>
-                    </div>
-                  }
-                  actions={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <button
-                        onClick={handleMarketAutofill}
-                        disabled={autofillLoading || detectedCurrencies.length === 0}
-                        style={{
-                          ...btnStyle(detectedCurrencies.length > 0),
-                          display: 'flex', alignItems: 'center', gap: 5,
-                          opacity: detectedCurrencies.length === 0 ? 0.4 : 1,
-                        }}
-                      >
-                        {autofillLoading ? (
-                          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
-                        ) : '⟳'}
-                        {autofillLoading ? ' Fetching…' : ' Autofill from Exposures'}
-                      </button>
-                      {autofillMsg && (
-                        <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.textTertiary }}>
-                          {autofillMsg}
-                        </span>
-                      )}
-                    </div>
-                  }
-                >
-                  <MarketForm market={market} onChange={m => { setMarket(m); clearFixture(); }} mode={marketMode} trades={trades} />
-                </StepSection>
-              )}
-
               {visibleStepKeys.includes('policy') && (
                 <StepSection
-                  stepNumber="03" title="Hedge Policy" stepKey="policy"
+                  stepNumber="02" title="Hedge Policy" stepKey="policy"
                   activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.policy}
                   badge={
                     activePresetName && activePresetId !== 'custom'
@@ -904,52 +860,6 @@ export default function InputPage() {
                     activePresetId={activePresetId}
                     onSelectPreset={handleSelectPreset}
                     onCustom={handleCustomPolicy}
-                  />
-                </StepSection>
-              )}
-
-              {visibleStepKeys.includes('hedges') && (
-                <StepSection
-                  stepNumber="04" title="Risk Mitigation" stepKey="hedges"
-                  activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.hedges}
-                  badge={hedges.length > 0 ? { label: `${hedges.length} instruments`, variant: 'info' } : undefined}
-                  summary={hedges.length > 0 ? (
-                    <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
-                      <span>{hedges.length} instruments</span>
-                      <span>{fmtCompact(hedgeSummary.totalNotional)} MXN notional</span>
-                      <span>{hedgeSummary.active} active</span>
-                      <span>{hedgeSummary.locked} locked</span>
-                    </div>
-                  ) : undefined}
-                  actions={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <CsvUploader label="Import CSV" onFile={handleHedgesCsv} schemaType="hedges" />
-                      <button onClick={openAddHedge} style={btnStyle(true)}>+ New Hedge Instrument</button>
-                    </div>
-                  }
-                >
-                  <HedgeTable hedges={hedges} onEdit={openEditHedge} onRemove={handleRemoveHedge} baseCcy={currencyCtx.baseCcy} />
-                </StepSection>
-              )}
-
-              {visibleStepKeys.includes('authorization') && (
-                <StepSection
-                  stepNumber="05" title="Execution Authorization" stepKey="authorization"
-                  activeStep={activeStep} onActivate={setActiveStep} locked={false}
-                  summary={
-                    <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
-                      <span style={{ color: integrityScore === 100 ? S.green : S.red }}>
-                        INTEGRITY: {integrityScore ?? '--'}/100
-                      </span>
-                      <span>{validation.errors.length} exceptions</span>
-                      <span>{validation.warnings.length} advisories</span>
-                    </div>
-                  }
-                >
-                  <ValidationSummary
-                    errors={validation.errors} warnings={validation.warnings}
-                    tradeCount={trades.length} hedgeCount={hedges.length}
-                    fixtureId={fixtureId}
                   />
                 </StepSection>
               )}
