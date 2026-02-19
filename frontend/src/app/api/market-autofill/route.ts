@@ -29,22 +29,52 @@ async function fetchSpot(from: string, to: string): Promise<number | null> {
 // Approximate forward points from interest rate differential using covered interest parity
 // fwd = spot × (1 + r_quote × T) / (1 + r_base × T) − spot
 // We approximate using AV FX_DAILY as a proxy for carry; here we use demo fallbacks for now
-function estimateForwardPoints(spot: number, currency: string): Record<string, number> {
-  // Carry assumptions (bps/month) by currency — well-known EM/DM differentials
-  const CARRY_BPS_MONTH: Record<string, number> = {
-    MXN: 48, BRL: 95, CLP: 18, COP: 32, TRY: 142, ZAR: 60,
-    INR: 22, IDR: 35, PHP: 15, THB: 12, KRW: 8, TWD: 5,
-    HUF: 25, PLN: 20, CZK: 18, RON: 22,
-    EUR: -5, GBP: -2, CHF: -8, SEK: 3, NOK: 5, DKK: -5,
-    JPY: -10, CAD: 2, AUD: 8, NZD: 10,
-    CNY: 5, HKD: 1, SGD: 3, RUB: 120,
-  };
 
+// Carry assumptions (bps/month) by currency — well-known EM/DM differentials
+const CARRY_BPS_MONTH: Record<string, number> = {
+  MXN: 48, BRL: 95, CLP: 18, COP: 32, TRY: 142, ZAR: 60,
+  INR: 22, IDR: 35, PHP: 15, THB: 12, KRW: 8, TWD: 5,
+  HUF: 25, PLN: 20, CZK: 18, RON: 22,
+  EUR: -5, GBP: -2, CHF: -8, SEK: 3, NOK: 5, DKK: -5,
+  JPY: -10, CAD: 2, AUD: 8, NZD: 10,
+  CNY: 5, HKD: 1, SGD: 3, RUB: 120,
+};
+
+function estimateForwardPoints(
+  spot: number,
+  currency: string,
+  requiredBuckets?: string[],
+): Record<string, number> {
   const now = new Date();
   const buckets: Record<string, number> = {};
   const bpsPerMonth = CARRY_BPS_MONTH[currency] ?? 20;
 
-  for (let m = 1; m <= 6; m++) {
+  // Determine how many months to generate:
+  // At minimum 6, but extend to cover ALL required trade buckets
+  let maxMonths = 6;
+
+  if (requiredBuckets && requiredBuckets.length > 0) {
+    const nowYear = now.getFullYear();
+    const nowMonth = now.getMonth(); // 0-indexed
+
+    for (const bucket of requiredBuckets) {
+      // Parse "YYYY-MM" format
+      const parts = bucket.split('-');
+      if (parts.length >= 2) {
+        const bYear = parseInt(parts[0], 10);
+        const bMonth = parseInt(parts[1], 10) - 1; // 0-indexed
+        if (!isNaN(bYear) && !isNaN(bMonth)) {
+          const monthsOut = (bYear - nowYear) * 12 + (bMonth - nowMonth);
+          if (monthsOut > maxMonths) maxMonths = monthsOut;
+        }
+      }
+    }
+
+    // Add 1-month buffer beyond the farthest bucket
+    maxMonths = Math.min(maxMonths + 1, 36); // Cap at 36 months (3 years)
+  }
+
+  for (let m = 1; m <= maxMonths; m++) {
     const d = new Date(now);
     d.setMonth(d.getMonth() + m);
     const bucket = d.toISOString().slice(0, 7); // YYYY-MM
@@ -57,8 +87,16 @@ function estimateForwardPoints(spot: number, currency: string): Record<string, n
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as { currencies?: string[] };
+    const body = await req.json() as { currencies?: string[]; trade_value_dates?: string[] };
     const currencies: string[] = body.currencies ?? ['MXN'];
+    const tradeValueDates: string[] = body.trade_value_dates ?? [];
+
+    // Derive required buckets (YYYY-MM) from trade value dates
+    const requiredBuckets = [...new Set(
+      tradeValueDates
+        .map(d => d.slice(0, 7))       // "2026-09-01" → "2026-09"
+        .filter(b => /^\d{4}-\d{2}$/.test(b)),
+    )];
 
     // Primary currency to price vs USD
     // For MXN and most EM, we want USD/CCY (units of CCY per 1 USD)
@@ -100,7 +138,7 @@ export async function POST(req: NextRequest) {
       spotSource = 'demo_fallback';
     }
 
-    const forwardPoints = estimateForwardPoints(spot, primaryCurrency);
+    const forwardPoints = estimateForwardPoints(spot, primaryCurrency, requiredBuckets);
     const asOf = new Date().toISOString().slice(0, 19) + 'Z';
 
     // Build currency pair label

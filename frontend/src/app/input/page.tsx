@@ -35,6 +35,15 @@ import CsvUploader from '../../components/input/CsvUploader';
 import GovernanceStrip from '../../components/input/GovernanceStrip';
 import SnapshotSummary from '../../components/input/SnapshotSummary';
 import Toast from '../../components/shared/Toast';
+import Modal from '../../components/shared/Modal';
+import BackendErrorBanner from '../../components/input/BackendErrorBanner';
+import {
+  AUTO_RESOLVED_CODES,
+  ERROR_KNOWLEDGE_BASE,
+  parseFieldIndex,
+  parseFieldTarget,
+} from '../../constants/errorKnowledgeBase';
+import type { ResolveActionType } from '../../constants/errorKnowledgeBase';
 
 const EMPTY_MARKET: MarketSnapshot = {
   as_of: new Date().toISOString().slice(0, 19) + 'Z',
@@ -413,6 +422,8 @@ export default function InputPage() {
   const [backendErrors, setBackendErrors]   = useState<ValidationErrorDetail[]>([]);
   const [backendErrorMsg, setBackendErrorMsg] = useState('');
 
+  const [showAutoResolveConfirm, setShowAutoResolveConfirm] = useState(false);
+
   // ── Modals ────────────────────────────────────────────────────────────────
   const [tradeModalOpen, setTradeModalOpen]       = useState(false);
   const [editingTradeIndex, setEditingTradeIndex] = useState<number | undefined>();
@@ -458,28 +469,24 @@ export default function InputPage() {
     return POLICY_PRESETS.find(p => p.id === activePresetId)?.name ?? null;
   }, [activePresetId]);
 
-  // Market-related error codes that are auto-resolved by handleCalculate's market autofill.
-  // These should NOT block the Generate button or show FAIL status.
-  const MARKET_ERROR_CODES = new Set(['V-011', 'V-012', 'V-014']);
-
   const validationState = useMemo<'PASS' | 'FAIL' | 'PENDING'>(() => {
     if (trades.length === 0) return 'PENDING';
     // If only market-related errors remain, show PASS (auto-fetched on generate)
     const nonMarket = validation.errors.filter(
-      e => e.severity === 'CRITICAL' && !MARKET_ERROR_CODES.has(e.code),
+      e => e.severity === 'CRITICAL' && !AUTO_RESOLVED_CODES.has(e.code),
     );
     return nonMarket.length === 0 ? 'PASS' : 'FAIL';
   }, [trades.length, validation.errors]);
 
   const nonMarketCriticals = validation.errors.filter(
-    e => e.severity === 'CRITICAL' && !MARKET_ERROR_CODES.has(e.code),
+    e => e.severity === 'CRITICAL' && !AUTO_RESOLVED_CODES.has(e.code),
   );
   const canCalculate = nonMarketCriticals.length === 0 && trades.length > 0 && !loading;
 
   const integrityScore = useMemo(() => {
     if (trades.length === 0) return undefined;
     // Exclude auto-resolved market errors from score penalty
-    const countable = validation.errors.filter(e => !MARKET_ERROR_CODES.has(e.code)).length;
+    const countable = validation.errors.filter(e => !AUTO_RESOLVED_CODES.has(e.code)).length;
     return Math.max(0, Math.min(100, Math.round(100 * (1 - countable / 21))));
   }, [trades.length, validation.errors]);
 
@@ -512,7 +519,7 @@ export default function InputPage() {
     const marketValid = market.spot_usdmxn > 0;
     const fwdValid    = Object.keys(market.forward_points_by_month).length > 0;
     // Exclude market-related errors that are auto-resolved on generate
-    const realErrors  = validation.errors.filter(e => !MARKET_ERROR_CODES.has(e.code));
+    const realErrors  = validation.errors.filter(e => !AUTO_RESOLVED_CODES.has(e.code));
     const noErrors    = realErrors.length === 0;
     return {
       exposure:      hasTrades ? 'complete' : 'pending',
@@ -554,7 +561,7 @@ export default function InputPage() {
 
   const validationGates = useMemo(() => {
     const nonMarketErrors = validation.errors.filter(
-      e => e.severity === 'CRITICAL' && !MARKET_ERROR_CODES.has(e.code),
+      e => e.severity === 'CRITICAL' && !AUTO_RESOLVED_CODES.has(e.code),
     );
     return [
       { label: 'Exposure data',     met: trades.length > 0,         message: trades.length === 0 ? 'No positions loaded' : undefined },
@@ -590,7 +597,10 @@ export default function InputPage() {
       const res = await fetch('/api/market-autofill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currencies: detectedCurrencies }),
+        body: JSON.stringify({
+          currencies: detectedCurrencies,
+          trade_value_dates: trades.map(t => t.value_date),
+        }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -613,7 +623,7 @@ export default function InputPage() {
     } finally {
       setAutofillLoading(false);
     }
-  }, [detectedCurrencies, clearFixture]);
+  }, [detectedCurrencies, trades, clearFixture]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSelectFixture = useCallback((selectedId: string | null) => {
@@ -707,17 +717,20 @@ export default function InputPage() {
   }, [clearFixture]);
   const handleCustomPolicy = useCallback(() => { clearFixture(); setActivePresetId('custom'); }, [clearFixture]);
 
-  const handleCalculate = async () => {
+  const handleCalculate = async (opts?: { forceMarketRefresh?: boolean }) => {
     setLoading(true); setBackendErrors([]); setBackendErrorMsg('');
     try {
-      // Auto-fetch market if not already populated
+      // Auto-fetch market if not already populated, or if forced (auto-resolve flow)
       let activeMarket = market;
-      if (activeMarket.spot_usdmxn === 0 && detectedCurrencies.length > 0) {
+      const needsFetch = opts?.forceMarketRefresh || activeMarket.spot_usdmxn === 0;
+      if (needsFetch && detectedCurrencies.length > 0) {
         try {
+          // Send trade value dates so the autofill generates forward points for ALL required buckets
+          const tradeValueDates = trades.map(t => t.value_date);
           const res = await fetch('/api/market-autofill', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ currencies: detectedCurrencies }),
+            body: JSON.stringify({ currencies: detectedCurrencies, trade_value_dates: tradeValueDates }),
           });
           if (res.ok) {
             const data = await res.json();
@@ -761,6 +774,79 @@ export default function InputPage() {
       setLoading(false);
     }
   };
+
+  /* ── Error Resolution Dispatch ──────────────────────────────────────────── */
+  const handleResolveError = useCallback((
+    error: ValidationErrorDetail,
+    actionOverride?: ResolveActionType,
+  ) => {
+    const knowledge = ERROR_KNOWLEDGE_BASE[error.code];
+    if (!knowledge?.resolveAction) return;
+
+    const actionType: ResolveActionType = actionOverride ?? knowledge.resolveAction.type;
+    const index = parseFieldIndex(error.field);
+    const target = parseFieldTarget(error.field);
+
+    switch (actionType) {
+      case 'auto_resolve':
+        setShowAutoResolveConfirm(true);
+        break;
+
+      case 'edit_trade':
+        setActiveStep('exposure');
+        if (index !== undefined && index < trades.length) {
+          setEditingTradeIndex(index);
+          setTradeModalOpen(true);
+        }
+        break;
+
+      case 'edit_hedge':
+        setActiveStep('exposure');
+        if (index !== undefined && index < hedges.length) {
+          setEditingHedgeIndex(index);
+          setHedgeModalOpen(true);
+        }
+        break;
+
+      case 'remove_duplicate':
+        if (target === 'trades' && index !== undefined && index < trades.length) {
+          const tradeId = trades[index]?.record_id;
+          if (window.confirm(`Remove duplicate trade "${tradeId}" at position ${index + 1}?`)) {
+            handleRemoveTrade(index);
+            setBackendErrors([]); setBackendErrorMsg('');
+          }
+        } else if (target === 'hedges' && index !== undefined && index < hedges.length) {
+          const hedgeId = hedges[index]?.hedge_id;
+          if (window.confirm(`Remove duplicate hedge "${hedgeId}" at position ${index + 1}?`)) {
+            handleRemoveHedge(index);
+            setBackendErrors([]); setBackendErrorMsg('');
+          }
+        }
+        break;
+
+      case 'navigate_policy':
+        setActiveStep('policy');
+        break;
+
+      case 'navigate_market':
+        handleMarketAutofill();
+        break;
+
+      case 'add_trades':
+        setActiveStep('exposure');
+        requestAnimationFrame(() => {
+          const addForm = document.querySelector('[data-section="add-exposure-line"]');
+          addForm?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        break;
+    }
+  }, [
+    trades, hedges, setActiveStep,
+    setEditingTradeIndex, setTradeModalOpen,
+    setEditingHedgeIndex, setHedgeModalOpen,
+    handleRemoveTrade, handleRemoveHedge,
+    handleMarketAutofill,
+  ]);
 
   const editingTrade = editingTradeIndex !== undefined ? trades[editingTradeIndex] : undefined;
   const editingHedge = editingHedgeIndex !== undefined ? hedges[editingHedgeIndex] : undefined;
@@ -846,30 +932,14 @@ export default function InputPage() {
           />
         ) : (
           <div>
-            {/* Backend error banner */}
+            {/* Backend error banner — rich explanations + resolutions */}
             {backendErrorMsg && (
-              <div style={{
-                marginTop: 12,
-                background: `color-mix(in srgb, ${S.red} 5%, transparent)`,
-                border: `1px solid ${S.red}`,
-                color: S.red,
-                padding: '10px 14px',
-                fontFamily: S.fontMono,
-                fontSize: '0.6875rem',
-              }}>
-                <p style={{ fontWeight: 600, marginBottom: backendErrors.length ? 8 : 0 }}>{backendErrorMsg}</p>
-                {backendErrors.length > 0 && (
-                  <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {backendErrors.map((e, i) => (
-                      <li key={i} style={{ display: 'flex', gap: 8 }}>
-                        <span style={{ background: `color-mix(in srgb, ${S.red} 12%, transparent)`, padding: '0 4px', fontSize: '0.5625rem' }}>{e.code}</span>
-                        <span style={{ opacity: 0.8 }}>{e.field}:</span>
-                        <span style={{ opacity: 0.7 }}>{e.message}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              <BackendErrorBanner
+                headerMessage={backendErrorMsg}
+                errors={backendErrors}
+                onDismiss={() => { setBackendErrorMsg(''); setBackendErrors([]); }}
+                onResolve={handleResolveError}
+              />
             )}
 
             {/* Progressive step sections */}
@@ -900,7 +970,9 @@ export default function InputPage() {
                   <TradeTable trades={trades} onEdit={openEditTrade} onRemove={handleRemoveTrade} baseCcy={currencyCtx.baseCcy} />
 
                   {/* ── Inline Trade Entry Form ───────────────────────────── */}
-                  <div style={{
+                  <div
+                    data-section="add-exposure-line"
+                    style={{
                     marginTop: 1,
                     borderTop: `1px solid ${S.border}`,
                     background: S.bgSub,
@@ -1194,7 +1266,7 @@ export default function InputPage() {
 
               {visibleStepKeys.includes('policy') && (
                 <StepSection
-                  stepNumber="03" title="Hedge Policy" stepKey="policy"
+                  stepNumber="02" title="Hedge Policy" stepKey="policy"
                   activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.policy}
                   badge={
                     activePresetName && activePresetId !== 'custom'
@@ -1273,6 +1345,84 @@ export default function InputPage() {
         open={hedgeModalOpen} onClose={() => setHedgeModalOpen(false)} onSave={handleSaveHedge}
         existingHedge={editingHedge} existingIds={hedgeIdsForModal} forwardBuckets={forwardBuckets}
       />
+
+      {/* Auto-Resolve Confirmation Modal */}
+      <Modal
+        open={showAutoResolveConfirm}
+        onClose={() => setShowAutoResolveConfirm(false)}
+        title="Auto-Resolve Market Data Errors"
+        subtitle="Fetch live market data and re-run the hedge calculation"
+        width="md"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setShowAutoResolveConfirm(false)}
+              style={{
+                fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
+                padding: '6px 16px', border: `1px solid ${S.border}`, color: S.textSecondary,
+                background: 'transparent', cursor: 'pointer',
+              }}
+            >
+              CANCEL
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowAutoResolveConfirm(false); handleCalculate({ forceMarketRefresh: true }); }}
+              style={{
+                fontFamily: S.fontMono, fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.06em',
+                padding: '6px 16px', border: `1px solid ${S.cyan}`, color: 'var(--bg-deep)',
+                background: S.cyan, cursor: 'pointer',
+              }}
+            >
+              CONFIRM & GENERATE
+            </button>
+          </>
+        }
+      >
+        <div style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textSecondary, lineHeight: 1.7 }}>
+          <p style={{ margin: '0 0 12px' }}>
+            The following market data errors will be automatically resolved by fetching live data from the market provider:
+          </p>
+
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14,
+            padding: '10px 12px',
+            background: 'color-mix(in srgb, var(--accent-cyan) 4%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--accent-cyan) 15%, transparent)',
+            borderRadius: 3,
+          }}>
+            {backendErrors.filter(e => AUTO_RESOLVED_CODES.has(e.code)).map((e, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  fontSize: '0.5625rem', fontWeight: 700, padding: '1px 5px',
+                  color: 'var(--accent-cyan)',
+                  background: 'color-mix(in srgb, var(--accent-cyan) 10%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--accent-cyan) 20%, transparent)',
+                  borderRadius: 2,
+                }}>{e.code}</span>
+                <span style={{ fontSize: '0.6875rem', color: S.textPrimary }}>{e.message}</span>
+              </div>
+            ))}
+            {backendErrors.filter(e => AUTO_RESOLVED_CODES.has(e.code)).length === 0 && (
+              <span style={{ fontSize: '0.6875rem', color: 'var(--accent-cyan)' }}>
+                V-011 (Spot Rate) · V-012 (Forward Points) · V-014 (Trade Bucket Forward Points)
+              </span>
+            )}
+          </div>
+
+          <p style={{ margin: '0 0 8px', fontWeight: 600, color: S.textPrimary }}>
+            What happens when you confirm:
+          </p>
+          <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <li>The engine fetches the current spot exchange rate for your currency pair</li>
+            <li>Forward points are retrieved for all trade settlement months</li>
+            <li>The hedge plan calculation is re-run with the fresh market data</li>
+            <li>If successful, you will be redirected to the results page</li>
+          </ol>
+        </div>
+      </Modal>
+
       <Toast message={toastMsg} visible={toastVisible} onClose={() => setToastVisible(false)} />
     </div>
   );
