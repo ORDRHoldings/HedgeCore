@@ -18,13 +18,13 @@ interface Props {
   generateLoading?: boolean;
 }
 
-/** Visible step numbers — the wizard is a 2-step flow (exposure + policy). */
+/** Visible step numbers — the wizard is a 2-step flow (exposure + policy) + Generate action. */
 const STEP_NUMBERS: Record<StepKey, string> = {
   exposure:      '01',
   hedges:        '01',   // hidden step – alias to 01
   market:        '01',   // hidden step – alias to 01
-  policy:        '03',   // displayed as 03 (after the Generate action at 02)
-  authorization: '03',   // hidden step – alias to 03
+  policy:        '02',   // displayed as 02 (before the Generate action at 03)
+  authorization: '02',   // hidden step – alias to 02
 };
 
 const statusColor: Record<string, string> = {
@@ -85,7 +85,43 @@ export default function StepProgress({
                 }}>—</span>
               )}
 
-              {/* Inject Generate node BEFORE the policy step */}
+              {/* Regular step button */}
+              <button
+                type="button"
+                onClick={() => !isLocked && onActivate(step.key)}
+                disabled={isLocked}
+                style={{
+                  fontFamily: mono,
+                  fontSize: '0.5625rem',
+                  letterSpacing: '0.04em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '2px 6px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: isActive ? '2px solid var(--text-primary)' : '2px solid transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  cursor: isLocked ? 'not-allowed' : 'pointer',
+                  opacity: isLocked ? 0.35 : 1,
+                  whiteSpace: 'nowrap',
+                  height: 38,
+                  transition: 'color 0.1s',
+                }}
+              >
+                {step.status === 'complete' ? (
+                  <span style={{ color: statusColor.complete, fontSize: '0.625rem' }}>✓</span>
+                ) : (
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: color, opacity, flexShrink: 0,
+                    display: 'inline-block',
+                  }} />
+                )}
+                {num} {step.label}
+              </button>
+
+              {/* Inject Generate node AFTER the policy step (last item in rail) */}
               {step.key === 'policy' && onGenerate !== undefined && (
                 <>
                   <span style={{
@@ -133,56 +169,11 @@ export default function StepProgress({
                         COMPUTING…
                       </>
                     ) : (
-                      '02 ▶ GENERATE HEDGE PLAN'
+                      '03 ▶ GENERATE HEDGE PLAN'
                     )}
                   </button>
-
-                  <span style={{
-                    padding: '0 8px',
-                    color: 'var(--text-secondary)',
-                    opacity: 0.2,
-                    fontFamily: mono,
-                    fontSize: '0.625rem',
-                    userSelect: 'none',
-                  }}>—</span>
                 </>
               )}
-
-              {/* Regular step button */}
-              <button
-                type="button"
-                onClick={() => !isLocked && onActivate(step.key)}
-                disabled={isLocked}
-                style={{
-                  fontFamily: mono,
-                  fontSize: '0.5625rem',
-                  letterSpacing: '0.04em',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '2px 6px',
-                  background: 'transparent',
-                  border: 'none',
-                  borderBottom: isActive ? '2px solid var(--text-primary)' : '2px solid transparent',
-                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  cursor: isLocked ? 'not-allowed' : 'pointer',
-                  opacity: isLocked ? 0.35 : 1,
-                  whiteSpace: 'nowrap',
-                  height: 38,
-                  transition: 'color 0.1s',
-                }}
-              >
-                {step.status === 'complete' ? (
-                  <span style={{ color: statusColor.complete, fontSize: '0.625rem' }}>✓</span>
-                ) : (
-                  <span style={{
-                    width: 6, height: 6, borderRadius: '50%',
-                    background: color, opacity, flexShrink: 0,
-                    display: 'inline-block',
-                  }} />
-                )}
-                {num} {step.label}
-              </button>
             </div>
           );
         })}
