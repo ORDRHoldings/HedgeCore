@@ -458,17 +458,30 @@ export default function InputPage() {
     return POLICY_PRESETS.find(p => p.id === activePresetId)?.name ?? null;
   }, [activePresetId]);
 
+  // Market-related error codes that are auto-resolved by handleCalculate's market autofill.
+  // These should NOT block the Generate button or show FAIL status.
+  const MARKET_ERROR_CODES = new Set(['V-011', 'V-012', 'V-014']);
+
   const validationState = useMemo<'PASS' | 'FAIL' | 'PENDING'>(() => {
     if (trades.length === 0) return 'PENDING';
-    return validation.canCalculate ? 'PASS' : 'FAIL';
-  }, [trades.length, validation.canCalculate]);
+    // If only market-related errors remain, show PASS (auto-fetched on generate)
+    const nonMarket = validation.errors.filter(
+      e => e.severity === 'CRITICAL' && !MARKET_ERROR_CODES.has(e.code),
+    );
+    return nonMarket.length === 0 ? 'PASS' : 'FAIL';
+  }, [trades.length, validation.errors]);
 
-  const canCalculate = !validation.errors.some(e => e.severity === 'CRITICAL') && trades.length > 0 && !loading;
+  const nonMarketCriticals = validation.errors.filter(
+    e => e.severity === 'CRITICAL' && !MARKET_ERROR_CODES.has(e.code),
+  );
+  const canCalculate = nonMarketCriticals.length === 0 && trades.length > 0 && !loading;
 
   const integrityScore = useMemo(() => {
     if (trades.length === 0) return undefined;
-    return Math.max(0, Math.min(100, Math.round(100 * (1 - validation.errors.length / 21))));
-  }, [trades.length, validation.errors.length]);
+    // Exclude auto-resolved market errors from score penalty
+    const countable = validation.errors.filter(e => !MARKET_ERROR_CODES.has(e.code)).length;
+    return Math.max(0, Math.min(100, Math.round(100 * (1 - countable / 21))));
+  }, [trades.length, validation.errors]);
 
   const stepUnlocked = useMemo(() => {
     const hasTrades = trades.length > 0;
@@ -498,7 +511,9 @@ export default function InputPage() {
     const hasTrades   = trades.length > 0;
     const marketValid = market.spot_usdmxn > 0;
     const fwdValid    = Object.keys(market.forward_points_by_month).length > 0;
-    const noErrors    = validation.errors.length === 0;
+    // Exclude market-related errors that are auto-resolved on generate
+    const realErrors  = validation.errors.filter(e => !MARKET_ERROR_CODES.has(e.code));
+    const noErrors    = realErrors.length === 0;
     return {
       exposure:      hasTrades ? 'complete' : 'pending',
       hedges:        hedges.length > 0 ? 'complete' : (hasTrades ? 'partial' : 'pending'),
@@ -506,7 +521,7 @@ export default function InputPage() {
       policy:        activePresetId ? 'complete' : 'partial',
       authorization: (hasTrades && noErrors) ? 'complete' : (hasTrades ? 'error' : 'pending'),
     } as Record<StepKey, 'complete' | 'partial' | 'error' | 'pending'>;
-  }, [trades.length, hedges.length, market.spot_usdmxn, market.forward_points_by_month, validation.errors.length, activePresetId]);
+  }, [trades.length, hedges.length, market.spot_usdmxn, market.forward_points_by_month, validation.errors, activePresetId]);
 
   const tradeSummary = useMemo(() => ({
     totalMxn:  trades.reduce((s, t) => s + t.amount, 0),
@@ -537,14 +552,19 @@ export default function InputPage() {
     [fixtureId],
   );
 
-  const validationGates = useMemo(() => [
-    { label: 'Exposure data',     met: trades.length > 0,         message: trades.length === 0 ? 'No positions loaded' : undefined },
-    { label: 'Market snapshot',   met: true,                      message: market.spot_usdmxn > 0 ? undefined : 'Auto-fetched on generate' },
-    { label: 'No critical errors',met: !validation.errors.some(e => e.severity === 'CRITICAL'),
-      message: validation.errors.some(e => e.severity === 'CRITICAL')
-        ? `${validation.errors.filter(e => e.severity === 'CRITICAL').length} critical`
-        : undefined },
-  ], [trades.length, market.spot_usdmxn, validation.errors]);
+  const validationGates = useMemo(() => {
+    const nonMarketErrors = validation.errors.filter(
+      e => e.severity === 'CRITICAL' && !MARKET_ERROR_CODES.has(e.code),
+    );
+    return [
+      { label: 'Exposure data',     met: trades.length > 0,         message: trades.length === 0 ? 'No positions loaded' : undefined },
+      { label: 'Market snapshot',   met: true,                      message: market.spot_usdmxn > 0 ? undefined : 'Auto-fetched on generate' },
+      { label: 'No critical errors',met: nonMarketErrors.length === 0,
+        message: nonMarketErrors.length > 0
+          ? `${nonMarketErrors.length} critical`
+          : undefined },
+    ];
+  }, [trades.length, market.spot_usdmxn, validation.errors]);
 
   // ── Detected currencies from trades ───────────────────────────────────────
   const detectedCurrencies = useMemo(
@@ -769,7 +789,7 @@ export default function InputPage() {
       <GovernanceStrip
         tradeCount={trades.length} hedgeCount={hedges.length} policyName={activePresetName}
         snapshotMode={marketMode} snapshotTimestamp={market.as_of} engineVersion="1.0.0"
-        validationState={validationState} errorCount={validation.errors.length}
+        validationState={validationState} errorCount={nonMarketCriticals.length}
         warningCount={validation.warnings.length} fixtureId={fixtureId}
         fixtureLabel={fixtureLabel}
         integrityScore={integrityScore}
@@ -1174,7 +1194,7 @@ export default function InputPage() {
 
               {visibleStepKeys.includes('policy') && (
                 <StepSection
-                  stepNumber="02" title="Hedge Policy" stepKey="policy"
+                  stepNumber="03" title="Hedge Policy" stepKey="policy"
                   activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.policy}
                   badge={
                     activePresetName && activePresetId !== 'custom'

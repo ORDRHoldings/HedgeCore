@@ -18,12 +18,13 @@ interface Props {
   generateLoading?: boolean;
 }
 
+/** Visible step numbers — the wizard is a 2-step flow (exposure + policy). */
 const STEP_NUMBERS: Record<StepKey, string> = {
   exposure:      '01',
-  hedges:        '02',
-  market:        '03',
-  policy:        '04',
-  authorization: '05',
+  hedges:        '01',   // hidden step – alias to 01
+  market:        '01',   // hidden step – alias to 01
+  policy:        '03',   // displayed as 03 (after the Generate action at 02)
+  authorization: '03',   // hidden step – alias to 03
 };
 
 const statusColor: Record<string, string> = {
@@ -132,7 +133,7 @@ export default function StepProgress({
                         COMPUTING…
                       </>
                     ) : (
-                      '03 ▶ GENERATE HEDGE PLAN'
+                      '02 ▶ GENERATE HEDGE PLAN'
                     )}
                   </button>
 

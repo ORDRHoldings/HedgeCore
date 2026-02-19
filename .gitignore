@@ -39,3 +39,4 @@ htmlcov/
 
 # Docker overrides
 docker-compose.override.yml
+.vercel
