@@ -242,11 +242,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         formData.append("username", username);
         formData.append("password", password);
 
-        const res = await fetch(`${API_BASE}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: formData.toString(),
-        });
+        // 30-second timeout — Render free tier cold-starts can take ~20 s
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
+        let res: Response;
+        try {
+          res = await fetch(`${API_BASE}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData.toString(),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -270,6 +280,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return { success: true };
       } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return {
+            success: false,
+            error: "Server is waking up — please try again in a moment.",
+          };
+        }
         const message = err instanceof Error ? err.message : "Network error";
         return { success: false, error: message };
       }

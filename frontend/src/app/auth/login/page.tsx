@@ -145,9 +145,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(false);
+  const [warmingUp, setWarmingUp] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
   const usernameRef = useRef<HTMLInputElement>(null);
+  const warmupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setFadeIn(true);
@@ -158,8 +160,17 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setWarmingUp(false);
+
+    // After 8 s of waiting, show "server waking up" notice
+    warmupTimerRef.current = setTimeout(() => setWarmingUp(true), 8_000);
+
     const result = await login(username, password);
+
+    if (warmupTimerRef.current) clearTimeout(warmupTimerRef.current);
+    setWarmingUp(false);
     setLoading(false);
+
     if (result.success) {
       router.push("/dashboard");
     } else {
@@ -448,9 +459,10 @@ export default function LoginPage() {
                       borderTop: `2px solid ${T.textSecondary}`,
                       borderRadius: "50%",
                       animation: "htSpin 800ms linear infinite",
+                      flexShrink: 0,
                     }}
                   />
-                  Authenticating...
+                  {warmingUp ? "Waking up server..." : "Authenticating..."}
                 </>
               ) : (
                 <>
@@ -460,6 +472,26 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {/* Warm-up notice — shown after 8 s of waiting */}
+          {warmingUp && (
+            <div
+              style={{
+                padding: "10px 24px",
+                borderTop: `1px solid ${T.border}`,
+                fontFamily: T.fontMono,
+                fontSize: "0.5625rem",
+                color: T.textSecondary,
+                lineHeight: 1.7,
+                background: `rgba(59,130,246,0.04)`,
+              }}
+            >
+              <span style={{ color: T.accent, fontWeight: 600 }}>SERVER COLD START</span>
+              <br />
+              The backend is waking up from sleep (free tier).
+              This takes up to 30 seconds — please wait.
+            </div>
+          )}
 
           {/* Demo hint bar — only shown in demo mode */}
           {DEMO_MODE && (
