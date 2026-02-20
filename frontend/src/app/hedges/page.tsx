@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Nav from "../../components/Nav";
+import AppTopBar from "../../components/layout/AppTopBar";
 import HedgeForm from "../../components/HedgeForm";
 import HedgeTable from "../../components/HedgeTable";
 import Spinner from "../../components/ui/Spinner";
@@ -36,6 +37,7 @@ export default function HedgesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <AppTopBar currentModule="Hedges" currentPath="/hedges" />
       <Nav />
       <main className="mx-auto max-w-4xl px-4 py-8">
         <h1 className="mb-6 text-2xl font-bold text-gray-900">Hedge Calculator</h1>

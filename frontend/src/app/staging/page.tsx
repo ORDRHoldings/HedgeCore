@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import type { RootState, AppDispatch } from "../../lib/store";
+import AppTopBar from "../../components/layout/AppTopBar";
 import { listStagingThunk } from "../../lib/store/slices/pipelineSlice";
 import DenseTable from "../../components/ui/DenseTable";
 import type { Column } from "../../components/ui/DenseTable";
@@ -93,7 +94,9 @@ export default function StagingListPage() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto p-4 space-y-4">
+    <>
+      <AppTopBar currentModule="Staging" currentPath="/staging" />
+      <div className="max-w-6xl mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-sm font-semibold text-[var(--text-primary)]">
           Staging Queue
@@ -124,5 +127,6 @@ export default function StagingListPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

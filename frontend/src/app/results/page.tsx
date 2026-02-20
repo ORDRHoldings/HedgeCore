@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useHedge } from '../../lib/hedgeContext';
+import AppTopBar from '../../components/layout/AppTopBar';
 import { deriveCurrencyContext } from '../../utils/currencyContext';
 import ExportBar from '../../components/export/ExportBar';
 import TabBar from '../../components/tabs/TabBar';
@@ -102,6 +103,8 @@ export default function ResultsPage() {
 
   return (
     <div className="space-y-0">
+      {/* ── App top bar ── */}
+      <AppTopBar currentModule="CurrencyFX" currentPath="/currency-fx" />
       {/* ── TIER 1: Run Identity Header ─────────────────────────────────────── */}
       <div className="bg-[var(--bg-panel)] border-b border-[var(--border-rim)] px-6 py-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
