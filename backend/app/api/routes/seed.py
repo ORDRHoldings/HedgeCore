@@ -240,12 +240,12 @@ async def seed_company(
             "CREATE INDEX IF NOT EXISTS ix_permissions_module_col ON permissions(module)",
         ]
 
-        async with async_engine.begin() as conn:
-            for stmt in migration_sql:
-                try:
+        for stmt in migration_sql:
+            try:
+                async with async_engine.begin() as conn:
                     await conn.execute(text(stmt))
-                except Exception as e:
-                    logger.warning(f"Migration step skipped: {e}")
+            except Exception as e:
+                logger.warning(f"Migration step skipped: {e}")
         logger.info("Schema migration complete")
 
         # ── Permissions ──

@@ -148,28 +148,57 @@ async def _ensure_tables():
         if f.name != "__init__.py":
             importlib.import_module(f"app.models.{f.stem}")
 
-    # Drop orphan indexes that may block create_all
-    async with async_engine.begin() as conn:
-        for idx in ["ix_permissions_module"]:
-            try:
-                await conn.execute(text(f"DROP INDEX IF EXISTS {idx}"))
-            except Exception:
-                pass
-
-    # Create tables (checkfirst=True is default — won't recreate existing)
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    # Add missing columns to already-existing tables
-    alter_stmts = [
+    # Use raw SQL for migration — each statement in its own transaction
+    raw_ddl = [
+        "DROP INDEX IF EXISTS ix_permissions_module",
+        """CREATE TABLE IF NOT EXISTS companies (
+            id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL,
+            slug VARCHAR(64) UNIQUE NOT NULL, domain VARCHAR(255),
+            logo_url VARCHAR(512), settings JSONB,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        """CREATE TABLE IF NOT EXISTS branches (
+            id UUID PRIMARY KEY,
+            company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL, code VARCHAR(32) NOT NULL,
+            region VARCHAR(128), timezone VARCHAR(64) DEFAULT 'UTC',
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(company_id, code))""",
+        """CREATE TABLE IF NOT EXISTS departments (
+            id UUID PRIMARY KEY,
+            branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL, code VARCHAR(32) NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(branch_id, code))""",
+        """CREATE TABLE IF NOT EXISTS permissions (
+            id SERIAL PRIMARY KEY,
+            codename VARCHAR(128) UNIQUE NOT NULL,
+            module VARCHAR(64) NOT NULL, action VARCHAR(64) NOT NULL,
+            description VARCHAR(255) NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        """CREATE TABLE IF NOT EXISTS role_permissions (
+            id SERIAL PRIMARY KEY,
+            role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+            permission_id INTEGER NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(role_id, permission_id))""",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS job_title VARCHAR(128)",
         "ALTER TABLE roles ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE",
-        "ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER DEFAULT 10 NOT NULL",
-        "ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT FALSE NOT NULL",
+        "ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER NOT NULL DEFAULT 10",
+        "ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN NOT NULL DEFAULT FALSE",
     ]
+    for stmt in raw_ddl:
+        try:
+            async with async_engine.begin() as conn:
+                await conn.execute(text(stmt))
+        except Exception as e:
+            logger.debug(f"DDL skipped: {e}")
+
+    alter_stmts: list = []  # kept for compatibility
     async with async_engine.begin() as conn:
         for stmt in alter_stmts:
             try:
