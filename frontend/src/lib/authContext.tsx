@@ -171,20 +171,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Initialize session on mount ──
   useEffect(() => {
     const init = async () => {
-      // Demo mode: instant auth
-      if (DEMO_MODE) {
-        const demoToken = Cookies.get(ACCESS_TOKEN_KEY);
-        if (demoToken?.startsWith("demo_token_")) {
-          setToken(demoToken);
-          setUser(DEMO_USER);
-        }
+      // Demo bypass — always active: if a demo_token_* cookie exists, restore
+      // the demo session instantly without hitting the backend (works regardless
+      // of NEXT_PUBLIC_DEMO_MODE flag so page refresh keeps the user logged in).
+      const storedToken = Cookies.get(ACCESS_TOKEN_KEY);
+      if (storedToken?.startsWith("demo_token_")) {
+        setToken(storedToken);
+        setUser(DEMO_USER);
         setIsLoading(false);
         return;
       }
 
       // Real auth: try stored access token
-      const storedToken = Cookies.get(ACCESS_TOKEN_KEY);
-      if (storedToken && !storedToken.startsWith("demo_token_")) {
+      if (storedToken) {
         const me = await fetchMe(storedToken);
         if (me) {
           setToken(storedToken);

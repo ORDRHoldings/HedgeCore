@@ -53,6 +53,24 @@ function hedgeDeltaDirection(pct: number): "positive" | "negative" | "neutral" {
   return "neutral";
 }
 
+// Demo fallback — shown instantly when logged in as demo/demo
+const DEMO_SUMMARY: DashboardSummary = {
+  branch_name:     "Headquarters",
+  company_name:    "Demo Corp",
+  role:            "risk_analyst",
+  hierarchy_level: 10,
+  is_company_wide: false,
+  branch_currency: "USD",
+  kpis: {
+    active_proposals:   5,
+    pending_approvals:  2,
+    total_exposure_usd: 42_500_000,
+    hedge_coverage_pct: 74,
+    open_alerts:        3,
+    team_size:          8,
+  },
+};
+
 export default function KpiSummaryWidget({
   token,
   user: _user,
@@ -63,6 +81,13 @@ export default function KpiSummaryWidget({
   const [error,   setError]   = useState<string | null>(null);
 
   useEffect(() => {
+    // Demo bypass — skip API call, show hardcoded demo data instantly
+    if (token.startsWith("demo_token_")) {
+      setData(DEMO_SUMMARY);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     const fetchSummary = async () => {
       setLoading(true);
