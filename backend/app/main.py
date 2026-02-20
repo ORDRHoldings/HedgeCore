@@ -138,6 +138,7 @@ async def _seed_permissions():
 
 async def _ensure_tables():
     """Create any missing tables (non-destructive — skips existing)."""
+    from sqlalchemy import text
     from app.core.db import async_engine, Base
     # Import all model modules to register with Base.metadata
     import importlib
@@ -147,9 +148,36 @@ async def _ensure_tables():
         if f.name != "__init__.py":
             importlib.import_module(f"app.models.{f.stem}")
 
+    # Drop orphan indexes that may block create_all
+    async with async_engine.begin() as conn:
+        for idx in ["ix_permissions_module"]:
+            try:
+                await conn.execute(text(f"DROP INDEX IF EXISTS {idx}"))
+            except Exception:
+                pass
+
+    # Create tables (checkfirst=True is default — won't recreate existing)
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    logger.info("✅ Database tables ensured (create_all)")
+
+    # Add missing columns to already-existing tables
+    alter_stmts = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS job_title VARCHAR(128)",
+        "ALTER TABLE roles ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE",
+        "ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER DEFAULT 10 NOT NULL",
+        "ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT FALSE NOT NULL",
+    ]
+    async with async_engine.begin() as conn:
+        for stmt in alter_stmts:
+            try:
+                await conn.execute(text(stmt))
+            except Exception as e:
+                logger.debug(f"ALTER skipped: {e}")
+
+    logger.info("✅ Database tables ensured (create_all + ALTER)")
 
 
 @asynccontextmanager
