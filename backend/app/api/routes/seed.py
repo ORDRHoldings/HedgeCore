@@ -171,42 +171,77 @@ async def seed_company(
     results = {"permissions": 0, "roles": 0, "branches": 0, "departments": 0, "users": 0}
 
     try:
-        # ── Migrate: create new tables + add missing columns to existing ──
-        from app.core.db import async_engine, Base
-        import importlib
-        from pathlib import Path
-        models_dir = Path(__file__).resolve().parent.parent.parent / "models"
-        for f in models_dir.glob("*.py"):
-            if f.name != "__init__.py":
-                importlib.import_module(f"app.models.{f.stem}")
-
-        # Create brand new tables (companies, branches, departments, permissions, role_permissions)
-        try:
-            async with async_engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-        except Exception as create_err:
-            logger.warning(f"create_all partial: {create_err}")
-
-        # Fix orphan indexes from partial create_all runs, then add missing columns
-        alter_statements = [
-            # Drop orphan duplicate index if it exists
+        # ── Full schema migration via raw SQL (handles existing + new tables) ──
+        from app.core.db import async_engine
+        migration_sql = [
+            # Drop orphan indexes first
             "DROP INDEX IF EXISTS ix_permissions_module",
-            # Users table — new org columns
+
+            # Create new tables if they don't exist
+            """CREATE TABLE IF NOT EXISTS companies (
+                id UUID PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                slug VARCHAR(64) UNIQUE NOT NULL,
+                domain VARCHAR(255),
+                logo_url VARCHAR(512),
+                settings JSONB,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS branches (
+                id UUID PRIMARY KEY,
+                company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+                name VARCHAR(255) NOT NULL,
+                code VARCHAR(32) NOT NULL,
+                region VARCHAR(128),
+                timezone VARCHAR(64) DEFAULT 'UTC',
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE(company_id, code)
+            )""",
+            """CREATE TABLE IF NOT EXISTS departments (
+                id UUID PRIMARY KEY,
+                branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+                name VARCHAR(255) NOT NULL,
+                code VARCHAR(32) NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE(branch_id, code)
+            )""",
+            """CREATE TABLE IF NOT EXISTS permissions (
+                id SERIAL PRIMARY KEY,
+                codename VARCHAR(128) UNIQUE NOT NULL,
+                module VARCHAR(64) NOT NULL,
+                action VARCHAR(64) NOT NULL,
+                description VARCHAR(255) NOT NULL DEFAULT '',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS role_permissions (
+                id SERIAL PRIMARY KEY,
+                role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+                permission_id INTEGER NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE(role_id, permission_id)
+            )""",
+
+            # Add missing columns to existing tables
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS job_title VARCHAR(128)",
-            # Roles table — new hierarchy columns
             "ALTER TABLE roles ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE",
-            "ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER DEFAULT 10 NOT NULL",
-            "ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT FALSE NOT NULL",
-            # Create indexes on new columns
+            "ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER NOT NULL DEFAULT 10",
+            "ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN NOT NULL DEFAULT FALSE",
+
+            # Indexes
             "CREATE INDEX IF NOT EXISTS ix_users_company_id ON users(company_id)",
             "CREATE INDEX IF NOT EXISTS ix_users_branch_id ON users(branch_id)",
             "CREATE INDEX IF NOT EXISTS ix_roles_company_id ON roles(company_id)",
+            "CREATE INDEX IF NOT EXISTS ix_permissions_codename ON permissions(codename)",
+            "CREATE INDEX IF NOT EXISTS ix_permissions_module_col ON permissions(module)",
         ]
+
         async with async_engine.begin() as conn:
-            for stmt in alter_statements:
+            for stmt in migration_sql:
                 try:
                     await conn.execute(text(stmt))
                 except Exception as e:
