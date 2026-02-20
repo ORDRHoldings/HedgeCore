@@ -29,6 +29,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.rbac import Role, UserRole
+from app.models.permission import Permission, RolePermission
 from app.models.user import User
 from app.schemas.rbac import RoleCreate, RoleUpdate
 
@@ -168,7 +169,7 @@ async def remove_role_from_user(session: AsyncSession, user_id: int, role_name: 
         return False
 
 
-async def get_roles_by_user(session: AsyncSession, user_id: int) -> List[str]:
+async def get_roles_by_user(session: AsyncSession, user_id) -> List[str]:
     """Return a list of role names assigned to a user."""
     stmt = (
         select(Role.name)
@@ -180,3 +181,56 @@ async def get_roles_by_user(session: AsyncSession, user_id: int) -> List[str]:
     roles = [r for (r,) in result.all()]
     logger.debug(f"User {user_id} roles: {roles}")
     return roles
+
+
+# ---------------------------------------------------------------------
+# Permission Queries
+# ---------------------------------------------------------------------
+async def get_permissions_by_user(session: AsyncSession, user_id) -> List[str]:
+    """
+    Return all permission codenames granted to a user via their roles.
+    Joins: UserRole → Role → RolePermission → Permission
+    """
+    stmt = (
+        select(Permission.codename)
+        .join(RolePermission, Permission.id == RolePermission.permission_id)
+        .join(Role, Role.id == RolePermission.role_id)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user_id)
+        .distinct()
+        .order_by(Permission.codename)
+    )
+    result = await session.execute(stmt)
+    perms = [r for (r,) in result.all()]
+    logger.debug(f"User {user_id} permissions: {perms}")
+    return perms
+
+
+async def get_user_hierarchy_level(session: AsyncSession, user_id) -> Optional[int]:
+    """
+    Return the lowest (most privileged) hierarchy_level across all roles
+    assigned to a user. Returns None if user has no roles.
+    """
+    from sqlalchemy import func as sqlfunc
+
+    stmt = (
+        select(sqlfunc.min(Role.hierarchy_level))
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user_id)
+    )
+    result = await session.execute(stmt)
+    level = result.scalar_one_or_none()
+    logger.debug(f"User {user_id} hierarchy_level: {level}")
+    return level
+
+
+async def get_permissions_by_role(session: AsyncSession, role_id: int) -> List[str]:
+    """Return all permission codenames for a given role."""
+    stmt = (
+        select(Permission.codename)
+        .join(RolePermission, Permission.id == RolePermission.permission_id)
+        .where(RolePermission.role_id == role_id)
+        .order_by(Permission.codename)
+    )
+    result = await session.execute(stmt)
+    return [r for (r,) in result.all()]

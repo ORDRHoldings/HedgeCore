@@ -45,24 +45,95 @@ logger.info("✅ HedgeCalc API booting")
 # Lifespan (ALL MUTATION GOES HERE)
 # -------------------------------------------------------------------
 async def _seed_roles():
-    """Seed default roles if they don't exist."""
+    """Seed default roles with hierarchy levels if they don't exist."""
     from sqlalchemy import select
     from app.models.rbac import Role
 
     default_roles = [
-        ("admin", "Full system access"),
-        ("supervisor", "Approve/reject staged artifacts"),
-        ("risk_analyst", "Create proposals and run sandbox calculations"),
+        # (name, description, hierarchy_level)
+        ("admin", "Full system access", 0),
+        ("supervisor", "Approve/reject staged artifacts", 5),
+        ("risk_analyst", "Create proposals and run sandbox calculations", 10),
     ]
 
     async with async_session_maker() as session:
-        for name, description in default_roles:
+        for name, description, level in default_roles:
             result = await session.execute(select(Role).where(Role.name == name))
-            if not result.scalar_one_or_none():
-                session.add(Role(name=name, description=description))
+            existing = result.scalar_one_or_none()
+            if not existing:
+                session.add(Role(
+                    name=name,
+                    description=description,
+                    hierarchy_level=level,
+                    is_system=True,
+                ))
+            else:
+                # Update existing roles with new fields if missing
+                if existing.hierarchy_level != level:
+                    existing.hierarchy_level = level
+                if not existing.is_system:
+                    existing.is_system = True
         await session.commit()
 
     logger.info("✅ Default roles seeded")
+
+
+async def _seed_permissions():
+    """Seed all permission codenames and default role→permission mappings."""
+    from sqlalchemy import select
+    from app.models.rbac import Role
+    from app.models.permission import (
+        Permission, RolePermission,
+        SEED_PERMISSIONS, DEFAULT_ROLE_PERMISSIONS,
+    )
+
+    async with async_session_maker() as session:
+        # 1. Seed permissions
+        for codename, module, action, description in SEED_PERMISSIONS:
+            result = await session.execute(
+                select(Permission).where(Permission.codename == codename)
+            )
+            if not result.scalar_one_or_none():
+                session.add(Permission(
+                    codename=codename,
+                    module=module,
+                    action=action,
+                    description=description,
+                ))
+        await session.flush()
+
+        # 2. Seed role → permission mappings
+        for role_name, perm_codenames in DEFAULT_ROLE_PERMISSIONS.items():
+            role_result = await session.execute(
+                select(Role).where(Role.name == role_name)
+            )
+            role = role_result.scalar_one_or_none()
+            if not role:
+                continue
+
+            for codename in perm_codenames:
+                perm_result = await session.execute(
+                    select(Permission).where(Permission.codename == codename)
+                )
+                perm = perm_result.scalar_one_or_none()
+                if not perm:
+                    continue
+
+                existing = await session.execute(
+                    select(RolePermission).where(
+                        RolePermission.role_id == role.id,
+                        RolePermission.permission_id == perm.id,
+                    )
+                )
+                if not existing.scalar_one_or_none():
+                    session.add(RolePermission(
+                        role_id=role.id,
+                        permission_id=perm.id,
+                    ))
+
+        await session.commit()
+
+    logger.info("✅ Permissions and role-permission mappings seeded")
 
 
 @asynccontextmanager
@@ -74,6 +145,11 @@ async def lifespan(app: FastAPI):
         await _seed_roles()
     except Exception as e:
         logger.warning(f"⚠️ _seed_roles skipped (DB may be uninitialised): {e}")
+
+    try:
+        await _seed_permissions()
+    except Exception as e:
+        logger.warning(f"⚠️ _seed_permissions skipped (DB may be uninitialised): {e}")
 
     try:
         yield

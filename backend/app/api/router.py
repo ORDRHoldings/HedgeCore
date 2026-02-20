@@ -22,6 +22,8 @@ from app.api.routes.v1_calculate import router as v1_calculate_router
 from app.api.routes.v1_upload import router as v1_upload_router
 from app.api.routes.v1_export import router as v1_export_router
 from app.api.routes.v1_pipeline import router as v1_pipeline_router
+from app.api.routes.organization import router as organization_router
+from app.api.routes.admin_roles import router as admin_roles_router
 
 router = APIRouter()
 
@@ -66,5 +68,11 @@ router.include_router(v1_export_router)
 
 # V1 Pipeline (Tri-State governance: SANDBOX → STAGING → LEDGER)
 router.include_router(v1_pipeline_router)
+
+# Organization hierarchy (owns /v1/organization)
+router.include_router(organization_router)
+
+# Role & Permission management (owns /v1/admin/roles)
+router.include_router(admin_roles_router)
 
 __all__ = ["router"]

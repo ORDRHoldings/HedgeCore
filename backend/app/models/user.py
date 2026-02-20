@@ -19,6 +19,7 @@ from sqlalchemy import (
     Boolean,
     Integer,
     DateTime,
+    ForeignKey,
     Index,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -66,6 +67,39 @@ class User(Base):
     )
 
     # ----------------------------------------------------------
+    # Organization Hierarchy
+    # ----------------------------------------------------------
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        doc="Company this user belongs to.",
+    )
+
+    branch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("branches.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        doc="Branch assignment within company.",
+    )
+
+    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("departments.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        doc="Optional department within branch.",
+    )
+
+    job_title: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        nullable=True,
+        doc="User's job title (e.g. 'FX Risk Analyst').",
+    )
+
+    # ----------------------------------------------------------
     # Status Flags
     # ----------------------------------------------------------
     is_active: Mapped[bool] = mapped_column(
@@ -106,6 +140,10 @@ class User(Base):
         cascade="all, delete-orphan",
         doc="All refresh tokens associated with this user.",
     )
+
+    company = relationship("Company", foreign_keys=[company_id], lazy="selectin")
+    branch = relationship("Branch", foreign_keys=[branch_id], lazy="selectin")
+    department = relationship("Department", foreign_keys=[department_id], lazy="selectin")
 
     # ----------------------------------------------------------
     # Indexes / Table Arguments
