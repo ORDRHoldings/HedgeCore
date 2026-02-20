@@ -293,7 +293,7 @@ function ModuleCard({ mod }: { mod: ModuleDef }) {
 // ── Terminal Page ─────────────────────────────────────────────────────────────
 export default function TerminalPage() {
   const router = useRouter();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const [ready, setReady] = useState(false);
 
   // Auth guard — wait for hydration, then redirect if unauthenticated
@@ -356,10 +356,26 @@ export default function TerminalPage() {
             </span>
           </span>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 12 }}>
+          <a
+            href="/dashboard"
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: '0.5rem',
+              letterSpacing: '0.06em',
+              padding: '3px 8px',
+              color: S.tertiary,
+              border: '1px solid ' + S.rim,
+              textDecoration: 'none',
+            }}
+          >
+            Dashboard
+          </a>
+        </div>
         <div className="hc-identity-right">
           <span className="hc-user-chip">
             <span style={{ color: S.tertiary }}>Role:</span>
-            <span className="hc-meta-accent">operator</span>
+            {user?.roles?.[0] ? <span className="hc-meta-accent">{user.roles[0]}</span> : <span className="hc-meta-accent">—</span>}
           </span>
           <button
             className="hc-logout-btn no-scale"

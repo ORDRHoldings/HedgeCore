@@ -1,0 +1,249 @@
+/**
+ * widgetRegistry.ts
+ * Defines all available dashboard widgets and default layouts per user role.
+ */
+
+import type { UserContext } from "@/lib/authContext";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface WidgetProps {
+  token: string;
+  user: UserContext;
+  onRemove?: () => void;
+}
+
+export interface WidgetDef {
+  id: string;
+  title: string;
+  description: string;
+  defaultW: number;  // grid columns (max 12)
+  defaultH: number;  // grid rows
+  minW: number;
+  minH: number;
+  requiredPermission: string | null;  // null = any authenticated user
+}
+
+export interface GridItem {
+  i: string;       // widget id
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+// ─── Widget Registry ──────────────────────────────────────────────────────────
+
+export const WIDGET_REGISTRY: WidgetDef[] = [
+  {
+    id: "kpi_summary",
+    title: "Portfolio KPIs",
+    description: "Key metrics: exposure, coverage, proposals, alerts. Scoped to your authority.",
+    defaultW: 12,
+    defaultH: 3,
+    minW: 6,
+    minH: 2,
+    requiredPermission: null,
+  },
+  {
+    id: "recent_runs",
+    title: "My Recent Runs",
+    description: "Last 10 sandbox and ledger calculation runs initiated by you.",
+    defaultW: 6,
+    defaultH: 5,
+    minW: 4,
+    minH: 3,
+    requiredPermission: null,
+  },
+  {
+    id: "pending_approvals",
+    title: "Pending Approvals",
+    description: "Staging artifacts awaiting your review and approval decision.",
+    defaultW: 6,
+    defaultH: 5,
+    minW: 4,
+    minH: 3,
+    requiredPermission: "pipeline.approve",
+  },
+  {
+    id: "team_activity",
+    title: "Team Activity",
+    description: "Live activity feed for your branch or company-wide.",
+    defaultW: 6,
+    defaultH: 6,
+    minW: 4,
+    minH: 4,
+    requiredPermission: "audit.view_branch",
+  },
+  {
+    id: "branch_comparison",
+    title: "Branch Risk Comparison",
+    description: "Side-by-side risk and exposure metrics across all branches.",
+    defaultW: 8,
+    defaultH: 5,
+    minW: 6,
+    minH: 4,
+    requiredPermission: "reports.view_all_branches",
+  },
+  {
+    id: "polisophic_mini",
+    title: "Geopolitical Risk",
+    description: "Top risk events and currency-exposure alert for your portfolio.",
+    defaultW: 6,
+    defaultH: 5,
+    minW: 4,
+    minH: 3,
+    requiredPermission: null,
+  },
+  {
+    id: "quick_actions",
+    title: "Quick Actions",
+    description: "Permission-gated shortcuts to your most common actions.",
+    defaultW: 4,
+    defaultH: 4,
+    minW: 3,
+    minH: 3,
+    requiredPermission: null,
+  },
+  {
+    id: "exposure_summary",
+    title: "FX Exposure Summary",
+    description: "Currency exposure breakdown: notional amounts and hedge coverage by pair.",
+    defaultW: 6,
+    defaultH: 5,
+    minW: 4,
+    minH: 3,
+    requiredPermission: "trades.view",
+  },
+  {
+    id: "pipeline_status",
+    title: "Pipeline Status",
+    description: "Tri-state pipeline funnel: Sandbox → Staging → Ledger counts.",
+    defaultW: 6,
+    defaultH: 4,
+    minW: 4,
+    minH: 3,
+    requiredPermission: "pipeline.create_proposal",
+  },
+];
+
+// ─── Default Layouts per Role ─────────────────────────────────────────────────
+
+type RoleLayout = { widgetIds: string[]; grid: GridItem[] };
+
+const ROLE_LAYOUTS: Record<string, RoleLayout> = {
+  admin: {
+    widgetIds: ["kpi_summary", "branch_comparison", "pending_approvals", "polisophic_mini", "team_activity"],
+    grid: [
+      { i: "kpi_summary",       x: 0, y: 0,  w: 12, h: 3 },
+      { i: "branch_comparison", x: 0, y: 3,  w: 8,  h: 5 },
+      { i: "pending_approvals", x: 8, y: 3,  w: 4,  h: 5 },
+      { i: "polisophic_mini",   x: 0, y: 8,  w: 6,  h: 5 },
+      { i: "team_activity",     x: 6, y: 8,  w: 6,  h: 6 },
+    ],
+  },
+  ceo: {
+    widgetIds: ["kpi_summary", "branch_comparison", "pending_approvals", "polisophic_mini", "team_activity"],
+    grid: [
+      { i: "kpi_summary",       x: 0, y: 0,  w: 12, h: 3 },
+      { i: "branch_comparison", x: 0, y: 3,  w: 8,  h: 5 },
+      { i: "pending_approvals", x: 8, y: 3,  w: 4,  h: 5 },
+      { i: "polisophic_mini",   x: 0, y: 8,  w: 6,  h: 5 },
+      { i: "team_activity",     x: 6, y: 8,  w: 6,  h: 6 },
+    ],
+  },
+  cfo: {
+    widgetIds: ["kpi_summary", "exposure_summary", "branch_comparison", "polisophic_mini", "recent_runs"],
+    grid: [
+      { i: "kpi_summary",       x: 0, y: 0,  w: 12, h: 3 },
+      { i: "exposure_summary",  x: 0, y: 3,  w: 6,  h: 5 },
+      { i: "branch_comparison", x: 6, y: 3,  w: 6,  h: 5 },
+      { i: "polisophic_mini",   x: 0, y: 8,  w: 6,  h: 5 },
+      { i: "recent_runs",       x: 6, y: 8,  w: 6,  h: 5 },
+    ],
+  },
+  head_of_risk: {
+    widgetIds: ["kpi_summary", "pending_approvals", "polisophic_mini", "branch_comparison", "team_activity"],
+    grid: [
+      { i: "kpi_summary",       x: 0, y: 0,  w: 12, h: 3 },
+      { i: "pending_approvals", x: 0, y: 3,  w: 6,  h: 5 },
+      { i: "polisophic_mini",   x: 6, y: 3,  w: 6,  h: 5 },
+      { i: "branch_comparison", x: 0, y: 8,  w: 8,  h: 5 },
+      { i: "team_activity",     x: 8, y: 8,  w: 4,  h: 6 },
+    ],
+  },
+  branch_manager: {
+    widgetIds: ["kpi_summary", "pending_approvals", "team_activity", "polisophic_mini", "recent_runs"],
+    grid: [
+      { i: "kpi_summary",       x: 0, y: 0,  w: 12, h: 3 },
+      { i: "pending_approvals", x: 0, y: 3,  w: 6,  h: 5 },
+      { i: "team_activity",     x: 6, y: 3,  w: 6,  h: 6 },
+      { i: "polisophic_mini",   x: 0, y: 8,  w: 6,  h: 5 },
+      { i: "recent_runs",       x: 6, y: 9,  w: 6,  h: 5 },
+    ],
+  },
+  supervisor: {
+    widgetIds: ["kpi_summary", "pending_approvals", "recent_runs", "team_activity", "quick_actions"],
+    grid: [
+      { i: "kpi_summary",       x: 0, y: 0,  w: 12, h: 3 },
+      { i: "pending_approvals", x: 0, y: 3,  w: 6,  h: 5 },
+      { i: "recent_runs",       x: 6, y: 3,  w: 6,  h: 5 },
+      { i: "team_activity",     x: 0, y: 8,  w: 8,  h: 6 },
+      { i: "quick_actions",     x: 8, y: 8,  w: 4,  h: 4 },
+    ],
+  },
+  senior_analyst: {
+    widgetIds: ["recent_runs", "exposure_summary", "polisophic_mini", "pipeline_status", "quick_actions"],
+    grid: [
+      { i: "recent_runs",       x: 0, y: 0,  w: 6,  h: 5 },
+      { i: "exposure_summary",  x: 6, y: 0,  w: 6,  h: 5 },
+      { i: "polisophic_mini",   x: 0, y: 5,  w: 6,  h: 5 },
+      { i: "pipeline_status",   x: 6, y: 5,  w: 6,  h: 4 },
+      { i: "quick_actions",     x: 6, y: 9,  w: 6,  h: 4 },
+    ],
+  },
+  risk_analyst: {
+    widgetIds: ["recent_runs", "polisophic_mini", "quick_actions", "exposure_summary"],
+    grid: [
+      { i: "recent_runs",      x: 0, y: 0, w: 7, h: 5 },
+      { i: "polisophic_mini",  x: 7, y: 0, w: 5, h: 5 },
+      { i: "quick_actions",    x: 0, y: 5, w: 4, h: 4 },
+      { i: "exposure_summary", x: 4, y: 5, w: 8, h: 5 },
+    ],
+  },
+  junior_analyst: {
+    widgetIds: ["recent_runs", "quick_actions", "polisophic_mini"],
+    grid: [
+      { i: "recent_runs",     x: 0, y: 0, w: 7, h: 5 },
+      { i: "quick_actions",   x: 7, y: 0, w: 5, h: 4 },
+      { i: "polisophic_mini", x: 0, y: 5, w: 12, h: 5 },
+    ],
+  },
+  auditor: {
+    widgetIds: ["team_activity", "pipeline_status", "recent_runs", "kpi_summary"],
+    grid: [
+      { i: "team_activity",    x: 0, y: 0, w: 8,  h: 6 },
+      { i: "pipeline_status",  x: 8, y: 0, w: 4,  h: 4 },
+      { i: "recent_runs",      x: 8, y: 4, w: 4,  h: 5 },
+      { i: "kpi_summary",      x: 0, y: 6, w: 8,  h: 3 },
+    ],
+  },
+};
+
+// Default fallback layout for unknown roles
+const DEFAULT_LAYOUT: RoleLayout = {
+  widgetIds: ["recent_runs", "quick_actions", "polisophic_mini"],
+  grid: [
+    { i: "recent_runs",     x: 0, y: 0, w: 7, h: 5 },
+    { i: "quick_actions",   x: 7, y: 0, w: 5, h: 4 },
+    { i: "polisophic_mini", x: 0, y: 5, w: 12, h: 5 },
+  ],
+};
+
+export function getDefaultLayoutForRole(role: string): RoleLayout {
+  return ROLE_LAYOUTS[role] ?? DEFAULT_LAYOUT;
+}
+
+export function getWidgetDef(id: string): WidgetDef | undefined {
+  return WIDGET_REGISTRY.find((w) => w.id === id);
+}
