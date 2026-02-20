@@ -161,7 +161,7 @@ export default function LoginPage() {
     const result = await login(username, password);
     setLoading(false);
     if (result.success) {
-      router.push("/terminal");
+      router.push("/dashboard");
     } else {
       setError(result.error ?? "Authentication failed");
     }
