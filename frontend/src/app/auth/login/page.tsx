@@ -321,16 +321,16 @@ export default function LoginPage() {
                   marginBottom: 6,
                 }}
               >
-                {DEMO_MODE ? "Username" : "Email"}
+                Username / Email
               </label>
               <input
                 ref={usernameRef}
-                type={DEMO_MODE ? "text" : "email"}
+                type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder={DEMO_MODE ? "demo" : "user@company.com"}
+                placeholder="demo  ·  or  user@company.com"
                 required
-                autoComplete={DEMO_MODE ? "username" : "email"}
+                autoComplete="username"
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -373,7 +373,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={DEMO_MODE ? "demo" : ""}
+                placeholder="demo  ·  or  your password"
                 required
                 autoComplete="current-password"
                 style={{
