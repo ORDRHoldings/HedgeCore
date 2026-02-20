@@ -24,6 +24,7 @@ from app.api.routes.v1_export import router as v1_export_router
 from app.api.routes.v1_pipeline import router as v1_pipeline_router
 from app.api.routes.organization import router as organization_router
 from app.api.routes.admin_roles import router as admin_roles_router
+from app.api.routes.seed import router as seed_router
 
 router = APIRouter()
 
@@ -74,5 +75,8 @@ router.include_router(organization_router)
 
 # Role & Permission management (owns /v1/admin/roles)
 router.include_router(admin_roles_router)
+
+# One-time seed endpoint (owns /v1/seed)
+router.include_router(seed_router)
 
 __all__ = ["router"]
