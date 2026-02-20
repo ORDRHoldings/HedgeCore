@@ -136,10 +136,31 @@ async def _seed_permissions():
     logger.info("✅ Permissions and role-permission mappings seeded")
 
 
+async def _ensure_tables():
+    """Create any missing tables (non-destructive — skips existing)."""
+    from app.core.db import async_engine, Base
+    # Import all model modules to register with Base.metadata
+    import importlib
+    from pathlib import Path
+    models_dir = Path(__file__).parent / "models"
+    for f in models_dir.glob("*.py"):
+        if f.name != "__init__.py":
+            importlib.import_module(f"app.models.{f.stem}")
+
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("✅ Database tables ensured (create_all)")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_engine()
     rebuild_all_schemas()
+
+    try:
+        await _ensure_tables()
+    except Exception as e:
+        logger.warning(f"⚠️ _ensure_tables skipped: {e}")
 
     try:
         await _seed_roles()
