@@ -3,8 +3,6 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { GitMerge, X } from "lucide-react";
 import { UserContext } from "@/lib/authContext";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
