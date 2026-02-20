@@ -22,7 +22,7 @@ const S = {
   fail:      "var(--accent-red,#B91C1C)",
 } as const;
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 interface ApprovalItem {
   id: string;
@@ -80,9 +80,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
     setError(null);
     setForbidden(false);
     try {
-      const res = await fetch(`${API_BASE}/v1/dashboard/pending-approvals`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await dashboardFetch("/v1/dashboard/pending-approvals", token);
       if (res.status === 403) { setForbidden(true); return; }
       if (!res.ok) { setError(`Error ${res.status}`); return; }
       const data: ApprovalItem[] = await res.json();
