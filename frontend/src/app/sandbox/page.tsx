@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import AppTopBar from "../../components/layout/AppTopBar";
 import type { RootState, AppDispatch } from "../../lib/store";
 import {
   sandboxCalculateThunk,
@@ -144,7 +145,9 @@ export default function SandboxPage() {
 
   // ── Main 3-column layout ──
   return (
-    <div className="h-full flex">
+    <>
+      <AppTopBar currentModule="Sandbox" currentPath="/sandbox" />
+      <div className="h-full flex">
       {/* Left Rail — 20% */}
       <aside className="w-[20%] min-w-[240px] border-r border-[var(--border-rim)] bg-[var(--bg-panel)] overflow-auto">
         <RailTabs
@@ -254,5 +257,6 @@ export default function SandboxPage() {
         ]}
       />
     </div>
+    </>
   );
 }

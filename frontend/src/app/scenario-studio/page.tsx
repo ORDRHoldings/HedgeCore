@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import AppTopBar from "../../components/layout/AppTopBar";
 
 const RENDER_TS = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
 
@@ -230,6 +231,8 @@ export default function ScenarioStudio() {
 
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
+      {/* ── App top bar ── */}
+      <AppTopBar currentModule="Scenario Studio" currentPath="/scenario-studio" />
       <TopBar onBack={() => router.push("/")} />
 
       {/* ── Sub-nav: tabs ── */}

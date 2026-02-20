@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
+import AppTopBar from "../../components/layout/AppTopBar";
 
 const RENDER_TS = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
 
@@ -287,6 +288,8 @@ export default function Polisophic() {
 
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
+      {/* ── App top bar ── */}
+      <AppTopBar currentModule="Polisophic" currentPath="/polisophic" />
       <TopBar onBack={() => router.push("/")} tab={tab} setTab={setTab} />
 
       <div style={{ flex: 1, overflow: "auto" }}>
