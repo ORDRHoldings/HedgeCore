@@ -15,6 +15,27 @@ export interface PolicyPreset {
 }
 
 export const POLICY_PRESETS: PolicyPreset[] = [
+  // ─── SME / STARTUP ──────────────────────────────────────────────────────────
+  {
+    id: 'small-business',
+    name: 'Small Business / Startup',
+    shortName: 'SME',
+    description: 'No minimum trade size — every bucket executes regardless of notional. Built for SMEs, startups, and early-stage hedgers with smaller transaction volumes.',
+    targetAudience: 'SMEs, startups, freelancers, small importers/exporters with sub-$500K exposures',
+    riskPosture: 'MODERATE',
+    category: 'CORPORATE',
+    formula: 'H = 0.8 × CF + 0.5 × FF,  min = $0',
+    formulaExplain: 'Hedge Notional = 80% of Confirmed Flows + 50% of Forecast Flows. No minimum trade size filter — every bucket executes even at very small notionals. Avoids the suppression issue small businesses face with standard corporate presets.',
+    rationale: 'Standard corporate presets set minimum trade sizes ($25k–$500k) to avoid bank execution costs on tiny tickets. For SMEs hedging their first transactions, this suppresses all buckets. Setting min = $0 lets every exposure get a hedge ticket, regardless of size.',
+    policy: {
+      bucket_mode: 'CALENDAR_MONTH',
+      hedge_ratios: { confirmed: 0.80, forecast: 0.50 },
+      cost_assumptions: { spread_bps: 25 },
+      execution_product: 'NDF',
+      min_trade_size_usd: 0,
+    },
+  },
+
   // ─── CORPORATE ──────────────────────────────────────────────────────────────
   {
     id: 'full-protection',
@@ -304,7 +325,7 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       hedge_ratios: { confirmed: 0.5, forecast: 0.3 },
       cost_assumptions: { spread_bps: 5.0 },
       execution_product: 'NDF',
-      min_trade_size_usd: 25000,
+      min_trade_size_usd: 5000,
     },
   },
   {
@@ -342,7 +363,7 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       hedge_ratios: { confirmed: 1.0, forecast: 0.4 },
       cost_assumptions: { spread_bps: 4.0 },
       execution_product: 'FWD',
-      min_trade_size_usd: 50000,
+      min_trade_size_usd: 10000,
     },
   },
   {
@@ -361,7 +382,7 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       hedge_ratios: { confirmed: 0.85, forecast: 0.7 },
       cost_assumptions: { spread_bps: 5.5 },
       execution_product: 'NDF',
-      min_trade_size_usd: 50000,
+      min_trade_size_usd: 10000,
     },
   },
   {
@@ -380,7 +401,7 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       hedge_ratios: { confirmed: 1.0, forecast: 0.8 },
       cost_assumptions: { spread_bps: 3.5 },
       execution_product: 'NDF',
-      min_trade_size_usd: 25000,
+      min_trade_size_usd: 5000,
     },
   },
   {
@@ -399,7 +420,7 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       hedge_ratios: { confirmed: 0.9, forecast: 0.4 },
       cost_assumptions: { spread_bps: 6.5 },
       execution_product: 'NDF',
-      min_trade_size_usd: 15000,
+      min_trade_size_usd: 5000,
     },
   },
 ];

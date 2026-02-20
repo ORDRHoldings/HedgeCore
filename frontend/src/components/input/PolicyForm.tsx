@@ -99,15 +99,37 @@ export default function PolicyForm({
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-[var(--text-secondary)]">Min Trade (USD)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium text-[var(--text-secondary)]">
+                Min Trade Size (USD)
+              </label>
+              {!isReadOnly && (
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...policy, min_trade_size_usd: 0 })}
+                  className="text-xs px-2 py-0.5 border rounded-sm text-[var(--accent-cyan)] border-[var(--accent-cyan)] opacity-70 hover:opacity-100 transition-opacity"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '0.5625rem', letterSpacing: '0.04em' }}
+                  title="Set to 0 — all buckets will execute regardless of notional size"
+                >
+                  NO MIN
+                </button>
+              )}
+            </div>
             <input
               type="number"
+              min={0}
+              step={1000}
               className={inputCls}
               value={policy.min_trade_size_usd}
-              onChange={(e) => onChange({ ...policy, min_trade_size_usd: +e.target.value })}
+              onChange={(e) => onChange({ ...policy, min_trade_size_usd: Math.max(0, +e.target.value || 0) })}
               readOnly={isReadOnly}
               tabIndex={isReadOnly ? -1 : undefined}
             />
+            <p className="mt-1 text-xs text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '0.5rem' }}>
+              {policy.min_trade_size_usd === 0
+                ? '✓ No minimum — all buckets execute'
+                : `Buckets < $${policy.min_trade_size_usd.toLocaleString()} USD will be suppressed`}
+            </p>
           </div>
           <div>
             <label className="text-sm font-medium text-[var(--text-secondary)]">Product</label>
