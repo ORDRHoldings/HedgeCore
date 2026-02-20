@@ -171,8 +171,31 @@ async def seed_company(
     results = {"permissions": 0, "roles": 0, "branches": 0, "departments": 0, "users": 0}
 
     try:
-        # ── Full schema migration via raw SQL (handles existing + new tables) ──
-        from app.core.db import async_engine
+        # ── Full schema migration ──
+        from app.core.db import async_engine, Base
+        import importlib
+        from pathlib import Path
+        models_dir = Path(__file__).resolve().parent.parent.parent / "models"
+        for f in models_dir.glob("*.py"):
+            if f.name != "__init__.py":
+                importlib.import_module(f"app.models.{f.stem}")
+
+        # Step 1: Drop orphan indexes
+        try:
+            async with async_engine.begin() as conn:
+                await conn.execute(text("DROP INDEX IF EXISTS ix_permissions_module"))
+        except Exception:
+            pass
+
+        # Step 2: create_all for all ORM tables
+        try:
+            async with async_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("create_all succeeded in seed")
+        except Exception as e:
+            logger.warning(f"create_all failed in seed: {e}")
+
+        # Step 3: Raw DDL fallback
         migration_sql = [
             # Drop orphan indexes first
             "DROP INDEX IF EXISTS ix_permissions_module",
