@@ -230,7 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Demo bypass — always active for demo/demo (works regardless of DEMO_MODE flag)
       if (username === "demo" && password === "demo") {
         const demoToken = "demo_token_" + Date.now();
-        Cookies.set(ACCESS_TOKEN_KEY, demoToken, { sameSite: "Strict" });
+        Cookies.set(ACCESS_TOKEN_KEY, demoToken, { sameSite: "Strict", expires: 30 });
         setToken(demoToken);
         setUser(DEMO_USER);
         return { success: true };

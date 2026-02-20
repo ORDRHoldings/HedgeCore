@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../lib/authContext';
 import type {
   TradeRow,
   HedgeRow,
@@ -410,6 +411,7 @@ function ScenarioCard({ story, fixtureLabel, onEdit }: { story: DemoStory; fixtu
 export default function InputPage() {
   const router = useRouter();
   const { setCalculation } = useHedge();
+  const { token } = useAuth();
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const [trades, setTrades]  = useState<TradeRow[]>([]);
@@ -440,6 +442,38 @@ export default function InputPage() {
   const [fixtureId, setFixtureId]     = useState<string | null>(null);
   const [summaryMode, setSummaryMode] = useState(false);
   const clearFixture = useCallback(() => { setFixtureId(null); setSummaryMode(false); }, []);
+
+  // ── Demo session: restore from localStorage on mount (demo users only) ────
+  useEffect(() => {
+    if (!token?.startsWith('demo_token_')) return;
+    try {
+      const saved = localStorage.getItem('demo_input_state');
+      if (saved) {
+        const { trades: t, hedges: h, market: m, policy: p, fixtureId: fid, summaryMode: sm } = JSON.parse(saved);
+        if (t?.length) {
+          setTrades(t);
+          setHedges(h ?? []);
+          if (m) setMarket(m);
+          if (p) setPolicy(p);
+          if (fid) setFixtureId(fid);
+          if (sm) setSummaryMode(sm);
+        }
+      }
+    } catch {
+      // Ignore parse errors — corrupted storage, just start fresh
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]); // runs once on mount when token is available
+
+  // ── Demo session: save to localStorage whenever state changes ─────────────
+  useEffect(() => {
+    if (!token?.startsWith('demo_token_')) return;
+    try {
+      localStorage.setItem('demo_input_state', JSON.stringify({ trades, hedges, market, policy, fixtureId, summaryMode }));
+    } catch {
+      // Ignore storage quota errors
+    }
+  }, [token, trades, hedges, market, policy, fixtureId, summaryMode]);
 
   // ── Toast ─────────────────────────────────────────────────────────────────
   const [toastMsg, setToastMsg]       = useState('');
@@ -883,6 +917,47 @@ export default function InputPage() {
 
       {/* ── Page content ── */}
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px' }}>
+
+        {/* ── Demo session banner (demo users only) ── */}
+        {token?.startsWith('demo_token_') && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 12, marginTop: 8,
+            padding: '7px 14px',
+            background: `color-mix(in srgb, ${S.cyan} 5%, ${S.bgSub})`,
+            border: `1px solid color-mix(in srgb, ${S.cyan} 22%, transparent)`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.cyan, letterSpacing: '0.08em' }}>
+                💾 DEMO SESSION
+              </span>
+              <span style={{ fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.textSecondary }}>
+                Your transaction data is automatically saved — it will be here next time you open the app.
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.04em' }}>
+                {trades.length > 0 ? `${trades.length} positions saved` : 'No data saved yet'}
+              </span>
+              {trades.length > 0 && (
+                <button
+                  onClick={() => {
+                    try { localStorage.removeItem('demo_input_state'); } catch { /* ignore */ }
+                    setTrades([]); setHedges([]); setMarket(EMPTY_MARKET);
+                    setPolicy(DEFAULT_DEMO_POLICY); setFixtureId(null); setSummaryMode(false);
+                    setToastMsg('Demo session cleared'); setToastVisible(true);
+                  }}
+                  style={{
+                    fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.06em',
+                    padding: '3px 10px',
+                    border: `1px solid color-mix(in srgb, ${S.red} 40%, transparent)`,
+                    color: S.red, background: 'transparent', cursor: 'pointer',
+                  }}
+                >× CLEAR SESSION</button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── Dataset Panel (always visible above wizard) ── */}
         <div style={{ marginTop: 12 }}>
