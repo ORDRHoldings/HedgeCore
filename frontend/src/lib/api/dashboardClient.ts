@@ -15,13 +15,15 @@
  *   3. "/api"  (local dev — next.config.js rewrite handles proxying)
  */
 
+const _PROD_HOSTNAMES = ["hedgecore.vercel.app", "ordr-terminal.vercel.app"];
+
 const _getApiBase = (): string => {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   if (
     typeof window !== "undefined" &&
-    window.location.hostname === "hedgecore.vercel.app"
+    _PROD_HOSTNAMES.includes(window.location.hostname)
   ) {
     return "https://hedgecore.onrender.com/api";
   }
