@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { History, X } from "lucide-react";
 import Link from "next/link";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 const S = {
   fontUI:        "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -124,9 +125,7 @@ export default function RecentRunsWidget({
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/v1/dashboard/recent-runs", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await dashboardFetch("/v1/dashboard/recent-runs", token);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json: RecentRun[] = await res.json();
         if (!cancelled) setRuns(json);

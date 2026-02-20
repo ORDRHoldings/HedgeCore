@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { BarChart3, X } from "lucide-react";
 import KpiTile from "@/components/ui/KpiTile";
 import type { UserContext } from "@/lib/authContext";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 const S = {
   fontUI:        "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -67,9 +68,7 @@ export default function KpiSummaryWidget({
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/v1/dashboard/summary", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await dashboardFetch("/v1/dashboard/summary", token);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json: DashboardSummary = await res.json();
         if (!cancelled) setData(json);
