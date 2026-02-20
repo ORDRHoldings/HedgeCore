@@ -249,7 +249,24 @@ export default function DashboardPage() {
     );
   }
 
-  if (!isAuthenticated || !user || !token) return null;
+  if (!isAuthenticated || !user || !token) {
+    router.replace("/auth/login");
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: S.bgDeep,
+        fontFamily: S.fontMono,
+        fontSize: "0.75rem",
+        color: S.tertiary,
+        letterSpacing: "0.06em",
+      }}>
+        Redirecting to login…
+      </div>
+    );
+  }
 
   const role = user.roles?.[0] ?? "—";
   const branchLabel = user.branch
