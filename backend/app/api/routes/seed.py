@@ -171,82 +171,88 @@ async def seed_company(
     results = {"permissions": 0, "roles": 0, "branches": 0, "departments": 0, "users": 0}
 
     try:
-        # ── Full schema migration ──
-        from app.core.db import async_engine, Base
-        import importlib
-        from pathlib import Path
-        models_dir = Path(__file__).resolve().parent.parent.parent / "models"
-        for f in models_dir.glob("*.py"):
-            if f.name != "__init__.py":
-                importlib.import_module(f"app.models.{f.stem}")
-
-        # Step 1: Drop orphan indexes
-        try:
-            async with async_engine.begin() as conn:
-                await conn.execute(text("DROP INDEX IF EXISTS ix_permissions_module"))
-        except Exception:
-            pass
-
-        # Step 2: create_all for all ORM tables
-        try:
-            async with async_engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            logger.info("create_all succeeded in seed")
-        except Exception as e:
-            logger.warning(f"create_all failed in seed: {e}")
-
-        # Step 3: Raw DDL fallback
+        # ── Full schema migration via raw SQL ──
+        from app.core.db import async_engine
         migration_sql = [
-            # Drop orphan indexes first
             "DROP INDEX IF EXISTS ix_permissions_module",
 
-            # Create new tables if they don't exist
+            # Core tables (FK dependency order)
             """CREATE TABLE IF NOT EXISTS companies (
-                id UUID PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                slug VARCHAR(64) UNIQUE NOT NULL,
-                domain VARCHAR(255),
-                logo_url VARCHAR(512),
-                settings JSONB,
+                id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL,
+                slug VARCHAR(64) UNIQUE NOT NULL, domain VARCHAR(255),
+                logo_url VARCHAR(512), settings JSONB,
                 is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )""",
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+
+            """CREATE TABLE IF NOT EXISTS roles (
+                id SERIAL PRIMARY KEY, name VARCHAR(64) NOT NULL UNIQUE,
+                description VARCHAR(255),
+                company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+                hierarchy_level INTEGER NOT NULL DEFAULT 10,
+                is_system BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+
             """CREATE TABLE IF NOT EXISTS branches (
                 id UUID PRIMARY KEY,
                 company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-                name VARCHAR(255) NOT NULL,
-                code VARCHAR(32) NOT NULL,
-                region VARCHAR(128),
-                timezone VARCHAR(64) DEFAULT 'UTC',
+                name VARCHAR(255) NOT NULL, code VARCHAR(32) NOT NULL,
+                region VARCHAR(128), timezone VARCHAR(64) DEFAULT 'UTC',
                 is_active BOOLEAN NOT NULL DEFAULT TRUE,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                UNIQUE(company_id, code)
-            )""",
+                UNIQUE(company_id, code))""",
+
             """CREATE TABLE IF NOT EXISTS departments (
                 id UUID PRIMARY KEY,
                 branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
-                name VARCHAR(255) NOT NULL,
-                code VARCHAR(32) NOT NULL,
+                name VARCHAR(255) NOT NULL, code VARCHAR(32) NOT NULL,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                UNIQUE(branch_id, code)
-            )""",
-            """CREATE TABLE IF NOT EXISTS permissions (
+                UNIQUE(branch_id, code))""",
+
+            """CREATE TABLE IF NOT EXISTS users (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                email VARCHAR(255) NOT NULL UNIQUE,
+                hashed_password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(255),
+                company_id UUID REFERENCES companies(id) ON DELETE SET NULL,
+                branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
+                department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+                job_title VARCHAR(128),
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                is_superuser BOOLEAN NOT NULL DEFAULT FALSE,
+                token_version INTEGER NOT NULL DEFAULT 1,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+
+            """CREATE TABLE IF NOT EXISTS user_roles (
                 id SERIAL PRIMARY KEY,
-                codename VARCHAR(128) UNIQUE NOT NULL,
-                module VARCHAR(64) NOT NULL,
-                action VARCHAR(64) NOT NULL,
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE(user_id, role_id))""",
+
+            """CREATE TABLE IF NOT EXISTS permissions (
+                id SERIAL PRIMARY KEY, codename VARCHAR(128) UNIQUE NOT NULL,
+                module VARCHAR(64) NOT NULL, action VARCHAR(64) NOT NULL,
                 description VARCHAR(255) NOT NULL DEFAULT '',
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )""",
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+
             """CREATE TABLE IF NOT EXISTS role_permissions (
                 id SERIAL PRIMARY KEY,
                 role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
                 permission_id INTEGER NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                UNIQUE(role_id, permission_id)
-            )""",
+                UNIQUE(role_id, permission_id))""",
 
-            # Add missing columns to existing tables
+            """CREATE TABLE IF NOT EXISTS refresh_tokens (
+                id SERIAL PRIMARY KEY, jti VARCHAR(64) NOT NULL UNIQUE,
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                expires_at TIMESTAMPTZ NOT NULL,
+                revoked BOOLEAN NOT NULL DEFAULT FALSE,
+                replaced_by_jti VARCHAR(64),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                created_ip VARCHAR(64), created_user_agent VARCHAR(256))""",
+
+            # ALTER TABLE for pre-existing tables
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL",
