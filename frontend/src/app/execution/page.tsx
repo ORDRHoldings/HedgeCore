@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useHedge } from '../../lib/hedgeContext';
 import ExecutionBridge from '../../components/execution/ExecutionBridge';
-import AppTopBar from '../../components/layout/AppTopBar';
 
 // ─── Execution Page — Full implementation ─────────────────────────────────────
 // Reads hedge plan from HedgeContext (same data as /results Execution tab).
@@ -97,8 +96,6 @@ function ExecutionContent() {
       color: 'var(--text-primary)',
       background: 'var(--bg-deep)',
     }}>
-      {/* ── App top bar ── */}
-      <AppTopBar currentModule="Execution" currentPath="/execution" />
       {/* Header strip */}
       <div style={{
         height: 44,
