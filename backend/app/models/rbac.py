@@ -29,6 +29,7 @@ import uuid
 from sqlalchemy import (
     String,
     Integer,
+    Boolean,
     DateTime,
     func,
     ForeignKey,
@@ -64,6 +65,30 @@ class Role(Base):
     name: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
+    # Company-scoped roles (NULL = system-wide role)
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+        doc="Company this role belongs to. NULL = system-level seed role.",
+    )
+
+    # Authority hierarchy: 0 = highest (CFO/Admin), higher = less authority
+    hierarchy_level: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=10,
+        doc="Authority level. 0 = highest (admin/CFO). Higher = less authority.",
+    )
+
+    is_system: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        doc="True for seed roles that cannot be deleted by company admins.",
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -79,8 +104,11 @@ class Role(Base):
         passive_deletes=True,
     )
 
+    company = relationship("Company", foreign_keys=[company_id], lazy="selectin")
+
     __table_args__ = (
         Index("ix_roles_name_unique", "name", unique=True),
+        Index("ix_roles_company_id", "company_id"),
     )
 
     def __repr__(self) -> str:  # pragma: no cover - representational

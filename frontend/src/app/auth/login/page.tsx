@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/authContext";
 import { Shield, ChevronRight } from "lucide-react";
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+
 // ── Design tokens — dark institutional terminal ──────────────────────────────
 const T = {
   bg: "#0A0E12",
@@ -294,7 +296,7 @@ export default function LoginPage() {
             onSubmit={handleSubmit}
             style={{ padding: "24px 24px 20px" }}
           >
-            {/* Username field */}
+            {/* Email / Username field */}
             <div style={{ marginBottom: 16 }}>
               <label
                 style={{
@@ -308,16 +310,16 @@ export default function LoginPage() {
                   marginBottom: 6,
                 }}
               >
-                Username
+                {DEMO_MODE ? "Username" : "Email"}
               </label>
               <input
                 ref={usernameRef}
-                type="text"
+                type={DEMO_MODE ? "text" : "email"}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="demo"
+                placeholder={DEMO_MODE ? "demo" : "user@company.com"}
                 required
-                autoComplete="username"
+                autoComplete={DEMO_MODE ? "username" : "email"}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -360,7 +362,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="demo"
+                placeholder={DEMO_MODE ? "demo" : ""}
                 required
                 autoComplete="current-password"
                 style={{
@@ -459,54 +461,56 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo hint bar */}
-          <div
-            style={{
-              padding: "10px 24px",
-              borderTop: `1px solid ${T.border}`,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              fontFamily: T.fontMono,
-              fontSize: "0.5625rem",
-              color: T.textTertiary,
-            }}
-          >
-            <span
+          {/* Demo hint bar — only shown in demo mode */}
+          {DEMO_MODE && (
+            <div
               style={{
-                fontWeight: 600,
-                color: T.textSecondary,
-                letterSpacing: "0.06em",
+                padding: "10px 24px",
+                borderTop: `1px solid ${T.border}`,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontFamily: T.fontMono,
+                fontSize: "0.5625rem",
+                color: T.textTertiary,
               }}
             >
-              DEMO ACCESS
-            </span>
-            <span style={{ color: T.border }}>|</span>
-            <span>
-              username{" "}
-              <code
+              <span
                 style={{
-                  color: T.accent,
-                  background: T.accentDim,
-                  padding: "1px 5px",
-                  borderRadius: 1,
+                  fontWeight: 600,
+                  color: T.textSecondary,
+                  letterSpacing: "0.06em",
                 }}
               >
-                demo
-              </code>
-              {"  "}password{" "}
-              <code
-                style={{
-                  color: T.accent,
-                  background: T.accentDim,
-                  padding: "1px 5px",
-                  borderRadius: 1,
-                }}
-              >
-                demo
-              </code>
-            </span>
-          </div>
+                DEMO ACCESS
+              </span>
+              <span style={{ color: T.border }}>|</span>
+              <span>
+                username{" "}
+                <code
+                  style={{
+                    color: T.accent,
+                    background: T.accentDim,
+                    padding: "1px 5px",
+                    borderRadius: 1,
+                  }}
+                >
+                  demo
+                </code>
+                {"  "}password{" "}
+                <code
+                  style={{
+                    color: T.accent,
+                    background: T.accentDim,
+                    padding: "1px 5px",
+                    borderRadius: 1,
+                  }}
+                >
+                  demo
+                </code>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Compliance notice */}

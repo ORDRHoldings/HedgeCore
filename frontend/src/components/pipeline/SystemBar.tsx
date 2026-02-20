@@ -5,9 +5,11 @@ import type { RootState } from "../../lib/store";
 import { setDecisionPacketMode } from "../../lib/store/slices/pipelineSlice";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../lib/store";
+import { useAuth } from "../../lib/authContext";
 
 export default function SystemBar() {
   const dispatch = useDispatch<AppDispatch>();
+  const { user } = useAuth();
   const { decisionPacketMode, sandboxResult } = useSelector(
     (s: RootState) => s.pipeline
   );
@@ -52,8 +54,14 @@ export default function SystemBar() {
       </button>
 
       <span className="text-[var(--text-tertiary)]">
-        Role: <span className="text-[var(--accent-cyan)]">risk_analyst</span>
+        Role: <span className="text-[var(--accent-cyan)]">{user?.roles?.[0] ?? "—"}</span>
       </span>
+
+      {user?.branch && (
+        <span className="text-[var(--text-tertiary)]">
+          Branch: <span className="text-[var(--text-secondary)]">{user.branch.code}</span>
+        </span>
+      )}
     </div>
   );
 }

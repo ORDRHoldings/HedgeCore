@@ -25,7 +25,8 @@ from app.core.security import (
 from app.crud import refresh_token as rt_crud
 from app.models.user import User
 from app.schemas.auth import RegisterRequest, TokenPair, TokenRefreshRequest
-from app.schemas.user import UserPublic
+from app.schemas.user import UserPublic, UserMeResponse, CompanyBrief, BranchBrief, DepartmentBrief
+from app.services import rbac_service
 from app.models.auth_audit_log import (
     record_auth_event,
     AuthEventType,
@@ -220,12 +221,10 @@ async def refresh_tokens(request: Request, body: TokenRefreshRequest, db: AsyncS
 
 
 # -------------------------------------------------------------------
-# 🙋 /auth/me (fixed)
+# 🙋 /auth/me — full user context with roles, permissions, org
 # -------------------------------------------------------------------
-@router.get("/me", response_model=UserPublic)
-async def read_me(request: Request, db: AsyncSession = Depends(get_session)) -> UserPublic:
-    ip = request.client.host if request.client else None
-    ua = request.headers.get("user-agent")
+@router.get("/me", response_model=UserMeResponse)
+async def read_me(request: Request, db: AsyncSession = Depends(get_session)) -> UserMeResponse:
     try:
         token = _extract_bearer_token(request)
         payload = decode_token(token, expected_type="access")
@@ -236,7 +235,40 @@ async def read_me(request: Request, db: AsyncSession = Depends(get_session)) -> 
 
         user_id = UUID(str(sub))
         user = await _get_user_or_401(db, user_id)
-        return UserPublic.model_validate(user, from_attributes=True)
+
+        # Fetch roles, permissions, hierarchy
+        roles = await rbac_service.get_roles_by_user(db, user.id)
+        permissions = await rbac_service.get_permissions_by_user(db, user.id)
+        hierarchy_level = await rbac_service.get_user_hierarchy_level(db, user.id)
+
+        # Build org context from eagerly-loaded relationships
+        company_brief = None
+        if getattr(user, "company", None):
+            company_brief = CompanyBrief.model_validate(user.company, from_attributes=True)
+
+        branch_brief = None
+        if getattr(user, "branch", None):
+            branch_brief = BranchBrief.model_validate(user.branch, from_attributes=True)
+
+        department_brief = None
+        if getattr(user, "department", None):
+            department_brief = DepartmentBrief.model_validate(user.department, from_attributes=True)
+
+        return UserMeResponse(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            job_title=getattr(user, "job_title", None),
+            is_active=user.is_active,
+            is_superuser=user.is_superuser,
+            created_at=user.created_at,
+            company=company_brief,
+            branch=branch_brief,
+            department=department_brief,
+            roles=roles,
+            permissions=permissions,
+            hierarchy_level=hierarchy_level,
+        )
 
     except HTTPException as e:
         raise e
