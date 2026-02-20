@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useHedge } from '../../lib/hedgeContext';
-import AppTopBar from '../../components/layout/AppTopBar';
 import TabBar from '../../components/tabs/TabBar';
 // ExportBar removed — available from results page only
 import ExecutiveSummaryPanel from '../../components/reports/ExecutiveSummaryPanel';
@@ -51,8 +50,6 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── App top bar ── */}
-      <AppTopBar currentModule="CurrencyFX" currentPath="/currency-fx" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

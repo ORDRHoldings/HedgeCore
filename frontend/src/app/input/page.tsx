@@ -33,7 +33,6 @@ import HedgeModal from '../../components/input/HedgeModal';
 import PolicyForm from '../../components/input/PolicyForm';
 import CsvUploader from '../../components/input/CsvUploader';
 import GovernanceStrip from '../../components/input/GovernanceStrip';
-import AppTopBar from '../../components/layout/AppTopBar';
 import SnapshotSummary from '../../components/input/SnapshotSummary';
 import Toast from '../../components/shared/Toast';
 import Modal from '../../components/shared/Modal';
@@ -872,9 +871,6 @@ export default function InputPage() {
 
   return (
     <div>
-      {/* ── App top bar ── */}
-      <AppTopBar currentModule="CurrencyFX" currentPath="/currency-fx" />
-
       {/* ── Governance strip ── */}
       <GovernanceStrip
         tradeCount={trades.length} hedgeCount={hedges.length} policyName={activePresetName}
