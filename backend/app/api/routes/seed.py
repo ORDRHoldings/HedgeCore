@@ -277,6 +277,16 @@ async def seed_company(
                 logger.warning(f"Migration step skipped: {e}")
         logger.info("Schema migration complete")
 
+        # ── Company (must be created FIRST — roles/users reference it) ──
+        r = await db.execute(select(Company).where(Company.id == COMPANY_ID))
+        if not r.scalar_one_or_none():
+            db.add(Company(
+                id=COMPANY_ID, name="Synex Capital Partners",
+                slug="synex-capital", domain="synexcapital.com",
+                settings={"default_currency": "USD", "risk_framework": "Basel III Enhanced"},
+            ))
+        await db.flush()
+
         # ── Permissions ──
         for codename, module, action, desc in SEED_PERMISSIONS:
             r = await db.execute(select(Permission).where(Permission.codename == codename))
@@ -285,7 +295,7 @@ async def seed_company(
                 results["permissions"] += 1
         await db.flush()
 
-        # ── Roles ──
+        # ── Roles (company now exists for company-scoped roles) ──
         role_map = {}
         for name, desc, level, is_sys in ROLES:
             r = await db.execute(select(Role).where(Role.name == name))
@@ -321,15 +331,6 @@ async def seed_company(
                 if not er.scalar_one_or_none():
                     db.add(RolePermission(role_id=role.id, permission_id=perm.id))
         await db.flush()
-
-        # ── Company ──
-        r = await db.execute(select(Company).where(Company.id == COMPANY_ID))
-        if not r.scalar_one_or_none():
-            db.add(Company(
-                id=COMPANY_ID, name="Synex Capital Partners",
-                slug="synex-capital", domain="synexcapital.com",
-                settings={"default_currency": "USD", "risk_framework": "Basel III Enhanced"},
-            ))
 
         # ── Branches ──
         for bid, bname, bcode, bregion, btz in [
