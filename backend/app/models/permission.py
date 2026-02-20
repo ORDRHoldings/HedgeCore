@@ -68,9 +68,7 @@ class Permission(Base):
         cascade="all, delete-orphan",
     )
 
-    __table_args__ = (
-        Index("ix_permissions_module", "module"),
-    )
+    __table_args__: tuple = ()
 
     def __repr__(self) -> str:
         return f"<Permission {self.codename!r}>"

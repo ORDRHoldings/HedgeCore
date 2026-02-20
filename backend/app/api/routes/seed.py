@@ -181,8 +181,11 @@ async def seed_company(
                 importlib.import_module(f"app.models.{f.stem}")
 
         # Create brand new tables (companies, branches, departments, permissions, role_permissions)
-        async with async_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        try:
+            async with async_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        except Exception as create_err:
+            logger.warning(f"create_all partial: {create_err}")
 
         # Add missing columns to existing tables via ALTER TABLE (safe — IF NOT EXISTS)
         alter_statements = [
