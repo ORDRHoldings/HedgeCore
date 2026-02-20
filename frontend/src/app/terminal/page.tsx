@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "../../lib/authContext";
 import {
   Layers,
@@ -357,7 +358,7 @@ export default function TerminalPage() {
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 12 }}>
-          <a
+          <Link
             href="/dashboard"
             style={{
               fontFamily: S.fontMono,
@@ -370,7 +371,7 @@ export default function TerminalPage() {
             }}
           >
             Dashboard
-          </a>
+          </Link>
         </div>
         <div className="hc-identity-right">
           <span className="hc-user-chip">

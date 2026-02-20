@@ -24,8 +24,8 @@ export default function LandingPage() {
       router.replace("/auth/login");
       return;
     }
-    // Authenticated — route to terminal selector
-    router.replace("/terminal");
+    // Authenticated — route to dashboard
+    router.replace("/dashboard");
   }, [isAuthenticated, router]);
 
   return null;
