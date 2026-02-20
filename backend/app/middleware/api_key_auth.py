@@ -64,7 +64,7 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             "/api/system/health",
         }
 
-        # ✔ Public prefixes (for swagger assets + oauth redirect)
+        # ✔ Public prefixes (for swagger assets + oauth redirect + auth)
         self.public_prefixes = (
             "/docs",
             "/redoc",
@@ -73,6 +73,7 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             "/api/redoc",
             "/api/openapi.json",
             "/api/docs/",
+            "/api/auth/",
         )
 
         self._keys: Dict[str, APIKeyRecord] = {}
