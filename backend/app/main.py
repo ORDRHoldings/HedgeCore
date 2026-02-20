@@ -156,24 +156,29 @@ async def _ensure_tables():
         except Exception:
             pass
 
-    # Step 2: create_all — creates ALL ORM tables on a fresh DB
-    # (checkfirst=True is default — skips tables that already exist)
-    try:
-        async with async_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("✅ create_all succeeded")
-    except Exception as e:
-        logger.warning(f"⚠️ create_all failed: {e}, falling back to raw DDL")
-
-    # Step 3: Raw DDL fallback — ensures tables + columns exist even
-    # when create_all partially fails on an existing DB
+    # Step 2: Create ALL tables via raw DDL (order respects FK dependencies)
+    # This is more reliable than create_all which fails on ENUM conflicts,
+    # type mismatches in legacy models, or duplicate indexes.
     raw_ddl = [
+        # ── Core tables (no FK dependencies) ──
         """CREATE TABLE IF NOT EXISTS companies (
             id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL,
             slug VARCHAR(64) UNIQUE NOT NULL, domain VARCHAR(255),
             logo_url VARCHAR(512), settings JSONB,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+
+        """CREATE TABLE IF NOT EXISTS roles (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(64) NOT NULL UNIQUE,
+            description VARCHAR(255),
+            company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+            hierarchy_level INTEGER NOT NULL DEFAULT 10,
+            is_system BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+
+        # ── Tables depending on companies ──
         """CREATE TABLE IF NOT EXISTS branches (
             id UUID PRIMARY KEY,
             company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
@@ -182,24 +187,65 @@ async def _ensure_tables():
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             UNIQUE(company_id, code))""",
+
+        # ── Tables depending on branches ──
         """CREATE TABLE IF NOT EXISTS departments (
             id UUID PRIMARY KEY,
             branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
             name VARCHAR(255) NOT NULL, code VARCHAR(32) NOT NULL,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             UNIQUE(branch_id, code))""",
+
+        # ── Users (depends on companies, branches, departments) ──
+        """CREATE TABLE IF NOT EXISTS users (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            email VARCHAR(255) NOT NULL UNIQUE,
+            hashed_password VARCHAR(255) NOT NULL,
+            full_name VARCHAR(255),
+            company_id UUID REFERENCES companies(id) ON DELETE SET NULL,
+            branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
+            department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+            job_title VARCHAR(128),
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            is_superuser BOOLEAN NOT NULL DEFAULT FALSE,
+            token_version INTEGER NOT NULL DEFAULT 1,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+
+        # ── RBAC join tables ──
+        """CREATE TABLE IF NOT EXISTS user_roles (
+            id SERIAL PRIMARY KEY,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(user_id, role_id))""",
+
         """CREATE TABLE IF NOT EXISTS permissions (
             id SERIAL PRIMARY KEY,
             codename VARCHAR(128) UNIQUE NOT NULL,
             module VARCHAR(64) NOT NULL, action VARCHAR(64) NOT NULL,
             description VARCHAR(255) NOT NULL DEFAULT '',
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+
         """CREATE TABLE IF NOT EXISTS role_permissions (
             id SERIAL PRIMARY KEY,
             role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
             permission_id INTEGER NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             UNIQUE(role_id, permission_id))""",
+
+        # ── Auth support ──
+        """CREATE TABLE IF NOT EXISTS refresh_tokens (
+            id SERIAL PRIMARY KEY,
+            jti VARCHAR(64) NOT NULL UNIQUE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            expires_at TIMESTAMPTZ NOT NULL,
+            revoked BOOLEAN NOT NULL DEFAULT FALSE,
+            replaced_by_jti VARCHAR(64),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            created_ip VARCHAR(64),
+            created_user_agent VARCHAR(256))""",
+
+        # ── ALTER TABLE for existing tables that may need new columns ──
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL",
