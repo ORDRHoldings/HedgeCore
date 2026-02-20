@@ -59,8 +59,11 @@ class Settings(BaseSettings):
 
     # ------------------------------------------------------------------
     # CORS Configuration
+    # Override via CORS_ALLOW_ORIGINS env var (JSON array or comma-separated).
+    # render.yaml sets this per-service so production and preview have
+    # different allowed origins without code changes.
     # ------------------------------------------------------------------
-    CORS_ALLOW_ORIGINS: List[AnyHttpUrl] = [
+    CORS_ALLOW_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "https://hedgecore.vercel.app",
@@ -69,6 +72,21 @@ class Settings(BaseSettings):
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: List[str] = ["*"]
     CORS_ALLOW_HEADERS: List[str] = ["*"]
+
+    @validator("CORS_ALLOW_ORIGINS", pre=True, always=True)
+    @classmethod
+    def parse_cors_origins(cls, v: object) -> List[str]:
+        """Accept JSON array string, comma-separated string, or list."""
+        import json
+        if isinstance(v, list):
+            return [str(o).rstrip("/") for o in v]
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("["):
+                parsed = json.loads(v)
+                return [str(o).rstrip("/") for o in parsed]
+            return [o.strip().rstrip("/") for o in v.split(",") if o.strip()]
+        return []
 
     # ------------------------------------------------------------------
     # Security Tunables
