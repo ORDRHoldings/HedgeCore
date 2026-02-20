@@ -111,6 +111,15 @@ function Td({
   );
 }
 
+// Demo fallback — shown instantly when logged in as demo/demo
+const DEMO_RUNS: RecentRun[] = [
+  { id: "demo-1", created_at: "2026-02-19T14:22:00Z", status: "LEDGER",            currency_pair: "USD/MXN", notional: 5_000_000, hedge_ratio: 0.82 },
+  { id: "demo-2", created_at: "2026-02-18T09:11:00Z", status: "STAGING",           currency_pair: "USD/GBP", notional: 2_500_000, hedge_ratio: 0.65 },
+  { id: "demo-3", created_at: "2026-02-17T16:45:00Z", status: "SANDBOX",           currency_pair: "USD/MXN", notional: 8_000_000, hedge_ratio: 0.78 },
+  { id: "demo-4", created_at: "2026-02-14T11:30:00Z", status: "LEDGER",            currency_pair: "USD/EUR", notional: 3_200_000, hedge_ratio: 0.90 },
+  { id: "demo-5", created_at: "2026-02-12T08:55:00Z", status: "SANDBOX/REJECTED",  currency_pair: "USD/GBP", notional: 1_800_000, hedge_ratio: 0.45 },
+];
+
 export default function RecentRunsWidget({
   token,
   onRemove,
@@ -120,6 +129,13 @@ export default function RecentRunsWidget({
   const [error,   setError]   = useState<string | null>(null);
 
   useEffect(() => {
+    // Demo bypass — skip API call, show hardcoded demo data instantly
+    if (token.startsWith("demo_token_")) {
+      setRuns(DEMO_RUNS);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     const fetchRuns = async () => {
       setLoading(true);

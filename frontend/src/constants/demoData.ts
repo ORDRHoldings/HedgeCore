@@ -25,7 +25,7 @@ export const DEFAULT_DEMO_POLICY: PolicyConfig = {
   hedge_ratios: { confirmed: 0.80, forecast: 0.50 },
   cost_assumptions: { spread_bps: 5.0 },
   execution_product: 'NDF',
-  min_trade_size_usd: 500000,
+  min_trade_size_usd: 0,   // No minimum — demo users should always see execution tickets
 };
 
 /* ── Demo Story Interface ── */
@@ -176,7 +176,7 @@ const F05_POLICY: PolicyConfig = {
   hedge_ratios: { confirmed: 0.85, forecast: 0.60 },
   cost_assumptions: { spread_bps: 3.5 },
   execution_product: 'FWD',
-  min_trade_size_usd: 250_000,
+  min_trade_size_usd: 0,
 };
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -218,7 +218,7 @@ const F06_POLICY: PolicyConfig = {
   hedge_ratios: { confirmed: 0.75, forecast: 0.45 },
   cost_assumptions: { spread_bps: 8.0 },
   execution_product: 'NDF',
-  min_trade_size_usd: 500_000,
+  min_trade_size_usd: 0,
 };
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -258,7 +258,7 @@ const F07_POLICY: PolicyConfig = {
   hedge_ratios: { confirmed: 0.90, forecast: 0.55 },
   cost_assumptions: { spread_bps: 2.5 },
   execution_product: 'FWD',
-  min_trade_size_usd: 1_000_000,
+  min_trade_size_usd: 0,
 };
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -298,7 +298,7 @@ const F08_POLICY: PolicyConfig = {
   hedge_ratios: { confirmed: 0.70, forecast: 0.40 },
   cost_assumptions: { spread_bps: 12.0 },
   execution_product: 'NDF',
-  min_trade_size_usd: 250_000,
+  min_trade_size_usd: 0,
 };
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -328,7 +328,7 @@ const F09_POLICY: PolicyConfig = {
   hedge_ratios: { confirmed: 0.80, forecast: 0.50 },
   cost_assumptions: { spread_bps: 5.0 },
   execution_product: 'NDF',
-  min_trade_size_usd: 500_000,
+  min_trade_size_usd: 0,
 };
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -368,7 +368,7 @@ const F10_POLICY: PolicyConfig = {
   hedge_ratios: { confirmed: 0.95, forecast: 0.70 },
   cost_assumptions: { spread_bps: 18.0 },
   execution_product: 'NDF',
-  min_trade_size_usd: 250_000,
+  min_trade_size_usd: 0,
 };
 
 /* ══════════════════════════════════════════════════════════════════════════════
@@ -412,7 +412,7 @@ export const DEMO_FIXTURES: DemoFixture[] = [
     id: '2026_EXPORTER_HEAVY_AR',
     label: 'Exporter Heavy AR',
     trades: F03_TRADES, hedges: F03_HEDGES, market: DEFAULT_DEMO_MARKET,
-    policy: { bucket_mode: 'CALENDAR_MONTH', hedge_ratios: { confirmed: 1.0, forecast: 0.75 }, cost_assumptions: { spread_bps: 4.0 }, execution_product: 'FWD', min_trade_size_usd: 100_000 },
+    policy: { bucket_mode: 'CALENDAR_MONTH', hedge_ratios: { confirmed: 1.0, forecast: 0.75 }, cost_assumptions: { spread_bps: 4.0 }, execution_product: 'FWD', min_trade_size_usd: 0 },
     presetId: 'active-risk-management',
     demoStory: {
       companyName: 'MexExport Global',
@@ -429,7 +429,7 @@ export const DEMO_FIXTURES: DemoFixture[] = [
     id: '2026_VOLATILE_MARKET',
     label: 'Volatile MXN — Stress',
     trades: F01_TRADES, hedges: F01_HEDGES, market: F04_MARKET,
-    policy: { bucket_mode: 'CALENDAR_MONTH', hedge_ratios: { confirmed: 1.0, forecast: 0.80 }, cost_assumptions: { spread_bps: 10.0 }, execution_product: 'NDF', min_trade_size_usd: 50_000 },
+    policy: { bucket_mode: 'CALENDAR_MONTH', hedge_ratios: { confirmed: 1.0, forecast: 0.80 }, cost_assumptions: { spread_bps: 10.0 }, execution_product: 'NDF', min_trade_size_usd: 0 },
     presetId: 'conservative-treasury',
     demoStory: {
       companyName: 'LatAm Corp (Stress Scenario)',
