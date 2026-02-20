@@ -148,9 +148,26 @@ async def _ensure_tables():
         if f.name != "__init__.py":
             importlib.import_module(f"app.models.{f.stem}")
 
-    # Use raw SQL for migration — each statement in its own transaction
+    # Step 1: Drop orphan indexes that may block create_all
+    for idx in ["ix_permissions_module"]:
+        try:
+            async with async_engine.begin() as conn:
+                await conn.execute(text(f"DROP INDEX IF EXISTS {idx}"))
+        except Exception:
+            pass
+
+    # Step 2: create_all — creates ALL ORM tables on a fresh DB
+    # (checkfirst=True is default — skips tables that already exist)
+    try:
+        async with async_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("✅ create_all succeeded")
+    except Exception as e:
+        logger.warning(f"⚠️ create_all failed: {e}, falling back to raw DDL")
+
+    # Step 3: Raw DDL fallback — ensures tables + columns exist even
+    # when create_all partially fails on an existing DB
     raw_ddl = [
-        "DROP INDEX IF EXISTS ix_permissions_module",
         """CREATE TABLE IF NOT EXISTS companies (
             id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL,
             slug VARCHAR(64) UNIQUE NOT NULL, domain VARCHAR(255),
@@ -198,15 +215,7 @@ async def _ensure_tables():
         except Exception as e:
             logger.debug(f"DDL skipped: {e}")
 
-    alter_stmts: list = []  # kept for compatibility
-    async with async_engine.begin() as conn:
-        for stmt in alter_stmts:
-            try:
-                await conn.execute(text(stmt))
-            except Exception as e:
-                logger.debug(f"ALTER skipped: {e}")
-
-    logger.info("✅ Database tables ensured (create_all + ALTER)")
+    logger.info("✅ Database tables ensured")
 
 
 @asynccontextmanager
