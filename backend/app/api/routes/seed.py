@@ -13,7 +13,7 @@ import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Header
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
@@ -171,6 +171,39 @@ async def seed_company(
     results = {"permissions": 0, "roles": 0, "branches": 0, "departments": 0, "users": 0}
 
     try:
+        # ── Migrate: create new tables + add missing columns to existing ──
+        from app.core.db import async_engine, Base
+        import importlib
+        from pathlib import Path
+        models_dir = Path(__file__).resolve().parent.parent.parent / "models"
+        for f in models_dir.glob("*.py"):
+            if f.name != "__init__.py":
+                importlib.import_module(f"app.models.{f.stem}")
+
+        # Create brand new tables (companies, branches, departments, permissions, role_permissions)
+        async with async_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        # Add missing columns to existing tables via ALTER TABLE (safe — IF NOT EXISTS)
+        alter_statements = [
+            # Users table — new org columns
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS job_title VARCHAR(128)",
+            # Roles table — new hierarchy columns
+            "ALTER TABLE roles ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE",
+            "ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER DEFAULT 10 NOT NULL",
+            "ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT FALSE NOT NULL",
+        ]
+        async with async_engine.begin() as conn:
+            for stmt in alter_statements:
+                try:
+                    await conn.execute(text(stmt))
+                except Exception as e:
+                    logger.warning(f"ALTER skipped: {e}")
+        logger.info("Schema migration complete")
+
         # ── Permissions ──
         for codename, module, action, desc in SEED_PERMISSIONS:
             r = await db.execute(select(Permission).where(Permission.codename == codename))
