@@ -187,8 +187,10 @@ async def seed_company(
         except Exception as create_err:
             logger.warning(f"create_all partial: {create_err}")
 
-        # Add missing columns to existing tables via ALTER TABLE (safe — IF NOT EXISTS)
+        # Fix orphan indexes from partial create_all runs, then add missing columns
         alter_statements = [
+            # Drop orphan duplicate index if it exists
+            "DROP INDEX IF EXISTS ix_permissions_module",
             # Users table — new org columns
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL",
@@ -198,13 +200,17 @@ async def seed_company(
             "ALTER TABLE roles ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE",
             "ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER DEFAULT 10 NOT NULL",
             "ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT FALSE NOT NULL",
+            # Create indexes on new columns
+            "CREATE INDEX IF NOT EXISTS ix_users_company_id ON users(company_id)",
+            "CREATE INDEX IF NOT EXISTS ix_users_branch_id ON users(branch_id)",
+            "CREATE INDEX IF NOT EXISTS ix_roles_company_id ON roles(company_id)",
         ]
         async with async_engine.begin() as conn:
             for stmt in alter_statements:
                 try:
                     await conn.execute(text(stmt))
                 except Exception as e:
-                    logger.warning(f"ALTER skipped: {e}")
+                    logger.warning(f"Migration step skipped: {e}")
         logger.info("Schema migration complete")
 
         # ── Permissions ──
