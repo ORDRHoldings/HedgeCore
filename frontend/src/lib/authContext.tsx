@@ -31,10 +31,11 @@ import Cookies from "js-cookie";
 // ── Config ────────────────────────────────────────────────────────────────────
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
+const _PROD_HOSTNAMES = ["hedgecore.vercel.app", "ordr-terminal.vercel.app"];
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   (typeof window !== "undefined" &&
-  window.location.hostname === "hedgecore.vercel.app"
+  _PROD_HOSTNAMES.includes(window.location.hostname)
     ? "https://hedgecore.onrender.com/api"
     : "/api");
 
