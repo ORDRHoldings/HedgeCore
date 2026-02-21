@@ -23,9 +23,284 @@ from app.models.user import User
 from app.models.rbac import Role, UserRole
 from app.models.organization import Company, Branch, Department
 from app.models.permission import Permission, RolePermission, SEED_PERMISSIONS
+from app.models.policy import PolicyTemplate
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/seed", tags=["seed"])
+
+# ── Policy preset seed data (mirrors frontend policyPresets.ts) ───────────────
+_POLICY_PRESETS_SEED = [
+    # ── CORPORATE ──────────────────────────────────────────────────────────────
+    {
+        "name": "Small Business / Startup", "short_name": "SME",
+        "description": "No minimum trade size — built for SMEs and early-stage hedgers with sub-$500K exposures.",
+        "risk_posture": "MODERATE", "category": "CORPORATE",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.80, "forecast": 0.50},
+                   "cost_assumptions": {"spread_bps": 25.0}, "execution_product": "NDF", "min_trade_size_usd": 0.0},
+    },
+    {
+        "name": "Full Protection", "short_name": "FULL",
+        "description": "Maximum hedge coverage for all confirmed and forecast flows. Zero FX tolerance.",
+        "risk_posture": "CONSERVATIVE", "category": "CORPORATE",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 1.0},
+                   "cost_assumptions": {"spread_bps": 4.0}, "execution_product": "FWD", "min_trade_size_usd": 50000.0},
+    },
+    {
+        "name": "Conservative Treasury", "short_name": "CNSV",
+        "description": "Full confirmed coverage, minimal forecast hedging. Board-mandated treasury policy.",
+        "risk_posture": "CONSERVATIVE", "category": "CORPORATE",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.25},
+                   "cost_assumptions": {"spread_bps": 3.0}, "execution_product": "FWD", "min_trade_size_usd": 100000.0},
+    },
+    {
+        "name": "Balanced Corporate", "short_name": "BLNC",
+        "description": "Full confirmed coverage, moderate forecast hedging. Standard mid-market FX program.",
+        "risk_posture": "MODERATE", "category": "CORPORATE",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.5},
+                   "cost_assumptions": {"spread_bps": 5.0}, "execution_product": "NDF", "min_trade_size_usd": 50000.0},
+    },
+    {
+        "name": "Active Risk Management", "short_name": "ACTV",
+        "description": "High coverage across confirmed and forecast flows. Active FX risk mandate.",
+        "risk_posture": "AGGRESSIVE", "category": "CORPORATE",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.75},
+                   "cost_assumptions": {"spread_bps": 4.0}, "execution_product": "NDF", "min_trade_size_usd": 25000.0},
+    },
+    {
+        "name": "Cost-Sensitive Hedger", "short_name": "COST",
+        "description": "Confirmed-only coverage. Hedges firm commitments only — avoids forecast hedging cost.",
+        "risk_posture": "CONSERVATIVE", "category": "CORPORATE",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.8, "forecast": 0.0},
+                   "cost_assumptions": {"spread_bps": 8.0}, "execution_product": "NDF", "min_trade_size_usd": 75000.0},
+    },
+    {
+        "name": "Layered Rolling", "short_name": "LAYR",
+        "description": "Graduated hedge build-up over 12 months. Avoids locking full exposure at a single spot rate.",
+        "risk_posture": "MODERATE", "category": "CORPORATE",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.6},
+                   "cost_assumptions": {"spread_bps": 4.5}, "execution_product": "FWD", "min_trade_size_usd": 50000.0},
+    },
+    # ── FINANCIAL ──────────────────────────────────────────────────────────────
+    {
+        "name": "Bank Trading Book", "short_name": "BANK",
+        "description": "Tight spread, high minimum, NDF-only. Mirrors interbank desk execution parameters.",
+        "risk_posture": "AGGRESSIVE", "category": "FINANCIAL",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.9},
+                   "cost_assumptions": {"spread_bps": 2.0}, "execution_product": "NDF", "min_trade_size_usd": 500000.0},
+    },
+    {
+        "name": "Asset Manager", "short_name": "AMGR",
+        "description": "Benchmark-relative hedging. Partial confirmed hedge, minimal forecast.",
+        "risk_posture": "MODERATE", "category": "FINANCIAL",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.75, "forecast": 0.0},
+                   "cost_assumptions": {"spread_bps": 3.5}, "execution_product": "FWD", "min_trade_size_usd": 250000.0},
+    },
+    {
+        "name": "Private Equity", "short_name": "PE",
+        "description": "Exit-date hedging. Protects terminal valuation and IRR, not operating flows.",
+        "risk_posture": "CONSERVATIVE", "category": "FINANCIAL",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.1},
+                   "cost_assumptions": {"spread_bps": 6.0}, "execution_product": "FWD", "min_trade_size_usd": 1000000.0},
+    },
+    {
+        "name": "Insurance Reserves", "short_name": "INSR",
+        "description": "Liability-matching hedge. Matches reserve currency to claims currency. Solvency II aligned.",
+        "risk_posture": "CONSERVATIVE", "category": "FINANCIAL",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.15},
+                   "cost_assumptions": {"spread_bps": 4.0}, "execution_product": "FWD", "min_trade_size_usd": 500000.0},
+    },
+    # ── SOVEREIGN ──────────────────────────────────────────────────────────────
+    {
+        "name": "Sovereign Debt Service", "short_name": "SOVR",
+        "description": "Full USD debt service hedging. Protects sovereign budget from FX-driven debt cost spikes.",
+        "risk_posture": "CONSERVATIVE", "category": "SOVEREIGN",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.0},
+                   "cost_assumptions": {"spread_bps": 2.5}, "execution_product": "FWD", "min_trade_size_usd": 5000000.0},
+    },
+    {
+        "name": "Export Proceeds", "short_name": "XPRT",
+        "description": "Commodity export receipts hedging. Locks USD revenue against local currency depreciation.",
+        "risk_posture": "MODERATE", "category": "SOVEREIGN",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.9, "forecast": 0.6},
+                   "cost_assumptions": {"spread_bps": 3.0}, "execution_product": "NDF", "min_trade_size_usd": 2000000.0},
+    },
+    {
+        "name": "Central Bank FX Ops", "short_name": "CBNK",
+        "description": "Reserve management overlay. Minimal hedging — intervention-ready liquidity maintained.",
+        "risk_posture": "AGGRESSIVE", "category": "SOVEREIGN",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.1, "forecast": 0.0},
+                   "cost_assumptions": {"spread_bps": 1.5}, "execution_product": "NDF", "min_trade_size_usd": 10000000.0},
+    },
+    # ── SECTOR-SPECIFIC ────────────────────────────────────────────────────────
+    {
+        "name": "Airline / Aviation", "short_name": "AIRL",
+        "description": "Jet fuel cost + USD revenue hedge. Covers fuel payables and USD-denominated ticket revenue.",
+        "risk_posture": "MODERATE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.9, "forecast": 0.7},
+                   "cost_assumptions": {"spread_bps": 5.5}, "execution_product": "NDF", "min_trade_size_usd": 100000.0},
+    },
+    {
+        "name": "Technology / SaaS", "short_name": "TECH",
+        "description": "USD revenue, MXN cost base. Light hedge on USD receivables — preserves natural hedge benefit.",
+        "risk_posture": "MODERATE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.5, "forecast": 0.3},
+                   "cost_assumptions": {"spread_bps": 5.0}, "execution_product": "NDF", "min_trade_size_usd": 5000.0},
+    },
+    {
+        "name": "Real Estate / REIB", "short_name": "REIT",
+        "description": "USD construction cost hedge by project phase. Protects import material payables.",
+        "risk_posture": "CONSERVATIVE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.2},
+                   "cost_assumptions": {"spread_bps": 6.0}, "execution_product": "FWD", "min_trade_size_usd": 200000.0},
+    },
+    {
+        "name": "Pharma / Healthcare", "short_name": "PHRM",
+        "description": "API and equipment USD import hedging. Regulatory margin protection for essential medicines.",
+        "risk_posture": "CONSERVATIVE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.4},
+                   "cost_assumptions": {"spread_bps": 4.0}, "execution_product": "FWD", "min_trade_size_usd": 10000.0},
+    },
+    {
+        "name": "Agriculture / Commodity", "short_name": "AGRI",
+        "description": "Harvest-season USD receipt hedging. Locks exchange rate at planting for harvest proceeds.",
+        "risk_posture": "MODERATE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.85, "forecast": 0.7},
+                   "cost_assumptions": {"spread_bps": 5.5}, "execution_product": "NDF", "min_trade_size_usd": 10000.0},
+    },
+    {
+        "name": "Automotive Supply Chain", "short_name": "AUTO",
+        "description": "Tier-1/2 supplier policy. Full USD component cost hedge with receivable netting.",
+        "risk_posture": "AGGRESSIVE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.8},
+                   "cost_assumptions": {"spread_bps": 3.5}, "execution_product": "NDF", "min_trade_size_usd": 5000.0},
+    },
+    {
+        "name": "Retail Importer", "short_name": "RETL",
+        "description": "Seasonal inventory hedge. Locks USD purchase cost for holiday season buying windows.",
+        "risk_posture": "MODERATE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.9, "forecast": 0.4},
+                   "cost_assumptions": {"spread_bps": 6.5}, "execution_product": "NDF", "min_trade_size_usd": 5000.0},
+    },
+    # ── NEW SECTOR/CORPORATE PRESETS (expansion) ───────────────────────────────
+    {
+        "name": "Hospitality / Tourism", "short_name": "HSPT",
+        "description": "Seasonal FX hedging for hotel groups and tour operators with USD-denominated bookings.",
+        "risk_posture": "MODERATE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.70, "forecast": 0.40},
+                   "cost_assumptions": {"spread_bps": 7.0}, "execution_product": "NDF", "min_trade_size_usd": 10000.0},
+    },
+    {
+        "name": "Shipping / Logistics", "short_name": "SHIP",
+        "description": "Freight cost and USD charter rate hedging for logistics operators and shipping companies.",
+        "risk_posture": "MODERATE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.85, "forecast": 0.65},
+                   "cost_assumptions": {"spread_bps": 4.5}, "execution_product": "NDF", "min_trade_size_usd": 25000.0},
+    },
+    {
+        "name": "Mining / Natural Resources", "short_name": "MINE",
+        "description": "USD commodity revenue hedging for mining companies and natural resource exporters.",
+        "risk_posture": "MODERATE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.80, "forecast": 0.55},
+                   "cost_assumptions": {"spread_bps": 5.0}, "execution_product": "NDF", "min_trade_size_usd": 100000.0},
+    },
+    {
+        "name": "Construction / Infrastructure", "short_name": "BLDG",
+        "description": "Project-based USD material cost hedge. Full confirmed coverage; minimal forecast during tender phase.",
+        "risk_posture": "CONSERVATIVE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.30},
+                   "cost_assumptions": {"spread_bps": 6.5}, "execution_product": "FWD", "min_trade_size_usd": 50000.0},
+    },
+    {
+        "name": "Media / Entertainment", "short_name": "MDIA",
+        "description": "USD content licensing and production cost hedge for media companies and studios.",
+        "risk_posture": "MODERATE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.60, "forecast": 0.35},
+                   "cost_assumptions": {"spread_bps": 6.0}, "execution_product": "NDF", "min_trade_size_usd": 5000.0},
+    },
+    {
+        "name": "NGO / Non-Profit", "short_name": "NGO",
+        "description": "Grant and donation FX protection. Full coverage of incoming USD grants to preserve programme budgets.",
+        "risk_posture": "CONSERVATIVE", "category": "CORPORATE",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.95, "forecast": 0.80},
+                   "cost_assumptions": {"spread_bps": 10.0}, "execution_product": "FWD", "min_trade_size_usd": 0.0},
+    },
+    {
+        "name": "Family Office", "short_name": "FAML",
+        "description": "Wealth preservation hedge for family offices with cross-border portfolio and real asset exposure.",
+        "risk_posture": "MODERATE", "category": "FINANCIAL",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.85, "forecast": 0.20},
+                   "cost_assumptions": {"spread_bps": 5.5}, "execution_product": "FWD", "min_trade_size_usd": 250000.0},
+    },
+    {
+        "name": "Hedge Fund", "short_name": "HFND",
+        "description": "Alpha-focused FX programme. Near-full coverage with tight spreads for systematic trading desks.",
+        "risk_posture": "AGGRESSIVE", "category": "FINANCIAL",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.95},
+                   "cost_assumptions": {"spread_bps": 1.5}, "execution_product": "NDF", "min_trade_size_usd": 1000000.0},
+    },
+    {
+        "name": "VC / Growth Equity", "short_name": "VCGR",
+        "description": "Portfolio company FX protection. Selective hedging of USD capital calls and exit proceeds.",
+        "risk_posture": "MODERATE", "category": "FINANCIAL",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.70, "forecast": 0.10},
+                   "cost_assumptions": {"spread_bps": 7.0}, "execution_product": "FWD", "min_trade_size_usd": 500000.0},
+    },
+    {
+        "name": "Import / Export Trader", "short_name": "IMEX",
+        "description": "Transactional hedge for active importers/exporters with high PO frequency and short tenors.",
+        "risk_posture": "MODERATE", "category": "CORPORATE",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.90, "forecast": 0.60},
+                   "cost_assumptions": {"spread_bps": 5.5}, "execution_product": "NDF", "min_trade_size_usd": 10000.0},
+    },
+    {
+        "name": "Energy / Utilities", "short_name": "ENGY",
+        "description": "USD fuel and equipment import hedging for energy companies and regulated utilities.",
+        "risk_posture": "CONSERVATIVE", "category": "SECTOR",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 0.95, "forecast": 0.70},
+                   "cost_assumptions": {"spread_bps": 3.5}, "execution_product": "FWD", "min_trade_size_usd": 500000.0},
+    },
+    {
+        "name": "Education / Institutions", "short_name": "EDUC",
+        "description": "Tuition revenue and USD equipment purchase hedge for universities and educational institutions.",
+        "risk_posture": "CONSERVATIVE", "category": "CORPORATE",
+        "config": {"bucket_mode": "CALENDAR_MONTH", "hedge_ratios": {"confirmed": 1.0, "forecast": 0.50},
+                   "cost_assumptions": {"spread_bps": 8.0}, "execution_product": "FWD", "min_trade_size_usd": 5000.0},
+    },
+]
+
+
+async def _seed_policy_templates(db: AsyncSession) -> int:
+    """
+    Idempotently insert all system policy presets.
+    Checks by (short_name, is_system=True, company_id IS NULL).
+    Returns the number of new templates inserted.
+    """
+    inserted = 0
+    for preset in _POLICY_PRESETS_SEED:
+        r = await db.execute(
+            select(PolicyTemplate).where(
+                PolicyTemplate.short_name == preset["short_name"],
+                PolicyTemplate.is_system.is_(True),
+                PolicyTemplate.company_id.is_(None),
+            )
+        )
+        if r.scalar_one_or_none():
+            continue  # already exists — idempotent
+        db.add(PolicyTemplate(
+            name=preset["name"],
+            short_name=preset["short_name"],
+            description=preset["description"],
+            risk_posture=preset["risk_posture"],
+            category=preset["category"],
+            config=preset["config"],
+            is_system=True,
+            company_id=None,
+            version=1,
+        ))
+        inserted += 1
+    await db.flush()
+    logger.info(f"Policy template seed: {inserted} new templates inserted ({len(_POLICY_PRESETS_SEED)} total defined)")
+    return inserted
 
 # ── Fixed UUIDs ──────────────────────────────────────────────────────────────
 COMPANY_ID   = uuid.UUID("11111111-1111-1111-1111-111111111111")
@@ -168,7 +443,7 @@ async def seed_company(
     if x_api_key not in [k for k in expected_keys if k]:
         raise HTTPException(status_code=403, detail="Invalid API key")
 
-    results = {"permissions": 0, "roles": 0, "branches": 0, "departments": 0, "users": 0}
+    results = {"permissions": 0, "roles": 0, "branches": 0, "departments": 0, "users": 0, "policy_templates": 0}
 
     try:
         # ── Full schema migration via raw SQL ──
@@ -387,6 +662,10 @@ async def seed_company(
                 if not er.scalar_one_or_none():
                     db.add(UserRole(user_id=user.id, role_id=role.id))
 
+        # ── Policy Templates ──
+        policy_templates_inserted = await _seed_policy_templates(db)
+        results["policy_templates"] = policy_templates_inserted
+
         await db.commit()
 
         logger.info(f"Company seed complete: {results}")
@@ -397,6 +676,7 @@ async def seed_company(
             "total_employees": len(EMPLOYEES),
             "total_roles": len(ROLES),
             "total_permissions": len(SEED_PERMISSIONS),
+            "total_policy_templates": len(_POLICY_PRESETS_SEED),
         }
 
     except Exception as e:
