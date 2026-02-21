@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import AppTopBar from "../../components/layout/AppTopBar";
 
 const RENDER_TS = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
 
@@ -191,8 +190,6 @@ export default function PortfolioRisk() {
 
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
-      {/* ── App top bar ── */}
-      <AppTopBar currentModule="Portfolio Risk" currentPath="/portfolio-risk" />
 
       {/* Header */}
       <header style={{

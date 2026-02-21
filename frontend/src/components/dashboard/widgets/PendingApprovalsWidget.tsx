@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { ClipboardCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { UserContext } from "@/lib/authContext";
+import EmptyState from "@/components/ui/EmptyState";
 
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -191,18 +192,33 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
 
       {/* Body */}
       <div style={{ flex: 1, overflow: "auto" }}>
-        {loading && <div style={monoNote(S.secondary)}>Loading approvals...</div>}
+        {loading && (
+          <div style={{ padding: "8px 12px" }}>
+            <EmptyState type="loading" message="Loading approvals..." />
+          </div>
+        )}
 
         {!loading && forbidden && (
-          <div style={monoNote(S.amber)}>Requires pipeline.approve permission</div>
+          <div style={{ padding: "8px 12px" }}>
+            <EmptyState type="error" title="Insufficient permissions" message="Requires pipeline.approve permission." />
+          </div>
         )}
 
         {!loading && !forbidden && error && (
-          <div style={monoNote(S.amber)}>No approval access</div>
+          <div style={{ padding: "8px 12px" }}>
+            <EmptyState type="error" title="Error loading approvals" message="Unable to load approval data." />
+          </div>
         )}
 
         {!loading && !forbidden && !error && count === 0 && (
-          <div style={monoNote(S.secondary)}>No pending approvals.</div>
+          <div style={{ padding: "8px 12px" }}>
+            <EmptyState
+              type="empty"
+              title="No pending approvals"
+              message="Proposals submitted for review will appear here."
+              action={{ label: "Go to Staging", onClick: () => router.push("/staging") }}
+            />
+          </div>
         )}
 
         {!loading && !forbidden && !error && count > 0 && (

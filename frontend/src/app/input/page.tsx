@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useDispatch, useSelector } from 'react-redux';
 import { useAuth } from '../../lib/authContext';
 import type {
   TradeRow,
@@ -13,18 +14,30 @@ import type {
 } from '../../api/types';
 import { FUTURES_CURRENCY_LIST } from '../../api/types';
 import { useHedge } from '../../lib/hedgeContext';
-import { calculate, uploadTradesCsv, uploadHedgesCsv } from '../../api/client';
-import {
-  DEFAULT_DEMO_POLICY,
-  DEMO_FIXTURES,
-} from '../../constants/demoData';
-import type { DemoFixture, DemoStory } from '../../constants/demoData';
+import { calculate, uploadHedgesCsv } from '../../api/client';
+import { importPositionsCsv } from '../../api/positionClient';
+import { getActivePolicy, listPolicyTemplates, activatePolicy as activatePolicyApi } from '../../api/policyClient';
+import type { PolicyTemplate } from '../../api/policyClient';
 import { POLICY_PRESETS } from '../../constants/policyPresets';
 import type { PolicyPreset } from '../../constants/policyPresets';
 import { validateAll } from '../../utils/validator';
 import { fmtCompact, fmtPct } from '../../utils/formatters';
 import { deriveCurrencyContext } from '../../utils/currencyContext';
+import type { AppDispatch, RootState } from '../../lib/store';
+import {
+  listPositionsThunk,
+  createPositionThunk,
+  updatePositionThunk,
+  deletePositionThunk,
+  clearError as clearPositionError,
+} from '../../lib/store/slices/positionSlice';
+import type { PositionRow } from '../../api/positionClient';
+import FileUploadLane from '../../components/input/FileUploadLane';
+import DatabaseConnectorLane from '../../components/input/DatabaseConnectorLane';
+import ConnectorPlaceholderLane from '../../components/input/ConnectorPlaceholderLane';
+import ImportHistoryPanel from '../../components/input/ImportHistoryPanel';
 
+import EmptyState from '../../components/ui/EmptyState';
 import StepSection from '../../components/input/StepSection';
 import StepProgress from '../../components/input/StepProgress';
 import type { StepKey } from '../../components/input/StepSection';
@@ -32,7 +45,6 @@ import TradeTable from '../../components/input/TradeTable';
 import TradeModal from '../../components/input/TradeModal';
 import HedgeModal from '../../components/input/HedgeModal';
 import PolicyForm from '../../components/input/PolicyForm';
-import CsvUploader from '../../components/input/CsvUploader';
 import GovernanceStrip from '../../components/input/GovernanceStrip';
 import SnapshotSummary from '../../components/input/SnapshotSummary';
 import Toast from '../../components/shared/Toast';
@@ -55,6 +67,18 @@ const EMPTY_MARKET: MarketSnapshot = {
 
 const STEP_ORDER: StepKey[] = ['exposure', 'policy'];
 
+// ─── Ingestion Desk tabs ──────────────────────────────────────────────────
+type DeskTab = 'manual' | 'upload' | 'database' | 'erp' | 'accounting' | 'history';
+
+const DESK_TABS: { key: DeskTab; label: string; subtitle: string }[] = [
+  { key: 'manual',      label: 'Manual Entry',      subtitle: 'Inline form + bulk' },
+  { key: 'upload',      label: 'Upload CSV / Excel', subtitle: 'File import' },
+  { key: 'database',    label: 'Connect Database',   subtitle: 'SQL pull' },
+  { key: 'erp',         label: 'ERP Integration',    subtitle: 'SAP · Oracle · MS Dynamics' },
+  { key: 'accounting',  label: 'Accounting System',  subtitle: 'Xero · QuickBooks · NetSuite' },
+  { key: 'history',     label: 'Import History',     subtitle: 'Audit trail' },
+];
+
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const S = {
   bg: 'var(--bg-deep)',
@@ -73,334 +97,60 @@ const S = {
   fontUI: "'IBM Plex Sans', sans-serif",
 };
 
-// ─── Dataset Selector Panel ───────────────────────────────────────────────────
-interface DatasetPanelProps {
-  fixtures: DemoFixture[];
-  activeId: string | null;
-  onSelect: (id: string | null) => void;
-  loading?: boolean;
+/** Convert a DB-backed PositionRow to the TradeRow shape the rest of the page uses */
+function positionToTradeRow(p: PositionRow): TradeRow {
+  return {
+    record_id:   p.record_id,
+    entity:      p.entity,
+    type:        p.type,
+    currency:    p.currency,
+    amount:      p.amount,
+    value_date:  p.value_date,
+    status:      p.status,
+    description: p.description ?? '',
+  };
 }
 
-function DatasetPanel({ fixtures, activeId, onSelect, loading }: DatasetPanelProps) {
-  const [confirmId, setConfirmId] = useState<string | null | '__CLEAR__'>(undefined as unknown as null);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  const handleClick = (id: string | null) => {
-    if (id === activeId || (id === null && activeId === null)) return;
-    setConfirmId(id);
-    setShowConfirm(true);
-  };
-
-  const confirm = () => {
-    onSelect(confirmId === null ? '__CLEAR__' : confirmId);
-    setShowConfirm(false);
-  };
-
-  const confirmLabel = confirmId ? (fixtures.find(f => f.id === confirmId)?.label ?? 'Unknown') : 'Empty state';
-
-  // Group fixtures
-  const groups: { label: string; items: DemoFixture[] }[] = [
-    { label: 'MXN / Latin America', items: fixtures.filter(f => ['F01', 'F02', 'F03', 'F04', 'F09'].some(p => f.id.includes(p))) },
-    { label: 'Global Currencies', items: fixtures.filter(f => ['F05', 'F06', 'F07', 'F08', 'F10'].some(p => f.id.includes(p))) },
-  ];
-  const all = fixtures;
-
-  return (
-    <>
-      <div style={{
-        border: `1px solid ${S.border}`,
-        background: S.bgPanel,
-        marginBottom: 0,
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 16px',
-          borderBottom: `1px solid ${S.border}`,
-          background: S.bgSub,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.08em' }}>DATASET SELECTOR</span>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: S.textPrimary, fontFamily: S.fontUI }}>Load Scenario Dataset</span>
-          </div>
-          {activeId && (
-            <button
-              onClick={() => handleClick(null)}
-              style={{
-                fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
-                padding: '3px 10px', border: `1px solid ${S.border}`,
-                color: S.textTertiary, background: 'transparent', cursor: 'pointer',
-              }}
-            >× CLEAR DATASET</button>
-          )}
-        </div>
-
-        {/* Fixture grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, 1fr)',
-          gap: 0,
-          borderBottom: `1px solid ${S.border}`,
-        }}>
-          {all.map((f, i) => {
-            const isActive = f.id === activeId;
-            const story = f.demoStory;
-            // Currency chip colour
-            const ccyColor = ['EUR', 'GBP', 'CHF'].includes(f.market.provider_metadata?.currency_pair?.toString().split('/')[1] ?? '')
-              ? S.cyan
-              : ['BRL', 'JPY', 'ZAR', 'TRY'].some(c => f.id.includes(c) || f.demoStory.geographicExposure.includes(c))
-              ? S.amber
-              : S.green;
-
-            // Detect primary currency from fixture
-            const primaryCcy = (() => {
-              const currencies = [...new Set(f.trades.map(t => t.currency))];
-              return currencies[0] ?? 'MXN';
-            })();
-
-            return (
-              <button
-                key={f.id}
-                onClick={() => handleClick(f.id)}
-                disabled={loading}
-                style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-                  padding: '10px 12px',
-                  borderRight: i % 5 !== 4 ? `1px solid ${S.borderSoft}` : 'none',
-                  borderBottom: i < 5 ? `1px solid ${S.borderSoft}` : 'none',
-                  background: isActive ? `color-mix(in srgb, ${S.cyan} 8%, transparent)` : 'transparent',
-                  border: isActive ? `1px solid ${S.cyan}` : undefined,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  textAlign: 'left',
-                  gap: 4,
-                  position: 'relative',
-                  transition: 'background 0.1s',
-                }}
-              >
-                {/* Active indicator */}
-                {isActive && (
-                  <span style={{
-                    position: 'absolute', top: 6, right: 6,
-                    fontFamily: S.fontMono, fontSize: '0.4375rem',
-                    color: S.cyan, letterSpacing: '0.06em',
-                  }}>● ACTIVE</span>
-                )}
-
-                {/* Fixture label chip */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
-                  <span style={{
-                    fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.06em',
-                    color: S.textTertiary,
-                  }}>{f.id.slice(-3)}</span>
-                  <span style={{
-                    fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.06em',
-                    color: ccyColor, background: `color-mix(in srgb, ${ccyColor} 10%, transparent)`,
-                    padding: '1px 4px',
-                  }}>{primaryCcy}</span>
-                </div>
-
-                {/* Company name */}
-                <span style={{
-                  fontFamily: S.fontUI, fontSize: '0.6875rem', fontWeight: 600,
-                  color: isActive ? S.cyan : S.textPrimary,
-                  lineHeight: 1.3,
-                }}>{story.companyName}</span>
-
-                {/* Industry */}
-                <span style={{
-                  fontFamily: S.fontUI, fontSize: '0.625rem',
-                  color: S.textTertiary,
-                  lineHeight: 1.3,
-                }}>{story.industry}</span>
-
-                {/* Trade count */}
-                <span style={{
-                  fontFamily: S.fontMono, fontSize: '0.5rem',
-                  color: S.textTertiary,
-                  marginTop: 2,
-                }}>{f.trades.length} pos · {f.hedges.length} hdg</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Footer hint */}
-        <div style={{ padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.05em' }}>
-            {activeId
-              ? `Dataset active — all inputs pre-loaded · click any card to switch · or manually edit below`
-              : `Select a scenario to pre-load all inputs · or build manually using the steps below`}
-          </span>
-        </div>
-      </div>
-
-      {/* Confirm dialog */}
-      {showConfirm && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 200,
-            background: 'rgba(10,14,18,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-          onClick={e => { if (e.target === e.currentTarget) setShowConfirm(false); }}
-        >
-          <div style={{
-            background: S.bgPanel, border: `1px solid ${S.border}`, width: 420,
-            fontFamily: S.fontUI,
-          }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 16px', borderBottom: `1px solid ${S.border}`,
-              background: S.bgSub,
-            }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.08em' }}>CONFIRM ACTION</span>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: S.textPrimary }}>Dataset Change</span>
-            </div>
-            <div style={{ padding: '16px' }}>
-              <p style={{ fontSize: '0.75rem', color: S.textSecondary, lineHeight: 1.65, margin: '0 0 10px' }}>
-                This will <strong style={{ color: S.textPrimary }}>reset all current inputs</strong> and{' '}
-                {confirmId
-                  ? <>load: <strong style={{ color: S.cyan }}>{confirmLabel}</strong></>
-                  : <>clear the form to empty state</>
-                }.
-              </p>
-              <p style={{ fontSize: '0.6875rem', color: S.textTertiary, lineHeight: 1.5, margin: 0 }}>
-                Any unsaved manual entries will be discarded.
-              </p>
-            </div>
-            <div style={{
-              padding: '10px 16px', borderTop: `1px solid ${S.borderSoft}`,
-              display: 'flex', justifyContent: 'flex-end', gap: 8, background: S.bgSub,
-            }}>
-              <button
-                onClick={() => setShowConfirm(false)}
-                style={{
-                  fontFamily: S.fontUI, fontSize: '0.6875rem', fontWeight: 500,
-                  padding: '4px 12px', border: `1px solid ${S.border}`,
-                  color: S.textSecondary, background: 'transparent', cursor: 'pointer',
-                }}
-              >Cancel</button>
-              <button
-                onClick={confirm}
-                style={{
-                  fontFamily: S.fontUI, fontSize: '0.6875rem', fontWeight: 600,
-                  padding: '4px 14px', border: `1px solid ${S.cyan}`,
-                  color: S.cyan, background: 'transparent', cursor: 'pointer',
-                }}
-              >{confirmId ? 'Load Dataset' : 'Reset to Empty'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
+// ─── Import result banner ─────────────────────────────────────────────────────
+interface ImportBannerProps {
+  created: number;
+  totalRows: number;
+  errors: { row: number; record_id?: string; error: string }[];
+  onDismiss: () => void;
 }
-
-// ─── Scenario Card ────────────────────────────────────────────────────────────
-function ScenarioCard({ story, fixtureLabel, onEdit }: { story: DemoStory; fixtureLabel: string; onEdit: () => void }) {
-  const [expanded, setExpanded] = useState(false);
-
+function ImportBanner({ created, totalRows, errors, onDismiss }: ImportBannerProps) {
+  const hasErrors = errors.length > 0;
   return (
     <div style={{
-      border: `1px solid ${S.border}`,
-      background: S.bgPanel,
-      marginBottom: 0,
+      border: `1px solid ${hasErrors ? S.amber : S.green}`,
+      background: hasErrors
+        ? `color-mix(in srgb, ${S.amber} 4%, ${S.bgPanel})`
+        : `color-mix(in srgb, ${S.green} 4%, ${S.bgPanel})`,
+      marginBottom: 8,
     }}>
-      {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 16px',
-        borderBottom: expanded ? `1px solid ${S.border}` : 'none',
-        background: `color-mix(in srgb, var(--accent-cyan) 4%, ${S.bgSub})`,
-        cursor: 'pointer',
-      }} onClick={() => setExpanded(e => !e)}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.cyan, letterSpacing: '0.08em' }}>SCENARIO BRIEF</span>
-          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: S.textPrimary, fontFamily: S.fontUI }}>
-            {story.companyName} — {story.industry}
-          </span>
-          <span style={{
-            fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary,
-            background: S.bgSub, padding: '2px 6px', border: `1px solid ${S.borderSoft}`,
-          }}>{story.geographicExposure}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={e => { e.stopPropagation(); onEdit(); }}
-            style={{
-              fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
-              padding: '3px 10px', border: `1px solid ${S.border}`,
-              color: S.textTertiary, background: 'transparent', cursor: 'pointer',
-            }}
-          >EDIT INPUTS</button>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.6rem', color: S.textTertiary }}>
-            {expanded ? '▲' : '▼'}
-          </span>
-        </div>
+        padding: '7px 14px',
+        borderBottom: `1px solid ${hasErrors ? S.amber : S.green}`,
+      }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: hasErrors ? S.amber : S.green, letterSpacing: '0.08em' }}>
+          CSV IMPORT RESULT
+        </span>
+        <span style={{ fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.textSecondary }}>
+          {created}/{totalRows} rows imported{hasErrors ? ` · ${errors.length} errors` : ''}
+        </span>
+        <button
+          onClick={onDismiss}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, fontFamily: S.fontMono, fontSize: '0.75rem' }}
+        >×</button>
       </div>
-
-      {expanded && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0 }}>
-
-          {/* Problem */}
-          <div style={{ padding: '14px 16px', borderRight: `1px solid ${S.borderSoft}` }}>
-            <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.red, letterSpacing: '0.08em', marginBottom: 6 }}>
-              ● EXPOSURE PROBLEM
-            </p>
-            <p style={{ fontSize: '0.75rem', color: S.textPrimary, lineHeight: 1.65, margin: '0 0 8px', fontFamily: S.fontUI }}>
-              {story.problem}
-            </p>
-            <div style={{
-              background: `color-mix(in srgb, ${S.red} 5%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${S.red} 18%, transparent)`,
-              padding: '6px 10px',
-            }}>
-              <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.red, letterSpacing: '0.06em', marginBottom: 4 }}>FINANCIAL IMPACT (UNHEDGED)</p>
-              <p style={{ fontSize: '0.6875rem', color: S.textSecondary, lineHeight: 1.5, margin: 0, fontFamily: S.fontUI }}>
-                {story.financialImpactWithoutHedge}
-              </p>
+      {hasErrors && (
+        <div style={{ padding: '8px 14px', maxHeight: 120, overflowY: 'auto' }}>
+          {errors.map((e, i) => (
+            <div key={i} style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.amber, marginBottom: 3 }}>
+              Row {e.row}{e.record_id ? ` (${e.record_id})` : ''}: {e.error}
             </div>
-          </div>
-
-          {/* Risk Description */}
-          <div style={{ padding: '14px 16px', borderRight: `1px solid ${S.borderSoft}` }}>
-            <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.amber, letterSpacing: '0.08em', marginBottom: 6 }}>
-              ◆ RISK ARCHITECTURE
-            </p>
-            <p style={{ fontSize: '0.75rem', color: S.textPrimary, lineHeight: 1.65, margin: '0 0 8px', fontFamily: S.fontUI }}>
-              {story.riskDescription}
-            </p>
-            <div style={{
-              background: `color-mix(in srgb, ${S.amber} 5%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${S.amber} 18%, transparent)`,
-              padding: '6px 10px',
-            }}>
-              <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.amber, letterSpacing: '0.06em', marginBottom: 4 }}>HEDGE OBJECTIVE</p>
-              <p style={{ fontSize: '0.6875rem', color: S.textSecondary, lineHeight: 1.5, margin: 0, fontFamily: S.fontUI }}>
-                {story.objective}
-              </p>
-            </div>
-          </div>
-
-          {/* Resolution */}
-          <div style={{ padding: '14px 16px' }}>
-            <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.green, letterSpacing: '0.08em', marginBottom: 6 }}>
-              ✓ HEDGECORE RESOLUTION
-            </p>
-            <p style={{ fontSize: '0.75rem', color: S.textPrimary, lineHeight: 1.65, margin: '0 0 8px', fontFamily: S.fontUI }}>
-              {story.resolution}
-            </p>
-            <div style={{
-              background: `color-mix(in srgb, ${S.green} 5%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${S.green} 18%, transparent)`,
-              padding: '6px 10px',
-            }}>
-              <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.green, letterSpacing: '0.06em', marginBottom: 4 }}>DATASET LOADED</p>
-              <p style={{ fontSize: '0.6875rem', color: S.textSecondary, lineHeight: 1.5, margin: 0, fontFamily: S.fontUI }}>
-                {fixtureLabel} — all trades, hedges, market data, and policy settings are pre-configured. Hit Generate Hedge Plan to see the output.
-              </p>
-            </div>
-          </div>
+          ))}
         </div>
       )}
     </div>
@@ -409,15 +159,29 @@ function ScenarioCard({ story, fixtureLabel, onEdit }: { story: DemoStory; fixtu
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function InputPage() {
-  const router = useRouter();
+  const router    = useRouter();
+  const dispatch  = useDispatch<AppDispatch>();
   const { setCalculation } = useHedge();
   const { token } = useAuth();
 
-  // ── Data ──────────────────────────────────────────────────────────────────
-  const [trades, setTrades]  = useState<TradeRow[]>([]);
+  // ── Redux position state ──────────────────────────────────────────────────
+  const { positions, loading: positionsLoading, error: positionError } = useSelector(
+    (s: RootState) => s.positions,
+  );
+
+  // ── Ingestion desk tab ────────────────────────────────────────────────────
+  const [deskTab, setDeskTab] = useState<DeskTab>('manual');
+
+  // ── Local state ───────────────────────────────────────────────────────────
   const [hedges, setHedges]  = useState<HedgeRow[]>([]);
   const [market, setMarket]  = useState<MarketSnapshot>(EMPTY_MARKET);
-  const [policy, setPolicy]  = useState<PolicyConfig>(DEFAULT_DEMO_POLICY);
+  const [policy, setPolicy]  = useState<PolicyConfig>({
+    bucket_mode: 'CALENDAR_MONTH',
+    hedge_ratios: { confirmed: 0, forecast: 0 },
+    cost_assumptions: { spread_bps: 0 },
+    execution_product: 'NDF',
+    min_trade_size_usd: 0,
+  });
 
   // ── UI ────────────────────────────────────────────────────────────────────
   const [loading, setLoading]               = useState(false);
@@ -426,66 +190,78 @@ export default function InputPage() {
 
   const [showAutoResolveConfirm, setShowAutoResolveConfirm] = useState(false);
 
+  // ── Import banner ─────────────────────────────────────────────────────────
+  const [importResult, setImportResult] = useState<{
+    created: number; totalRows: number;
+    errors: { row: number; record_id?: string; error: string }[];
+  } | null>(null);
+
   // ── Modals ────────────────────────────────────────────────────────────────
   const [tradeModalOpen, setTradeModalOpen]       = useState(false);
-  const [editingTradeIndex, setEditingTradeIndex] = useState<number | undefined>();
+  const [editingPosition, setEditingPosition]     = useState<PositionRow | undefined>();
   const [hedgeModalOpen, setHedgeModalOpen]       = useState(false);
   const [editingHedgeIndex, setEditingHedgeIndex] = useState<number | undefined>();
 
   // ── Policy / Market ───────────────────────────────────────────────────────
-  const [activePresetId, setActivePresetId] = useState<string | null>('balanced-corporate');
-  const [marketMode, setMarketMode]         = useState<'DEMO' | 'MANUAL'>('MANUAL');
-  const [autofillLoading, setAutofillLoading] = useState(false);
-  const [autofillMsg, setAutofillMsg]       = useState('');
+  const [activePresetId, setActivePresetId]       = useState<string | null>('balanced-corporate');
+  // DB-backed active policy template (for activate button)
+  const [dbTemplates, setDbTemplates]             = useState<PolicyTemplate[]>([]);
+  const [activePolicyTemplateId, setActivePolicyTemplateId] = useState<string | null>(null);
+  const [policyActivating, setPolicyActivating]   = useState(false);
+  const [policyActivateMsg, setPolicyActivateMsg] = useState('');
+  const [marketMode, setMarketMode]               = useState<'DEMO' | 'MANUAL'>('MANUAL');
+  const [autofillLoading, setAutofillLoading]     = useState(false);
+  const [autofillMsg, setAutofillMsg]             = useState('');
 
-  // ── Fixture / summary mode ────────────────────────────────────────────────
-  const [fixtureId, setFixtureId]     = useState<string | null>(null);
-  const [summaryMode, setSummaryMode] = useState(false);
-  const clearFixture = useCallback(() => { setFixtureId(null); setSummaryMode(false); }, []);
-
-  // ── Demo session: restore from localStorage on mount (demo users only) ────
-  useEffect(() => {
-    if (!token?.startsWith('demo_token_')) return;
-    try {
-      const saved = localStorage.getItem('demo_input_state');
-      if (saved) {
-        const { trades: t, hedges: h, market: m, policy: p, fixtureId: fid, summaryMode: sm } = JSON.parse(saved);
-        if (t?.length) {
-          setTrades(t);
-          setHedges(h ?? []);
-          if (m) setMarket(m);
-          if (p) setPolicy(p);
-          if (fid) setFixtureId(fid);
-          if (sm) setSummaryMode(sm);
-        }
-      }
-    } catch {
-      // Ignore parse errors — corrupted storage, just start fresh
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]); // runs once on mount when token is available
-
-  // ── Demo session: save to localStorage whenever state changes ─────────────
-  useEffect(() => {
-    if (!token?.startsWith('demo_token_')) return;
-    try {
-      localStorage.setItem('demo_input_state', JSON.stringify({ trades, hedges, market, policy, fixtureId, summaryMode }));
-    } catch {
-      // Ignore storage quota errors
-    }
-  }, [token, trades, hedges, market, policy, fixtureId, summaryMode]);
+  // ── Step (progressive disclosure) ─────────────────────────────────────────
+  const [activeStep, setActiveStep] = useState<StepKey>('exposure');
 
   // ── Toast ─────────────────────────────────────────────────────────────────
   const [toastMsg, setToastMsg]       = useState('');
   const [toastVisible, setToastVisible] = useState(false);
 
+  const showToast = useCallback((msg: string) => {
+    setToastMsg(msg); setToastVisible(true);
+  }, []);
+
   // ── Inline trade entry form ───────────────────────────────────────────────
-  const EMPTY_INLINE: TradeRow = { record_id: '', entity: '', type: 'AP', currency: 'MXN', amount: 0, value_date: '', status: 'CONFIRMED', description: '' };
+  const EMPTY_INLINE: TradeRow = {
+    record_id: '', entity: '', type: 'AP', currency: 'MXN',
+    amount: 0, value_date: '', status: 'CONFIRMED', description: '',
+  };
   const [inlineForm, setInlineForm]       = useState<TradeRow>(EMPTY_INLINE);
   const [inlineTouched, setInlineTouched] = useState<Record<string, boolean>>({});
+  const [inlineSaving, setInlineSaving]   = useState(false);
 
-  // ── Step (progressive disclosure) ─────────────────────────────────────────
-  const [activeStep, setActiveStep] = useState<StepKey>('exposure');
+  // ── Load positions from DB on mount ───────────────────────────────────────
+  useEffect(() => {
+    if (!token) return;
+    dispatch(listPositionsThunk({ token }));
+  }, [dispatch, token]);
+
+  // ── Load policy templates + active policy on mount ────────────────────────
+  useEffect(() => {
+    if (!token) return;
+    // Fetch templates (for matching DB template IDs to preset IDs)
+    listPolicyTemplates(token).then(setDbTemplates).catch(() => {/* ignore */});
+    // Fetch active policy → pre-select preset if found
+    getActivePolicy(token).then(instance => {
+      if (!instance?.template) return;
+      const tmpl = instance.template;
+      // Record the DB template UUID so we can skip re-activation
+      setActivePolicyTemplateId(tmpl.id);
+      // Match by short_name to a known preset ID
+      const matched = POLICY_PRESETS.find(p => p.shortName === tmpl.short_name);
+      if (matched) {
+        setActivePresetId(matched.id);
+        setPolicy(matched.policy);
+      }
+    }).catch(() => {/* ignore — use defaults */});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]); // run once on mount
+
+  // ── Derive trades array from Redux positions for downstream use ───────────
+  const trades = useMemo(() => positions.map(positionToTradeRow), [positions]);
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const validation = useMemo(
@@ -505,7 +281,6 @@ export default function InputPage() {
 
   const validationState = useMemo<'PASS' | 'FAIL' | 'PENDING'>(() => {
     if (trades.length === 0) return 'PENDING';
-    // If only market-related errors remain, show PASS (auto-fetched on generate)
     const nonMarket = validation.errors.filter(
       e => e.severity === 'CRITICAL' && !AUTO_RESOLVED_CODES.has(e.code),
     );
@@ -519,21 +294,17 @@ export default function InputPage() {
 
   const integrityScore = useMemo(() => {
     if (trades.length === 0) return undefined;
-    // Exclude auto-resolved market errors from score penalty
     const countable = validation.errors.filter(e => !AUTO_RESOLVED_CODES.has(e.code)).length;
     return Math.max(0, Math.min(100, Math.round(100 * (1 - countable / 21))));
   }, [trades.length, validation.errors]);
 
-  const stepUnlocked = useMemo(() => {
-    const hasTrades = trades.length > 0;
-    return {
-      exposure:      true,
-      market:        true,   // not a visible step — keep key to avoid TS errors
-      policy:        hasTrades,
-      hedges:        true,   // not a visible step
-      authorization: true,
-    };
-  }, [trades.length]);
+  const stepUnlocked = useMemo(() => ({
+    exposure:      true,
+    market:        true,
+    policy:        trades.length > 0,
+    hedges:        true,
+    authorization: true,
+  }), [trades.length]);
 
   const lockedSteps = useMemo(() => {
     const locked = new Set<StepKey>();
@@ -552,7 +323,6 @@ export default function InputPage() {
     const hasTrades   = trades.length > 0;
     const marketValid = market.spot_usdmxn > 0;
     const fwdValid    = Object.keys(market.forward_points_by_month).length > 0;
-    // Exclude market-related errors that are auto-resolved on generate
     const realErrors  = validation.errors.filter(e => !AUTO_RESOLVED_CODES.has(e.code));
     const noErrors    = realErrors.length === 0;
     return {
@@ -576,44 +346,23 @@ export default function InputPage() {
     locked:  hedges.filter(h => h.status === 'LOCKED').length,
   }), [hedges]);
 
-  const bucketCount = useMemo(() => Object.keys(market.forward_points_by_month).length, [market.forward_points_by_month]);
-
-  const ageMinutes = useMemo(() => {
-    const m = Math.floor((Date.now() - Date.parse(market.as_of)) / 60000);
-    return isNaN(m) || m < 0 ? '--' : `${m}m`;
-  }, [market.as_of]);
-
-  const fixtureLabel = useMemo(
-    () => DEMO_FIXTURES.find((f: DemoFixture) => f.id === fixtureId)?.label ?? null,
-    [fixtureId],
-  );
-
-  const activeFixture = useMemo(
-    () => fixtureId ? DEMO_FIXTURES.find((f: DemoFixture) => f.id === fixtureId) ?? null : null,
-    [fixtureId],
-  );
-
   const validationGates = useMemo(() => {
     const nonMarketErrors = validation.errors.filter(
       e => e.severity === 'CRITICAL' && !AUTO_RESOLVED_CODES.has(e.code),
     );
     return [
-      { label: 'Exposure data',     met: trades.length > 0,         message: trades.length === 0 ? 'No positions loaded' : undefined },
-      { label: 'Market snapshot',   met: true,                      message: market.spot_usdmxn > 0 ? undefined : 'Auto-fetched on generate' },
-      { label: 'No critical errors',met: nonMarketErrors.length === 0,
-        message: nonMarketErrors.length > 0
-          ? `${nonMarketErrors.length} critical`
-          : undefined },
+      { label: 'Exposure data',      met: trades.length > 0,           message: trades.length === 0 ? 'No positions loaded' : undefined },
+      { label: 'Market snapshot',    met: true,                        message: market.spot_usdmxn > 0 ? undefined : 'Auto-fetched on generate' },
+      { label: 'No critical errors', met: nonMarketErrors.length === 0,
+        message: nonMarketErrors.length > 0 ? `${nonMarketErrors.length} critical` : undefined },
     ];
   }, [trades.length, market.spot_usdmxn, validation.errors]);
 
-  // ── Detected currencies from trades ───────────────────────────────────────
   const detectedCurrencies = useMemo(
     () => [...new Set(trades.map(t => t.currency))],
     [trades],
   );
 
-  // ── Currency context (single canonical source for labels + validation) ────
   const currencyCtx = useMemo(
     () => deriveCurrencyContext(trades, market),
     [trades, market],
@@ -646,80 +395,74 @@ export default function InputPage() {
         setAutofillMsg(isLive
           ? `Live rates loaded for ${detectedCurrencies.join(', ')} via Alpha Vantage`
           : `Demo rates loaded for ${detectedCurrencies.join(', ')} — configure ALPHA_VANTAGE_API_KEY for live data`);
-        setToastMsg(isLive ? 'Market data autofilled (live)' : 'Market data autofilled (demo rates)');
-        setToastVisible(true);
-        clearFixture();
-        // Jump to market step
-        setActiveStep('market');
+        showToast(isLive ? 'Market data autofilled (live)' : 'Market data autofilled (demo rates)');
       }
     } catch (err) {
       setAutofillMsg(`Autofill failed: ${String(err)}`);
     } finally {
       setAutofillLoading(false);
     }
-  }, [detectedCurrencies, trades, clearFixture]);
+  }, [detectedCurrencies, trades, showToast]);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleSelectFixture = useCallback((selectedId: string | null) => {
-    if (!selectedId || selectedId === '__CLEAR__') {
-      setTrades([]); setHedges([]); setMarket(EMPTY_MARKET);
-      setPolicy(DEFAULT_DEMO_POLICY); setActivePresetId('balanced-corporate');
-      setMarketMode('MANUAL'); setFixtureId(null); setSummaryMode(false);
-      setActiveStep('exposure'); setBackendErrors([]); setBackendErrorMsg('');
-      setAutofillMsg('');
-      if (selectedId === '__CLEAR__') { setToastMsg('Dataset cleared'); setToastVisible(true); }
-      return;
-    }
-    const fixture = DEMO_FIXTURES.find((f: DemoFixture) => f.id === selectedId);
-    if (!fixture) return;
-    setTrades(fixture.trades); setHedges(fixture.hedges); setMarket(fixture.market);
-    setPolicy(fixture.policy); setActivePresetId(fixture.presetId);
-    setMarketMode('DEMO'); setFixtureId(fixture.id);
-    setSummaryMode(true); setActiveStep('policy');
-    setBackendErrors([]); setBackendErrorMsg('');
-    setAutofillMsg('');
-    setToastMsg(`Dataset loaded: ${fixture.label}`); setToastVisible(true);
+  // ── Hedges handlers (local — hedges are not yet DB-persisted) ────────────
+  const handleHedgesCsv = useCallback(async (file: File) => {
+    const data = await uploadHedgesCsv(file);
+    setHedges(data.hedges);
   }, []);
 
-  const handleTradesCsv = useCallback(async (file: File) => {
-    const data = await uploadTradesCsv(file); setTrades(data.trades); clearFixture();
-  }, [clearFixture]);
-
-  const handleHedgesCsv = useCallback(async (file: File) => {
-    const data = await uploadHedgesCsv(file); setHedges(data.hedges); clearFixture();
-  }, [clearFixture]);
-
-  const openAddTrade  = useCallback(() => { setEditingTradeIndex(undefined); setTradeModalOpen(true); }, []);
-  const openEditTrade = useCallback((i: number) => { setEditingTradeIndex(i); setTradeModalOpen(true); }, []);
-  const handleSaveTrade = useCallback((trade: TradeRow) => {
-    clearFixture();
-    if (editingTradeIndex !== undefined) {
-      setTrades(prev => prev.map((t, i) => i === editingTradeIndex ? trade : t));
-    } else {
-      setTrades(prev => [...prev, trade]);
-    }
-    setTradeModalOpen(false);
-  }, [editingTradeIndex, clearFixture]);
-  const handleRemoveTrade = useCallback((i: number) => {
-    clearFixture(); setTrades(prev => prev.filter((_, j) => j !== i));
-  }, [clearFixture]);
-
-  const openAddHedge  = useCallback(() => { setEditingHedgeIndex(undefined); setHedgeModalOpen(true); }, []);
-  const openEditHedge = useCallback((i: number) => { setEditingHedgeIndex(i); setHedgeModalOpen(true); }, []);
+  const openAddHedge   = useCallback(() => { setEditingHedgeIndex(undefined); setHedgeModalOpen(true); }, []);
+  const openEditHedge  = useCallback((i: number) => { setEditingHedgeIndex(i); setHedgeModalOpen(true); }, []);
   const handleSaveHedge = useCallback((hedge: HedgeRow) => {
-    clearFixture();
     if (editingHedgeIndex !== undefined) {
       setHedges(prev => prev.map((h, i) => i === editingHedgeIndex ? hedge : h));
     } else {
       setHedges(prev => [...prev, hedge]);
     }
     setHedgeModalOpen(false);
-  }, [editingHedgeIndex, clearFixture]);
+  }, [editingHedgeIndex]);
   const handleRemoveHedge = useCallback((i: number) => {
-    clearFixture(); setHedges(prev => prev.filter((_, j) => j !== i));
-  }, [clearFixture]);
+    setHedges(prev => prev.filter((_, j) => j !== i));
+  }, []);
 
-  // ── Inline trade form handler ──────────────────────────────────────────────
+  // ── Position (DB) handlers ────────────────────────────────────────────────
+  const openAddTrade = useCallback(() => {
+    setEditingPosition(undefined);
+    setTradeModalOpen(true);
+  }, []);
+
+  const openEditTrade = useCallback((idx: number) => {
+    setEditingPosition(positions[idx]);
+    setTradeModalOpen(true);
+  }, [positions]);
+
+  const handleSaveTrade = useCallback(async (trade: TradeRow) => {
+    if (!token) return;
+    if (editingPosition) {
+      // Update existing
+      await dispatch(updatePositionThunk({ id: editingPosition.id, trade, token }));
+      showToast('Position updated');
+    } else {
+      // Create new
+      const result = await dispatch(createPositionThunk({ trade, token }));
+      if (createPositionThunk.fulfilled.match(result)) {
+        showToast('Position added');
+      } else {
+        showToast(`Error: ${result.payload as string}`);
+      }
+    }
+    setTradeModalOpen(false);
+    setEditingPosition(undefined);
+  }, [dispatch, token, editingPosition, showToast]);
+
+  const handleRemoveTrade = useCallback(async (idx: number) => {
+    if (!token) return;
+    const pos = positions[idx];
+    if (!pos) return;
+    await dispatch(deletePositionThunk({ id: pos.id, token }));
+    showToast('Position removed');
+  }, [dispatch, token, positions, showToast]);
+
+  // ── Inline trade save (DB write) ──────────────────────────────────────────
   const inlineIdDuplicate = inlineForm.record_id !== '' && existingTradeIds.has(inlineForm.record_id);
   const inlineValid = (
     inlineForm.record_id.trim() !== '' &&
@@ -729,14 +472,21 @@ export default function InputPage() {
     inlineForm.value_date !== ''
   );
 
-  const handleInlineSave = useCallback(() => {
+  const handleInlineSave = useCallback(async () => {
     setInlineTouched({ record_id: true, entity: true, amount: true, value_date: true });
-    if (!inlineValid) return;
-    clearFixture();
-    setTrades(prev => [...prev, inlineForm]);
-    setInlineForm({ record_id: '', entity: '', type: 'AP', currency: 'MXN', amount: 0, value_date: '', status: 'CONFIRMED', description: '' });
-    setInlineTouched({});
-  }, [inlineForm, inlineValid, clearFixture]);
+    if (!inlineValid || !token) return;
+    setInlineSaving(true);
+    const result = await dispatch(createPositionThunk({ trade: inlineForm, token }));
+    setInlineSaving(false);
+    if (createPositionThunk.fulfilled.match(result)) {
+      setInlineForm(EMPTY_INLINE);
+      setInlineTouched({});
+      showToast('Position added');
+    } else {
+      showToast(`Error: ${result.payload as string}`);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, token, inlineForm, inlineValid, showToast]);
 
   const setInlineField = useCallback(<K extends keyof TradeRow>(field: K, value: TradeRow[K]) => {
     setInlineForm(f => ({ ...f, [field]: value }));
@@ -746,20 +496,78 @@ export default function InputPage() {
     setInlineTouched(t => ({ ...t, [field]: true }));
   }, []);
 
-  const handleSelectPreset = useCallback((preset: PolicyPreset) => {
-    clearFixture(); setPolicy(preset.policy); setActivePresetId(preset.id);
-  }, [clearFixture]);
-  const handleCustomPolicy = useCallback(() => { clearFixture(); setActivePresetId('custom'); }, [clearFixture]);
+  // ── CSV import (positions bulk upload to DB) ───────────────────────────────
+  const handlePositionsCsv = useCallback(async (file: File) => {
+    if (!token) return;
+    try {
+      const result = await importPositionsCsv(file, token);
+      setImportResult({
+        created: result.created,
+        totalRows: result.total_rows,
+        errors: result.errors,
+      });
+      if (result.created > 0) {
+        await dispatch(listPositionsThunk({ token }));
+        showToast(`Imported ${result.created} positions`);
+      }
+    } catch (err: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const detail = (err as any)?.response?.data?.detail;
+      if (detail?.parse_errors) {
+        setImportResult({ created: 0, totalRows: 0, errors: detail.parse_errors });
+      } else {
+        showToast(`CSV import failed: ${String(err)}`);
+      }
+    }
+  }, [dispatch, token, showToast]);
 
+  // ── Policy ────────────────────────────────────────────────────────────────
+  const handleSelectPreset = useCallback((preset: PolicyPreset) => {
+    setPolicy(preset.policy); setActivePresetId(preset.id);
+    setPolicyActivateMsg('');
+  }, []);
+  const handleCustomPolicy = useCallback(() => { setActivePresetId('custom'); setPolicyActivateMsg(''); }, []);
+
+  // Activate the selected preset as the company+branch active policy in the DB
+  const handleActivatePolicy = useCallback(async () => {
+    if (!token || !activePresetId || activePresetId === 'custom') return;
+    // Find the DB template matching this preset's shortName
+    const preset = POLICY_PRESETS.find(p => p.id === activePresetId);
+    if (!preset) return;
+    const dbTmpl = dbTemplates.find(t => t.short_name === preset.shortName);
+    if (!dbTmpl) {
+      setPolicyActivateMsg('Template not found in database — try reloading.');
+      return;
+    }
+    // Skip if already the active template
+    if (activePolicyTemplateId === dbTmpl.id) {
+      setPolicyActivateMsg(`✓ ${preset.name} is already the active policy.`);
+      return;
+    }
+    setPolicyActivating(true);
+    setPolicyActivateMsg('');
+    try {
+      await activatePolicyApi(dbTmpl.id, token);
+      setActivePolicyTemplateId(dbTmpl.id);
+      setPolicyActivateMsg(`✓ ${preset.name} activated as the active hedge policy.`);
+      showToast(`Policy activated: ${preset.shortName}`);
+    } catch (e: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const detail = (e as any)?.response?.data?.detail ?? String(e);
+      setPolicyActivateMsg(`Error: ${detail}`);
+    } finally {
+      setPolicyActivating(false);
+    }
+  }, [token, activePresetId, dbTemplates, activePolicyTemplateId, showToast]);
+
+  // ── Calculation ───────────────────────────────────────────────────────────
   const handleCalculate = async (opts?: { forceMarketRefresh?: boolean }) => {
     setLoading(true); setBackendErrors([]); setBackendErrorMsg('');
     try {
-      // Auto-fetch market if not already populated, or if forced (auto-resolve flow)
       let activeMarket = market;
       const needsFetch = opts?.forceMarketRefresh || activeMarket.spot_usdmxn === 0;
       if (needsFetch && detectedCurrencies.length > 0) {
         try {
-          // Send trade value dates so the autofill generates forward points for ALL required buckets
           const tradeValueDates = trades.map(t => t.value_date);
           const res = await fetch('/api/market-autofill', {
             method: 'POST',
@@ -768,23 +576,18 @@ export default function InputPage() {
           });
           if (res.ok) {
             const data = await res.json();
-            if (data.market) {
-              activeMarket = data.market;
-              setMarket(data.market);
-            }
+            if (data.market) { activeMarket = data.market; setMarket(data.market); }
           } else {
             setBackendErrorMsg(`Market autofill failed (HTTP ${res.status}). Add market data manually or retry.`);
-            setLoading(false);
-            return;
+            setLoading(false); return;
           }
         } catch (e) {
           setBackendErrorMsg(`Market autofill unavailable: ${String(e)}. Add market data manually or retry.`);
-          setLoading(false);
-          return;
+          setLoading(false); return;
         }
       }
       const result = await calculate({ trades, hedges, market: activeMarket, policy });
-      setCalculation(result, { policy, trades, hedges, market: activeMarket, fixtureId });
+      setCalculation(result, { policy, trades, hedges, market: activeMarket, fixtureId: null });
       router.push('/results');
     } catch (err: unknown) {
       const anyErr = err as { response?: { data?: { detail?: unknown } } };
@@ -799,8 +602,7 @@ export default function InputPage() {
       } else {
         const msg = typeof detail === 'string'
           ? detail
-          : detail
-          ? JSON.stringify(detail)
+          : detail ? JSON.stringify(detail)
           : `Network or server error — ${String(err)}`;
         setBackendErrorMsg(msg);
       }
@@ -828,8 +630,8 @@ export default function InputPage() {
 
       case 'edit_trade':
         setActiveStep('exposure');
-        if (index !== undefined && index < trades.length) {
-          setEditingTradeIndex(index);
+        if (index !== undefined && index < positions.length) {
+          setEditingPosition(positions[index]);
           setTradeModalOpen(true);
         }
         break;
@@ -843,9 +645,9 @@ export default function InputPage() {
         break;
 
       case 'remove_duplicate':
-        if (target === 'trades' && index !== undefined && index < trades.length) {
-          const tradeId = trades[index]?.record_id;
-          if (window.confirm(`Remove duplicate trade "${tradeId}" at position ${index + 1}?`)) {
+        if (target === 'trades' && index !== undefined && index < positions.length) {
+          const pos = positions[index];
+          if (window.confirm(`Remove duplicate trade "${pos.record_id}" at position ${index + 1}?`)) {
             handleRemoveTrade(index);
             setBackendErrors([]); setBackendErrorMsg('');
           }
@@ -875,14 +677,14 @@ export default function InputPage() {
         break;
     }
   }, [
-    trades, hedges, setActiveStep,
-    setEditingTradeIndex, setTradeModalOpen,
+    positions, hedges, setActiveStep,
+    setEditingPosition, setTradeModalOpen,
     setEditingHedgeIndex, setHedgeModalOpen,
     handleRemoveTrade, handleRemoveHedge,
     handleMarketAutofill,
   ]);
 
-  const editingTrade = editingTradeIndex !== undefined ? trades[editingTradeIndex] : undefined;
+  const editingTrade = editingPosition ? positionToTradeRow(editingPosition) : undefined;
   const editingHedge = editingHedgeIndex !== undefined ? hedges[editingHedgeIndex] : undefined;
 
   const tradeIdsForModal = useMemo(() => {
@@ -895,13 +697,12 @@ export default function InputPage() {
     return existingHedgeIds;
   }, [existingHedgeIds, editingHedge]);
 
-  const btnStyle = (active: boolean): React.CSSProperties => ({
-    fontFamily: S.fontMono, fontSize: '0.625rem', fontWeight: active ? 600 : 500,
-    padding: '3px 10px', letterSpacing: '0.04em',
-    border: `1px solid ${active ? S.cyan : S.border}`,
-    color: active ? S.cyan : S.textTertiary,
-    background: 'transparent', cursor: 'pointer',
-  });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _hedgeSummary = hedgeSummary; // referenced in governance strip
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _autofillLoading = autofillLoading; // used in autofill button
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _autofillMsg = autofillMsg; // shown below market button
 
   return (
     <div>
@@ -910,73 +711,41 @@ export default function InputPage() {
         tradeCount={trades.length} hedgeCount={hedges.length} policyName={activePresetName}
         snapshotMode={marketMode} snapshotTimestamp={market.as_of} engineVersion="1.0.0"
         validationState={validationState} errorCount={nonMarketCriticals.length}
-        warningCount={validation.warnings.length} fixtureId={fixtureId}
-        fixtureLabel={fixtureLabel}
+        warningCount={validation.warnings.length} fixtureId={null}
+        fixtureLabel={null}
         integrityScore={integrityScore}
       />
 
       {/* ── Page content ── */}
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px' }}>
 
-        {/* ── Demo session banner (demo users only) ── */}
-        {token?.startsWith('demo_token_') && (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 12, marginTop: 8,
-            padding: '7px 14px',
-            background: `color-mix(in srgb, ${S.cyan} 5%, ${S.bgSub})`,
-            border: `1px solid color-mix(in srgb, ${S.cyan} 22%, transparent)`,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.cyan, letterSpacing: '0.08em' }}>
-                💾 DEMO SESSION
-              </span>
-              <span style={{ fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.textSecondary }}>
-                Your transaction data is automatically saved — it will be here next time you open the app.
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.04em' }}>
-                {trades.length > 0 ? `${trades.length} positions saved` : 'No data saved yet'}
-              </span>
-              {trades.length > 0 && (
-                <button
-                  onClick={() => {
-                    try { localStorage.removeItem('demo_input_state'); } catch { /* ignore */ }
-                    setTrades([]); setHedges([]); setMarket(EMPTY_MARKET);
-                    setPolicy(DEFAULT_DEMO_POLICY); setFixtureId(null); setSummaryMode(false);
-                    setToastMsg('Demo session cleared'); setToastVisible(true);
-                  }}
-                  style={{
-                    fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.06em',
-                    padding: '3px 10px',
-                    border: `1px solid color-mix(in srgb, ${S.red} 40%, transparent)`,
-                    color: S.red, background: 'transparent', cursor: 'pointer',
-                  }}
-                >× CLEAR SESSION</button>
-              )}
-            </div>
+        {/* ── Import result banner ── */}
+        {importResult && (
+          <div style={{ marginTop: 8 }}>
+            <ImportBanner
+              created={importResult.created}
+              totalRows={importResult.totalRows}
+              errors={importResult.errors}
+              onDismiss={() => setImportResult(null)}
+            />
           </div>
         )}
 
-        {/* ── Dataset Panel (always visible above wizard) ── */}
-        <div style={{ marginTop: 12 }}>
-          <DatasetPanel
-            fixtures={DEMO_FIXTURES}
-            activeId={fixtureId}
-            onSelect={handleSelectFixture}
-            loading={loading}
-          />
-        </div>
-
-        {/* ── Scenario Card (shown when fixture active) ── */}
-        {activeFixture && (
-          <div style={{ marginTop: 0, borderTop: 'none' }}>
-            <ScenarioCard
-              story={activeFixture.demoStory}
-              fixtureLabel={activeFixture.label}
-              onEdit={() => setSummaryMode(false)}
-            />
+        {/* ── Position load error ── */}
+        {positionError && (
+          <div style={{
+            marginTop: 8, padding: '8px 14px',
+            border: `1px solid ${S.red}`,
+            background: `color-mix(in srgb, ${S.red} 5%, ${S.bgPanel})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.red }}>
+              Failed to load positions: {positionError}
+            </span>
+            <button
+              onClick={() => dispatch(clearPositionError())}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, fontFamily: S.fontMono }}
+            >×</button>
           </div>
         )}
 
@@ -994,426 +763,509 @@ export default function InputPage() {
           />
         </div>
 
-        {/* ── Summary mode OR Wizard mode ── */}
-        {summaryMode ? (
-          <SnapshotSummary
-            trades={trades} hedges={hedges} market={market} policy={policy}
-            fixtureId={fixtureId} fixtureLabel={fixtureLabel}
-            validationState={validationState} integrityScore={integrityScore}
-            onEditInputs={() => setSummaryMode(false)}
-            onGeneratePlan={handleCalculate}
-            canGenerate={canCalculate}
-            loading={loading}
+        {/* ── Backend error banner ── */}
+        {backendErrorMsg && (
+          <BackendErrorBanner
+            headerMessage={backendErrorMsg}
+            errors={backendErrors}
+            onDismiss={() => { setBackendErrorMsg(''); setBackendErrors([]); }}
+            onResolve={handleResolveError}
           />
-        ) : (
-          <div>
-            {/* Backend error banner — rich explanations + resolutions */}
-            {backendErrorMsg && (
-              <BackendErrorBanner
-                headerMessage={backendErrorMsg}
-                errors={backendErrors}
-                onDismiss={() => { setBackendErrorMsg(''); setBackendErrors([]); }}
-                onResolve={handleResolveError}
-              />
-            )}
+        )}
 
-            {/* Progressive step sections */}
-            <div style={{ marginTop: 3 }}>
+        {/* ── Progressive step sections ── */}
+        <div style={{ marginTop: 3 }}>
 
-              {visibleStepKeys.includes('exposure') && (
-                <StepSection
-                  stepNumber="01" title="Exposure Intake" stepKey="exposure"
-                  activeStep={activeStep} onActivate={setActiveStep} locked={false}
-                  badge={trades.length > 0 ? { label: `${trades.length} positions`, variant: 'info' } : undefined}
-                  summary={trades.length > 0 ? (
-                    <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
-                      <span>{trades.length} positions</span>
-                      <span>Net: {fmtCompact(tradeSummary.totalMxn)}</span>
-                      <span>Confirmed: {tradeSummary.confirmed}</span>
-                      <span>Forecast: {tradeSummary.forecast}</span>
-                      {detectedCurrencies.length > 0 && (
-                        <span style={{ color: S.amber }}>Currencies: {detectedCurrencies.join(', ')}</span>
-                      )}
-                    </div>
-                  ) : undefined}
-                  actions={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <CsvUploader label="Import CSV" onFile={handleTradesCsv} schemaType="trades" />
-                    </div>
-                  }
-                >
-                  <TradeTable trades={trades} onEdit={openEditTrade} onRemove={handleRemoveTrade} baseCcy={currencyCtx.baseCcy} />
-
-                  {/* ── Inline Trade Entry Form ───────────────────────────── */}
-                  <div
-                    data-section="add-exposure-line"
-                    style={{
-                    marginTop: 1,
-                    borderTop: `1px solid ${S.border}`,
-                    background: S.bgSub,
-                  }}>
-                    {/* Section header */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '7px 14px',
-                      borderBottom: `1px solid ${S.borderSoft}`,
-                    }}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.textTertiary, letterSpacing: '0.1em' }}>
-                        ADD EXPOSURE LINE
+          {visibleStepKeys.includes('exposure') && (
+            <StepSection
+              stepNumber="01" title="Ingestion Desk" stepKey="exposure"
+              activeStep={activeStep} onActivate={setActiveStep} locked={false}
+              badge={trades.length > 0 ? { label: `${trades.length} positions`, variant: 'info' } : undefined}
+              summary={trades.length > 0 ? (
+                <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
+                  <span>{trades.length} positions</span>
+                  <span>Net: {fmtCompact(tradeSummary.totalMxn)}</span>
+                  <span>Confirmed: {tradeSummary.confirmed}</span>
+                  <span>Forecast: {tradeSummary.forecast}</span>
+                  {detectedCurrencies.length > 0 && (
+                    <span style={{ color: S.amber }}>Currencies: {detectedCurrencies.join(', ')}</span>
+                  )}
+                </div>
+              ) : undefined}
+              actions={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  {positionsLoading && (
+                    <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.06em' }}>
+                      Loading…
+                    </span>
+                  )}
+                </div>
+              }
+            >
+              {/* ── Ingestion Desk tab strip ──────────────────────── */}
+              <div style={{
+                display:      'flex',
+                borderBottom: `1px solid ${S.border}`,
+                background:   S.bgSub,
+                overflowX:    'auto',
+              }}>
+                {DESK_TABS.map(tab => {
+                  const active = deskTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setDeskTab(tab.key)}
+                      style={{
+                        fontFamily:    S.fontMono,
+                        fontSize:      '0.5rem',
+                        letterSpacing: '0.06em',
+                        padding:       '8px 16px',
+                        border:        'none',
+                        borderBottom:  active ? `2px solid ${S.cyan}` : '2px solid transparent',
+                        background:    active ? `color-mix(in srgb, ${S.cyan} 5%, ${S.bgPanel})` : 'transparent',
+                        color:         active ? S.cyan : S.textTertiary,
+                        cursor:        'pointer',
+                        display:       'flex',
+                        flexDirection: 'column',
+                        gap:           2,
+                        whiteSpace:    'nowrap',
+                        transition:    'all 0.1s',
+                      }}
+                    >
+                      <span style={{ textTransform: 'uppercase' }}>{tab.label}</span>
+                      <span style={{ fontSize: '0.375rem', opacity: 0.6, fontFamily: S.fontUI, textTransform: 'none', letterSpacing: 0 }}>
+                        {tab.subtitle}
                       </span>
-                      <span style={{
-                        width: 1, height: 10, background: S.borderSoft, display: 'inline-block',
-                      }} />
-                      <span style={{ fontFamily: S.fontUI, fontSize: '0.625rem', color: S.textTertiary }}>
-                        Enter a new trade position directly
-                      </span>
-                    </div>
+                    </button>
+                  );
+                })}
+              </div>
 
-                    {/* Form grid */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(4, 1fr)',
-                      gap: 1,
-                      background: S.border,
-                      padding: 0,
-                    }}>
-                      {/* RECORD ID */}
-                      {(() => {
-                        const err = inlineTouched.record_id && !inlineForm.record_id.trim()
-                          ? 'Required'
-                          : inlineTouched.record_id && inlineIdDuplicate
-                          ? 'ID exists'
-                          : null;
-                        return (
-                          <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
-                              RECORD ID {err && <span style={{ color: S.red }}>— {err}</span>}
-                            </label>
-                            <input
-                              type="text"
-                              value={inlineForm.record_id}
-                              onChange={e => setInlineField('record_id', e.target.value)}
-                              onBlur={() => touchInline('record_id')}
-                              placeholder="e.g. TXN-001"
-                              style={{
-                                fontFamily: S.fontMono, fontSize: '0.6875rem',
-                                background: 'transparent',
-                                border: 'none',
-                                borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
-                                color: S.textPrimary,
-                                padding: '2px 0',
-                                outline: 'none',
-                                width: '100%',
-                              }}
-                            />
-                          </div>
-                        );
-                      })()}
+              {/* ── Tab: Upload CSV / Excel ── */}
+              {deskTab === 'upload' && (
+                <div style={{ padding: '16px' }}>
+                  <FileUploadLane
+                    token={token ?? undefined}
+                    onImportComplete={() => { if (token) dispatch(listPositionsThunk({ token })); }}
+                  />
+                </div>
+              )}
 
-                      {/* ENTITY */}
-                      {(() => {
-                        const err = inlineTouched.entity && !inlineForm.entity.trim() ? 'Required' : null;
-                        return (
-                          <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
-                              ENTITY {err && <span style={{ color: S.red }}>— {err}</span>}
-                            </label>
-                            <input
-                              type="text"
-                              value={inlineForm.entity}
-                              onChange={e => setInlineField('entity', e.target.value)}
-                              onBlur={() => touchInline('entity')}
-                              placeholder="e.g. Acme Corp"
-                              style={{
-                                fontFamily: S.fontMono, fontSize: '0.6875rem',
-                                background: 'transparent',
-                                border: 'none',
-                                borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
-                                color: S.textPrimary,
-                                padding: '2px 0',
-                                outline: 'none',
-                                width: '100%',
-                              }}
-                            />
-                          </div>
-                        );
-                      })()}
+              {/* ── Tab: Connect Database ── */}
+              {deskTab === 'database' && (
+                <div style={{ padding: '16px' }}>
+                  <DatabaseConnectorLane />
+                </div>
+              )}
 
-                      {/* FLOW TYPE */}
+              {/* ── Tab: ERP Integration ── */}
+              {deskTab === 'erp' && (
+                <div style={{ padding: '16px' }}>
+                  <ConnectorPlaceholderLane
+                    title="ERP integration — coming soon"
+                    message="Pull exposure positions directly from SAP, Oracle EBS, or Microsoft Dynamics. One-click sync with field mapping configuration."
+                  />
+                </div>
+              )}
+
+              {/* ── Tab: Accounting System ── */}
+              {deskTab === 'accounting' && (
+                <div style={{ padding: '16px' }}>
+                  <ConnectorPlaceholderLane
+                    title="Accounting system connector — coming soon"
+                    message="Connect to Xero, QuickBooks, or NetSuite to automatically import foreign currency invoices and payables as exposure positions."
+                  />
+                </div>
+              )}
+
+              {/* ── Tab: Import History ── */}
+              {deskTab === 'history' && (
+                <div style={{ padding: '16px' }}>
+                  <ImportHistoryPanel token={token ?? undefined} />
+                </div>
+              )}
+
+              {/* ── Tab: Manual Entry (default) ── */}
+              {deskTab === 'manual' && (<>
+              {/* Empty state when no positions */}
+              {trades.length === 0 && !positionsLoading ? (
+                <div style={{ padding: '32px 0' }}>
+                  <EmptyState
+                    type="empty"
+                    title="No positions yet"
+                    message="Add your first FX exposure position below, or import a CSV file."
+                    action={{ label: '+ Add Position', onClick: openAddTrade }}
+                  />
+                </div>
+              ) : (
+                <TradeTable
+                  trades={trades}
+                  onEdit={openEditTrade}
+                  onRemove={handleRemoveTrade}
+                  baseCcy={currencyCtx.baseCcy}
+                />
+              )}
+
+              {/* ── Inline Trade Entry Form ─────────────────────────── */}
+              <div
+                data-section="add-exposure-line"
+                style={{
+                  marginTop: 1,
+                  borderTop: `1px solid ${S.border}`,
+                  background: S.bgSub,
+                }}>
+                {/* Section header */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '7px 14px',
+                  borderBottom: `1px solid ${S.borderSoft}`,
+                }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.textTertiary, letterSpacing: '0.1em' }}>
+                    ADD EXPOSURE LINE
+                  </span>
+                  <span style={{ width: 1, height: 10, background: S.borderSoft, display: 'inline-block' }} />
+                  <span style={{ fontFamily: S.fontUI, fontSize: '0.625rem', color: S.textTertiary }}>
+                    Enter a new trade position directly — saved to database
+                  </span>
+                </div>
+
+                {/* Form grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: 1,
+                  background: S.border,
+                  padding: 0,
+                }}>
+                  {/* RECORD ID */}
+                  {(() => {
+                    const err = inlineTouched.record_id && !inlineForm.record_id.trim()
+                      ? 'Required'
+                      : inlineTouched.record_id && inlineIdDuplicate
+                      ? 'ID exists'
+                      : null;
+                    return (
                       <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
-                          FLOW TYPE
-                        </label>
-                        <select
-                          value={inlineForm.type}
-                          onChange={e => setInlineField('type', e.target.value as TradeRow['type'])}
-                          style={{
-                            fontFamily: S.fontMono, fontSize: '0.6875rem',
-                            background: S.bgPanel,
-                            border: 'none',
-                            borderBottom: `1px solid ${S.borderSoft}`,
-                            color: S.textPrimary,
-                            padding: '2px 0',
-                            outline: 'none',
-                            width: '100%',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <option value="AP">AP — Accounts Payable</option>
-                          <option value="AR">AR — Accounts Receivable</option>
-                        </select>
-                      </div>
-
-                      {/* CURRENCY */}
-                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
-                          CURRENCY
-                        </label>
-                        <select
-                          value={inlineForm.currency}
-                          onChange={e => setInlineField('currency', e.target.value as FuturesCurrency)}
-                          style={{
-                            fontFamily: S.fontMono, fontSize: '0.6875rem',
-                            background: S.bgPanel,
-                            border: 'none',
-                            borderBottom: `1px solid ${S.borderSoft}`,
-                            color: S.textPrimary,
-                            padding: '2px 0',
-                            outline: 'none',
-                            width: '100%',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {FUTURES_CURRENCY_LIST.map(c => (
-                            <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* AMOUNT */}
-                      {(() => {
-                        const err = inlineTouched.amount && !(inlineForm.amount > 0) ? 'Must be > 0' : null;
-                        return (
-                          <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
-                              AMOUNT ({inlineForm.currency}) {err && <span style={{ color: S.red }}>— {err}</span>}
-                            </label>
-                            <input
-                              type="number"
-                              min={0}
-                              step={1000}
-                              value={inlineForm.amount || ''}
-                              onChange={e => setInlineField('amount', parseFloat(e.target.value) || 0)}
-                              onBlur={() => touchInline('amount')}
-                              placeholder="0"
-                              style={{
-                                fontFamily: S.fontMono, fontSize: '0.6875rem',
-                                background: 'transparent',
-                                border: 'none',
-                                borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
-                                color: S.textPrimary,
-                                padding: '2px 0',
-                                outline: 'none',
-                                width: '100%',
-                              }}
-                            />
-                          </div>
-                        );
-                      })()}
-
-                      {/* VALUE DATE */}
-                      {(() => {
-                        const err = inlineTouched.value_date && !inlineForm.value_date ? 'Required' : null;
-                        return (
-                          <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
-                              VALUE DATE {err && <span style={{ color: S.red }}>— {err}</span>}
-                            </label>
-                            <input
-                              type="date"
-                              value={inlineForm.value_date}
-                              onChange={e => setInlineField('value_date', e.target.value)}
-                              onBlur={() => touchInline('value_date')}
-                              style={{
-                                fontFamily: S.fontMono, fontSize: '0.6875rem',
-                                background: 'transparent',
-                                border: 'none',
-                                borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
-                                color: S.textPrimary,
-                                padding: '2px 0',
-                                outline: 'none',
-                                width: '100%',
-                                colorScheme: 'dark',
-                              }}
-                            />
-                          </div>
-                        );
-                      })()}
-
-                      {/* STATUS */}
-                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
-                          STATUS
-                        </label>
-                        <select
-                          value={inlineForm.status}
-                          onChange={e => setInlineField('status', e.target.value as TradeRow['status'])}
-                          style={{
-                            fontFamily: S.fontMono, fontSize: '0.6875rem',
-                            background: S.bgPanel,
-                            border: 'none',
-                            borderBottom: `1px solid ${S.borderSoft}`,
-                            color: S.textPrimary,
-                            padding: '2px 0',
-                            outline: 'none',
-                            width: '100%',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <option value="CONFIRMED">CONFIRMED</option>
-                          <option value="FORECAST">FORECAST</option>
-                        </select>
-                      </div>
-
-                      {/* DESCRIPTION */}
-                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
-                          DESCRIPTION
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                          RECORD ID {err && <span style={{ color: S.red }}>— {err}</span>}
                         </label>
                         <input
                           type="text"
-                          value={inlineForm.description ?? ''}
-                          onChange={e => setInlineField('description', e.target.value)}
-                          placeholder="Optional note"
+                          value={inlineForm.record_id}
+                          onChange={e => setInlineField('record_id', e.target.value)}
+                          onBlur={() => touchInline('record_id')}
+                          placeholder="e.g. TXN-001"
                           style={{
                             fontFamily: S.fontMono, fontSize: '0.6875rem',
-                            background: 'transparent',
-                            border: 'none',
-                            borderBottom: `1px solid ${S.borderSoft}`,
-                            color: S.textPrimary,
-                            padding: '2px 0',
-                            outline: 'none',
-                            width: '100%',
+                            background: 'transparent', border: 'none',
+                            borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
+                            color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%',
                           }}
                         />
                       </div>
-                    </div>
+                    );
+                  })()}
 
-                    {/* Submit row */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                      gap: 10, padding: '8px 14px',
-                      borderTop: `1px solid ${S.borderSoft}`,
-                    }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setInlineForm({ record_id: '', entity: '', type: 'AP', currency: 'MXN', amount: 0, value_date: '', status: 'CONFIRMED', description: '' });
-                          setInlineTouched({});
-                        }}
-                        style={{
-                          fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
-                          padding: '4px 12px',
-                          border: `1px solid ${S.border}`,
-                          color: S.textTertiary,
-                          background: 'transparent',
-                          cursor: 'pointer',
-                        }}
-                      >CLEAR</button>
-                      <button
-                        type="button"
-                        onClick={handleInlineSave}
-                        style={{
-                          fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
-                          fontWeight: 700,
-                          padding: '4px 18px',
-                          border: `1px solid ${inlineValid ? S.cyan : S.border}`,
-                          color: inlineValid ? S.cyan : S.textTertiary,
-                          background: inlineValid ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : 'transparent',
-                          cursor: 'pointer',
-                          transition: 'all 0.1s',
-                        }}
-                      >+ ADD POSITION</button>
-                    </div>
+                  {/* ENTITY */}
+                  {(() => {
+                    const err = inlineTouched.entity && !inlineForm.entity.trim() ? 'Required' : null;
+                    return (
+                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                          ENTITY {err && <span style={{ color: S.red }}>— {err}</span>}
+                        </label>
+                        <input
+                          type="text"
+                          value={inlineForm.entity}
+                          onChange={e => setInlineField('entity', e.target.value)}
+                          onBlur={() => touchInline('entity')}
+                          placeholder="e.g. Acme Corp"
+                          style={{
+                            fontFamily: S.fontMono, fontSize: '0.6875rem',
+                            background: 'transparent', border: 'none',
+                            borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
+                            color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%',
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
+
+                  {/* FLOW TYPE */}
+                  <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
+                      FLOW TYPE
+                    </label>
+                    <select
+                      value={inlineForm.type}
+                      onChange={e => setInlineField('type', e.target.value as TradeRow['type'])}
+                      style={{
+                        fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel,
+                        border: 'none', borderBottom: `1px solid ${S.borderSoft}`,
+                        color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer',
+                      }}
+                    >
+                      <option value="AP">AP — Accounts Payable</option>
+                      <option value="AR">AR — Accounts Receivable</option>
+                    </select>
                   </div>
-                </StepSection>
-              )}
 
-              {visibleStepKeys.includes('policy') && (
-                <StepSection
-                  stepNumber="02" title="Hedge Policy" stepKey="policy"
-                  activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.policy}
-                  badge={
-                    activePresetName && activePresetId !== 'custom'
-                      ? { label: activePresetName, variant: 'info' }
-                      : activePresetId === 'custom'
-                      ? { label: 'Custom', variant: 'neutral' }
-                      : undefined
-                  }
-                  summary={
-                    <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
-                      <span>{activePresetName ?? 'Custom'}</span>
-                      <span>Confirmed: {fmtPct(policy.hedge_ratios.confirmed)}</span>
-                      <span>Forecast: {fmtPct(policy.hedge_ratios.forecast)}</span>
-                      <span>{policy.execution_product}</span>
-                    </div>
-                  }
-                >
-                  <PolicyForm
-                    policy={policy} onChange={setPolicy}
-                    activePresetId={activePresetId}
-                    onSelectPreset={handleSelectPreset}
-                    onCustom={handleCustomPolicy}
-                  />
-                </StepSection>
-              )}
+                  {/* CURRENCY */}
+                  <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
+                      CURRENCY
+                    </label>
+                    <select
+                      value={inlineForm.currency}
+                      onChange={e => setInlineField('currency', e.target.value as FuturesCurrency)}
+                      style={{
+                        fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel,
+                        border: 'none', borderBottom: `1px solid ${S.borderSoft}`,
+                        color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer',
+                      }}
+                    >
+                      {FUTURES_CURRENCY_LIST.map(c => (
+                        <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+                      ))}
+                    </select>
+                  </div>
 
-            </div>
-          </div>
-        )}
+                  {/* AMOUNT */}
+                  {(() => {
+                    const err = inlineTouched.amount && !(inlineForm.amount > 0) ? 'Must be > 0' : null;
+                    return (
+                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                          AMOUNT ({inlineForm.currency}) {err && <span style={{ color: S.red }}>— {err}</span>}
+                        </label>
+                        <input
+                          type="number" min={0} step={1000}
+                          value={inlineForm.amount || ''}
+                          onChange={e => setInlineField('amount', parseFloat(e.target.value) || 0)}
+                          onBlur={() => touchInline('amount')}
+                          placeholder="0"
+                          style={{
+                            fontFamily: S.fontMono, fontSize: '0.6875rem',
+                            background: 'transparent', border: 'none',
+                            borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
+                            color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%',
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
+
+                  {/* VALUE DATE */}
+                  {(() => {
+                    const err = inlineTouched.value_date && !inlineForm.value_date ? 'Required' : null;
+                    return (
+                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                          VALUE DATE {err && <span style={{ color: S.red }}>— {err}</span>}
+                        </label>
+                        <input
+                          type="date"
+                          value={inlineForm.value_date}
+                          onChange={e => setInlineField('value_date', e.target.value)}
+                          onBlur={() => touchInline('value_date')}
+                          style={{
+                            fontFamily: S.fontMono, fontSize: '0.6875rem',
+                            background: 'transparent', border: 'none',
+                            borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
+                            color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', colorScheme: 'dark',
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
+
+                  {/* STATUS */}
+                  <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
+                      STATUS
+                    </label>
+                    <select
+                      value={inlineForm.status}
+                      onChange={e => setInlineField('status', e.target.value as TradeRow['status'])}
+                      style={{
+                        fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel,
+                        border: 'none', borderBottom: `1px solid ${S.borderSoft}`,
+                        color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer',
+                      }}
+                    >
+                      <option value="CONFIRMED">CONFIRMED</option>
+                      <option value="FORECAST">FORECAST</option>
+                    </select>
+                  </div>
+
+                  {/* DESCRIPTION */}
+                  <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
+                      DESCRIPTION
+                    </label>
+                    <input
+                      type="text"
+                      value={inlineForm.description ?? ''}
+                      onChange={e => setInlineField('description', e.target.value)}
+                      placeholder="Optional note"
+                      style={{
+                        fontFamily: S.fontMono, fontSize: '0.6875rem',
+                        background: 'transparent', border: 'none',
+                        borderBottom: `1px solid ${S.borderSoft}`,
+                        color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Submit row */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                  gap: 10, padding: '8px 14px',
+                  borderTop: `1px solid ${S.borderSoft}`,
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => { setInlineForm(EMPTY_INLINE); setInlineTouched({}); }}
+                    style={{
+                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                      padding: '4px 12px', border: `1px solid ${S.border}`,
+                      color: S.textTertiary, background: 'transparent', cursor: 'pointer',
+                    }}
+                  >CLEAR</button>
+                  <button
+                    type="button"
+                    onClick={handleInlineSave}
+                    disabled={inlineSaving}
+                    style={{
+                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                      fontWeight: 700,
+                      padding: '4px 18px',
+                      border: `1px solid ${inlineValid ? S.cyan : S.border}`,
+                      color: inlineValid ? S.cyan : S.textTertiary,
+                      background: inlineValid ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : 'transparent',
+                      cursor: inlineSaving ? 'not-allowed' : 'pointer',
+                      opacity: inlineSaving ? 0.6 : 1,
+                      transition: 'all 0.1s',
+                    }}
+                  >{inlineSaving ? 'SAVING…' : '+ ADD POSITION'}</button>
+                </div>
+              </div>
+              </>)}
+            </StepSection>
+          )}
+
+          {visibleStepKeys.includes('policy') && (
+            <StepSection
+              stepNumber="02" title="Hedge Policy" stepKey="policy"
+              activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.policy}
+              badge={
+                activePresetName && activePresetId !== 'custom'
+                  ? { label: activePresetName, variant: 'info' }
+                  : activePresetId === 'custom'
+                  ? { label: 'Custom', variant: 'neutral' }
+                  : undefined
+              }
+              summary={
+                <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
+                  <span>{activePresetName ?? 'Custom'}</span>
+                  <span>Confirmed: {fmtPct(policy.hedge_ratios.confirmed)}</span>
+                  <span>Forecast: {fmtPct(policy.hedge_ratios.forecast)}</span>
+                  <span>{policy.execution_product}</span>
+                </div>
+              }
+            >
+              <PolicyForm
+                policy={policy} onChange={setPolicy}
+                activePresetId={activePresetId}
+                onSelectPreset={handleSelectPreset}
+                onCustom={handleCustomPolicy}
+              />
+
+              {/* ── Activate Policy in DB ──────────────────────────── */}
+              {activePresetId && activePresetId !== 'custom' && (
+                <div style={{
+                  padding: '10px 14px',
+                  borderTop: `1px solid ${S.borderSoft}`,
+                  display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                  background: S.bgSub,
+                }}>
+                  <button
+                    type="button"
+                    onClick={handleActivatePolicy}
+                    disabled={policyActivating || activePolicyTemplateId === dbTemplates.find(t => t.short_name === POLICY_PRESETS.find(p => p.id === activePresetId)?.shortName)?.id}
+                    style={{
+                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', fontWeight: 700,
+                      padding: '5px 16px',
+                      border: `1px solid ${policyActivating ? S.textTertiary : S.cyan}`,
+                      color: policyActivating ? S.textTertiary : S.cyan,
+                      background: policyActivating ? 'transparent' : `color-mix(in srgb, ${S.cyan} 6%, transparent)`,
+                      cursor: policyActivating ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.1s',
+                    }}
+                  >
+                    {policyActivating ? 'ACTIVATING…' : 'ACTIVATE POLICY'}
+                  </button>
+                  {policyActivateMsg && (
+                    <span style={{
+                      fontFamily: S.fontMono, fontSize: '0.5rem',
+                      color: policyActivateMsg.startsWith('✓') ? S.green : S.red,
+                      letterSpacing: '0.04em',
+                    }}>
+                      {policyActivateMsg}
+                    </span>
+                  )}
+                  {!policyActivateMsg && activePolicyTemplateId && (
+                    <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary }}>
+                      A policy is already active for this branch — activating will replace it.
+                    </span>
+                  )}
+                </div>
+              )}
+            </StepSection>
+          )}
+
+        </div>
       </div>
 
-      {/* Sticky gate bar — wizard mode only (Generate is in the step rail) */}
-      {!summaryMode && (
-        <div
-          className="sticky bottom-0 z-40 shrink-0 no-print"
-          style={{
-            borderTop: `1px solid ${S.border}`,
-            background: S.bgSub,
-            fontFamily: S.fontMono,
-          }}
-        >
-          <div style={{ maxWidth: 1280, margin: '0 auto', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>GATE CHECK</span>
-            {validationGates.filter(g => !g.met).map((g, i) => (
-              <span
-                key={i}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  fontSize: '0.5625rem',
-                  color: S.red,
-                  border: `1px solid ${S.red}`,
-                  padding: '1px 6px',
-                }}
-              >
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: S.red, display: 'inline-block' }} />
-                {g.label}
-                {g.message && <span style={{ color: S.textTertiary, fontSize: '0.5rem' }}> — {g.message}</span>}
-              </span>
-            ))}
-            {validationGates.every(g => g.met) && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.5625rem', color: S.green }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: S.green, display: 'inline-block' }} />
-                ALL GATES PASSED — CLICK GENERATE HEDGE PLAN IN THE RAIL ABOVE
-              </span>
-            )}
-          </div>
+      {/* Sticky gate bar */}
+      <div
+        className="sticky bottom-0 z-40 shrink-0 no-print"
+        style={{
+          borderTop: `1px solid ${S.border}`,
+          background: S.bgSub,
+          fontFamily: S.fontMono,
+        }}
+      >
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>GATE CHECK</span>
+          {validationGates.filter(g => !g.met).map((g, i) => (
+            <span
+              key={i}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontSize: '0.5625rem', color: S.red,
+                border: `1px solid ${S.red}`, padding: '1px 6px',
+              }}
+            >
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: S.red, display: 'inline-block' }} />
+              {g.label}
+              {g.message && <span style={{ color: S.textTertiary, fontSize: '0.5rem' }}> — {g.message}</span>}
+            </span>
+          ))}
+          {validationGates.every(g => g.met) && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.5625rem', color: S.green }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: S.green, display: 'inline-block' }} />
+              ALL GATES PASSED — CLICK GENERATE HEDGE PLAN IN THE RAIL ABOVE
+            </span>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Modals */}
       <TradeModal
-        open={tradeModalOpen} onClose={() => setTradeModalOpen(false)} onSave={handleSaveTrade}
+        open={tradeModalOpen} onClose={() => { setTradeModalOpen(false); setEditingPosition(undefined); }}
+        onSave={handleSaveTrade}
         existingTrade={editingTrade} existingIds={tradeIdsForModal} forwardBuckets={forwardBuckets}
       />
       <HedgeModal
@@ -1438,9 +1290,7 @@ export default function InputPage() {
                 padding: '6px 16px', border: `1px solid ${S.border}`, color: S.textSecondary,
                 background: 'transparent', cursor: 'pointer',
               }}
-            >
-              CANCEL
-            </button>
+            >CANCEL</button>
             <button
               type="button"
               onClick={() => { setShowAutoResolveConfirm(false); handleCalculate({ forceMarketRefresh: true }); }}
@@ -1449,9 +1299,7 @@ export default function InputPage() {
                 padding: '6px 16px', border: `1px solid ${S.cyan}`, color: 'var(--bg-deep)',
                 background: S.cyan, cursor: 'pointer',
               }}
-            >
-              CONFIRM & GENERATE
-            </button>
+            >CONFIRM & GENERATE</button>
           </>
         }
       >
@@ -1459,7 +1307,6 @@ export default function InputPage() {
           <p style={{ margin: '0 0 12px' }}>
             The following market data errors will be automatically resolved by fetching live data from the market provider:
           </p>
-
           <div style={{
             display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14,
             padding: '10px 12px',
@@ -1485,7 +1332,6 @@ export default function InputPage() {
               </span>
             )}
           </div>
-
           <p style={{ margin: '0 0 8px', fontWeight: 600, color: S.textPrimary }}>
             What happens when you confirm:
           </p>

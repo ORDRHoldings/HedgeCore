@@ -1,77 +1,66 @@
 "use client";
 
-import React from "react";
-import { Radar, X, Zap } from "lucide-react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ShieldCheck, Radar, X } from "lucide-react";
+import EmptyState from "@/components/ui/EmptyState";
 import { UserContext } from "@/lib/authContext";
-import { RegimeChip, ScoreBar } from "@/components/ui/RiskPrimitives";
+import { getActivePolicy } from "@/api/policyClient";
+import type { PolicyInstance } from "@/api/policyClient";
 
 const S = {
-  fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-  bgDeep:    "var(--bg-deep)",
-  bgPanel:   "var(--bg-panel)",
-  bgSub:     "var(--bg-sub)",
-  rim:       "var(--border-rim)",
-  soft:      "var(--border-soft)",
-  primary:   "var(--text-primary)",
-  secondary: "var(--text-secondary)",
-  tertiary:  "var(--text-tertiary)",
-  cyan:      "var(--accent-cyan)",
-  amber:     "var(--accent-amber)",
-  pass:      "var(--status-pass)",
-  fail:      "var(--accent-red,#B91C1C)",
+  fontMono:   "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  fontUI:     "'IBM Plex Sans', sans-serif",
+  bgPanel:    "var(--bg-panel)",
+  bgDeep:     "var(--bg-deep)",
+  bgSub:      "var(--bg-sub)",
+  rim:        "var(--border-rim)",
+  borderSoft: "var(--border-soft)",
+  primary:    "var(--text-primary)",
+  secondary:  "var(--text-secondary)",
+  tertiary:   "var(--text-tertiary)",
+  cyan:       "var(--accent-cyan)",
+  amber:      "var(--accent-amber)",
+  green:      "var(--status-pass)",
+  red:        "var(--accent-red)",
 } as const;
 
-/* ── Static data ─────────────────────────────────────────────────── */
-const RISK_SCORES = [
-  { dimension: "MXN Exchange Rate Pressure",   score: 74, regime: "ELEVATED",  currencies: ["MXN"] },
-  { dimension: "US Interest Rate Trajectory",  score: 80, regime: "HIGH",      currencies: ["USD"] },
-  { dimension: "Mexico Sovereign Credit Risk", score: 62, regime: "MODERATE",  currencies: ["MXN"] },
-  { dimension: "Global Liquidity Conditions",  score: 71, regime: "ELEVATED",  currencies: ["USD", "GBP", "MXN"] },
-  { dimension: "GBP Trade Uncertainty",        score: 48, regime: "MODERATE",  currencies: ["GBP"] },
-];
+const RISK_COLOR: Record<string, string> = {
+  CONSERVATIVE: "var(--status-pass)",
+  MODERATE:     "var(--accent-cyan)",
+  AGGRESSIVE:   "var(--accent-amber)",
+};
 
-const TOP_EVENTS = [
-  { id: "EVT-2026-0214", headline: "Banxico holds rate at 10.25%; signals two cuts in H1 2026",      severity: 72, alertTriggered: true,  currencies: ["MXN"] },
-  { id: "EVT-2026-0211", headline: "FOMC hawkish dissent; rate cut timeline pushed to Q3 2026",      severity: 78, alertTriggered: true,  currencies: ["USD"] },
-  { id: "EVT-2026-0213", headline: "OFAC sanctions expansion targeting energy sector counterparties", severity: 85, alertTriggered: true,  currencies: ["USD", "MXN"] },
-];
-
-const BRANCH_CURRENCY: Record<string, string> = { NYC: "USD", MXC: "MXN", LDN: "GBP" };
-
-/* ── Regime accent colour ────────────────────────────────────────── */
-function regimeAccent(regime: string): string {
-  switch (regime) {
-    case "HIGH":     return "var(--accent-red,#B91C1C)";
-    case "ELEVATED": return "var(--accent-amber)";
-    case "MODERATE": return "var(--accent-cyan)";
-    default:         return "var(--text-secondary)";
-  }
-}
-
-/* ── Severity badge colour ───────────────────────────────────────── */
-function severityColor(score: number): string {
-  if (score >= 80) return "var(--accent-red,#B91C1C)";
-  if (score >= 65) return "var(--accent-amber)";
-  return "var(--accent-cyan)";
-}
+const RISK_DOT: Record<string, string> = {
+  CONSERVATIVE: "●",
+  MODERATE:     "◆",
+  AGGRESSIVE:   "▲",
+};
 
 interface Props {
-  token:    string;
-  user:     UserContext;
+  token:     string;
+  user:      UserContext;
   onRemove?: () => void;
 }
 
-export default function PolisophicMiniWidget({ user, onRemove }: Props) {
-  const branchCode     = ((user?.branch?.code) ?? "NYC").toUpperCase();
-  const userCurrency   = BRANCH_CURRENCY[branchCode] ?? "USD";
-  const relevantEvents = TOP_EVENTS.filter(e => e.currencies.includes(userCurrency)).slice(0, 3);
-  const relevantScore  = RISK_SCORES.find(r => r.currencies.includes(userCurrency));
-  const compositeScore = Math.round(
-    RISK_SCORES.reduce((sum, r) => sum + r.score, 0) / RISK_SCORES.length
-  );
-  const accentColor = relevantScore ? regimeAccent(relevantScore.regime) : S.secondary;
+export default function PolisophicMiniWidget({ token, onRemove }: Props) {
+  const router = useRouter();
+
+  // undefined = loading, null = no active policy, PolicyInstance = active
+  const [instance, setInstance]   = useState<PolicyInstance | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    getActivePolicy(token)
+      .then(p  => { if (!cancelled) setInstance(p); })
+      .catch(e => { if (!cancelled) { setLoadError(String(e)); setInstance(null); } });
+    return () => { cancelled = true; };
+  }, [token]);
+
+  const loading = instance === undefined;
+  const tmpl    = instance?.template ?? null;
 
   return (
     <div
@@ -82,10 +71,10 @@ export default function PolisophicMiniWidget({ user, onRemove }: Props) {
         display:       "flex",
         flexDirection: "column",
         overflow:      "hidden",
-        fontFamily:    S.fontUI,
+        minHeight:     160,
       }}
     >
-      {/* ── Header ──────────────────────────────────────────────────── */}
+      {/* Header */}
       <div
         style={{
           display:      "flex",
@@ -94,6 +83,7 @@ export default function PolisophicMiniWidget({ user, onRemove }: Props) {
           padding:      "8px 12px",
           borderBottom: `1px solid ${S.rim}`,
           background:   S.bgDeep,
+          flexShrink:   0,
         }}
       >
         <Radar size={13} color={S.cyan} style={{ flexShrink: 0 }} />
@@ -107,22 +97,13 @@ export default function PolisophicMiniWidget({ user, onRemove }: Props) {
             flex:          1,
           }}
         >
-          Geopolitical Risk
+          Active Hedge Policy
         </span>
-        <span
-          style={{
-            fontFamily:    S.fontMono,
-            fontSize:      8,
-            color:         S.bgDeep,
-            background:    S.secondary,
-            padding:       "1px 5px",
-            borderRadius:  2,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-          }}
-        >
-          {userCurrency} Exposure
-        </span>
+        {loading && (
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em" }}>
+            LOADING…
+          </span>
+        )}
         {onRemove && (
           <button
             onClick={onRemove}
@@ -141,139 +122,105 @@ export default function PolisophicMiniWidget({ user, onRemove }: Props) {
         )}
       </div>
 
-      {/* ── Body ────────────────────────────────────────────────────── */}
-      <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Body */}
+      <div style={{ flex: 1 }}>
+        {loadError ? (
+          <div style={{ padding: "10px 12px" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.red }}>
+              {loadError}
+            </span>
+          </div>
+        ) : !instance || !tmpl ? (
+          <div style={{ padding: "10px 12px" }}>
+            <EmptyState
+              type="empty"
+              title="No active policy"
+              message="Select a hedge policy template to activate it for your branch."
+              action={{
+                label: "Select Policy",
+                onClick: () => router.push("/input"),
+              }}
+            />
+          </div>
+        ) : (
+          <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
 
-        {/* 1. Currency exposure alert box */}
-        {relevantScore && (
-          <div
-            style={{
-              borderLeft:   `3px solid ${accentColor}`,
-              background:   S.bgSub,
-              borderRadius: "0 4px 4px 0",
-              padding:      "7px 10px",
-            }}
-          >
-            <div
-              style={{
-                fontFamily: S.fontMono,
-                fontSize:   10,
-                color:      S.primary,
-                lineHeight: 1.4,
-              }}
-            >
-              Your{" "}
-              <span style={{ color: accentColor, fontWeight: 600 }}>{userCurrency}</span>{" "}
-              exposure is facing{" "}
-              <span style={{ color: accentColor }}>{relevantScore.regime}</span>{" "}
-              risk
-            </div>
-            <div
-              style={{
-                marginTop:  5,
-                display:    "flex",
-                alignItems: "center",
-                gap:        8,
-              }}
-            >
-              <ScoreBar score={relevantScore.score} />
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
-                Score {relevantScore.score}
+            {/* Name + risk posture */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{
+                fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.1em",
+                color: S.cyan,
+                background: `color-mix(in srgb, ${S.cyan} 10%, transparent)`,
+                padding: "2px 6px",
+              }}>
+                {tmpl.short_name}
               </span>
-              <RegimeChip regime={relevantScore.regime} />
+              <span style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", fontWeight: 600, color: S.primary }}>
+                {tmpl.name}
+              </span>
+              <span style={{
+                marginLeft: "auto",
+                fontFamily: S.fontMono, fontSize: "0.4375rem",
+                color: RISK_COLOR[tmpl.risk_posture] ?? S.tertiary,
+                letterSpacing: "0.06em",
+              }}>
+                {RISK_DOT[tmpl.risk_posture] ?? "●"} {tmpl.risk_posture}
+              </span>
+            </div>
+
+            {/* Key ratio grid */}
+            <div style={{
+              display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+              border: `1px solid ${S.borderSoft}`,
+            }}>
+              {[
+                { label: "CONF RATIO", value: `${((tmpl.config.hedge_ratios?.confirmed ?? 0) * 100).toFixed(0)}%` },
+                { label: "FCST RATIO", value: `${((tmpl.config.hedge_ratios?.forecast  ?? 0) * 100).toFixed(0)}%` },
+                { label: "BPS",        value: `${tmpl.config.cost_assumptions?.spread_bps ?? "—"}`                },
+              ].map(({ label, value }, i) => (
+                <div key={label} style={{
+                  padding: "6px 8px", textAlign: "center",
+                  borderRight: i < 2 ? `1px solid ${S.borderSoft}` : "none",
+                }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.4rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>
+                    {label}
+                  </div>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", fontWeight: 600, color: S.cyan }}>
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Product chip + description */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{
+                fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.08em",
+                color: tmpl.config.execution_product === "NDF" ? S.amber : S.green,
+                background: `color-mix(in srgb, ${tmpl.config.execution_product === "NDF" ? S.amber : S.green} 8%, transparent)`,
+                padding: "1px 5px",
+              }}>
+                {tmpl.config.execution_product ?? "NDF"}
+              </span>
+              {tmpl.description && (
+                <span style={{
+                  fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.tertiary,
+                  flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {tmpl.description}
+                </span>
+              )}
+            </div>
+
+            {/* Activated at */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <ShieldCheck size={10} color={S.green} />
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary }}>
+                ACTIVE SINCE {new Date(instance.activated_at).toLocaleDateString()}
+              </span>
             </div>
           </div>
         )}
-
-        {/* 2. Relevant events */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {relevantEvents.map(evt => (
-            <div
-              key={evt.id}
-              style={{
-                display:      "flex",
-                alignItems:   "flex-start",
-                gap:          6,
-                background:   S.bgSub,
-                border:       `1px solid ${S.soft}`,
-                borderRadius: 4,
-                padding:      "5px 8px",
-              }}
-            >
-              {evt.alertTriggered && (
-                <Zap size={10} color={S.amber} style={{ flexShrink: 0, marginTop: 1 }} />
-              )}
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, flex: 1, lineHeight: 1.45 }}>
-                {evt.headline}
-              </span>
-              <span
-                style={{
-                  fontFamily:   S.fontMono,
-                  fontSize:     8,
-                  color:        S.bgDeep,
-                  background:   severityColor(evt.severity),
-                  padding:      "1px 4px",
-                  borderRadius: 2,
-                  flexShrink:   0,
-                  alignSelf:    "flex-start",
-                }}
-              >
-                {evt.severity}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* 3. Open Full Polisophic View link */}
-        <Link
-          href="/polisophic"
-          style={{
-            fontFamily:     S.fontMono,
-            fontSize:       9,
-            color:          S.cyan,
-            textDecoration: "none",
-            letterSpacing:  "0.04em",
-          }}
-        >
-          → Open Full Polisophic View
-        </Link>
-      </div>
-
-      {/* ── Footer: composite score ──────────────────────────────────── */}
-      <div
-        style={{
-          borderTop:  `1px solid ${S.soft}`,
-          background: S.bgDeep,
-          padding:    "5px 12px",
-          display:    "flex",
-          alignItems: "center",
-          gap:        8,
-        }}
-      >
-        <span
-          style={{
-            fontFamily:    S.fontMono,
-            fontSize:      9,
-            color:         S.tertiary,
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-          }}
-        >
-          Composite Risk:
-        </span>
-        <span
-          style={{
-            fontFamily: S.fontMono,
-            fontSize:   11,
-            color:      severityColor(compositeScore),
-            fontWeight: 700,
-          }}
-        >
-          {compositeScore}
-        </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
-          / 100
-        </span>
       </div>
     </div>
   );

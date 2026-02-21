@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BarChart3, X } from "lucide-react";
 import KpiTile from "@/components/ui/KpiTile";
+import EmptyState from "@/components/ui/EmptyState";
 import type { UserContext } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
@@ -53,24 +54,6 @@ function hedgeDeltaDirection(pct: number): "positive" | "negative" | "neutral" {
   return "neutral";
 }
 
-// Demo fallback — shown instantly when logged in as demo/demo
-const DEMO_SUMMARY: DashboardSummary = {
-  branch_name:     "Headquarters",
-  company_name:    "Demo Corp",
-  role:            "risk_analyst",
-  hierarchy_level: 10,
-  is_company_wide: false,
-  branch_currency: "USD",
-  kpis: {
-    active_proposals:   5,
-    pending_approvals:  2,
-    total_exposure_usd: 42_500_000,
-    hedge_coverage_pct: 74,
-    open_alerts:        3,
-    team_size:          8,
-  },
-};
-
 export default function KpiSummaryWidget({
   token,
   user: _user,
@@ -81,13 +64,6 @@ export default function KpiSummaryWidget({
   const [error,   setError]   = useState<string | null>(null);
 
   useEffect(() => {
-    // Demo bypass — skip API call, show hardcoded demo data instantly
-    if (token.startsWith("demo_token_")) {
-      setData(DEMO_SUMMARY);
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
     const fetchSummary = async () => {
       setLoading(true);
@@ -198,30 +174,11 @@ export default function KpiSummaryWidget({
       {/* Body */}
       <div style={{ padding: 12 }}>
         {loading && (
-          <p
-            style={{
-              fontFamily: S.fontMono,
-              fontSize:   11,
-              color:      S.textTertiary,
-              textAlign:  "center",
-              margin:     "16px 0",
-            }}
-          >
-            Loading...
-          </p>
+          <EmptyState type="loading" message="Loading KPI data..." />
         )}
 
         {error && !loading && (
-          <p
-            style={{
-              fontFamily: S.fontMono,
-              fontSize:   11,
-              color:      S.accentRed,
-              margin:     0,
-            }}
-          >
-            Error loading metrics
-          </p>
+          <EmptyState type="error" message="Failed to load KPI data" />
         )}
 
         {data && !loading && !error && (

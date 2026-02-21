@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../lib/authContext";
 import type { RootState, AppDispatch } from "../../lib/store";
 import { listLedgerThunk } from "../../lib/store/slices/pipelineSlice";
 import DenseTable from "../../components/ui/DenseTable";
@@ -15,13 +16,14 @@ import type { LedgerEntry } from "../../api/pipelineTypes";
 export default function LedgerListPage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const { token } = useAuth();
   const { ledgerEntries, ledgerLoading, error } = useSelector(
     (s: RootState) => s.pipeline
   );
 
   useEffect(() => {
-    dispatch(listLedgerThunk());
-  }, [dispatch]);
+    if (token) dispatch(listLedgerThunk({ token }));
+  }, [dispatch, token]);
 
   const columns: Column<LedgerEntry>[] = useMemo(
     () => [

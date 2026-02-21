@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useParams } from "next/navigation";
+import { useAuth } from "../../../lib/authContext";
 import type { RootState, AppDispatch } from "../../../lib/store";
 import {
   getStagingThunk,
@@ -30,26 +31,30 @@ export default function StagingDetailPage() {
   }
   const staging_id = params.staging_id;
   const dispatch = useDispatch<AppDispatch>();
+  const { token } = useAuth();
   const { currentStaging, stagingLoading, xrayOpen, error } = useSelector(
     (s: RootState) => s.pipeline
   );
 
   useEffect(() => {
-    if (staging_id) dispatch(getStagingThunk(staging_id));
-  }, [dispatch, staging_id]);
+    if (staging_id && token) dispatch(getStagingThunk({ stagingId: staging_id, token }));
+  }, [dispatch, staging_id, token]);
 
   const handleAuthorize = useCallback(
     (action: ApprovalAction, comment: string) => {
-      if (!staging_id) return;
+      if (!staging_id || !token) return;
       dispatch(
         authorizeStagedThunk({
-          staging_id,
-          action,
-          comment: comment || undefined,
+          request: {
+            staging_id,
+            action,
+            comment: comment || undefined,
+          },
+          token,
         })
       );
     },
-    [dispatch, staging_id]
+    [dispatch, staging_id, token]
   );
 
   if (stagingLoading || !currentStaging) {

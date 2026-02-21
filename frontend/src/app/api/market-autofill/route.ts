@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
     const primaryCurrency = currencies[0] ?? 'MXN';
 
     let spot: number | null = null;
-    let spotSource = 'demo_fallback';
+    let spotSource = 'indicative_fallback';
 
     // Determine fetch direction
     // For DM currencies that quote vs USD (EUR, GBP, AUD, NZD, CHF), we fetch CCY/USD then invert
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
 
     if (spot === null) {
       spot = DEMO_SPOTS[primaryCurrency] ?? 1.0;
-      spotSource = 'demo_fallback';
+      spotSource = 'indicative_fallback';
     }
 
     const forwardPoints = estimateForwardPoints(spot, primaryCurrency, requiredBuckets);
@@ -150,13 +150,13 @@ export async function POST(req: NextRequest) {
       forward_points_by_month: forwardPoints,
       provider_metadata: {
         source: spotSource,
-        data_class: spotSource === 'alpha_vantage_live' ? 'LIVE' : 'DEMO',
+        data_class: spotSource === 'alpha_vantage_live' ? 'LIVE' : 'INDICATIVE_FALLBACK',
         currency_pair: pairLabel,
         primary_currency: primaryCurrency,
         currencies_detected: currencies,
         note: spotSource === 'alpha_vantage_live'
           ? `Live spot from Alpha Vantage as of ${asOf}. Forward points estimated from carry differentials.`
-          : `Demo fallback rates — configure ALPHA_VANTAGE_API_KEY in .env.local for live data.`,
+          : `Indicative fallback rates — configure ALPHA_VANTAGE_API_KEY in .env.local for live data.`,
       },
     };
 

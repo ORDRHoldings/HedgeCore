@@ -538,6 +538,13 @@ async def authorize_staged(
     if artifact.authorization_status not in (AuthorizationStatus.PENDING,):
         raise ValueError(f"Artifact {staging_id} already {artifact.authorization_status}")
 
+    # Self-approval prevention — RBAC requirement
+    if hasattr(artifact, "submitted_by") and artifact.submitted_by and str(user_id) == str(artifact.submitted_by):
+        raise ValueError(
+            "SELF_APPROVAL_BLOCKED: The submitter of a proposal cannot approve "
+            "their own submission. A different authorized reviewer is required."
+        )
+
     # Get the proposal to check staleness
     proposal = await pipeline_db.load_proposal(session, artifact.proposal_id)
     if proposal:

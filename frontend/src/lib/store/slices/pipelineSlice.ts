@@ -109,139 +109,166 @@ function extractError(err: unknown): PipelineError {
 }
 
 // ---------------------------------------------------------------------------
-// Async Thunks
+// Async Thunks — all accept { ..., token } to pass JWT through
 // ---------------------------------------------------------------------------
 
 export const sandboxCalculateThunk = createAsyncThunk(
   "pipeline/sandboxCalculate",
-  async (request: SandboxCalculateRequest, { rejectWithValue }) => {
+  async (
+    { request, token }: { request: SandboxCalculateRequest; token: string },
+    { rejectWithValue },
+  ) => {
     try {
-      return await pipelineClient.sandboxCalculate(request);
+      return await pipelineClient.sandboxCalculate(request, token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const createProposalThunk = createAsyncThunk(
   "pipeline/createProposal",
-  async (request: CreateProposalRequest, { rejectWithValue }) => {
+  async (
+    { request, token }: { request: CreateProposalRequest; token: string },
+    { rejectWithValue },
+  ) => {
     try {
-      return await pipelineClient.createProposal(request);
+      return await pipelineClient.createProposal(request, token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const listProposalsThunk = createAsyncThunk(
   "pipeline/listProposals",
-  async (_: void, { rejectWithValue }) => {
+  async ({ token }: { token: string }, { rejectWithValue }) => {
     try {
-      return await pipelineClient.listProposals();
+      return await pipelineClient.listProposals(token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const getProposalThunk = createAsyncThunk(
   "pipeline/getProposal",
-  async (proposalId: string, { rejectWithValue }) => {
+  async (
+    { proposalId, token }: { proposalId: string; token: string },
+    { rejectWithValue },
+  ) => {
     try {
-      return await pipelineClient.getProposal(proposalId);
+      return await pipelineClient.getProposal(proposalId, token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const submitToStagingThunk = createAsyncThunk(
   "pipeline/submitToStaging",
-  async (request: SubmitToStagingRequest, { rejectWithValue }) => {
+  async (
+    { request, token }: { request: SubmitToStagingRequest; token: string },
+    { rejectWithValue },
+  ) => {
     try {
-      return await pipelineClient.submitToStaging(request);
+      return await pipelineClient.submitToStaging(request, token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const listStagingThunk = createAsyncThunk(
   "pipeline/listStaging",
-  async (_: void, { rejectWithValue }) => {
+  async ({ token }: { token: string }, { rejectWithValue }) => {
     try {
-      return await pipelineClient.listStaging();
+      return await pipelineClient.listStaging(token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const getStagingThunk = createAsyncThunk(
   "pipeline/getStaging",
-  async (stagingId: string, { rejectWithValue }) => {
+  async (
+    { stagingId, token }: { stagingId: string; token: string },
+    { rejectWithValue },
+  ) => {
     try {
-      return await pipelineClient.getStaging(stagingId);
+      return await pipelineClient.getStaging(stagingId, token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const authorizeStagedThunk = createAsyncThunk(
   "pipeline/authorizeStaged",
-  async (request: AuthorizeRequest, { rejectWithValue }) => {
+  async (
+    { request, token }: { request: AuthorizeRequest; token: string },
+    { rejectWithValue },
+  ) => {
     try {
-      return await pipelineClient.authorizeStaged(request);
+      return await pipelineClient.authorizeStaged(request, token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const listLedgerThunk = createAsyncThunk(
   "pipeline/listLedger",
-  async (_: void, { rejectWithValue }) => {
+  async ({ token }: { token: string }, { rejectWithValue }) => {
     try {
-      return await pipelineClient.listLedger();
+      return await pipelineClient.listLedger(token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const getLedgerThunk = createAsyncThunk(
   "pipeline/getLedger",
-  async (ledgerId: string, { rejectWithValue }) => {
+  async (
+    { ledgerId, token }: { ledgerId: string; token: string },
+    { rejectWithValue },
+  ) => {
     try {
-      return await pipelineClient.getLedger(ledgerId);
+      return await pipelineClient.getLedger(ledgerId, token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const replayLedgerThunk = createAsyncThunk(
   "pipeline/replayLedger",
-  async (request: ReplayLedgerRequest, { rejectWithValue }) => {
+  async (
+    { request, token }: { request: ReplayLedgerRequest; token: string },
+    { rejectWithValue },
+  ) => {
     try {
-      return await pipelineClient.replayLedger(request);
+      return await pipelineClient.replayLedger(request, token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 export const getTimelineThunk = createAsyncThunk(
   "pipeline/getTimeline",
-  async (ledgerId: string, { rejectWithValue }) => {
+  async (
+    { ledgerId, token }: { ledgerId: string; token: string },
+    { rejectWithValue },
+  ) => {
     try {
-      return await pipelineClient.getLedgerTimeline(ledgerId);
+      return await pipelineClient.getLedgerTimeline(ledgerId, token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -284,7 +311,7 @@ const pipelineSlice = createSlice({
           state.sandboxLoading = false;
           state.sandboxResult = action.payload;
           state.activeState = "SANDBOX";
-        }
+        },
       )
       .addCase(sandboxCalculateThunk.rejected, (state, action) => {
         state.sandboxLoading = false;
@@ -303,7 +330,7 @@ const pipelineSlice = createSlice({
           state.proposalsLoading = false;
           state.currentProposal = action.payload;
           state.proposals.push(action.payload);
-        }
+        },
       )
       .addCase(createProposalThunk.rejected, (state, action) => {
         state.proposalsLoading = false;
@@ -321,7 +348,7 @@ const pipelineSlice = createSlice({
         (state, action: PayloadAction<Proposal[]>) => {
           state.proposalsLoading = false;
           state.proposals = action.payload;
-        }
+        },
       )
       .addCase(listProposalsThunk.rejected, (state, action) => {
         state.proposalsLoading = false;
@@ -339,7 +366,7 @@ const pipelineSlice = createSlice({
         (state, action: PayloadAction<Proposal>) => {
           state.proposalsLoading = false;
           state.currentProposal = action.payload;
-        }
+        },
       )
       .addCase(getProposalThunk.rejected, (state, action) => {
         state.proposalsLoading = false;
@@ -359,7 +386,7 @@ const pipelineSlice = createSlice({
           state.currentStaging = action.payload;
           state.stagingArtifacts.push(action.payload);
           state.activeState = "STAGING";
-        }
+        },
       )
       .addCase(submitToStagingThunk.rejected, (state, action) => {
         state.stagingLoading = false;
@@ -377,7 +404,7 @@ const pipelineSlice = createSlice({
         (state, action: PayloadAction<StagedArtifact[]>) => {
           state.stagingLoading = false;
           state.stagingArtifacts = action.payload;
-        }
+        },
       )
       .addCase(listStagingThunk.rejected, (state, action) => {
         state.stagingLoading = false;
@@ -395,7 +422,7 @@ const pipelineSlice = createSlice({
         (state, action: PayloadAction<StagedArtifact>) => {
           state.stagingLoading = false;
           state.currentStaging = action.payload;
-        }
+        },
       )
       .addCase(getStagingThunk.rejected, (state, action) => {
         state.stagingLoading = false;
@@ -415,7 +442,7 @@ const pipelineSlice = createSlice({
           state.currentLedger = action.payload;
           state.ledgerEntries.push(action.payload);
           state.activeState = "LEDGER";
-        }
+        },
       )
       .addCase(authorizeStagedThunk.rejected, (state, action) => {
         state.stagingLoading = false;
@@ -433,7 +460,7 @@ const pipelineSlice = createSlice({
         (state, action: PayloadAction<LedgerEntry[]>) => {
           state.ledgerLoading = false;
           state.ledgerEntries = action.payload;
-        }
+        },
       )
       .addCase(listLedgerThunk.rejected, (state, action) => {
         state.ledgerLoading = false;
@@ -451,7 +478,7 @@ const pipelineSlice = createSlice({
         (state, action: PayloadAction<LedgerEntry>) => {
           state.ledgerLoading = false;
           state.currentLedger = action.payload;
-        }
+        },
       )
       .addCase(getLedgerThunk.rejected, (state, action) => {
         state.ledgerLoading = false;
@@ -469,7 +496,7 @@ const pipelineSlice = createSlice({
         (state, action: PayloadAction<ReplayResult>) => {
           state.replayLoading = false;
           state.replayResult = action.payload;
-        }
+        },
       )
       .addCase(replayLedgerThunk.rejected, (state, action) => {
         state.replayLoading = false;
@@ -485,7 +512,7 @@ const pipelineSlice = createSlice({
         getTimelineThunk.fulfilled,
         (state, action: PayloadAction<TimelineEvent[]>) => {
           state.timeline = action.payload;
-        }
+        },
       )
       .addCase(getTimelineThunk.rejected, (state, action) => {
         state.error = action.payload as PipelineError;
