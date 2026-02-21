@@ -127,6 +127,8 @@ export default function RecentRunsWidget({
   const [error,   setError]   = useState<string | null>(null);
 
   useEffect(() => {
+    // Demo tokens are not accepted by the backend — skip fetch in demo mode
+    if (token.startsWith("demo_token_")) { setLoading(false); return; }
     let cancelled = false;
     const fetchRuns = async () => {
       setLoading(true);
