@@ -2,12 +2,16 @@
 
 13 endpoints covering the full tri-state governance lifecycle.
 DB-backed persistence for proposals, staging, and ledger.
+All endpoints require JWT authentication via Depends(get_current_user).
+Mutation endpoints enforce inline permission checks via rbac_service.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
+from app.core.security import get_current_user
+from app.models.user import User
 from app.schemas_v1.pipeline import (
     AuthorizeRequest,
     CreateProposalRequest,
@@ -18,21 +22,44 @@ from app.schemas_v1.pipeline import (
     SubmitToStagingRequest,
     TimelineResponse,
 )
-from app.services import pipeline_service
+from app.services import pipeline_service, rbac_service
 
 router = APIRouter(prefix="/v1/pipeline", tags=["v1-pipeline"])
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Permission helper
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def _check_permission(
+    session: AsyncSession, user: User, codename: str
+) -> None:
+    """Raise 403 if user lacks the given permission and is not superuser."""
+    if user.is_superuser:
+        return
+    perms = await rbac_service.get_permissions_by_user(session, user.id)
+    if codename not in perms:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Missing permission: {codename}",
+        )
+
+
 # ---------------------------------------------------------------------------
-# SANDBOX (in-memory, synchronous — no DB session needed)
+# SANDBOX (in-memory, synchronous — no DB session needed for calculation)
 # ---------------------------------------------------------------------------
 
 
 @router.post("/sandbox/calculate")
-def sandbox_calculate(request: SandboxCalculateRequest):
+async def sandbox_calculate(
+    request: SandboxCalculateRequest,
+    current_user: User = Depends(get_current_user),
+):
     """Run engine + waterfall in sandbox mode (SIMULATION)."""
     try:
-        result = pipeline_service.sandbox_calculate("anonymous", request)
+        result = pipeline_service.sandbox_calculate(
+            str(current_user.id), request
+        )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -61,10 +88,14 @@ def sandbox_calculate(request: SandboxCalculateRequest):
 async def create_proposal(
     request: CreateProposalRequest,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
 ):
     """Create a proposal (freeze sandbox result)."""
+    await _check_permission(session, current_user, "pipeline.create_proposal")
     try:
-        proposal = await pipeline_service.create_proposal(session, "anonymous", request.run_id)
+        proposal = await pipeline_service.create_proposal(
+            session, str(current_user.id), request.run_id
+        )
     except ValueError as e:
         error_msg = str(e)
         if "SNAPSHOT_STALE" in error_msg:
@@ -75,7 +106,10 @@ async def create_proposal(
 
 
 @router.get("/proposals")
-async def list_proposals(session: AsyncSession = Depends(get_async_session)):
+async def list_proposals(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
     """List all proposals."""
     proposals = await pipeline_service.list_proposals(session)
     return ProposalListResponse(
@@ -88,6 +122,7 @@ async def list_proposals(session: AsyncSession = Depends(get_async_session)):
 async def get_proposal(
     proposal_id: str,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a specific proposal."""
     proposal = await pipeline_service.get_proposal(session, proposal_id)
@@ -101,10 +136,14 @@ async def submit_to_staging(
     proposal_id: str,
     request: SubmitToStagingRequest,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
 ):
     """Submit a proposal to staging for governance review."""
+    await _check_permission(session, current_user, "pipeline.submit_staging")
     try:
-        artifact = await pipeline_service.submit_to_staging(session, proposal_id, "anonymous", request)
+        artifact = await pipeline_service.submit_to_staging(
+            session, proposal_id, str(current_user.id), request
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -117,7 +156,10 @@ async def submit_to_staging(
 
 
 @router.get("/staging")
-async def list_staging(session: AsyncSession = Depends(get_async_session)):
+async def list_staging(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
     """List all staged artifacts."""
     artifacts = await pipeline_service.list_staging(session)
     return StagingListResponse(
@@ -130,6 +172,7 @@ async def list_staging(session: AsyncSession = Depends(get_async_session)):
 async def get_staging(
     staging_id: str,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a specific staged artifact."""
     artifact = await pipeline_service.get_staging(session, staging_id)
@@ -143,11 +186,18 @@ async def authorize_staged(
     staging_id: str,
     request: AuthorizeRequest,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
 ):
     """Approve, reject, or return a staged artifact."""
+    await _check_permission(session, current_user, "pipeline.approve")
+
+    # Resolve user's actual role (not hardcoded)
+    roles = await rbac_service.get_roles_by_user(session, current_user.id)
+    user_role = roles[0] if roles else "unknown"
+
     try:
         result = await pipeline_service.authorize_staged(
-            session, staging_id, "anonymous", "supervisor", request
+            session, staging_id, str(current_user.id), user_role, request
         )
     except ValueError as e:
         error_msg = str(e)
@@ -164,7 +214,10 @@ async def authorize_staged(
 
 
 @router.get("/ledger")
-async def list_ledger(session: AsyncSession = Depends(get_async_session)):
+async def list_ledger(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
     """List all ledger entries."""
     entries = await pipeline_service.list_ledger(session)
     return LedgerListResponse(
@@ -177,6 +230,7 @@ async def list_ledger(session: AsyncSession = Depends(get_async_session)):
 async def get_ledger(
     ledger_id: str,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a specific ledger entry."""
     entry = await pipeline_service.get_ledger(session, ledger_id)
@@ -189,6 +243,7 @@ async def get_ledger(
 async def replay_ledger(
     ledger_id: str,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
 ):
     """Run deterministic replay verification on a ledger entry."""
     try:
@@ -203,6 +258,7 @@ async def replay_ledger(
 async def get_ledger_timeline(
     ledger_id: str,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
 ):
     """Get event timeline for a ledger entry."""
     entry = await pipeline_service.get_ledger(session, ledger_id)
@@ -229,6 +285,7 @@ async def export_ledger(
     ledger_id: str,
     fmt: str,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
 ):
     """Export ledger entry as PDF, Excel, or ZIP."""
     entry = await pipeline_service.get_ledger(session, ledger_id)

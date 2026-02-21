@@ -26,6 +26,9 @@ from app.api.routes.organization import router as organization_router
 from app.api.routes.admin_roles import router as admin_roles_router
 from app.api.routes.seed import router as seed_router
 from app.api.routes.dashboard import router as dashboard_router
+from app.api.routes.v1_positions import router as v1_positions_router
+from app.api.routes.v1_policies import router as v1_policies_router
+from app.api.routes.v1_connectors import router as v1_connectors_router
 
 router = APIRouter()
 
@@ -82,5 +85,14 @@ router.include_router(seed_router)
 
 # Dashboard aggregate endpoints (owns /v1/dashboard)
 router.include_router(dashboard_router)
+
+# V1 Position Spine (owns /v1/positions)
+router.include_router(v1_positions_router)
+
+# V1 Policy DB (owns /v1/policies)
+router.include_router(v1_policies_router)
+
+# V1 Connector / Ingestion Desk (owns /v1/connectors)
+router.include_router(v1_connectors_router)
 
 __all__ = ["router"]

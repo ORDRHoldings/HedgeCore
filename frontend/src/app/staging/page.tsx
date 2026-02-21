@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../lib/authContext";
 import type { RootState, AppDispatch } from "../../lib/store";
 import { listStagingThunk } from "../../lib/store/slices/pipelineSlice";
 import DenseTable from "../../components/ui/DenseTable";
@@ -16,13 +17,14 @@ import type { StagedArtifact } from "../../api/pipelineTypes";
 export default function StagingListPage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const { token } = useAuth();
   const { stagingArtifacts, stagingLoading, error } = useSelector(
     (s: RootState) => s.pipeline
   );
 
   useEffect(() => {
-    dispatch(listStagingThunk());
-  }, [dispatch]);
+    if (token) dispatch(listStagingThunk({ token }));
+  }, [dispatch, token]);
 
   const columns: Column<StagedArtifact>[] = useMemo(
     () => [

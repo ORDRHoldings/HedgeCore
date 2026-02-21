@@ -136,6 +136,319 @@ async def _seed_permissions():
     logger.info("✅ Permissions and role-permission mappings seeded")
 
 
+async def _seed_policy_templates():
+    """
+    Seed the 20 system policy templates (mirrors frontend policyPresets.ts).
+    Uses INSERT … ON CONFLICT DO NOTHING keyed on (is_system=True, short_name).
+    Safe to run on every startup — idempotent.
+    """
+    from sqlalchemy import select, text as sa_text
+    from app.models.policy import PolicyTemplate
+
+    # These mirror POLICY_PRESETS in frontend/src/constants/policyPresets.ts
+    SYSTEM_TEMPLATES = [
+        {
+            "short_name": "SME",
+            "name": "Small Business / Startup",
+            "description": "No minimum trade size — every bucket executes regardless of notional.",
+            "risk_posture": "MODERATE",
+            "category": "CORPORATE",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 0.80, "forecast": 0.50},
+                "cost_assumptions": {"spread_bps": 25},
+                "execution_product": "NDF",
+                "min_trade_size_usd": 0,
+            },
+        },
+        {
+            "short_name": "FULL",
+            "name": "Full Protection",
+            "description": "Maximum hedge coverage for all confirmed and forecast flows.",
+            "risk_posture": "CONSERVATIVE",
+            "category": "CORPORATE",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 1.0},
+                "cost_assumptions": {"spread_bps": 4.0},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 50000,
+            },
+        },
+        {
+            "short_name": "CNSV",
+            "name": "Conservative Treasury",
+            "description": "Full confirmed coverage, minimal forecast hedging. Board-mandated treasury policy.",
+            "risk_posture": "CONSERVATIVE",
+            "category": "CORPORATE",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.25},
+                "cost_assumptions": {"spread_bps": 3.0},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 100000,
+            },
+        },
+        {
+            "short_name": "BLNC",
+            "name": "Balanced Corporate",
+            "description": "Full confirmed coverage, moderate forecast hedging. Standard mid-market FX program.",
+            "risk_posture": "MODERATE",
+            "category": "CORPORATE",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.5},
+                "cost_assumptions": {"spread_bps": 5.0},
+                "execution_product": "NDF",
+                "min_trade_size_usd": 50000,
+            },
+        },
+        {
+            "short_name": "ACTV",
+            "name": "Active Risk Management",
+            "description": "High coverage across confirmed and forecast flows.",
+            "risk_posture": "AGGRESSIVE",
+            "category": "CORPORATE",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.75},
+                "cost_assumptions": {"spread_bps": 4.0},
+                "execution_product": "NDF",
+                "min_trade_size_usd": 25000,
+            },
+        },
+        {
+            "short_name": "COST",
+            "name": "Cost-Sensitive Hedger",
+            "description": "Confirmed-only coverage. Hedges firm commitments only.",
+            "risk_posture": "CONSERVATIVE",
+            "category": "CORPORATE",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 0.8, "forecast": 0.0},
+                "cost_assumptions": {"spread_bps": 8.0},
+                "execution_product": "NDF",
+                "min_trade_size_usd": 75000,
+            },
+        },
+        {
+            "short_name": "LAYR",
+            "name": "Layered Rolling",
+            "description": "Graduated hedge build-up over 12 months.",
+            "risk_posture": "MODERATE",
+            "category": "CORPORATE",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.6},
+                "cost_assumptions": {"spread_bps": 4.5},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 100000,
+            },
+        },
+        {
+            "short_name": "EXPO",
+            "name": "Export-Oriented",
+            "description": "Tailored for exporters with high AR flows in foreign currency.",
+            "risk_posture": "MODERATE",
+            "category": "CORPORATE",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 0.9, "forecast": 0.5},
+                "cost_assumptions": {"spread_bps": 5.5},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 50000,
+            },
+        },
+        {
+            "short_name": "IMPO",
+            "name": "Import-Focused",
+            "description": "Optimized for importers with high AP exposure.",
+            "risk_posture": "CONSERVATIVE",
+            "category": "CORPORATE",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.4},
+                "cost_assumptions": {"spread_bps": 4.0},
+                "execution_product": "NDF",
+                "min_trade_size_usd": 25000,
+            },
+        },
+        {
+            "short_name": "FINM",
+            "name": "Financial Mandate",
+            "description": "Institutional-grade policy for financial sector firms.",
+            "risk_posture": "CONSERVATIVE",
+            "category": "FINANCIAL",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.35},
+                "cost_assumptions": {"spread_bps": 2.5},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 500000,
+            },
+        },
+        {
+            "short_name": "BANK",
+            "name": "Banking Treasury Standard",
+            "description": "Basel-aligned hedging framework for banking institutions.",
+            "risk_posture": "CONSERVATIVE",
+            "category": "FINANCIAL",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.2},
+                "cost_assumptions": {"spread_bps": 2.0},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 1000000,
+            },
+        },
+        {
+            "short_name": "SOVR",
+            "name": "Sovereign / Quasi-Sovereign",
+            "description": "Government entity hedging policy with maximum coverage.",
+            "risk_posture": "CONSERVATIVE",
+            "category": "SOVEREIGN",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.15},
+                "cost_assumptions": {"spread_bps": 1.5},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 2000000,
+            },
+        },
+        {
+            "short_name": "AGRI",
+            "name": "Agribusiness Seasonal",
+            "description": "Seasonal crop cycle hedging with harvest-aligned buckets.",
+            "risk_posture": "MODERATE",
+            "category": "SECTOR",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 0.85, "forecast": 0.55},
+                "cost_assumptions": {"spread_bps": 7.0},
+                "execution_product": "NDF",
+                "min_trade_size_usd": 10000,
+            },
+        },
+        {
+            "short_name": "ENER",
+            "name": "Energy Sector",
+            "description": "Commodity-correlated FX hedging for energy companies.",
+            "risk_posture": "AGGRESSIVE",
+            "category": "SECTOR",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 0.9, "forecast": 0.65},
+                "cost_assumptions": {"spread_bps": 5.0},
+                "execution_product": "NDF",
+                "min_trade_size_usd": 100000,
+            },
+        },
+        {
+            "short_name": "TECH",
+            "name": "Technology / SaaS",
+            "description": "Subscription revenue hedging for recurring USD/EUR receipts.",
+            "risk_posture": "MODERATE",
+            "category": "SECTOR",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 0.75, "forecast": 0.45},
+                "cost_assumptions": {"spread_bps": 6.0},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 5000,
+            },
+        },
+        {
+            "short_name": "MANU",
+            "name": "Manufacturing Supply Chain",
+            "description": "Multi-currency hedging across global supplier payments.",
+            "risk_posture": "MODERATE",
+            "category": "SECTOR",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.6},
+                "cost_assumptions": {"spread_bps": 4.5},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 50000,
+            },
+        },
+        {
+            "short_name": "RETL",
+            "name": "Retail / Consumer Goods",
+            "description": "Seasonal inventory purchase hedging for retail importers.",
+            "risk_posture": "MODERATE",
+            "category": "SECTOR",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 0.9, "forecast": 0.4},
+                "cost_assumptions": {"spread_bps": 6.5},
+                "execution_product": "NDF",
+                "min_trade_size_usd": 20000,
+            },
+        },
+        {
+            "short_name": "PHRM",
+            "name": "Pharmaceutical",
+            "description": "Clinical trial and R&D cost hedging across currencies.",
+            "risk_posture": "CONSERVATIVE",
+            "category": "SECTOR",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.3},
+                "cost_assumptions": {"spread_bps": 3.5},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 100000,
+            },
+        },
+        {
+            "short_name": "TRSP",
+            "name": "Transportation / Logistics",
+            "description": "Fuel and lease cost hedging for transport operators.",
+            "risk_posture": "AGGRESSIVE",
+            "category": "SECTOR",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 0.8, "forecast": 0.7},
+                "cost_assumptions": {"spread_bps": 7.5},
+                "execution_product": "NDF",
+                "min_trade_size_usd": 10000,
+            },
+        },
+        {
+            "short_name": "PROP",
+            "name": "Real Estate / Property",
+            "description": "Cross-border property acquisition and rental income hedging.",
+            "risk_posture": "CONSERVATIVE",
+            "category": "SECTOR",
+            "config": {
+                "bucket_mode": "CALENDAR_MONTH",
+                "hedge_ratios": {"confirmed": 1.0, "forecast": 0.2},
+                "cost_assumptions": {"spread_bps": 3.0},
+                "execution_product": "FWD",
+                "min_trade_size_usd": 200000,
+            },
+        },
+    ]
+
+    async with async_session_maker() as session:
+        for tmpl in SYSTEM_TEMPLATES:
+            existing = await session.execute(
+                select(PolicyTemplate).where(
+                    PolicyTemplate.is_system == True,
+                    PolicyTemplate.short_name == tmpl["short_name"],
+                )
+            )
+            if not existing.scalar_one_or_none():
+                session.add(PolicyTemplate(
+                    company_id=None,
+                    is_system=True,
+                    version=1,
+                    **tmpl,
+                ))
+        await session.commit()
+
+    logger.info("✅ System policy templates seeded")
+
+
 async def _ensure_tables():
     """Create any missing tables (non-destructive — skips existing)."""
     from sqlalchemy import text
@@ -253,6 +566,84 @@ async def _ensure_tables():
         "ALTER TABLE roles ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE",
         "ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER NOT NULL DEFAULT 10",
         "ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN NOT NULL DEFAULT FALSE",
+
+        # ── Phase 2: FX positions (tenant-scoped, soft-delete) ──────────────────
+        """CREATE TABLE IF NOT EXISTS positions (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+            branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
+            created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+            record_id VARCHAR(128) NOT NULL,
+            entity VARCHAR(255) NOT NULL,
+            flow_type VARCHAR(4) NOT NULL,
+            currency VARCHAR(3) NOT NULL,
+            amount NUMERIC(20,6) NOT NULL,
+            value_date VARCHAR(10) NOT NULL,
+            status VARCHAR(16) NOT NULL DEFAULT 'CONFIRMED',
+            description VARCHAR(512),
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CONSTRAINT positions_currency_length CHECK (char_length(currency) = 3),
+            CONSTRAINT positions_amount_positive CHECK (amount > 0),
+            CONSTRAINT positions_flow_type_enum CHECK (flow_type IN ('AR', 'AP')),
+            CONSTRAINT positions_status_enum CHECK (status IN ('CONFIRMED', 'FORECAST')),
+            UNIQUE(company_id, record_id))""",
+        "CREATE INDEX IF NOT EXISTS ix_positions_scope ON positions(company_id, branch_id, is_active)",
+        "CREATE INDEX IF NOT EXISTS ix_positions_currency ON positions(company_id, currency)",
+        "CREATE INDEX IF NOT EXISTS ix_positions_created_by ON positions(created_by, created_at)",
+
+        # ── Phase 3: Policy templates + instances ────────────────────────────────
+        """CREATE TABLE IF NOT EXISTS policy_templates (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL,
+            short_name VARCHAR(16) NOT NULL,
+            description TEXT,
+            risk_posture VARCHAR(16) NOT NULL,
+            category VARCHAR(32) NOT NULL,
+            config JSONB NOT NULL,
+            version INTEGER NOT NULL DEFAULT 1,
+            is_system BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        """CREATE TABLE IF NOT EXISTS policy_instances (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+            branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
+            template_id UUID NOT NULL REFERENCES policy_templates(id),
+            activated_by UUID NOT NULL REFERENCES users(id),
+            activated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            is_active BOOLEAN NOT NULL DEFAULT TRUE)""",
+        "CREATE INDEX IF NOT EXISTS ix_policy_instances_scope ON policy_instances(company_id, branch_id, is_active)",
+
+        # ── Connector framework tables ──
+        """CREATE TABLE IF NOT EXISTS connector_runs (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            company_id UUID NOT NULL,
+            branch_id UUID,
+            triggered_by UUID NOT NULL,
+            connector_type VARCHAR(32) NOT NULL,
+            source_filename VARCHAR(512),
+            source_hash VARCHAR(128),
+            status VARCHAR(20) NOT NULL DEFAULT 'RUNNING',
+            total_rows INTEGER NOT NULL DEFAULT 0,
+            created_ok INTEGER NOT NULL DEFAULT 0,
+            error_count INTEGER NOT NULL DEFAULT 0,
+            started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            completed_at TIMESTAMPTZ)""",
+
+        "CREATE INDEX IF NOT EXISTS ix_connector_runs_scope ON connector_runs(company_id, branch_id)",
+        "CREATE INDEX IF NOT EXISTS ix_connector_runs_user  ON connector_runs(triggered_by, started_at)",
+
+        """CREATE TABLE IF NOT EXISTS connector_run_errors (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            run_id UUID NOT NULL REFERENCES connector_runs(id) ON DELETE CASCADE,
+            row_number INTEGER,
+            field_name VARCHAR(128),
+            error_message TEXT NOT NULL,
+            raw_data JSONB)""",
+
+        "CREATE INDEX IF NOT EXISTS ix_connector_run_errors_run ON connector_run_errors(run_id)",
     ]
     for stmt in raw_ddl:
         try:
@@ -283,6 +674,11 @@ async def lifespan(app: FastAPI):
         await _seed_permissions()
     except Exception as e:
         logger.warning(f"⚠️ _seed_permissions skipped (DB may be uninitialised): {e}")
+
+    try:
+        await _seed_policy_templates()
+    except Exception as e:
+        logger.warning(f"⚠️ _seed_policy_templates skipped: {e}")
 
     try:
         yield

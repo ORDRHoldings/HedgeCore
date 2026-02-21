@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../lib/authContext";
 import type { RootState, AppDispatch } from "../../lib/store";
 import {
   sandboxCalculateThunk,
@@ -35,8 +37,12 @@ import LiquidityTab from "../../components/sandbox/LiquidityTab";
 import RollsTab from "../../components/sandbox/RollsTab";
 import ScenariosTab from "../../components/sandbox/ScenariosTab";
 
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+
 export default function SandboxPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
+  const { token } = useAuth();
   const {
     sandboxResult,
     sandboxLoading,
@@ -64,15 +70,15 @@ export default function SandboxPage() {
         market: fixture.market,
         policy: fixture.policy,
       };
-      dispatch(sandboxCalculateThunk(req));
+      dispatch(sandboxCalculateThunk({ request: req, token: token! }));
     },
-    [dispatch]
+    [dispatch, token]
   );
 
   const handleCreateProposal = useCallback(() => {
     if (!sandboxResult?.run_id) return;
-    dispatch(createProposalThunk({ run_id: sandboxResult.run_id }));
-  }, [dispatch, sandboxResult]);
+    dispatch(createProposalThunk({ request: { run_id: sandboxResult.run_id }, token: token! }));
+  }, [dispatch, sandboxResult, token]);
 
   const handleXRay = useCallback(
     (context: Record<string, unknown>) => {
@@ -190,10 +196,19 @@ export default function SandboxPage() {
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {error && <ErrorBanner code={error.code} message={error.message} />}
 
-        <DemoFixtureSelector fixtureId={fixtureId} loading={sandboxLoading} onSelect={handleRunDemo} />
+        {DEMO_MODE && (
+          <DemoFixtureSelector fixtureId={fixtureId} loading={sandboxLoading} onSelect={handleRunDemo} />
+        )}
 
         {!sandboxResult && !sandboxLoading && (
-          <EmptyState type="empty" title="No simulation" message="Select a demo fixture or upload data to run a sandbox calculation." />
+          DEMO_MODE ? null : (
+            <EmptyState
+              type="empty"
+              title="No simulation data"
+              message="Upload exposure positions via the Ingestion Desk to run a hedge calculation."
+              action={{ label: "Go to Ingestion Desk", onClick: () => router.push("/input") }}
+            />
+          )
         )}
         {sandboxLoading && <EmptyState type="loading" message="Running sandbox calculation…" />}
 

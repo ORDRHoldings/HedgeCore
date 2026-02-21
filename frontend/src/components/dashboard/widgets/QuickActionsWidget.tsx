@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import EmptyState from "@/components/ui/EmptyState";
 import { useRouter } from "next/navigation";
 import {
   Zap,
@@ -121,18 +122,11 @@ export default function QuickActionsWidget({ token, user, onRemove }: Props) {
       {/* Body */}
       <div style={{ padding: 10 }}>
         {visibleActions.length === 0 ? (
-          <p
-            style={{
-              fontFamily: S.fontMono,
-              fontSize: "0.6875rem",
-              color: S.secondary,
-              margin: 0,
-              textAlign: "center",
-              padding: "12px 0",
-            }}
-          >
-            No quick actions available for your role.
-          </p>
+          <EmptyState
+            type="empty"
+            title="No actions available"
+            message="Quick actions will appear here based on your role permissions."
+          />
         ) : (
           <div
             style={{

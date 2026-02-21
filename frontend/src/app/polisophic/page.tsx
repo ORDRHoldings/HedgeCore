@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
-import AppTopBar from "../../components/layout/AppTopBar";
+import EmptyState from "../../components/ui/EmptyState";
 
 const RENDER_TS = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -228,9 +229,15 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
           <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 6px", border: `1px solid ${S.fail}`, color: S.fail, background: `color-mix(in srgb, var(--accent-red,#B91C1C) 8%, transparent)` }}>
             ● 4 ACTIVE ALERTS
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 6px", border: `1px solid ${S.rim}`, color: S.tertiary }}>
-            LIVE FEED DEMO
-          </span>
+          {DEMO_MODE ? (
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 6px", border: `1px solid ${S.rim}`, color: S.tertiary }}>
+              LIVE FEED DEMO
+            </span>
+          ) : (
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 6px", border: `1px solid ${S.amber}`, color: S.amber }}>
+              FEED DISCONNECTED
+            </span>
+          )}
           <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{RENDER_TS}</span>
         </div>
       </header>
@@ -288,14 +295,21 @@ export default function Polisophic() {
 
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
-      {/* ── App top bar ── */}
-      <AppTopBar currentModule="Polisophic" currentPath="/polisophic" />
       <TopBar onBack={() => router.push("/")} tab={tab} setTab={setTab} />
 
       <div style={{ flex: 1, overflow: "auto" }}>
 
         {/* ══════════ EVENT FEED ══════════ */}
-        {tab === "Event Feed" && (
+        {tab === "Event Feed" && !DEMO_MODE && (
+          <div style={{ padding: "60px 28px" }}>
+            <EmptyState
+              type="empty"
+              title="No risk events"
+              message="Connect a risk intelligence feed to receive structured geopolitical and macro event data."
+            />
+          </div>
+        )}
+        {tab === "Event Feed" && DEMO_MODE && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", height: "100%" }}>
 
             {/* Main feed */}
@@ -424,7 +438,16 @@ export default function Polisophic() {
         )}
 
         {/* ══════════ RISK SCORES ══════════ */}
-        {tab === "Risk Scores" && (
+        {tab === "Risk Scores" && !DEMO_MODE && (
+          <div style={{ padding: "60px 28px" }}>
+            <EmptyState
+              type="empty"
+              title="No risk scores"
+              message="Connect a risk intelligence feed to see multi-dimensional risk score data."
+            />
+          </div>
+        )}
+        {tab === "Risk Scores" && DEMO_MODE && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", height: "100%" }}>
             <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, overflow: "auto" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
@@ -508,7 +531,16 @@ export default function Polisophic() {
         )}
 
         {/* ══════════ MACRO SCENARIOS ══════════ */}
-        {tab === "Macro Scenarios" && (
+        {tab === "Macro Scenarios" && !DEMO_MODE && (
+          <div style={{ padding: "60px 28px" }}>
+            <EmptyState
+              type="empty"
+              title="No macro scenarios"
+              message="Connect a risk intelligence feed to see macro scenario projections and probability trees."
+            />
+          </div>
+        )}
+        {tab === "Macro Scenarios" && DEMO_MODE && (
           <div style={{ padding: "20px 28px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Macro Scenario Tree</span>
@@ -582,7 +614,16 @@ export default function Polisophic() {
         )}
 
         {/* ══════════ ALERT RULES ══════════ */}
-        {tab === "Alert Rules" && (
+        {tab === "Alert Rules" && !DEMO_MODE && (
+          <div style={{ padding: "60px 28px" }}>
+            <EmptyState
+              type="empty"
+              title="No alert rules"
+              message="Configure a risk intelligence feed to define and manage alert rules."
+            />
+          </div>
+        )}
+        {tab === "Alert Rules" && DEMO_MODE && (
           <div style={{ padding: "20px 28px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Alert Rule Registry</span>
@@ -753,7 +794,7 @@ export default function Polisophic() {
         <span style={{ color: S.rim }}>·</span>
         <span>Political & Macro Risk Intelligence Engine</span>
         <span style={{ color: S.rim }}>·</span>
-        <span>Static Demo · {RENDER_TS}</span>
+        <span>{DEMO_MODE ? "Static Demo" : "Feed disconnected"} · {RENDER_TS}</span>
       </footer>
     </div>
   );

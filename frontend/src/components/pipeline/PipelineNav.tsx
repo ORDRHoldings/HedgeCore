@@ -10,6 +10,7 @@ type PipelineStage = "SANDBOX" | "STAGING" | "LEDGER";
 interface StageConfig {
   key: PipelineStage;
   label: string;
+  subtitle: string;
   path: string;
   color: string;
   bgActive: string;
@@ -19,7 +20,8 @@ interface StageConfig {
 const STAGES: StageConfig[] = [
   {
     key: "SANDBOX",
-    label: "Sandbox",
+    label: "Draft",
+    subtitle: "Sandbox",
     path: "/sandbox",
     color: "text-[var(--text-secondary)]",
     bgActive: "bg-[var(--bg-sub)]",
@@ -27,7 +29,8 @@ const STAGES: StageConfig[] = [
   },
   {
     key: "STAGING",
-    label: "Staging",
+    label: "Review",
+    subtitle: "Staging",
     path: "/staging",
     color: "text-[var(--accent-amber)]",
     bgActive: "bg-[var(--accent-amber)]/10",
@@ -35,7 +38,8 @@ const STAGES: StageConfig[] = [
   },
   {
     key: "LEDGER",
-    label: "Ledger",
+    label: "Record",
+    subtitle: "Ledger",
     path: "/ledger",
     color: "text-[var(--accent-cyan)]",
     bgActive: "bg-[var(--accent-cyan)]/10",
@@ -56,7 +60,7 @@ export default function PipelineNav() {
   };
 
   return (
-    <nav className="h-10 bg-[var(--bg-panel)] border-b border-[var(--border-rim)] flex items-center px-4 gap-1 shrink-0">
+    <nav className="h-12 bg-[var(--bg-panel)] border-b border-[var(--border-rim)] flex items-center px-4 gap-1 shrink-0">
       {STAGES.map((stage, i) => {
         const isActive =
           pathname?.startsWith(stage.path) || activeState === stage.key;
@@ -84,7 +88,7 @@ export default function PipelineNav() {
             <button
               onClick={() => handleClick(stage)}
               disabled={isDisabled}
-              title={isDisabled ? `${stage.label} — coming soon` : undefined}
+              title={isDisabled ? `${stage.label} (${stage.subtitle}) — coming soon` : undefined}
               className={[
                 "px-3 py-1.5 rounded text-xs font-medium transition-colors",
                 isDisabled
@@ -94,7 +98,10 @@ export default function PipelineNav() {
                     : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-sub)]/50",
               ].join(" ")}
             >
-              {stage.label}
+              <span className="flex flex-col items-center leading-none gap-0.5">
+                <span>{stage.label}</span>
+                <span className="text-[0.5rem] opacity-50 font-normal tracking-wider uppercase">{stage.subtitle}</span>
+              </span>
             </button>
           </div>
         );
@@ -103,7 +110,7 @@ export default function PipelineNav() {
       {/* Active state indicator */}
       <div className="flex-1" />
       <span className="text-[0.625rem] font-mono text-[var(--text-tertiary)] uppercase tracking-wider">
-        {activeState}
+        {STAGES.find(s => s.key === activeState)?.label ?? activeState}
       </span>
     </nav>
   );

@@ -1,152 +1,227 @@
 "use client";
-import React from "react";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
 import { TrendingUp, X } from "lucide-react";
+import EmptyState from "@/components/ui/EmptyState";
 import { UserContext } from "@/lib/authContext";
+import type { AppDispatch, RootState } from "@/lib/store";
+import { fetchExposureThunk } from "@/lib/store/slices/positionSlice";
+
 const S = {
-  fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-  bgDeep:    "var(--bg-deep)",
-  bgPanel:   "var(--bg-panel)",
-  bgSub:     "var(--bg-sub)",
-  rim:       "var(--border-rim)",
-  soft:      "var(--border-soft)",
-  primary:   "var(--text-primary)",
-  secondary: "var(--text-secondary)",
-  tertiary:  "var(--text-tertiary)",
-  cyan:      "var(--accent-cyan)",
-  amber:     "var(--accent-amber)",
-  pass:      "var(--status-pass)",
-  fail:      "var(--accent-red,#B91C1C)",
+  fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  bgPanel:  "var(--bg-panel)",
+  bgDeep:   "var(--bg-deep)",
+  bgSub:    "var(--bg-sub)",
+  rim:      "var(--border-rim)",
+  borderSoft: "var(--border-soft)",
+  primary:  "var(--text-primary)",
+  secondary:"var(--text-secondary)",
+  tertiary: "var(--text-tertiary)",
+  cyan:     "var(--accent-cyan)",
+  amber:    "var(--accent-amber)",
+  green:    "var(--status-pass)",
 } as const;
-interface ExposureRow {
-  currency: string;
-  notional_usd: number;
-  hedge_ratio: number;
-  open_trades: number;
+
+interface Props {
+  token: string;
+  user: UserContext;
+  onRemove?: () => void;
 }
-const BRANCH_EXPOSURE: Record<string, ExposureRow[]> = {
-  NYC: [
-    { currency: "USD/MXN", notional_usd: 24_500_000, hedge_ratio: 78, open_trades: 8 },
-    { currency: "USD/GBP", notional_usd: 11_200_000, hedge_ratio: 65, open_trades: 5 },
-    { currency: "USD/EUR", notional_usd:  6_800_000, hedge_ratio: 82, open_trades: 3 },
-  ],
-  MXC: [
-    { currency: "USD/MXN", notional_usd: 15_400_000, hedge_ratio: 85, open_trades: 12 },
-    { currency: "MXN/EUR", notional_usd:  2_800_000, hedge_ratio: 70, open_trades:  4 },
-  ],
-  LDN: [
-    { currency: "GBP/USD", notional_usd: 18_200_000, hedge_ratio: 68, open_trades: 9 },
-    { currency: "GBP/EUR", notional_usd:  7_400_000, hedge_ratio: 72, open_trades: 5 },
-    { currency: "GBP/MXN", notional_usd:  3_300_000, hedge_ratio: 60, open_trades: 2 },
-  ],
-};
-function mergeAllBranches(): ExposureRow[] {
-  const map = new Map<string, ExposureRow>();
-  for (const rows of Object.values(BRANCH_EXPOSURE)) {
-    for (const row of rows) {
-      const existing = map.get(row.currency);
-      if (!existing || row.notional_usd > existing.notional_usd) {
-        map.set(row.currency, { ...row });
-      }
-    }
-  }
-  return Array.from(map.values()).sort((a, b) => b.notional_usd - a.notional_usd);
+
+function fmtCompact(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000)     return `${(n / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000)         return `${(n / 1_000).toFixed(0)}K`;
+  return n.toFixed(0);
 }
-function hedgeColor(ratio: number): string {
-  if (ratio >= 75) return "var(--status-pass)";
-  if (ratio >= 55) return "var(--accent-amber)";
-  return "var(--accent-red,#B91C1C)";
-}
-function fmtMillions(n: number): string { return `${(n / 1_000_000).toFixed(1)}M`; }
-interface Props { token: string; user: UserContext; onRemove?: () => void; }
-export default function ExposureSummaryWidget({ token, user, onRemove }: Props) {
-  const [hoveredRow, setHoveredRow] = React.useState<number | null>(null);
-  const hasTradesView = Array.isArray(user.permissions) && user.permissions.includes("trades.view");
-  const hasViewAll    = Array.isArray(user.permissions) && user.permissions.includes("reports.view_all_branches");
-  const branchCode = (user as any).branch?.code?.toUpperCase() ?? "NYC";
-  const rows: ExposureRow[] = hasViewAll ? mergeAllBranches() : (BRANCH_EXPOSURE[branchCode] ?? BRANCH_EXPOSURE["NYC"]);
-  const totalNotional = rows.reduce((sum, r) => sum + r.notional_usd, 0);
-  const scopeLabel = hasViewAll ? "ALL BRANCHES" : branchCode;
+
+export default function ExposureSummaryWidget({ token, onRemove }: Props) {
+  const router   = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+  const { exposure, exposureLoading } = useSelector((s: RootState) => s.positions);
+
+  // Fetch on mount (and whenever token changes)
+  useEffect(() => {
+    if (!token) return;
+    dispatch(fetchExposureThunk({ token }));
+  }, [dispatch, token]);
+
+  const hasData = exposure.length > 0;
+
+  // Sort by total exposure descending
+  const sorted = [...exposure].sort(
+    (a, b) => (b.total_confirmed + b.total_forecast) - (a.total_confirmed + a.total_forecast),
+  );
+
+  // Total across all currencies (for relative bar widths)
+  const maxTotal = sorted.length > 0
+    ? Math.max(...sorted.map(e => e.total_confirmed + e.total_forecast))
+    : 1;
+
   return (
-    <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 4, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: S.fontUI }}>
+    <div
+      style={{
+        background:    S.bgPanel,
+        border:        `1px solid ${S.rim}`,
+        borderRadius:  4,
+        display:       "flex",
+        flexDirection: "column",
+        overflow:      "hidden",
+        minHeight:     160,
+      }}
+    >
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep }}>
+      <div
+        style={{
+          display:      "flex",
+          alignItems:   "center",
+          gap:          6,
+          padding:      "6px 10px",
+          borderBottom: `1px solid ${S.rim}`,
+          background:   S.bgDeep,
+          flexShrink:   0,
+        }}
+      >
         <TrendingUp size={12} color={S.cyan} />
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.1em", color: S.cyan, fontWeight: 700 }}>
+        <span
+          style={{
+            fontFamily:    S.fontMono,
+            fontSize:      "0.625rem",
+            letterSpacing: "0.1em",
+            color:         S.cyan,
+            fontWeight:    700,
+          }}
+        >
           FX EXPOSURE SUMMARY
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.amber, border: `1px solid ${S.amber}`, borderRadius: 2, padding: "1px 5px", letterSpacing: "0.05em", marginLeft: 2 }}>
-          {scopeLabel}
-        </span>
         <span style={{ flex: 1 }} />
+        {exposureLoading && (
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em" }}>
+            LOADING…
+          </span>
+        )}
         {onRemove && (
-          <button onClick={onRemove} style={{ background: "none", border: "none", cursor: "pointer", color: S.tertiary, display: "flex", alignItems: "center", padding: 2, lineHeight: 1 }} title="Remove widget">
+          <button
+            onClick={onRemove}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              color: S.tertiary, display: "flex", alignItems: "center", padding: 2, lineHeight: 1,
+            }}
+            title="Remove widget"
+          >
             <X size={12} />
           </button>
         )}
       </div>
+
       {/* Body */}
-      <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-        {!hasTradesView ? (
-          <p style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.amber, margin: 0, padding: "10px 0", textAlign: "center" }}>
-            Requires trades.view permission
-          </p>
+      <div style={{ flex: 1, overflow: "auto" }}>
+        {!hasData ? (
+          <div style={{ padding: 10 }}>
+            <EmptyState
+              type="empty"
+              title="No exposure data"
+              message="Enter positions to see your FX exposure summary."
+              action={{
+                label: "Enter Positions",
+                onClick: () => router.push("/input"),
+              }}
+            />
+          </div>
         ) : (
-          <>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.secondary, display: "flex", justifyContent: "flex-end" }}>
-              {fmtMillions(totalNotional)} total
+          <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
+            {/* Legend */}
+            <div style={{ display: "flex", gap: 12, marginBottom: 2 }}>
+              {[
+                { label: "CONFIRMED", color: S.cyan },
+                { label: "FORECAST",  color: S.amber },
+              ].map(({ label, color }) => (
+                <span key={label} style={{ fontFamily: S.fontMono, fontSize: "0.4rem", color, letterSpacing: "0.08em" }}>
+                  ● {label}
+                </span>
+              ))}
             </div>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.6875rem" }}>
-              <thead>
-                <tr>
-                  {["Pair", "Notional ($M)", "Hedge %", "Trades"].map((col) => (
-                    <th key={col} style={{
-                        fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, fontWeight: 600,
-                        textAlign: col === "Pair" ? "left" : "right", padding: "2px 6px 4px",
-                        borderBottom: `1px solid ${S.soft}`, letterSpacing: "0.05em", whiteSpace: "nowrap"
+
+            {/* Per-currency rows */}
+            {sorted.map((row) => {
+              const total    = row.total_confirmed + row.total_forecast;
+              const pctConf  = total > 0 ? (row.total_confirmed / total) * 100 : 0;
+              const pctFcst  = total > 0 ? (row.total_forecast  / total) * 100 : 0;
+              const barWidth = total > 0 ? (total / maxTotal) * 100 : 0;
+              const countTotal = row.count_confirmed + row.count_forecast;
+
+              return (
+                <div key={row.currency}>
+                  {/* Currency label + total */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{
+                        fontFamily:    S.fontMono,
+                        fontSize:      "0.5rem",
+                        fontWeight:    700,
+                        color:         S.primary,
+                        letterSpacing: "0.06em",
                       }}>
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, idx) => {
-                  const isHovered = hoveredRow === idx;
-                  const hColor = hedgeColor(row.hedge_ratio);
-                  return (
-                    <tr key={row.currency}
-                      onMouseEnter={() => setHoveredRow(idx)}
-                      onMouseLeave={() => setHoveredRow(null)}
-                      style={{ background: isHovered ? "rgba(255,255,255,0.03)" : "transparent", transition: "background 0.1s" }}>
-                      <td style={{ fontFamily: S.fontMono, color: S.primary, padding: "4px 6px", fontSize: "0.6875rem", fontWeight: 600, whiteSpace: "nowrap" }}>
                         {row.currency}
-                      </td>
-                      <td style={{ fontFamily: S.fontMono, color: S.secondary, padding: "4px 6px", fontSize: "0.6875rem", textAlign: "right", whiteSpace: "nowrap" }}>
-                        {fmtMillions(row.notional_usd)}
-                      </td>
-                      <td style={{ padding: "4px 6px", textAlign: "right" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5 }}>
-                          <div style={{ width: 40, height: 4, background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 2, overflow: "hidden", flexShrink: 0 }}>
-                            <div style={{ width: `${row.hedge_ratio}%`, height: "100%", background: hColor, transition: "width 0.3s ease" }} />
-                          </div>
-                          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: hColor, minWidth: 28, textAlign: "right" }}>
-                            {row.hedge_ratio}%
-                          </span>
-                        </div>
-                      </td>
-                      <td style={{ fontFamily: S.fontMono, color: S.secondary, padding: "4px 6px", fontSize: "0.6875rem", textAlign: "right" }}>
-                        {row.open_trades}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, borderTop: `1px solid ${S.soft}`, paddingTop: 6, textAlign: "right" }}>
-              Last snapshot: static demo
-            </div>
-          </>
+                      </span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary }}>
+                        {countTotal} pos
+                      </span>
+                    </div>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.secondary }}>
+                      {fmtCompact(total)}
+                    </span>
+                  </div>
+
+                  {/* Stacked bar */}
+                  <div style={{
+                    height: 6,
+                    background: S.bgSub,
+                    border: `1px solid ${S.borderSoft}`,
+                    position: "relative",
+                    overflow: "hidden",
+                  }}>
+                    {/* Outer bar scaled to max */}
+                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${barWidth}%`, display: "flex" }}>
+                      {/* Confirmed segment */}
+                      {row.total_confirmed > 0 && (
+                        <div style={{
+                          width: `${pctConf}%`, height: "100%",
+                          background: S.cyan,
+                          opacity: 0.8,
+                        }} />
+                      )}
+                      {/* Forecast segment */}
+                      {row.total_forecast > 0 && (
+                        <div style={{
+                          width: `${pctFcst}%`, height: "100%",
+                          background: S.amber,
+                          opacity: 0.65,
+                        }} />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sub-labels */}
+                  <div style={{ display: "flex", gap: 10, marginTop: 2 }}>
+                    {row.total_confirmed > 0 && (
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.4rem", color: S.tertiary }}>
+                        <span style={{ color: S.cyan }}>Conf</span> {fmtCompact(row.total_confirmed)}
+                      </span>
+                    )}
+                    {row.total_forecast > 0 && (
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.4rem", color: S.tertiary }}>
+                        <span style={{ color: S.amber }}>Fcst</span> {fmtCompact(row.total_forecast)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useParams } from "next/navigation";
+import { useAuth } from "../../../lib/authContext";
 import type { RootState, AppDispatch } from "../../../lib/store";
 import {
   getLedgerThunk,
@@ -30,6 +31,7 @@ export default function LedgerDetailPage() {
   }
   const ledger_id = params.ledger_id;
   const dispatch = useDispatch<AppDispatch>();
+  const { token } = useAuth();
   const {
     currentLedger,
     ledgerLoading,
@@ -41,16 +43,16 @@ export default function LedgerDetailPage() {
   } = useSelector((s: RootState) => s.pipeline);
 
   useEffect(() => {
-    if (ledger_id) {
-      dispatch(getLedgerThunk(ledger_id));
-      dispatch(getTimelineThunk(ledger_id));
+    if (ledger_id && token) {
+      dispatch(getLedgerThunk({ ledgerId: ledger_id, token }));
+      dispatch(getTimelineThunk({ ledgerId: ledger_id, token }));
     }
-  }, [dispatch, ledger_id]);
+  }, [dispatch, ledger_id, token]);
 
   const handleReplay = useCallback(() => {
-    if (!ledger_id) return;
-    dispatch(replayLedgerThunk({ ledger_id }));
-  }, [dispatch, ledger_id]);
+    if (!ledger_id || !token) return;
+    dispatch(replayLedgerThunk({ request: { ledger_id }, token }));
+  }, [dispatch, ledger_id, token]);
 
   if (ledgerLoading || !currentLedger) {
     return (

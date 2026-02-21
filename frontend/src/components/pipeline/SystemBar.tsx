@@ -1,15 +1,19 @@
 "use client";
 
-import { useSelector } from "react-redux";
-import type { RootState } from "../../lib/store";
+/**
+ * SystemBar.tsx — Pipeline context strip
+ *
+ * Renders ONLY on execution-pipeline routes (via ClientProviders).
+ * Shows pipeline metadata: engine version, run ID, snapshot hash, committee toggle.
+ * No brand, no navigation, no identity — those live in AppTopBar.
+ */
+
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState, AppDispatch } from "../../lib/store";
 import { setDecisionPacketMode } from "../../lib/store/slices/pipelineSlice";
-import { useDispatch } from "react-redux";
-import type { AppDispatch } from "../../lib/store";
-import { useAuth } from "../../lib/authContext";
 
 export default function SystemBar() {
   const dispatch = useDispatch<AppDispatch>();
-  const { user } = useAuth();
   const { decisionPacketMode, sandboxResult } = useSelector(
     (s: RootState) => s.pipeline
   );
@@ -21,11 +25,7 @@ export default function SystemBar() {
     : "—";
 
   return (
-    <div className="h-7 bg-[var(--bg-deep)] border-b border-[var(--border-rim)] flex items-center px-4 gap-6 text-[0.625rem] font-mono text-[var(--text-tertiary)] shrink-0 select-none">
-      <span className="font-semibold text-[var(--text-secondary)] tracking-wider uppercase">
-        HedgeCalc
-      </span>
-
+    <div className="h-8 bg-[var(--bg-sub)] border-b border-[var(--border-soft)] flex items-center px-4 gap-6 text-xs font-mono text-[var(--text-tertiary)] shrink-0 select-none">
       <span>
         Engine <span className="text-[var(--text-secondary)]">{engineVersion}</span>
       </span>
@@ -44,7 +44,7 @@ export default function SystemBar() {
       <button
         onClick={() => dispatch(setDecisionPacketMode(!decisionPacketMode))}
         className={[
-          "px-2 py-0.5 rounded text-[0.625rem] font-medium transition-colors",
+          "px-2 py-0.5 rounded text-xs font-medium transition-colors",
           decisionPacketMode
             ? "bg-[var(--accent-cyan)]/20 text-[var(--accent-cyan)]"
             : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]",
@@ -52,16 +52,6 @@ export default function SystemBar() {
       >
         {decisionPacketMode ? "◆ Committee" : "◇ Committee"}
       </button>
-
-      <span className="text-[var(--text-tertiary)]">
-        Role: <span className="text-[var(--accent-cyan)]">{user?.roles?.[0] ?? "—"}</span>
-      </span>
-
-      {user?.branch && (
-        <span className="text-[var(--text-tertiary)]">
-          Branch: <span className="text-[var(--text-secondary)]">{user.branch.code}</span>
-        </span>
-      )}
     </div>
   );
 }

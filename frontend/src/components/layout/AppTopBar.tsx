@@ -2,99 +2,110 @@
 
 /**
  * AppTopBar.tsx
- * Unified top navigation bar for all ORDR Terminal module pages.
+ * Unified top navigation bar for ALL authenticated ORDR Terminal pages.
  *
- * Shows:
- *   Left:   ⬡ ORDR Terminal  [CurrentModule pill]
- *   Center: Dashboard · CurrencyFX · Portfolio Risk · Polisophic · HedgeWiki
- *   Right:  Full Name  [role]  Branch  [↓ Switch]  Sign Out
+ * Layout:
+ *   Left:   ⬡ ORDR  [CurrentSection pill]
+ *   Center: Dashboard · Analysis · Execution · Governance
+ *   Right:  Full Name  [role]  Branch  Sign Out
  *
- * Used by: every module page (currency-fx, results, reports, portfolio-risk,
- *          polisophic, hedgewiki, hedges, ledger, execution, sandbox, staging,
- *          scenario-studio)
+ * Rendered by ClientProviders Shell on every authenticated route.
+ * Determines active section from pathname automatically.
  */
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-  bgSub:    "var(--bg-sub,#0d1117)",
-  bgPanel:  "var(--bg-panel,#111722)",
-  rim:      "var(--border-rim,#1e2835)",
-  soft:     "var(--border-soft,#1a2333)",
-  primary:  "var(--text-primary,#e8edf4)",
-  secondary:"var(--text-secondary,#8a94a6)",
-  tertiary: "var(--text-tertiary,#4a5568)",
-  cyan:     "var(--accent-cyan,#22d3ee)",
-  amber:    "var(--accent-amber,#fbbf24)",
+  bgPanel:  "var(--bg-panel)",
+  rim:      "var(--border-rim)",
+  soft:     "var(--border-soft)",
+  primary:  "var(--text-primary)",
+  secondary:"var(--text-secondary)",
+  tertiary: "var(--text-tertiary)",
+  cyan:     "var(--accent-cyan)",
+  amber:    "var(--accent-amber)",
   red:      "var(--accent-red,#f87171)",
 } as const;
 
-// ── Module definitions ────────────────────────────────────────────────────────
-interface ModuleLink {
+// ── Navigation sections (institutional 4-section architecture) ────────────────
+interface NavSection {
   label: string;
-  path:  string;
-  short: string; // short label for dropdown
+  href:  string;
+  /** Routes that belong to this section */
+  prefixes: string[];
 }
 
-const MODULE_LINKS: ModuleLink[] = [
-  { label: "Dashboard",      path: "/dashboard",      short: "Dashboard"      },
-  { label: "CurrencyFX",     path: "/currency-fx",    short: "CurrencyFX"     },
-  { label: "Portfolio Risk",  path: "/portfolio-risk", short: "Portfolio Risk" },
-  { label: "Polisophic",     path: "/polisophic",     short: "Polisophic"     },
-  { label: "HedgeWiki",      path: "/hedgewiki",      short: "HedgeWiki"      },
+const NAV_SECTIONS: NavSection[] = [
+  {
+    label: "Dashboard",
+    href:  "/dashboard",
+    prefixes: ["/dashboard"],
+  },
+  {
+    label: "Analysis",
+    href:  "/currency-fx",
+    prefixes: ["/currency-fx", "/portfolio-risk", "/scenario-studio", "/polisophic", "/input"],
+  },
+  {
+    label: "Execution",
+    href:  "/sandbox",
+    prefixes: ["/sandbox", "/staging", "/ledger", "/results", "/reports", "/execution"],
+  },
+  {
+    label: "Governance",
+    href:  "/hedgewiki",
+    prefixes: ["/hedgewiki", "/hedges"],
+  },
+  {
+    label: "Help",
+    href:  "/help",
+    prefixes: ["/help"],
+  },
 ];
 
-// ── Props ─────────────────────────────────────────────────────────────────────
-export interface AppTopBarProps {
-  /** Display name of the current module, e.g. "CurrencyFX" */
-  currentModule: string;
-  /** Current path, used to highlight active nav link, e.g. "/currency-fx" */
-  currentPath: string;
+// ── Section label resolver ────────────────────────────────────────────────────
+function resolveSection(pathname: string): string {
+  for (const sec of NAV_SECTIONS) {
+    if (sec.prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+      return sec.label;
+    }
+  }
+  return "Dashboard";
 }
 
 // ── Role badge colour ─────────────────────────────────────────────────────────
 function roleColor(role: string): string {
   if (["admin", "cfo", "ceo"].includes(role))            return S.amber;
   if (["head_of_risk", "branch_manager"].includes(role)) return S.cyan;
-  if (["auditor"].includes(role))                        return "#a78bfa"; // purple
+  if (["auditor"].includes(role))                        return "#a78bfa";
   return S.secondary;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function AppTopBar({ currentModule, currentPath }: AppTopBarProps) {
+export default function AppTopBar() {
   const { user, logout, isAuthenticated } = useAuth();
-  const router  = useRouter();
-  const [dropOpen, setDropOpen] = useState(false);
-  const dropRef  = useRef<HTMLDivElement>(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
-        setDropOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  const router   = useRouter();
+  const pathname = usePathname() ?? "";
 
   const handleLogout = () => {
     logout();
     router.push("/auth/login");
   };
 
-  // Don't render if not authenticated (page's own auth guard handles redirect)
+  // Don't render on auth or public pages
   if (!isAuthenticated || !user) return null;
+  if (pathname.startsWith("/auth") || pathname === "/api-health") return null;
 
-  const role   = user.roles?.[0] ?? "—";
-  const branch = user.branch?.code ?? user.branch?.name ?? "—";
-  const name   = user.full_name ?? user.email;
+  const role    = user.roles?.[0] ?? "—";
+  const branch  = user.branch?.code ?? user.branch?.name ?? "—";
+  const name    = user.full_name ?? user.email;
+  const section = resolveSection(pathname);
 
   return (
     <div
@@ -102,20 +113,20 @@ export default function AppTopBar({ currentModule, currentPath }: AppTopBarProps
         position:     "sticky",
         top:          0,
         zIndex:       200,
-        height:       40,
+        height:       48,
         display:      "flex",
         alignItems:   "center",
-        background:   S.bgSub,
+        background:   S.bgPanel,
         borderBottom: `1px solid ${S.rim}`,
         fontFamily:   S.fontUI,
-        paddingLeft:  16,
-        paddingRight: 16,
+        paddingLeft:  24,
+        paddingRight: 24,
         gap:          0,
         flexShrink:   0,
       }}
     >
-      {/* ── LEFT: Brand + module pill ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+      {/* ── LEFT: Brand + section pill ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         <Link
           href="/dashboard"
           style={{
@@ -125,11 +136,11 @@ export default function AppTopBar({ currentModule, currentPath }: AppTopBarProps
             textDecoration: "none",
           }}
         >
-          <span style={{ color: S.cyan, fontSize: 14, lineHeight: 1 }}>⬡</span>
+          <span style={{ color: S.cyan, fontSize: 15, lineHeight: 1 }}>⬡</span>
           <span
             style={{
               fontFamily:    S.fontMono,
-              fontSize:      11,
+              fontSize:      13,
               fontWeight:    700,
               letterSpacing: "0.1em",
               color:         S.primary,
@@ -143,73 +154,68 @@ export default function AppTopBar({ currentModule, currentPath }: AppTopBarProps
         {/* divider */}
         <span style={{ color: S.rim, fontSize: 16, userSelect: "none" }}>│</span>
 
-        {/* current module pill */}
+        {/* current section pill */}
         <span
           style={{
             fontFamily:    S.fontMono,
-            fontSize:      10,
+            fontSize:      12,
             fontWeight:    600,
-            letterSpacing: "0.08em",
+            letterSpacing: "0.06em",
             color:         S.cyan,
-            background:    `color-mix(in srgb, ${S.cyan} 10%, transparent)`,
-            border:        `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`,
-            padding:       "2px 8px",
+            background:    `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
+            border:        `1px solid color-mix(in srgb, ${S.cyan} 20%, transparent)`,
+            padding:       "3px 10px",
             borderRadius:  2,
             textTransform: "uppercase",
           }}
         >
-          {currentModule}
+          {section}
         </span>
       </div>
 
-      {/* ── CENTER: Nav links ── */}
+      {/* ── CENTER: Section nav ── */}
       <nav
         style={{
           flex:           1,
           display:        "flex",
           alignItems:     "center",
           justifyContent: "center",
-          gap:            4,
+          gap:            0,
         }}
       >
-        {MODULE_LINKS.map((m) => {
-          const isActive = currentPath === m.path ||
-            (m.path !== "/dashboard" && currentPath.startsWith(m.path));
+        {NAV_SECTIONS.map((sec) => {
+          const isActive = sec.prefixes.some(
+            (p) => pathname === p || pathname.startsWith(p + "/")
+          );
           return (
             <Link
-              key={m.path}
-              href={m.path}
+              key={sec.label}
+              href={sec.href}
               style={{
-                fontFamily:     S.fontMono,
-                fontSize:       10,
+                fontFamily:     S.fontUI,
+                fontSize:       13,
                 fontWeight:     isActive ? 600 : 400,
-                letterSpacing:  "0.06em",
+                letterSpacing:  "0.02em",
                 color:          isActive ? S.cyan : S.secondary,
                 textDecoration: "none",
-                padding:        "3px 10px",
+                padding:        "4px 16px",
                 borderBottom:   isActive ? `2px solid ${S.cyan}` : "2px solid transparent",
                 transition:     "color 120ms, border-color 120ms",
                 whiteSpace:     "nowrap",
               }}
-              onMouseEnter={(e) => {
-                if (!isActive) (e.currentTarget as HTMLElement).style.color = S.primary;
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) (e.currentTarget as HTMLElement).style.color = S.secondary;
-              }}
             >
-              {m.label}
+              {sec.label}
             </Link>
           );
         })}
       </nav>
 
-      {/* ── RIGHT: Identity + dropdown + sign out ── */}
+      {/* ── RIGHT: Identity + sign out ── */}
       <div
         style={{
           display:    "flex",
           alignItems: "center",
-          gap:        10,
+          gap:        12,
           flexShrink: 0,
         }}
       >
@@ -217,11 +223,11 @@ export default function AppTopBar({ currentModule, currentPath }: AppTopBarProps
         <span
           style={{
             fontFamily: S.fontUI,
-            fontSize:   12,
+            fontSize:   13,
             fontWeight: 500,
             color:      S.primary,
             whiteSpace: "nowrap",
-            maxWidth:   160,
+            maxWidth:   180,
             overflow:   "hidden",
             textOverflow: "ellipsis",
           }}
@@ -233,13 +239,13 @@ export default function AppTopBar({ currentModule, currentPath }: AppTopBarProps
         <span
           style={{
             fontFamily:    S.fontMono,
-            fontSize:      9,
+            fontSize:      11,
             fontWeight:    600,
-            letterSpacing: "0.07em",
+            letterSpacing: "0.06em",
             color:         roleColor(role),
             background:    `color-mix(in srgb, ${roleColor(role)} 10%, transparent)`,
             border:        `1px solid color-mix(in srgb, ${roleColor(role)} 25%, transparent)`,
-            padding:       "1px 6px",
+            padding:       "2px 8px",
             borderRadius:  2,
             textTransform: "uppercase",
             whiteSpace:    "nowrap",
@@ -252,9 +258,9 @@ export default function AppTopBar({ currentModule, currentPath }: AppTopBarProps
         <span
           style={{
             fontFamily:    S.fontMono,
-            fontSize:      10,
+            fontSize:      12,
             color:         S.tertiary,
-            letterSpacing: "0.06em",
+            letterSpacing: "0.04em",
             whiteSpace:    "nowrap",
           }}
         >
@@ -264,132 +270,23 @@ export default function AppTopBar({ currentModule, currentPath }: AppTopBarProps
         {/* divider */}
         <span style={{ color: S.rim, fontSize: 16, userSelect: "none" }}>│</span>
 
-        {/* Module switcher dropdown */}
-        <div ref={dropRef} style={{ position: "relative" }}>
-          <button
-            onClick={() => setDropOpen((o) => !o)}
-            style={{
-              display:       "flex",
-              alignItems:    "center",
-              gap:           4,
-              fontFamily:    S.fontMono,
-              fontSize:      10,
-              fontWeight:    500,
-              letterSpacing: "0.06em",
-              color:         dropOpen ? S.cyan : S.secondary,
-              background:    "none",
-              border:        `1px solid ${dropOpen ? S.cyan : S.soft}`,
-              padding:       "3px 8px",
-              cursor:        "pointer",
-              borderRadius:  2,
-              transition:    "color 120ms, border-color 120ms",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = S.primary;
-              (e.currentTarget as HTMLElement).style.borderColor = S.secondary;
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.color = dropOpen ? S.cyan : S.secondary;
-              (e.currentTarget as HTMLElement).style.borderColor = dropOpen ? S.cyan : S.soft;
-            }}
-            aria-haspopup="listbox"
-            aria-expanded={dropOpen}
-          >
-            Switch Module
-            <span style={{ fontSize: 8, marginTop: 1 }}>{dropOpen ? "▲" : "▼"}</span>
-          </button>
-
-          {dropOpen && (
-            <div
-              role="listbox"
-              style={{
-                position:   "absolute",
-                top:        "calc(100% + 4px)",
-                right:      0,
-                minWidth:   180,
-                background: S.bgPanel,
-                border:     `1px solid ${S.rim}`,
-                borderRadius: 3,
-                boxShadow:  "0 8px 24px rgba(0,0,0,0.4)",
-                zIndex:     300,
-                overflow:   "hidden",
-              }}
-            >
-              {MODULE_LINKS.map((m) => {
-                const isActive = currentPath === m.path ||
-                  (m.path !== "/dashboard" && currentPath.startsWith(m.path));
-                return (
-                  <button
-                    key={m.path}
-                    role="option"
-                    aria-selected={isActive}
-                    onClick={() => {
-                      setDropOpen(false);
-                      router.push(m.path);
-                    }}
-                    style={{
-                      display:    "block",
-                      width:      "100%",
-                      textAlign:  "left",
-                      fontFamily: S.fontMono,
-                      fontSize:   11,
-                      padding:    "9px 14px",
-                      color:      isActive ? S.cyan : S.secondary,
-                      background: isActive
-                        ? `color-mix(in srgb, ${S.cyan} 6%, transparent)`
-                        : "none",
-                      border:     "none",
-                      borderBottom: `1px solid ${S.soft}`,
-                      cursor:     "pointer",
-                      letterSpacing: "0.04em",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        (e.currentTarget as HTMLElement).style.background =
-                          `color-mix(in srgb, ${S.cyan} 4%, transparent)`;
-                        (e.currentTarget as HTMLElement).style.color = S.primary;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        (e.currentTarget as HTMLElement).style.background = "none";
-                        (e.currentTarget as HTMLElement).style.color = S.secondary;
-                      }
-                    }}
-                  >
-                    {isActive && (
-                      <span style={{ color: S.cyan, marginRight: 6 }}>●</span>
-                    )}
-                    {m.short}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
         {/* Sign Out */}
         <button
           onClick={handleLogout}
           style={{
             fontFamily:    S.fontMono,
-            fontSize:      10,
+            fontSize:      12,
             fontWeight:    500,
-            letterSpacing: "0.06em",
+            letterSpacing: "0.04em",
             color:         S.tertiary,
             background:    "none",
-            border:        "none",
+            border:        `1px solid ${S.soft}`,
             cursor:        "pointer",
-            padding:       "3px 6px",
-            transition:    "color 120ms",
+            padding:       "4px 12px",
+            borderRadius:  2,
+            transition:    "color 120ms, border-color 120ms",
             whiteSpace:    "nowrap",
           }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLElement).style.color = S.red)
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLElement).style.color = S.tertiary)
-          }
         >
           Sign Out
         </button>

@@ -27,6 +27,8 @@ import {
   type ReactNode,
 } from "react";
 import Cookies from "js-cookie";
+import { store } from "./store";
+import { setAuthState } from "./store/slices/authSlice";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
@@ -163,21 +165,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const newToken = await refreshTokens();
       if (newToken) {
         setToken(newToken);
+        // Re-fetch user context after token refresh to keep Redux mirror fresh
+        const me = await fetchMe(newToken);
+        if (me) setUser(me);
+        store.dispatch(setAuthState({ token: newToken, user: me ?? null }));
         scheduleRefresh();
       }
     }, 25 * 60 * 1000);
-  }, [refreshTokens]);
+  }, [refreshTokens, fetchMe]);
 
   // ── Initialize session on mount ──
   useEffect(() => {
     const init = async () => {
-      // Demo bypass — always active: if a demo_token_* cookie exists, restore
-      // the demo session instantly without hitting the backend (works regardless
-      // of NEXT_PUBLIC_DEMO_MODE flag so page refresh keeps the user logged in).
+      // Demo bypass — only active when NEXT_PUBLIC_DEMO_MODE=true.
+      // When demo mode is off, demo_token_* cookies are treated as invalid and
+      // the user is redirected to real JWT auth.
       const storedToken = Cookies.get(ACCESS_TOKEN_KEY);
-      if (storedToken?.startsWith("demo_token_")) {
+      if (DEMO_MODE && storedToken?.startsWith("demo_token_")) {
         setToken(storedToken);
         setUser(DEMO_USER);
+        store.dispatch(setAuthState({ token: storedToken, user: DEMO_USER }));
         setIsLoading(false);
         return;
       }
@@ -188,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (me) {
           setToken(storedToken);
           setUser(me);
+          store.dispatch(setAuthState({ token: storedToken, user: me }));
           scheduleRefresh();
           setIsLoading(false);
           return;
@@ -200,6 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (me2) {
             setToken(newToken);
             setUser(me2);
+            store.dispatch(setAuthState({ token: newToken, user: me2 }));
             scheduleRefresh();
             setIsLoading(false);
             return;
@@ -210,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // No valid session
       setToken(null);
       setUser(null);
+      store.dispatch(setAuthState({ token: null, user: null }));
       setIsLoading(false);
     };
 
@@ -227,12 +237,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       username: string,
       password: string,
     ): Promise<{ success: boolean; error?: string }> => {
-      // Demo bypass — always active for demo/demo (works regardless of DEMO_MODE flag)
-      if (username === "demo" && password === "demo") {
+      // Demo bypass — only active when NEXT_PUBLIC_DEMO_MODE=true
+      if (DEMO_MODE && username === "demo" && password === "demo") {
         const demoToken = "demo_token_" + Date.now();
         Cookies.set(ACCESS_TOKEN_KEY, demoToken, { sameSite: "Strict", expires: 30 });
         setToken(demoToken);
         setUser(DEMO_USER);
+        store.dispatch(setAuthState({ token: demoToken, user: DEMO_USER }));
         return { success: true };
       }
 
@@ -277,6 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(me);
           scheduleRefresh();
         }
+        store.dispatch(setAuthState({ token: data.access_token as string, user: me ?? null }));
 
         return { success: true };
       } catch (err: unknown) {
@@ -309,6 +321,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     setToken(null);
     setUser(null);
+    store.dispatch(setAuthState({ token: null, user: null }));
   }, []);
 
   // ── Permission helpers ──

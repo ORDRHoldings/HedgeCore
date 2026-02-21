@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Activity } from "lucide-react";
 import { UserContext } from "@/lib/authContext";
+import EmptyState from "@/components/ui/EmptyState";
 
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -255,18 +256,32 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
 
       {/* Body - activity feed */}
       <div style={{ flex: 1, overflow: "auto" }}>
-        {loading && <div style={monoNote(S.secondary)}>Loading activity...</div>}
+        {loading && (
+          <div style={{ padding: "8px 12px" }}>
+            <EmptyState type="loading" message="Loading activity..." />
+          </div>
+        )}
 
         {!loading && forbidden && (
-          <div style={monoNote(S.amber)}>Requires audit.view_branch permission</div>
+          <div style={{ padding: "8px 12px" }}>
+            <EmptyState type="error" title="Insufficient permissions" message="Requires audit.view_branch permission." />
+          </div>
         )}
 
         {!loading && !forbidden && error && (
-          <div style={monoNote(S.amber)}>No activity access</div>
+          <div style={{ padding: "8px 12px" }}>
+            <EmptyState type="error" title="Error loading activity" message="Unable to load team activity." />
+          </div>
         )}
 
         {!loading && !forbidden && !error && filtered.length === 0 && (
-          <div style={monoNote(S.secondary)}>No recent activity.</div>
+          <div style={{ padding: "8px 12px" }}>
+            <EmptyState
+              type="empty"
+              title="No recent activity"
+              message="Team actions will be logged here as users interact with the platform."
+            />
+          </div>
         )}
 
         {!loading && !forbidden && !error && filtered.length > 0 && (

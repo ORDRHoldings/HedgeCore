@@ -12,14 +12,14 @@
  *   Provider (react-redux)
  *     HedgeProvider
  *       SessionLoader   ← dispatches loadSessionThunk on mount
- *       Shell           ← pathname-aware: shows pipeline chrome only on pipeline pages
+ *       Shell           ← pathname-aware
+ *         AppTopBar     ← persistent on ALL authenticated routes (self-hides on auth pages)
+ *         SystemBar     ← pipeline context strip (pipeline routes only)
+ *         PipelineNav   ← pipeline routes only
  *         <main>{children}</main>
  *
- * Pipeline pages (show SystemBar + PipelineNav + StaleSnapshotBanner):
+ * Pipeline routes (show context strip + PipelineNav + StaleSnapshotBanner):
  *   /sandbox, /staging, /ledger, /currency-fx, /input, /results, /reports, /execution
- *
- * All other pages (dashboard, portfolio-risk, polisophic, hedgewiki, etc.)
- * receive a clean layout — their own AppTopBar handles navigation.
  */
 
 import type { ReactNode } from "react";
@@ -28,12 +28,13 @@ import { usePathname } from "next/navigation";
 import { store } from "../../lib/store";
 import { AuthProvider } from "../../lib/authContext";
 import { HedgeProvider } from "../../lib/hedgeContext";
+import AppTopBar from "../layout/AppTopBar";
 import SystemBar from "./SystemBar";
 import PipelineNav from "./PipelineNav";
 import StaleSnapshotBanner from "./StaleSnapshotBanner";
 import SessionLoader from "./SessionLoader";
 
-// Routes that get the legacy pipeline chrome (SystemBar + PipelineNav)
+// Routes that get the pipeline context strip (SystemBar + PipelineNav)
 const PIPELINE_PREFIXES = [
   "/sandbox",
   "/staging",
@@ -53,6 +54,7 @@ function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[var(--bg-deep)] flex flex-col">
+      <AppTopBar />
       {showPipelineChrome && (
         <>
           <SystemBar />

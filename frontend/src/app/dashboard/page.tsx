@@ -13,17 +13,12 @@
 
 import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import type { Layout, Layouts } from "react-grid-layout";
 import {
-  LayoutDashboard,
   Plus,
   RefreshCw,
   Monitor,
-  LogOut,
-  Building2,
-  ChevronRight,
 } from "lucide-react";
 
 import { useAuth } from "@/lib/authContext";
@@ -123,7 +118,7 @@ function nowTs() {
 // ── Dashboard Page ────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading, user, token, logout } = useAuth();
+  const { isAuthenticated, isLoading, user, token } = useAuth();
 
   const [ready, setReady] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
@@ -268,11 +263,6 @@ export default function DashboardPage() {
     );
   }
 
-  const role = user.roles?.[0] ?? "—";
-  const branchLabel = user.branch
-    ? `${user.company?.name ?? "Synex"} · ${user.branch.name}`
-    : user.company?.name ?? "Synex Capital Partners";
-
   const rglLayout = toRGLLayout(gridItems);
 
   return (
@@ -284,123 +274,6 @@ export default function DashboardPage() {
       display: "flex",
       flexDirection: "column",
     }}>
-
-      {/* ── TopBar ─────────────────────────────────────────────────────────── */}
-      <header style={{
-        height: 48,
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "0 24px",
-        background: S.bgPanel,
-        borderBottom: `1px solid ${S.rim}`,
-        flexShrink: 0,
-      }}>
-        {/* Brand */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <LayoutDashboard size={16} strokeWidth={1.5} style={{ color: S.cyan }} />
-          <span style={{
-            fontFamily: S.fontUI,
-            fontSize: "0.8125rem",
-            fontWeight: 700,
-            color: S.primary,
-            letterSpacing: "0.05em",
-            textTransform: "uppercase" as const,
-          }}>
-            ORDR Dashboard
-          </span>
-        </div>
-
-        <span style={{ color: S.rim }}>|</span>
-
-        {/* Org context */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Building2 size={13} strokeWidth={1.5} style={{ color: S.tertiary }} />
-          <span style={{
-            fontFamily: S.fontMono,
-            fontSize: "0.5625rem",
-            color: S.secondary,
-            letterSpacing: "0.04em",
-          }}>
-            {branchLabel}
-          </span>
-        </div>
-
-        <span style={{ color: S.soft }}>·</span>
-
-        {/* Role */}
-        <span style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.5rem",
-          padding: "1px 6px",
-          border: `1px solid ${S.rim}`,
-          color: S.cyan,
-          letterSpacing: "0.05em",
-          textTransform: "uppercase" as const,
-        }}>
-          {role}
-        </span>
-
-        {/* Nav links */}
-        <div style={{ flex: 1 }} />
-        <nav style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          {[
-            { href: "/dashboard",    label: "Dashboard",    active: true },
-            { href: "/terminal",     label: "Terminal" },
-            { href: "/polisophic",   label: "Polisophic" },
-          ].map(({ href, label, active }) => (
-            <Link
-              key={href}
-              href={href}
-              style={{
-                fontFamily: S.fontMono,
-                fontSize: "0.5625rem",
-                letterSpacing: "0.04em",
-                padding: "4px 10px",
-                color: active ? S.cyan : S.tertiary,
-                borderBottom: active ? `2px solid ${S.cyan}` : "2px solid transparent",
-                textDecoration: "none",
-                transition: "color 120ms",
-              }}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-        <span style={{ color: S.rim }}>|</span>
-
-        {/* User identity */}
-        <span style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.5rem",
-          color: S.tertiary,
-          letterSpacing: "0.03em",
-        }}>
-          {user.full_name ?? user.email}
-        </span>
-
-        {/* Logout */}
-        <button
-          onClick={() => { logout(); router.push("/auth/login"); }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            fontFamily: S.fontMono,
-            fontSize: "0.5rem",
-            letterSpacing: "0.06em",
-            color: S.tertiary,
-            background: "transparent",
-            border: `1px solid ${S.rim}`,
-            padding: "3px 8px",
-            cursor: "pointer",
-          }}
-        >
-          <LogOut size={11} strokeWidth={1.5} />
-          Sign Out
-        </button>
-      </header>
 
       {/* ── Controls bar ───────────────────────────────────────────────────── */}
       <div style={{
@@ -419,7 +292,7 @@ export default function DashboardPage() {
             alignItems: "center",
             gap: 5,
             fontFamily: S.fontMono,
-            fontSize: "0.5625rem",
+            fontSize: "0.75rem",
             letterSpacing: "0.04em",
             color: S.cyan,
             background: "transparent",
@@ -439,7 +312,7 @@ export default function DashboardPage() {
             alignItems: "center",
             gap: 5,
             fontFamily: S.fontMono,
-            fontSize: "0.5625rem",
+            fontSize: "0.75rem",
             letterSpacing: "0.04em",
             color: S.tertiary,
             background: "transparent",
@@ -456,7 +329,7 @@ export default function DashboardPage() {
 
         <span style={{
           fontFamily: S.fontMono,
-          fontSize: "0.4375rem",
+          fontSize: "0.6875rem",
           color: S.tertiary,
           letterSpacing: "0.04em",
         }}>
@@ -490,7 +363,7 @@ export default function DashboardPage() {
                 alignItems: "center",
                 gap: 6,
                 fontFamily: S.fontMono,
-                fontSize: "0.5625rem",
+                fontSize: "0.75rem",
                 letterSpacing: "0.05em",
                 color: S.cyan,
                 background: "transparent",
@@ -543,7 +416,7 @@ export default function DashboardPage() {
         background: S.bgPanel,
         borderTop: `1px solid ${S.rim}`,
         fontFamily: S.fontMono,
-        fontSize: "0.5rem",
+        fontSize: "0.6875rem",
         color: S.tertiary,
         letterSpacing: "0.04em",
         flexShrink: 0,

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { History, X } from "lucide-react";
-import Link from "next/link";
+import EmptyState from "@/components/ui/EmptyState";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 const S = {
@@ -29,11 +30,11 @@ type RunStatus =
 
 interface RecentRun {
   id:            string;
-  created_at:    string;
+  created_at:    string | null;
   status:        RunStatus;
-  currency_pair: string;
-  notional:      number;
-  hedge_ratio:   number;
+  currency_pair: string | null;
+  notional:      number | null;
+  hedge_ratio:   number | null;
 }
 
 interface RecentRunsWidgetProps {
@@ -58,14 +59,19 @@ function statusChipStyle(status: RunStatus): {
   }
 }
 
-function formatDate(iso: string): string {
-  try { return iso.slice(0, 10); } catch { return iso; }
+function formatDate(iso: string | null): string {
+  if (!iso) return "\u2014";
+  try { return iso.slice(0, 10); } catch { return "\u2014"; }
 }
-function formatNotional(n: number): string {
+function formatNotional(n: number | null): string {
+  if (n == null) return "\u2014";
   return `$${(n / 1_000_000).toFixed(1)}M`;
 }
-function formatHedge(ratio: number): string {
-  return `${(ratio * 100).toFixed(0)}%`;
+function formatHedge(ratio: number | null): string {
+  if (ratio == null) return "\u2014";
+  // If ratio is 0-1 treat as decimal; if > 1 treat as percentage
+  const pct = ratio > 1 ? ratio : ratio * 100;
+  return `${pct.toFixed(0)}%`;
 }
 
 function Th({ children, right }: { children: React.ReactNode; right?: boolean }) {
@@ -111,31 +117,16 @@ function Td({
   );
 }
 
-// Demo fallback — shown instantly when logged in as demo/demo
-const DEMO_RUNS: RecentRun[] = [
-  { id: "demo-1", created_at: "2026-02-19T14:22:00Z", status: "LEDGER",            currency_pair: "USD/MXN", notional: 5_000_000, hedge_ratio: 0.82 },
-  { id: "demo-2", created_at: "2026-02-18T09:11:00Z", status: "STAGING",           currency_pair: "USD/GBP", notional: 2_500_000, hedge_ratio: 0.65 },
-  { id: "demo-3", created_at: "2026-02-17T16:45:00Z", status: "SANDBOX",           currency_pair: "USD/MXN", notional: 8_000_000, hedge_ratio: 0.78 },
-  { id: "demo-4", created_at: "2026-02-14T11:30:00Z", status: "LEDGER",            currency_pair: "USD/EUR", notional: 3_200_000, hedge_ratio: 0.90 },
-  { id: "demo-5", created_at: "2026-02-12T08:55:00Z", status: "SANDBOX/REJECTED",  currency_pair: "USD/GBP", notional: 1_800_000, hedge_ratio: 0.45 },
-];
-
 export default function RecentRunsWidget({
   token,
   onRemove,
 }: RecentRunsWidgetProps) {
+  const router = useRouter();
   const [runs,    setRuns]    = useState<RecentRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
 
   useEffect(() => {
-    // Demo bypass — skip API call, show hardcoded demo data instantly
-    if (token.startsWith("demo_token_")) {
-      setRuns(DEMO_RUNS);
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
     const fetchRuns = async () => {
       setLoading(true);
@@ -220,40 +211,21 @@ export default function RecentRunsWidget({
       {/* Body */}
       <div style={{ overflowX: "auto", minHeight: 60 }}>
         {loading && (
-          <p style={{
-            fontFamily: S.fontMono, fontSize: 11,
-            color: S.textTertiary, textAlign: "center",
-            margin: "16px 0",
-          }}>
-            Loading...
-          </p>
+          <EmptyState type="loading" message="Loading recent runs..." />
         )}
         {error && !loading && (
-          <p style={{ fontFamily: S.fontMono, fontSize: 11, color: S.accentRed, margin: 12 }}>
-            Error loading runs
-          </p>
+          <EmptyState type="error" message="Failed to load recent runs" />
         )}
         {!loading && !error && runs.length === 0 && (
-          <div style={{ padding: "24px 16px", textAlign: "center" }}>
-            <p style={{
-              fontFamily: S.fontMono, fontSize: 11,
-              color: S.textTertiary, margin: "0 0 10px",
-            }}>
-              No recent calculations. Run your first hedge to get started.
-            </p>
-            <Link
-              href="/currency-fx"
-              style={{
-                fontFamily:     S.fontMono,
-                fontSize:       11,
-                color:          S.accentCyan,
-                textDecoration: "none",
-                letterSpacing:  "0.05em",
-              }}
-            >
-              {"→"} Open CurrencyFX
-            </Link>
-          </div>
+          <EmptyState
+            type="empty"
+            title="No calculations yet"
+            message="Run your first hedge calculation to see results here."
+            action={{
+              label: "Go to Input",
+              onClick: () => router.push("/input"),
+            }}
+          />
         )}
         {!loading && !error && runs.length > 0 && (
           <table style={{
@@ -284,7 +256,7 @@ export default function RecentRunsWidget({
                 return (
                   <tr key={run.id}>
                     <Td mono>{formatDate(run.created_at)}</Td>
-                    <Td mono>{run.currency_pair}</Td>
+                    <Td mono>{run.currency_pair ?? "\u2014"}</Td>
                     <Td mono right>{formatNotional(run.notional)}</Td>
                     <Td mono right>{formatHedge(run.hedge_ratio)}</Td>
                     <Td>
@@ -323,7 +295,7 @@ export default function RecentRunsWidget({
                         title="Open run (coming soon)"
                         aria-label="Open run"
                       >
-                        {"→"}
+                        {"\u2192"}
                       </button>
                     </Td>
                   </tr>
