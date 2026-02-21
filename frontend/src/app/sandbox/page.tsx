@@ -7,12 +7,11 @@ import { useAuth } from "../../lib/authContext";
 import type { RootState, AppDispatch } from "../../lib/store";
 import {
   sandboxCalculateThunk,
-  createProposalThunk,
   setXRayOpen,
   setXRayContext,
 } from "../../lib/store/slices/pipelineSlice";
 import type { CalculateRequest } from "../../api/types";
-import { DEMO_FIXTURES } from "../../constants/demoData";
+import { DEMO_FIXTURES, DEFAULT_DEMO_MARKET, DEFAULT_DEMO_POLICY } from "../../constants/demoData";
 import type { DemoFixture } from "../../constants/demoData";
 
 // UI primitives
@@ -27,7 +26,6 @@ import ErrorBanner from "../../components/ui/ErrorBanner";
 // Sandbox components
 import DemoFixtureSelector from "../../components/sandbox/DemoFixtureSelector";
 import WaterfallEngine from "../../components/sandbox/WaterfallEngine";
-import ProposalControls from "../../components/sandbox/ProposalControls";
 import AllocatorSummary from "../../components/sandbox/AllocatorSummary";
 import ExposureTab from "../../components/sandbox/ExposureTab";
 import AttributionTab from "../../components/sandbox/AttributionTab";
@@ -36,6 +34,7 @@ import BeforeAfterTab from "../../components/sandbox/BeforeAfterTab";
 import LiquidityTab from "../../components/sandbox/LiquidityTab";
 import RollsTab from "../../components/sandbox/RollsTab";
 import ScenariosTab from "../../components/sandbox/ScenariosTab";
+import ScenarioStressTester from "../../components/sandbox/ScenarioStressTester";
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
@@ -46,8 +45,6 @@ export default function SandboxPage() {
   const {
     sandboxResult,
     sandboxLoading,
-    currentProposal,
-    proposalsLoading,
     xrayOpen,
     error,
     decisionPacketMode,
@@ -82,11 +79,6 @@ export default function SandboxPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  const handleCreateProposal = useCallback(() => {
-    if (!sandboxResult?.run_id) return;
-    dispatch(createProposalThunk({ request: { run_id: sandboxResult.run_id }, token: token! }));
-  }, [dispatch, sandboxResult, token]);
 
   const handleXRay = useCallback(
     (context: Record<string, unknown>) => {
@@ -144,14 +136,11 @@ export default function SandboxPage() {
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <ProposalControls
-            onCreateProposal={handleCreateProposal}
-            proposalsLoading={proposalsLoading}
-            canPropose={!!sandboxResult && waterfall?.overall_status !== "FAIL"}
-            currentProposalId={currentProposal?.proposal_id}
-          />
-        </div>
+        <ScenarioStressTester
+          sandboxResult={sandboxResult}
+          defaultPolicy={DEFAULT_DEMO_POLICY}
+          defaultSpot={DEFAULT_DEMO_MARKET.spot_usdmxn}
+        />
       </div>
     );
   }
@@ -218,7 +207,7 @@ export default function SandboxPage() {
             />
           )
         )}
-        {sandboxLoading && <EmptyState type="loading" message="Running sandbox calculation…" />}
+        {sandboxLoading && <EmptyState type="loading" message="Running simulation…" />}
 
         {sandboxResult && waterfall && (
           <>
@@ -242,15 +231,15 @@ export default function SandboxPage() {
               allocatorResult={v2?.allocator_result as Record<string, unknown> | undefined}
               currencyNetting={v2?.currency_netting as Record<string, unknown> | undefined}
             />
-
-            <ProposalControls
-              onCreateProposal={handleCreateProposal}
-              proposalsLoading={proposalsLoading}
-              canPropose={waterfall.overall_status !== "FAIL"}
-              currentProposalId={currentProposal?.proposal_id}
-            />
           </>
         )}
+
+        {/* Scenario Stress Tester — always visible */}
+        <ScenarioStressTester
+          sandboxResult={sandboxResult}
+          defaultPolicy={DEFAULT_DEMO_POLICY}
+          defaultSpot={DEFAULT_DEMO_MARKET.spot_usdmxn}
+        />
       </div>
 
       {/* Right Rail — 30% */}

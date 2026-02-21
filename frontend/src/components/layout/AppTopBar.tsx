@@ -53,9 +53,9 @@ const NAV_SECTIONS: NavSection[] = [
     prefixes: ["/currency-fx", "/portfolio-risk", "/scenario-studio", "/polisophic", "/input"],
   },
   {
-    label: "Execution",
+    label: "Simulation",
     href:  "/sandbox",
-    prefixes: ["/sandbox", "/staging", "/ledger", "/results", "/reports", "/execution"],
+    prefixes: ["/sandbox"],
   },
   {
     label: "Governance",

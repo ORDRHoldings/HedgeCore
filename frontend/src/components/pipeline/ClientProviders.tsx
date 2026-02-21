@@ -14,12 +14,11 @@
  *       SessionLoader   ← dispatches loadSessionThunk on mount
  *       Shell           ← pathname-aware
  *         AppTopBar     ← persistent on ALL authenticated routes (self-hides on auth pages)
- *         SystemBar     ← pipeline context strip (pipeline routes only)
- *         PipelineNav   ← pipeline routes only
+ *         SystemBar     ← pipeline context strip (simulation routes only)
  *         <main>{children}</main>
  *
- * Pipeline routes (show context strip + PipelineNav + StaleSnapshotBanner):
- *   /sandbox, /staging, /ledger, /currency-fx, /input, /results, /reports, /execution
+ * Pipeline routes (show context strip + StaleSnapshotBanner):
+ *   /sandbox, /currency-fx, /input
  */
 
 import type { ReactNode } from "react";
@@ -30,20 +29,14 @@ import { AuthProvider } from "../../lib/authContext";
 import { HedgeProvider } from "../../lib/hedgeContext";
 import AppTopBar from "../layout/AppTopBar";
 import SystemBar from "./SystemBar";
-import PipelineNav from "./PipelineNav";
 import StaleSnapshotBanner from "./StaleSnapshotBanner";
 import SessionLoader from "./SessionLoader";
 
-// Routes that get the pipeline context strip (SystemBar + PipelineNav)
+// Routes that get the pipeline context strip (SystemBar only)
 const PIPELINE_PREFIXES = [
   "/sandbox",
-  "/staging",
-  "/ledger",
   "/currency-fx",
   "/input",
-  "/results",
-  "/reports",
-  "/execution",
 ];
 
 function Shell({ children }: { children: ReactNode }) {
@@ -58,7 +51,6 @@ function Shell({ children }: { children: ReactNode }) {
       {showPipelineChrome && (
         <>
           <SystemBar />
-          <PipelineNav />
           <StaleSnapshotBanner />
         </>
       )}
