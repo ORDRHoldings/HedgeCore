@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
@@ -74,6 +74,14 @@ export default function SandboxPage() {
     },
     [dispatch, token]
   );
+
+  // Auto-load first fixture on mount in demo mode (so the page is never blank)
+  useEffect(() => {
+    if (DEMO_MODE && !sandboxResult && !sandboxLoading && DEMO_FIXTURES.length > 0 && token) {
+      handleRunDemo(DEMO_FIXTURES[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   const handleCreateProposal = useCallback(() => {
     if (!sandboxResult?.run_id) return;

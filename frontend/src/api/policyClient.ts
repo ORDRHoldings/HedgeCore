@@ -3,6 +3,8 @@
  */
 import axios from "axios";
 import type { PolicyConfig } from "./types";
+import type { PolicyPreset } from "@/constants/policyPresets";
+import type { QuestionnaireAnswers, AIPolicyResult } from "@/app/api/policy-ai/route";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
@@ -103,3 +105,27 @@ export async function createPolicyTemplate(
   });
   return data as PolicyTemplate;
 }
+
+// ---------------------------------------------------------------------------
+// AI Policy Suggestion — calls the Next.js /api/policy-ai route (server-side)
+// No auth required — the Claude API key lives on the server.
+// ---------------------------------------------------------------------------
+
+export type { QuestionnaireAnswers, AIPolicyResult };
+
+export async function suggestPolicyAI(
+  answers: QuestionnaireAnswers,
+): Promise<AIPolicyResult> {
+  const res = await fetch("/api/policy-ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ answers }),
+  });
+  if (!res.ok) {
+    throw new Error(`Policy AI request failed: HTTP ${res.status}`);
+  }
+  return (await res.json()) as AIPolicyResult;
+}
+
+// Re-export the PolicyPreset type for consumers that import from policyClient
+export type { PolicyPreset };
