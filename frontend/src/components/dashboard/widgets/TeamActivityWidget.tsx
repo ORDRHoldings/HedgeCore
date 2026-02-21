@@ -108,6 +108,8 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
   const [activeTab, setActiveTab] = useState("ALL");
 
   const fetchActivity = useCallback(async () => {
+    // Demo tokens are not accepted by the backend — skip fetch in demo mode
+    if (token.startsWith("demo_token_")) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     setForbidden(false);

@@ -77,6 +77,8 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
   const [forbidden, setForbidden] = useState(false);
 
   const fetchApprovals = useCallback(async () => {
+    // Demo tokens are not accepted by the backend — skip fetch in demo mode
+    if (token.startsWith("demo_token_")) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     setForbidden(false);
