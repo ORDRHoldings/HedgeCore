@@ -40,11 +40,11 @@ interface Action {
 }
 
 const ACTIONS: Action[] = [
-  { label: "New Trade Entry",    permission: "trades.create",                Icon: FileText,     route: "/currency-fx" },
+  { label: "New Trade Entry",    permission: "trades.create",                Icon: FileText,     route: "/input"       },
   { label: "Run Sandbox",        permission: "calculate.run_sandbox",         Icon: Zap,          route: "/sandbox"     },
   { label: "Create Proposal",    permission: "pipeline.create_proposal",      Icon: PlusCircle,   route: "/sandbox"     },
   { label: "Review Approvals",   permission: "pipeline.approve",              Icon: CheckSquare,  route: "/staging"     },
-  { label: "Refresh Market Data",permission: "market.autofill",               Icon: RefreshCw,    route: "/currency-fx" },
+  { label: "Refresh Market Data",permission: "market.autofill",               Icon: RefreshCw,    route: "/input"       },
   { label: "View Reports",       permission: "reports.view_own_branch",       Icon: BarChart2,    route: "/reports"     },
   { label: "Audit Log",          permission: "audit.view_own",                Icon: Search,       route: "/ledger"      },
 ];
