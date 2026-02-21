@@ -46,6 +46,8 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
   // Fetch on mount (and whenever token changes)
   useEffect(() => {
     if (!token) return;
+    // Demo tokens are not accepted by the backend — skip fetch in demo mode
+    if (token.startsWith("demo_token_")) return;
     dispatch(fetchExposureThunk({ token }));
   }, [dispatch, token]);
 
