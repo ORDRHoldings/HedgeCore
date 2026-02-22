@@ -313,9 +313,10 @@ export default function InputPage() {
     return nonMarket.length === 0 ? 'PASS' : 'FAIL';
   }, [trades.length, validation.errors]);
 
-  const nonMarketCriticals = validation.errors.filter(
-    e => e.severity === 'CRITICAL' && !AUTO_RESOLVED_CODES.has(e.code),
-  );
+  // Only surface non-auto-resolved critical errors when there are actual trades to validate
+  const nonMarketCriticals = trades.length > 0
+    ? validation.errors.filter(e => e.severity === 'CRITICAL' && !AUTO_RESOLVED_CODES.has(e.code))
+    : [];
   const canCalculate = nonMarketCriticals.length === 0 && trades.length > 0 && !loading;
 
   const integrityScore = useMemo(() => {
@@ -373,9 +374,9 @@ export default function InputPage() {
   }), [hedges]);
 
   const validationGates = useMemo(() => {
-    const nonMarketErrors = validation.errors.filter(
-      e => e.severity === 'CRITICAL' && !AUTO_RESOLVED_CODES.has(e.code),
-    );
+    const nonMarketErrors = trades.length > 0
+      ? validation.errors.filter(e => e.severity === 'CRITICAL' && !AUTO_RESOLVED_CODES.has(e.code))
+      : [];
     return [
       { label: 'Exposure data',      met: trades.length > 0,           message: trades.length === 0 ? 'No positions loaded' : undefined },
       { label: 'Market snapshot',    met: true,                        message: market.spot_usdmxn > 0 ? undefined : 'Auto-fetched on generate' },
@@ -765,7 +766,7 @@ export default function InputPage() {
         tradeCount={trades.length} hedgeCount={hedges.length} policyName={activePresetName}
         snapshotMode={marketMode} snapshotTimestamp={market.as_of} engineVersion="1.0.0"
         validationState={validationState} errorCount={nonMarketCriticals.length}
-        warningCount={validation.warnings.length} fixtureId={null}
+        warningCount={trades.length > 0 ? validation.warnings.length : 0} fixtureId={null}
         fixtureLabel={null}
         integrityScore={integrityScore}
       />
