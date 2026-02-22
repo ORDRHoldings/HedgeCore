@@ -4,14 +4,15 @@
  * execution-history/page.tsx -- Execution History
  *
  * Full audit trail of all hedge executions across the ORDR pipeline.
- * Displays ledger entries with status tracking, approval chain details,
- * and hash-integrity verification for a Mexican manufacturing treasury desk.
+ * Displays connector run entries with status tracking, approval chain details,
+ * and hash-integrity verification.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
-import EmptyState from "../../components/ui/EmptyState";
+import { listConnectorRuns } from "../../api/connectorClient";
+import type { ConnectorRun } from "../../api/connectorClient";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -21,8 +22,6 @@ function useRenderTs(): string {
   }, []);
   return renderTs;
 }
-
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 // -- Design tokens ----------------------------------------------------------------
 const S = {
@@ -53,7 +52,7 @@ const STATUS_COLORS: Record<ExecutionStatus, string> = {
   CANCELLED:  S.tertiary,
 };
 
-// -- Demo execution data ----------------------------------------------------------
+// -- Execution row interface -------------------------------------------------------
 interface ExecutionRow {
   ledgerId: string;
   stagingId: string;
@@ -72,159 +71,32 @@ interface ExecutionRow {
   stagingSummary: string;
 }
 
-const DEMO_EXECUTIONS: ExecutionRow[] = [
-  {
-    ledgerId: "LDG-2026-0047",
-    stagingId: "STG-0089",
-    status: "SETTLED",
-    notional: 3200000,
-    currencyPair: "USD/MXN",
-    instrument: "Forward 6M",
-    authorizedBy: "Maria Torres (CFO)",
-    timestamp: "2026-02-20 16:45",
-    counterparty: "Citibanamex",
-    rate: "17.4520",
-    settlementDate: "2026-08-20",
-    hashIntegrity: "VERIFIED",
-    approvalChain: [
-      { name: "Carlos Reyes", role: "Head of Risk", ts: "2026-02-20 14:30" },
-      { name: "Maria Torres", role: "CFO", ts: "2026-02-20 15:15" },
-    ],
-    stagingSummary: "6M USD/MXN forward hedge covering Q3 payables exposure from US supplier contracts.",
-  },
-  {
-    ledgerId: "LDG-2026-0046",
-    stagingId: "STG-0088",
-    status: "EXECUTED",
-    notional: 1800000,
-    currencyPair: "EUR/MXN",
-    instrument: "Collar 3M",
-    authorizedBy: "Carlos Reyes (Head of Risk)",
-    timestamp: "2026-02-19 11:20",
-    counterparty: "BBVA Mexico",
-    rate: "18.9350 / 19.4200",
-    settlementDate: "2026-05-19",
-    hashIntegrity: "VERIFIED",
-    approvalChain: [
-      { name: "Ana Lopez", role: "Treasury Analyst", ts: "2026-02-19 09:00" },
-      { name: "Carlos Reyes", role: "Head of Risk", ts: "2026-02-19 10:45" },
-    ],
-    stagingSummary: "3M EUR/MXN collar for European raw material imports. Floor 18.93, Cap 19.42.",
-  },
-  {
-    ledgerId: "LDG-2026-0045",
-    stagingId: "STG-0087",
-    status: "AUTHORIZED",
-    notional: 5500000,
-    currencyPair: "USD/MXN",
-    instrument: "Forward 12M",
-    authorizedBy: "Maria Torres (CFO)",
-    timestamp: "2026-02-18 09:15",
-    counterparty: "Santander Mexico",
-    rate: "17.8900",
-    settlementDate: "2027-02-18",
-    hashIntegrity: "VERIFIED",
-    approvalChain: [
-      { name: "Carlos Reyes", role: "Head of Risk", ts: "2026-02-17 16:00" },
-      { name: "Maria Torres", role: "CFO", ts: "2026-02-18 09:10" },
-    ],
-    stagingSummary: "12M USD/MXN forward for annual capital equipment purchase program.",
-  },
-  {
-    ledgerId: "LDG-2026-0044",
-    stagingId: "STG-0086",
-    status: "SETTLED",
-    notional: 2100000,
-    currencyPair: "USD/MXN",
-    instrument: "NDF 3M",
-    authorizedBy: "Carlos Reyes",
-    timestamp: "2026-02-15 14:30",
-    counterparty: "JPMorgan Mexico",
-    rate: "17.3100",
-    settlementDate: "2026-05-15",
-    hashIntegrity: "VERIFIED",
-    approvalChain: [
-      { name: "Ana Lopez", role: "Treasury Analyst", ts: "2026-02-15 11:00" },
-      { name: "Carlos Reyes", role: "Head of Risk", ts: "2026-02-15 13:45" },
-    ],
-    stagingSummary: "3M NDF hedge for non-deliverable USD/MXN exposure on intercompany transfers.",
-  },
-  {
-    ledgerId: "LDG-2026-0043",
-    stagingId: "STG-0085",
-    status: "FAILED",
-    notional: 900000,
-    currencyPair: "GBP/MXN",
-    instrument: "Option Put",
-    authorizedBy: "Auto-System",
-    timestamp: "2026-02-14 10:00",
-    counterparty: "HSBC Mexico",
-    rate: "N/A",
-    settlementDate: "N/A",
-    hashIntegrity: "PENDING",
-    approvalChain: [
-      { name: "Auto-System", role: "Automated Rule", ts: "2026-02-14 09:55" },
-    ],
-    stagingSummary: "GBP/MXN put option failed: counterparty credit limit exceeded. Requires manual review.",
-  },
-  {
-    ledgerId: "LDG-2026-0042",
-    stagingId: "STG-0084",
-    status: "SETTLED",
-    notional: 4700000,
-    currencyPair: "USD/MXN",
-    instrument: "Forward 6M",
-    authorizedBy: "Maria Torres (CFO)",
-    timestamp: "2026-02-12 15:45",
-    counterparty: "Citibanamex",
-    rate: "17.3850",
-    settlementDate: "2026-08-12",
-    hashIntegrity: "VERIFIED",
-    approvalChain: [
-      { name: "Carlos Reyes", role: "Head of Risk", ts: "2026-02-12 13:00" },
-      { name: "Maria Torres", role: "CFO", ts: "2026-02-12 14:30" },
-    ],
-    stagingSummary: "6M forward hedge covering Q3 USD payables to primary US manufacturing partner.",
-  },
-  {
-    ledgerId: "LDG-2026-0041",
-    stagingId: "STG-0083",
-    status: "CANCELLED",
-    notional: 1200000,
-    currencyPair: "JPY/MXN",
-    instrument: "Forward 3M",
-    authorizedBy: "Carlos Reyes",
-    timestamp: "2026-02-10 08:30",
-    counterparty: "Mizuho Mexico",
-    rate: "N/A",
-    settlementDate: "N/A",
-    hashIntegrity: "PENDING",
-    approvalChain: [
-      { name: "Carlos Reyes", role: "Head of Risk", ts: "2026-02-10 08:25" },
-    ],
-    stagingSummary: "3M JPY/MXN forward cancelled: underlying purchase order was rescinded by procurement.",
-  },
-  {
-    ledgerId: "LDG-2026-0040",
-    stagingId: "STG-0082",
-    status: "SETTLED",
-    notional: 6800000,
-    currencyPair: "USD/MXN",
-    instrument: "Collar 12M",
-    authorizedBy: "Maria Torres (CFO)",
-    timestamp: "2026-02-08 16:00",
-    counterparty: "Santander Mexico",
-    rate: "17.1500 / 17.9200",
-    settlementDate: "2027-02-08",
-    hashIntegrity: "VERIFIED",
-    approvalChain: [
-      { name: "Ana Lopez", role: "Treasury Analyst", ts: "2026-02-08 10:00" },
-      { name: "Carlos Reyes", role: "Head of Risk", ts: "2026-02-08 13:00" },
-      { name: "Maria Torres", role: "CFO", ts: "2026-02-08 15:30" },
-    ],
-    stagingSummary: "12M USD/MXN collar for annual hedging program. Floor 17.15, Cap 17.92.",
-  },
-];
+// -- Status map for ConnectorRun → ExecutionStatus --------------------------------
+const STATUS_MAP: Record<string, ExecutionStatus> = {
+  COMPLETED: "SETTLED",
+  RUNNING:   "AUTHORIZED",
+  FAILED:    "FAILED",
+};
+
+// -- Map ConnectorRun to ExecutionRow ---------------------------------------------
+function runToRow(run: ConnectorRun): ExecutionRow {
+  return {
+    ledgerId:       run.id,
+    stagingId:      run.source_filename ?? "—",
+    status:         (STATUS_MAP[run.status] ?? "EXECUTED") as ExecutionStatus,
+    notional:       run.total_rows,
+    currencyPair:   run.connector_type,
+    instrument:     run.connector_type,
+    authorizedBy:   run.triggered_by,
+    timestamp:      run.started_at.slice(0, 16).replace("T", " "),
+    counterparty:   "—",
+    rate:           "—",
+    settlementDate: run.completed_at ? run.completed_at.slice(0, 10) : "—",
+    hashIntegrity:  run.source_hash ? "VERIFIED" : "PENDING",
+    approvalChain:  [{ name: run.triggered_by, role: run.connector_type, ts: run.started_at.slice(0, 16).replace("T", " ") }],
+    stagingSummary: `${run.connector_type} import: ${run.total_rows} rows total, ${run.created_ok} created, ${run.error_count} errors`,
+  };
+}
 
 // -- Badge helper -----------------------------------------------------------------
 function Badge({ label, color }: { label: string; color: string }) {
@@ -383,15 +255,15 @@ function DetailPanel({ row, onClose }: { row: ExecutionRow; onClose: () => void 
           }}>
             {/* Column 1: Ledger Entry Details */}
             <div>
-              <div style={sectionHeader}>LEDGER ENTRY DETAILS</div>
+              <div style={sectionHeader}>RUN DETAILS</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {[
-                  { label: "Ledger ID", value: row.ledgerId },
-                  { label: "Staging ID", value: row.stagingId },
-                  { label: "Currency Pair", value: row.currencyPair },
-                  { label: "Instrument", value: row.instrument },
-                  { label: "Notional", value: `$${row.notional.toLocaleString("en-US")}` },
-                  { label: "Timestamp", value: row.timestamp },
+                  { label: "Run ID",          value: row.ledgerId },
+                  { label: "Source File",      value: row.stagingId },
+                  { label: "Connector Type",   value: row.currencyPair },
+                  { label: "Rows Processed",   value: String(row.notional) },
+                  { label: "Started",          value: row.timestamp },
+                  { label: "Settled / Done",   value: row.settlementDate },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <div style={detailLabel}>{label}</div>
@@ -403,11 +275,11 @@ function DetailPanel({ row, onClose }: { row: ExecutionRow; onClose: () => void 
 
             {/* Column 2: Execution Details */}
             <div>
-              <div style={sectionHeader}>EXECUTION DETAILS</div>
+              <div style={sectionHeader}>IMPORT SUMMARY</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {[
-                  { label: "Counterparty", value: row.counterparty },
-                  { label: "Rate", value: row.rate },
+                  { label: "Counterparty",   value: row.counterparty },
+                  { label: "Rate",           value: row.rate },
                   { label: "Settlement Date", value: row.settlementDate },
                 ].map(({ label, value }) => (
                   <div key={label}>
@@ -416,7 +288,7 @@ function DetailPanel({ row, onClose }: { row: ExecutionRow; onClose: () => void 
                   </div>
                 ))}
                 <div>
-                  <div style={detailLabel}>STAGING SUMMARY</div>
+                  <div style={detailLabel}>SUMMARY</div>
                   <div style={{
                     fontFamily: S.fontUI,
                     fontSize: 11,
@@ -432,7 +304,7 @@ function DetailPanel({ row, onClose }: { row: ExecutionRow; onClose: () => void 
 
             {/* Column 3: Approval Chain */}
             <div>
-              <div style={sectionHeader}>APPROVAL CHAIN</div>
+              <div style={sectionHeader}>TRIGGERED BY</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {row.approvalChain.map((approver, idx) => (
                   <div key={idx} style={{
@@ -511,8 +383,13 @@ function DetailPanel({ row, onClose }: { row: ExecutionRow; onClose: () => void 
 // =================================================================================
 export default function ExecutionHistoryPage() {
   const renderTs = useRenderTs();
-  const { isAuthenticated, token, user, isDemoMode } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
+
+  // -- API state ------------------------------------------------------------------
+  const [runs, setRuns] = useState<ConnectorRun[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // -- Filter state ---------------------------------------------------------------
   const [dateFrom, setDateFrom] = useState("");
@@ -524,70 +401,36 @@ export default function ExecutionHistoryPage() {
   // -- Pagination state -----------------------------------------------------------
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
-  const totalEntries = 23;
 
   // -- Auth guard -----------------------------------------------------------------
-  if (!isAuthenticated) {
-    router.push("/auth/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!isAuthenticated) router.push("/auth/login");
+  }, [isAuthenticated, router]);
 
-  // -- Empty state when not demo ---------------------------------------------------
-  if (!DEMO_MODE && !isDemoMode) {
-    return (
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        background: S.bgDeep,
-        fontFamily: S.fontUI,
-        color: S.primary,
-      }}>
-        {/* TopBar */}
-        <header style={{
-          display: "flex", alignItems: "center", gap: 12, height: 44,
-          padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
-        }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <rect x="1" y="3" width="14" height="10" rx="1.5" stroke={S.cyan} strokeWidth="1.25" />
-            <path d="M1 6h14" stroke={S.cyan} strokeWidth="1" />
-            <path d="M4 9h4" stroke={S.cyan} strokeWidth="1" strokeLinecap="round" />
-          </svg>
-          <div>
-            <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary, lineHeight: 1.1 }}>
-              Execution History
-            </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 11, letterSpacing: "0.07em", color: S.tertiary }}>
-              EXECUTION &gt; EXECUTION HISTORY
-            </div>
-          </div>
-          <div style={{ flex: 1 }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>{renderTs}</span>
-        </header>
+  // -- Fetch runs -----------------------------------------------------------------
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+    let cancelled = false;
+    setLoading(true);
+    setApiError(null);
+    listConnectorRuns(token, 100)
+      .then(res => {
+        if (!cancelled) setRuns(res.items ?? []);
+      })
+      .catch(err => {
+        if (!cancelled) setApiError(err instanceof Error ? err.message : "Failed to load execution history");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [isAuthenticated, token]);
 
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
-          <EmptyState
-            type="empty"
-            title="No Execution History"
-            message="No executions recorded. Complete the execution pipeline to see history."
-          />
-        </div>
-
-        {/* Footer */}
-        <footer style={{
-          height: 32, display: "flex", alignItems: "center", justifyContent: "center",
-          background: S.bgPanel, borderTop: `1px solid ${S.rim}`, flexShrink: 0,
-        }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.06em" }}>
-            {renderTs} — ORDR &middot; Execution History
-          </span>
-        </footer>
-      </div>
-    );
-  }
+  // -- Map runs to rows -----------------------------------------------------------
+  const allRows = useMemo(() => runs.map(runToRow), [runs]);
 
   // -- Filter logic ---------------------------------------------------------------
-  const filteredData = DEMO_EXECUTIONS.filter(row => {
+  const filteredData = useMemo(() => allRows.filter(row => {
     if (statusFilter !== "ALL" && row.status !== statusFilter) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -611,7 +454,15 @@ export default function ExecutionHistoryPage() {
       if (rowDate > to) return false;
     }
     return true;
-  });
+  }), [allRows, statusFilter, searchQuery, dateFrom, dateTo]);
+
+  // -- KPI computations ----------------------------------------------------------
+  const kpiTotal      = allRows.length;
+  const kpiSettled    = allRows.filter(r => r.status === "SETTLED").length;
+  const kpiFailed     = allRows.filter(r => r.status === "FAILED").length;
+  const kpiSuccessRate = kpiTotal > 0
+    ? `${(((kpiTotal - kpiFailed) / kpiTotal) * 100).toFixed(1)}%`
+    : "—";
 
   // -- Shared styles --------------------------------------------------------------
   const inputStyle: React.CSSProperties = {
@@ -654,19 +505,12 @@ export default function ExecutionHistoryPage() {
     whiteSpace: "nowrap",
   };
 
-  // -- Format notional ------------------------------------------------------------
-  function fmtNotional(n: number): string {
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-    return `$${n.toLocaleString("en-US")}`;
-  }
-
+  // -- Export CSV -----------------------------------------------------------------
   function handleExportCSV() {
-    // Demo: create CSV content and download
-    const headers = ["Ledger ID", "Staging ID", "Status", "Notional (USD)", "Currency Pair", "Instrument", "Authorized By", "Timestamp"];
+    const headers = ["Run ID", "Source File", "Status", "Rows", "Connector Type", "Triggered By", "Timestamp"];
     const rows = filteredData.map(r => [
       r.ledgerId, r.stagingId, r.status, r.notional.toString(),
-      r.currencyPair, r.instrument, r.authorizedBy, r.timestamp,
+      r.currencyPair, r.authorizedBy, r.timestamp,
     ]);
     const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -677,6 +521,12 @@ export default function ExecutionHistoryPage() {
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  if (!isAuthenticated) return null;
+
+  // -- Pagination -----------------------------------------------------------------
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const pagedData  = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div style={{
@@ -733,10 +583,10 @@ export default function ExecutionHistoryPage() {
 
           {/* ------ KPI Summary Row ------ */}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <KPICard label="Total Executions" value="23" badge="ALL TIME" badgeColor={S.tertiary} />
-            <KPICard label="Total Notional Executed" value="$47.2M USD" badge="HEDGED" badgeColor={S.cyan} />
-            <KPICard label="Average Execution Time" value="4.2 min" badge="AVG" badgeColor={S.amber} />
-            <KPICard label="Success Rate" value="95.7%" badge="RATE" badgeColor={S.pass} />
+            <KPICard label="Total Runs"    value={loading ? "…" : String(kpiTotal)}    badge="ALL TIME" badgeColor={S.tertiary} />
+            <KPICard label="Settled"       value={loading ? "…" : String(kpiSettled)}  badge="SETTLED"  badgeColor={S.pass} />
+            <KPICard label="Failed"        value={loading ? "…" : String(kpiFailed)}   badge="FAILED"   badgeColor={S.fail} />
+            <KPICard label="Success Rate"  value={loading ? "…" : kpiSuccessRate}      badge="RATE"     badgeColor={S.cyan} />
           </div>
 
           {/* ------ Filter Bar ------ */}
@@ -810,7 +660,7 @@ export default function ExecutionHistoryPage() {
                 type="text"
                 value={searchQuery}
                 onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                placeholder="Ledger ID or counterparty..."
+                placeholder="Run ID or connector..."
                 style={{ ...inputStyle, flex: 1 }}
               />
             </div>
@@ -846,10 +696,10 @@ export default function ExecutionHistoryPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
-                  {["LEDGER ID", "STAGING ID", "STATUS", "NOTIONAL (USD)", "CURRENCY PAIR", "INSTRUMENT", "AUTHORIZED BY", "TIMESTAMP", "ACTIONS"].map(h => (
+                  {["RUN ID", "SOURCE FILE", "STATUS", "ROWS", "CONNECTOR TYPE", "TRIGGERED BY", "TIMESTAMP", "HASH", "ACTIONS"].map(h => (
                     <th key={h} style={{
                       ...thStyle,
-                      textAlign: h === "NOTIONAL (USD)" ? "right" : "left",
+                      textAlign: h === "ROWS" ? "right" : "left",
                     }}>
                       {h}
                     </th>
@@ -857,143 +707,196 @@ export default function ExecutionHistoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredData.length === 0 ? (
+                {/* Loading state */}
+                {loading && (
                   <tr>
                     <td colSpan={9} style={{ padding: 40, textAlign: "center" }}>
-                      <span style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary }}>
-                        No executions match your filters.
+                      <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.06em" }}>
+                        LOADING EXECUTION HISTORY…
                       </span>
                     </td>
                   </tr>
-                ) : (
-                  filteredData.map((row, i) => {
-                    const isExpanded = expandedRow === row.ledgerId;
-                    return (
-                      <>
-                        <tr
-                          key={row.ledgerId}
-                          onClick={() => setExpandedRow(isExpanded ? null : row.ledgerId)}
+                )}
+
+                {/* Error state */}
+                {!loading && apiError && (
+                  <tr>
+                    <td colSpan={9} style={{ padding: 40, textAlign: "center" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.fail }}>
+                          FAILED TO LOAD — {apiError}
+                        </span>
+                        <button
+                          onClick={() => { setApiError(null); setLoading(true); }}
                           style={{
-                            borderBottom: `1px solid ${S.soft}`,
-                            background: isExpanded
-                              ? `color-mix(in srgb, ${S.cyan} 5%, transparent)`
-                              : i % 2 === 0
-                                ? "transparent"
-                                : `color-mix(in srgb, ${S.rim} 12%, transparent)`,
-                            cursor: "pointer",
-                            transition: "background 0.12s",
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isExpanded) (e.currentTarget as HTMLElement).style.background = `color-mix(in srgb, ${S.cyan} 4%, transparent)`;
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isExpanded) (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.rim} 12%, transparent)`;
+                            fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+                            color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}`,
+                            padding: "4px 14px", borderRadius: 2, cursor: "pointer",
                           }}
                         >
-                          {/* Ledger ID */}
-                          <td style={{ ...tdStyle, fontWeight: 600, color: S.cyan }}>
-                            {row.ledgerId}
-                          </td>
-                          {/* Staging ID */}
-                          <td style={{ ...tdStyle, color: S.secondary }}>
-                            {row.stagingId}
-                          </td>
-                          {/* Status */}
-                          <td style={{ ...tdStyle }}>
-                            <StatusBadge status={row.status} />
-                          </td>
-                          {/* Notional */}
-                          <td style={{ ...tdStyle, textAlign: "right", fontWeight: 600 }}>
-                            ${row.notional.toLocaleString("en-US")}
-                          </td>
-                          {/* Currency Pair */}
-                          <td style={tdStyle}>
-                            {row.currencyPair}
-                          </td>
-                          {/* Instrument */}
-                          <td style={{ ...tdStyle, color: S.secondary }}>
-                            {row.instrument}
-                          </td>
-                          {/* Authorized By */}
-                          <td style={{ ...tdStyle, fontFamily: S.fontUI, color: S.secondary }}>
-                            {row.authorizedBy}
-                          </td>
-                          {/* Timestamp */}
-                          <td style={{ ...tdStyle, color: S.tertiary }}>
-                            {row.timestamp}
-                          </td>
-                          {/* Actions */}
-                          <td style={tdStyle}>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExpandedRow(isExpanded ? null : row.ledgerId);
-                              }}
-                              style={{
-                                fontFamily: S.fontMono,
-                                fontSize: 10,
-                                fontWeight: 600,
-                                letterSpacing: "0.06em",
-                                color: S.cyan,
-                                background: "transparent",
-                                border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
-                                padding: "2px 10px",
-                                borderRadius: 2,
-                                cursor: "pointer",
-                              }}
-                            >
-                              {isExpanded ? "HIDE" : "VIEW"}
-                            </button>
-                          </td>
-                        </tr>
-                        {isExpanded && (
-                          <DetailPanel
-                            key={`detail-${row.ledgerId}`}
-                            row={row}
-                            onClose={() => setExpandedRow(null)}
-                          />
-                        )}
-                      </>
-                    );
-                  })
+                          RETRY
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 )}
+
+                {/* Empty state */}
+                {!loading && !apiError && filteredData.length === 0 && (
+                  <tr>
+                    <td colSpan={9} style={{ padding: 48, textAlign: "center" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                          <rect x="3" y="7" width="26" height="18" rx="2" stroke={S.tertiary} strokeWidth="1.5" />
+                          <path d="M3 12h26" stroke={S.tertiary} strokeWidth="1" />
+                          <path d="M9 18h8" stroke={S.tertiary} strokeWidth="1" strokeLinecap="round" />
+                        </svg>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.06em" }}>
+                          NO EXECUTION HISTORY YET
+                        </div>
+                        <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, maxWidth: 360, lineHeight: 1.6, textAlign: "center" }}>
+                          {allRows.length === 0
+                            ? "Positions imported via CSV, database, or ERP connector will appear here."
+                            : "No executions match your current filters."}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+
+                {/* Data rows */}
+                {!loading && !apiError && pagedData.map((row, i) => {
+                  const isExpanded = expandedRow === row.ledgerId;
+                  return (
+                    <>
+                      <tr
+                        key={row.ledgerId}
+                        onClick={() => setExpandedRow(isExpanded ? null : row.ledgerId)}
+                        style={{
+                          borderBottom: `1px solid ${S.soft}`,
+                          background: isExpanded
+                            ? `color-mix(in srgb, ${S.cyan} 5%, transparent)`
+                            : i % 2 === 0
+                              ? "transparent"
+                              : `color-mix(in srgb, ${S.rim} 12%, transparent)`,
+                          cursor: "pointer",
+                          transition: "background 0.12s",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isExpanded) (e.currentTarget as HTMLElement).style.background = `color-mix(in srgb, ${S.cyan} 4%, transparent)`;
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isExpanded) (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.rim} 12%, transparent)`;
+                        }}
+                      >
+                        {/* Run ID */}
+                        <td style={{ ...tdStyle, fontWeight: 600, color: S.cyan }}>
+                          {row.ledgerId}
+                        </td>
+                        {/* Source File */}
+                        <td style={{ ...tdStyle, color: S.secondary }}>
+                          {row.stagingId}
+                        </td>
+                        {/* Status */}
+                        <td style={{ ...tdStyle }}>
+                          <StatusBadge status={row.status} />
+                        </td>
+                        {/* Rows */}
+                        <td style={{ ...tdStyle, textAlign: "right", fontWeight: 600 }}>
+                          {row.notional.toLocaleString("en-US")}
+                        </td>
+                        {/* Connector Type */}
+                        <td style={tdStyle}>
+                          {row.currencyPair}
+                        </td>
+                        {/* Triggered By */}
+                        <td style={{ ...tdStyle, fontFamily: S.fontUI, color: S.secondary }}>
+                          {row.authorizedBy}
+                        </td>
+                        {/* Timestamp */}
+                        <td style={{ ...tdStyle, color: S.tertiary }}>
+                          {row.timestamp}
+                        </td>
+                        {/* Hash */}
+                        <td style={tdStyle}>
+                          <Badge
+                            label={row.hashIntegrity}
+                            color={row.hashIntegrity === "VERIFIED" ? S.pass : S.amber}
+                          />
+                        </td>
+                        {/* Actions */}
+                        <td style={tdStyle}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedRow(isExpanded ? null : row.ledgerId);
+                            }}
+                            style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 10,
+                              fontWeight: 600,
+                              letterSpacing: "0.06em",
+                              color: S.cyan,
+                              background: "transparent",
+                              border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
+                              padding: "2px 10px",
+                              borderRadius: 2,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {isExpanded ? "HIDE" : "VIEW"}
+                          </button>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <DetailPanel
+                          key={`detail-${row.ledgerId}`}
+                          row={row}
+                          onClose={() => setExpandedRow(null)}
+                        />
+                      )}
+                    </>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/* ------ Pagination ------ */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 4px",
-          }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
-              Showing 1-{Math.min(filteredData.length, pageSize)} of {totalEntries} entries
-            </span>
-            <div style={{ display: "flex", gap: 4 }}>
-              {[1, 2, 3].map(page => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  style={{
-                    fontFamily: S.fontMono,
-                    fontSize: 11,
-                    fontWeight: currentPage === page ? 700 : 400,
-                    color: currentPage === page ? S.cyan : S.tertiary,
-                    background: currentPage === page ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : "transparent",
-                    border: `1px solid ${currentPage === page ? S.cyan : S.rim}`,
-                    padding: "3px 10px",
-                    borderRadius: 2,
-                    cursor: "pointer",
-                    minWidth: 32,
-                  }}
-                >
-                  {page}
-                </button>
-              ))}
+          {!loading && !apiError && filteredData.length > 0 && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0 4px",
+            }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                Showing {Math.min((currentPage - 1) * pageSize + 1, filteredData.length)}–{Math.min(currentPage * pageSize, filteredData.length)} of {filteredData.length} entries
+              </span>
+              <div style={{ display: "flex", gap: 4 }}>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 11,
+                      fontWeight: currentPage === page ? 700 : 400,
+                      color: currentPage === page ? S.cyan : S.tertiary,
+                      background: currentPage === page ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : "transparent",
+                      border: `1px solid ${currentPage === page ? S.cyan : S.rim}`,
+                      padding: "3px 10px",
+                      borderRadius: 2,
+                      cursor: "pointer",
+                      minWidth: 32,
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
         </div>
       </div>

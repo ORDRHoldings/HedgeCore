@@ -16,6 +16,8 @@ import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import EmptyState from "../../components/ui/EmptyState";
 import Link from "next/link";
+import { listPolicyTemplates, getActivePolicy } from "../../api/policyClient";
+import type { PolicyTemplate, PolicyInstance } from "../../api/policyClient";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -25,7 +27,6 @@ function useRenderTs(): string {
   }, []);
   return renderTs;
 }
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 // -- Design tokens ----------------------------------------------------------------
 const S = {
@@ -66,6 +67,7 @@ interface InstrumentAlloc {
   color: string;
 }
 
+// Display-layer policy shape — mapped from PolicyTemplate API responses
 interface DemoPolicy {
   code: string;
   name: string;
@@ -83,6 +85,91 @@ interface DemoPolicy {
   mandatory?: boolean;
 }
 
+// Instrument colour palette for API-sourced templates (cycled by index)
+const INST_COLORS = [
+  "var(--accent-cyan)",
+  "var(--accent-amber)",
+  "var(--status-pass)",
+  "var(--accent-red,#B91C1C)",
+  "#a78bfa",
+  "#f472b6",
+];
+
+/**
+ * Map a PolicyTemplate from the API onto the DemoPolicy display shape.
+ * PolicyConfig hedging instruments live in config.instruments (array of
+ * { name, allocation_pct }) when present; otherwise we fall back gracefully.
+ */
+function templateToDisplay(
+  t: PolicyTemplate,
+  activeInstanceId: string | null,
+): DemoPolicy {
+  const cfg = t.config as unknown as Record<string, unknown>;
+
+  // Hedge ratio
+  const hedgeRatio =
+    typeof cfg.hedge_ratio === "number"
+      ? Math.round(cfg.hedge_ratio * 100)
+      : typeof cfg.hedgeRatio === "number"
+      ? Math.round((cfg.hedgeRatio as number) * 100)
+      : 0;
+
+  // Instruments
+  type RawInst = { name?: string; allocation_pct?: number; pct?: number };
+  const rawInsts =
+    Array.isArray(cfg.instruments)
+      ? (cfg.instruments as RawInst[])
+      : [];
+  const instruments: InstrumentAlloc[] = rawInsts.map((inst, i) => ({
+    name: inst.name ?? `Instrument ${i + 1}`,
+    pct: Math.round(
+      typeof inst.allocation_pct === "number"
+        ? inst.allocation_pct * 100
+        : typeof inst.pct === "number"
+        ? inst.pct
+        : 0
+    ),
+    color: INST_COLORS[i % INST_COLORS.length],
+  }));
+
+  // Premium budget
+  const premiumBudget =
+    typeof cfg.premium_budget === "number"
+      ? `${(cfg.premium_budget as number * 100).toFixed(2)}% of notional`
+      : typeof cfg.premiumBudget === "string"
+      ? (cfg.premiumBudget as string)
+      : "—";
+
+  // VaR coverage
+  const varCoverage =
+    typeof cfg.var_coverage === "string"
+      ? (cfg.var_coverage as string)
+      : typeof cfg.varCoverage === "string"
+      ? (cfg.varCoverage as string)
+      : "—";
+
+  // Risk posture mapping: API uses CONSERVATIVE/MODERATE/AGGRESSIVE
+  const riskMap: Record<string, "LOW" | "MODERATE" | "HIGH"> = {
+    CONSERVATIVE: "LOW",
+    MODERATE: "MODERATE",
+    AGGRESSIVE: "HIGH",
+  };
+  const riskPosture: "LOW" | "MODERATE" | "HIGH" =
+    riskMap[t.risk_posture] ?? "MODERATE";
+
+  return {
+    code: t.short_name,
+    name: t.name,
+    active: t.id === activeInstanceId,
+    riskPosture,
+    hedgeRatio,
+    instruments,
+    premiumBudget,
+    varCoverage,
+    created: t.created_at.slice(0, 10),
+  };
+}
+
 // -- Risk posture colors ----------------------------------------------------------
 function riskColor(posture: DemoPolicy["riskPosture"]): string {
   if (posture === "LOW") return S.pass;
@@ -90,116 +177,6 @@ function riskColor(posture: DemoPolicy["riskPosture"]): string {
   return S.amber;
 }
 
-// -- Demo data: My Policies -------------------------------------------------------
-const MY_POLICIES: DemoPolicy[] = [
-  {
-    code: "BLNC",
-    name: "Balanced Corporate",
-    active: true,
-    riskPosture: "MODERATE",
-    hedgeRatio: 75,
-    instruments: [
-      { name: "Forwards",      pct: 40, color: "var(--accent-cyan)" },
-      { name: "Options",       pct: 30, color: "var(--accent-amber)" },
-      { name: "Collars",       pct: 20, color: "var(--status-pass)" },
-      { name: "Participators", pct: 10, color: "var(--accent-red,#B91C1C)" },
-    ],
-    premiumBudget: "0.5% of notional",
-    varCoverage: "85% at 95% confidence",
-    created: "2026-01-15",
-    lastModified: "2026-02-10",
-  },
-  {
-    code: "SHIELD-MX",
-    name: "Mexico Export Shield",
-    active: false,
-    riskPosture: "LOW",
-    hedgeRatio: 90,
-    instruments: [
-      { name: "Forwards", pct: 60, color: "var(--accent-cyan)" },
-      { name: "Collars",  pct: 30, color: "var(--status-pass)" },
-      { name: "Options",  pct: 10, color: "var(--accent-amber)" },
-    ],
-    premiumBudget: "0.8% of notional",
-    varCoverage: "95% at 99% confidence",
-    created: "2025-11-20",
-  },
-  {
-    code: "YIELD-Q2",
-    name: "Q2 2026 Yield Optimization",
-    active: false,
-    riskPosture: "HIGH",
-    hedgeRatio: 50,
-    instruments: [
-      { name: "Options",       pct: 50, color: "var(--accent-amber)" },
-      { name: "Seagulls",      pct: 30, color: "#a78bfa" },
-      { name: "Participators", pct: 20, color: "var(--accent-red,#B91C1C)" },
-    ],
-    premiumBudget: "0.2% of notional",
-    varCoverage: "60% at 90% confidence",
-    created: "2026-02-01",
-  },
-];
-
-// -- Demo data: Branch Policies ---------------------------------------------------
-const BRANCH_POLICIES: DemoPolicy[] = [
-  {
-    code: "MX-EXP-01",
-    name: "MX Export Standard",
-    active: false,
-    riskPosture: "LOW",
-    hedgeRatio: 85,
-    instruments: [
-      { name: "Forwards", pct: 55, color: "var(--accent-cyan)" },
-      { name: "Collars",  pct: 30, color: "var(--status-pass)" },
-      { name: "Options",  pct: 15, color: "var(--accent-amber)" },
-    ],
-    premiumBudget: "0.6% of notional",
-    varCoverage: "90% at 95% confidence",
-    created: "2025-10-01",
-    publishedBy: "J. Rodriguez",
-    branch: "MX-CORP",
-  },
-  {
-    code: "MX-IMP-02",
-    name: "MX Import Defensive",
-    active: false,
-    riskPosture: "MODERATE",
-    hedgeRatio: 70,
-    instruments: [
-      { name: "Forwards", pct: 45, color: "var(--accent-cyan)" },
-      { name: "Options",  pct: 35, color: "var(--accent-amber)" },
-      { name: "Collars",  pct: 20, color: "var(--status-pass)" },
-    ],
-    premiumBudget: "0.45% of notional",
-    varCoverage: "80% at 95% confidence",
-    created: "2025-12-10",
-    publishedBy: "M. Fernandez",
-    branch: "MX-CORP",
-  },
-];
-
-// -- Demo data: Company-wide Policies ---------------------------------------------
-const COMPANY_POLICIES: DemoPolicy[] = [
-  {
-    code: "CORP-STD-01",
-    name: "Corporate Standard Hedge Policy",
-    active: true,
-    riskPosture: "LOW",
-    hedgeRatio: 80,
-    instruments: [
-      { name: "Forwards", pct: 50, color: "var(--accent-cyan)" },
-      { name: "Collars",  pct: 30, color: "var(--status-pass)" },
-      { name: "Options",  pct: 20, color: "var(--accent-amber)" },
-    ],
-    premiumBudget: "0.6% of notional",
-    varCoverage: "90% at 99% confidence",
-    created: "2025-06-01",
-    lastModified: "2026-01-15",
-    setBy: "Corporate Treasury",
-    mandatory: true,
-  },
-];
 
 // -- Tabs -------------------------------------------------------------------------
 const TABS = [
@@ -430,7 +407,7 @@ function ActionBtn({ label, accent, danger }: { label: string; accent?: boolean;
 
 // -- Main page component ----------------------------------------------------------
 export default function SavedPoliciesPage() {
-  const { isAuthenticated, token, user, isDemoMode } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
   const renderTs = useRenderTs();
 
@@ -438,21 +415,59 @@ export default function SavedPoliciesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("name");
 
+  // API state
+  const [policies, setPolicies] = useState<PolicyTemplate[]>([]);
+  const [activeInstance, setActiveInstance] = useState<PolicyInstance | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+
   // Auth guard
   if (!isAuthenticated) {
     router.push("/auth/login");
     return null;
   }
 
-  const showDemo = DEMO_MODE || isDemoMode;
+  // Fetch policy templates + active instance on mount
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    setLoading(true);
+    setApiError(null);
+    Promise.all([
+      listPolicyTemplates(token ?? undefined).catch(() => [] as PolicyTemplate[]),
+      getActivePolicy(token ?? undefined).catch(() => null),
+    ]).then(([templates, active]) => {
+      setPolicies(templates);
+      setActiveInstance(active);
+      setLoading(false);
+    }).catch(() => {
+      setApiError("Failed to load policies");
+      setLoading(false);
+    });
+  }, [isAuthenticated, token]);
 
-  // Filter + sort policies per active tab
+  const activeTemplateId = activeInstance?.template_id ?? null;
+
+  // Map API templates to display shape, then filter by tab
+  // The API returns a flat list; we distinguish tabs by is_system + company_id:
+  //   "my"      → company-specific non-system templates (company_id set, is_system false)
+  //   "branch"  → templates that have a matching branch scope (same heuristic; API may add branch_id later)
+  //   "company" → system templates (is_system true) or company-wide (company_id set, is_system false)
+  // For now: "my" = user/company templates, "company" = system templates, "branch" = empty until API supports it
+  const tabPolicies = useMemo<DemoPolicy[]>(() => {
+    let source: PolicyTemplate[];
+    if (activeTab === "my") {
+      source = policies.filter((t) => !t.is_system && t.company_id !== null);
+    } else if (activeTab === "branch") {
+      source = []; // branch-scoped templates require branch_id on PolicyTemplate — not yet in API
+    } else {
+      source = policies.filter((t) => t.is_system);
+    }
+    return source.map((t) => templateToDisplay(t, activeTemplateId));
+  }, [policies, activeTab, activeTemplateId]);
+
+  // Filter + sort
   const filteredPolicies = useMemo(() => {
-    let source: DemoPolicy[] = [];
-    if (activeTab === "my")       source = showDemo ? MY_POLICIES : [];
-    if (activeTab === "branch")   source = showDemo ? BRANCH_POLICIES : [];
-    if (activeTab === "company")  source = showDemo ? COMPANY_POLICIES : [];
-
+    let source = tabPolicies;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       source = source.filter(
@@ -461,9 +476,8 @@ export default function SavedPoliciesPage() {
           p.name.toLowerCase().includes(q)
       );
     }
-
     return sortPolicies(source, sortBy);
-  }, [activeTab, searchQuery, sortBy, showDemo]);
+  }, [tabPolicies, searchQuery, sortBy]);
 
   const showMeta = activeTab === "branch" || activeTab === "company";
 
@@ -556,7 +570,7 @@ export default function SavedPoliciesPage() {
         <div style={{ flex: 1 }} />
 
         {/* Counts badge */}
-        {showDemo && (
+        {!loading && (
           <span style={{
             fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
             color: S.tertiary, padding: "1px 6px", border: `1px solid ${S.rim}`,
@@ -663,7 +677,41 @@ export default function SavedPoliciesPage() {
         </div>
 
         {/* Card grid or empty state */}
-        {filteredPolicies.length > 0 ? (
+        {loading ? (
+          <div style={{
+            textAlign: "center", padding: "48px 0",
+            fontFamily: S.fontMono, fontSize: "0.75rem",
+            color: S.tertiary, letterSpacing: "0.06em",
+          }}>
+            LOADING POLICIES…
+          </div>
+        ) : apiError ? (
+          <div style={{ marginTop: 40 }}>
+            <EmptyState
+              type="error"
+              title="Failed to Load Policies"
+              message={apiError}
+              action={{
+                label: "Retry",
+                onClick: () => {
+                  setLoading(true);
+                  setApiError(null);
+                  Promise.all([
+                    listPolicyTemplates(token ?? undefined).catch(() => [] as PolicyTemplate[]),
+                    getActivePolicy(token ?? undefined).catch(() => null),
+                  ]).then(([templates, active]) => {
+                    setPolicies(templates);
+                    setActiveInstance(active);
+                    setLoading(false);
+                  }).catch(() => {
+                    setApiError("Failed to load policies");
+                    setLoading(false);
+                  });
+                },
+              }}
+            />
+          </div>
+        ) : filteredPolicies.length > 0 ? (
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
@@ -673,12 +721,12 @@ export default function SavedPoliciesPage() {
               <PolicyCard key={policy.code} policy={policy} showMeta={showMeta} />
             ))}
           </div>
-        ) : !showDemo ? (
+        ) : tabPolicies.length === 0 ? (
           <div style={{ marginTop: 40 }}>
             <EmptyState
               type="empty"
               title="No Saved Policies"
-              message="No custom policies yet. Use the AI Policy Wizard to create your first."
+              message="Create your first policy in the Policy Engine. Templates you create will appear here."
               action={{
                 label: "Create Policy",
                 onClick: () => router.push("/ai-policy-wizard"),
