@@ -21,7 +21,7 @@ import type { PolicyTemplate } from '../../api/policyClient';
 import { POLICY_PRESETS } from '../../constants/policyPresets';
 import type { PolicyPreset } from '../../constants/policyPresets';
 import { validateAll } from '../../utils/validator';
-import { fmtCompact, fmtPct } from '../../utils/formatters';
+import { fmtMXN } from '../../utils/formatters';
 import { deriveCurrencyContext } from '../../utils/currencyContext';
 import type { AppDispatch, RootState } from '../../lib/store';
 import {
@@ -30,6 +30,7 @@ import {
   updatePositionThunk,
   deletePositionThunk,
   clearError as clearPositionError,
+  markExecuted,
 } from '../../lib/store/slices/positionSlice';
 import type { PositionRow } from '../../api/positionClient';
 import FileUploadLane from '../../components/input/FileUploadLane';
@@ -38,8 +39,6 @@ import ConnectorPlaceholderLane from '../../components/input/ConnectorPlaceholde
 import ImportHistoryPanel from '../../components/input/ImportHistoryPanel';
 
 import EmptyState from '../../components/ui/EmptyState';
-import StepSection from '../../components/input/StepSection';
-import StepProgress from '../../components/input/StepProgress';
 import type { StepKey } from '../../components/input/StepSection';
 import TradeTable from '../../components/input/TradeTable';
 import TradeModal from '../../components/input/TradeModal';
@@ -165,7 +164,7 @@ export default function InputPage() {
   const { token } = useAuth();
 
   // ── Redux position state ──────────────────────────────────────────────────
-  const { positions, loading: positionsLoading, error: positionError } = useSelector(
+  const { positions, loading: positionsLoading, error: positionError, executedIds, ibkrRefs } = useSelector(
     (s: RootState) => s.positions,
   );
 
@@ -223,6 +222,25 @@ export default function InputPage() {
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg); setToastVisible(true);
   }, []);
+
+  // ── IBKR Execution modal ──────────────────────────────────────────────────
+  const [ibkrModalOpen, setIbkrModalOpen]             = useState(false);
+  const [ibkrTargetPosition, setIbkrTargetPosition]   = useState<PositionRow | undefined>();
+  const [ibkrRefInput, setIbkrRefInput]                = useState('');
+
+  const openIbkrModal = useCallback((pos: PositionRow) => {
+    setIbkrTargetPosition(pos);
+    setIbkrRefInput('');
+    setIbkrModalOpen(true);
+  }, []);
+
+  const handleConfirmExecution = useCallback(() => {
+    if (!ibkrTargetPosition) return;
+    dispatch(markExecuted({ id: ibkrTargetPosition.id, ibkr_ref: ibkrRefInput || undefined }));
+    setIbkrModalOpen(false);
+    setIbkrTargetPosition(undefined);
+    showToast('Position marked as executed');
+  }, [dispatch, ibkrTargetPosition, ibkrRefInput, showToast]);
 
   // ── Inline trade entry form ───────────────────────────────────────────────
   const EMPTY_INLINE: TradeRow = {
@@ -439,17 +457,29 @@ export default function InputPage() {
     setTradeModalOpen(true);
   }, [positions]);
 
+  /** Duplicate: pre-fill modal with a copy of the row (create mode, blank ID) */
+  const openDuplicateTrade = useCallback((pos: PositionRow) => {
+    // Treat as "new" but pre-populate with a copy of the source row (blank record_id)
+    setEditingPosition({
+      ...pos,
+      id:        '__duplicate__',  // sentinel so TradeModal sees it as existing but onSave creates new
+      record_id: '',
+    });
+    setTradeModalOpen(true);
+  }, []);
+
   const handleSaveTrade = useCallback(async (trade: TradeRow) => {
     if (!token) return;
-    if (editingPosition) {
+    const isDuplicate = editingPosition?.id === '__duplicate__';
+    if (editingPosition && !isDuplicate) {
       // Update existing
       await dispatch(updatePositionThunk({ id: editingPosition.id, trade, token }));
       showToast('Position updated');
     } else {
-      // Create new
+      // Create new (includes duplicate scenario)
       const result = await dispatch(createPositionThunk({ trade, token }));
       if (createPositionThunk.fulfilled.match(result)) {
-        showToast('Position added');
+        showToast(isDuplicate ? 'Position duplicated' : 'Position added');
       } else {
         showToast(`Error: ${result.payload as string}`);
       }
@@ -688,13 +718,29 @@ export default function InputPage() {
     handleMarketAutofill,
   ]);
 
-  const editingTrade = editingPosition ? positionToTradeRow(editingPosition) : undefined;
+  // For duplicate: pass the trade data but mark as "new" (undefined existingTrade in modal)
+  // by only setting editingTrade when it's a real edit, not a duplicate
+  const isDuplicating = editingPosition?.id === '__duplicate__';
+  const editingTrade = editingPosition && !isDuplicating ? positionToTradeRow(editingPosition) : undefined;
+  // For duplicate, we pass the prefill data so the modal form is pre-filled
+  const duplicatePrefill = isDuplicating ? positionToTradeRow(editingPosition!) : undefined;
   const editingHedge = editingHedgeIndex !== undefined ? hedges[editingHedgeIndex] : undefined;
 
   const tradeIdsForModal = useMemo(() => {
     if (editingTrade) { const s = new Set(existingTradeIds); s.delete(editingTrade.record_id); return s; }
     return existingTradeIds;
   }, [existingTradeIds, editingTrade]);
+
+  // Duplicate: convert the prefill data into initialValues for TradeModal
+  const tradeModalInitialValues = duplicatePrefill ? {
+    entity:      duplicatePrefill.entity,
+    type:        duplicatePrefill.type,
+    currency:    duplicatePrefill.currency,
+    amount:      duplicatePrefill.amount,
+    value_date:  duplicatePrefill.value_date,
+    status:      duplicatePrefill.status,
+    description: duplicatePrefill.description,
+  } : undefined;
 
   const hedgeIdsForModal = useMemo(() => {
     if (editingHedge) { const s = new Set(existingHedgeIds); s.delete(editingHedge.hedge_id); return s; }
@@ -753,18 +799,32 @@ export default function InputPage() {
           </div>
         )}
 
-        {/* ── Step progress rail ── */}
-        <div style={{ marginTop: 12 }}>
-          <StepProgress
-            steps={[
-              { key: 'exposure', label: 'Exposure Hedge Plan', status: stepStatuses.exposure },
-              { key: 'policy',   label: 'Hedge Policy',        status: stepStatuses.policy },
-            ]}
-            activeStep={activeStep} onActivate={setActiveStep} lockedSteps={lockedSteps}
-            onGenerate={handleCalculate}
-            canGenerate={canCalculate}
-            generateLoading={loading}
-          />
+        {/* ── Action bar: Generate Hedge Plan ── */}
+        <div style={{
+          marginTop: 8, display: 'flex', alignItems: 'center', gap: 12,
+          padding: '8px 0', borderBottom: `1px solid ${S.border}`,
+        }}>
+          <button
+            type="button"
+            onClick={() => handleCalculate()}
+            disabled={!canCalculate}
+            style={{
+              fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.08em', fontWeight: 700,
+              padding: '5px 20px',
+              border: `1px solid ${canCalculate ? S.cyan : S.border}`,
+              color: canCalculate ? 'var(--bg-deep)' : S.textTertiary,
+              background: canCalculate ? S.cyan : 'transparent',
+              cursor: canCalculate ? 'pointer' : 'not-allowed',
+              transition: 'all 0.1s',
+            }}
+          >
+            {loading ? 'GENERATING…' : '⚡ GENERATE HEDGE PLAN'}
+          </button>
+          {trades.length > 0 && (
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.06em' }}>
+              {trades.length} POSITIONS · {tradeSummary.confirmed} CONFIRMED · {tradeSummary.forecast} FORECAST
+            </span>
+          )}
         </div>
 
         {/* ── Backend error banner ── */}
@@ -777,148 +837,101 @@ export default function InputPage() {
           />
         )}
 
-        {/* ── Progressive step sections ── */}
-        <div style={{ marginTop: 3 }}>
+        {/* ── Ingestion Desk ── */}
+        <div style={{ marginTop: 8 }}>
 
-          {visibleStepKeys.includes('exposure') && (
-            <StepSection
-              stepNumber="01" title="Ingestion Desk" stepKey="exposure"
-              activeStep={activeStep} onActivate={setActiveStep} locked={false}
-              badge={trades.length > 0 ? { label: `${trades.length} positions`, variant: 'info' } : undefined}
-              summary={trades.length > 0 ? (
-                <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
-                  <span>{trades.length} positions</span>
-                  <span>Net: {fmtCompact(tradeSummary.totalMxn)}</span>
-                  <span>Confirmed: {tradeSummary.confirmed}</span>
-                  <span>Forecast: {tradeSummary.forecast}</span>
-                  {detectedCurrencies.length > 0 && (
-                    <span style={{ color: S.amber }}>Currencies: {detectedCurrencies.join(', ')}</span>
-                  )}
-                </div>
-              ) : undefined}
-              actions={
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  {positionsLoading && (
-                    <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.06em' }}>
-                      Loading…
-                    </span>
-                  )}
-                </div>
-              }
-            >
-              {/* ── Ingestion Desk tab strip ──────────────────────── */}
-              <div style={{
-                display:      'flex',
-                borderBottom: `1px solid ${S.border}`,
-                background:   S.bgSub,
-                overflowX:    'auto',
-              }}>
-                {DESK_TABS.map(tab => {
-                  const active = deskTab === tab.key;
-                  return (
-                    <button
-                      key={tab.key}
-                      onClick={() => setDeskTab(tab.key)}
-                      style={{
-                        fontFamily:    S.fontMono,
-                        fontSize:      '0.5rem',
-                        letterSpacing: '0.06em',
-                        padding:       '8px 16px',
-                        border:        'none',
-                        borderBottom:  active ? `2px solid ${S.cyan}` : '2px solid transparent',
-                        background:    active ? `color-mix(in srgb, ${S.cyan} 5%, ${S.bgPanel})` : 'transparent',
-                        color:         active ? S.cyan : S.textTertiary,
-                        cursor:        'pointer',
-                        display:       'flex',
-                        flexDirection: 'column',
-                        gap:           2,
-                        whiteSpace:    'nowrap',
-                        transition:    'all 0.1s',
-                      }}
-                    >
-                      <span style={{ textTransform: 'uppercase' }}>{tab.label}</span>
-                      <span style={{ fontSize: '0.375rem', opacity: 0.6, fontFamily: S.fontUI, textTransform: 'none', letterSpacing: 0 }}>
-                        {tab.subtitle}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+          {/* ── Tab strip ── */}
+          <div style={{
+            display:      'flex',
+            borderBottom: `1px solid ${S.border}`,
+            background:   S.bgSub,
+            overflowX:    'auto',
+          }}>
+            {DESK_TABS.map(tab => {
+              const active = deskTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setDeskTab(tab.key)}
+                  style={{
+                    fontFamily:    S.fontMono,
+                    fontSize:      '0.5rem',
+                    letterSpacing: '0.06em',
+                    padding:       '8px 16px',
+                    border:        'none',
+                    borderBottom:  active ? `2px solid ${S.cyan}` : '2px solid transparent',
+                    background:    active ? `color-mix(in srgb, ${S.cyan} 5%, ${S.bgPanel})` : 'transparent',
+                    color:         active ? S.cyan : S.textTertiary,
+                    cursor:        'pointer',
+                    display:       'flex',
+                    flexDirection: 'column',
+                    gap:           2,
+                    whiteSpace:    'nowrap',
+                    transition:    'all 0.1s',
+                  }}
+                >
+                  <span style={{ textTransform: 'uppercase' }}>{tab.label}</span>
+                  <span style={{ fontSize: '0.375rem', opacity: 0.6, fontFamily: S.fontUI, textTransform: 'none', letterSpacing: 0 }}>
+                    {tab.subtitle}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-              {/* ── Tab: Upload CSV / Excel ── */}
-              {deskTab === 'upload' && (
-                <div style={{ padding: '16px' }}>
-                  <FileUploadLane
-                    token={token ?? undefined}
-                    onImportComplete={() => { if (token) dispatch(listPositionsThunk({ token })); }}
-                  />
-                </div>
-              )}
+          {/* ── Tab: Upload CSV / Excel ── */}
+          {deskTab === 'upload' && (
+            <div style={{ padding: '16px' }}>
+              <FileUploadLane
+                token={token ?? undefined}
+                onImportComplete={() => { if (token) dispatch(listPositionsThunk({ token })); }}
+              />
+            </div>
+          )}
 
-              {/* ── Tab: Connect Database ── */}
-              {deskTab === 'database' && (
-                <div style={{ padding: '16px' }}>
-                  <DatabaseConnectorLane />
-                </div>
-              )}
+          {/* ── Tab: Connect Database ── */}
+          {deskTab === 'database' && (
+            <div style={{ padding: '16px' }}>
+              <DatabaseConnectorLane />
+            </div>
+          )}
 
-              {/* ── Tab: ERP Integration ── */}
-              {deskTab === 'erp' && (
-                <div style={{ padding: '16px' }}>
-                  <ConnectorPlaceholderLane
-                    title="ERP integration — coming soon"
-                    message="Pull exposure positions directly from SAP, Oracle EBS, or Microsoft Dynamics. One-click sync with field mapping configuration."
-                  />
-                </div>
-              )}
+          {/* ── Tab: ERP Integration ── */}
+          {deskTab === 'erp' && (
+            <div style={{ padding: '16px' }}>
+              <ConnectorPlaceholderLane
+                title="ERP integration — coming soon"
+                message="Pull exposure positions directly from SAP, Oracle EBS, or Microsoft Dynamics. One-click sync with field mapping configuration."
+              />
+            </div>
+          )}
 
-              {/* ── Tab: Accounting System ── */}
-              {deskTab === 'accounting' && (
-                <div style={{ padding: '16px' }}>
-                  <ConnectorPlaceholderLane
-                    title="Accounting system connector — coming soon"
-                    message="Connect to Xero, QuickBooks, or NetSuite to automatically import foreign currency invoices and payables as exposure positions."
-                  />
-                </div>
-              )}
+          {/* ── Tab: Accounting System ── */}
+          {deskTab === 'accounting' && (
+            <div style={{ padding: '16px' }}>
+              <ConnectorPlaceholderLane
+                title="Accounting system connector — coming soon"
+                message="Connect to Xero, QuickBooks, or NetSuite to automatically import foreign currency invoices and payables as exposure positions."
+              />
+            </div>
+          )}
 
-              {/* ── Tab: Import History ── */}
-              {deskTab === 'history' && (
-                <div style={{ padding: '16px' }}>
-                  <ImportHistoryPanel token={token ?? undefined} />
-                </div>
-              )}
+          {/* ── Tab: Import History ── */}
+          {deskTab === 'history' && (
+            <div style={{ padding: '16px' }}>
+              <ImportHistoryPanel token={token ?? undefined} />
+            </div>
+          )}
 
-              {/* ── Tab: Manual Entry (default) ── */}
-              {deskTab === 'manual' && (<>
-              {/* Empty state when no positions */}
-              {trades.length === 0 && !positionsLoading ? (
-                <div style={{ padding: '32px 0' }}>
-                  <EmptyState
-                    type="empty"
-                    title="No positions yet"
-                    message="Add your first FX exposure position below, or import a CSV file."
-                    action={{ label: '+ Add Position', onClick: openAddTrade }}
-                  />
-                </div>
-              ) : (
-                <TradeTable
-                  trades={trades}
-                  onEdit={openEditTrade}
-                  onRemove={handleRemoveTrade}
-                  baseCcy={currencyCtx.baseCcy}
-                />
-              )}
-
-              {/* ── Inline Trade Entry Form ─────────────────────────── */}
+          {/* ── Tab: Manual Entry ── */}
+          {deskTab === 'manual' && (
+            <div>
+              {/* ── Inline Trade Entry Form (always visible at top) ── */}
               <div
                 data-section="add-exposure-line"
-                style={{
-                  marginTop: 1,
-                  borderTop: `1px solid ${S.border}`,
-                  background: S.bgSub,
-                }}>
-                {/* Section header */}
+                style={{ background: S.bgSub, borderBottom: `1px solid ${S.border}` }}
+              >
+                {/* Form header */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '7px 14px',
@@ -929,7 +942,7 @@ export default function InputPage() {
                   </span>
                   <span style={{ width: 1, height: 10, background: S.borderSoft, display: 'inline-block' }} />
                   <span style={{ fontFamily: S.fontUI, fontSize: '0.625rem', color: S.textTertiary }}>
-                    Enter a new trade position directly — saved to database
+                    Enter a new FX exposure position — saved to database
                   </span>
                 </div>
 
@@ -997,17 +1010,11 @@ export default function InputPage() {
 
                   {/* FLOW TYPE */}
                   <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
-                      FLOW TYPE
-                    </label>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>FLOW TYPE</label>
                     <select
                       value={inlineForm.type}
                       onChange={e => setInlineField('type', e.target.value as TradeRow['type'])}
-                      style={{
-                        fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel,
-                        border: 'none', borderBottom: `1px solid ${S.borderSoft}`,
-                        color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer',
-                      }}
+                      style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
                     >
                       <option value="AP">AP — Accounts Payable</option>
                       <option value="AR">AR — Accounts Receivable</option>
@@ -1016,17 +1023,11 @@ export default function InputPage() {
 
                   {/* CURRENCY */}
                   <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
-                      CURRENCY
-                    </label>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>CURRENCY</label>
                     <select
                       value={inlineForm.currency}
                       onChange={e => setInlineField('currency', e.target.value as FuturesCurrency)}
-                      style={{
-                        fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel,
-                        border: 'none', borderBottom: `1px solid ${S.borderSoft}`,
-                        color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer',
-                      }}
+                      style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
                     >
                       {FUTURES_CURRENCY_LIST.map(c => (
                         <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
@@ -1048,12 +1049,7 @@ export default function InputPage() {
                           onChange={e => setInlineField('amount', parseFloat(e.target.value) || 0)}
                           onBlur={() => touchInline('amount')}
                           placeholder="0"
-                          style={{
-                            fontFamily: S.fontMono, fontSize: '0.6875rem',
-                            background: 'transparent', border: 'none',
-                            borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
-                            color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%',
-                          }}
+                          style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${err ? S.red : S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%' }}
                         />
                       </div>
                     );
@@ -1072,12 +1068,7 @@ export default function InputPage() {
                           value={inlineForm.value_date}
                           onChange={e => setInlineField('value_date', e.target.value)}
                           onBlur={() => touchInline('value_date')}
-                          style={{
-                            fontFamily: S.fontMono, fontSize: '0.6875rem',
-                            background: 'transparent', border: 'none',
-                            borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
-                            color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', colorScheme: 'dark',
-                          }}
+                          style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${err ? S.red : S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', colorScheme: 'dark' }}
                         />
                       </div>
                     );
@@ -1085,17 +1076,11 @@ export default function InputPage() {
 
                   {/* STATUS */}
                   <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
-                      STATUS
-                    </label>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>STATUS</label>
                     <select
                       value={inlineForm.status}
                       onChange={e => setInlineField('status', e.target.value as TradeRow['status'])}
-                      style={{
-                        fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel,
-                        border: 'none', borderBottom: `1px solid ${S.borderSoft}`,
-                        color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer',
-                      }}
+                      style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
                     >
                       <option value="CONFIRMED">CONFIRMED</option>
                       <option value="FORECAST">FORECAST</option>
@@ -1104,129 +1089,143 @@ export default function InputPage() {
 
                   {/* DESCRIPTION */}
                   <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
-                      DESCRIPTION
-                    </label>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>DESCRIPTION</label>
                     <input
                       type="text"
                       value={inlineForm.description ?? ''}
                       onChange={e => setInlineField('description', e.target.value)}
                       placeholder="Optional note"
-                      style={{
-                        fontFamily: S.fontMono, fontSize: '0.6875rem',
-                        background: 'transparent', border: 'none',
-                        borderBottom: `1px solid ${S.borderSoft}`,
-                        color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%',
-                      }}
+                      style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%' }}
                     />
                   </div>
                 </div>
 
                 {/* Submit row */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                  gap: 10, padding: '8px 14px',
-                  borderTop: `1px solid ${S.borderSoft}`,
-                }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '8px 14px', borderTop: `1px solid ${S.borderSoft}` }}>
                   <button
                     type="button"
                     onClick={() => { setInlineForm(EMPTY_INLINE); setInlineTouched({}); }}
-                    style={{
-                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
-                      padding: '4px 12px', border: `1px solid ${S.border}`,
-                      color: S.textTertiary, background: 'transparent', cursor: 'pointer',
-                    }}
+                    style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', padding: '4px 12px', border: `1px solid ${S.border}`, color: S.textTertiary, background: 'transparent', cursor: 'pointer' }}
                   >CLEAR</button>
                   <button
                     type="button"
                     onClick={handleInlineSave}
                     disabled={inlineSaving}
-                    style={{
-                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
-                      fontWeight: 700,
-                      padding: '4px 18px',
-                      border: `1px solid ${inlineValid ? S.cyan : S.border}`,
-                      color: inlineValid ? S.cyan : S.textTertiary,
-                      background: inlineValid ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : 'transparent',
-                      cursor: inlineSaving ? 'not-allowed' : 'pointer',
-                      opacity: inlineSaving ? 0.6 : 1,
-                      transition: 'all 0.1s',
-                    }}
+                    style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', fontWeight: 700, padding: '4px 18px', border: `1px solid ${inlineValid ? S.cyan : S.border}`, color: inlineValid ? S.cyan : S.textTertiary, background: inlineValid ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : 'transparent', cursor: inlineSaving ? 'not-allowed' : 'pointer', opacity: inlineSaving ? 0.6 : 1, transition: 'all 0.1s' }}
                   >{inlineSaving ? 'SAVING…' : '+ ADD POSITION'}</button>
                 </div>
               </div>
-              </>)}
-            </StepSection>
-          )}
 
-          {visibleStepKeys.includes('policy') && (
-            <StepSection
-              stepNumber="02" title="Hedge Policy" stepKey="policy"
-              activeStep={activeStep} onActivate={setActiveStep} locked={!stepUnlocked.policy}
-              badge={
-                activePresetName && activePresetId !== 'custom'
-                  ? { label: activePresetName, variant: 'info' }
-                  : activePresetId === 'custom'
-                  ? { label: 'Custom', variant: 'neutral' }
-                  : undefined
-              }
-              summary={
-                <div style={{ display: 'flex', gap: 16, fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textSecondary }}>
-                  <span>{activePresetName ?? 'Custom'}</span>
-                  <span>Confirmed: {fmtPct(policy.hedge_ratios.confirmed)}</span>
-                  <span>Forecast: {fmtPct(policy.hedge_ratios.forecast)}</span>
-                  <span>{policy.execution_product}</span>
+              {/* ── Position Table (immediately below form, no gap) ── */}
+              {positionsLoading ? (
+                <div style={{ padding: '24px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.textTertiary, letterSpacing: '0.06em' }}>
+                  LOADING POSITIONS…
                 </div>
-              }
-            >
-              <PolicyForm
-                policy={policy} onChange={setPolicy}
-                activePresetId={activePresetId}
-                onSelectPreset={handleSelectPreset}
-                onCustom={handleCustomPolicy}
-              />
-
-              {/* ── Activate Policy in DB ──────────────────────────── */}
-              {activePresetId && activePresetId !== 'custom' && (
-                <div style={{
-                  padding: '10px 14px',
-                  borderTop: `1px solid ${S.borderSoft}`,
-                  display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-                  background: S.bgSub,
-                }}>
-                  <button
-                    type="button"
-                    onClick={handleActivatePolicy}
-                    disabled={policyActivating || activePolicyTemplateId === dbTemplates.find(t => t.short_name === POLICY_PRESETS.find(p => p.id === activePresetId)?.shortName)?.id}
-                    style={{
-                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', fontWeight: 700,
-                      padding: '5px 16px',
-                      border: `1px solid ${policyActivating ? S.textTertiary : S.cyan}`,
-                      color: policyActivating ? S.textTertiary : S.cyan,
-                      background: policyActivating ? 'transparent' : `color-mix(in srgb, ${S.cyan} 6%, transparent)`,
-                      cursor: policyActivating ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.1s',
-                    }}
-                  >
-                    {policyActivating ? 'ACTIVATING…' : 'ACTIVATE POLICY'}
-                  </button>
-                  {policyActivateMsg && (
-                    <span style={{
-                      fontFamily: S.fontMono, fontSize: '0.5rem',
-                      color: policyActivateMsg.startsWith('✓') ? S.green : S.red,
-                      letterSpacing: '0.04em',
-                    }}>
-                      {policyActivateMsg}
-                    </span>
-                  )}
-                  {!policyActivateMsg && activePolicyTemplateId && (
-                    <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary }}>
-                      A policy is already active for this branch — activating will replace it.
-                    </span>
-                  )}
+              ) : trades.length === 0 ? (
+                <div style={{ padding: '24px 0' }}>
+                  <EmptyState
+                    type="empty"
+                    title="No positions yet"
+                    message="Add your first FX exposure position using the form above, or import a CSV file."
+                  />
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  {/* Table caption */}
+                  <div style={{ display: 'flex', gap: 16, padding: '6px 14px', background: S.bgSub, borderBottom: `1px solid ${S.border}`, fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.06em', color: S.textTertiary }}>
+                    <span>TOTAL: {trades.length}</span>
+                    <span style={{ color: S.cyan }}>CONFIRMED: {tradeSummary.confirmed}</span>
+                    <span style={{ color: S.amber }}>FORECAST: {tradeSummary.forecast}</span>
+                    <span>EXECUTED: {executedIds.length}</span>
+                    {detectedCurrencies.length > 0 && (
+                      <span style={{ color: S.amber }}>CCY: {detectedCurrencies.join(', ')}</span>
+                    )}
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: S.fontUI, fontSize: '0.75rem' }}>
+                    <thead>
+                      <tr style={{ background: S.bgSub, borderBottom: `1px solid ${S.border}` }}>
+                        {['ID', 'Entity', 'Type', 'CCY', 'Amount', 'Value Date', 'Status', 'Description', 'Actions'].map(h => (
+                          <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {positions.map((pos, idx) => {
+                        const isExecuted = executedIds.includes(pos.id);
+                        const ibkrRef = ibkrRefs[pos.id];
+                        return (
+                          <tr key={pos.id} style={{ borderBottom: `1px solid ${S.borderSoft}`, background: isExecuted ? `color-mix(in srgb, ${S.green} 3%, transparent)` : 'transparent' }}>
+                            <td style={{ padding: '7px 10px', fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textPrimary }}>{pos.record_id}</td>
+                            <td style={{ padding: '7px 10px', color: S.textPrimary }}>{pos.entity}</td>
+                            <td style={{ padding: '7px 10px', textAlign: 'center' }}>
+                              <span style={{ padding: '2px 6px', borderRadius: 2, fontSize: '0.625rem', fontWeight: 600, background: pos.type === 'AR' ? `color-mix(in srgb, ${S.green} 12%, transparent)` : `color-mix(in srgb, ${S.red} 12%, transparent)`, color: pos.type === 'AR' ? S.green : S.red }}>
+                                {pos.type}
+                              </span>
+                            </td>
+                            <td style={{ padding: '7px 10px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.625rem', color: S.textSecondary }}>{pos.currency}</td>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textPrimary }}>{fmtMXN(pos.amount)}</td>
+                            <td style={{ padding: '7px 10px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.625rem' }}>{pos.value_date}</td>
+                            <td style={{ padding: '7px 10px', textAlign: 'center' }}>
+                              {isExecuted ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 2, fontSize: '0.5625rem', fontWeight: 700, background: `color-mix(in srgb, ${S.green} 12%, transparent)`, color: S.green, fontFamily: S.fontMono, letterSpacing: '0.04em' }}>
+                                  ✓ EXECUTED
+                                  {ibkrRef && <span style={{ fontSize: '0.5rem', opacity: 0.7 }}> · {ibkrRef}</span>}
+                                </span>
+                              ) : (
+                                <span style={{ padding: '2px 7px', borderRadius: 2, fontSize: '0.5625rem', fontWeight: 600, fontFamily: S.fontMono, letterSpacing: '0.04em', background: pos.status === 'CONFIRMED' ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : `color-mix(in srgb, ${S.amber} 10%, transparent)`, color: pos.status === 'CONFIRMED' ? S.cyan : S.amber }}>
+                                  {pos.status}
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ padding: '7px 10px', color: S.textSecondary, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pos.description}</td>
+                            <td style={{ padding: '7px 10px', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {/* Duplicate */}
+                                <button
+                                  title="Duplicate"
+                                  onClick={() => openDuplicateTrade(pos)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, padding: '2px 4px', fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.04em' }}
+                                  onMouseEnter={e => (e.currentTarget.style.color = S.cyan)}
+                                  onMouseLeave={e => (e.currentTarget.style.color = S.textTertiary)}
+                                >⊕</button>
+                                {/* Edit */}
+                                <button
+                                  title="Edit"
+                                  onClick={() => openEditTrade(idx)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, padding: '2px 4px', fontFamily: S.fontMono, fontSize: '0.625rem' }}
+                                  onMouseEnter={e => (e.currentTarget.style.color = S.amber)}
+                                  onMouseLeave={e => (e.currentTarget.style.color = S.textTertiary)}
+                                >✎</button>
+                                {/* Execute via IBKR (only for non-executed CONFIRMED) */}
+                                {!isExecuted && pos.status === 'CONFIRMED' && (
+                                  <button
+                                    title="Execute via IBKR"
+                                    onClick={() => openIbkrModal(pos)}
+                                    style={{ background: 'none', border: `1px solid ${S.green}`, cursor: 'pointer', color: S.green, padding: '1px 5px', fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.06em', borderRadius: 2 }}
+                                  >IBKR</button>
+                                )}
+                                {/* Delete */}
+                                <button
+                                  title="Delete"
+                                  onClick={() => {
+                                    if (window.confirm(`Remove position "${pos.record_id}"?`)) {
+                                      handleRemoveTrade(idx);
+                                    }
+                                  }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, padding: '2px 4px', fontFamily: S.fontMono, fontSize: '0.75rem', lineHeight: 1 }}
+                                  onMouseEnter={e => (e.currentTarget.style.color = S.red)}
+                                  onMouseLeave={e => (e.currentTarget.style.color = S.textTertiary)}
+                                >×</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
-            </StepSection>
+            </div>
           )}
 
         </div>
@@ -1270,7 +1269,9 @@ export default function InputPage() {
       <TradeModal
         open={tradeModalOpen} onClose={() => { setTradeModalOpen(false); setEditingPosition(undefined); }}
         onSave={handleSaveTrade}
-        existingTrade={editingTrade} existingIds={tradeIdsForModal} forwardBuckets={forwardBuckets}
+        existingTrade={editingTrade}
+        initialValues={tradeModalInitialValues}
+        existingIds={tradeIdsForModal} forwardBuckets={forwardBuckets}
       />
       <HedgeModal
         open={hedgeModalOpen} onClose={() => setHedgeModalOpen(false)} onSave={handleSaveHedge}
@@ -1345,6 +1346,48 @@ export default function InputPage() {
             <li>The hedge plan calculation is re-run with the fresh market data</li>
             <li>If successful, you will be redirected to the results page</li>
           </ol>
+        </div>
+      </Modal>
+
+      {/* ── IBKR Execution Confirmation Modal ── */}
+      <Modal
+        open={ibkrModalOpen}
+        onClose={() => { setIbkrModalOpen(false); setIbkrTargetPosition(undefined); }}
+        title="Confirm Execution"
+        subtitle={ibkrTargetPosition ? `Position: ${ibkrTargetPosition.record_id} · ${ibkrTargetPosition.currency} ${fmtMXN(ibkrTargetPosition.amount)}` : ''}
+        width="sm"
+        footer={
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', width: '100%' }}>
+            <button
+              type="button"
+              onClick={() => { setIbkrModalOpen(false); setIbkrTargetPosition(undefined); }}
+              style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', padding: '5px 14px', border: `1px solid ${S.border}`, color: S.textSecondary, background: 'transparent', cursor: 'pointer' }}
+            >CANCEL</button>
+            <button
+              type="button"
+              onClick={handleConfirmExecution}
+              style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', fontWeight: 700, padding: '5px 18px', border: `1px solid ${S.green}`, color: 'var(--bg-deep)', background: S.green, cursor: 'pointer' }}
+            >✓ CONFIRM EXECUTED</button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
+          <p style={{ fontFamily: S.fontUI, fontSize: '0.8125rem', color: S.textSecondary, lineHeight: 1.6, margin: 0 }}>
+            Mark this position as <strong style={{ color: S.green }}>executed</strong> via Interactive Brokers?
+            This will flag it as a verified fact in the Position Desk.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
+              IBKR REFERENCE (optional)
+            </label>
+            <input
+              type="text"
+              value={ibkrRefInput}
+              onChange={e => setIbkrRefInput(e.target.value)}
+              placeholder="e.g. IBKR-2026-00341"
+              style={{ fontFamily: S.fontMono, fontSize: '0.75rem', padding: '6px 10px', border: `1px solid ${S.border}`, background: S.bgSub, color: S.textPrimary, outline: 'none', width: '100%' }}
+            />
+          </div>
         </div>
       </Modal>
 

@@ -38,23 +38,39 @@ interface HealthStatus {
 
 const GUIDE_SECTIONS = [
   {
-    title: "Ingestion Desk",
+    title: "Position Desk",
     path: "/input",
-    description: "Enter FX exposure positions manually, upload CSV/Excel files, or connect a database. All imports generate an auditable ConnectorRun artifact.",
+    description: "Enter FX exposure positions manually, upload CSV/Excel files, or connect a database. Use the inline form to add positions instantly — they appear in the table below for duplicate, edit, delete, and IBKR execution workflow.",
     steps: [
-      "Navigate to Analysis → Ingestion Desk",
-      "Select an import lane: Manual Entry, Upload CSV/Excel, Connect Database",
-      "Review and commit your exposure data",
-      "Activate a policy template to define hedge parameters",
+      "Navigate to Position Desk in the top nav",
+      "Use the inline entry form to add FX exposure positions",
+      "Positions appear immediately in the table below",
+      "Duplicate, Edit, or Delete positions using row action buttons",
+      "For CONFIRMED positions: click IBKR to confirm execution and mark as fact",
+      "Use Upload CSV or Connect Database tabs for bulk import",
     ],
   },
   {
-    title: "Simulation",
-    path: "/sandbox",
+    title: "Policy Engine",
+    path: "/policies",
+    description: "Browse all 33 system hedge policy presets organized by category. Create custom AI-powered policies using the 5-step wizard. The AI analyzes your business profile and generates 3 tailored recommendations.",
+    steps: [
+      "Navigate to Policy Engine in the top nav",
+      "Browse system presets by category (Corporate, Financial, Sovereign, Sector)",
+      "Click 'Activate Policy' on any preset to make it your active hedge policy",
+      "Click '+ New AI Policy' to open the 5-step wizard",
+      "Complete the wizard and review 3 AI recommendations",
+      "Save your custom policy by name and tag",
+      "Admin users can publish policies company-wide",
+    ],
+  },
+  {
+    title: "Execution",
+    path: "/execution",
     description: "Run deterministic hedge calculations and stress-test your portfolio against historical crashes and custom shocks. All math is computed client-side — instant results with no backend round-trip.",
     steps: [
-      "Ensure positions are entered via the Ingestion Desk",
-      "Navigate to Simulation in the top nav",
+      "Ensure positions are entered via the Position Desk",
+      "Navigate to Execution in the top nav",
       "Select a demo fixture or load your own positions",
       "Use the Scenario Stress Tester to stress-test against % moves and historic crises",
       "Review the exposure waterfall, attribution, and Before/After impact panels",
@@ -63,11 +79,11 @@ const GUIDE_SECTIONS = [
   {
     title: "Analysis",
     path: "/currency-fx",
-    description: "Three-step workflow: load exposure positions, apply a hedge policy, then generate a full hedge plan with exposure waterfall, allocation breakdown, and IFRS 9 compliance checks.",
+    description: "Deep-dive FX analytics: exposure waterfall, currency breakdown, forward curve analysis, and IFRS 9 compliance scoring for your current position portfolio.",
     steps: [
-      "Step 01 — Exposure Hedge Plan: enter or import FX positions",
-      "Step 02 — Hedge Policy: select and configure a policy template",
-      "Step 03 — Generate Hedge Plan: run the engine and review results",
+      "Navigate to Execution → Analysis",
+      "Review currency exposure breakdown and net positions",
+      "Analyze forward curve against your settlement buckets",
       "Export results for governance reporting",
     ],
   },
@@ -183,11 +199,12 @@ export default function HelpPage() {
             Quick Links
           </div>
           {[
-            { label: "Dashboard", path: "/dashboard" },
-            { label: "Ingestion Desk", path: "/input" },
-            { label: "Analysis", path: "/currency-fx" },
-            { label: "Simulation", path: "/sandbox" },
-            { label: "HedgeWiki", path: "/hedgewiki" },
+            { label: "Dashboard",      path: "/dashboard"   },
+            { label: "Position Desk",  path: "/input"       },
+            { label: "Policy Engine",  path: "/policies"    },
+            { label: "Execution",      path: "/execution"   },
+            { label: "Analysis",       path: "/currency-fx" },
+            { label: "HedgeWiki",      path: "/hedgewiki"   },
           ].map((lnk) => (
             <button
               key={lnk.path}

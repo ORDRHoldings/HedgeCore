@@ -11,6 +11,8 @@ interface Props {
   onClose: () => void;
   onSave: (trade: TradeRow) => void;
   existingTrade?: TradeRow;
+  /** Pre-fill form in CREATE mode (not edit). Used for duplicate workflow. */
+  initialValues?: Partial<TradeRow>;
   existingIds: Set<string>;
   forwardBuckets: Set<string>;
 }
@@ -71,7 +73,7 @@ function LabeledField({ label, hint, children }: { label: string; hint?: string;
   );
 }
 
-export default function TradeModal({ open, onClose, onSave, existingTrade, existingIds, forwardBuckets }: Props) {
+export default function TradeModal({ open, onClose, onSave, existingTrade, initialValues, existingIds, forwardBuckets }: Props) {
   const [form, setForm] = useState<TradeRow>({
     record_id: '', entity: '', type: 'AP', currency: 'MXN',
     amount: 0, value_date: '', status: 'CONFIRMED', description: '',
@@ -80,13 +82,26 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, exist
 
   useEffect(() => {
     if (open) {
-      setForm(existingTrade ?? {
-        record_id: '', entity: '', type: 'AP', currency: 'MXN',
-        amount: 0, value_date: '', status: 'CONFIRMED', description: '',
-      });
+      if (existingTrade) {
+        setForm(existingTrade);
+      } else if (initialValues) {
+        // Duplicate mode: pre-fill with values but always blank record_id
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { record_id: _discard, ...valuesWithoutId } = (initialValues as Partial<TradeRow> & { record_id?: string });
+        setForm({
+          record_id: '', entity: '', type: 'AP', currency: 'MXN',
+          amount: 0, value_date: '', status: 'CONFIRMED', description: '',
+          ...valuesWithoutId,
+        });
+      } else {
+        setForm({
+          record_id: '', entity: '', type: 'AP', currency: 'MXN',
+          amount: 0, value_date: '', status: 'CONFIRMED', description: '',
+        });
+      }
       setTouched({});
     }
-  }, [open, existingTrade]);
+  }, [open, existingTrade, initialValues]);
 
   const set = (field: keyof TradeRow, value: string | number) =>
     setForm(f => ({ ...f, [field]: value }));
@@ -111,6 +126,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, exist
   };
 
   const isEdit = !!existingTrade;
+  const isDuplicate = !existingTrade && !!initialValues;
 
   // Selected currency info
   const selectedCcy = FUTURES_CURRENCY_LIST.find(c => c.code === form.currency);
@@ -119,8 +135,8 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, exist
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit Exposure' : 'New Exposure Line'}
-      subtitle={isEdit ? `Editing: ${existingTrade?.record_id}` : 'Commercial exposure · FX-eligible instrument'}
+      title={isEdit ? 'Edit Exposure' : isDuplicate ? 'Duplicate Exposure' : 'New Exposure Line'}
+      subtitle={isEdit ? `Editing: ${existingTrade?.record_id}` : isDuplicate ? 'Duplicated from existing position — assign a new Record ID' : 'Commercial exposure · FX-eligible instrument'}
       width="lg"
       footer={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
@@ -146,7 +162,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, exist
                 background: 'transparent', cursor: canSave ? 'pointer' : 'not-allowed',
                 opacity: canSave ? 1 : 0.5,
               }}
-            >{isEdit ? 'Update Position' : 'Add Position'}</button>
+            >{isEdit ? 'Update Position' : isDuplicate ? 'Save Duplicate' : 'Add Position'}</button>
           </div>
         </div>
       }
