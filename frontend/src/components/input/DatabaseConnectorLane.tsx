@@ -54,7 +54,7 @@ export default function DatabaseConnectorLane() {
               key={f.key}
               style={{ background: S.bgPanel, padding: "10px 14px", display: "flex", flexDirection: "column", gap: 4 }}
             >
-              <label style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.08em", color: S.tertiary }}>
+              <label style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em", color: S.tertiary }}>
                 {f.label}
               </label>
               <input

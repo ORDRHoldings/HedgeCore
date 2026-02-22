@@ -25,7 +25,7 @@ export default function DemoFixtureSelector({
           onClick={() => onSelect(f.id)}
           disabled={loading}
           className={[
-            "px-2 py-1 text-[0.6875rem] font-medium rounded transition-colors",
+            "px-2 py-1 text-[0.8125rem] font-medium rounded transition-colors",
             fixtureId === f.id
               ? "bg-[var(--accent-cyan)]/20 text-[var(--accent-cyan)]"
               : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-sub)]",

@@ -37,7 +37,7 @@ export default function EmptyState({
           role="status"
           aria-label="Loading"
         />
-        <p className="text-xs text-[var(--text-secondary)]">{m}</p>
+        <p className="text-sm text-[var(--text-secondary)]">{m}</p>
       </div>
     );
   }
@@ -55,11 +55,11 @@ export default function EmptyState({
           <circle cx="12" cy="16.5" r="0.75" fill="currentColor" />
         </svg>
         <span className="text-sm font-medium text-[var(--text-primary)]">{t}</span>
-        <p className="text-xs text-[var(--text-secondary)] text-center max-w-sm">{m}</p>
+        <p className="text-sm text-[var(--text-secondary)] text-center max-w-sm">{m}</p>
         {action && (
           <button
             onClick={action.onClick}
-            className="mt-2 px-3 py-1.5 text-xs font-medium rounded border border-[var(--accent-red)]/30 text-[var(--accent-red)] hover:bg-red-50 transition-colors"
+            className="mt-2 px-3 py-1.5 text-sm font-medium rounded border border-[var(--accent-red)]/30 text-[var(--accent-red)] hover:bg-red-50 transition-colors"
           >
             {action.label}
           </button>
@@ -80,11 +80,11 @@ export default function EmptyState({
         <path d="M8 7V5a1.5 1.5 0 011.5-1.5h5A1.5 1.5 0 0116 5v2" stroke="currentColor" strokeWidth="1.5" />
       </svg>
       <span className="text-sm font-medium text-[var(--text-secondary)]">{t}</span>
-      <p className="text-xs text-[var(--text-tertiary)] text-center max-w-sm">{m}</p>
+      <p className="text-sm text-[var(--text-tertiary)] text-center max-w-sm">{m}</p>
       {action && (
         <button
           onClick={action.onClick}
-          className="mt-2 px-3 py-1.5 text-xs font-medium rounded border border-[var(--border-rim)] text-[var(--text-secondary)] hover:bg-[var(--bg-sub)] transition-colors"
+          className="mt-2 px-3 py-1.5 text-sm font-medium rounded border border-[var(--border-rim)] text-[var(--text-secondary)] hover:bg-[var(--bg-sub)] transition-colors"
         >
           {action.label}
         </button>

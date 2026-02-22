@@ -178,7 +178,7 @@ function RegimeChip({ regime }: { regime: string }) {
   const { color, border } = map[regime] ?? map.MODERATE;
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.06em",
+      fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
       padding: "1px 5px", border: `1px solid ${border}`, color,
     }}>{regime}</span>
   );
@@ -192,7 +192,7 @@ function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
       <div style={{ width: 64, height: 5, background: S.soft, position: "relative" as const, flexShrink: 0 }}>
         <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: color, transition: "width 0.3s" }} />
       </div>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color, fontWeight: 600, minWidth: 20 }}>{score}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color, fontWeight: 600, minWidth: 20 }}>{score}</span>
     </div>
   );
 }
@@ -206,7 +206,7 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
         padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
       }}>
         <button onClick={onBack} style={{
-          fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
           background: "transparent", border: `1px solid ${S.rim}`,
           padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
         }}>← Home</button>
@@ -220,25 +220,25 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
           <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary, lineHeight: 1.1 }}>
             Polisophic
           </div>
-          <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.07em", color: S.tertiary }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.07em", color: S.tertiary }}>
             POLITICAL & MACRO RISK INTELLIGENCE
           </div>
         </div>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 6px", border: `1px solid ${S.fail}`, color: S.fail, background: `color-mix(in srgb, var(--accent-red,#B91C1C) 8%, transparent)` }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.fail}`, color: S.fail, background: `color-mix(in srgb, var(--accent-red,#B91C1C) 8%, transparent)` }}>
             ● 4 ACTIVE ALERTS
           </span>
           {DEMO_MODE ? (
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 6px", border: `1px solid ${S.rim}`, color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.rim}`, color: S.tertiary }}>
               LIVE FEED DEMO
             </span>
           ) : (
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 6px", border: `1px solid ${S.amber}`, color: S.amber }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.amber}`, color: S.amber }}>
               FEED DISCONNECTED
             </span>
           )}
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{RENDER_TS}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RENDER_TS}</span>
         </div>
       </header>
 
@@ -249,7 +249,7 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
       }}>
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
-            fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.04em",
+            fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.04em",
             padding: "0 16px", height: "100%", display: "flex", alignItems: "center",
             color: tab === t ? S.cyan : S.tertiary,
             borderBottom: tab === t ? `2px solid ${S.cyan}` : "2px solid transparent",
@@ -258,7 +258,7 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
           }}>{t}</button>
         ))}
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, padding: "1px 6px", border: `1px solid ${S.rim}` }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, padding: "1px 6px", border: `1px solid ${S.rim}` }}>
           {RISK_EVENTS.length} events · {MACRO_SCENARIOS.length} scenarios · engine v1.0
         </span>
       </div>
@@ -316,8 +316,8 @@ export default function Polisophic() {
             <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, overflow: "auto" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
                 <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Structured Event Feed</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{RISK_EVENTS.length} events · last 7 days</span>
-                <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.amber }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RISK_EVENTS.length} events · last 7 days</span>
+                <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.amber }}>
                   ● AUTO-INGESTED · PENDING LIVE INTEGRATION
                 </span>
               </div>
@@ -332,24 +332,24 @@ export default function Polisophic() {
                   }}>
                     {/* meta strip */}
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" as const }}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary }}>{ev.ts}</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{ev.ts}</span>
                       <span style={{ color: S.rim }}>·</span>
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 4px",
+                        fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 4px",
                         border: `1px solid ${S.rim}`, color: S.tertiary, letterSpacing: "0.05em",
                       }}>{ev.region}</span>
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 4px",
+                        fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 4px",
                         border: `1px solid ${S.cyan}`, color: S.cyan, letterSpacing: "0.05em",
                       }}>{ev.category}</span>
                       {ev.alertTriggered && (
                         <span style={{
-                          fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 5px",
+                          fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 5px",
                           border: `1px solid ${S.fail}`, color: S.fail,
                           background: `color-mix(in srgb, var(--accent-red,#B91C1C) 6%, transparent)`,
                         }}>⚡ ALERT TRIGGERED</span>
                       )}
-                      <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.5rem", color: severityColor, fontWeight: 600 }}>
+                      <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: severityColor, fontWeight: 600 }}>
                         SEV {ev.severity}
                       </span>
                     </div>
@@ -362,25 +362,25 @@ export default function Polisophic() {
                     {/* structured signals */}
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                       <div style={{
-                        fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "2px 7px",
+                        fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "2px 7px",
                         border: `1px solid ${S.soft}`, color: S.tertiary, letterSpacing: "0.04em",
                       }}>
                         RAW SIGNAL: <span style={{ color: S.secondary }}>{ev.rawSignal}</span>
                       </div>
                       <div style={{
-                        fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "2px 7px",
+                        fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "2px 7px",
                         border: `1px solid ${S.soft}`, color: S.tertiary, letterSpacing: "0.04em",
                       }}>
                         IMPACT: <span style={{ color: severityColor }}>{ev.impact}</span>
                       </div>
                       <div style={{
-                        fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "2px 7px",
+                        fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "2px 7px",
                         border: `1px solid ${S.soft}`, color: S.tertiary, letterSpacing: "0.04em",
                       }}>
                         CONF: <span style={{ color: S.pass }}>{ev.confidence}%</span>
                       </div>
                       <div style={{
-                        fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "2px 7px",
+                        fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "2px 7px",
                         border: `1px solid ${S.soft}`, color: S.tertiary, letterSpacing: "0.04em",
                       }}>
                         ID: <span style={{ color: S.tertiary }}>{ev.id}</span>
@@ -393,7 +393,7 @@ export default function Polisophic() {
 
             {/* Right: Regime summary */}
             <aside style={{ padding: "20px 16px", background: S.bgSub, overflow: "auto" }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>
                 CURRENT REGIME SIGNALS
               </div>
               {[
@@ -408,13 +408,13 @@ export default function Polisophic() {
                   display: "flex", flexDirection: "column", gap: 2, padding: "8px 0",
                   borderBottom: i < arr.length - 1 ? `1px solid ${S.soft}` : "none",
                 }}>
-                  <span style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.tertiary }}>{label}</span>
+                  <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary }}>{label}</span>
                   <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", fontWeight: 700, color, letterSpacing: "0.03em" }}>{value}</span>
                 </div>
               ))}
 
               <div style={{ marginTop: 20, paddingTop: 14, borderTop: `1px solid ${S.rim}` }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>
                   SOURCE CATEGORIES
                 </div>
                 {[
@@ -424,13 +424,13 @@ export default function Polisophic() {
                   { label: "Macro Data Release", count: 1 },
                 ].map(({ label, count }) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${S.soft}` }}>
-                    <span style={{ fontFamily: S.fontUI, fontSize: "0.5rem", color: S.secondary }}>{label}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{count}</span>
+                    <span style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary }}>{label}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{count}</span>
                   </div>
                 ))}
               </div>
 
-              <div style={{ marginTop: "auto", paddingTop: 14, fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.04em" }}>
+              <div style={{ marginTop: "auto", paddingTop: 14, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
                 Live ingestion pending · Static demo
               </div>
             </aside>
@@ -452,7 +452,7 @@ export default function Polisophic() {
             <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, overflow: "auto" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
                 <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Risk Score Matrix</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>8 dimensions · as of {RENDER_TS}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>8 dimensions · as of {RENDER_TS}</span>
               </div>
               <div style={{ height: 1, background: S.rim, marginBottom: 0 }} />
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -460,7 +460,7 @@ export default function Polisophic() {
                   <tr>
                     {["Risk Dimension", "Score", "Δ 7D", "Regime", "Primary Driver"].map((h, i) => (
                       <th key={h} style={{
-                        padding: "6px 12px 6px 0", fontFamily: S.fontMono, fontSize: "0.4375rem",
+                        padding: "6px 12px 6px 0", fontFamily: S.fontMono, fontSize: "0.6875rem",
                         letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
                         textAlign: "left", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
                       }}>{h}</th>
@@ -476,13 +476,13 @@ export default function Polisophic() {
                       <td style={{ padding: "10px 12px 10px 0" }}>
                         <ScoreBar score={row.score} />
                       </td>
-                      <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: row.delta > 0 ? S.fail : S.pass }}>
+                      <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: row.delta > 0 ? S.fail : S.pass }}>
                         {row.delta > 0 ? `+${row.delta}` : `${row.delta}`}
                       </td>
                       <td style={{ padding: "10px 12px 10px 0" }}>
                         <RegimeChip regime={row.regime} />
                       </td>
-                      <td style={{ padding: "10px 0 10px 0", fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.tertiary }}>
+                      <td style={{ padding: "10px 0 10px 0", fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary }}>
                         {row.driver}
                       </td>
                     </tr>
@@ -499,10 +499,10 @@ export default function Polisophic() {
                   { label: "AVG 7D CHANGE",    value: `+${(RISK_SCORES.reduce((s, r) => s + r.delta, 0) / RISK_SCORES.length).toFixed(1)}`, unit: "pts" },
                 ].map(({ label, value, unit }) => (
                   <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em" }}>{label}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em" }}>{label}</span>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
                       <span style={{ fontFamily: S.fontMono, fontSize: "1.25rem", fontWeight: 700, color: S.primary, lineHeight: 1 }}>{value}</span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{unit}</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{unit}</span>
                     </div>
                   </div>
                 ))}
@@ -510,7 +510,7 @@ export default function Polisophic() {
             </div>
 
             <aside style={{ padding: "20px 16px", background: S.bgSub, overflow: "auto" }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>
                 HEDGE IMPLICATIONS
               </div>
               {[
@@ -519,11 +519,11 @@ export default function Polisophic() {
                 { condition: "Score < 55", implication: "Conservative program · Annual review", color: S.pass },
               ].map(({ condition, implication, color }, i) => (
                 <div key={condition} style={{ padding: "10px 10px", background: S.bgPanel, border: `1px solid ${S.rim}`, borderLeft: `3px solid ${color}`, marginBottom: 8 }}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color, letterSpacing: "0.05em", marginBottom: 3 }}>{condition}</div>
-                  <div style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.secondary, lineHeight: 1.4 }}>{implication}</div>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color, letterSpacing: "0.05em", marginBottom: 3 }}>{condition}</div>
+                  <div style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.4 }}>{implication}</div>
                 </div>
               ))}
-              <div style={{ marginTop: 12, fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.04em" }}>
+              <div style={{ marginTop: 12, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
                 Score methodology: Structured event weight × recency decay × confidence
               </div>
             </aside>
@@ -544,7 +544,7 @@ export default function Polisophic() {
           <div style={{ padding: "20px 28px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Macro Scenario Tree</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>4 scenarios · probability sums to 100%</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>4 scenarios · probability sums to 100%</span>
             </div>
             <div style={{ height: 1, background: S.rim, marginBottom: 20 }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -560,24 +560,24 @@ export default function Polisophic() {
                     {/* probability badge */}
                     <div style={{ position: "absolute", top: 14, right: 16, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
                       <span style={{ fontFamily: S.fontMono, fontSize: "1.5rem", fontWeight: 700, color: barColor, lineHeight: 1 }}>{sc.probability}%</span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary }}>PROBABILITY</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>PROBABILITY</span>
                     </div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em", marginBottom: 4 }}>{sc.id} · {sc.horizon}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em", marginBottom: 4 }}>{sc.id} · {sc.horizon}</div>
                     <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700, color: S.primary, marginBottom: 10, maxWidth: "68%", lineHeight: 1.3 }}>
                       {sc.name}
                     </div>
                     <div style={{ height: 1, background: S.rim, marginBottom: 10 }} />
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, width: 80, flexShrink: 0 }}>USD/MXN PATH</span>
-                        <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.primary, fontWeight: 600 }}>{sc.usdmxnPath}</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, width: 80, flexShrink: 0 }}>USD/MXN PATH</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.primary, fontWeight: 600 }}>{sc.usdmxnPath}</span>
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, width: 80, flexShrink: 0 }}>RISK SCORE</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, width: 80, flexShrink: 0 }}>RISK SCORE</span>
                         <ScoreBar score={sc.riskScore} />
                       </div>
                       <div style={{ marginTop: 8, padding: "8px 10px", background: S.bgSub, border: `1px solid ${S.soft}` }}>
-                        <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em", marginBottom: 4 }}>HEDGE IMPLICATION</div>
+                        <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em", marginBottom: 4 }}>HEDGE IMPLICATION</div>
                         <div style={{ fontFamily: S.fontUI, fontSize: "0.6rem", color: S.secondary, lineHeight: 1.5 }}>{sc.hedgeImplication}</div>
                       </div>
                     </div>
@@ -588,7 +588,7 @@ export default function Polisophic() {
 
             {/* Probability bar */}
             <div style={{ marginTop: 20, padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>SCENARIO PROBABILITY DISTRIBUTION</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>SCENARIO PROBABILITY DISTRIBUTION</div>
               <div style={{ display: "flex", height: 20, gap: 0, border: `1px solid ${S.rim}`, overflow: "hidden" }}>
                 {MACRO_SCENARIOS.map((sc, i) => {
                   const barColor = sc.riskScore >= 80 ? S.fail : sc.riskScore >= 60 ? S.amber : S.pass;
@@ -599,14 +599,14 @@ export default function Polisophic() {
                       opacity: 0.75,
                       borderRight: i < MACRO_SCENARIOS.length - 1 ? `1px solid ${S.rim}` : "none",
                     }}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.375rem", color: S.bgDeep, fontWeight: 700 }}>{sc.probability}%</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.bgDeep, fontWeight: 700 }}>{sc.probability}%</span>
                     </div>
                   );
                 })}
               </div>
               <div style={{ display: "flex", gap: 16, marginTop: 6 }}>
                 {MACRO_SCENARIOS.map(sc => (
-                  <div key={sc.id} style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary }}>{sc.id}: {sc.name.split(" ").slice(0, 2).join(" ")}…</div>
+                  <div key={sc.id} style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{sc.id}: {sc.name.split(" ").slice(0, 2).join(" ")}…</div>
                 ))}
               </div>
             </div>
@@ -627,7 +627,7 @@ export default function Polisophic() {
           <div style={{ padding: "20px 28px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Alert Rule Registry</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{ALERT_RULES.length} rules configured</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{ALERT_RULES.length} rules configured</span>
             </div>
             <div style={{ height: 1, background: S.rim, marginBottom: 0 }} />
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -635,7 +635,7 @@ export default function Polisophic() {
                 <tr>
                   {["Rule ID", "Trigger Condition", "Automated Action", "Status", "Last Fired"].map(h => (
                     <th key={h} style={{
-                      padding: "6px 12px 6px 0", fontFamily: S.fontMono, fontSize: "0.4375rem",
+                      padding: "6px 12px 6px 0", fontFamily: S.fontMono, fontSize: "0.6875rem",
                       letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
                       textAlign: "left", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
                     }}>{h}</th>
@@ -647,17 +647,17 @@ export default function Polisophic() {
                   const statusColor = rule.status === "FIRED" ? S.fail : S.pass;
                   return (
                     <tr key={rule.id} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                      <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{rule.id}</td>
-                      <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>{rule.trigger}</td>
+                      <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{rule.id}</td>
+                      <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{rule.trigger}</td>
                       <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontUI, fontSize: "0.6rem", color: S.secondary, lineHeight: 1.4 }}>{rule.action}</td>
                       <td style={{ padding: "10px 12px 10px 0" }}>
                         <span style={{
-                          fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 5px",
+                          fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 5px",
                           border: `1px solid ${statusColor}`, color: statusColor,
                           background: `color-mix(in srgb, ${statusColor} 8%, transparent)`,
                         }}>● {rule.status}</span>
                       </td>
-                      <td style={{ padding: "10px 0 10px 0", fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{rule.lastFired}</td>
+                      <td style={{ padding: "10px 0 10px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{rule.lastFired}</td>
                     </tr>
                   );
                 })}
@@ -665,7 +665,7 @@ export default function Polisophic() {
             </table>
 
             <div style={{ marginTop: 24, padding: "16px 18px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>
                 HOW POLISOPHIC ALERTS INTEGRATE WITH HEDGECORE
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
@@ -679,7 +679,7 @@ export default function Polisophic() {
                       <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700, color: S.cyan }}>{step}</span>
                       <span style={{ fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600, color: S.primary }}>{title}</span>
                     </div>
-                    <p style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.secondary, lineHeight: 1.6, margin: 0 }}>{desc}</p>
+                    <p style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.6, margin: 0 }}>{desc}</p>
                   </div>
                 ))}
               </div>
@@ -694,11 +694,11 @@ export default function Polisophic() {
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>
                 My Exposure Risk
               </span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>
                 {user?.branch?.name ?? "Branch"} · {exposureInfo.currency} exposure · {exposureInfo.pairs.join(", ")}
               </span>
               {!user && (
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.amber }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.amber }}>
                   LOGIN TO SEE PERSONALISED RISK
                 </span>
               )}
@@ -717,7 +717,7 @@ export default function Polisophic() {
                 ? "color-mix(in srgb,var(--accent-amber) 8%,transparent)"
                 : "color-mix(in srgb,var(--accent-cyan) 8%,transparent)",
             }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.07em", marginBottom: 6 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.07em", marginBottom: 6 }}>
                 EXPOSURE RISK ALERT · {branchCode} BRANCH · {exposureInfo.currency}
               </div>
               <div style={{ fontFamily: S.fontUI, fontSize: "0.875rem", fontWeight: 600, color: S.primary, marginBottom: 8 }}>
@@ -726,7 +726,7 @@ export default function Polisophic() {
               <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" as const }}>
                 <ScoreBar score={relevantScore.score} />
                 <RegimeChip regime={relevantScore.regime} />
-                <span style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.secondary, flex: 1 }}>
+                <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, flex: 1 }}>
                   {relevantScore.dimension}: {relevantScore.driver}
                 </span>
               </div>
@@ -734,7 +734,7 @@ export default function Polisophic() {
 
             {/* Hedge implication */}
             <div style={{ padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.rim}`, marginBottom: 20 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
                 HEDGE IMPLICATION FOR {exposureInfo.currency} EXPOSURE
               </div>
               <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary, lineHeight: 1.6 }}>
@@ -757,12 +757,12 @@ export default function Polisophic() {
               return (
                 <div key={ev.id} style={{ padding: "12px 0", borderBottom: i < arr.length - 1 ? `1px solid ${S.soft}` : "none" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, flexWrap: "wrap" as const }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary }}>{ev.ts}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 4px", border: `1px solid ${S.cyan}`, color: S.cyan }}>{ev.category}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{ev.ts}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 4px", border: `1px solid ${S.cyan}`, color: S.cyan }}>{ev.category}</span>
                     {ev.alertTriggered && (
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 5px", border: `1px solid ${S.fail}`, color: S.fail }}>ALERT</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 5px", border: `1px solid ${S.fail}`, color: S.fail }}>ALERT</span>
                     )}
-                    <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.5rem", color: sev, fontWeight: 600 }}>SEV {ev.severity}</span>
+                    <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: sev, fontWeight: 600 }}>SEV {ev.severity}</span>
                   </div>
                   <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.primary, lineHeight: 1.45 }}>{ev.headline}</div>
                 </div>
@@ -772,7 +772,7 @@ export default function Polisophic() {
             {/* Back link */}
             <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>
               <a href="/dashboard" style={{
-                fontFamily: S.fontMono, fontSize: "0.5rem", letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
                 padding: "4px 10px", border: `1px solid ${S.rim}`, color: S.tertiary,
                 textDecoration: "none",
               }}>
@@ -787,7 +787,7 @@ export default function Polisophic() {
       <footer style={{
         height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px",
         borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
-        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
         <span>HedgeCore · Polisophic</span>

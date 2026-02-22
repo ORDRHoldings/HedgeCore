@@ -101,7 +101,7 @@ export default function WidgetCatalog({
             </div>
             <div style={{
               fontFamily: S.fontMono,
-              fontSize: "0.4375rem",
+              fontSize: "0.6875rem",
               color: S.tertiary,
               letterSpacing: "0.06em",
               marginTop: 2,
@@ -132,7 +132,7 @@ export default function WidgetCatalog({
           {available.length === 0 && (
             <div style={{
               fontFamily: S.fontMono,
-              fontSize: "0.5625rem",
+              fontSize: "0.75rem",
               color: S.tertiary,
               padding: "24px 0",
               textAlign: "center",
@@ -170,7 +170,7 @@ export default function WidgetCatalog({
                     {widget.requiredPermission && (
                       <div style={{
                         fontFamily: S.fontMono,
-                        fontSize: "0.4375rem",
+                        fontSize: "0.6875rem",
                         color: S.tertiary,
                         letterSpacing: "0.05em",
                         marginTop: 2,
@@ -186,7 +186,7 @@ export default function WidgetCatalog({
                       alignItems: "center",
                       gap: 4,
                       fontFamily: S.fontMono,
-                      fontSize: "0.4375rem",
+                      fontSize: "0.6875rem",
                       color: S.cyan,
                       border: `1px solid ${S.cyan}`,
                       padding: "2px 7px",
@@ -203,7 +203,7 @@ export default function WidgetCatalog({
                         alignItems: "center",
                         gap: 4,
                         fontFamily: S.fontMono,
-                        fontSize: "0.4375rem",
+                        fontSize: "0.6875rem",
                         color: S.cyan,
                         background: "transparent",
                         border: `1px solid ${S.cyan}`,
@@ -221,7 +221,7 @@ export default function WidgetCatalog({
 
                 <div style={{
                   fontFamily: S.fontUI,
-                  fontSize: "0.5625rem",
+                  fontSize: "0.75rem",
                   color: S.secondary,
                   lineHeight: 1.5,
                 }}>
@@ -232,7 +232,7 @@ export default function WidgetCatalog({
                   display: "flex",
                   gap: 8,
                   fontFamily: S.fontMono,
-                  fontSize: "0.375rem",
+                  fontSize: "0.625rem",
                   color: S.tertiary,
                   letterSpacing: "0.04em",
                 }}>
@@ -257,7 +257,7 @@ export default function WidgetCatalog({
               width: "100%",
               padding: "9px 16px",
               fontFamily: S.fontMono,
-              fontSize: "0.5625rem",
+              fontSize: "0.75rem",
               letterSpacing: "0.06em",
               color: S.secondary,
               background: "transparent",
@@ -271,7 +271,7 @@ export default function WidgetCatalog({
           <div style={{
             marginTop: 8,
             fontFamily: S.fontMono,
-            fontSize: "0.375rem",
+            fontSize: "0.625rem",
             color: S.tertiary,
             textAlign: "center",
             letterSpacing: "0.04em",

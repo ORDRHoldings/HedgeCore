@@ -26,7 +26,7 @@ export default function AuthorizationTab({
   return (
     <div className="space-y-3">
       {/* Threshold indicator */}
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center justify-between text-sm">
         <span className="text-[var(--text-secondary)]">Approval Progress</span>
         <span className="font-mono text-[var(--text-primary)]">
           {currentApprovals}/{requiredApprovals}
@@ -46,14 +46,14 @@ export default function AuthorizationTab({
 
       {/* Comment */}
       <div>
-        <label className="block text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+        <label className="block text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
           Comment
         </label>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder="Optional comment…"
-          className="w-full h-20 px-2 py-1.5 text-xs bg-[var(--bg-sub)] border border-[var(--border-rim)] rounded text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] resize-none"
+          className="w-full h-20 px-2 py-1.5 text-sm bg-[var(--bg-sub)] border border-[var(--border-rim)] rounded text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] resize-none"
         />
       </div>
 
@@ -62,21 +62,21 @@ export default function AuthorizationTab({
         <button
           onClick={() => handleAction("APPROVE")}
           disabled={loading}
-          className="flex-1 px-3 py-1.5 text-xs font-medium bg-[var(--accent-green)]/20 text-[var(--accent-green)] border border-[var(--accent-green)]/30 rounded hover:bg-[var(--accent-green)]/30 disabled:opacity-50 transition-colors"
+          className="flex-1 px-3 py-1.5 text-sm font-medium bg-[var(--accent-green)]/20 text-[var(--accent-green)] border border-[var(--accent-green)]/30 rounded hover:bg-[var(--accent-green)]/30 disabled:opacity-50 transition-colors"
         >
           Approve
         </button>
         <button
           onClick={() => handleAction("RETURN")}
           disabled={loading}
-          className="flex-1 px-3 py-1.5 text-xs font-medium bg-[var(--bg-sub)] text-[var(--text-secondary)] border border-[var(--border-rim)] rounded hover:bg-[var(--bg-sub)]/80 disabled:opacity-50 transition-colors"
+          className="flex-1 px-3 py-1.5 text-sm font-medium bg-[var(--bg-sub)] text-[var(--text-secondary)] border border-[var(--border-rim)] rounded hover:bg-[var(--bg-sub)]/80 disabled:opacity-50 transition-colors"
         >
           Return
         </button>
         <button
           onClick={() => handleAction("REJECT")}
           disabled={loading}
-          className="flex-1 px-3 py-1.5 text-xs font-medium bg-[var(--accent-red)]/20 text-[var(--accent-red)] border border-[var(--accent-red)]/30 rounded hover:bg-[var(--accent-red)]/30 disabled:opacity-50 transition-colors"
+          className="flex-1 px-3 py-1.5 text-sm font-medium bg-[var(--accent-red)]/20 text-[var(--accent-red)] border border-[var(--accent-red)]/30 rounded hover:bg-[var(--accent-red)]/30 disabled:opacity-50 transition-colors"
         >
           Reject
         </button>

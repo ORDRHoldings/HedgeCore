@@ -379,8 +379,8 @@ export default function InputPage() {
     return [
       { label: 'Exposure data',      met: trades.length > 0,           message: trades.length === 0 ? 'No positions loaded' : undefined },
       { label: 'Market snapshot',    met: true,                        message: market.spot_usdmxn > 0 ? undefined : 'Auto-fetched on generate' },
-      { label: 'No critical errors', met: nonMarketErrors.length === 0,
-        message: nonMarketErrors.length > 0 ? `${nonMarketErrors.length} critical` : undefined },
+      { label: 'No blocking errors', met: nonMarketErrors.length === 0,
+        message: nonMarketErrors.length > 0 ? `${nonMarketErrors.length} blocking exception${nonMarketErrors.length !== 1 ? 's' : ''}` : undefined },
     ];
   }, [trades.length, market.spot_usdmxn, validation.errors]);
 
@@ -836,6 +836,7 @@ export default function InputPage() {
           <BackendErrorBanner
             headerMessage={backendErrorMsg}
             errors={backendErrors}
+            autoResolvedCodes={AUTO_RESOLVED_CODES}
             onDismiss={() => { setBackendErrorMsg(''); setBackendErrors([]); }}
             onResolve={handleResolveError}
           />

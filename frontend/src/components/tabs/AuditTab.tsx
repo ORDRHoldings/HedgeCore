@@ -86,7 +86,7 @@ export default function AuditTab({ runEnvelope, traceLite }: Props) {
     <div className="space-y-5">
       {/* Attestation badge */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-2 bg-[var(--accent-green)]/8 text-[var(--accent-green)] border border-[var(--accent-green)]/30 rounded px-3 py-1.5 text-xs font-medium">
+        <span className="inline-flex items-center gap-2 bg-[var(--accent-green)]/8 text-[var(--accent-green)] border border-[var(--accent-green)]/30 rounded px-3 py-1.5 text-sm font-medium">
           <span className="w-2 h-2 rounded-full bg-[var(--accent-green)] animate-pulse" />
           Deterministic · Snapshot-Bound · Fully Reproducible
         </span>
@@ -148,7 +148,7 @@ export default function AuditTab({ runEnvelope, traceLite }: Props) {
         <div className="px-5 pb-5">
           <div className="bg-[var(--bg-deep)] border border-[var(--border-soft)] rounded p-4">
             <div className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Audit Proof Properties</div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
               {[
                 { label: "Determinism", value: "Guaranteed", color: "var(--accent-green)" },
                 { label: "Snapshot Binding", value: "market_hash locked", color: "var(--accent-cyan)" },
@@ -159,7 +159,7 @@ export default function AuditTab({ runEnvelope, traceLite }: Props) {
               ].map(p => (
                 <div key={p.label}>
                   <div className="text-[10px] text-[var(--text-tertiary)]">{p.label}</div>
-                  <div className="font-mono font-semibold text-xs mt-0.5" style={{ color: p.color }}>{p.value}</div>
+                  <div className="font-mono font-semibold text-sm mt-0.5" style={{ color: p.color }}>{p.value}</div>
                 </div>
               ))}
             </div>
@@ -182,7 +182,7 @@ export default function AuditTab({ runEnvelope, traceLite }: Props) {
               {traceLite.events.length} events · {stageGroups.length} stages
             </span>
           </div>
-          <span className={`text-[var(--text-tertiary)] text-xs transition-transform duration-200 ${traceOpen ? "rotate-90" : ""}`}>▶</span>
+          <span className={`text-[var(--text-tertiary)] text-sm transition-transform duration-200 ${traceOpen ? "rotate-90" : ""}`}>▶</span>
         </button>
 
         {traceOpen && (
@@ -200,7 +200,7 @@ export default function AuditTab({ runEnvelope, traceLite }: Props) {
                       <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider ${sty.bg} ${sty.text}`}>
                         {stage}
                       </span>
-                      <span className="text-xs text-[var(--text-secondary)]">
+                      <span className="text-sm text-[var(--text-secondary)]">
                         {events.length} event{events.length !== 1 ? "s" : ""}
                       </span>
                     </div>
@@ -209,7 +209,7 @@ export default function AuditTab({ runEnvelope, traceLite }: Props) {
                   {isExpanded && (
                     <div className="divide-y divide-[var(--border-soft)]">
                       {events.map((e, i) => (
-                        <div key={i} className="px-4 py-2.5 flex items-start gap-3 text-xs">
+                        <div key={i} className="px-4 py-2.5 flex items-start gap-3 text-sm">
                           <span className="font-mono text-[10px] text-[var(--text-tertiary)] shrink-0 w-44 break-all mt-0.5">{e.timestamp}</span>
                           <span className="text-[var(--text-secondary)] leading-relaxed">{e.detail}</span>
                         </div>
@@ -238,18 +238,18 @@ export default function AuditTab({ runEnvelope, traceLite }: Props) {
               How to replay this run
             </span>
           </div>
-          <span className={`text-[var(--text-tertiary)] text-xs transition-transform duration-200 ${reproOpen ? "rotate-90" : ""}`}>▶</span>
+          <span className={`text-[var(--text-tertiary)] text-sm transition-transform duration-200 ${reproOpen ? "rotate-90" : ""}`}>▶</span>
         </button>
 
         {reproOpen && (
           <div className="p-5">
-            <p className="text-xs text-[var(--text-secondary)] mb-4 leading-relaxed">
+            <p className="text-sm text-[var(--text-secondary)] mb-4 leading-relaxed">
               The following steps describe how to reproduce this exact run. Output hash must match{" "}
               <span className="font-mono text-[var(--accent-cyan)]">{runEnvelope.outputs_hash.slice(0, 16)}…</span> to confirm determinism.
             </p>
             <div className="space-y-2">
               {reproSteps.map((step, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 bg-[var(--bg-deep)] border border-[var(--border-soft)] rounded text-xs">
+                <div key={i} className="flex items-start gap-3 p-3 bg-[var(--bg-deep)] border border-[var(--border-soft)] rounded text-sm">
                   <span className="font-mono text-[var(--accent-cyan)] shrink-0 font-bold w-4">{i + 1}.</span>
                   <span className="text-[var(--text-secondary)] leading-relaxed font-mono">{step.replace(/^\d+\.\s*/, "")}</span>
                 </div>

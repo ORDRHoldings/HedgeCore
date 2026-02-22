@@ -2,7 +2,7 @@
 
 export default function PolicyLockTab() {
   return (
-    <div className="text-xs text-[var(--text-secondary)]">
+    <div className="text-sm text-[var(--text-secondary)]">
       <p>Policy hash locked at submission time.</p>
       <p className="mt-2 text-[var(--text-tertiary)]">
         If policy changes after submission, the staged artifact becomes
@@ -10,7 +10,7 @@ export default function PolicyLockTab() {
         current policy.
       </p>
       <div className="mt-3 p-2 bg-[var(--bg-sub)] rounded">
-        <span className="text-[0.625rem] uppercase font-medium text-[var(--text-tertiary)]">
+        <span className="text-[0.75rem] uppercase font-medium text-[var(--text-tertiary)]">
           Policy Enforcement
         </span>
         <ul className="mt-1 space-y-0.5 text-[var(--text-secondary)]">

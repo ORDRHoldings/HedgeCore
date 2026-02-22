@@ -261,7 +261,7 @@ function StatusChip({ status }: { status: Entry["status"] }) {
   const { c, b } = map[status];
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.06em",
+      fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
       padding: "1px 5px", border: `1px solid ${b}`, color: c,
     }}>{status}</span>
   );
@@ -296,7 +296,7 @@ export default function HedgeWiki() {
         padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
       }}>
         <button onClick={() => router.push("/")} style={{
-          fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
           background: "transparent", border: `1px solid ${S.rim}`,
           padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
         }}>← Home</button>
@@ -310,16 +310,16 @@ export default function HedgeWiki() {
           <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary, lineHeight: 1.1 }}>
             HedgeWiki
           </div>
-          <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.07em", color: S.tertiary }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.07em", color: S.tertiary }}>
             GOVERNANCE KNOWLEDGE GRAPH · HEDGECORE LAYER
           </div>
         </div>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 6px", border: `1px solid ${S.rim}`, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.rim}`, color: S.tertiary }}>
             {Object.keys(ENTRIES).length} ARTICLES · {CATEGORIES.length} DOMAINS
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{RENDER_TS}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RENDER_TS}</span>
         </div>
       </header>
 
@@ -331,7 +331,7 @@ export default function HedgeWiki() {
           borderRight: `1px solid ${S.rim}`, background: S.bgSub,
           display: "flex", flexDirection: "column", overflow: "auto",
         }}>
-          <div style={{ padding: "14px 14px 8px", fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.07em" }}>
+          <div style={{ padding: "14px 14px 8px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.07em" }}>
             KNOWLEDGE DOMAINS
           </div>
           {CATEGORIES.map(cat => {
@@ -351,7 +351,7 @@ export default function HedgeWiki() {
                   cursor: "pointer", textAlign: "left" as const, width: "100%",
                 }}
               >
-                <span style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", color: isActive ? S.primary : S.secondary, fontWeight: isActive ? 600 : 400, lineHeight: 1.3 }}>
+                <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: isActive ? S.primary : S.secondary, fontWeight: isActive ? 600 : 400, lineHeight: 1.3 }}>
                   {cat.label}
                 </span>
                 <span style={{ fontFamily: S.fontMono, fontSize: "0.4rem", color: S.tertiary }}>{cat.count} entries</span>
@@ -360,7 +360,7 @@ export default function HedgeWiki() {
           })}
 
           <div style={{ marginTop: "auto", padding: "14px", borderTop: `1px solid ${S.rim}` }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em", marginBottom: 6 }}>GRAPH STATS</div>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em", marginBottom: 6 }}>GRAPH STATS</div>
             {[
               { l: "Entries", v: Object.keys(ENTRIES).length },
               { l: "Citations", v: Object.values(ENTRIES).reduce((s, e) => s + e.citations.length, 0) },
@@ -368,8 +368,8 @@ export default function HedgeWiki() {
               { l: "HC fields",  v: Object.values(ENTRIES).filter(e => e.hedgecoreField).length },
             ].map(({ l, v }) => (
               <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
-                <span style={{ fontFamily: S.fontUI, fontSize: "0.5rem", color: S.tertiary }}>{l}</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.secondary }}>{v}</span>
+                <span style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary }}>{l}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>{v}</span>
               </div>
             ))}
           </div>
@@ -377,7 +377,7 @@ export default function HedgeWiki() {
 
         {/* PANE 2: Entry list */}
         <div style={{ borderRight: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", overflow: "auto" }}>
-          <div style={{ padding: "14px 14px 8px", fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em" }}>
+          <div style={{ padding: "14px 14px 8px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>
             {activeCategory} · {filteredEntries.length} ENTRIES
           </div>
           <div style={{ height: 1, background: S.rim }} />
@@ -412,7 +412,7 @@ export default function HedgeWiki() {
           {/* Title row */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 6 }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 3 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 3 }}>
                 {entry.category}
               </div>
               <h1 style={{ fontFamily: S.fontUI, fontSize: "1rem", fontWeight: 700, color: S.primary, margin: 0, lineHeight: 1.25 }}>
@@ -421,7 +421,7 @@ export default function HedgeWiki() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
               <StatusChip status={entry.status} />
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary }}>{entry.version} · {entry.updated}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{entry.version} · {entry.updated}</span>
             </div>
           </div>
 
@@ -429,7 +429,7 @@ export default function HedgeWiki() {
 
           {/* Abstract */}
           <section style={{ marginBottom: 20 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>ABSTRACT</div>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>ABSTRACT</div>
             <p style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", lineHeight: 1.72, color: S.secondary, margin: 0 }}>
               {entry.abstract}
             </p>
@@ -437,7 +437,7 @@ export default function HedgeWiki() {
 
           {/* Citations */}
           <section style={{ marginBottom: 20 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
               AUTHORITATIVE CITATIONS ({entry.citations.length})
             </div>
             <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 4 }}>
@@ -448,13 +448,13 @@ export default function HedgeWiki() {
           {/* HedgeCore linkage */}
           {entry.hedgecoreField && (
             <section style={{ marginBottom: 20 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
                 HEDGECORE FIELD LINKAGE
               </div>
               <div style={{
                 padding: "8px 12px", background: S.bgSub, border: `1px solid ${S.rim}`,
                 borderLeft: `3px solid ${S.cyan}`,
-                fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.cyan, letterSpacing: "0.03em",
+                fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, letterSpacing: "0.03em",
               }}>
                 {entry.hedgecoreField}
               </div>
@@ -464,13 +464,13 @@ export default function HedgeWiki() {
           {/* Audit note */}
           {entry.auditNote && (
             <section style={{ marginBottom: 20 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
                 AUDIT NOTE
               </div>
               <div style={{
                 padding: "8px 12px", background: `color-mix(in srgb, var(--accent-amber) 5%, transparent)`,
                 border: `1px solid ${S.amber}`,
-                fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.secondary, lineHeight: 1.6,
+                fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.6,
               }}>
                 ⚑ {entry.auditNote}
               </div>
@@ -480,7 +480,7 @@ export default function HedgeWiki() {
           {/* Linked entries */}
           {entry.linkedIds.length > 0 && (
             <section>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
                 KNOWLEDGE GRAPH LINKS ({entry.linkedIds.length})
               </div>
               <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
@@ -501,7 +501,7 @@ export default function HedgeWiki() {
                         textAlign: "left" as const,
                       }}
                     >
-                      <span style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", fontWeight: 500, color: S.secondary }}>{linked.title}</span>
+                      <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 500, color: S.secondary }}>{linked.title}</span>
                       <span style={{ fontFamily: S.fontMono, fontSize: "0.4rem", color: S.tertiary, letterSpacing: "0.04em" }}>{linked.category} · {linked.version}</span>
                     </button>
                   );
@@ -516,7 +516,7 @@ export default function HedgeWiki() {
       <footer style={{
         height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px",
         borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
-        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
         <span>HedgeCore · HedgeWiki</span>

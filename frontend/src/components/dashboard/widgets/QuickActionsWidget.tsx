@@ -170,7 +170,7 @@ export default function QuickActionsWidget({ token, user, onRemove }: Props) {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: "0.5625rem",
+                      fontSize: "0.75rem",
                       color: S.tertiary,
                     }}
                   >

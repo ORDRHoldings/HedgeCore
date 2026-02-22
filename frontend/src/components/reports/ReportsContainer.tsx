@@ -79,7 +79,7 @@ function ReportSection({
           <span className="text-[10px] font-mono text-[var(--text-tertiary)] tracking-widest">{number}</span>
           <span className="text-sm font-semibold text-[var(--text-primary)]" style={{ fontFamily: "var(--font-heading)" }}>{title}</span>
         </div>
-        <span className={`text-[var(--text-tertiary)] text-xs transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}>▶</span>
+        <span className={`text-[var(--text-tertiary)] text-sm transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}>▶</span>
       </button>
 
       {expanded && (
@@ -88,13 +88,13 @@ function ReportSection({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-[var(--border-soft)]">
             <div className="border-l-2 border-[var(--accent-cyan)] pl-4">
               <div className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">What This Means</div>
-              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{meaning}</p>
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{meaning}</p>
             </div>
             <div>
               <div className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Decision Guidance</div>
               <ul className="space-y-1.5">
                 {guidance.map((g, i) => (
-                  <li key={i} className="text-xs text-[var(--text-secondary)] flex items-start gap-2">
+                  <li key={i} className="text-sm text-[var(--text-secondary)] flex items-start gap-2">
                     <span className="text-[var(--accent-cyan)] mt-0.5 shrink-0">›</span>{g}
                   </li>
                 ))}
@@ -160,7 +160,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
           <button
             key={r.key}
             onClick={() => setActiveReport(r.key)}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium border transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border transition-colors ${
               activeReport === r.key
                 ? "border-[var(--accent-cyan)] text-[var(--accent-cyan)] bg-[var(--accent-cyan)]/5"
                 : "border-[var(--border-rim)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)]"
@@ -405,7 +405,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
                 { label: "Rules Passed",   value: `${compliance.checks.filter(c => c.pass).length} / ${compliance.checks.length}` },
                 { label: "Rules Failed",   value: `${compliance.checks.filter(c => !c.pass).length}` },
               ].map(item => (
-                <div key={item.label} className="flex justify-between text-xs border-b border-[var(--border-soft)] pb-1">
+                <div key={item.label} className="flex justify-between text-sm border-b border-[var(--border-soft)] pb-1">
                   <span className="text-[var(--text-tertiary)]">{item.label}</span>
                   <span className="font-mono font-semibold text-[var(--text-primary)]">{item.value}</span>
                 </div>
@@ -419,7 +419,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
               <div key={i} className={`flex items-start gap-3 p-3 rounded border text-sm ${check.pass ? "border-[var(--accent-green)]/20 bg-[var(--accent-green)]/3" : "border-[var(--accent-red)]/20 bg-[var(--accent-red)]/3"}`}>
                 <span className={`shrink-0 font-bold text-base mt-0.5 ${check.pass ? "text-[var(--accent-green)]" : "text-[var(--accent-red)]"}`}>{check.pass ? "✓" : "✗"}</span>
                 <div>
-                  <div className="font-semibold text-[var(--text-primary)] text-xs">{check.label}</div>
+                  <div className="font-semibold text-[var(--text-primary)] text-sm">{check.label}</div>
                   <div className="text-[11px] text-[var(--text-secondary)] mt-0.5">{check.detail}</div>
                 </div>
               </div>
@@ -430,21 +430,21 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
             <div className="space-y-2">
               <div className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider">Breach Explanations</div>
               {validation_report.errors.map((err, i) => (
-                <div key={`e-${i}`} className="p-3 border border-[var(--accent-red)]/30 bg-[var(--accent-red)]/4 rounded text-xs">
+                <div key={`e-${i}`} className="p-3 border border-[var(--accent-red)]/30 bg-[var(--accent-red)]/4 rounded text-sm">
                   <span className="font-mono text-[var(--accent-red)] font-bold">[{err.code}]</span>{" "}
                   <span className="text-[var(--text-primary)]">{err.field}:</span>{" "}
                   <span className="text-[var(--text-secondary)]">{err.message}</span>
                 </div>
               ))}
               {validation_report.warnings.map((w, i) => (
-                <div key={`w-${i}`} className="p-3 border border-[var(--accent-amber)]/30 bg-[var(--accent-amber)]/4 rounded text-xs text-[var(--text-secondary)]">{w}</div>
+                <div key={`w-${i}`} className="p-3 border border-[var(--accent-amber)]/30 bg-[var(--accent-amber)]/4 rounded text-sm text-[var(--text-secondary)]">{w}</div>
               ))}
             </div>
           )}
 
           <div className="bg-[var(--bg-deep)] border border-[var(--border-soft)] rounded p-4">
             <div className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Policy Parameters Reference</div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
               {[
                 { label: "Bucket Mode",     value: FALLBACK_POLICY.bucket_mode },
                 { label: "Confirmed Ratio", value: fmtPct(FALLBACK_POLICY.hedge_ratios.confirmed) },
@@ -574,14 +574,14 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
                   <h3 className="text-lg font-bold text-[var(--text-primary)]" style={{ fontFamily: "var(--font-heading)" }}>
                     Committee Governance Snapshot
                   </h3>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">
+                  <p className="text-sm text-[var(--text-secondary)] mt-1">
                     Auto-generated briefing for board / treasury committee distribution. One-click PDF export below.
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button
                     onClick={async () => { try { await exportExecutiveBriefPdf(result, baseCcy); } catch (e) { console.error(e); } }}
-                    className="flex items-center gap-2 px-4 py-2 text-xs font-mono border border-[var(--border-rim)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)] transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-mono border border-[var(--border-rim)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)] transition-colors"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
                     Generate PDF Brief ↓
@@ -626,14 +626,14 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
                 {narrative.length > 0 ? (
                   <ol className="space-y-3">
                     {narrative.map((line: string, i: number) => (
-                      <li key={i} className="flex items-start gap-3 text-xs">
+                      <li key={i} className="flex items-start gap-3 text-sm">
                         <span className="text-[var(--accent-cyan)] font-mono shrink-0 mt-0.5">{i + 1}.</span>
                         <span className="text-[var(--text-secondary)] leading-relaxed">{line}</span>
                       </li>
                     ))}
                   </ol>
                 ) : (
-                  <p className="text-xs text-[var(--text-tertiary)]">
+                  <p className="text-sm text-[var(--text-tertiary)]">
                     Narrative generation requires additional reportCalcs inputs. Run a full calculation to enable.
                   </p>
                 )}
@@ -652,7 +652,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
                     {compliance.score}%
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-[var(--text-primary)]">{compliance.classification}</div>
+                    <div className="text-sm font-semibold text-[var(--text-primary)]">{compliance.classification}</div>
                     <div className="text-[10px] text-[var(--text-tertiary)] mt-0.5">{compliance.checks.filter(c => c.pass).length}/{compliance.checks.length} rules passed</div>
                     <div className="text-[10px] text-[var(--text-tertiary)]">Validation: {result.validation_report.status}</div>
                   </div>

@@ -340,7 +340,7 @@ export default function NotificationsContainer({ result }: NotificationsContaine
           </div>
           <button
             onClick={() => setFilterCategory("ALL")}
-            className={`w-full text-left flex items-center justify-between px-3 py-2 rounded text-xs transition-colors border ${
+            className={`w-full text-left flex items-center justify-between px-3 py-2 rounded text-sm transition-colors border ${
               filterCategory === "ALL"
                 ? "bg-[var(--accent-cyan)]/8 text-[var(--accent-cyan)] border-[var(--accent-cyan)]/20"
                 : "text-[var(--text-secondary)] hover:bg-[var(--bg-panel)] border-transparent"
@@ -353,7 +353,7 @@ export default function NotificationsContainer({ result }: NotificationsContaine
             <button
               key={cat}
               onClick={() => setFilterCategory(cat)}
-              className={`w-full text-left flex items-center justify-between px-3 py-2 rounded text-xs transition-colors border ${
+              className={`w-full text-left flex items-center justify-between px-3 py-2 rounded text-sm transition-colors border ${
                 filterCategory === cat
                   ? "bg-[var(--accent-cyan)]/8 text-[var(--accent-cyan)] border-[var(--accent-cyan)]/20"
                   : "text-[var(--text-secondary)] hover:bg-[var(--bg-panel)] border-transparent"
@@ -374,7 +374,7 @@ export default function NotificationsContainer({ result }: NotificationsContaine
             <button
               key={sev}
               onClick={() => setFilterSeverity(sev)}
-              className={`w-full text-left px-3 py-1.5 rounded text-xs transition-colors border ${
+              className={`w-full text-left px-3 py-1.5 rounded text-sm transition-colors border ${
                 filterSeverity === sev
                   ? "bg-[var(--accent-cyan)]/8 text-[var(--accent-cyan)] border-[var(--accent-cyan)]/20"
                   : "text-[var(--text-secondary)] hover:bg-[var(--bg-panel)] border-transparent"
@@ -395,7 +395,7 @@ export default function NotificationsContainer({ result }: NotificationsContaine
                   ? "No alerts match the current filter"
                   : "No controls alerts for this run"}
               </p>
-              <p className="text-xs text-[var(--text-secondary)]">
+              <p className="text-sm text-[var(--text-secondary)]">
                 All policy checks passed. Execution is clear to proceed.
               </p>
             </div>
@@ -451,7 +451,7 @@ export default function NotificationsContainer({ result }: NotificationsContaine
                   </div>
 
                   {/* Body */}
-                  <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div className="md:col-span-2 space-y-2">
                       <div>
                         <div className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Reason</div>
@@ -491,7 +491,7 @@ export default function NotificationsContainer({ result }: NotificationsContaine
                 { label: "Acknowledged",   value: ackCount,   color: "var(--accent-green)" },
                 { label: "Escalated",      value: escalCount, color: "var(--accent-indigo)" },
               ].map(item => (
-                <div key={item.label} className="flex justify-between items-center text-xs">
+                <div key={item.label} className="flex justify-between items-center text-sm">
                   <span style={{ color: item.color }}>{item.label}</span>
                   <span className="font-mono font-bold" style={{ color: item.color }}>{item.value}</span>
                 </div>

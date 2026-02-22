@@ -98,7 +98,7 @@ const ExecutiveSummaryPanel: React.FC<ExecutiveSummaryPanelProps> = ({
           >
             <div
               style={{
-                fontSize: '11px',
+                fontSize: '13px',
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
                 color: 'var(--text-secondary)',
@@ -157,7 +157,7 @@ const ExecutiveSummaryPanel: React.FC<ExecutiveSummaryPanelProps> = ({
       >
         <div
           style={{
-            fontSize: '11px',
+            fontSize: '13px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
             color: 'var(--text-secondary)',

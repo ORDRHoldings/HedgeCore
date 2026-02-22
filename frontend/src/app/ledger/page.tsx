@@ -87,7 +87,7 @@ export default function LedgerListPage() {
         <h1 className="text-sm font-semibold text-[var(--text-primary)]">
           Immutable Ledger
         </h1>
-        <span className="text-[0.625rem] font-mono text-[var(--text-tertiary)] uppercase">
+        <span className="text-[0.75rem] font-mono text-[var(--text-tertiary)] uppercase">
           {ledgerEntries.length} entries
         </span>
       </div>

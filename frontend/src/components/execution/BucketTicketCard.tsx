@@ -62,7 +62,7 @@ export default function BucketTicketCard({ bucket, mapping, worstCase, runId, ba
             {/* Action badge */}
             {hasAction && (
               <span
-                className={`text-xs font-mono font-bold px-2 py-0.5 border rounded ${
+                className={`text-sm font-mono font-bold px-2 py-0.5 border rounded ${
                   side === 'BUY'
                     ? 'border-[var(--accent-green)]/40 text-[var(--accent-green)] bg-[var(--accent-green)]/5'
                     : side === 'SELL'
@@ -107,7 +107,7 @@ export default function BucketTicketCard({ bucket, mapping, worstCase, runId, ba
             {side} {contracts}{' '}
             {mapping.display_label} ({mapping.expiry_label})
           </p>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
             {getDirectionLabel(bucket.action_mxn, baseCcy)}
           </p>
         </div>
@@ -159,7 +159,7 @@ export default function BucketTicketCard({ bucket, mapping, worstCase, runId, ba
 
             <div className="flex justify-between">
               <span className="text-[var(--text-secondary)]">Carry</span>
-              <span className="text-xs text-[var(--text-secondary)]">{bucket.carry_note}</span>
+              <span className="text-sm text-[var(--text-secondary)]">{bucket.carry_note}</span>
             </div>
 
             {!isFutures && mapping.suggested_contracts != null && (
@@ -175,10 +175,10 @@ export default function BucketTicketCard({ bucket, mapping, worstCase, runId, ba
           {/* Futures contract breakdown */}
           {isFutures && hasAction && (
             <div className="mt-3 pt-3 border-t border-[var(--border-soft)]">
-              <p className="text-xs font-medium text-[var(--text-secondary)] mb-2">
+              <p className="text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Contract Calculation
               </p>
-              <div className="space-y-1 text-xs font-mono">
+              <div className="space-y-1 text-sm font-mono">
                 {mapping.contract_size_mxn != null && (
                   <div className="text-[var(--text-secondary)]">
                     {fmtNotional(bucket.action_mxn, baseCcy)} ÷{' '}

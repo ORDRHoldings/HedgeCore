@@ -55,7 +55,7 @@ const PolicyCompliancePanel: React.FC<PolicyCompliancePanelProps> = ({
             {classification.label}
           </span>
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
           {passCount} of {totalCount} checks passed
         </div>
       </div>
@@ -74,7 +74,7 @@ const PolicyCompliancePanel: React.FC<PolicyCompliancePanelProps> = ({
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {check.label}
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '0.125rem' }}>
                 {check.detail}
               </div>
             </div>
@@ -86,12 +86,12 @@ const PolicyCompliancePanel: React.FC<PolicyCompliancePanelProps> = ({
       {(validationReport.errors.length > 0 || validationReport.warnings.length > 0) && (
         <div style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: '0.5rem', padding: '0.75rem', marginBottom: '1.5rem' }}>
           {validationReport.errors.map((err, i) => (
-            <div key={'e-' + i} style={{ fontSize: '11px', color: 'var(--accent-red)', marginBottom: '0.25rem' }}>
+            <div key={'e-' + i} style={{ fontSize: '13px', color: 'var(--accent-red)', marginBottom: '0.25rem' }}>
               ERROR: {err.message ?? String(err)}
             </div>
           ))}
           {validationReport.warnings.map((warn, i) => (
-            <div key={'w-' + i} style={{ fontSize: '11px', color: 'var(--accent-amber)', marginBottom: '0.25rem' }}>
+            <div key={'w-' + i} style={{ fontSize: '13px', color: 'var(--accent-amber)', marginBottom: '0.25rem' }}>
               WARN: {warn}
             </div>
           ))}
@@ -100,10 +100,10 @@ const PolicyCompliancePanel: React.FC<PolicyCompliancePanelProps> = ({
 
       {/* Policy Parameters Reference */}
       <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '1rem', marginTop: '0.5rem' }}>
-        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+        <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
           Policy Parameters Reference
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', fontSize: '11px', color: 'var(--text-secondary)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', fontSize: '13px', color: 'var(--text-secondary)' }}>
           <div>
             Bucket Mode: <strong style={{ color: 'var(--text-primary)' }}>{policy.bucket_mode}</strong>
           </div>

@@ -34,7 +34,7 @@ export default function KpiTile({
         className,
       ].join(" ")}
     >
-      <span className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase tracking-wider leading-none">
+      <span className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase tracking-wider leading-none">
         {label}
       </span>
       <div className="flex items-baseline gap-1.5">
@@ -42,11 +42,11 @@ export default function KpiTile({
           {value}
         </span>
         {unit && (
-          <span className="text-[0.625rem] text-[var(--text-tertiary)]">{unit}</span>
+          <span className="text-[0.75rem] text-[var(--text-tertiary)]">{unit}</span>
         )}
       </div>
       {(previousValue !== undefined || delta) && (
-        <div className="flex items-center gap-1.5 text-[0.625rem] leading-none">
+        <div className="flex items-center gap-1.5 text-[0.75rem] leading-none">
           {previousValue !== undefined && (
             <span className="text-[var(--text-tertiary)] line-through tabular-nums">
               {previousValue}

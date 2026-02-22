@@ -117,7 +117,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
             cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: S.fontMono,
-            fontSize: '0.5rem',
+            fontSize: '0.6875rem',
             color: S.textTertiary,
             flexShrink: 0,
           }}
@@ -151,7 +151,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
               background: S.bgSub,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.08em' }}>CSV IMPORT FORMAT</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em' }}>CSV IMPORT FORMAT</span>
                 <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: S.textPrimary }}>
                   {schemaLabel} — Column Reference
                 </span>
@@ -172,7 +172,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
                 padding: '10px 14px',
                 marginBottom: 16,
               }}>
-                <p style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.cyan, letterSpacing: '0.06em', marginBottom: 6 }}>IMPORT TIPS</p>
+                <p style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.cyan, letterSpacing: '0.06em', marginBottom: 6 }}>IMPORT TIPS</p>
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {[
                     'First row must be the header row — column names are case-sensitive',
@@ -191,7 +191,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
               </div>
 
               {/* Schema table */}
-              <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 8 }}>COLUMN SCHEMA</p>
+              <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 8 }}>COLUMN SCHEMA</p>
               <div style={{ border: `1px solid ${S.border}`, overflow: 'hidden' }}>
                 {/* Table header */}
                 <div style={{
@@ -201,7 +201,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
                   padding: '6px 10px',
                 }}>
                   {['COLUMN', 'REQ.', 'TYPE', 'EXAMPLE', 'NOTES'].map(h => (
-                    <span key={h} style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.08em' }}>{h}</span>
+                    <span key={h} style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em' }}>{h}</span>
                   ))}
                 </div>
                 {/* Rows */}
@@ -227,7 +227,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
               </div>
 
               {/* CSV example */}
-              <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.08em', marginTop: 16, marginBottom: 8 }}>EXAMPLE CSV</p>
+              <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginTop: 16, marginBottom: 8 }}>EXAMPLE CSV</p>
               <div style={{
                 background: S.bgSub,
                 border: `1px solid ${S.border}`,
@@ -249,7 +249,7 @@ export default function CsvUploader({ label, onFile, schemaType = 'trades' }: Pr
                 padding: '10px 14px',
                 marginTop: 14,
               }}>
-                <p style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.amber, letterSpacing: '0.06em', marginBottom: 6 }}>VALIDATION RULES</p>
+                <p style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.06em', marginBottom: 6 }}>VALIDATION RULES</p>
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {(schemaType === 'trades' ? [
                     'record_id must be unique within the import file and across existing records',

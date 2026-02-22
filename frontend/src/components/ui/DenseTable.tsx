@@ -61,7 +61,7 @@ export default function DenseTable<T>({
   }, [data, sortKey, sortDir, columns]);
 
   const cellPad = compact ? "px-2 py-1" : "px-3 py-1.5";
-  const textSize = compact ? "text-[0.625rem]" : "text-[0.6875rem]";
+  const textSize = compact ? "text-[0.75rem]" : "text-[0.8125rem]";
 
   if (data.length === 0) {
     return (

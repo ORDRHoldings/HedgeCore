@@ -15,7 +15,7 @@ export default function AnchorTab({ ledger }: AnchorTabProps) {
         computation.
       </p>
       <div className="p-2 bg-[var(--bg-sub)] rounded">
-        <span className="text-[0.625rem] uppercase font-medium text-[var(--text-tertiary)]">
+        <span className="text-[0.75rem] uppercase font-medium text-[var(--text-tertiary)]">
           Entry Root Hash
         </span>
         <p className="font-mono text-[var(--text-primary)] break-all mt-1">
@@ -23,7 +23,7 @@ export default function AnchorTab({ ledger }: AnchorTabProps) {
         </p>
       </div>
       <div className="p-2 bg-[var(--bg-sub)] rounded">
-        <span className="text-[0.625rem] uppercase font-medium text-[var(--text-tertiary)]">
+        <span className="text-[0.75rem] uppercase font-medium text-[var(--text-tertiary)]">
           Replay Status
         </span>
         <p className="mt-1">
@@ -39,7 +39,7 @@ export default function AnchorTab({ ledger }: AnchorTabProps) {
         </p>
       </div>
       <div className="p-2 bg-[var(--bg-sub)] rounded">
-        <span className="text-[0.625rem] uppercase font-medium text-[var(--text-tertiary)]">
+        <span className="text-[0.75rem] uppercase font-medium text-[var(--text-tertiary)]">
           Audit Readiness
         </span>
         <p className="mt-1 text-[var(--text-tertiary)]">

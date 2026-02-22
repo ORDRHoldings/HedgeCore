@@ -111,7 +111,7 @@ function StatusBar() {
         gap: 16,
         padding: "0 24px",
         fontFamily: T.fontMono,
-        fontSize: "0.5625rem",
+        fontSize: "0.75rem",
         color: T.textTertiary,
         letterSpacing: "0.05em",
         zIndex: 10,
@@ -293,7 +293,7 @@ export default function LoginPage() {
             <span
               style={{
                 fontFamily: T.fontMono,
-                fontSize: "0.5625rem",
+                fontSize: "0.75rem",
                 color: T.textTertiary,
                 letterSpacing: "0.04em",
               }}
@@ -313,7 +313,7 @@ export default function LoginPage() {
                 style={{
                   display: "block",
                   fontFamily: T.fontMono,
-                  fontSize: "0.5625rem",
+                  fontSize: "0.75rem",
                   fontWeight: 500,
                   color: T.textTertiary,
                   letterSpacing: "0.08em",
@@ -359,7 +359,7 @@ export default function LoginPage() {
                 style={{
                   display: "block",
                   fontFamily: T.fontMono,
-                  fontSize: "0.5625rem",
+                  fontSize: "0.75rem",
                   fontWeight: 500,
                   color: T.textTertiary,
                   letterSpacing: "0.08em",
@@ -480,7 +480,7 @@ export default function LoginPage() {
                 padding: "10px 24px",
                 borderTop: `1px solid ${T.border}`,
                 fontFamily: T.fontMono,
-                fontSize: "0.5625rem",
+                fontSize: "0.75rem",
                 color: T.textSecondary,
                 lineHeight: 1.7,
                 background: `rgba(59,130,246,0.04)`,
@@ -503,7 +503,7 @@ export default function LoginPage() {
                 alignItems: "center",
                 gap: 8,
                 fontFamily: T.fontMono,
-                fontSize: "0.5625rem",
+                fontSize: "0.75rem",
                 color: T.textTertiary,
               }}
             >
@@ -551,7 +551,7 @@ export default function LoginPage() {
             marginTop: 20,
             textAlign: "center",
             fontFamily: T.fontMono,
-            fontSize: "0.5rem",
+            fontSize: "0.6875rem",
             color: T.textTertiary,
             letterSpacing: "0.05em",
             lineHeight: 1.8,

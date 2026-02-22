@@ -162,12 +162,12 @@ export default function HelpPage() {
           <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary, lineHeight: 1.1 }}>
             Help &amp; Documentation
           </div>
-          <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.07em", color: S.tertiary }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.07em", color: S.tertiary }}>
             ORDR TERMINAL · PLATFORM GUIDE
           </div>
         </div>
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{RENDER_TS}</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RENDER_TS}</span>
       </header>
 
       {/* ── Body ── */}
@@ -175,7 +175,7 @@ export default function HelpPage() {
 
         {/* Left sidebar — section nav */}
         <aside style={{ borderRight: `1px solid ${S.rim}`, background: S.bgPanel, overflow: "auto", padding: "16px 0" }}>
-          <div style={{ padding: "0 16px 8px", fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          <div style={{ padding: "0 16px 8px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" }}>
             Platform Guide
           </div>
           {GUIDE_SECTIONS.map((sec, i) => (
@@ -196,7 +196,7 @@ export default function HelpPage() {
           ))}
 
           <div style={{ height: 1, background: S.rim, margin: "12px 0" }} />
-          <div style={{ padding: "0 16px 8px", fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          <div style={{ padding: "0 16px 8px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" }}>
             Quick Links
           </div>
           {[
@@ -213,7 +213,7 @@ export default function HelpPage() {
               onClick={() => router.push(lnk.path)}
               style={{
                 display: "block", width: "100%", textAlign: "left",
-                padding: "6px 16px", fontFamily: S.fontMono, fontSize: "0.5625rem",
+                padding: "6px 16px", fontFamily: S.fontMono, fontSize: "0.75rem",
                 color: S.tertiary, background: "transparent", cursor: "pointer",
               }}
               onMouseEnter={(e) => (e.currentTarget.style.color = S.secondary)}
@@ -234,7 +234,7 @@ export default function HelpPage() {
                   <span style={{ fontFamily: S.fontUI, fontSize: "1rem", fontWeight: 700, color: S.primary }}>{sec.title}</span>
                   <button
                     onClick={() => router.push(sec.path)}
-                    style={{ fontFamily: S.fontMono, fontSize: "0.5rem", padding: "2px 8px", border: `1px solid ${S.rim}`, color: S.cyan, background: "transparent", cursor: "pointer", letterSpacing: "0.04em" }}
+                    style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "2px 8px", border: `1px solid ${S.rim}`, color: S.cyan, background: "transparent", cursor: "pointer", letterSpacing: "0.04em" }}
                   >
                     Open →
                   </button>
@@ -245,13 +245,13 @@ export default function HelpPage() {
                 </p>
 
                 <div style={{ marginBottom: 32 }}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
                     Workflow Steps
                   </div>
                   <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
                     {sec.steps.map((step, idx) => (
                       <li key={idx} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                        <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.cyan, minWidth: 18, marginTop: 2 }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.cyan, minWidth: 18, marginTop: 2 }}>
                           {String(idx + 1).padStart(2, "0")}
                         </span>
                         <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.5 }}>{step}</span>
@@ -263,20 +263,20 @@ export default function HelpPage() {
                 {/* Scenario Stress Tester callout for Simulation section */}
                 {activeSection === 1 && (
                   <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "14px 18px", borderRadius: 2 }}>
-                    <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 10 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 10 }}>
                       SCENARIO STRESS TESTER — CLIENT-SIDE P&amp;L ENGINE
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       {["% Spot Moves", "Historic Crises", "Custom Shock"].map((chip, i) => (
                         <div key={chip} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           {i > 0 && <span style={{ color: S.rim, fontSize: "0.625rem" }}>+</span>}
-                          <div style={{ padding: "4px 10px", border: `1px solid ${i === 0 ? S.cyan : S.rim}`, color: i === 0 ? S.cyan : S.tertiary, fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.04em" }}>
+                          <div style={{ padding: "4px 10px", border: `1px solid ${i === 0 ? S.cyan : S.rim}`, color: i === 0 ? S.cyan : S.tertiary, fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.04em" }}>
                             {chip}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary }}>
+                    <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>
                       Instant P&amp;L: Unhedged · Hedged · Hedge Benefit · Efficiency %. No backend required.
                     </div>
                   </div>
@@ -291,27 +291,27 @@ export default function HelpPage() {
 
           {/* System Diagnostics */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
               System Diagnostics
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>Backend API</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: statusColor, display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>Backend API</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: statusColor, display: "flex", alignItems: "center", gap: 4 }}>
                   <span style={{ width: 5, height: 5, borderRadius: "50%", background: statusColor, display: "inline-block" }} />
                   {backendStatus}
                 </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>Frontend</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.pass, display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>Frontend</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.pass, display: "flex", alignItems: "center", gap: 4 }}>
                   <span style={{ width: 5, height: 5, borderRadius: "50%", background: S.pass, display: "inline-block" }} />
                   ONLINE
                 </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>Platform</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{PLATFORM_VERSION}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>Platform</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{PLATFORM_VERSION}</span>
               </div>
             </div>
           </div>
@@ -320,7 +320,7 @@ export default function HelpPage() {
 
           {/* Knowledge Base */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
               Knowledge Base
             </div>
             <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary, lineHeight: 1.5, marginBottom: 10 }}>
@@ -330,7 +330,7 @@ export default function HelpPage() {
               onClick={() => router.push("/hedgewiki")}
               style={{
                 display: "block", width: "100%", padding: "8px 12px", marginBottom: 10,
-                fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.04em",
+                fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.04em",
                 color: S.cyan, background: `color-mix(in srgb, var(--accent-cyan) 8%, transparent)`,
                 border: `1px solid ${S.cyan}`, cursor: "pointer",
               }}
@@ -360,13 +360,13 @@ export default function HelpPage() {
 
           {/* Contact Support */}
           <div>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
               Contact Support
             </div>
             <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary, lineHeight: 1.6 }}>
               For technical issues or platform questions, contact your system administrator or the HedgeCore support team.
             </div>
-            <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>
+            <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>
               support@hedgecore.app
             </div>
           </div>
@@ -377,7 +377,7 @@ export default function HelpPage() {
       <footer style={{
         display: "flex", alignItems: "center", gap: 12, height: 28,
         padding: "0 20px", borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
-        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
         <span>HedgeCore · ORDR Terminal</span>
