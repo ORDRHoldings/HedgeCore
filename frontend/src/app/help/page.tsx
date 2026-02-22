@@ -49,35 +49,37 @@ const GUIDE_SECTIONS = [
     ],
   },
   {
-    title: "Sandbox (Draft)",
+    title: "Simulation",
     path: "/sandbox",
-    description: "Run deterministic hedge calculations against your position data. The engine is snapshot-only — results are frozen at calculation time.",
+    description: "Run deterministic hedge calculations and stress-test your portfolio against historical crashes and custom shocks. All math is computed client-side — instant results with no backend round-trip.",
     steps: [
       "Ensure positions are entered via the Ingestion Desk",
-      "Navigate to Execution → Draft (Sandbox)",
-      "Review the exposure waterfall and allocation results",
-      "Create a Proposal to submit for Review",
+      "Navigate to Simulation in the top nav",
+      "Select a demo fixture or load your own positions",
+      "Use the Scenario Stress Tester to stress-test against % moves and historic crises",
+      "Review the exposure waterfall, attribution, and Before/After impact panels",
     ],
   },
   {
-    title: "Staging (Review)",
-    path: "/staging",
-    description: "Proposals submitted from Sandbox await authorization here. A different user from the submitter must approve — self-approval is blocked.",
+    title: "Analysis",
+    path: "/currency-fx",
+    description: "Three-step workflow: load exposure positions, apply a hedge policy, then generate a full hedge plan with exposure waterfall, allocation breakdown, and IFRS 9 compliance checks.",
     steps: [
-      "A Risk Analyst creates and submits a proposal",
-      "A Branch Manager or CFO reviews in Staging",
-      "Approve, Return, or Reject the proposal",
-      "Approved proposals are recorded to the Ledger",
+      "Step 01 — Exposure Hedge Plan: enter or import FX positions",
+      "Step 02 — Hedge Policy: select and configure a policy template",
+      "Step 03 — Generate Hedge Plan: run the engine and review results",
+      "Export results for governance reporting",
     ],
   },
   {
-    title: "Ledger (Record)",
-    path: "/ledger",
-    description: "Immutable record of all authorized hedge proposals. Each entry carries a deterministic signature for audit purposes.",
+    title: "Governance (HedgeWiki)",
+    path: "/hedgewiki",
+    description: "Versioned knowledge graph covering FX instruments, ISDA framework, IFRS 9 standards, ASC 815, policy templates, and HedgeCore architecture. Every article links back to authoritative citations.",
     steps: [
-      "View all authorized hedge runs",
-      "Export to PDF for governance reporting",
-      "Trace back to original sandbox run via Run ID",
+      "Browse knowledge domains in the left sidebar",
+      "Read article abstracts and authoritative citations",
+      "Follow knowledge graph links to related articles",
+      "Use HedgeCore field linkages to map concepts to engine fields",
     ],
   },
 ];
@@ -183,9 +185,8 @@ export default function HelpPage() {
           {[
             { label: "Dashboard", path: "/dashboard" },
             { label: "Ingestion Desk", path: "/input" },
-            { label: "Draft (Sandbox)", path: "/sandbox" },
-            { label: "Review (Staging)", path: "/staging" },
-            { label: "Record (Ledger)", path: "/ledger" },
+            { label: "Analysis", path: "/currency-fx" },
+            { label: "Simulation", path: "/sandbox" },
             { label: "HedgeWiki", path: "/hedgewiki" },
           ].map((lnk) => (
             <button
@@ -240,24 +241,24 @@ export default function HelpPage() {
                   </ol>
                 </div>
 
-                {/* Pipeline diagram for Sandbox section */}
+                {/* Scenario Stress Tester callout for Simulation section */}
                 {activeSection === 1 && (
                   <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "14px 18px", borderRadius: 2 }}>
                     <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 10 }}>
-                      TRI-STATE PIPELINE
+                      SCENARIO STRESS TESTER — CLIENT-SIDE P&amp;L ENGINE
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {["Draft", "Review", "Record"].map((stage, i) => (
-                        <div key={stage} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          {i > 0 && <span style={{ color: S.rim, fontSize: "0.625rem" }}>→</span>}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      {["% Spot Moves", "Historic Crises", "Custom Shock"].map((chip, i) => (
+                        <div key={chip} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {i > 0 && <span style={{ color: S.rim, fontSize: "0.625rem" }}>+</span>}
                           <div style={{ padding: "4px 10px", border: `1px solid ${i === 0 ? S.cyan : S.rim}`, color: i === 0 ? S.cyan : S.tertiary, fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.04em" }}>
-                            {stage}
+                            {chip}
                           </div>
                         </div>
                       ))}
                     </div>
                     <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary }}>
-                      Self-approval is blocked. A different authorized reviewer must approve each proposal.
+                      Instant P&amp;L: Unhedged · Hedged · Hedge Benefit · Efficiency %. No backend required.
                     </div>
                   </div>
                 )}
