@@ -132,7 +132,7 @@ function ImportBanner({ created, totalRows, errors, onDismiss }: ImportBannerPro
         padding: '7px 14px',
         borderBottom: `1px solid ${hasErrors ? S.amber : S.green}`,
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: hasErrors ? S.amber : S.green, letterSpacing: '0.08em' }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: hasErrors ? S.amber : S.green, letterSpacing: '0.06em' }}>
           CSV IMPORT RESULT
         </span>
         <span style={{ fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.textSecondary }}>
@@ -146,7 +146,7 @@ function ImportBanner({ created, totalRows, errors, onDismiss }: ImportBannerPro
       {hasErrors && (
         <div style={{ padding: '8px 14px', maxHeight: 120, overflowY: 'auto' }}>
           {errors.map((e, i) => (
-            <div key={i} style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.amber, marginBottom: 3 }}>
+            <div key={i} style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.amber, marginBottom: 3 }}>
               Row {e.row}{e.record_id ? ` (${e.record_id})` : ''}: {e.error}
             </div>
           ))}
@@ -793,7 +793,7 @@ export default function InputPage() {
             background: `color-mix(in srgb, ${S.red} 5%, ${S.bgPanel})`,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.red }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.red }}>
               Failed to load positions: {positionError}
             </span>
             <button
@@ -813,7 +813,7 @@ export default function InputPage() {
             onClick={() => handleCalculate()}
             disabled={!canCalculate}
             style={{
-              fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.08em', fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', fontWeight: 700,
               padding: '5px 20px',
               border: `1px solid ${canCalculate ? S.cyan : S.border}`,
               color: canCalculate ? 'var(--bg-deep)' : S.textTertiary,
@@ -825,7 +825,7 @@ export default function InputPage() {
             {loading ? 'GENERATING…' : '⚡ GENERATE HEDGE PLAN'}
           </button>
           {trades.length > 0 && (
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.06em' }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.04em' }}>
               {trades.length} POSITIONS · {tradeSummary.confirmed} CONFIRMED · {tradeSummary.forecast} FORECAST
             </span>
           )}
@@ -859,7 +859,7 @@ export default function InputPage() {
                   onClick={() => setDeskTab(tab.key)}
                   style={{
                     fontFamily:    S.fontMono,
-                    fontSize:      '0.5rem',
+                    fontSize:      '0.75rem',
                     letterSpacing: '0.06em',
                     padding:       '8px 16px',
                     border:        'none',
@@ -875,7 +875,7 @@ export default function InputPage() {
                   }}
                 >
                   <span style={{ textTransform: 'uppercase' }}>{tab.label}</span>
-                  <span style={{ fontSize: '0.375rem', opacity: 0.6, fontFamily: S.fontUI, textTransform: 'none', letterSpacing: 0 }}>
+                  <span style={{ fontSize: '0.625rem', opacity: 0.6, fontFamily: S.fontUI, textTransform: 'none', letterSpacing: 0 }}>
                     {tab.subtitle}
                   </span>
                 </button>
@@ -941,11 +941,11 @@ export default function InputPage() {
                   padding: '7px 14px',
                   borderBottom: `1px solid ${S.borderSoft}`,
                 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.textTertiary, letterSpacing: '0.1em' }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.1em' }}>
                     ADD EXPOSURE LINE
                   </span>
                   <span style={{ width: 1, height: 10, background: S.borderSoft, display: 'inline-block' }} />
-                  <span style={{ fontFamily: S.fontUI, fontSize: '0.625rem', color: S.textTertiary }}>
+                  <span style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.textTertiary }}>
                     Enter a new FX exposure position — saved to database
                   </span>
                 </div>
@@ -966,8 +966,8 @@ export default function InputPage() {
                       ? 'ID exists'
                       : null;
                     return (
-                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                      <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
                           RECORD ID {err && <span style={{ color: S.red }}>— {err}</span>}
                         </label>
                         <input
@@ -977,10 +977,10 @@ export default function InputPage() {
                           onBlur={() => touchInline('record_id')}
                           placeholder="e.g. TXN-001"
                           style={{
-                            fontFamily: S.fontMono, fontSize: '0.6875rem',
+                            fontFamily: S.fontMono, fontSize: '0.875rem',
                             background: 'transparent', border: 'none',
                             borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
-                            color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%',
+                            color: S.textPrimary, padding: '4px 0', outline: 'none', width: '100%',
                           }}
                         />
                       </div>
@@ -991,8 +991,8 @@ export default function InputPage() {
                   {(() => {
                     const err = inlineTouched.entity && !inlineForm.entity.trim() ? 'Required' : null;
                     return (
-                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                      <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
                           ENTITY {err && <span style={{ color: S.red }}>— {err}</span>}
                         </label>
                         <input
@@ -1002,10 +1002,10 @@ export default function InputPage() {
                           onBlur={() => touchInline('entity')}
                           placeholder="e.g. Acme Corp"
                           style={{
-                            fontFamily: S.fontMono, fontSize: '0.6875rem',
+                            fontFamily: S.fontMono, fontSize: '0.875rem',
                             background: 'transparent', border: 'none',
                             borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
-                            color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%',
+                            color: S.textPrimary, padding: '4px 0', outline: 'none', width: '100%',
                           }}
                         />
                       </div>
@@ -1013,12 +1013,12 @@ export default function InputPage() {
                   })()}
 
                   {/* FLOW TYPE */}
-                  <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>FLOW TYPE</label>
+                  <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary }}>FLOW TYPE</label>
                     <select
                       value={inlineForm.type}
                       onChange={e => setInlineField('type', e.target.value as TradeRow['type'])}
-                      style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
+                      style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
                     >
                       <option value="AP">AP — Accounts Payable</option>
                       <option value="AR">AR — Accounts Receivable</option>
@@ -1026,12 +1026,12 @@ export default function InputPage() {
                   </div>
 
                   {/* CURRENCY */}
-                  <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>CURRENCY</label>
+                  <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary }}>CURRENCY</label>
                     <select
                       value={inlineForm.currency}
                       onChange={e => setInlineField('currency', e.target.value as FuturesCurrency)}
-                      style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
+                      style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
                     >
                       {FUTURES_CURRENCY_LIST.map(c => (
                         <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
@@ -1043,8 +1043,8 @@ export default function InputPage() {
                   {(() => {
                     const err = inlineTouched.amount && !(inlineForm.amount > 0) ? 'Must be > 0' : null;
                     return (
-                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                      <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
                           AMOUNT ({inlineForm.currency}) {err && <span style={{ color: S.red }}>— {err}</span>}
                         </label>
                         <input
@@ -1053,7 +1053,7 @@ export default function InputPage() {
                           onChange={e => setInlineField('amount', parseFloat(e.target.value) || 0)}
                           onBlur={() => touchInline('amount')}
                           placeholder="0"
-                          style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${err ? S.red : S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%' }}
+                          style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${err ? S.red : S.borderSoft}`, color: S.textPrimary, padding: '4px 0', outline: 'none', width: '100%' }}
                         />
                       </div>
                     );
@@ -1063,8 +1063,8 @@ export default function InputPage() {
                   {(() => {
                     const err = inlineTouched.value_date && !inlineForm.value_date ? 'Required' : null;
                     return (
-                      <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
+                      <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
                           VALUE DATE {err && <span style={{ color: S.red }}>— {err}</span>}
                         </label>
                         <input
@@ -1072,19 +1072,19 @@ export default function InputPage() {
                           value={inlineForm.value_date}
                           onChange={e => setInlineField('value_date', e.target.value)}
                           onBlur={() => touchInline('value_date')}
-                          style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${err ? S.red : S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', colorScheme: 'dark' }}
+                          style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${err ? S.red : S.borderSoft}`, color: S.textPrimary, padding: '4px 0', outline: 'none', width: '100%', colorScheme: 'dark' }}
                         />
                       </div>
                     );
                   })()}
 
                   {/* STATUS */}
-                  <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>STATUS</label>
+                  <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary }}>STATUS</label>
                     <select
                       value={inlineForm.status}
                       onChange={e => setInlineField('status', e.target.value as TradeRow['status'])}
-                      style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
+                      style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
                     >
                       <option value="CONFIRMED">CONFIRMED</option>
                       <option value="FORECAST">FORECAST</option>
@@ -1092,14 +1092,14 @@ export default function InputPage() {
                   </div>
 
                   {/* DESCRIPTION */}
-                  <div style={{ background: S.bgPanel, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>DESCRIPTION</label>
+                  <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary }}>DESCRIPTION</label>
                     <input
                       type="text"
                       value={inlineForm.description ?? ''}
                       onChange={e => setInlineField('description', e.target.value)}
                       placeholder="Optional note"
-                      style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%' }}
+                      style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '4px 0', outline: 'none', width: '100%' }}
                     />
                   </div>
                 </div>
@@ -1109,20 +1109,20 @@ export default function InputPage() {
                   <button
                     type="button"
                     onClick={() => { setInlineForm(EMPTY_INLINE); setInlineTouched({}); }}
-                    style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', padding: '4px 12px', border: `1px solid ${S.border}`, color: S.textTertiary, background: 'transparent', cursor: 'pointer' }}
+                    style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', padding: '7px 14px', border: `1px solid ${S.border}`, color: S.textTertiary, background: 'transparent', cursor: 'pointer' }}
                   >CLEAR</button>
                   <button
                     type="button"
                     onClick={handleInlineSave}
                     disabled={inlineSaving}
-                    style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', fontWeight: 700, padding: '4px 18px', border: `1px solid ${inlineValid ? S.cyan : S.border}`, color: inlineValid ? S.cyan : S.textTertiary, background: inlineValid ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : 'transparent', cursor: inlineSaving ? 'not-allowed' : 'pointer', opacity: inlineSaving ? 0.6 : 1, transition: 'all 0.1s' }}
+                    style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', fontWeight: 700, padding: '7px 18px', border: `1px solid ${inlineValid ? S.cyan : S.border}`, color: inlineValid ? S.cyan : S.textTertiary, background: inlineValid ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : 'transparent', cursor: inlineSaving ? 'not-allowed' : 'pointer', opacity: inlineSaving ? 0.6 : 1, transition: 'all 0.1s' }}
                   >{inlineSaving ? 'SAVING…' : '+ ADD POSITION'}</button>
                 </div>
               </div>
 
               {/* ── Position Table (immediately below form, no gap) ── */}
               {positionsLoading ? (
-                <div style={{ padding: '24px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.textTertiary, letterSpacing: '0.06em' }}>
+                <div style={{ padding: '24px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, letterSpacing: '0.04em' }}>
                   LOADING POSITIONS…
                 </div>
               ) : trades.length === 0 ? (
@@ -1135,7 +1135,7 @@ export default function InputPage() {
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   {/* Table caption */}
-                  <div style={{ display: 'flex', gap: 16, padding: '6px 14px', background: S.bgSub, borderBottom: `1px solid ${S.border}`, fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.06em', color: S.textTertiary }}>
+                  <div style={{ display: 'flex', gap: 16, padding: '6px 14px', background: S.bgSub, borderBottom: `1px solid ${S.border}`, fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.04em', color: S.textTertiary }}>
                     <span>TOTAL: {trades.length}</span>
                     <span style={{ color: S.cyan }}>CONFIRMED: {tradeSummary.confirmed}</span>
                     <span style={{ color: S.amber }}>FORECAST: {tradeSummary.forecast}</span>
@@ -1148,7 +1148,7 @@ export default function InputPage() {
                     <thead>
                       <tr style={{ background: S.bgSub, borderBottom: `1px solid ${S.border}` }}>
                         {['ID', 'Entity', 'Type', 'CCY', 'Amount', 'Value Date', 'Status', 'Description', 'Actions'].map(h => (
-                          <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                          <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -1158,24 +1158,24 @@ export default function InputPage() {
                         const ibkrRef = ibkrRefs[pos.id];
                         return (
                           <tr key={pos.id} style={{ borderBottom: `1px solid ${S.borderSoft}`, background: isExecuted ? `color-mix(in srgb, ${S.green} 3%, transparent)` : 'transparent' }}>
-                            <td style={{ padding: '7px 10px', fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textPrimary }}>{pos.record_id}</td>
+                            <td style={{ padding: '7px 10px', fontFamily: S.fontMono, fontSize: '0.8125rem', color: S.textPrimary }}>{pos.record_id}</td>
                             <td style={{ padding: '7px 10px', color: S.textPrimary }}>{pos.entity}</td>
                             <td style={{ padding: '7px 10px', textAlign: 'center' }}>
-                              <span style={{ padding: '2px 6px', borderRadius: 2, fontSize: '0.625rem', fontWeight: 600, background: pos.type === 'AR' ? `color-mix(in srgb, ${S.green} 12%, transparent)` : `color-mix(in srgb, ${S.red} 12%, transparent)`, color: pos.type === 'AR' ? S.green : S.red }}>
+                              <span style={{ padding: '2px 6px', borderRadius: 2, fontSize: '0.75rem', fontWeight: 600, background: pos.type === 'AR' ? `color-mix(in srgb, ${S.green} 12%, transparent)` : `color-mix(in srgb, ${S.red} 12%, transparent)`, color: pos.type === 'AR' ? S.green : S.red }}>
                                 {pos.type}
                               </span>
                             </td>
-                            <td style={{ padding: '7px 10px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.625rem', color: S.textSecondary }}>{pos.currency}</td>
-                            <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textPrimary }}>{fmtMXN(pos.amount)}</td>
-                            <td style={{ padding: '7px 10px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.625rem' }}>{pos.value_date}</td>
+                            <td style={{ padding: '9px 12px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textSecondary }}>{pos.currency}</td>
+                            <td style={{ padding: '9px 12px', textAlign: 'right', fontFamily: S.fontMono, fontSize: '0.8125rem', color: S.textPrimary }}>{fmtMXN(pos.amount)}</td>
+                            <td style={{ padding: '9px 12px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.75rem' }}>{pos.value_date}</td>
                             <td style={{ padding: '7px 10px', textAlign: 'center' }}>
                               {isExecuted ? (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 2, fontSize: '0.5625rem', fontWeight: 700, background: `color-mix(in srgb, ${S.green} 12%, transparent)`, color: S.green, fontFamily: S.fontMono, letterSpacing: '0.04em' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 2, fontSize: '0.6875rem', fontWeight: 700, background: `color-mix(in srgb, ${S.green} 12%, transparent)`, color: S.green, fontFamily: S.fontMono, letterSpacing: '0.04em' }}>
                                   ✓ EXECUTED
-                                  {ibkrRef && <span style={{ fontSize: '0.5rem', opacity: 0.7 }}> · {ibkrRef}</span>}
+                                  {ibkrRef && <span style={{ fontSize: '0.625rem', opacity: 0.7 }}> · {ibkrRef}</span>}
                                 </span>
                               ) : (
-                                <span style={{ padding: '2px 7px', borderRadius: 2, fontSize: '0.5625rem', fontWeight: 600, fontFamily: S.fontMono, letterSpacing: '0.04em', background: pos.status === 'CONFIRMED' ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : `color-mix(in srgb, ${S.amber} 10%, transparent)`, color: pos.status === 'CONFIRMED' ? S.cyan : S.amber }}>
+                                <span style={{ padding: '2px 7px', borderRadius: 2, fontSize: '0.6875rem', fontWeight: 600, fontFamily: S.fontMono, letterSpacing: '0.04em', background: pos.status === 'CONFIRMED' ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : `color-mix(in srgb, ${S.amber} 10%, transparent)`, color: pos.status === 'CONFIRMED' ? S.cyan : S.amber }}>
                                   {pos.status}
                                 </span>
                               )}
@@ -1187,7 +1187,7 @@ export default function InputPage() {
                                 <button
                                   title="Duplicate"
                                   onClick={() => openDuplicateTrade(pos)}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, padding: '2px 4px', fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.04em' }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, padding: '3px 6px', fontFamily: S.fontMono, fontSize: '0.8125rem', letterSpacing: '0.02em' }}
                                   onMouseEnter={e => (e.currentTarget.style.color = S.cyan)}
                                   onMouseLeave={e => (e.currentTarget.style.color = S.textTertiary)}
                                 >⊕</button>
@@ -1195,7 +1195,7 @@ export default function InputPage() {
                                 <button
                                   title="Edit"
                                   onClick={() => openEditTrade(idx)}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, padding: '2px 4px', fontFamily: S.fontMono, fontSize: '0.625rem' }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, padding: '3px 6px', fontFamily: S.fontMono, fontSize: '0.8125rem' }}
                                   onMouseEnter={e => (e.currentTarget.style.color = S.amber)}
                                   onMouseLeave={e => (e.currentTarget.style.color = S.textTertiary)}
                                 >✎</button>
@@ -1204,7 +1204,7 @@ export default function InputPage() {
                                   <button
                                     title="Execute via IBKR"
                                     onClick={() => openIbkrModal(pos)}
-                                    style={{ background: 'none', border: `1px solid ${S.green}`, cursor: 'pointer', color: S.green, padding: '1px 5px', fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.06em', borderRadius: 2 }}
+                                    style={{ background: 'none', border: `1px solid ${S.green}`, cursor: 'pointer', color: S.green, padding: '1px 5px', fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.06em', borderRadius: 2 }}
                                   >IBKR</button>
                                 )}
                                 {/* Delete */}
@@ -1215,7 +1215,7 @@ export default function InputPage() {
                                       handleRemoveTrade(idx);
                                     }
                                   }}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, padding: '2px 4px', fontFamily: S.fontMono, fontSize: '0.75rem', lineHeight: 1 }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.textTertiary, padding: '2px 4px', fontFamily: S.fontMono, fontSize: '1rem', lineHeight: 1 }}
                                   onMouseEnter={e => (e.currentTarget.style.color = S.red)}
                                   onMouseLeave={e => (e.currentTarget.style.color = S.textTertiary)}
                                 >×</button>
@@ -1244,23 +1244,23 @@ export default function InputPage() {
         }}
       >
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>GATE CHECK</span>
+          <span style={{ fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary }}>GATE CHECK</span>
           {validationGates.filter(g => !g.met).map((g, i) => (
             <span
               key={i}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                fontSize: '0.5625rem', color: S.red,
+                fontSize: '0.75rem', color: S.red,
                 border: `1px solid ${S.red}`, padding: '1px 6px',
               }}
             >
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: S.red, display: 'inline-block' }} />
               {g.label}
-              {g.message && <span style={{ color: S.textTertiary, fontSize: '0.5rem' }}> — {g.message}</span>}
+              {g.message && <span style={{ color: S.textTertiary, fontSize: '0.6875rem' }}> — {g.message}</span>}
             </span>
           ))}
           {validationGates.every(g => g.met) && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.5625rem', color: S.green }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: S.green }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: S.green, display: 'inline-block' }} />
               ALL GATES PASSED — CLICK GENERATE HEDGE PLAN IN THE RAIL ABOVE
             </span>
@@ -1325,17 +1325,17 @@ export default function InputPage() {
             {backendErrors.filter(e => AUTO_RESOLVED_CODES.has(e.code)).map((e, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{
-                  fontSize: '0.5625rem', fontWeight: 700, padding: '1px 5px',
+                  fontSize: '0.625rem', fontWeight: 700, padding: '2px 6px',
                   color: 'var(--accent-cyan)',
                   background: 'color-mix(in srgb, var(--accent-cyan) 10%, transparent)',
                   border: '1px solid color-mix(in srgb, var(--accent-cyan) 20%, transparent)',
                   borderRadius: 2,
                 }}>{e.code}</span>
-                <span style={{ fontSize: '0.6875rem', color: S.textPrimary }}>{e.message}</span>
+                <span style={{ fontSize: '0.8125rem', color: S.textPrimary }}>{e.message}</span>
               </div>
             ))}
             {backendErrors.filter(e => AUTO_RESOLVED_CODES.has(e.code)).length === 0 && (
-              <span style={{ fontSize: '0.6875rem', color: 'var(--accent-cyan)' }}>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--accent-cyan)' }}>
                 V-011 (Spot Rate) · V-012 (Forward Points) · V-014 (Trade Bucket Forward Points)
               </span>
             )}
@@ -1364,23 +1364,23 @@ export default function InputPage() {
             <button
               type="button"
               onClick={() => { setIbkrModalOpen(false); setIbkrTargetPosition(undefined); }}
-              style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', padding: '5px 14px', border: `1px solid ${S.border}`, color: S.textSecondary, background: 'transparent', cursor: 'pointer' }}
+              style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', padding: '7px 14px', border: `1px solid ${S.border}`, color: S.textSecondary, background: 'transparent', cursor: 'pointer' }}
             >CANCEL</button>
             <button
               type="button"
               onClick={handleConfirmExecution}
-              style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', fontWeight: 700, padding: '5px 18px', border: `1px solid ${S.green}`, color: 'var(--bg-deep)', background: S.green, cursor: 'pointer' }}
+              style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', fontWeight: 700, padding: '7px 18px', border: `1px solid ${S.green}`, color: 'var(--bg-deep)', background: S.green, cursor: 'pointer' }}
             >✓ CONFIRM EXECUTED</button>
           </div>
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
-          <p style={{ fontFamily: S.fontUI, fontSize: '0.8125rem', color: S.textSecondary, lineHeight: 1.6, margin: 0 }}>
+          <p style={{ fontFamily: S.fontUI, fontSize: '0.875rem', color: S.textSecondary, lineHeight: 1.6, margin: 0 }}>
             Mark this position as <strong style={{ color: S.green }}>executed</strong> via Interactive Brokers?
             This will flag it as a verified fact in the Position Desk.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.textTertiary }}>
+            <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary }}>
               IBKR REFERENCE (optional)
             </label>
             <input
@@ -1388,7 +1388,7 @@ export default function InputPage() {
               value={ibkrRefInput}
               onChange={e => setIbkrRefInput(e.target.value)}
               placeholder="e.g. IBKR-2026-00341"
-              style={{ fontFamily: S.fontMono, fontSize: '0.75rem', padding: '6px 10px', border: `1px solid ${S.border}`, background: S.bgSub, color: S.textPrimary, outline: 'none', width: '100%' }}
+              style={{ fontFamily: S.fontMono, fontSize: '0.875rem', padding: '8px 10px', border: `1px solid ${S.border}`, background: S.bgSub, color: S.textPrimary, outline: 'none', width: '100%' }}
             />
           </div>
         </div>
