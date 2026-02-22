@@ -2,28 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
 
-const SYSTEM_COLORS: Record<string, string> = {
-  QuickBooks: "#2CA01C",
-  Xero:       "#13B5EA",
-  Sage:       "#00DC82",
-  NetSuite:   "#E6A817",
+// Keyed by lowercase system ID (matches what the page sends)
+const SYSTEM_META: Record<string, { displayName: string; color: string }> = {
+  quickbooks: { displayName: "QuickBooks Online", color: "#2CA01C" },
+  xero:       { displayName: "Xero",              color: "#13B5EA" },
+  sage:       { displayName: "Sage Intacct",       color: "#00DC82" },
+  netsuite:   { displayName: "NetSuite",           color: "#E6A817" },
 };
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const system = searchParams.get("system") ?? "QuickBooks";
+  const systemId = (searchParams.get("system") ?? "quickbooks").toLowerCase();
+
+  const meta        = SYSTEM_META[systemId] ?? { displayName: systemId, color: "#22d3ee" };
+  const displayName = meta.displayName;
+  const color       = meta.color;
 
   const baseUrl     = req.nextUrl.origin;
-  const callbackUrl = `${baseUrl}/accounting-oauth-callback?system=${encodeURIComponent(system)}`;
-
-  const color = SYSTEM_COLORS[system] ?? "#22d3ee";
+  const callbackUrl = `${baseUrl}/accounting-oauth-callback?system=${encodeURIComponent(systemId)}`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Connect ${system}\u2026</title>
+  <title>Connect ${displayName}\u2026</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -61,10 +64,10 @@ export async function GET(req: NextRequest) {
 <body>
   <div class="card">
     <div class="label">ORDR TERMINAL \u00b7 ACCOUNTING CONNECTION</div>
-    <div class="system">${system}</div>
+    <div class="system">${displayName}</div>
     <div class="msg">
-      Connecting to your ${system} account. In production, this redirects to the
-      ${system} OAuth consent page where you grant ORDR read access to your accounting data.
+      Connecting to your ${displayName} account. In production, this redirects to the
+      ${displayName} OAuth consent page where you grant ORDR read access to your accounting data.
     </div>
     <div class="spinner"></div>
     <div class="status">CONNECTING\u2026</div>
