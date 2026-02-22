@@ -622,7 +622,7 @@ export default function InputPage() {
       }
       const result = await calculate({ trades, hedges, market: activeMarket, policy });
       setCalculation(result, { policy, trades, hedges, market: activeMarket, fixtureId: null });
-      router.push('/results');
+      router.push('/execution');
     } catch (err: unknown) {
       const anyErr = err as { response?: { data?: { detail?: unknown } } };
       const detail = anyErr?.response?.data?.detail;

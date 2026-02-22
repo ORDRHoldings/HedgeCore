@@ -147,7 +147,62 @@ export default function SandboxPage() {
 
   // ── Main 3-column layout ──
   return (
-    <div className="h-full flex">
+    <div className="h-full flex flex-col">
+      {/* ── Page header strip ── */}
+      <div style={{
+        borderBottom: '1px solid var(--border-rim)',
+        background: 'var(--bg-panel)',
+        padding: '0 16px',
+        display: 'flex', alignItems: 'center', gap: 12, height: 44,
+        flexShrink: 0,
+      }}>
+        <button
+          onClick={() => router.push('/input')}
+          style={{
+            fontFamily: "'IBM Plex Sans', sans-serif",
+            fontSize: '0.625rem', fontWeight: 500,
+            padding: '2px 8px', border: '1px solid var(--border-rim)',
+            color: 'var(--text-secondary)', background: 'transparent', cursor: 'pointer',
+          }}
+        >
+          ← Position Desk
+        </button>
+        <span style={{
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: '0.5rem', letterSpacing: '0.12em',
+          color: 'var(--text-tertiary)',
+        }}>SIMULATION ENGINE</span>
+        {sandboxResult && (
+          <>
+            <span style={{ color: 'var(--border-rim)' }}>|</span>
+            <span style={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: '0.5rem', color: 'var(--text-tertiary)',
+            }}>
+              RUN <span style={{ color: 'var(--accent-cyan)' }}>{sandboxResult.run_id.slice(0, 8).toUpperCase()}</span>
+            </span>
+          </>
+        )}
+        <div style={{ flex: 1 }} />
+        {sandboxResult && (
+          <button
+            onClick={() => router.push('/execution')}
+            style={{
+              fontFamily: "'IBM Plex Sans', sans-serif",
+              fontSize: '0.6875rem', fontWeight: 600,
+              padding: '4px 14px',
+              border: '1px solid var(--accent-cyan)',
+              color: 'var(--accent-cyan)',
+              background: 'transparent', cursor: 'pointer',
+            }}
+          >
+            Execution Bridge →
+          </button>
+        )}
+      </div>
+
+      {/* ── 3-column body ── */}
+      <div className="flex-1 flex min-h-0">
       {/* Left Rail — 20% */}
       <aside className="w-[20%] min-w-[240px] border-r border-[var(--border-rim)] bg-[var(--bg-panel)] overflow-auto">
         <RailTabs
@@ -202,12 +257,12 @@ export default function SandboxPage() {
             <EmptyState
               type="empty"
               title="No simulation data"
-              message="Upload exposure positions via the Ingestion Desk to run a hedge calculation."
-              action={{ label: "Go to Ingestion Desk", onClick: () => router.push("/input") }}
+              message="Upload exposure positions via the Position Desk to run a hedge calculation."
+              action={{ label: "Go to Position Desk", onClick: () => router.push("/input") }}
             />
           )
         )}
-        {sandboxLoading && <EmptyState type="loading" message="Running simulation…" />}
+        {sandboxLoading && <EmptyState type="loading" message="Running simulation engine…" />}
 
         {sandboxResult && waterfall && (
           <>
@@ -231,6 +286,45 @@ export default function SandboxPage() {
               allocatorResult={v2?.allocator_result as Record<string, unknown> | undefined}
               currencyNetting={v2?.currency_netting as Record<string, unknown> | undefined}
             />
+
+            {/* ── Execution Bridge CTA ── */}
+            <div style={{
+              background: 'color-mix(in srgb, var(--accent-cyan) 4%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--accent-cyan) 20%, transparent)',
+              borderRadius: 4,
+              padding: '14px 18px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexWrap: 'wrap', gap: 10,
+            }}>
+              <div>
+                <p style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: '0.5625rem', letterSpacing: '0.06em',
+                  color: 'var(--accent-cyan)', marginBottom: 3,
+                }}>SIMULATION COMPLETE</p>
+                <p style={{
+                  fontFamily: "'IBM Plex Sans', sans-serif",
+                  fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0,
+                }}>
+                  Integrity {waterfall.integrity_score}/100 · {waterfall.rules.filter((r: { status: string }) => r.status === "PASS").length}/{waterfall.rules.length} rules passed.
+                  Ready to generate execution tickets.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push('/execution')}
+                style={{
+                  fontFamily: "'IBM Plex Sans', sans-serif",
+                  fontSize: '0.75rem', fontWeight: 700,
+                  padding: '7px 20px',
+                  border: '1px solid var(--accent-cyan)',
+                  color: 'var(--accent-cyan)',
+                  background: 'transparent', cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                → Open Execution Bridge
+              </button>
+            </div>
           </>
         )}
 
@@ -265,6 +359,7 @@ export default function SandboxPage() {
           { id: "raw", label: "Raw Data", content: <JsonViewer data={sandboxResult ?? {}} initialExpanded={false} /> },
         ]}
       />
+      </div>{/* end 3-column body */}
     </div>
   );
 }

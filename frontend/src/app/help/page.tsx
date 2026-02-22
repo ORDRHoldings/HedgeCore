@@ -67,13 +67,14 @@ const GUIDE_SECTIONS = [
   {
     title: "Execution",
     path: "/execution",
-    description: "Run deterministic hedge calculations and stress-test your portfolio against historical crashes and custom shocks. All math is computed client-side — instant results with no backend round-trip.",
+    description: "The Execution section contains two sub-tools: the Simulation Engine (stress-testing and waterfall analysis) and the Execution Bridge (bucket-level trade tickets). Run the hedge engine from the Position Desk to generate execution-ready instructions.",
     steps: [
-      "Ensure positions are entered via the Position Desk",
-      "Navigate to Execution in the top nav",
-      "Select a demo fixture or load your own positions",
-      "Use the Scenario Stress Tester to stress-test against % moves and historic crises",
-      "Review the exposure waterfall, attribution, and Before/After impact panels",
+      "Enter positions on the Position Desk and click Generate Hedge Plan",
+      "The Execution Bridge opens automatically with bucket-level trade tickets",
+      "Switch between NDF and Futures Proxy instrument types",
+      "Copy ticket details or use the IBKR handoff button",
+      "Use the Simulation Engine tab for deep scenario stress-testing and waterfall rule analysis",
+      "Review the Scenario Stress Tester at any time — no data required",
     ],
   },
   {
@@ -199,12 +200,13 @@ export default function HelpPage() {
             Quick Links
           </div>
           {[
-            { label: "Dashboard",      path: "/dashboard"   },
-            { label: "Position Desk",  path: "/input"       },
-            { label: "Policy Engine",  path: "/policies"    },
-            { label: "Execution",      path: "/execution"   },
-            { label: "Analysis",       path: "/currency-fx" },
-            { label: "HedgeWiki",      path: "/hedgewiki"   },
+            { label: "Dashboard",          path: "/dashboard"   },
+            { label: "Position Desk",      path: "/input"       },
+            { label: "Policy Engine",      path: "/policies"    },
+            { label: "Execution Bridge",   path: "/execution"   },
+            { label: "Simulation Engine",  path: "/sandbox"     },
+            { label: "Analysis",           path: "/currency-fx" },
+            { label: "HedgeWiki",          path: "/hedgewiki"   },
           ].map((lnk) => (
             <button
               key={lnk.path}
