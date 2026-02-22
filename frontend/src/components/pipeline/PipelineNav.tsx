@@ -20,8 +20,8 @@ interface StageConfig {
 const STAGES: StageConfig[] = [
   {
     key: "SANDBOX",
-    label: "Draft",
-    subtitle: "Sandbox",
+    label: "Simulate",
+    subtitle: "Sim Engine",
     path: "/sandbox",
     color: "text-[var(--text-secondary)]",
     bgActive: "bg-[var(--bg-sub)]",
@@ -38,7 +38,7 @@ const STAGES: StageConfig[] = [
   },
   {
     key: "LEDGER",
-    label: "Record",
+    label: "Commit",
     subtitle: "Ledger",
     path: "/ledger",
     color: "text-[var(--accent-cyan)]",

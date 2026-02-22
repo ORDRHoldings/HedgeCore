@@ -84,9 +84,9 @@ export default function PipelineStatusWidget({ onRemove }: Props) {
         <EmptyState
           type="empty"
           title="No pipeline activity"
-          message="Create a proposal from the Sandbox to see pipeline status."
+          message="Run a simulation in the Execution section to see pipeline status."
           action={{
-            label: "Go to Sandbox",
+            label: "Go to Simulation Engine",
             onClick: () => router.push("/sandbox"),
           }}
         />

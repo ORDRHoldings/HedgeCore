@@ -254,8 +254,12 @@ export default function InputPage() {
   // ── Load positions from DB on mount ───────────────────────────────────────
   useEffect(() => {
     if (!token) return;
-    // Demo tokens are not accepted by the backend — skip fetch in demo mode
-    if (token.startsWith('demo_token_')) return;
+    // Demo tokens are not accepted by the backend — skip fetch and clear any
+    // stale error state left over from a previous session so no banner appears
+    if (token.startsWith('demo_token_')) {
+      dispatch(clearPositionError());
+      return;
+    }
     dispatch(listPositionsThunk({ token }));
   }, [dispatch, token]);
 
@@ -622,7 +626,7 @@ export default function InputPage() {
       }
       const result = await calculate({ trades, hedges, market: activeMarket, policy });
       setCalculation(result, { policy, trades, hedges, market: activeMarket, fixtureId: null });
-      router.push('/results');
+      router.push('/execution');
     } catch (err: unknown) {
       const anyErr = err as { response?: { data?: { detail?: unknown } } };
       const detail = anyErr?.response?.data?.detail;
@@ -781,8 +785,8 @@ export default function InputPage() {
           </div>
         )}
 
-        {/* ── Position load error ── */}
-        {positionError && (
+        {/* ── Position load error (suppressed for demo users) ── */}
+        {positionError && !token?.startsWith('demo_token_') && (
           <div style={{
             marginTop: 8, padding: '8px 14px',
             border: `1px solid ${S.red}`,
@@ -1122,13 +1126,12 @@ export default function InputPage() {
                   LOADING POSITIONS…
                 </div>
               ) : trades.length === 0 ? (
-                <div style={{ padding: '24px 0' }}>
-                  <EmptyState
-                    type="empty"
-                    title="No positions yet"
-                    message="Add your first FX exposure position using the form above, or import a CSV file."
-                  />
-                </div>
+                <EmptyState
+                  type="empty"
+                  title="No positions yet"
+                  message="Add your first FX exposure position using the form above, or import a CSV file."
+                  className="py-4"
+                />
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   {/* Table caption */}
