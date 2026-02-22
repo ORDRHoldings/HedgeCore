@@ -100,7 +100,7 @@ export default function FileUploadLane({ token, onImportComplete }: Props) {
           style={{ display: "none" }}
           onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = ""; }}
         />
-        <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 8 }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 8 }}>
           DROP FILE HERE OR CLICK TO BROWSE
         </div>
         <div style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>
@@ -221,7 +221,7 @@ function ConnectorRunBanner({ run, onDismiss }: { run: ConnectorRun; onDismiss: 
         padding:        "8px 14px",
         borderBottom:   `1px solid ${color}`,
       }}>
-        <span style={{ fontFamily: S2.fontMono, fontSize: "0.5rem", letterSpacing: "0.08em", color }}>
+        <span style={{ fontFamily: S2.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em", color }}>
           {success ? "IMPORT COMPLETE" : partial ? "IMPORT PARTIAL" : "IMPORT FAILED"}
         </span>
         <span style={{ fontFamily: S2.fontUI, fontSize: "0.625rem", color: S2.secondary }}>
@@ -248,10 +248,10 @@ function ConnectorRunBanner({ run, onDismiss }: { run: ConnectorRun; onDismiss: 
           ["Run ID",     run.id.slice(0, 8) + "…"],
         ].map(([label, val]) => (
           <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontFamily: S2.fontMono, fontSize: "0.375rem", color: S2.tertiary, letterSpacing: "0.08em" }}>
+            <span style={{ fontFamily: S2.fontMono, fontSize: "0.625rem", color: S2.tertiary, letterSpacing: "0.08em" }}>
               {label}
             </span>
-            <span style={{ fontFamily: S2.fontMono, fontSize: "0.5625rem", color: S2.primary }}>
+            <span style={{ fontFamily: S2.fontMono, fontSize: "0.75rem", color: S2.primary }}>
               {val}
             </span>
           </div>

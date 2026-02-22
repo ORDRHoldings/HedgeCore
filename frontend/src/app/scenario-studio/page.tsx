@@ -32,7 +32,7 @@ function TopBar({ onBack }: { onBack: () => void }) {
       flexShrink: 0,
     }}>
       <button onClick={onBack} style={{
-        fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
         background: "transparent", border: `1px solid ${S.rim}`,
         padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
       }}>← Home</button>
@@ -41,11 +41,11 @@ function TopBar({ onBack }: { onBack: () => void }) {
         Scenario Studio
       </span>
       <span style={{
-        fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.08em",
+        fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em",
         color: S.secondary, padding: "1px 5px", border: `1px solid ${S.rim}`,
       }}>SIMULATION · STRESS</span>
       <div style={{ flex: 1 }} />
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.04em" }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
         AS OF {RENDER_TS}
       </span>
     </header>
@@ -55,9 +55,9 @@ function TopBar({ onBack }: { onBack: () => void }) {
 function SectionLabel({ index, title, count }: { index: string; title: string; count?: string }) {
   return (
     <div style={{ display: "flex", alignItems: "baseline", gap: 10, paddingBottom: 8 }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.06em" }}>{index}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>{index}</span>
       <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>{title}</span>
-      {count && <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, marginLeft: "auto" }}>{count}</span>}
+      {count && <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, marginLeft: "auto" }}>{count}</span>}
     </div>
   );
 }
@@ -240,7 +240,7 @@ export default function ScenarioStudio() {
       }}>
         {["Scenario Library", "Shock Ladder", "P&L Distribution", "Path Builder", "Audit"].map((tab, i) => (
           <div key={tab} style={{
-            fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.04em",
+            fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.04em",
             padding: "0 14px", height: "100%", display: "flex", alignItems: "center",
             color: i === 0 ? S.cyan : S.tertiary,
             borderBottom: i === 0 ? `2px solid ${S.cyan}` : "2px solid transparent",
@@ -249,7 +249,7 @@ export default function ScenarioStudio() {
         ))}
         <div style={{ flex: 1 }} />
         <span style={{
-          fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.06em",
+          fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
           color: S.tertiary, padding: "1px 6px", border: `1px solid ${S.rim}`,
         }}>
           ENGINE v1.0.0 · DETERMINISTIC
@@ -269,7 +269,7 @@ export default function ScenarioStudio() {
                 {["ID", "Scenario", "Method", "Spot Δ", "Hedge P&L", "Conf.", "Status"].map((h, i) => (
                   <th key={h} style={{
                     padding: "4px 8px 4px 0", fontFamily: S.fontMono,
-                    fontSize: "0.4375rem", letterSpacing: "0.07em", textTransform: "uppercase",
+                    fontSize: "0.6875rem", letterSpacing: "0.07em", textTransform: "uppercase",
                     color: S.tertiary, textAlign: i > 2 ? "right" : "left",
                     borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
                   }}>{h}</th>
@@ -284,24 +284,24 @@ export default function ScenarioStudio() {
                   S.tertiary;
                 return (
                   <tr key={sc.id} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                    <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{sc.id}</td>
+                    <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{sc.id}</td>
                     <td style={{ padding: "7px 8px 7px 0", maxWidth: 150 }}>
                       <div style={{ fontWeight: 500, color: S.primary, fontSize: "0.6875rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sc.name}</div>
-                      <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em", marginTop: 1 }}>{sc.type}</div>
+                      <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em", marginTop: 1 }}>{sc.type}</div>
                     </td>
-                    <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.5rem", color: S.secondary, whiteSpace: "nowrap" }}>{sc.method}</td>
-                    <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", textAlign: "right", color: sc.spotDelta !== null ? (sc.spotDelta > 0 ? S.fail : S.pass) : S.tertiary }}>
+                    <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary, whiteSpace: "nowrap" }}>{sc.method}</td>
+                    <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: sc.spotDelta !== null ? (sc.spotDelta > 0 ? S.fail : S.pass) : S.tertiary }}>
                       {sc.spotDelta !== null ? `+${sc.spotDelta.toFixed(2)}%` : "—"}
                     </td>
-                    <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", textAlign: "right", color: fmtColor(sc.hedgePnL) }}>
+                    <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: fmtColor(sc.hedgePnL) }}>
                       {sc.hedgePnL !== null ? fmtM(sc.hedgePnL) : "—"}
                     </td>
-                    <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.5rem", textAlign: "right", color: S.secondary }}>
+                    <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", textAlign: "right", color: S.secondary }}>
                       {sc.confidence !== null ? `${sc.confidence}%` : "—"}
                     </td>
                     <td style={{ padding: "7px 0 7px 0", textAlign: "right" }}>
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.06em",
+                        fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
                         padding: "1px 4px", border: `1px solid ${statusColor}`, color: statusColor,
                       }}>{sc.status}</span>
                     </td>
@@ -322,7 +322,7 @@ export default function ScenarioStudio() {
               { label: "DRAFT",    value: SCENARIOS.filter(s => s.status === "DRAFT").length,    color: S.tertiary },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em" }}>{label}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>{label}</span>
                 <span style={{ fontFamily: S.fontMono, fontSize: "1.125rem", fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
               </div>
             ))}
@@ -342,7 +342,7 @@ export default function ScenarioStudio() {
                   {["Shock", "Rate", "Hedge P&L", "Exp Impact", "Net Impact"].map((h, i) => (
                     <th key={h} style={{
                       padding: "4px 8px 4px 0", fontFamily: S.fontMono,
-                      fontSize: "0.4375rem", letterSpacing: "0.07em", textTransform: "uppercase",
+                      fontSize: "0.6875rem", letterSpacing: "0.07em", textTransform: "uppercase",
                       color: S.tertiary, textAlign: i > 1 ? "right" : "left",
                       borderBottom: `1px solid ${S.rim}`,
                     }}>{h}</th>
@@ -357,19 +357,19 @@ export default function ScenarioStudio() {
                       borderBottom: `1px solid ${S.soft}`,
                       background: isBase ? `color-mix(in srgb, var(--accent-cyan) 4%, transparent)` : "transparent",
                     }}>
-                      <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: isBase ? 700 : 400, color: isBase ? S.cyan : (row.shock.startsWith("+") ? S.fail : S.pass) }}>
+                      <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: isBase ? 700 : 400, color: isBase ? S.cyan : (row.shock.startsWith("+") ? S.fail : S.pass) }}>
                         {row.shock}
                       </td>
-                      <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>
+                      <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>
                         {row.usdmxn.toFixed(2)}
                       </td>
-                      <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", textAlign: "right", color: fmtColor(row.hedgePnL) }}>
+                      <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: fmtColor(row.hedgePnL) }}>
                         {fmtM(row.hedgePnL)}
                       </td>
-                      <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", textAlign: "right", color: fmtColor(row.portfolioImpact) }}>
+                      <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: fmtColor(row.portfolioImpact) }}>
                         {fmtM(row.portfolioImpact)}
                       </td>
-                      <td style={{ padding: "5px 0 5px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", textAlign: "right", fontWeight: 600, color: fmtColor(row.netImpact) }}>
+                      <td style={{ padding: "5px 0 5px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", fontWeight: 600, color: fmtColor(row.netImpact) }}>
                         {fmtM(row.netImpact)}
                       </td>
                     </tr>
@@ -390,7 +390,7 @@ export default function ScenarioStudio() {
                   <tr>
                     {["Pctl", "P&L", ""].map((h, i) => (
                       <th key={i} style={{
-                        padding: "3px 8px 3px 0", fontFamily: S.fontMono, fontSize: "0.4375rem",
+                        padding: "3px 8px 3px 0", fontFamily: S.fontMono, fontSize: "0.6875rem",
                         letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
                         textAlign: i === 1 ? "right" : "left", borderBottom: `1px solid ${S.rim}`,
                       }}>{h}</th>
@@ -400,8 +400,8 @@ export default function ScenarioStudio() {
                 <tbody>
                   {DISTRIBUTION.map(d => (
                     <tr key={d.percentile} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                      <td style={{ padding: "4px 8px 4px 0", fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{d.percentile}</td>
-                      <td style={{ padding: "4px 8px 4px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", textAlign: "right", color: fmtColor(d.pnl), fontWeight: d.percentile === "P50" ? 600 : 400 }}>
+                      <td style={{ padding: "4px 8px 4px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{d.percentile}</td>
+                      <td style={{ padding: "4px 8px 4px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: fmtColor(d.pnl), fontWeight: d.percentile === "P50" ? 600 : 400 }}>
                         {fmtM(d.pnl)}
                       </td>
                       <td style={{ padding: "4px 0 4px 0" }}>
@@ -413,7 +413,7 @@ export default function ScenarioStudio() {
               </table>
               {/* Shape preview */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em" }}>DISTRIBUTION SHAPE</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em" }}>DISTRIBUTION SHAPE</div>
                 <div style={{ padding: "10px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
                   <Sparkline />
                   <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontFamily: S.fontMono, fontSize: "0.4rem", color: S.tertiary }}>
@@ -430,8 +430,8 @@ export default function ScenarioStudio() {
                     { label: "Kurtosis", value: "3.82" },
                   ].map(({ label, value }) => (
                     <div key={label} style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.tertiary }}>{label}</span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>{value}</span>
+                      <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary }}>{label}</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{value}</span>
                     </div>
                   ))}
                 </div>
@@ -461,15 +461,15 @@ export default function ScenarioStudio() {
                 display: "grid", gridTemplateColumns: "1fr auto", gap: 8,
                 padding: "6px 0", borderBottom: i < arr.length - 1 ? `1px solid ${S.soft}` : "none",
               }}>
-                <dt style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.tertiary, fontWeight: 400 }}>{dt}</dt>
-                <dd style={{ margin: 0, fontFamily: S.fontMono, fontSize: "0.5rem", color: S.secondary, textAlign: "right" as const }}>{dd}</dd>
+                <dt style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary, fontWeight: 400 }}>{dt}</dt>
+                <dd style={{ margin: 0, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary, textAlign: "right" as const }}>{dd}</dd>
               </div>
             ))}
           </dl>
 
           <div style={{ marginTop: 20, paddingTop: 14, borderTop: `1px solid ${S.rim}` }}>
             <SectionLabel index="E" title="Audit Trace" />
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, lineHeight: 1.8, letterSpacing: "0.03em" }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, lineHeight: 1.8, letterSpacing: "0.03em" }}>
               <div>RUN-ID: <span style={{ color: S.secondary }}>—</span></div>
               <div>SNAP-HASH: <span style={{ color: S.secondary }}>—</span></div>
               <div>SEED: <span style={{ color: S.secondary }}>0xDEAD1234</span></div>
@@ -479,7 +479,7 @@ export default function ScenarioStudio() {
             </div>
           </div>
 
-          <div style={{ marginTop: "auto", paddingTop: 16, fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.04em" }}>
+          <div style={{ marginTop: "auto", paddingTop: 16, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
             Static demo data · Engine pending
           </div>
         </aside>
@@ -490,7 +490,7 @@ export default function ScenarioStudio() {
       <footer style={{
         height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px",
         borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
-        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
         <span>HedgeCore · Scenario Studio</span>

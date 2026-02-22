@@ -101,7 +101,7 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
         </span>
         <span style={{ flex: 1 }} />
         {exposureLoading && (
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>
             LOADING…
           </span>
         )}
@@ -169,11 +169,11 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
                       }}>
                         {row.currency}
                       </span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>
                         {countTotal} pos
                       </span>
                     </div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.secondary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>
                       {fmtCompact(total)}
                     </span>
                   </div>

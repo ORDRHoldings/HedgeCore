@@ -114,8 +114,8 @@ const EMPTY_ANSWERS: WizardAnswers = {
 function FieldLabel({ label, hint }: { label: string; hint?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 5 }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.08em', color: S.tertiary }}>{label}</span>
-      {hint && <span style={{ fontFamily: S.fontUI, fontSize: '0.5625rem', color: S.tertiary, opacity: 0.7 }}>{hint}</span>}
+      <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.tertiary }}>{label}</span>
+      {hint && <span style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.tertiary, opacity: 0.7 }}>{hint}</span>}
     </div>
   );
 }
@@ -178,15 +178,15 @@ function RecommendationCard({ rec, selected, onSelect, isFallback }: {
       {/* Card header */}
       <div style={{ padding: '10px 14px', background: selected ? `color-mix(in srgb, ${S.cyan} 10%, ${S.bgDeep})` : S.bgDeep, borderBottom: `1px solid ${S.border}` }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.1em', color: selected ? S.cyan : S.tertiary, fontWeight: 700 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.1em', color: selected ? S.cyan : S.tertiary, fontWeight: 700 }}>
             {rec.label}{isFallback && rec.label === 'AI Custom' ? ' (PRESET)' : ''}
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', padding: '1px 5px', borderRadius: 2, background: `color-mix(in srgb, ${riskColor(p.riskPosture)} 12%, transparent)`, color: riskColor(p.riskPosture), letterSpacing: '0.06em' }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', padding: '1px 5px', borderRadius: 2, background: `color-mix(in srgb, ${riskColor(p.riskPosture)} 12%, transparent)`, color: riskColor(p.riskPosture), letterSpacing: '0.06em' }}>
             {p.riskPosture}
           </span>
         </div>
         <div style={{ marginTop: 4, fontFamily: S.fontUI, fontSize: '0.8125rem', fontWeight: 600, color: S.primary }}>{p.name}</div>
-        <div style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.tertiary, letterSpacing: '0.05em', marginTop: 2 }}>{p.shortName} · {p.category}</div>
+        <div style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.tertiary, letterSpacing: '0.05em', marginTop: 2 }}>{p.shortName} · {p.category}</div>
       </div>
 
       {/* Policy parameters */}
@@ -213,7 +213,7 @@ function RecommendationCard({ rec, selected, onSelect, isFallback }: {
       {selected && (
         <div style={{ padding: '6px 14px', background: `color-mix(in srgb, ${S.cyan} 12%, transparent)`, borderTop: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
           <Check size={10} color={S.cyan} />
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.cyan, letterSpacing: '0.06em' }}>SELECTED</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.cyan, letterSpacing: '0.06em' }}>SELECTED</span>
         </div>
       )}
     </div>
@@ -416,7 +416,7 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
               <div>
                 <FieldLabel label="CONFIRMED / FORECAST RATIO" hint="0.0–1.0" />
                 <input type="number" min={0} max={1} step={0.05} style={inputStyle} value={answers.confirmed_to_forecast_ratio} onChange={e => set('confirmed_to_forecast_ratio', +e.target.value)} />
-                <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.tertiary, marginTop: 3, display: 'block' }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.tertiary, marginTop: 3, display: 'block' }}>
                   {Math.round(answers.confirmed_to_forecast_ratio * 100)}% confirmed, {Math.round((1 - answers.confirmed_to_forecast_ratio) * 100)}% forecast
                 </span>
               </div>
@@ -542,7 +542,7 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
           return (
             <div style={{ padding: '20px 0', textAlign: 'center' }}>
               <p style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: S.red, letterSpacing: '0.06em' }}>{aiError}</p>
-              <button type="button" onClick={() => { setStep(3); }} style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', padding: '4px 14px', border: `1px solid ${S.border}`, color: S.secondary, background: 'transparent', cursor: 'pointer', marginTop: 12 }}>
+              <button type="button" onClick={() => { setStep(3); }} style={{ fontFamily: S.fontMono, fontSize: '0.75rem', padding: '4px 14px', border: `1px solid ${S.border}`, color: S.secondary, background: 'transparent', cursor: 'pointer', marginTop: 12 }}>
                 ← Back to Objectives
               </button>
             </div>
@@ -555,7 +555,7 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Sparkles size={14} color={S.cyan} />
-              <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.08em', color: S.cyan }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.cyan }}>
                 {aiResult.fallback ? 'PRESET MATCHED' : 'AI RECOMMENDATIONS'} — SELECT ONE
               </span>
             </div>
@@ -596,14 +596,14 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
                 <span style={{ fontFamily: S.fontUI, fontSize: '0.8125rem', color: S.secondary }}>
                   Publish company-wide (admin)
                 </span>
-                <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.amber, padding: '1px 5px', border: `1px solid ${S.amber}`, letterSpacing: '0.06em' }}>ADMIN</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.amber, padding: '1px 5px', border: `1px solid ${S.amber}`, letterSpacing: '0.06em' }}>ADMIN</span>
               </label>
             )}
 
             {/* Save/apply buttons */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               {saved ? (
-                <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.green, letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.green, letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 5 }}>
                   <Check size={12} /> POLICY SAVED
                 </span>
               ) : (
@@ -611,7 +611,7 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
                   type="button"
                   onClick={handleSave}
                   disabled={saving || !policyName.trim()}
-                  style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', fontWeight: 700, padding: '5px 16px', border: `1px solid ${policyName.trim() ? S.amber : S.border}`, color: policyName.trim() ? S.amber : S.tertiary, background: policyName.trim() ? `color-mix(in srgb, ${S.amber} 8%, transparent)` : 'transparent', cursor: saving || !policyName.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                  style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em', fontWeight: 700, padding: '5px 16px', border: `1px solid ${policyName.trim() ? S.amber : S.border}`, color: policyName.trim() ? S.amber : S.tertiary, background: policyName.trim() ? `color-mix(in srgb, ${S.amber} 8%, transparent)` : 'transparent', cursor: saving || !policyName.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
                 >
                   <Save size={11} />
                   {saving ? 'SAVING…' : 'SAVE POLICY'}
@@ -620,11 +620,11 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
               <button
                 type="button"
                 onClick={handleApply}
-                style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', fontWeight: 700, padding: '5px 16px', border: `1px solid ${S.cyan}`, color: S.cyan, background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`, cursor: 'pointer' }}
+                style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em', fontWeight: 700, padding: '5px 16px', border: `1px solid ${S.cyan}`, color: S.cyan, background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`, cursor: 'pointer' }}
               >
                 ⚡ APPLY TO SESSION
               </button>
-              {saveError && <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.red }}>{saveError}</span>}
+              {saveError && <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.red }}>{saveError}</span>}
             </div>
           </div>
         );
@@ -663,7 +663,7 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
               <button
                 type="button"
                 onClick={goBack}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', padding: '5px 14px', border: `1px solid ${S.border}`, color: S.secondary, background: 'transparent', cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em', padding: '5px 14px', border: `1px solid ${S.border}`, color: S.secondary, background: 'transparent', cursor: 'pointer' }}
               >
                 <ChevronLeft size={12} /> BACK
               </button>
@@ -673,7 +673,7 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
                 type="button"
                 onClick={goNext}
                 disabled={!canProceed}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', fontWeight: 700, padding: '5px 18px', border: `1px solid ${canProceed ? S.cyan : S.border}`, color: canProceed ? S.cyan : S.tertiary, background: canProceed ? `color-mix(in srgb, ${S.cyan} 8%, transparent)` : 'transparent', cursor: canProceed ? 'pointer' : 'not-allowed' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em', fontWeight: 700, padding: '5px 18px', border: `1px solid ${canProceed ? S.cyan : S.border}`, color: canProceed ? S.cyan : S.tertiary, background: canProceed ? `color-mix(in srgb, ${S.cyan} 8%, transparent)` : 'transparent', cursor: canProceed ? 'pointer' : 'not-allowed' }}
               >
                 {isLastBeforeAI ? (
                   <><Sparkles size={11} /> ANALYZE WITH AI</>
@@ -686,7 +686,7 @@ export default function PolicyWizardModal({ open, onClose, token, onApply, onSav
               <button
                 type="button"
                 onClick={handleClose}
-                style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', padding: '5px 14px', border: `1px solid ${S.border}`, color: S.secondary, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+                style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.06em', padding: '5px 14px', border: `1px solid ${S.border}`, color: S.secondary, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
               >
                 <X size={11} /> CLOSE
               </button>

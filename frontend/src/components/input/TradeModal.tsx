@@ -46,7 +46,7 @@ const inputStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   display: 'block',
   fontFamily: S.fontMono,
-  fontSize: '0.5625rem',
+  fontSize: '0.75rem',
   color: S.textTertiary,
   letterSpacing: '0.07em',
   marginBottom: 4,
@@ -54,7 +54,7 @@ const labelStyle: React.CSSProperties = {
 
 const hintStyle: React.CSSProperties = {
   fontFamily: S.fontMono,
-  fontSize: '0.5rem',
+  fontSize: '0.6875rem',
   color: S.textTertiary,
   letterSpacing: '0.04em',
 };
@@ -140,7 +140,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
       width="lg"
       footer={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.textTertiary, letterSpacing: '0.05em' }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, letterSpacing: '0.05em' }}>
             {canSave ? '● READY TO SAVE' : '○ COMPLETE REQUIRED FIELDS'}
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -174,7 +174,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
           borderBottom: `1px solid ${S.borderSoft}`,
           padding: '12px 0 16px',
         }}>
-          <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>IDENTIFICATION</p>
+          <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>IDENTIFICATION</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <LabeledField label="RECORD ID *" hint="unique across all positions">
               <input
@@ -202,7 +202,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
 
         {/* ── Section: Exposure Details ── */}
         <div style={{ borderBottom: `1px solid ${S.borderSoft}`, padding: '12px 0 16px' }}>
-          <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>EXPOSURE DETAILS</p>
+          <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>EXPOSURE DETAILS</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
 
             {/* Type */}
@@ -231,7 +231,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
                 ))}
               </select>
               {selectedCcy && (
-                <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, marginTop: 3, display: 'block' }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, marginTop: 3, display: 'block' }}>
                   {selectedCcy.exchange} · {selectedCcy.name}
                 </span>
               )}
@@ -256,7 +256,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
 
         {/* ── Section: Timing & Status ── */}
         <div style={{ padding: '12px 0 4px' }}>
-          <p style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>TIMING & CERTAINTY</p>
+          <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>TIMING & CERTAINTY</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
 
             {/* Value Date */}
@@ -308,7 +308,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
             padding: '8px 12px',
             marginTop: 8,
           }}>
-            <p style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.amber, letterSpacing: '0.06em', marginBottom: 3 }}>CROSS-CURRENCY ADVISORY</p>
+            <p style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.amber, letterSpacing: '0.06em', marginBottom: 3 }}>CROSS-CURRENCY ADVISORY</p>
             <p style={{ fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.textSecondary, lineHeight: 1.5, margin: 0 }}>
               Exposure in <strong style={{ color: S.textPrimary }}>{form.currency}</strong> will be converted to USD equivalent for engine processing.
               Ensure the Market Conditions step includes a valid {form.currency}/USD spot rate and forward curve.

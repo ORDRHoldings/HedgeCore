@@ -95,13 +95,13 @@ function PresetCard({ preset, isActive, isActivating, onActivate }: PresetCardPr
       {/* Header */}
       <div style={{ padding: '10px 12px', borderBottom: `1px solid ${S.rim}`, background: S.bgDeep }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.08em', color: S.tertiary }}>{preset.category}</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', padding: '1px 5px', borderRadius: 2, background: `color-mix(in srgb, ${rc} 12%, transparent)`, color: rc, letterSpacing: '0.06em' }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.tertiary }}>{preset.category}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', padding: '1px 5px', borderRadius: 2, background: `color-mix(in srgb, ${rc} 12%, transparent)`, color: rc, letterSpacing: '0.06em' }}>
             {risk}
           </span>
         </div>
         <div style={{ fontFamily: S.fontUI, fontSize: '0.8125rem', fontWeight: 600, color: S.primary, lineHeight: 1.3 }}>{preset.name}</div>
-        <div style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.tertiary, letterSpacing: '0.05em', marginTop: 2 }}>{preset.shortName}</div>
+        <div style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.tertiary, letterSpacing: '0.05em', marginTop: 2 }}>{preset.shortName}</div>
       </div>
 
       {/* Body */}
@@ -120,7 +120,7 @@ function PresetCard({ preset, isActive, isActivating, onActivate }: PresetCardPr
           ].map(({ label, value }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
               <span style={{ fontFamily: S.fontMono, fontSize: '0.4rem', color: S.tertiary, letterSpacing: '0.06em' }}>{label}</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', fontWeight: 700, color: S.primary }}>{value}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', fontWeight: 700, color: S.primary }}>{value}</span>
             </div>
           ))}
         </div>
@@ -131,14 +131,14 @@ function PresetCard({ preset, isActive, isActivating, onActivate }: PresetCardPr
         {isActive ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <Check size={11} color={S.cyan} />
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.cyan, letterSpacing: '0.06em' }}>ACTIVE POLICY</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.cyan, letterSpacing: '0.06em' }}>ACTIVE POLICY</span>
           </div>
         ) : (
           <button
             type="button"
             onClick={() => onActivate(preset)}
             disabled={isActivating}
-            style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.06em', padding: '3px 10px', border: `1px solid ${hovered ? S.cyan : S.rim}`, color: hovered ? S.cyan : S.tertiary, background: 'transparent', cursor: isActivating ? 'not-allowed' : 'pointer', transition: 'all 0.12s' }}
+            style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.06em', padding: '3px 10px', border: `1px solid ${hovered ? S.cyan : S.rim}`, color: hovered ? S.cyan : S.tertiary, background: 'transparent', cursor: isActivating ? 'not-allowed' : 'pointer', transition: 'all 0.12s' }}
           >
             {isActivating ? 'ACTIVATING…' : 'ACTIVATE POLICY'}
           </button>
@@ -260,7 +260,7 @@ export default function PoliciesPage() {
         {activePresetId && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`, background: `color-mix(in srgb, ${S.cyan} 6%, transparent)` }}>
             <Check size={12} color={S.cyan} />
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.cyan, letterSpacing: '0.06em' }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.cyan, letterSpacing: '0.06em' }}>
               ACTIVE: {POLICY_PRESETS.find(p => p.id === activePresetId)?.shortName ?? 'POLICY'}
             </span>
           </div>
@@ -271,7 +271,7 @@ export default function PoliciesPage() {
           onClick={() => setWizardOpen(true)}
           style={{
             display: 'flex', alignItems: 'center', gap: 7,
-            fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.08em', fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em', fontWeight: 700,
             padding: '7px 18px', border: `1px solid ${S.amber}`,
             color: 'var(--bg-deep)', background: S.amber,
             cursor: 'pointer',
@@ -297,7 +297,7 @@ export default function PoliciesPage() {
                 onClick={() => setActiveCategory(key)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
-                  fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.06em',
+                  fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.06em',
                   padding: '5px 12px', border: `1px solid ${active ? S.cyan : S.rim}`,
                   color: active ? S.cyan : S.tertiary,
                   background: active ? `color-mix(in srgb, ${S.cyan} 8%, ${S.bgPanel})` : 'transparent',
@@ -341,7 +341,7 @@ export default function PoliciesPage() {
             />
           ))}
           {filteredPresets.length === 0 && (
-            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px 0', fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.tertiary, letterSpacing: '0.06em' }}>
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px 0', fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary, letterSpacing: '0.06em' }}>
               NO POLICIES MATCH YOUR SEARCH
             </div>
           )}
@@ -352,7 +352,7 @@ export default function PoliciesPage() {
           <div style={{ borderTop: `1px solid ${S.rim}`, paddingTop: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <Sparkles size={14} color={S.amber} />
-              <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.1em', color: S.amber, fontWeight: 700 }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.1em', color: S.amber, fontWeight: 700 }}>
                 CUSTOM POLICIES ({savedTemplates.length})
               </span>
             </div>
@@ -361,16 +361,16 @@ export default function PoliciesPage() {
                 <div key={tmpl.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', border: `1px solid ${S.rim}`, background: S.bgPanel }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontFamily: S.fontUI, fontSize: '0.8125rem', fontWeight: 600, color: S.primary }}>{tmpl.name}</div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.tertiary, letterSpacing: '0.05em', marginTop: 2 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.tertiary, letterSpacing: '0.05em', marginTop: 2 }}>
                       {tmpl.short_name} · {tmpl.category} · {tmpl.risk_posture}
                     </div>
                   </div>
                   {isAdmin && (
-                    <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', padding: '1px 5px', border: `1px solid ${S.amber}`, color: S.amber, letterSpacing: '0.06em' }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', padding: '1px 5px', border: `1px solid ${S.amber}`, color: S.amber, letterSpacing: '0.06em' }}>
                       ADMIN
                     </span>
                   )}
-                  <div style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.tertiary }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.tertiary }}>
                     Conf: {Math.round(tmpl.config.hedge_ratios.confirmed * 100)}% · Fcst: {Math.round(tmpl.config.hedge_ratios.forecast * 100)}%
                   </div>
                 </div>
@@ -381,7 +381,7 @@ export default function PoliciesPage() {
 
         {/* Activate message */}
         {activateMsg && (
-          <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: '0.5rem', color: activateMsg.startsWith('✓') ? S.green : S.red, letterSpacing: '0.04em' }}>
+          <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: '0.6875rem', color: activateMsg.startsWith('✓') ? S.green : S.red, letterSpacing: '0.04em' }}>
             {activateMsg}
           </div>
         )}

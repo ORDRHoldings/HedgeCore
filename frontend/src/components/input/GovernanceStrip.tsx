@@ -49,7 +49,7 @@ export default function GovernanceStrip({
   return (
     <div
       className="sticky top-0 z-50 shrink-0 border-b border-[var(--border-rim)] bg-[var(--bg-sub)] print-header"
-      style={{ height: 32, fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5625rem', letterSpacing: '0.04em', color: 'var(--text-secondary)', overflow: 'hidden' }}
+      style={{ height: 32, fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.75rem', letterSpacing: '0.04em', color: 'var(--text-secondary)', overflow: 'hidden' }}
     >
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
 

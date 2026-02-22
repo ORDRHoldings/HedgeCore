@@ -32,8 +32,8 @@ const colorMap: Record<ChipStatus, ColorSet> = {
 };
 
 const sizeStyles = {
-  sm: "px-1.5 py-0.5 text-[0.625rem] gap-1",
-  md: "px-2 py-0.5 text-[0.6875rem] gap-1.5",
+  sm: "px-1.5 py-0.5 text-[0.75rem] gap-1",
+  md: "px-2 py-0.5 text-[0.8125rem] gap-1.5",
 };
 
 const dotSizes = {

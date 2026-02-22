@@ -50,7 +50,7 @@ const ScenarioSensitivityPanel: React.FC<ScenarioSensitivityPanelProps> = ({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
         {kpiCards.map((card) => (
           <div key={card.label} style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: '0.5rem', padding: '0.75rem' }}>
-            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
               {card.label}
             </div>
             <div style={{ fontSize: '20px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.25rem' }}>

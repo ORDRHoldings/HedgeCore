@@ -56,7 +56,7 @@ const ExposureInsightsPanel: React.FC<ExposureInsightsPanelProps> = ({ buckets }
       {/* Concentration Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         <div style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: '0.5rem', padding: '1rem' }}>
-          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
             Peak Bucket
           </div>
           <div style={{ fontSize: '20px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
@@ -68,14 +68,14 @@ const ExposureInsightsPanel: React.FC<ExposureInsightsPanelProps> = ({ buckets }
           </div>
         </div>
         <div style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: '0.5rem', padding: '1rem' }}>
-          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
             Concentration (HHI)
           </div>
           <div style={{ fontSize: '20px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
             {concentration.herfindahlIndex.toFixed(4)}
           </div>
           <div style={{ marginTop: '0.25rem' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px', background: hhiLabel.color + '22', color: hhiLabel.color }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px', background: hhiLabel.color + '22', color: hhiLabel.color }}>
               {hhiLabel.text}
             </span>
           </div>
@@ -84,7 +84,7 @@ const ExposureInsightsPanel: React.FC<ExposureInsightsPanelProps> = ({ buckets }
 
       {/* Confirmed vs Forecast Bar */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+        <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
           Flow Composition
         </div>
         <div style={{ display: 'flex', height: '24px', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-soft)' }}>
@@ -95,7 +95,7 @@ const ExposureInsightsPanel: React.FC<ExposureInsightsPanelProps> = ({ buckets }
             {forecastTotal > 0 && forecastPctStr}
           </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
           <span>
             <span style={{ color: 'var(--accent-cyan)', marginRight: '4px' }}>&#9632;</span>
             Confirmed {fmtCompact(confirmedTotal)}
@@ -110,7 +110,7 @@ const ExposureInsightsPanel: React.FC<ExposureInsightsPanelProps> = ({ buckets }
       {/* Cashflow Timing */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         <div style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: '0.5rem', padding: '1rem' }}>
-          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
             Peak Cashflow Bucket
           </div>
           <div style={{ fontSize: '20px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
@@ -118,7 +118,7 @@ const ExposureInsightsPanel: React.FC<ExposureInsightsPanelProps> = ({ buckets }
           </div>
         </div>
         <div style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: '0.5rem', padding: '1rem' }}>
-          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
             Volatility Metrics
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginTop: '0.5rem' }}>

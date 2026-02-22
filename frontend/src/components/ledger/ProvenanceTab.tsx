@@ -12,7 +12,7 @@ export default function ProvenanceTab({ ledger }: ProvenanceTabProps) {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase">
+      <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase">
         Hash Tree
       </h3>
       {l.provenance_chain ? (

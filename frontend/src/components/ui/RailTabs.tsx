@@ -41,7 +41,7 @@ export default function RailTabs({
               aria-selected={isActive}
               onClick={() => setActive(tab.id)}
               className={[
-                "relative px-3 py-2 text-[0.6875rem] font-medium transition-colors whitespace-nowrap",
+                "relative px-3 py-2 text-[0.8125rem] font-medium transition-colors whitespace-nowrap",
                 isActive
                   ? "text-[var(--text-primary)]"
                   : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]",

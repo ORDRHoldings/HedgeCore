@@ -45,7 +45,7 @@ const HedgeEfficiencyPanel: React.FC<HedgeEfficiencyPanelProps> = ({ buckets, su
 
       {/* Per-Bucket Coverage Bars */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+        <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
           Coverage by Bucket
         </div>
         {coverageData.map((d) => {
@@ -53,13 +53,13 @@ const HedgeEfficiencyPanel: React.FC<HedgeEfficiencyPanelProps> = ({ buckets, su
           const barWidth = Math.min((d.ratio / maxRatio) * 100, 100) + '%';
           return (
             <div key={d.bucket} style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem', gap: '0.5rem' }}>
-              <div style={{ width: '80px', fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-secondary)', flexShrink: 0, textAlign: 'right' }}>
+              <div style={{ width: '80px', fontSize: '13px', fontFamily: 'monospace', color: 'var(--text-secondary)', flexShrink: 0, textAlign: 'right' }}>
                 {d.bucket}
               </div>
               <div style={{ flex: 1, height: '18px', background: 'var(--bg-deep)', borderRadius: '3px', overflow: 'hidden', border: '1px solid var(--border-soft)' }}>
                 <div style={{ width: barWidth, height: '100%', background: statusColor[status], borderRadius: '2px', transition: 'width 0.3s' }} />
               </div>
-              <div style={{ width: '50px', fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-primary)', flexShrink: 0 }}>
+              <div style={{ width: '50px', fontSize: '13px', fontFamily: 'monospace', color: 'var(--text-primary)', flexShrink: 0 }}>
                 {fmtPct(d.ratio)}
               </div>
             </div>
@@ -102,21 +102,21 @@ const HedgeEfficiencyPanel: React.FC<HedgeEfficiencyPanelProps> = ({ buckets, su
 
       {/* Instrument Mix */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+        <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
           Instrument Mix
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
           <div style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: '0.5rem', padding: '0.75rem', textAlign: 'center' }}>
             <div style={{ fontSize: '20px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent-red)' }}>{mix.sellCount}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Sell (Reduce)</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Sell (Reduce)</div>
           </div>
           <div style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: '0.5rem', padding: '0.75rem', textAlign: 'center' }}>
             <div style={{ fontSize: '20px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent-green)' }}>{mix.buyCount}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Buy (Add)</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Buy (Add)</div>
           </div>
           <div style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-soft)', borderRadius: '0.5rem', padding: '0.75rem', textAlign: 'center' }}>
             <div style={{ fontSize: '20px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-secondary)' }}>{mix.suppressedCount}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Suppressed</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>Suppressed</div>
           </div>
         </div>
       </div>
