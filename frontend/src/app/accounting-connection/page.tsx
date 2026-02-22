@@ -237,7 +237,6 @@ export default function AccountingConnectionPage() {
 
   // ── Import history ──────────────────────────────────────────────────────
   const [runHistory,    setRunHistory]    = useState<ConnectorRun[]>([]);
-  const [historyError,  setHistoryError]  = useState<string | null>(null);
 
   // ── Auth guard ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -292,14 +291,13 @@ export default function AccountingConnectionPage() {
   // ── Load run history when system or auth changes ─────────────────────────
   useEffect(() => {
     if (!token) return;
-    setHistoryError(null);
     listConnectorRuns(token, 20)
       .then(data => {
         setRunHistory(data.items.filter(r => r.connector_type === "ACCOUNTING"));
       })
       .catch(() => {
+        // API unavailable (e.g. demo mode / 401) — silently show empty state
         setRunHistory([]);
-        setHistoryError("Unable to load import history.");
       });
   }, [token, selectedSystem]);
 
@@ -1312,11 +1310,7 @@ export default function AccountingConnectionPage() {
                 </span>
               </div>
 
-              {historyError ? (
-                <div style={{ padding: "16px 14px" }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.fail }}>{historyError}</span>
-                </div>
-              ) : runHistory.length === 0 ? (
+              {runHistory.length === 0 ? (
                 <div style={{ padding: "24px 14px", textAlign: "center" }}>
                   <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
                     No imports yet. Connect an accounting system and run your first import.
