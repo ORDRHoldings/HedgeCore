@@ -170,7 +170,20 @@ export default function PoliciesPage() {
 
   // Load active policy + templates on mount
   useEffect(() => {
-    if (!token || token.startsWith('demo_token_')) return;
+    if (!token) return;
+    if (token.startsWith('demo_token_')) {
+      // For demo users, default active policy to Balanced Corporate (BLNC)
+      const demoPreset = POLICY_PRESETS.find(p => p.shortName === 'BLNC');
+      if (demoPreset) {
+        setActiveInstance({
+          id: 'demo-instance',
+          template: { id: 'demo-tmpl', short_name: 'BLNC', name: 'Balanced Corporate', is_system: true } as PolicyTemplate,
+          activated_by: 'demo',
+          activated_at: new Date().toISOString(),
+        } as PolicyInstance);
+      }
+      return;
+    }
     getActivePolicy(token).then(inst => setActiveInstance(inst)).catch(() => {});
     listPolicyTemplates(token).then(setDbTemplates).catch(() => {});
   }, [token]);

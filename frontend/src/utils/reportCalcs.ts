@@ -263,7 +263,7 @@ export function vulnerabilityRanking(
   // Per bucket: find worst case at extremes
   const bucketMap: Record<string, number> = {};
   for (const row of perBucket) {
-    if (extremeSigmas.includes(row.sigma)) {
+    if (extremeSigmas.some(s => Math.abs(s - row.sigma) < 0.001)) {  // epsilon compare avoids float equality bug
       const current = bucketMap[row.bucket] ?? 0;
       if (Math.abs(row.hedge_benefit_usd) > Math.abs(current)) {
         bucketMap[row.bucket] = row.hedge_benefit_usd;
