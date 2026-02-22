@@ -49,7 +49,7 @@ export default function HedgeForm({ onSubmit, loading = false }: HedgeFormProps)
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Instrument ID
             </label>
             <input
@@ -60,7 +60,7 @@ export default function HedgeForm({ onSubmit, loading = false }: HedgeFormProps)
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Quantity (contracts)
             </label>
             <input
@@ -71,7 +71,7 @@ export default function HedgeForm({ onSubmit, loading = false }: HedgeFormProps)
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Asset Class
             </label>
             <select
@@ -85,7 +85,7 @@ export default function HedgeForm({ onSubmit, loading = false }: HedgeFormProps)
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Underlying
             </label>
             <input
@@ -96,7 +96,7 @@ export default function HedgeForm({ onSubmit, loading = false }: HedgeFormProps)
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Contract Multiplier
             </label>
             <input
@@ -107,7 +107,7 @@ export default function HedgeForm({ onSubmit, loading = false }: HedgeFormProps)
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Spot Price (USD)
             </label>
             <input
@@ -119,7 +119,7 @@ export default function HedgeForm({ onSubmit, loading = false }: HedgeFormProps)
           </div>
         </div>
 
-        <div className="rounded bg-gray-50 p-3 text-xs text-gray-600">
+        <div className="rounded bg-gray-50 p-3 text-sm text-gray-600">
           <strong>Scenarios:</strong> -5% equity / +10% vol, -10% equity / +20% vol
         </div>
 

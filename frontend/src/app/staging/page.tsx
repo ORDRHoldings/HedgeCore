@@ -100,7 +100,7 @@ export default function StagingListPage() {
         <h1 className="text-sm font-semibold text-[var(--text-primary)]">
           Staging Queue
         </h1>
-        <span className="text-[0.625rem] font-mono text-[var(--text-tertiary)] uppercase">
+        <span className="text-[0.75rem] font-mono text-[var(--text-tertiary)] uppercase">
           {stagingArtifacts.length} artifacts
         </span>
       </div>

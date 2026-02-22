@@ -68,7 +68,7 @@ function ErrorRow({
       >
         {/* Code badge */}
         <span style={{
-          fontSize: '0.5625rem',
+          fontSize: '0.75rem',
           fontWeight: 700,
           padding: '1px 5px',
           borderRadius: 2,
@@ -84,7 +84,7 @@ function ErrorRow({
 
         {/* Severity label */}
         <span style={{
-          fontSize: '0.5rem',
+          fontSize: '0.6875rem',
           fontWeight: 700,
           color: severityColor,
           opacity: 0.8,
@@ -126,7 +126,7 @@ function ErrorRow({
             type="button"
             onClick={(e) => { e.stopPropagation(); onResolve(error); }}
             style={{
-              fontSize: '0.5rem',
+              fontSize: '0.6875rem',
               fontWeight: 600,
               padding: '2px 6px',
               borderRadius: 2,
@@ -156,7 +156,7 @@ function ErrorRow({
 
         {/* Expand chevron */}
         <span style={{
-          fontSize: '0.5rem',
+          fontSize: '0.6875rem',
           color: 'var(--text-secondary)',
           opacity: 0.5,
           flexShrink: 0,
@@ -180,7 +180,7 @@ function ErrorRow({
           {/* WHY section */}
           <div>
             <div style={{
-              fontSize: '0.5rem',
+              fontSize: '0.6875rem',
               fontWeight: 700,
               fontFamily: mono,
               color: 'var(--text-secondary)',
@@ -204,7 +204,7 @@ function ErrorRow({
           {/* HOW TO FIX section */}
           <div>
             <div style={{
-              fontSize: '0.5rem',
+              fontSize: '0.6875rem',
               fontWeight: 700,
               fontFamily: mono,
               color: 'var(--text-secondary)',
@@ -253,7 +253,7 @@ function ErrorRow({
                     type="button"
                     onClick={() => onResolve(error, knowledge.resolveAction.secondaryType)}
                     style={{
-                      fontSize: '0.5625rem',
+                      fontSize: '0.75rem',
                       fontWeight: 700,
                       fontFamily: mono,
                       padding: '3px 10px',
@@ -277,7 +277,7 @@ function ErrorRow({
                   type="button"
                   onClick={() => onResolve(error)}
                   style={{
-                    fontSize: '0.5625rem',
+                    fontSize: '0.75rem',
                     fontWeight: 700,
                     fontFamily: mono,
                     padding: '3px 10px',
@@ -314,9 +314,11 @@ interface Props {
   onDismiss?: () => void;
   /** Generic resolve callback — parent handles dispatching to correct action */
   onResolve?: (error: ValidationErrorDetail, actionOverride?: ResolveActionType) => void;
+  /** Codes that are auto-resolved (excluded from EXCEPTION count in header) */
+  autoResolvedCodes?: Set<string>;
 }
 
-export default function BackendErrorBanner({ headerMessage, errors, onDismiss, onResolve }: Props) {
+export default function BackendErrorBanner({ headerMessage, errors, onDismiss, onResolve, autoResolvedCodes }: Props) {
   /* Group errors by validation category */
   const grouped = useMemo(() => {
     const map: Record<string, ValidationErrorDetail[]> = {};
@@ -333,8 +335,12 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
       .map(cat => ({ category: cat, items: map[cat] }));
   }, [errors]);
 
-  const totalCritical = errors.filter(e => e.severity === 'CRITICAL').length;
-  const totalWarning = errors.filter(e => e.severity === 'WARNING').length;
+  /* Only count non-auto-resolved errors in the header badge */
+  const actionableErrors = autoResolvedCodes
+    ? errors.filter(e => !autoResolvedCodes.has(e.code))
+    : errors;
+  const totalCritical = actionableErrors.filter(e => e.severity === 'CRITICAL').length;
+  const totalWarning = actionableErrors.filter(e => e.severity === 'WARNING').length;
 
   return (
     <div style={{
@@ -373,7 +379,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {totalCritical > 0 && (
             <span style={{
-              fontSize: '0.5rem',
+              fontSize: '0.6875rem',
               fontWeight: 700,
               padding: '2px 6px',
               color: 'var(--accent-red)',
@@ -386,7 +392,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
           )}
           {totalWarning > 0 && (
             <span style={{
-              fontSize: '0.5rem',
+              fontSize: '0.6875rem',
               fontWeight: 700,
               padding: '2px 6px',
               color: 'var(--accent-amber)',
@@ -459,7 +465,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
                   </span>
                   {catCritical > 0 && (
                     <span style={{
-                      fontSize: '0.5rem',
+                      fontSize: '0.6875rem',
                       padding: '1px 5px',
                       borderRadius: 2,
                       color: 'var(--accent-red)',
@@ -471,7 +477,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
                   )}
                   {catWarning > 0 && (
                     <span style={{
-                      fontSize: '0.5rem',
+                      fontSize: '0.6875rem',
                       padding: '1px 5px',
                       borderRadius: 2,
                       color: 'var(--accent-amber)',
@@ -497,7 +503,7 @@ export default function BackendErrorBanner({ headerMessage, errors, onDismiss, o
       <div style={{
         padding: '8px 14px',
         borderTop: '1px solid color-mix(in srgb, var(--border-rim) 30%, transparent)',
-        fontSize: '0.5625rem',
+        fontSize: '0.75rem',
         color: 'var(--text-secondary)',
         opacity: 0.5,
         letterSpacing: '0.04em',

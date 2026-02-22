@@ -25,7 +25,7 @@ export default function BeforeAfterTab({
       {/* Worst-case KPI deltas */}
       {wc && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-2">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-2">
             Worst-Case Impact
           </h3>
           <div className="grid grid-cols-2 gap-2">
@@ -68,7 +68,7 @@ export default function BeforeAfterTab({
       {/* Margin impact */}
       {ms && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-2">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-2">
             Margin Summary
           </h3>
           <div className="grid grid-cols-2 gap-2">

@@ -31,7 +31,7 @@ export default function LiquidityTab({
     <div className="space-y-3">
       {liquidityResult && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
             Liquidity Estimates
           </h3>
           <JsonViewer data={liquidityResult} />
@@ -39,7 +39,7 @@ export default function LiquidityTab({
       )}
       {regime && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
             Regime Classification
           </h3>
           <div className="flex items-center gap-2 mb-2">

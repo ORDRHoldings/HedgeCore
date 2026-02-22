@@ -107,7 +107,7 @@ export default function SandboxPage() {
           <div className="flex gap-2 flex-wrap">
             {waterfall?.rules.map((r: { rule_id: string; status: string }) => (
               <div key={r.rule_id} className="flex items-center gap-1">
-                <span className="text-[0.625rem] font-mono text-[var(--text-tertiary)]">{r.rule_id}</span>
+                <span className="text-[0.75rem] font-mono text-[var(--text-tertiary)]">{r.rule_id}</span>
                 <StatusChip status={r.status as ChipStatus} size="sm" />
               </div>
             ))}
@@ -169,7 +169,7 @@ export default function SandboxPage() {
         </button>
         <span style={{
           fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: '0.5rem', letterSpacing: '0.12em',
+          fontSize: '0.6875rem', letterSpacing: '0.12em',
           color: 'var(--text-tertiary)',
         }}>SIMULATION ENGINE</span>
         {sandboxResult && (
@@ -177,7 +177,7 @@ export default function SandboxPage() {
             <span style={{ color: 'var(--border-rim)' }}>|</span>
             <span style={{
               fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: '0.5rem', color: 'var(--text-tertiary)',
+              fontSize: '0.6875rem', color: 'var(--text-tertiary)',
             }}>
               RUN <span style={{ color: 'var(--accent-cyan)' }}>{sandboxResult.run_id.slice(0, 8).toUpperCase()}</span>
             </span>
@@ -299,7 +299,7 @@ export default function SandboxPage() {
               <div>
                 <p style={{
                   fontFamily: "'IBM Plex Mono', monospace",
-                  fontSize: '0.5625rem', letterSpacing: '0.06em',
+                  fontSize: '0.75rem', letterSpacing: '0.06em',
                   color: 'var(--accent-cyan)', marginBottom: 3,
                 }}>SIMULATION COMPLETE</p>
                 <p style={{

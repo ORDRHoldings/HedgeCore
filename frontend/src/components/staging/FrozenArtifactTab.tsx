@@ -12,7 +12,7 @@ export default function FrozenArtifactTab({
   const s = staging;
 
   return (
-    <div className="space-y-2 text-xs">
+    <div className="space-y-2 text-sm">
       <div className="space-y-1">
         {[
           { label: "Staging ID", value: s.staging_id.slice(0, 12), mono: true },
@@ -39,7 +39,7 @@ export default function FrozenArtifactTab({
       </div>
       {s.justification && (
         <div className="mt-2 p-2 bg-[var(--bg-sub)] rounded text-[var(--text-secondary)]">
-          <span className="text-[0.625rem] uppercase font-medium">
+          <span className="text-[0.75rem] uppercase font-medium">
             Justification
           </span>
           <p className="mt-1">{s.justification}</p>

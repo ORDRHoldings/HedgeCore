@@ -25,7 +25,7 @@ export default function SystemBar() {
     : "—";
 
   return (
-    <div className="h-8 bg-[var(--bg-sub)] border-b border-[var(--border-soft)] flex items-center px-4 gap-6 text-xs font-mono text-[var(--text-tertiary)] shrink-0 select-none">
+    <div className="h-8 bg-[var(--bg-sub)] border-b border-[var(--border-soft)] flex items-center px-4 gap-6 text-sm font-mono text-[var(--text-tertiary)] shrink-0 select-none">
       <span>
         Engine <span className="text-[var(--text-secondary)]">{engineVersion}</span>
       </span>
@@ -44,7 +44,7 @@ export default function SystemBar() {
       <button
         onClick={() => dispatch(setDecisionPacketMode(!decisionPacketMode))}
         className={[
-          "px-2 py-0.5 rounded text-xs font-medium transition-colors",
+          "px-2 py-0.5 rounded text-sm font-medium transition-colors",
           decisionPacketMode
             ? "bg-[var(--accent-cyan)]/20 text-[var(--accent-cyan)]"
             : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]",

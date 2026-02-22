@@ -92,7 +92,7 @@ export default function StepProgress({
                 disabled={isLocked}
                 style={{
                   fontFamily: mono,
-                  fontSize: '0.5625rem',
+                  fontSize: '0.75rem',
                   letterSpacing: '0.04em',
                   display: 'flex',
                   alignItems: 'center',
@@ -139,7 +139,7 @@ export default function StepProgress({
                     disabled={!canGenerate || generateLoading}
                     style={{
                       fontFamily: mono,
-                      fontSize: '0.5rem',
+                      fontSize: '0.6875rem',
                       fontWeight: 700,
                       letterSpacing: '0.1em',
                       padding: '4px 14px',

@@ -32,7 +32,7 @@ export default function StaleSnapshotBanner() {
   if (!isStale) return null;
 
   return (
-    <div className="h-7 bg-[var(--accent-amber)]/10 border-b border-[var(--accent-amber)]/25 flex items-center justify-center gap-2 text-[0.6875rem] font-medium text-[var(--accent-amber)] shrink-0">
+    <div className="h-7 bg-[var(--accent-amber)]/10 border-b border-[var(--accent-amber)]/25 flex items-center justify-center gap-2 text-[0.8125rem] font-medium text-[var(--accent-amber)] shrink-0">
       <svg
         width="14"
         height="14"

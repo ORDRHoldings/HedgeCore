@@ -60,7 +60,7 @@ export default function AllocatorSummary({
         )}
         {currencyNetting && (
           <div>
-            <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+            <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
               Currency Netting
             </h3>
             <JsonViewer data={currencyNetting} />

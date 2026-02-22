@@ -90,7 +90,7 @@ export default function PipelineNav() {
               disabled={isDisabled}
               title={isDisabled ? `${stage.label} (${stage.subtitle}) — coming soon` : undefined}
               className={[
-                "px-3 py-1.5 rounded text-xs font-medium transition-colors",
+                "px-3 py-1.5 rounded text-sm font-medium transition-colors",
                 isDisabled
                   ? "text-[var(--text-tertiary)]/40 cursor-not-allowed opacity-40"
                   : isActive
@@ -100,7 +100,7 @@ export default function PipelineNav() {
             >
               <span className="flex flex-col items-center leading-none gap-0.5">
                 <span>{stage.label}</span>
-                <span className="text-[0.5rem] opacity-50 font-normal tracking-wider uppercase">{stage.subtitle}</span>
+                <span className="text-[0.8125rem] opacity-50 font-normal tracking-wider uppercase">{stage.subtitle}</span>
               </span>
             </button>
           </div>
@@ -109,7 +109,7 @@ export default function PipelineNav() {
 
       {/* Active state indicator */}
       <div className="flex-1" />
-      <span className="text-[0.625rem] font-mono text-[var(--text-tertiary)] uppercase tracking-wider">
+      <span className="text-[0.75rem] font-mono text-[var(--text-tertiary)] uppercase tracking-wider">
         {STAGES.find(s => s.key === activeState)?.label ?? activeState}
       </span>
     </nav>

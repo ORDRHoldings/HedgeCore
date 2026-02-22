@@ -89,7 +89,7 @@ function FormulaTooltip({
         borderBottom: `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`,
         display: 'flex', alignItems: 'center', gap: 6,
       }}>
-        <span style={{ fontFamily: S.mono, fontSize: '0.4375rem', color: S.cyan, letterSpacing: '0.1em' }}>
+        <span style={{ fontFamily: S.mono, fontSize: '0.6875rem', color: S.cyan, letterSpacing: '0.1em' }}>
           ƒ HEDGE FORMULA
         </span>
       </div>
@@ -115,7 +115,7 @@ function FormulaTooltip({
       {/* Explanation */}
       <div style={{ padding: '8px 12px', borderBottom: `1px solid ${S.borderSoft}` }}>
         <p style={{
-          fontFamily: S.mono, fontSize: '0.5rem', color: S.textTert,
+          fontFamily: S.mono, fontSize: '0.6875rem', color: S.textTert,
           letterSpacing: '0.08em', marginBottom: 4,
         }}>FORMULA BREAKDOWN</p>
         <p style={{ fontSize: '0.6875rem', color: S.textSec, lineHeight: 1.6, margin: 0 }}>
@@ -126,7 +126,7 @@ function FormulaTooltip({
       {/* Rationale */}
       <div style={{ padding: '8px 12px' }}>
         <p style={{
-          fontFamily: S.mono, fontSize: '0.5rem', color: S.textTert,
+          fontFamily: S.mono, fontSize: '0.6875rem', color: S.textTert,
           letterSpacing: '0.08em', marginBottom: 4,
         }}>REAL-WORLD RATIONALE</p>
         <p style={{ fontSize: '0.6875rem', color: S.textSec, lineHeight: 1.6, margin: 0 }}>
@@ -190,7 +190,7 @@ function PresetCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
             <span style={{
               fontFamily: S.mono,
-              fontSize: '0.4375rem',
+              fontSize: '0.6875rem',
               letterSpacing: '0.1em',
               color: isActive ? S.cyan : S.textTert,
               background: isActive
@@ -201,7 +201,7 @@ function PresetCard({
               {preset.shortName}
             </span>
             <span style={{
-              fontFamily: S.mono, fontSize: '0.4375rem',
+              fontFamily: S.mono, fontSize: '0.6875rem',
               color: risk.color, letterSpacing: '0.06em',
             }}>
               {risk.dot} {risk.label}
@@ -231,7 +231,7 @@ function PresetCard({
               ? `color-mix(in srgb, ${S.cyan} 12%, transparent)`
               : 'transparent',
             color: tooltipVisible ? S.cyan : S.textTert,
-            fontFamily: S.mono, fontSize: '0.5625rem',
+            fontFamily: S.mono, fontSize: '0.75rem',
             cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.1s',
@@ -282,7 +282,7 @@ function PresetCard({
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <span style={{
-          fontFamily: S.mono, fontSize: '0.4375rem',
+          fontFamily: S.mono, fontSize: '0.6875rem',
           color: preset.policy.execution_product === 'NDF' ? S.amber : S.green,
           letterSpacing: '0.08em',
           background: preset.policy.execution_product === 'NDF'
@@ -293,7 +293,7 @@ function PresetCard({
           {preset.policy.execution_product}
         </span>
         <span style={{
-          fontFamily: S.mono, fontSize: '0.4375rem', color: S.textTert,
+          fontFamily: S.mono, fontSize: '0.6875rem', color: S.textTert,
         }}>
           min ${(preset.policy.min_trade_size_usd / 1000).toFixed(0)}k
         </span>
@@ -305,7 +305,7 @@ function PresetCard({
         flex: 1,
       }}>
         <p style={{
-          fontFamily: S.ui, fontSize: '0.5625rem',
+          fontFamily: S.ui, fontSize: '0.75rem',
           color: S.textTert, lineHeight: 1.55, margin: 0,
           display: '-webkit-box',
           WebkitLineClamp: 2,
@@ -348,7 +348,7 @@ function CustomCard({ isActive, onClick }: { isActive: boolean; onClick: () => v
         margin: 0,
       }}>Custom Policy</p>
       <p style={{
-        fontFamily: S.ui, fontSize: '0.5625rem',
+        fontFamily: S.ui, fontSize: '0.75rem',
         color: S.textTert, lineHeight: 1.55, margin: 0, textAlign: 'center',
       }}>
         Define your own ratios, spread, product, and minimum trade size.
@@ -382,7 +382,7 @@ export default function PolicyPresetSelector({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{
-            fontFamily: S.mono, fontSize: '0.4375rem',
+            fontFamily: S.mono, fontSize: '0.6875rem',
             color: S.textTert, letterSpacing: '0.1em',
           }}>HEDGE POLICY</span>
           <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: S.text }}>
@@ -390,7 +390,7 @@ export default function PolicyPresetSelector({
           </span>
           {activePreset && (
             <span style={{
-              fontFamily: S.mono, fontSize: '0.4375rem', letterSpacing: '0.08em',
+              fontFamily: S.mono, fontSize: '0.6875rem', letterSpacing: '0.08em',
               color: S.cyan, background: `color-mix(in srgb, ${S.cyan} 10%, transparent)`,
               padding: '2px 7px',
             }}>
@@ -399,7 +399,7 @@ export default function PolicyPresetSelector({
           )}
           {isCustom && (
             <span style={{
-              fontFamily: S.mono, fontSize: '0.4375rem', letterSpacing: '0.08em',
+              fontFamily: S.mono, fontSize: '0.6875rem', letterSpacing: '0.08em',
               color: S.amber, background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
               padding: '2px 7px',
             }}>
@@ -411,7 +411,7 @@ export default function PolicyPresetSelector({
           <button
             onClick={onCustom}
             style={{
-              fontFamily: S.mono, fontSize: '0.5rem', letterSpacing: '0.06em',
+              fontFamily: S.mono, fontSize: '0.6875rem', letterSpacing: '0.06em',
               color: S.cyan, background: 'transparent',
               border: `1px solid ${S.borderSoft}`,
               padding: '3px 8px', cursor: 'pointer',
@@ -434,7 +434,7 @@ export default function PolicyPresetSelector({
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
               style={{
-                fontFamily: S.mono, fontSize: '0.5rem', letterSpacing: '0.06em',
+                fontFamily: S.mono, fontSize: '0.6875rem', letterSpacing: '0.06em',
                 padding: '7px 14px',
                 borderBottom: isTab ? `2px solid ${S.cyan}` : '2px solid transparent',
                 color: isTab ? S.cyan : hasActive ? S.green : S.textTert,
@@ -445,7 +445,7 @@ export default function PolicyPresetSelector({
                 transition: 'color 0.1s',
               }}
             >
-              {hasActive && <span style={{ color: S.green, fontSize: '0.4375rem' }}>●</span>}
+              {hasActive && <span style={{ color: S.green, fontSize: '0.6875rem' }}>●</span>}
               {cat.label.toUpperCase()}
             </button>
           );
@@ -455,7 +455,7 @@ export default function PolicyPresetSelector({
           marginLeft: 'auto',
           display: 'flex', alignItems: 'center',
           padding: '0 12px',
-          fontFamily: S.mono, fontSize: '0.4375rem',
+          fontFamily: S.mono, fontSize: '0.6875rem',
           color: S.textTert,
         }}>
           {POLICY_PRESETS.length} PRESETS + CUSTOM
@@ -469,7 +469,7 @@ export default function PolicyPresetSelector({
         borderBottom: `1px solid ${S.border}`,
       }}>
         <span style={{
-          fontFamily: S.ui, fontSize: '0.5625rem', color: S.textTert,
+          fontFamily: S.ui, fontSize: '0.75rem', color: S.textTert,
         }}>
           {PRESET_CATEGORIES.find(c => c.id === activeCategory)?.description}
         </span>
@@ -548,19 +548,19 @@ export default function PolicyPresetSelector({
           flexWrap: 'wrap',
         }}>
           <span style={{
-            fontFamily: S.mono, fontSize: '0.4375rem', color: S.cyan,
+            fontFamily: S.mono, fontSize: '0.6875rem', color: S.cyan,
             letterSpacing: '0.1em',
           }}>ACTIVE POLICY</span>
           <span style={{ fontFamily: S.ui, fontSize: '0.625rem', fontWeight: 600, color: S.text }}>
             {activePreset.name}
           </span>
           <span style={{
-            fontFamily: S.mono, fontSize: '0.5rem', color: S.textSec,
+            fontFamily: S.mono, fontSize: '0.6875rem', color: S.textSec,
           }}>
             {activePreset.targetAudience}
           </span>
           <span style={{
-            fontFamily: S.mono, fontSize: '0.5rem',
+            fontFamily: S.mono, fontSize: '0.6875rem',
             color: RISK_CONFIG[activePreset.riskPosture].color,
             marginLeft: 'auto',
           }}>
@@ -575,13 +575,13 @@ export default function PolicyPresetSelector({
         display: 'flex', alignItems: 'center', gap: 16,
         borderTop: `1px solid ${S.borderSoft}`,
       }}>
-        <span style={{ fontFamily: S.mono, fontSize: '0.4375rem', color: S.textTert, letterSpacing: '0.06em' }}>LEGEND</span>
+        <span style={{ fontFamily: S.mono, fontSize: '0.6875rem', color: S.textTert, letterSpacing: '0.06em' }}>LEGEND</span>
         {Object.entries(RISK_CONFIG).map(([key, cfg]) => (
-          <span key={key} style={{ fontFamily: S.mono, fontSize: '0.4375rem', color: cfg.color }}>
+          <span key={key} style={{ fontFamily: S.mono, fontSize: '0.6875rem', color: cfg.color }}>
             {cfg.dot} {cfg.label}
           </span>
         ))}
-        <span style={{ fontFamily: S.mono, fontSize: '0.4375rem', color: S.textTert, marginLeft: 'auto' }}>
+        <span style={{ fontFamily: S.mono, fontSize: '0.6875rem', color: S.textTert, marginLeft: 'auto' }}>
           hover <span style={{ color: S.cyan }}>ƒ</span> on any card for formula breakdown
         </span>
       </div>

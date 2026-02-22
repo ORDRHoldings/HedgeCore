@@ -28,7 +28,7 @@ export default function TimelineTab({ timeline }: TimelineTabProps) {
               <span className="text-[var(--text-tertiary)]">{e.actor}</span>
             </div>
             <p className="text-[var(--text-secondary)] mt-0.5">{e.detail}</p>
-            <span className="text-[0.625rem] text-[var(--text-tertiary)]">
+            <span className="text-[0.75rem] text-[var(--text-tertiary)]">
               {new Date(e.timestamp).toLocaleString()}
             </span>
           </div>

@@ -27,7 +27,7 @@ export default function StickyActionBar({ loading, onCalculate, canCalculate, ga
         <div className="flex items-center gap-4 flex-1 min-w-0">
           {unmet.length > 0 ? (
             <div className="flex items-center gap-3 flex-wrap">
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5rem', letterSpacing: '0.07em', color: 'var(--text-tertiary)' }}>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.6875rem', letterSpacing: '0.07em', color: 'var(--text-tertiary)' }}>
                 GATE CHECK
               </span>
               {unmet.map((g, i) => (
@@ -35,7 +35,7 @@ export default function StickyActionBar({ loading, onCalculate, canCalculate, ga
                   key={i}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4,
-                    fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5625rem',
+                    fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.75rem',
                     color: 'var(--accent-red)',
                     border: '1px solid var(--accent-red)',
                     padding: '1px 6px',
@@ -43,7 +43,7 @@ export default function StickyActionBar({ loading, onCalculate, canCalculate, ga
                 >
                   <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent-red)', display: 'inline-block' }} />
                   {g.label}
-                  {g.message && <span style={{ color: 'var(--text-tertiary)', fontSize: '0.5rem' }}> — {g.message}</span>}
+                  {g.message && <span style={{ color: 'var(--text-tertiary)', fontSize: '0.6875rem' }}> — {g.message}</span>}
                 </span>
               ))}
             </div>
@@ -53,12 +53,12 @@ export default function StickyActionBar({ loading, onCalculate, canCalculate, ga
                 width: 6, height: 6, borderRadius: '50%',
                 background: 'var(--status-pass)', display: 'inline-block',
               }} />
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5625rem', color: 'var(--status-pass)' }}>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.75rem', color: 'var(--status-pass)' }}>
                 ALL GATES PASSED — READY TO COMPUTE
               </span>
             </div>
           ) : (
-            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5625rem', color: 'var(--text-tertiary)' }}>
+            <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
               Load exposure data to enable hedge plan computation.
             </span>
           )}

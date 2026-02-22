@@ -37,9 +37,9 @@ const S = {
 function SectionHeader({ index, title, count }: { index: string; title: string; count?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, paddingBottom: 8 }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.textTertiary, letterSpacing: '0.06em' }}>{index}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, letterSpacing: '0.06em' }}>{index}</span>
       <span style={{ fontFamily: S.fontUI, fontSize: '0.8125rem', fontWeight: 600, color: S.textPrimary }}>{title}</span>
-      {count && <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.textTertiary, marginLeft: 'auto' }}>{count}</span>}
+      {count && <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, marginLeft: 'auto' }}>{count}</span>}
     </div>
   );
 }
@@ -52,7 +52,7 @@ function TH({ children, right }: { children: React.ReactNode; right?: boolean })
   return (
     <th style={{
       padding: '5px 10px 5px 0',
-      fontFamily: S.fontMono, fontSize: '0.5rem', fontWeight: 500,
+      fontFamily: S.fontMono, fontSize: '0.6875rem', fontWeight: 500,
       letterSpacing: '0.07em', textTransform: 'uppercase', color: S.textTertiary,
       textAlign: right ? 'right' : 'left', whiteSpace: 'nowrap',
       borderBottom: `1px solid ${S.borderRim}`,
@@ -144,7 +144,7 @@ export default function SnapshotSummary({
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '8px 14px', background: S.bgSub,
         border: `1px solid ${S.borderRim}`, marginBottom: 16,
-        fontFamily: S.fontMono, fontSize: '0.5625rem',
+        fontFamily: S.fontMono, fontSize: '0.75rem',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ color: S.textTertiary, letterSpacing: '0.06em' }}>SNAPSHOT SUMMARY</span>
@@ -293,7 +293,7 @@ export default function SnapshotSummary({
                       <button
                         onClick={() => router.push(`/execution?bucket=${bk}`)}
                         style={{
-                          fontFamily: S.fontMono, fontSize: '0.5rem', fontWeight: 500,
+                          fontFamily: S.fontMono, fontSize: '0.6875rem', fontWeight: 500,
                           padding: '1px 6px', border: `1px solid ${S.borderRim}`,
                           color: S.textTertiary, background: 'transparent', cursor: 'pointer',
                           letterSpacing: '0.04em',
@@ -348,7 +348,7 @@ export default function SnapshotSummary({
             {exceptions.length === 0 ? (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                padding: '8px 0', fontFamily: S.fontMono, fontSize: '0.5625rem',
+                padding: '8px 0', fontFamily: S.fontMono, fontSize: '0.75rem',
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--status-pass)', display: 'inline-block' }} />
                 <span style={{ color: 'var(--status-pass)' }}>No data quality exceptions detected · {trades.length} rows validated</span>
@@ -403,7 +403,7 @@ export default function SnapshotSummary({
                   borderBottom: i < arr.length - 1 ? `1px solid ${S.borderSoft}` : 'none',
                 }}>
                   <dt style={{ fontFamily: S.fontUI, fontSize: '0.625rem', color: S.textTertiary, fontWeight: 400 }}>{dt}</dt>
-                  <dd style={{ margin: 0, fontFamily: mono ? S.fontMono : S.fontUI, fontSize: '0.5625rem', color: S.textSecondary, wordBreak: 'break-all', maxWidth: 120, textAlign: 'right' }}>{dd}</dd>
+                  <dd style={{ margin: 0, fontFamily: mono ? S.fontMono : S.fontUI, fontSize: '0.75rem', color: S.textSecondary, wordBreak: 'break-all', maxWidth: 120, textAlign: 'right' }}>{dd}</dd>
                 </div>
               ))}
             </dl>
@@ -411,7 +411,7 @@ export default function SnapshotSummary({
               <button
                 onClick={() => router.push('/ledger')}
                 style={{
-                  fontFamily: S.fontMono, fontSize: '0.5rem', fontWeight: 500,
+                  fontFamily: S.fontMono, fontSize: '0.6875rem', fontWeight: 500,
                   padding: '3px 8px', border: `1px solid ${S.borderRim}`,
                   color: S.textTertiary, background: 'transparent', cursor: 'pointer',
                   letterSpacing: '0.04em', width: '100%', textAlign: 'center',
