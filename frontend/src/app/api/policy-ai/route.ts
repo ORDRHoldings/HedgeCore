@@ -24,11 +24,19 @@ export interface QuestionnaireAnswers {
   hedge_objective: string;
 }
 
+export interface AIPolicyRecommendation {
+  preset: PolicyPreset;
+  rationale: string;
+  label: string;
+}
+
 export interface AIPolicyResult {
   suggested: PolicyPreset;
   explanation: string;
   fallback: boolean;
   nearest_preset_name?: string;
+  /** 3 recommendations: [0]=AI Custom, [1]=Best Preset Match, [2]=Alternative */
+  recommendations: AIPolicyRecommendation[];
 }
 
 // ── Fallback: score each preset against the answers and return nearest match ──
@@ -114,6 +122,15 @@ function findNearestPreset(answers: QuestionnaireAnswers): PolicyPreset {
     if (s > bestScore) { bestScore = s; best = preset; }
   }
   return best;
+}
+
+/** Return top N presets by score */
+function findTopPresets(answers: QuestionnaireAnswers, n: number): PolicyPreset[] {
+  return [...POLICY_PRESETS]
+    .map(p => ({ preset: p, score: scoreFallback(p, answers) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, n)
+    .map(x => x.preset);
 }
 
 // ── Claude API call ───────────────────────────────────────────────────────────
@@ -239,13 +256,33 @@ Return ONLY the JSON policy object as specified.`;
       },
     };
 
-    const nearest = findNearestPreset(answers);
+    const topPresets = findTopPresets(answers, 2);
+    const [top1, top2] = topPresets;
+
+    const recommendations: AIPolicyRecommendation[] = [
+      {
+        preset: suggested,
+        rationale: parsed.rationale ?? 'AI-generated policy tailored to your company profile.',
+        label: 'AI Custom',
+      },
+      {
+        preset: top1,
+        rationale: top1.rationale ?? `Best matching preset for your ${answers.industry} profile with ${answers.risk_appetite.toLowerCase()} risk appetite.`,
+        label: 'Best Match',
+      },
+      {
+        preset: top2 ?? top1,
+        rationale: (top2 ?? top1).rationale ?? 'Alternative preset recommendation based on your cash flow characteristics.',
+        label: 'Alternative',
+      },
+    ];
 
     return {
       suggested,
       explanation: parsed.rationale ?? 'AI-generated policy tailored to your company profile.',
       fallback: false,
-      nearest_preset_name: nearest.name,
+      nearest_preset_name: top1.name,
+      recommendations,
     };
 
   } catch (err) {
@@ -272,16 +309,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json(aiResult);
     }
 
-    // Fallback: nearest-match preset scoring
-    const nearest = findNearestPreset(answers);
-    const result: AIPolicyResult = {
-      suggested: nearest,
-      explanation: `Based on your profile (${answers.industry}, ${answers.risk_appetite.toLowerCase()} risk appetite, ${answers.cash_flow_predictability.toLowerCase()} cash flow predictability), the ${nearest.name} preset is the closest match to your requirements. ${nearest.rationale}`,
+    // Fallback: nearest-match preset scoring (return top 3)
+    const topPresets = findTopPresets(answers, 3);
+    const [fb1, fb2, fb3] = topPresets;
+    const fallbackResult: AIPolicyResult = {
+      suggested: fb1,
+      explanation: `Based on your profile (${answers.industry}, ${answers.risk_appetite.toLowerCase()} risk appetite, ${answers.cash_flow_predictability.toLowerCase()} cash flow predictability), the ${fb1.name} preset is the closest match. ${fb1.rationale}`,
       fallback: true,
-      nearest_preset_name: nearest.name,
+      nearest_preset_name: fb1.name,
+      recommendations: [
+        { preset: fb1, rationale: fb1.rationale ?? 'Top-scored preset for your profile.', label: 'Best Match' },
+        { preset: fb2 ?? fb1, rationale: (fb2 ?? fb1).rationale ?? 'Strong alternative based on risk posture.', label: 'Alternative' },
+        { preset: fb3 ?? fb2 ?? fb1, rationale: (fb3 ?? fb2 ?? fb1).rationale ?? 'Third option for consideration.', label: 'Third Option' },
+      ],
     };
 
-    return NextResponse.json(result);
+    return NextResponse.json(fallbackResult);
 
   } catch (err) {
     console.error('[policy-ai] Error:', err);
