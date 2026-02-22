@@ -34,12 +34,15 @@ import { setAuthState } from "./store/slices/authSlice";
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 const _PROD_HOSTNAMES = ["hedgecore.vercel.app", "ordr-terminal.vercel.app"];
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined" &&
-  _PROD_HOSTNAMES.includes(window.location.hostname)
-    ? "https://hedgecore.onrender.com/api"
-    : "/api");
+const API_BASE = (() => {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  try {
+    if (typeof window !== "undefined" && _PROD_HOSTNAMES.includes(window.location.hostname)) {
+      return "https://hedgecore.onrender.com/api";
+    }
+  } catch { /* SSR: location not available */ }
+  return "/api";
+})();
 
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";

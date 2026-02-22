@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { useAuth } from '../../lib/authContext';
 import type {
@@ -157,8 +157,9 @@ function ImportBanner({ created, totalRows, errors, onDismiss }: ImportBannerPro
 }
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
-export default function InputPage() {
-  const router    = useRouter();
+function InputPageInner() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
   const dispatch  = useDispatch<AppDispatch>();
   const { setCalculation } = useHedge();
   const { token } = useAuth();
@@ -168,8 +169,18 @@ export default function InputPage() {
     (s: RootState) => s.positions,
   );
 
-  // ── Ingestion desk tab ────────────────────────────────────────────────────
-  const [deskTab, setDeskTab] = useState<DeskTab>('manual');
+  // ── Ingestion desk tab — reads ?tab= query param for deep-linking ─────────
+  const initialTab = (() => {
+    const t = searchParams.get('tab') as DeskTab | null;
+    return (t && DESK_TABS.some(d => d.key === t)) ? t : 'manual';
+  })();
+  const [deskTab, setDeskTab] = useState<DeskTab>(initialTab);
+
+  // Respond to URL changes (e.g. back/forward navigation)
+  useEffect(() => {
+    const t = searchParams.get('tab') as DeskTab | null;
+    if (t && DESK_TABS.some(d => d.key === t)) setDeskTab(t);
+  }, [searchParams]);
 
   // ── Local state ───────────────────────────────────────────────────────────
   const [hedges, setHedges]  = useState<HedgeRow[]>([]);
@@ -1434,5 +1445,14 @@ export default function InputPage() {
 
       <Toast message={toastMsg} visible={toastVisible} onClose={() => setToastVisible(false)} />
     </div>
+  );
+}
+
+// ─── Suspense wrapper — required because InputPageInner uses useSearchParams() ──
+export default function InputPage() {
+  return (
+    <Suspense fallback={null}>
+      <InputPageInner />
+    </Suspense>
   );
 }
