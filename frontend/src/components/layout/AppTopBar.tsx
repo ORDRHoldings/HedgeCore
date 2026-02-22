@@ -191,32 +191,36 @@ interface NavSection {
 const NAV: NavSection[] = [
   {
     label: "Dashboard", href: "/dashboard", icon: Ic.dashboard,
-    prefixes: ["/dashboard", "/portfolio-risk", "/scenario-studio"],
+    prefixes: ["/dashboard", "/portfolio-risk", "/scenario-studio", "/polisophic"],
     header: "Overview",
     items: [
       { label: "Summary",         desc: "KPIs, P&L snapshot, FX exposure heat-map", href: "/dashboard",       icon: Ic.dashboard },
       { label: "Portfolio Risk",  desc: "Delta, vega, correlation across positions",  href: "/portfolio-risk", icon: Ic.bar_chart, badge: "RISK",  badgeColor: S.amber },
       { label: "Scenario Studio", desc: "Monte Carlo & stress-test simulations",      href: "/scenario-studio",icon: Ic.lightning, badge: "SIM",   badgeColor: S.cyan  },
+      { label: "Polisophic",      desc: "Political & macro risk intelligence feed",   href: "/polisophic",     icon: Ic.governance, badge: "RISK", badgeColor: S.amber },
+      { label: "Hedge Wiki",     desc: "FX instruments, ISDA, IFRS 9 knowledge graph", href: "/hedgewiki",    icon: Ic.book },
     ],
   },
   {
     label: "Position Desk", href: "/input", icon: Ic.table,
-    prefixes: ["/input"],
+    prefixes: ["/input", "/database-connection", "/erp-integration", "/accounting-connection"],
     header: "Exposure Management",
     items: [
-      { label: "Manual Entry",      desc: "Inline form — add & edit FX positions",         href: "/input",  icon: Ic.pen },
-      { label: "Upload CSV / XLSX", desc: "Bulk import via structured spreadsheet",         href: "/input",  icon: Ic.upload,   badge: "BULK", badgeColor: S.amber },
-      { label: "Connect Database",  desc: "SQL pull — Oracle, Postgres, MySQL",             href: "/input",  icon: Ic.db,       badge: "SQL",  badgeColor: S.cyan  },
+      { label: "Manual Entry",         desc: "Inline form — add & edit FX positions",         href: "/input",                  icon: Ic.pen },
+      { label: "Upload CSV / XLSX",    desc: "Bulk import via structured spreadsheet",         href: "/input",                  icon: Ic.upload,   badge: "BULK", badgeColor: S.amber },
+      { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",             href: "/database-connection",    icon: Ic.db,       badge: "SQL",  badgeColor: S.cyan  },
+      { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",  href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",  badgeColor: S.amber },
+      { label: "Accounting Systems",   desc: "QuickBooks, Xero, Sage invoice import",          href: "/accounting-connection",  icon: Ic.reports },
     ],
   },
   {
     label: "Policy Engine", href: "/policies", icon: Ic.policy,
-    prefixes: ["/policies", "/polisophic"],
+    prefixes: ["/policies", "/ai-policy-wizard", "/saved-policies"],
     header: "Hedge Policy",
     items: [
-      { label: "Policy Library",    desc: "Browse 33 institutional preset policies",        href: "/policies",    icon: Ic.book },
-      { label: "AI Policy Wizard",  desc: "Generate tailored policy from your risk profile",href: "/policies",    icon: Ic.ai,     badge: "AI",    badgeColor: S.amber },
-      { label: "My Saved Policies", desc: "User-scoped & branch-published policies",        href: "/polisophic",  icon: Ic.shield, badge: "SAVED", badgeColor: S.cyan  },
+      { label: "Policy Library",    desc: "Browse 33 institutional preset policies",        href: "/policies",          icon: Ic.book },
+      { label: "AI Policy Wizard",  desc: "Generate tailored policy from your risk profile",href: "/ai-policy-wizard",  icon: Ic.ai,     badge: "AI",    badgeColor: S.amber },
+      { label: "My Saved Policies", desc: "User-scoped & branch-published policies",        href: "/saved-policies",    icon: Ic.shield, badge: "SAVED", badgeColor: S.cyan  },
     ],
   },
   {
@@ -231,23 +235,23 @@ const NAV: NavSection[] = [
   },
   {
     label: "Execution", href: "/execution", icon: Ic.execution,
-    prefixes: ["/execution", "/sandbox", "/currency-fx"],
+    prefixes: ["/execution", "/sandbox", "/currency-fx", "/execution-history"],
     header: "Trade Execution",
     items: [
-      { label: "Execution Pipeline", desc: "Stage, freeze, and authorize hedge trades",     href: "/execution",   icon: Ic.lightning },
-      { label: "Sandbox",            desc: "What-if calculator & backtest engine",          href: "/sandbox",     icon: Ic.terminal, badge: "DEV",  badgeColor: S.amber },
-      { label: "FX Rates",           desc: "Live spot rates, forward curves, vol surface",  href: "/currency-fx", icon: Ic.bar_chart },
-      { label: "Execution History",  desc: "Confirmed & executed trade log",                href: "/execution",   icon: Ic.clock },
+      { label: "Execution Pipeline", desc: "Stage, freeze, and authorize hedge trades",     href: "/execution",         icon: Ic.lightning },
+      { label: "Sandbox",            desc: "What-if calculator & backtest engine",          href: "/sandbox",           icon: Ic.terminal, badge: "DEV",  badgeColor: S.amber },
+      { label: "FX Rates",           desc: "Live spot rates, forward curves, vol surface",  href: "/currency-fx",       icon: Ic.bar_chart },
+      { label: "Execution History",  desc: "Confirmed & executed trade log",                href: "/execution-history", icon: Ic.clock },
     ],
   },
   {
     label: "Governance", href: "/hedgewiki", icon: Ic.governance,
-    prefixes: ["/hedgewiki", "/hedges"],
+    prefixes: ["/hedgewiki", "/hedges", "/audit-trail", "/access-control"],
     header: "Compliance & Audit",
     items: [
-      { label: "Hedge Wiki",      desc: "Instrument encyclopedia — products & regulations", href: "/hedgewiki",  icon: Ic.book },
-      { label: "Audit Trail",     desc: "Immutable decision log with hash-chain integrity", href: "/hedgewiki",  icon: Ic.check, badge: "AUDIT", badgeColor: S.amber },
-      { label: "Access Control",  desc: "Role permissions, branch hierarchy, MFA status",   href: "/hedgewiki",  icon: Ic.key },
+      { label: "Hedge Wiki",      desc: "Instrument encyclopedia — products & regulations", href: "/hedgewiki",      icon: Ic.book },
+      { label: "Audit Trail",     desc: "Immutable decision log with hash-chain integrity", href: "/audit-trail",    icon: Ic.check, badge: "AUDIT", badgeColor: S.amber },
+      { label: "Access Control",  desc: "Role permissions, branch hierarchy, MFA status",   href: "/access-control", icon: Ic.key },
     ],
   },
   {

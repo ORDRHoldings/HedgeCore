@@ -911,6 +911,23 @@ export default function InputPage() {
                 title="ERP integration — coming soon"
                 message="Pull exposure positions directly from SAP, Oracle EBS, or Microsoft Dynamics. One-click sync with field mapping configuration."
               />
+              <div style={{ marginTop: 12, textAlign: 'center' }}>
+                <button
+                  onClick={() => router.push('/erp-integration')}
+                  style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: '0.75rem', fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    padding: '7px 18px',
+                    border: '1px solid var(--accent-cyan)',
+                    color: 'var(--accent-cyan)',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Open full ERP Integration →
+                </button>
+              </div>
             </div>
           )}
 
@@ -921,6 +938,23 @@ export default function InputPage() {
                 title="Accounting system connector — coming soon"
                 message="Connect to Xero, QuickBooks, or NetSuite to automatically import foreign currency invoices and payables as exposure positions."
               />
+              <div style={{ marginTop: 12, textAlign: 'center' }}>
+                <button
+                  onClick={() => router.push('/accounting-connection')}
+                  style={{
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: '0.75rem', fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    padding: '7px 18px',
+                    border: '1px solid var(--accent-cyan)',
+                    color: 'var(--accent-cyan)',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Open full Accounting Connection →
+                </button>
+              </div>
             </div>
           )}
 
