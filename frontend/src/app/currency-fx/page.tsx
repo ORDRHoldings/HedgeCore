@@ -3,15 +3,15 @@
 /**
  * currency-fx/page.tsx — FX Rates & Forward Curve
  *
- * Displays demo market data: USD/MXN spot rate, forward points by month,
- * implied forward rates, cross rates, and historic crisis shocks.
- * Links to Sandbox for full stress-test analysis.
+ * Live TradingView chart, currency pair selector, forward curve table,
+ * cross rates, and historic crisis shocks reference grid.
  */
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/lib/store";
+import TradingViewEmbed from "../../components/execution/TradingViewEmbed";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
@@ -31,21 +31,31 @@ const S = {
   fail:     "var(--accent-red,#f87171)",
 } as const;
 
-// ── Static demo market data ────────────────────────────────────────────────────
+// ── Currency pair data ────────────────────────────────────────────────────────
+interface CcyPairSpec {
+  pair: string;
+  tvSymbol: string;
+  spot: number;
+  change: number;
+  vol: string;
+  fwdLabel: string;
+}
+
+const ALL_PAIRS: CcyPairSpec[] = [
+  { pair: "USD/MXN", tvSymbol: "FX_IDC:USDMXN", spot: 18.97,  change: +0.12,  vol: "12.4%", fwdLabel: "NDF VANILLA" },
+  { pair: "EUR/MXN", tvSymbol: "FX_IDC:EURMXN", spot: 20.54,  change: -0.08,  vol: "13.1%", fwdLabel: "DELIVERABLE" },
+  { pair: "GBP/MXN", tvSymbol: "FX_IDC:GBPMXN", spot: 23.87,  change: +0.22,  vol: "14.3%", fwdLabel: "DELIVERABLE" },
+  { pair: "JPY/MXN", tvSymbol: "FX_IDC:JPYMXN", spot: 0.126,  change: -0.001, vol: "15.8%", fwdLabel: "NDF" },
+  { pair: "BRL/MXN", tvSymbol: "FX_IDC:BRLMXN", spot: 3.42,   change: +0.03,  vol: "18.2%", fwdLabel: "NDF" },
+  { pair: "CNY/MXN", tvSymbol: "FX_IDC:CNYMXN", spot: 2.61,   change: -0.02,  vol: "9.6%",  fwdLabel: "NDF" },
+];
+
+// ── Forward points (USD/MXN demo) ─────────────────────────────────────────────
 const DEMO_SPOT = 18.97;
 const DEMO_FORWARD_POINTS: Record<string, number> = {
-  "2026-03": 0.048,
-  "2026-04": 0.091,
-  "2026-05": 0.138,
-  "2026-06": 0.182,
-  "2026-07": 0.225,
-  "2026-08": 0.267,
-  "2026-09": 0.308,
-  "2026-10": 0.349,
-  "2026-11": 0.388,
-  "2026-12": 0.427,
-  "2027-01": 0.464,
-  "2027-02": 0.501,
+  "2026-03": 0.048, "2026-04": 0.091, "2026-05": 0.138, "2026-06": 0.182,
+  "2026-07": 0.225, "2026-08": 0.267, "2026-09": 0.308, "2026-10": 0.349,
+  "2026-11": 0.388, "2026-12": 0.427, "2027-01": 0.464, "2027-02": 0.501,
 };
 
 const HISTORIC_CRISES = [
@@ -60,15 +70,6 @@ const HISTORIC_CRISES = [
   { label: "Fed Hike '22",       shock: -20, desc: "125bps hike cycle, EM outflow" },
 ];
 
-const CURRENCY_PAIRS = [
-  { pair: "USD/MXN", spot: 18.97,  change: +0.12,   vol: "12.4%" },
-  { pair: "EUR/MXN", spot: 20.54,  change: -0.08,   vol: "13.1%" },
-  { pair: "GBP/MXN", spot: 23.87,  change: +0.22,   vol: "14.3%" },
-  { pair: "JPY/MXN", spot:  0.126, change: -0.001,  vol: "15.8%" },
-  { pair: "BRL/MXN", spot:  3.42,  change: +0.03,   vol: "18.2%" },
-  { pair: "CNY/MXN", spot:  2.61,  change: -0.02,   vol:  "9.6%" },
-];
-
 function fmtMonth(ym: string): string {
   const [y, m] = ym.split("-");
   const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -77,6 +78,7 @@ function fmtMonth(ym: string): string {
 
 export default function CurrencyFxPage() {
   const [renderTs, setRenderTs] = useState('');
+  const [activePair, setActivePair] = useState(0); // index into ALL_PAIRS
   useEffect(() => {
     setRenderTs(new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC");
   }, []);
@@ -89,13 +91,15 @@ export default function CurrencyFxPage() {
   const isLive = !!(liveMarket?.spot_usdmxn);
 
   const buckets = Object.entries(fwdPoints).sort(([a], [b]) => a.localeCompare(b));
+  const selectedPair = ALL_PAIRS[activePair];
 
   return (
     <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI }}>
 
       {/* ── Page header ── */}
       <div style={{
-        padding: "14px 24px",
+        height: 44,
+        padding: "0 24px",
         borderBottom: `1px solid ${S.rim}`,
         background: S.bgPanel,
         display: "flex",
@@ -107,8 +111,8 @@ export default function CurrencyFxPage() {
             FX RATES
           </span>
           <span style={{ color: S.soft }}>·</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, letterSpacing: "0.06em", color: S.tertiary }}>
-            USD/MXN FORWARD CURVE
+          <span style={{ fontFamily: S.fontMono, fontSize: 11, letterSpacing: "0.06em", color: S.cyan }}>
+            {selectedPair.pair}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -123,15 +127,59 @@ export default function CurrencyFxPage() {
         </div>
       </div>
 
-      <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* ── Currency Pair Selector Bar ── */}
+      <div style={{
+        height: 36,
+        display: "flex",
+        alignItems: "stretch",
+        gap: 0,
+        borderBottom: `1px solid ${S.rim}`,
+        background: S.bgSub,
+        paddingLeft: 12,
+      }}>
+        {ALL_PAIRS.map((p, i) => (
+          <button
+            key={p.pair}
+            onClick={() => setActivePair(i)}
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 11,
+              fontWeight: i === activePair ? 700 : 400,
+              letterSpacing: "0.04em",
+              color: i === activePair ? S.cyan : S.secondary,
+              background: "transparent",
+              border: "none",
+              borderBottom: i === activePair ? `2px solid ${S.cyan}` : "2px solid transparent",
+              padding: "0 16px",
+              cursor: "pointer",
+              transition: "color 120ms",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            {p.pair}
+            <span style={{
+              fontSize: 9,
+              color: p.change >= 0 ? S.pass : S.fail,
+              fontWeight: 600,
+            }}>
+              {p.change >= 0 ? "▲" : "▼"}
+            </span>
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+      </div>
+
+      <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20, maxWidth: 1440, margin: "0 auto" }}>
 
         {/* ── Spot rate hero KPIs ── */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           {[
-            { label: "SPOT RATE · USD/MXN",  value: spot.toFixed(4),  sub: "+0.12 · +0.63% · 1D",  subColor: S.pass },
-            { label: "IMPLIED VOL · 1Y",      value: "12.4%",          sub: "annualized",             subColor: S.tertiary },
-            { label: "NDF BASIS · 12M",       value: fwdPoints["2027-02"] ? `+${(fwdPoints["2027-02"] as number).toFixed(3)}` : "+0.501", sub: "MXN pts", subColor: S.tertiary },
-            { label: "SOURCE",                value: "Banxico Fix",    sub: "T+2 · 12:00 CDMX",       subColor: S.tertiary },
+            { label: `SPOT RATE · ${selectedPair.pair}`, value: selectedPair.spot.toFixed(selectedPair.pair.includes("JPY") ? 3 : 4), sub: `${selectedPair.change >= 0 ? "+" : ""}${selectedPair.change.toFixed(selectedPair.pair.includes("JPY") ? 3 : 2)} · 1D`, subColor: selectedPair.change >= 0 ? S.pass : S.fail },
+            { label: "IMPLIED VOL · 1Y",   value: selectedPair.vol,   sub: "annualized",        subColor: S.tertiary },
+            { label: "NDF BASIS · 12M",    value: fwdPoints["2027-02"] ? `+${(fwdPoints["2027-02"] as number).toFixed(3)}` : "+0.501", sub: "MXN pts", subColor: S.tertiary },
+            { label: "SOURCE",             value: "Banxico Fix",      sub: "T+2 · 12:00 CDMX",  subColor: S.tertiary },
           ].map((kpi, i) => (
             <div key={kpi.label} style={{
               background: S.bgPanel,
@@ -139,6 +187,7 @@ export default function CurrencyFxPage() {
               borderTop: i === 0 ? `2px solid ${S.cyan}` : `1px solid ${S.rim}`,
               padding: "16px 20px",
               minWidth: 160,
+              flex: 1,
             }}>
               <div style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary, marginBottom: 6 }}>
                 {kpi.label}
@@ -153,6 +202,40 @@ export default function CurrencyFxPage() {
           ))}
         </div>
 
+        {/* ── TradingView Chart ── */}
+        <div style={{
+          background: S.bgPanel,
+          border: `1px solid ${S.rim}`,
+          borderTop: `2px solid ${S.cyan}`,
+          overflow: "hidden",
+        }}>
+          <div style={{
+            padding: "8px 16px",
+            borderBottom: `1px solid ${S.soft}`,
+            background: S.bgSub,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.08em", color: S.tertiary }}>
+              {selectedPair.pair} — TRADINGVIEW CHART
+            </span>
+            <span style={{
+              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+              color: S.cyan,
+              background: "color-mix(in srgb, var(--accent-cyan) 12%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--accent-cyan) 25%, transparent)",
+              padding: "1px 5px", borderRadius: 2,
+            }}>
+              LIVE
+            </span>
+          </div>
+          <div style={{ height: 420, width: "100%" }} key={selectedPair.tvSymbol}>
+            <TradingViewEmbed symbol={selectedPair.tvSymbol} />
+          </div>
+        </div>
+
+        {/* ── 2-column: Forward curve + Cross rates ── */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
 
           {/* ── Forward curve table ── */}
@@ -161,7 +244,7 @@ export default function CurrencyFxPage() {
               padding: "10px 16px", borderBottom: `1px solid ${S.rim}`, background: S.bgSub,
               fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.08em", color: S.tertiary,
             }}>
-              USD/MXN FORWARD CURVE — NDF VANILLA
+              {selectedPair.pair} FORWARD CURVE — {selectedPair.fwdLabel}
             </div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -215,12 +298,19 @@ export default function CurrencyFxPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {CURRENCY_PAIRS.map((row, i) => (
-                    <tr key={row.pair} style={{
-                      borderBottom: `1px solid ${S.soft}`,
-                      background: i % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.rim} 12%, transparent)`,
-                    }}>
-                      <td style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.cyan }}>{row.pair}</td>
+                  {ALL_PAIRS.map((row, i) => (
+                    <tr
+                      key={row.pair}
+                      onClick={() => setActivePair(i)}
+                      style={{
+                        borderBottom: `1px solid ${S.soft}`,
+                        background: i === activePair
+                          ? "color-mix(in srgb, var(--accent-cyan) 8%, transparent)"
+                          : i % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.rim} 12%, transparent)`,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <td style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: i === activePair ? S.cyan : S.primary }}>{row.pair}</td>
                       <td style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>
                         {row.spot.toFixed(row.pair.includes("JPY") ? 3 : 2)}
                       </td>
@@ -283,7 +373,7 @@ export default function CurrencyFxPage() {
                     <div style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 600, color: S.primary }}>{crisis.label}</div>
                     <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, marginTop: 2 }}>{crisis.desc}</div>
                     <div style={{ fontFamily: S.fontMono, fontSize: 10, color: isNeg ? S.fail : S.pass, marginTop: 3 }}>
-                      Implied: {implied.toFixed(2)} USD/MXN
+                      Implied: {implied.toFixed(2)} {selectedPair.pair.split("/")[0]}/MXN
                     </div>
                   </div>
                 </div>
@@ -293,9 +383,17 @@ export default function CurrencyFxPage() {
         </div>
 
         {/* Footer */}
-        <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, textAlign: "center" }}>
+        <div style={{
+          height: 32,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: S.fontMono, fontSize: 10, color: S.tertiary,
+        }}>
+          <span suppressHydrationWarning>{renderTs}</span>
+          <span style={{ margin: "0 8px", color: S.soft }}>·</span>
           Rates are {isLive ? "from live session snapshot" : "illustrative demo data"} · Banxico official fix · T+2 settlement ·{" "}
-          <Link href="/hedgewiki" style={{ color: S.cyan, textDecoration: "none" }}>
+          <Link href="/hedgewiki" style={{ color: S.cyan, textDecoration: "none", marginLeft: 4 }}>
             See HedgeWiki for NDF mechanics →
           </Link>
         </div>
