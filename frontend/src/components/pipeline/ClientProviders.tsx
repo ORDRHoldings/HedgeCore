@@ -14,11 +14,11 @@
  *       SessionLoader   ← dispatches loadSessionThunk on mount
  *       Shell           ← pathname-aware
  *         AppTopBar     ← persistent on ALL authenticated routes (self-hides on auth pages)
- *         SystemBar     ← pipeline context strip (simulation routes only)
+ *         SystemBar     ← pipeline context strip (execution routes only)
  *         <main>{children}</main>
  *
  * Pipeline routes (show context strip + StaleSnapshotBanner):
- *   /sandbox, /currency-fx, /input
+ *   /sandbox, /execution, /currency-fx, /input
  */
 
 import type { ReactNode } from "react";
@@ -35,6 +35,7 @@ import SessionLoader from "./SessionLoader";
 // Routes that get the pipeline context strip (SystemBar only)
 const PIPELINE_PREFIXES = [
   "/sandbox",
+  "/execution",
   "/currency-fx",
   "/input",
 ];
