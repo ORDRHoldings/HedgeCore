@@ -3,23 +3,24 @@
 import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
-const SYSTEM_COLORS: Record<string, string> = {
-  QuickBooks: "#2CA01C",
-  Xero:       "#13B5EA",
-  Sage:       "#00DC82",
-  NetSuite:   "#E6A817",
+// Keyed by lowercase system ID
+const SYSTEM_META: Record<string, { displayName: string; color: string }> = {
+  quickbooks: { displayName: "QuickBooks Online", color: "#2CA01C" },
+  xero:       { displayName: "Xero",              color: "#13B5EA" },
+  sage:       { displayName: "Sage Intacct",       color: "#00DC82" },
+  netsuite:   { displayName: "NetSuite",           color: "#E6A817" },
 };
 
 function CallbackContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const system = searchParams.get("system") ?? "accounting";
-    const key    = `ordr_accounting_oauth_${system.toLowerCase()}`;
+    const systemId = (searchParams.get("system") ?? "accounting").toLowerCase();
+    const key      = `ordr_accounting_oauth_${systemId}`;
     try {
       localStorage.setItem(key, "authorized");
     } catch {
-      // localStorage unavailable
+      // localStorage unavailable (private browsing with strict settings)
     }
 
     // If opened as popup, close it automatically
@@ -28,8 +29,10 @@ function CallbackContent() {
     }
   }, [searchParams]);
 
-  const system = searchParams.get("system") ?? "Accounting";
-  const color  = SYSTEM_COLORS[system] ?? "#22d3ee";
+  const systemId    = (searchParams.get("system") ?? "").toLowerCase();
+  const meta        = SYSTEM_META[systemId] ?? { displayName: systemId || "Accounting", color: "#22d3ee" };
+  const displayName = meta.displayName;
+  const color       = meta.color;
 
   return (
     <div
@@ -54,7 +57,7 @@ function CallbackContent() {
       </div>
 
       <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 24, lineHeight: 1.6 }}>
-        <span style={{ color }}>{system}</span> has been connected to ORDR.
+        <span style={{ color }}>{displayName}</span> has been connected to ORDR.
         This window will close automatically.
       </div>
 
