@@ -322,7 +322,9 @@ export default function InputPage() {
   const integrityScore = useMemo(() => {
     if (trades.length === 0) return undefined;
     const countable = validation.errors.filter(e => !AUTO_RESOLVED_CODES.has(e.code)).length;
-    return Math.max(0, Math.min(100, Math.round(100 * (1 - countable / 21))));
+    // Derive denominator from error knowledge base (no magic numbers)
+    const maxCodes = Math.max(Object.keys(ERROR_KNOWLEDGE_BASE).filter(k => !AUTO_RESOLVED_CODES.has(k)).length, 1);
+    return Math.max(0, Math.min(100, Math.round(100 * (1 - countable / maxCodes))));
   }, [trades.length, validation.errors]);
 
   const stepUnlocked = useMemo(() => ({

@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const RENDER_TS = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+// ── Hydration-safe timestamp hook ─────────────────────────────────────────────
+function useRenderTs(): string {
+  const [renderTs, setRenderTs] = useState('');
+  useEffect(() => {
+    setRenderTs(new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC");
+  }, []);
+  return renderTs;
+}
 
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -280,6 +287,7 @@ function CitTag({ text }: { text: string }) {
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function HedgeWiki() {
+  const renderTs = useRenderTs();
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<CategoryId>("FX INSTRUMENTS");
   const [activeEntry, setActiveEntry] = useState<EntryId>("ndf");
@@ -319,7 +327,7 @@ export default function HedgeWiki() {
           <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.rim}`, color: S.tertiary }}>
             {Object.keys(ENTRIES).length} ARTICLES · {CATEGORIES.length} DOMAINS
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RENDER_TS}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{renderTs}</span>
         </div>
       </header>
 

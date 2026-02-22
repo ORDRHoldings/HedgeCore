@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import EmptyState from "../../components/ui/EmptyState";
 
-const RENDER_TS = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+// ── Hydration-safe timestamp hook ─────────────────────────────────────────────
+function useRenderTs(): string {
+  const [renderTs, setRenderTs] = useState('');
+  useEffect(() => {
+    setRenderTs(new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC");
+  }, []);
+  return renderTs;
+}
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 const S = {
@@ -198,6 +205,7 @@ function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
 }
 
 function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setTab: (t: string) => void }) {
+  const renderTs = useRenderTs();
   const tabs = ["Event Feed", "Risk Scores", "Macro Scenarios", "Alert Rules", "My Exposure Risk"];
   return (
     <>
@@ -238,7 +246,7 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
               FEED DISCONNECTED
             </span>
           )}
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RENDER_TS}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{renderTs}</span>
         </div>
       </header>
 
@@ -269,6 +277,7 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function Polisophic() {
+  const renderTs = useRenderTs();
   const router = useRouter();
   const { user } = useAuth();
   const [tab, setTab] = useState("Event Feed");
@@ -452,7 +461,7 @@ export default function Polisophic() {
             <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, overflow: "auto" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
                 <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Risk Score Matrix</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>8 dimensions · as of {RENDER_TS}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>8 dimensions · as of {renderTs}</span>
               </div>
               <div style={{ height: 1, background: S.rim, marginBottom: 0 }} />
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -794,7 +803,7 @@ export default function Polisophic() {
         <span style={{ color: S.rim }}>·</span>
         <span>Political & Macro Risk Intelligence Engine</span>
         <span style={{ color: S.rim }}>·</span>
-        <span>{DEMO_MODE ? "Static Demo" : "Feed disconnected"} · {RENDER_TS}</span>
+        <span>{DEMO_MODE ? "Static Demo" : "Feed disconnected"} · {renderTs}</span>
       </footer>
     </div>
   );

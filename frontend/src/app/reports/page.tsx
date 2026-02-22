@@ -37,11 +37,45 @@ export default function ReportsPage() {
 
   if (!result || !lastInputs) {
     return (
-      <div className="text-center py-20 text-[var(--text-secondary)]">
-        <p className="text-lg mb-4">No engine run available.</p>
-        <Link href="/" className="text-[var(--accent-cyan)] hover:underline">
-          Return to Input to execute
-        </Link>
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        minHeight: 480, padding: "80px 24px", gap: 16, textAlign: "center",
+      }}>
+        {/* briefcase icon */}
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+        </svg>
+        <p style={{ fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)", fontSize: 15, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
+          No engine run available
+        </p>
+        <p style={{ fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)", fontSize: 13, color: "var(--text-tertiary)", maxWidth: 400, margin: 0 }}>
+          Generate a hedge plan from the Position Desk, or explore a pre-computed simulation in the Sandbox to see sample reports.
+        </p>
+        <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+          <Link
+            href="/input"
+            style={{
+              fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+              fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+              color: "var(--bg-panel)", background: "var(--accent-cyan)",
+              padding: "8px 18px", borderRadius: 2, textDecoration: "none",
+            }}
+          >
+            GO TO POSITION DESK →
+          </Link>
+          <Link
+            href="/sandbox"
+            style={{
+              fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+              fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+              color: "var(--accent-cyan)",
+              border: "1px solid var(--accent-cyan)",
+              padding: "8px 18px", borderRadius: 2, textDecoration: "none",
+            }}
+          >
+            VIEW DEMO SIMULATION →
+          </Link>
+        </div>
       </div>
     );
   }

@@ -3,7 +3,8 @@ import type { TradeRow, HedgeRow, MarketSnapshot, PolicyConfig } from '../api/ty
 // ─── Default market (USD/MXN baseline) ──────────────────────────────────────
 
 export const DEFAULT_DEMO_MARKET: MarketSnapshot = {
-  as_of: '2026-02-17T12:00:00Z',
+  // Dynamic timestamp: always "fresh" (5 min ago) to avoid stale-snapshot banner in demo mode
+  as_of: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
   spot_usdmxn: 18.97,
   forward_points_by_month: {
     '2026-03': 0.048,

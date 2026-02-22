@@ -1,8 +1,16 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const RENDER_TS = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+// ── Hydration-safe timestamp hook ─────────────────────────────────────────────
+function useRenderTs(): string {
+  const [renderTs, setRenderTs] = useState('');
+  useEffect(() => {
+    setRenderTs(new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC");
+  }, []);
+  return renderTs;
+}
 
 // ─── style constants ─────────────────────────────────────────────────────────
 const S = {
@@ -25,6 +33,7 @@ const S = {
 // ─── primitives ──────────────────────────────────────────────────────────────
 
 function TopBar({ onBack }: { onBack: () => void }) {
+  const renderTs = useRenderTs();
   return (
     <header style={{
       display: "flex", alignItems: "center", gap: 12, height: 44,
@@ -46,7 +55,7 @@ function TopBar({ onBack }: { onBack: () => void }) {
       }}>SIMULATION · STRESS</span>
       <div style={{ flex: 1 }} />
       <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
-        AS OF {RENDER_TS}
+        AS OF {renderTs}
       </span>
     </header>
   );
