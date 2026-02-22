@@ -124,7 +124,8 @@ export default function DashboardPage() {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [widgetIds, setWidgetIds] = useState<string[]>([]);
   const [gridItems, setGridItems] = useState<GridItem[]>([]);
-  const [ts, setTs] = useState(nowTs());
+  // Hydration-safe: initialize empty, set on client
+  const [ts, setTs] = useState('');
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -152,8 +153,9 @@ export default function DashboardPage() {
     }
   }, [user?.id]);
 
-  // ── Clock ─────────────────────────────────────────────────────────────────
+  // ── Clock: set initial value on client, then tick every 30s ───────────────
   useEffect(() => {
+    setTs(nowTs());                                     // hydration-safe initial set
     const id = setInterval(() => setTs(nowTs()), 30_000);
     return () => clearInterval(id);
   }, []);

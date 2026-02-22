@@ -4,7 +4,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
 
-const RENDER_TS = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+// ── Hydration-safe timestamp hook ─────────────────────────────────────────────
+function useRenderTs(): string {
+  const [renderTs, setRenderTs] = useState('');
+  useEffect(() => {
+    setRenderTs(new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC");
+  }, []);
+  return renderTs;
+}
 
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -111,6 +118,7 @@ const KB_LINKS = [
 ];
 
 export default function HelpPage() {
+  const renderTs = useRenderTs();
   const router = useRouter();
   const { token } = useAuth();
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
@@ -167,7 +175,7 @@ export default function HelpPage() {
           </div>
         </div>
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RENDER_TS}</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{renderTs}</span>
       </header>
 
       {/* ── Body ── */}
@@ -384,7 +392,7 @@ export default function HelpPage() {
         <span style={{ color: S.rim }}>·</span>
         <span>Platform Help &amp; Diagnostics</span>
         <span style={{ color: S.rim }}>·</span>
-        <span>{RENDER_TS}</span>
+        <span>{renderTs}</span>
       </footer>
     </div>
   );

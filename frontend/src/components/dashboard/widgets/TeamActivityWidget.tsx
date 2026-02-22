@@ -321,8 +321,9 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
                   {item.module}
                 </span>
 
-                {/* Relative time */}
+                {/* Relative time — suppressHydrationWarning: Date.now() differs on server vs client */}
                 <span
+                  suppressHydrationWarning
                   style={{
                     fontFamily: S.fontMono,
                     fontSize: 9,

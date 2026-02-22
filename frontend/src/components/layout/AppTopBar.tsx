@@ -191,7 +191,7 @@ interface NavSection {
 const NAV: NavSection[] = [
   {
     label: "Dashboard", href: "/dashboard", icon: Ic.dashboard,
-    prefixes: ["/dashboard"],
+    prefixes: ["/dashboard", "/portfolio-risk", "/scenario-studio"],
     header: "Overview",
     items: [
       { label: "Summary",         desc: "KPIs, P&L snapshot, FX exposure heat-map", href: "/dashboard",       icon: Ic.dashboard },
