@@ -52,6 +52,11 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
 
   useEffect(() => {
     if (!token) return;
+    // Demo tokens are not accepted by the backend — show demo policy in demo mode
+    if (token.startsWith("demo_token_")) {
+      setInstance(null);  // null = no active policy (widget shows empty state, no error)
+      return;
+    }
     let cancelled = false;
     getActivePolicy(token)
       .then(p  => { if (!cancelled) setInstance(p); })
