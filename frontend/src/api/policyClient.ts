@@ -4,7 +4,7 @@
 import axios from "axios";
 import type { PolicyConfig } from "./types";
 import type { PolicyPreset } from "@/constants/policyPresets";
-import type { QuestionnaireAnswers, AIPolicyResult } from "@/app/api/policy-ai/route";
+import type { QuestionnaireAnswers, AIPolicyResult, AIPolicyRecommendation } from "@/app/api/policy-ai/route";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
@@ -111,7 +111,7 @@ export async function createPolicyTemplate(
 // No auth required — the Claude API key lives on the server.
 // ---------------------------------------------------------------------------
 
-export type { QuestionnaireAnswers, AIPolicyResult };
+export type { QuestionnaireAnswers, AIPolicyResult, AIPolicyRecommendation };
 
 export async function suggestPolicyAI(
   answers: QuestionnaireAnswers,

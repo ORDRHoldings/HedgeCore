@@ -19,6 +19,10 @@ interface PositionState {
   error:          string | null;
   exposure:       ExposureAggregation[];
   exposureLoading: boolean;
+  /** Frontend-only: IDs of positions marked as executed (persists in session) */
+  executedIds:    string[];
+  /** Frontend-only: map of position id → IBKR reference string */
+  ibkrRefs:       Record<string, string>;
 }
 
 const initialState: PositionState = {
@@ -27,6 +31,8 @@ const initialState: PositionState = {
   error:           null,
   exposure:        [],
   exposureLoading: false,
+  executedIds:     [],
+  ibkrRefs:        {},
 };
 
 // ---------------------------------------------------------------------------
@@ -117,9 +123,21 @@ const positionSlice = createSlice({
       state.error = null;
     },
     resetPositions(state) {
-      state.positions = [];
-      state.exposure  = [];
-      state.error     = null;
+      state.positions  = [];
+      state.exposure   = [];
+      state.error      = null;
+      state.executedIds = [];
+      state.ibkrRefs    = {};
+    },
+    /** Frontend-only: mark a CONFIRMED position as executed (IBKR workflow) */
+    markExecuted(state, action: { payload: { id: string; ibkr_ref?: string } }) {
+      const { id, ibkr_ref } = action.payload;
+      if (!state.executedIds.includes(id)) {
+        state.executedIds.push(id);
+      }
+      if (ibkr_ref) {
+        state.ibkrRefs[id] = ibkr_ref;
+      }
     },
   },
   extraReducers(builder) {
@@ -179,5 +197,5 @@ const positionSlice = createSlice({
   },
 });
 
-export const { clearError, resetPositions } = positionSlice.actions;
+export const { clearError, resetPositions, markExecuted } = positionSlice.actions;
 export default positionSlice.reducer;

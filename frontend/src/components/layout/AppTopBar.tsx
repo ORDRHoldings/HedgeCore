@@ -6,7 +6,7 @@
  *
  * Layout:
  *   Left:   ⬡ ORDR  [CurrentSection pill]
- *   Center: Dashboard · Analysis · Execution · Governance
+ *   Center: Dashboard · Position Desk · Policy Engine · Reports · Execution · Governance · Help
  *   Right:  Full Name  [role]  Branch  Sign Out
  *
  * Rendered by ClientProviders Shell on every authenticated route.
@@ -48,14 +48,24 @@ const NAV_SECTIONS: NavSection[] = [
     prefixes: ["/dashboard"],
   },
   {
-    label: "Analysis",
-    href:  "/currency-fx",
-    prefixes: ["/currency-fx", "/portfolio-risk", "/scenario-studio", "/polisophic", "/input"],
+    label: "Position Desk",
+    href:  "/input",
+    prefixes: ["/input"],
   },
   {
-    label: "Simulation",
-    href:  "/sandbox",
-    prefixes: ["/sandbox"],
+    label: "Policy Engine",
+    href:  "/policies",
+    prefixes: ["/policies", "/polisophic"],
+  },
+  {
+    label: "Reports",
+    href:  "/reports",
+    prefixes: ["/reports", "/results"],
+  },
+  {
+    label: "Execution",
+    href:  "/execution",
+    prefixes: ["/execution", "/sandbox", "/currency-fx", "/portfolio-risk", "/scenario-studio"],
   },
   {
     label: "Governance",
