@@ -72,13 +72,8 @@ export default function SandboxPage() {
     [dispatch, token]
   );
 
-  // Auto-load first fixture on mount in demo mode (so the page is never blank)
-  useEffect(() => {
-    if (DEMO_MODE && !sandboxResult && !sandboxLoading && DEMO_FIXTURES.length > 0 && token) {
-      handleRunDemo(DEMO_FIXTURES[0].id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  // Sandbox starts clean — user explicitly picks a fixture or loads from Position Desk
+  // (auto-load removed: Task 10 redesign)
 
   const handleXRay = useCallback(
     (context: Record<string, unknown>) => {
@@ -252,15 +247,49 @@ export default function SandboxPage() {
           <DemoFixtureSelector fixtureId={fixtureId} loading={sandboxLoading} onSelect={handleRunDemo} />
         )}
 
-        {!sandboxResult && !sandboxLoading && (
-          DEMO_MODE ? null : (
-            <EmptyState
-              type="empty"
-              title="No simulation data"
-              message="Upload exposure positions via the Position Desk to run a hedge calculation."
-              action={{ label: "Go to Position Desk", onClick: () => router.push("/input") }}
-            />
-          )
+        {!sandboxResult && !sandboxLoading && !DEMO_MODE && (
+          <EmptyState
+            type="empty"
+            title="No simulation data"
+            message="Upload exposure positions via the Position Desk to run a hedge calculation."
+            action={{ label: "Go to Position Desk", onClick: () => router.push("/input") }}
+          />
+        )}
+        {!sandboxResult && !sandboxLoading && DEMO_MODE && !fixtureId && (
+          <div style={{
+            background: 'color-mix(in srgb, var(--accent-cyan) 4%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--accent-cyan) 18%, transparent)',
+            borderRadius: 4,
+            padding: '24px 28px',
+            textAlign: 'center',
+          }}>
+            <p style={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: '0.6875rem', letterSpacing: '0.1em',
+              color: 'var(--accent-cyan)', marginBottom: 6,
+            }}>SANDBOX READY</p>
+            <p style={{
+              fontFamily: "'IBM Plex Sans', sans-serif",
+              fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: '0 0 16px',
+            }}>
+              Choose a demo simulation below, or load positions from the Position Desk.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                onClick={() => router.push('/input')}
+                style={{
+                  fontFamily: "'IBM Plex Sans', sans-serif",
+                  fontSize: '0.75rem', fontWeight: 500,
+                  padding: '6px 16px',
+                  border: '1px solid var(--border-rim)',
+                  color: 'var(--text-secondary)',
+                  background: 'transparent', cursor: 'pointer',
+                }}
+              >
+                Load from Position Desk
+              </button>
+            </div>
+          </div>
         )}
         {sandboxLoading && <EmptyState type="loading" message="Running simulation engine…" />}
 

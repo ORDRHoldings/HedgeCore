@@ -45,65 +45,161 @@ interface HealthStatus {
 
 const GUIDE_SECTIONS = [
   {
-    title: "Position Desk",
-    path: "/input",
-    description: "Enter FX exposure positions manually, upload CSV/Excel files, or connect a database. Use the inline form to add positions instantly — they appear in the table below for duplicate, edit, delete, and IBKR execution workflow.",
+    title: "Getting Started",
+    path: "/dashboard",
+    description: "Welcome to ORDR Terminal — your institutional FX treasury platform. Start with the Dashboard to see your portfolio KPIs, then input positions, configure a hedge policy, and run the simulation engine to generate execution-ready trade tickets.",
     steps: [
-      "Navigate to Position Desk in the top nav",
-      "Use the inline entry form to add FX exposure positions",
-      "Positions appear immediately in the table below",
-      "Duplicate, Edit, or Delete positions using row action buttons",
-      "For CONFIRMED positions: click IBKR to confirm execution and mark as fact",
-      "Use Upload CSV or Connect Database tabs for bulk import",
+      "Log in with your enterprise credentials (SSO supported)",
+      "Review the Dashboard for portfolio summary and KPIs",
+      "Navigate to Position Desk to enter or import FX exposure data",
+      "Select a hedge policy in the Policy Engine",
+      "Run the Sandbox simulation to analyze hedge effectiveness",
+      "Use the Execution Pipeline to stage, approve, and execute trades",
+    ],
+  },
+  {
+    title: "Dashboard & Widgets",
+    path: "/dashboard",
+    description: "The Dashboard provides a real-time overview of your FX portfolio: P&L snapshot, exposure heat-map, team activity feed, and quick-access KPI tiles. Portfolio Risk and Scenario Studio are accessible via the Dashboard submenu.",
+    steps: [
+      "View consolidated P&L and exposure KPIs at a glance",
+      "Monitor team activity feed for recent pipeline actions",
+      "Navigate to Portfolio Risk for delta, vega, and correlation analysis",
+      "Open Scenario Studio for Monte Carlo and stress-test simulations",
+      "Access Polisophic for political and macro risk intelligence",
+    ],
+  },
+  {
+    title: "Data Ingestion",
+    path: "/input",
+    description: "Ingest FX exposure data through multiple channels: manual entry, CSV/Excel upload, SQL database connection, ERP integration (SAP, Oracle, NetSuite), or accounting system connectors (Xero, QuickBooks, Sage). Each channel maps source fields to ORDR TradeRow format.",
+    steps: [
+      "Use Manual Entry for quick ad-hoc position input",
+      "Upload CSV or Excel files for bulk import with auto-mapping",
+      "Configure Database Connection for scheduled SQL pulls",
+      "Set up ERP Integration for SAP, Oracle, or NetSuite connectors",
+      "Connect Accounting Systems to import foreign currency invoices",
+      "Review Import History for audit trail of all data ingestion events",
     ],
   },
   {
     title: "Policy Engine",
     path: "/policies",
-    description: "Browse all 33 system hedge policy presets organized by category. Create custom AI-powered policies using the 5-step wizard. The AI analyzes your business profile and generates 3 tailored recommendations.",
+    description: "Browse all 33 system hedge policy presets organized by category. Create custom AI-powered policies using the 5-step wizard. The AI analyzes your business profile and generates 3 tailored recommendations. Save and manage custom policies for your team.",
     steps: [
-      "Navigate to Policy Engine in the top nav",
       "Browse system presets by category (Corporate, Financial, Sovereign, Sector)",
       "Click 'Activate Policy' on any preset to make it your active hedge policy",
-      "Click '+ New AI Policy' to open the 5-step wizard",
-      "Complete the wizard and review 3 AI recommendations",
-      "Save your custom policy by name and tag",
-      "Admin users can publish policies company-wide",
+      "Open the AI Policy Wizard for guided custom policy creation",
+      "Complete 5 steps: Business Profile → Cash Flow → Risk → Objectives → AI Recommendations",
+      "Review 3 AI-generated policy recommendations (Conservative, Balanced, Aggressive)",
+      "Save custom policies and manage them in My Saved Policies",
+      "Admin users can publish policies branch-wide or company-wide",
     ],
   },
   {
-    title: "Execution",
+    title: "Sandbox & Simulation",
+    path: "/sandbox",
+    description: "The Sandbox is the core simulation engine. It runs your positions through the waterfall rule engine, generates integrity scores, and produces allocation recommendations. Start clean and choose a demo fixture or load data from the Position Desk.",
+    steps: [
+      "Navigate to Sandbox — it starts clean (no auto-loaded data)",
+      "Select a demo simulation fixture or load positions from Position Desk",
+      "Review KPIs: Integrity Score, Rules Passed, V2 Module Count",
+      "Analyze the Waterfall Engine for rule-by-rule pass/fail details",
+      "Explore left rail tabs: Exposure, Attribution, Constraints",
+      "Explore right rail tabs: Before/After, Liquidity, Rolls, Scenarios",
+      "Use the Scenario Stress Tester for custom shock analysis",
+      "Click 'Execution Bridge →' to proceed to trade ticket generation",
+    ],
+  },
+  {
+    title: "Execution Pipeline",
     path: "/execution",
-    description: "The Execution section contains two sub-tools: the Simulation Engine (stress-testing and waterfall analysis) and the Execution Bridge (bucket-level trade tickets). Run the hedge engine from the Position Desk to generate execution-ready instructions.",
+    description: "The full execution pipeline: Proposal → Staging → Approval → Ledger. Create proposals from sandbox results, submit to staging for review, obtain dual-approval authorization, and record executed trades on the immutable ledger.",
     steps: [
-      "Enter positions on the Position Desk and click Generate Hedge Plan",
-      "The Execution Bridge opens automatically with bucket-level trade tickets",
-      "Switch between NDF and Futures Proxy instrument types",
+      "Generate a hedge plan proposal from sandbox simulation results",
+      "Submit proposal to staging for governance review",
+      "Obtain required approvals (dual authorization for amounts > threshold)",
+      "Execute approved trades via IBKR handoff or manual confirmation",
+      "View executed trades in the Ledger with hash-chain integrity",
+      "Review Execution History for all completed and pending transactions",
+    ],
+  },
+  {
+    title: "Execution Bridge",
+    path: "/execution",
+    description: "The Execution Bridge translates sandbox hedge allocations into bucket-level trade tickets. Each ticket includes instrument type (NDF, Forward, Option), notional, tenor, counterparty, and IBKR execution parameters.",
+    steps: [
+      "Run a sandbox simulation to generate hedge allocations",
+      "Navigate to Execution Bridge to see bucket-level trade tickets",
+      "Switch between NDF and Futures Proxy instrument types per bucket",
+      "Review ticket details: notional, rate, tenor, settlement date",
       "Copy ticket details or use the IBKR handoff button",
-      "Use the Simulation Engine tab for deep scenario stress-testing and waterfall rule analysis",
-      "Review the Scenario Stress Tester at any time — no data required",
+      "Monitor TradingView chart for real-time rate reference",
     ],
   },
   {
-    title: "Analysis",
+    title: "FX Rates",
     path: "/currency-fx",
-    description: "Deep-dive FX analytics: exposure waterfall, currency breakdown, forward curve analysis, and IFRS 9 compliance scoring for your current position portfolio.",
+    description: "Live FX market data with TradingView charts. Switch between currency pairs (USD/MXN, EUR/MXN, GBP/MXN, etc.), view forward curves, cross rates, and historic crisis reference shocks for stress-testing context.",
     steps: [
-      "Navigate to Execution → Analysis",
-      "Review currency exposure breakdown and net positions",
-      "Analyze forward curve against your settlement buckets",
-      "Export results for governance reporting",
+      "Select a currency pair from the tab bar to switch the chart",
+      "View live TradingView chart with technical analysis tools",
+      "Review forward curve table with forward points and annualized basis",
+      "Click cross rates rows to switch the active pair",
+      "Reference historic crisis shocks for scenario planning",
+      "Open Sandbox to run full stress-test simulations",
     ],
   },
   {
-    title: "Governance (HedgeWiki)",
-    path: "/hedgewiki",
-    description: "Versioned knowledge graph covering FX instruments, ISDA framework, IFRS 9 standards, ASC 815, policy templates, and HedgeCore architecture. Every article links back to authoritative citations.",
+    title: "Polisophic",
+    path: "/polisophic",
+    description: "Political and macro risk intelligence feed. Monitor risk events (central bank decisions, sanctions, fiscal policy), track risk scores by dimension, analyze macro scenarios, configure alert rules, and assess exposure risk impact.",
     steps: [
-      "Browse knowledge domains in the left sidebar",
-      "Read article abstracts and authoritative citations",
-      "Follow knowledge graph links to related articles",
-      "Use HedgeCore field linkages to map concepts to engine fields",
+      "Review the Event Feed for latest political and macro risk events",
+      "Check Risk Scores for MXN pressure, sovereign risk, and trade policy",
+      "Explore Macro Scenarios for base, upside, and downside projections",
+      "Configure Alert Rules for automated notifications on key thresholds",
+      "Assess My Exposure Risk to see how events impact your portfolio",
+    ],
+  },
+  {
+    title: "Governance",
+    path: "/hedgewiki",
+    description: "Comprehensive governance suite: HedgeWiki knowledge base for FX instruments and standards, Audit Trail for immutable decision logging with hash-chain integrity, and Access Control for role-based permissions and branch hierarchy.",
+    steps: [
+      "Browse HedgeWiki for FX instruments, ISDA, IFRS 9, ASC 815 articles",
+      "Review Audit Trail for all pipeline actions with timestamps and hashes",
+      "Verify chain integrity with one-click hash validation",
+      "Manage Access Control: users, roles, permissions, branch hierarchy",
+      "Export audit logs for regulatory compliance reporting",
+    ],
+  },
+  {
+    title: "Troubleshooting",
+    path: "/help",
+    description: "Common issues and solutions for the ORDR Terminal platform. Check system diagnostics, verify API connectivity, and resolve data import errors.",
+    steps: [
+      "Check System Diagnostics panel (right sidebar) for backend/frontend status",
+      "If backend shows OFFLINE: verify API URL and network connectivity",
+      "Clear browser cache if UI shows stale data after an update",
+      "For import errors: verify CSV/Excel column headers match expected format",
+      "For policy errors: ensure at least one policy is activated before sandbox run",
+      "Contact support@hedgecore.app for unresolved issues",
+    ],
+  },
+  {
+    title: "API Reference",
+    path: "/help",
+    description: "ORDR Terminal API endpoints for programmatic integration. All endpoints require Bearer token authentication. The API serves hedge calculation, pipeline management, policy configuration, and data ingestion.",
+    steps: [
+      "POST /api/calculate — Run hedge calculation engine with positions + policy",
+      "POST /api/proposals — Create a new hedge proposal from sandbox results",
+      "POST /api/staging — Submit proposal to staging for approval",
+      "POST /api/staging/:id/authorize — Authorize a staged artifact",
+      "GET /api/ledger — List all ledger entries (executed trades)",
+      "GET /api/policies — List policy templates (system + custom)",
+      "POST /api/connectors/csv — Import positions from CSV file",
+      "GET /api/health — Check API health status",
     ],
   },
 ];
@@ -125,6 +221,11 @@ export default function HelpPage() {
   const [healthLoading, setHealthLoading] = useState(true);
   const [healthError, setHealthError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState(0);
+  const [searchFilter, setSearchFilter] = useState("");
+
+  const filteredSections = GUIDE_SECTIONS.map((sec, i) => ({ ...sec, origIdx: i })).filter(sec =>
+    !searchFilter || sec.title.toLowerCase().includes(searchFilter.toLowerCase()) || sec.description.toLowerCase().includes(searchFilter.toLowerCase())
+  );
 
   useEffect(() => {
     const fetchHealth = async () => {
@@ -186,16 +287,35 @@ export default function HelpPage() {
           <div style={{ padding: "0 16px 8px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" }}>
             Platform Guide
           </div>
-          {GUIDE_SECTIONS.map((sec, i) => (
+          <div style={{ padding: "0 12px 10px" }}>
+            <input
+              type="text"
+              placeholder="Search guides…"
+              value={searchFilter}
+              onChange={e => setSearchFilter(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "5px 10px",
+                fontFamily: S.fontMono,
+                fontSize: "0.6875rem",
+                color: S.primary,
+                background: S.bgSub,
+                border: `1px solid ${S.soft}`,
+                borderRadius: 2,
+                outline: "none",
+              }}
+            />
+          </div>
+          {filteredSections.map((sec) => (
             <button
               key={sec.title}
-              onClick={() => setActiveSection(i)}
+              onClick={() => setActiveSection(sec.origIdx)}
               style={{
                 display: "block", width: "100%", textAlign: "left",
                 padding: "8px 16px", fontFamily: S.fontUI, fontSize: "0.75rem",
-                color: activeSection === i ? S.cyan : S.secondary,
-                background: activeSection === i ? `color-mix(in srgb, var(--accent-cyan) 8%, transparent)` : "transparent",
-                borderLeft: activeSection === i ? `2px solid ${S.cyan}` : "2px solid transparent",
+                color: activeSection === sec.origIdx ? S.cyan : S.secondary,
+                background: activeSection === sec.origIdx ? `color-mix(in srgb, var(--accent-cyan) 8%, transparent)` : "transparent",
+                borderLeft: activeSection === sec.origIdx ? `2px solid ${S.cyan}` : "2px solid transparent",
                 cursor: "pointer", transition: "all 100ms",
               }}
             >
@@ -211,10 +331,14 @@ export default function HelpPage() {
             { label: "Dashboard",          path: "/dashboard"   },
             { label: "Position Desk",      path: "/input"       },
             { label: "Policy Engine",      path: "/policies"    },
-            { label: "Execution Bridge",   path: "/execution"   },
-            { label: "Simulation Engine",  path: "/sandbox"     },
-            { label: "Analysis",           path: "/currency-fx" },
+            { label: "AI Policy Wizard",   path: "/ai-policy-wizard" },
+            { label: "Sandbox",            path: "/sandbox"     },
+            { label: "Execution Pipeline", path: "/execution"   },
+            { label: "FX Rates",           path: "/currency-fx" },
+            { label: "Polisophic",         path: "/polisophic"  },
             { label: "HedgeWiki",          path: "/hedgewiki"   },
+            { label: "Audit Trail",        path: "/audit-trail" },
+            { label: "Access Control",     path: "/access-control" },
           ].map((lnk) => (
             <button
               key={lnk.path}
