@@ -236,12 +236,16 @@ export default function InputPage() {
   // ── Load positions from DB on mount ───────────────────────────────────────
   useEffect(() => {
     if (!token) return;
+    // Demo tokens are not accepted by the backend — skip fetch in demo mode
+    if (token.startsWith('demo_token_')) return;
     dispatch(listPositionsThunk({ token }));
   }, [dispatch, token]);
 
   // ── Load policy templates + active policy on mount ────────────────────────
   useEffect(() => {
     if (!token) return;
+    // Demo tokens are not accepted by the backend — skip fetch in demo mode
+    if (token.startsWith('demo_token_')) return;
     // Fetch templates (for matching DB template IDs to preset IDs)
     listPolicyTemplates(token).then(setDbTemplates).catch(() => {/* ignore */});
     // Fetch active policy → pre-select preset if found
