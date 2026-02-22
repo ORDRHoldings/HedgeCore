@@ -25,7 +25,7 @@ export default function ReplayEngine({
         <button
           onClick={onRunReplay}
           disabled={replayLoading}
-          className="px-3 py-1 text-[0.6875rem] font-medium bg-[var(--accent-cyan)] text-[var(--bg-deep)] rounded hover:bg-[var(--accent-cyan)]/80 disabled:opacity-50 transition-colors"
+          className="px-3 py-1 text-[0.8125rem] font-medium bg-[var(--accent-cyan)] text-[var(--bg-deep)] rounded hover:bg-[var(--accent-cyan)]/80 disabled:opacity-50 transition-colors"
         >
           {replayLoading ? "Replaying…" : "Run Replay"}
         </button>
@@ -114,7 +114,7 @@ function DivergenceReport({
 }) {
   return (
     <div className="mt-2">
-      <h3 className="text-[0.625rem] font-medium text-[var(--accent-red)] uppercase mb-1">
+      <h3 className="text-[0.75rem] font-medium text-[var(--accent-red)] uppercase mb-1">
         Divergences
       </h3>
       <JsonViewer data={divergences} initialExpanded />

@@ -43,7 +43,7 @@ export default function ErrorBanner({
         <circle cx="8" cy="11" r="0.6" fill="currentColor" />
       </svg>
       <div className="flex-1 min-w-0">
-        <span className="block text-[0.6875rem] font-mono font-medium text-[var(--accent-amber)] uppercase tracking-wider leading-none mb-1">
+        <span className="block text-[0.8125rem] font-mono font-medium text-[var(--accent-amber)] uppercase tracking-wider leading-none mb-1">
           {code.replace(/_/g, " ")}
         </span>
         <p className="text-xs text-[var(--text-primary)] leading-snug">{resolved}</p>

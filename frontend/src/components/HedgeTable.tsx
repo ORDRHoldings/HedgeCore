@@ -44,7 +44,7 @@ export default function HedgeTable({ result }: HedgeTableProps) {
         {/* Summary */}
         {result.summary && (
           <div className="border-t border-gray-100 pt-3">
-            <h4 className="text-xs font-semibold text-gray-700 uppercase mb-2">Summary</h4>
+            <h4 className="text-sm font-semibold text-gray-700 uppercase mb-2">Summary</h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
                 <span className="text-gray-500">Total Cost:</span>
@@ -65,12 +65,12 @@ export default function HedgeTable({ result }: HedgeTableProps) {
             {/* Hedge Effectiveness */}
             {result.summary.hedge_effectiveness && (
               <div className="mt-2">
-                <span className="text-xs text-gray-500">Effectiveness:</span>
+                <span className="text-sm text-gray-500">Effectiveness:</span>
                 <div className="mt-1 flex gap-3">
                   {Object.entries(result.summary.hedge_effectiveness).map(([key, val]) => (
                     <span
                       key={key}
-                      className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700"
+                      className="rounded bg-blue-50 px-2 py-1 text-sm text-blue-700"
                     >
                       {key}: {val != null ? `${(val * 100).toFixed(1)}%` : "N/A"}
                     </span>
@@ -83,12 +83,12 @@ export default function HedgeTable({ result }: HedgeTableProps) {
             {result.summary.worst_case &&
               Object.keys(result.summary.worst_case).length > 0 && (
                 <div className="mt-2">
-                  <span className="text-xs text-gray-500">Worst Case:</span>
+                  <span className="text-sm text-gray-500">Worst Case:</span>
                   <div className="mt-1 flex gap-3">
                     {Object.entries(result.summary.worst_case).map(([key, val]) => (
                       <span
                         key={key}
-                        className="rounded bg-amber-50 px-2 py-1 text-xs text-amber-700"
+                        className="rounded bg-amber-50 px-2 py-1 text-sm text-amber-700"
                       >
                         {key}:{" "}
                         {val.kind === "number"
@@ -104,7 +104,7 @@ export default function HedgeTable({ result }: HedgeTableProps) {
 
         {/* Meta */}
         {result.meta && (
-          <div className="border-t border-gray-100 pt-3 text-xs text-gray-500">
+          <div className="border-t border-gray-100 pt-3 text-sm text-gray-500">
             Engine: {result.meta.engine} {result.meta.version} | Duration:{" "}
             {result.meta.duration_ms}ms
           </div>
@@ -113,10 +113,10 @@ export default function HedgeTable({ result }: HedgeTableProps) {
         {/* Decision Details (for rejected) */}
         {!isApproved && result.decision && typeof result.decision === "object" && (
           <div className="border-t border-gray-100 pt-3">
-            <h4 className="text-xs font-semibold text-gray-700 uppercase mb-2">
+            <h4 className="text-sm font-semibold text-gray-700 uppercase mb-2">
               Decision Details
             </h4>
-            <pre className="rounded bg-gray-50 p-3 text-xs text-gray-700 overflow-auto max-h-40">
+            <pre className="rounded bg-gray-50 p-3 text-sm text-gray-700 overflow-auto max-h-40">
               {JSON.stringify(result.decision, null, 2)}
             </pre>
           </div>

@@ -20,7 +20,7 @@ export default function AttributionTab({
     <div className="space-y-3">
       {navAttribution && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
             NAV Attribution
           </h3>
           <JsonViewer data={navAttribution} />
@@ -28,7 +28,7 @@ export default function AttributionTab({
       )}
       {factorCovariance && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
             Factor Covariance
           </h3>
           <JsonViewer data={factorCovariance} />

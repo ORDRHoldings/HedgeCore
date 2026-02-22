@@ -113,14 +113,14 @@ function RegimeChip({ regime }: { regime: string }) {
   const c = map[regime] ?? S.tertiary;
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.06em",
+      fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
       padding: "1px 5px", border: `1px solid ${c}`, color: c,
     }}>{regime}</span>
   );
 }
 
 function VarBar({ value, max }: { value: number; max: number }) {
-  if (value === 0) return <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 80, height: 5, background: S.soft }} /><span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, minWidth: 40, textAlign: "right" as const }}>—</span></div>;
+  if (value === 0) return <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 80, height: 5, background: S.soft }} /><span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, minWidth: 40, textAlign: "right" as const }}>—</span></div>;
   const pct = Math.min(100, (Math.abs(value) / max) * 100);
   const color = pct > 70 ? S.fail : pct > 30 ? S.amber : S.pass;
   return (
@@ -128,7 +128,7 @@ function VarBar({ value, max }: { value: number; max: number }) {
       <div style={{ width: 80, height: 5, background: S.soft, position: "relative" as const, flexShrink: 0 }}>
         <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: color }} />
       </div>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color, fontWeight: 600, minWidth: 40, textAlign: "right" as const }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color, fontWeight: 600, minWidth: 40, textAlign: "right" as const }}>
         {fmtM(value)}
       </span>
     </div>
@@ -197,7 +197,7 @@ export default function PortfolioRisk() {
         padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
       }}>
         <button onClick={() => router.push("/")} style={{
-          fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
           background: "transparent", border: `1px solid ${S.rim}`,
           padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
         }}>← Home</button>
@@ -212,7 +212,7 @@ export default function PortfolioRisk() {
           <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary, lineHeight: 1.1 }}>
             Portfolio Risk Analysis
           </div>
-          <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.07em", color: S.tertiary }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.07em", color: S.tertiary }}>
             R1–R8 DECOMPOSITION · HEDGE EFFECTIVENESS · VaR · ATTRIBUTION
           </div>
         </div>
@@ -229,12 +229,12 @@ export default function PortfolioRisk() {
               padding: "4px 12px", display: "flex", flexDirection: "column", gap: 1,
               borderRight: i < arr.length - 1 ? `1px solid ${S.rim}` : "none",
             }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em" }}>{label}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em" }}>{label}</span>
               <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
             </div>
           ))}
         </div>
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{RENDER_TS}</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RENDER_TS}</span>
       </header>
 
       {/* Tab bar */}
@@ -244,7 +244,7 @@ export default function PortfolioRisk() {
       }}>
         {tabs.map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
-            fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.04em",
+            fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.04em",
             padding: "0 16px", height: "100%", display: "flex", alignItems: "center",
             color: tab === t ? S.cyan : S.tertiary,
             borderBottom: tab === t ? `2px solid ${S.cyan}` : "2px solid transparent",
@@ -253,7 +253,7 @@ export default function PortfolioRisk() {
           }}>{t}</button>
         ))}
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, padding: "1px 6px", border: `1px solid ${S.rim}` }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, padding: "1px 6px", border: `1px solid ${S.rim}` }}>
           Q1-2026-DEMO · ENGINE v1.0
         </span>
       </div>
@@ -266,7 +266,7 @@ export default function PortfolioRisk() {
             <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, overflow: "auto" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
                 <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>R1–R8 Risk Decomposition</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>8 dimensions · 99% VaR · 1-day horizon</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>8 dimensions · 99% VaR · 1-day horizon</span>
               </div>
               <div style={{ height: 1, background: S.rim, marginBottom: 0 }} />
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -274,7 +274,7 @@ export default function PortfolioRisk() {
                   <tr>
                     {["Dim", "Risk Name", "VaR 99%", "CVaR 99%", "Gross Exp.", "Hedge %", "Residual", "Regime"].map(h => (
                       <th key={h} style={{
-                        padding: "6px 10px 6px 0", fontFamily: S.fontMono, fontSize: "0.4375rem",
+                        padding: "6px 10px 6px 0", fontFamily: S.fontMono, fontSize: "0.6875rem",
                         letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
                         textAlign: "left", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
                       }}>{h}</th>
@@ -289,21 +289,21 @@ export default function PortfolioRisk() {
                         <td style={{ padding: "9px 10px 9px 0", fontFamily: S.fontMono, fontSize: "0.625rem", fontWeight: 700, color: S.cyan }}>{r.code}</td>
                         <td style={{ padding: "9px 10px 9px 0" }}>
                           <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", fontWeight: 500, color: S.primary }}>{r.name}</div>
-                          <div style={{ fontFamily: S.fontUI, fontSize: "0.5rem", color: S.tertiary, lineHeight: 1.3, maxWidth: 200 }}>{r.description.slice(0, 78)}…</div>
+                          <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary, lineHeight: 1.3, maxWidth: 200 }}>{r.description.slice(0, 78)}…</div>
                         </td>
                         <td style={{ padding: "9px 10px 9px 0" }}>
                           <VarBar value={r.var99} max={maxAbsVar} />
                         </td>
-                        <td style={{ padding: "9px 10px 9px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: r.cvar99 < 0 ? S.fail : S.tertiary }}>
+                        <td style={{ padding: "9px 10px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: r.cvar99 < 0 ? S.fail : S.tertiary }}>
                           {r.cvar99 !== 0 ? fmtM(r.cvar99) : "—"}
                         </td>
-                        <td style={{ padding: "9px 10px 9px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>
+                        <td style={{ padding: "9px 10px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>
                           {r.exposure > 0 ? fmtM(r.exposure) : "—"}
                         </td>
-                        <td style={{ padding: "9px 10px 9px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: r.hedgeRatio > 0 ? S.pass : S.tertiary }}>
+                        <td style={{ padding: "9px 10px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: r.hedgeRatio > 0 ? S.pass : S.tertiary }}>
                           {r.hedgeRatio > 0 ? `${(r.hedgeRatio * 100).toFixed(0)}%` : "—"}
                         </td>
-                        <td style={{ padding: "9px 10px 9px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>
+                        <td style={{ padding: "9px 10px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>
                           {r.residualExposure > 0 ? fmtM(r.residualExposure) : "—"}
                         </td>
                         <td style={{ padding: "9px 0 9px 0" }}>
@@ -323,7 +323,7 @@ export default function PortfolioRisk() {
                   { label: "ACTIVE DIMS",    value: `${R_DIMS.filter(r => r.regime !== "NONE").length}/8`, color: S.secondary },
                 ].map(({ label, value, color }) => (
                   <div key={label}>
-                    <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em" }}>{label}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em" }}>{label}</div>
                     <div style={{ fontFamily: S.fontMono, fontSize: "1rem", fontWeight: 700, color, lineHeight: 1.1 }}>{value}</div>
                   </div>
                 ))}
@@ -331,14 +331,14 @@ export default function PortfolioRisk() {
             </div>
 
             <aside style={{ padding: "20px 16px", background: S.bgSub, overflow: "auto" }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>
                 RISK RADAR (VaR-scaled)
               </div>
               <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
                 <RiskRadar />
               </div>
               <div style={{ height: 1, background: S.rim, marginBottom: 12 }} />
-              <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>REGIME SUMMARY</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>REGIME SUMMARY</div>
               {(["HIGH", "MODERATE", "LOW", "NONE"] as const).map(regime => {
                 const dims = R_DIMS.filter(r => r.regime === regime);
                 const colorMap: Record<string, string> = { HIGH: S.fail, MODERATE: S.amber, LOW: S.pass, NONE: S.tertiary };
@@ -347,16 +347,16 @@ export default function PortfolioRisk() {
                   <div key={regime} style={{ padding: "6px 0", borderBottom: `1px solid ${S.soft}` }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                       <span style={{ width: 5, height: 5, borderRadius: "50%", background: color, display: "inline-block" }} />
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color, fontWeight: 600 }}>{regime}</span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, marginLeft: "auto" }}>{dims.length}</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color, fontWeight: 600 }}>{regime}</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, marginLeft: "auto" }}>{dims.length}</span>
                     </div>
-                    <div style={{ fontFamily: S.fontUI, fontSize: "0.5rem", color: S.tertiary, paddingLeft: 11 }}>
+                    <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary, paddingLeft: 11 }}>
                       {dims.map(d => d.code).join(" · ") || "—"}
                     </div>
                   </div>
                 );
               })}
-              <div style={{ marginTop: 14, fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, lineHeight: 1.8 }}>
+              <div style={{ marginTop: 14, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, lineHeight: 1.8 }}>
                 Methodology: Hist. Sim. + Parametric<br/>
                 Horizon: 1-day · Confidence: 99%<br/>
                 Decay: EWMA λ=0.94
@@ -370,7 +370,7 @@ export default function PortfolioRisk() {
           <div style={{ padding: "20px 28px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Position Ledger</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{POSITIONS.length} positions</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{POSITIONS.length} positions</span>
             </div>
             <div style={{ height: 1, background: S.rim, marginBottom: 0 }} />
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -378,7 +378,7 @@ export default function PortfolioRisk() {
                 <tr>
                   {["ID", "Position Name", "Type", "Notional (MXN)", "Currency", "Delta", "Status"].map(h => (
                     <th key={h} style={{
-                      padding: "6px 12px 6px 0", fontFamily: S.fontMono, fontSize: "0.4375rem",
+                      padding: "6px 12px 6px 0", fontFamily: S.fontMono, fontSize: "0.6875rem",
                       letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
                       textAlign: "left", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
                     }}>{h}</th>
@@ -391,18 +391,18 @@ export default function PortfolioRisk() {
                   const statusColor = p.status === "ACTIVE" ? S.pass : p.status === "CONFIRMED" ? S.cyan : S.amber;
                   return (
                     <tr key={p.id} style={{ borderBottom: `1px solid ${S.soft}`, background: isHedge ? `color-mix(in srgb, var(--accent-cyan) 2%, transparent)` : "transparent" }}>
-                      <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>{p.id}</td>
+                      <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{p.id}</td>
                       <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontUI, fontSize: "0.6875rem", fontWeight: 500, color: S.primary }}>{p.name}</td>
                       <td style={{ padding: "9px 12px 9px 0" }}>
-                        <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 5px", border: `1px solid ${isHedge ? S.cyan : S.rim}`, color: isHedge ? S.cyan : S.secondary }}>{p.type}</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 5px", border: `1px solid ${isHedge ? S.cyan : S.rim}`, color: isHedge ? S.cyan : S.secondary }}>{p.type}</span>
                       </td>
-                      <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: p.notional >= 0 ? S.pass : S.fail, fontWeight: 600 }}>
+                      <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: p.notional >= 0 ? S.pass : S.fail, fontWeight: 600 }}>
                         {p.notional >= 0 ? `+${(p.notional / 1_000_000).toFixed(1)}M` : `−${(Math.abs(p.notional) / 1_000_000).toFixed(1)}M`}
                       </td>
-                      <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>{p.currency}</td>
-                      <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>{p.delta.toFixed(2)}</td>
+                      <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{p.currency}</td>
+                      <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{p.delta.toFixed(2)}</td>
                       <td style={{ padding: "9px 0 9px 0" }}>
-                        <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 5px", border: `1px solid ${statusColor}`, color: statusColor }}>{p.status}</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 5px", border: `1px solid ${statusColor}`, color: statusColor }}>{p.status}</span>
                       </td>
                     </tr>
                   );
@@ -417,7 +417,7 @@ export default function PortfolioRisk() {
                 { label: "HEDGE COVER", value: `${((hedgeNotional / grossExposure) * 100).toFixed(1)}%`, color: S.cyan },
               ].map(({ label, value, color }) => (
                 <div key={label}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em" }}>{label}</div>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em" }}>{label}</div>
                   <div style={{ fontFamily: S.fontMono, fontSize: "1.125rem", fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
                 </div>
               ))}
@@ -430,17 +430,17 @@ export default function PortfolioRisk() {
           <div style={{ padding: "20px 28px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Risk Attribution</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>P&L factor decomposition · rolling 30D</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>P&L factor decomposition · rolling 30D</span>
             </div>
             <div style={{ height: 1, background: S.rim, marginBottom: 20 }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
               <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>FACTOR DECOMPOSITION</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>FACTOR DECOMPOSITION</div>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr>
                       {["Factor", "P&L", "Share"].map(h => (
-                        <th key={h} style={{ padding: "5px 10px 5px 0", fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
+                        <th key={h} style={{ padding: "5px 10px 5px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -451,13 +451,13 @@ export default function PortfolioRisk() {
                       return (
                         <tr key={a.factor} style={{ borderBottom: `1px solid ${S.soft}` }}>
                           <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontUI, fontSize: "0.6875rem", fontWeight: 500, color: S.primary }}>{a.factor}</td>
-                          <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.fail, fontWeight: 600 }}>{fmtM(a.contribution)}</td>
+                          <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail, fontWeight: 600 }}>{fmtM(a.contribution)}</td>
                           <td style={{ padding: "8px 0 8px 0" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                               <div style={{ width: 80, height: 5, background: S.soft, position: "relative" as const }}>
                                 <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${a.pct}%`, background: c, opacity: 0.8 }} />
                               </div>
-                              <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.secondary }}>{a.pct}%</span>
+                              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>{a.pct}%</span>
                             </div>
                           </td>
                         </tr>
@@ -466,13 +466,13 @@ export default function PortfolioRisk() {
                     <tr style={{ borderTop: `1px solid ${S.rim}` }}>
                       <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontUI, fontSize: "0.6875rem", fontWeight: 700, color: S.primary }}>Total</td>
                       <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 700, color: S.fail }}>{fmtM(ATTRIBUTION.reduce((s, a) => s + a.contribution, 0))}</td>
-                      <td style={{ padding: "8px 0 8px 0", fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>100%</td>
+                      <td style={{ padding: "8px 0 8px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>100%</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>WATERFALL — P&L BY FACTOR</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>WATERFALL — P&L BY FACTOR</div>
                 <div style={{ padding: "14px", background: S.bgSub, border: `1px solid ${S.rim}`, marginBottom: 14 }}>
                   <div style={{ display: "flex", height: 48, gap: 3, alignItems: "flex-end" }}>
                     {ATTRIBUTION.map((a, i) => {
@@ -481,7 +481,7 @@ export default function PortfolioRisk() {
                       const h = (Math.abs(a.contribution) / maxC) * 48;
                       return (
                         <div key={a.factor} style={{ flex: a.pct, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                          <span style={{ fontFamily: S.fontMono, fontSize: "0.375rem", color: colors[i] }}>{fmtM(a.contribution)}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: colors[i] }}>{fmtM(a.contribution)}</span>
                           <div style={{ width: "100%", height: `${h}px`, background: colors[i], opacity: 0.8, minHeight: 4 }} />
                         </div>
                       );
@@ -494,15 +494,15 @@ export default function PortfolioRisk() {
                       return (
                         <div key={a.factor} style={{ display: "flex", alignItems: "center", gap: 3 }}>
                           <div style={{ width: 7, height: 7, background: colors[i] }} />
-                          <span style={{ fontFamily: S.fontUI, fontSize: "0.4375rem", color: S.tertiary }}>{a.factor.split(" ").slice(0, 2).join(" ")}</span>
+                          <span style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary }}>{a.factor.split(" ").slice(0, 2).join(" ")}</span>
                         </div>
                       );
                     })}
                   </div>
                 </div>
                 <div style={{ padding: "12px 14px", background: `color-mix(in srgb, var(--accent-cyan) 4%, transparent)`, border: `1px solid ${S.cyan}` }}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.cyan, letterSpacing: "0.06em", marginBottom: 6 }}>ATTRIBUTION INSIGHT</div>
-                  <p style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.secondary, lineHeight: 1.65, margin: 0 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.cyan, letterSpacing: "0.06em", marginBottom: 6 }}>ATTRIBUTION INSIGHT</div>
+                  <p style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.65, margin: 0 }}>
                     FX rate movement (R1) drives 62% of risk. The 80% NDF program offsets primary delta; residual 22% stems from forward point carry and tail scenarios. Correlation and counterparty risks are within policy limits.
                   </p>
                 </div>
@@ -516,14 +516,14 @@ export default function PortfolioRisk() {
           <div style={{ padding: "20px 28px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Hedge Effectiveness Report</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>IFRS 9 §6.4.1 · prospective · {HEDGE_EFFICIENCY.length} buckets</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>IFRS 9 §6.4.1 · prospective · {HEDGE_EFFICIENCY.length} buckets</span>
             </div>
             <div style={{ height: 1, background: S.rim, marginBottom: 0 }} />
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
                   {["Tenor Bucket", "Target Ratio", "Actual Ratio", "Effectiveness", "IFRS 9 Status"].map(h => (
-                    <th key={h} style={{ padding: "6px 12px 6px 0", fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap" }}>{h}</th>
+                    <th key={h} style={{ padding: "6px 12px 6px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -531,18 +531,18 @@ export default function PortfolioRisk() {
                 {HEDGE_EFFICIENCY.map(h => (
                   <tr key={h.bucket} style={{ borderBottom: `1px solid ${S.soft}` }}>
                     <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 600, color: S.primary }}>{h.bucket}</td>
-                    <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>{(h.targetRatio * 100).toFixed(0)}%</td>
-                    <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.secondary }}>{(h.actualRatio * 100).toFixed(0)}%</td>
+                    <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{(h.targetRatio * 100).toFixed(0)}%</td>
+                    <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{(h.actualRatio * 100).toFixed(0)}%</td>
                     <td style={{ padding: "10px 12px 10px 0" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ width: 60, height: 4, background: S.soft, position: "relative" as const }}>
                           <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${h.effectiveness}%`, background: S.pass }} />
                         </div>
-                        <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.pass, fontWeight: 600 }}>{h.effectiveness.toFixed(1)}%</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.pass, fontWeight: 600 }}>{h.effectiveness.toFixed(1)}%</span>
                       </div>
                     </td>
                     <td style={{ padding: "10px 0 10px 0" }}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", padding: "1px 5px", border: `1px solid ${S.pass}`, color: S.pass }}>● {h.status}</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 5px", border: `1px solid ${S.pass}`, color: S.pass }}>● {h.status}</span>
                     </td>
                   </tr>
                 ))}
@@ -551,7 +551,7 @@ export default function PortfolioRisk() {
 
             <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div style={{ padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>IFRS 9 §6.4.1 QUALIFICATION CHECKLIST</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>IFRS 9 §6.4.1 QUALIFICATION CHECKLIST</div>
                 {[
                   "Economic relationship between item and instrument",
                   "Credit risk does not dominate value changes",
@@ -562,12 +562,12 @@ export default function PortfolioRisk() {
                 ].map(c => (
                   <div key={c} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", borderBottom: `1px solid ${S.soft}` }}>
                     <span style={{ color: S.pass, fontFamily: S.fontMono, fontSize: "0.625rem", flexShrink: 0 }}>✓</span>
-                    <span style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.secondary, lineHeight: 1.4 }}>{c}</span>
+                    <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.4 }}>{c}</span>
                   </div>
                 ))}
               </div>
               <div style={{ padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>EFFECTIVENESS METHODOLOGY</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 10 }}>EFFECTIVENESS METHODOLOGY</div>
                 {[
                   { label: "Assessment method",  value: "Dollar-offset (prospective qualitative)" },
                   { label: "Testing frequency",  value: "Each reporting date + on market disruption" },
@@ -577,8 +577,8 @@ export default function PortfolioRisk() {
                   { label: "Standard ref.",      value: "IFRS 9.6.4.1(a–c) · IFRS 9.B6.4.1" },
                 ].map(({ label, value }) => (
                   <div key={label} style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 8, padding: "5px 0", borderBottom: `1px solid ${S.soft}` }}>
-                    <span style={{ fontFamily: S.fontUI, fontSize: "0.5625rem", color: S.tertiary }}>{label}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.secondary }}>{value}</span>
+                    <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary }}>{label}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>{value}</span>
                   </div>
                 ))}
               </div>
@@ -591,7 +591,7 @@ export default function PortfolioRisk() {
       <footer style={{
         height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px",
         borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
-        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
         <span>HedgeCore · Portfolio Risk Analysis</span>

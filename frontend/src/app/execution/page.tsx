@@ -94,7 +94,7 @@ function ExecutionHubContent() {
             {tab.badge != null && tab.badge > 0 && (
               <span style={{
                 fontFamily: S.fontMono,
-                fontSize: '0.5rem',
+                fontSize: '0.6875rem',
                 background: 'var(--accent-cyan)',
                 color: '#0a0f14',
                 borderRadius: 2,
@@ -112,7 +112,7 @@ function ExecutionHubContent() {
       {result && (
         <span style={{
           fontFamily: S.fontMono,
-          fontSize: '0.5rem', color: 'var(--text-tertiary)',
+          fontSize: '0.6875rem', color: 'var(--text-tertiary)',
           letterSpacing: '0.06em',
         }}>
           RUN <span style={{ color: 'var(--accent-cyan)' }}>{result.run_id.slice(0, 8).toUpperCase()}</span>
@@ -192,7 +192,7 @@ function ExecutionHubContent() {
               }}>
                 <div style={{
                   fontFamily: S.fontMono,
-                  fontSize: '0.5rem', letterSpacing: '0.12em',
+                  fontSize: '0.6875rem', letterSpacing: '0.12em',
                   color: card.color, marginBottom: 8,
                 }}>{card.step}</div>
                 <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)', marginBottom: 6 }}>{card.title}</p>
@@ -202,7 +202,7 @@ function ExecutionHubContent() {
                   style={{
                     display: 'inline-block',
                     fontFamily: S.fontMono,
-                    fontSize: '0.5625rem', letterSpacing: '0.05em',
+                    fontSize: '0.75rem', letterSpacing: '0.05em',
                     color: 'var(--text-secondary)',
                     border: '1px solid var(--border-rim)',
                     padding: '4px 10px',
@@ -236,7 +236,7 @@ function ExecutionHubContent() {
           borderBottom: '1px solid color-mix(in srgb, var(--accent-cyan) 15%, transparent)',
           padding: '6px 20px',
           fontFamily: S.fontMono,
-          fontSize: '0.5rem', letterSpacing: '0.08em',
+          fontSize: '0.6875rem', letterSpacing: '0.08em',
           color: 'var(--text-tertiary)',
           flexShrink: 0,
         }}>

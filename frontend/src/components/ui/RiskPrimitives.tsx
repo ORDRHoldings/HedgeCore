@@ -29,7 +29,7 @@ export function RegimeChip({ regime }: { regime: Regime | string }) {
   return (
     <span style={{
       fontFamily: S.fontMono,
-      fontSize: "0.4375rem",
+      fontSize: "0.6875rem",
       letterSpacing: "0.06em",
       padding: "1px 5px",
       border: `1px solid ${border}`,
@@ -60,7 +60,7 @@ export function ScoreBar({ score, max = 100 }: { score: number; max?: number }) 
       </div>
       <span style={{
         fontFamily: S.fontMono,
-        fontSize: "0.5rem",
+        fontSize: "0.6875rem",
         color,
         fontWeight: 600,
         minWidth: 20,

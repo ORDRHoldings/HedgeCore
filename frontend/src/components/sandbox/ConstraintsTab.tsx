@@ -29,7 +29,7 @@ export default function ConstraintsTab({
     <div className="space-y-3">
       {capitalAdequacy && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
             Capital Adequacy
           </h3>
           <JsonViewer data={capitalAdequacy} />
@@ -37,7 +37,7 @@ export default function ConstraintsTab({
       )}
       {marginBreakdown && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
             Margin Breakdown
           </h3>
           <JsonViewer data={marginBreakdown} />
@@ -45,7 +45,7 @@ export default function ConstraintsTab({
       )}
       {concentration && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
             Concentration
           </h3>
           <JsonViewer data={concentration} />
@@ -53,7 +53,7 @@ export default function ConstraintsTab({
       )}
       {hedgeBands && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
             Hedge Bands
           </h3>
           <JsonViewer data={hedgeBands} />
@@ -61,7 +61,7 @@ export default function ConstraintsTab({
       )}
       {transactionCosts && (
         <div>
-          <h3 className="text-[0.625rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
+          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
             Transaction Costs
           </h3>
           <JsonViewer data={transactionCosts} />

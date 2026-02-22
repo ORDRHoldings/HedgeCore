@@ -77,7 +77,7 @@ export default function ExecutionBridge({
           <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
             <div>
               <h3 className="text-lg font-semibold text-[var(--text-primary)]">Execution Desk</h3>
-              <p className="text-xs text-[var(--text-secondary)]">
+              <p className="text-sm text-[var(--text-secondary)]">
                 Run {runId.slice(0, 8)}…
               </p>
             </div>
@@ -87,7 +87,7 @@ export default function ExecutionBridge({
             <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">
               No execution required
             </p>
-            <p className="text-xs text-[var(--text-secondary)] mb-4">
+            <p className="text-sm text-[var(--text-secondary)] mb-4">
               All buckets were suppressed by policy rules.
             </p>
 
@@ -99,7 +99,7 @@ export default function ExecutionBridge({
                     Suppressed Buckets — Reason &amp; Detail
                   </span>
                 </div>
-                <table className="w-full text-xs font-mono">
+                <table className="w-full text-sm font-mono">
                   <thead>
                     <tr className="border-b border-[var(--border-soft)]">
                       {['Bucket', 'Net Exposure', 'Action', 'Action USD', 'Reason'].map(h => (
@@ -154,7 +154,7 @@ export default function ExecutionBridge({
           <div className="h-[360px] w-full">
             <TradingViewEmbed key={spotSymbol} symbol={spotSymbol} />
           </div>
-          <p className="text-xs text-[var(--text-secondary)] text-center py-2 border-t border-[var(--border-soft)]">
+          <p className="text-sm text-[var(--text-secondary)] text-center py-2 border-t border-[var(--border-soft)]">
             Chart is informational; calculations use MarketSnapshot.
           </p>
         </div>
@@ -207,7 +207,7 @@ export default function ExecutionBridge({
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h3 className="text-lg font-semibold text-[var(--text-primary)]">Execution Desk</h3>
-            <p className="text-xs text-[var(--text-secondary)]">
+            <p className="text-sm text-[var(--text-secondary)]">
               Trade instructions derived from HedgeCalc run {runId.slice(0, 8)}…
             </p>
           </div>
@@ -215,7 +215,7 @@ export default function ExecutionBridge({
           <div className="flex items-center gap-1 bg-[var(--bg-deep)] rounded-full p-0.5">
             <button
               onClick={() => setInstrumentType('NDF')}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              className={`px-3 py-1 text-sm rounded-full transition-colors ${
                 instrumentType === 'NDF'
                   ? 'bg-[var(--accent-cyan)] text-white shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -225,7 +225,7 @@ export default function ExecutionBridge({
             </button>
             <button
               onClick={() => setInstrumentType('FUTURES')}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              className={`px-3 py-1 text-sm rounded-full transition-colors ${
                 instrumentType === 'FUTURES'
                   ? 'bg-[var(--accent-cyan)] text-white shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -258,7 +258,7 @@ export default function ExecutionBridge({
         {/* Show suppressed buckets as collapsed notice */}
         {suppressedBuckets.length > 0 && (
           <div className="mt-2 border-t border-[var(--border-soft)] pt-3">
-            <p className="text-xs text-[var(--text-secondary)]">
+            <p className="text-sm text-[var(--text-secondary)]">
               <span className="text-[var(--accent-amber)]">
                 {suppressedBuckets.length} bucket{suppressedBuckets.length > 1 ? 's' : ''} suppressed
               </span>{' '}
@@ -279,7 +279,7 @@ export default function ExecutionBridge({
                 <button
                   key={s.symbol}
                   onClick={() => setActiveChartIdx(i)}
-                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                  className={`px-3 py-1 text-sm rounded-full border transition-colors ${
                     i === activeChartIdx
                       ? 'bg-[var(--accent-cyan)] text-white border-[var(--accent-cyan)]'
                       : 'bg-[var(--bg-sub)] text-[var(--text-secondary)] border-[var(--border-rim)] hover:text-[var(--text-primary)]'
@@ -294,7 +294,7 @@ export default function ExecutionBridge({
         <div className="h-[420px] md:h-[560px] w-full">
           {activeChart && <TradingViewEmbed key={activeChart.symbol} symbol={activeChart.symbol} />}
         </div>
-        <p className="text-xs text-[var(--text-secondary)] text-center py-2 border-t border-[var(--border-soft)]">
+        <p className="text-sm text-[var(--text-secondary)] text-center py-2 border-t border-[var(--border-soft)]">
           Chart is informational; calculations use MarketSnapshot.
         </p>
       </div>

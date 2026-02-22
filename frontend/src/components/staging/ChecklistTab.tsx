@@ -20,7 +20,7 @@ interface ChecklistTabProps {
 
 export default function ChecklistTab({ results }: ChecklistTabProps) {
   return (
-    <div className="text-xs text-[var(--text-secondary)] space-y-1">
+    <div className="text-sm text-[var(--text-secondary)] space-y-1">
       {GOVERNANCE_CHECKLIST.map((item, i) => {
         const key = item.toLowerCase().replace(/\s+/g, "_");
         const checked = results?.[key];
@@ -29,7 +29,7 @@ export default function ChecklistTab({ results }: ChecklistTabProps) {
           <div key={i} className="flex items-center gap-2">
             <span
               className={[
-                "w-4 h-4 rounded-full border flex items-center justify-center text-[0.5rem] shrink-0",
+                "w-4 h-4 rounded-full border flex items-center justify-center text-[0.8125rem] shrink-0",
                 checked === true
                   ? "border-[var(--accent-green)] text-[var(--accent-green)] bg-[var(--accent-green)]/10"
                   : checked === false

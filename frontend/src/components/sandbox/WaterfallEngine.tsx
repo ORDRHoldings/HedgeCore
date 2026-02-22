@@ -112,7 +112,7 @@ export default function WaterfallEngine({
           {onXRay && (
             <button
               onClick={onXRay}
-              className="text-[0.625rem] text-[var(--accent-cyan)] hover:underline"
+              className="text-[0.75rem] text-[var(--accent-cyan)] hover:underline"
             >
               X-Ray →
             </button>
