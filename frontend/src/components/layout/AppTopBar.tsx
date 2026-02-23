@@ -227,11 +227,13 @@ const NAV: NavSection[] = [
   {
     label: "Reports", href: "/reports", icon: Ic.reports,
     prefixes: ["/reports", "/results"],
-    header: "Analytics & Export",
+    header: "Report Studio",
     items: [
-      { label: "Hedge Plan Report",  desc: "Full hedge schedule with rationale",            href: "/results",     icon: Ic.reports },
-      { label: "P&L Attribution",    desc: "Realized vs unrealized gain/loss breakdown",    href: "/reports",     icon: Ic.bar_chart },
-      { label: "Export Centre",      desc: "PDF, Excel, XBRL, and audit-ready exports",     href: "/reports",     icon: Ic.download, badge: "EXPORT", badgeColor: S.cyan },
+      { label: "Report Studio",        desc: "Institutional report builder — 30 presets, AI composer, export",  href: "/reports",                icon: Ic.reports,    badge: "STUDIO",  badgeColor: S.cyan  },
+      { label: "Preset Library",       desc: "Browse 30 board/treasury/risk/audit/compliance presets",          href: "/reports?view=library",   icon: Ic.book,       badge: "30",      badgeColor: S.cyan  },
+      { label: "AI Report Builder",    desc: "Goal-driven AI composer — governed, no hallucinated data",        href: "/reports?view=builder",   icon: Ic.ai,         badge: "AI",      badgeColor: S.amber },
+      { label: "Saved Reports",        desc: "Your saved, versioned, and scheduled reports",                    href: "/reports?view=saved",     icon: Ic.shield,     badge: "SAVED",   badgeColor: S.cyan  },
+      { label: "Hedge Plan Report",    desc: "Full hedge schedule with rationale — results view",               href: "/results",                icon: Ic.bar_chart },
     ],
   },
   {
