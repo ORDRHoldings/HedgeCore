@@ -591,6 +591,7 @@ const T28_DAILY_TREASURY = tmpl(
     sec("FORWARD_CURVE", "Today's Spot & Forward Rates"),
     sec("EXPOSURE_DECOMPOSITION", "Exposure Change vs Yesterday"),
     sec("EXECUTION_LOG", "Trades Executed Today"),
+    sec("DISCLOSURES", "Data Sources & Disclaimers"),
   ],
   { pages: 2, export: "PDF", tags: ["daily", "flash", "intraday", "treasury"] }
 );
