@@ -376,6 +376,8 @@ export default function CurrencyFxPage() {
       </div>
 
       {/* ── Currency Pair Selector Bar ── */}
+      {/* overflowX:"clip" (not "auto") so the absolutely-positioned ADD PAIR
+          dropdown is not clipped on the Y-axis by the scroll container */}
       <div style={{
         display:      "flex",
         alignItems:   "stretch",
@@ -383,9 +385,11 @@ export default function CurrencyFxPage() {
         borderBottom: `1px solid ${S.rim}`,
         background:   S.bgSub,
         paddingLeft:  12,
-        overflowX:    "auto",
+        overflowX:    "clip",
+        overflowY:    "visible",
         flexShrink:   0,
         minHeight:    36,
+        position:     "relative",
       }}>
         {pairs.map((p, i) => {
           const isActive = i === activePairIdx;
