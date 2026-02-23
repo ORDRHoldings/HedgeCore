@@ -82,6 +82,29 @@ function estimateForwardPoints(
     const pts = parseFloat((spot * (bpsPerMonth / 10000) * m).toFixed(4));
     buckets[bucket] = pts;
   }
+
+  // Also backfill any required buckets that are in the past (e.g. expired trades still in portfolio)
+  // Use carry approximation based on distance from now — past buckets get a small positive value
+  if (requiredBuckets) {
+    for (const bucket of requiredBuckets) {
+      if (!(bucket in buckets)) {
+        const parts = bucket.split('-');
+        if (parts.length >= 2) {
+          const bYear = parseInt(parts[0], 10);
+          const bMonth = parseInt(parts[1], 10) - 1;
+          if (!isNaN(bYear) && !isNaN(bMonth)) {
+            const nowYear = now.getFullYear();
+            const nowMonth = now.getMonth();
+            const monthsAgo = (nowYear - bYear) * 12 + (nowMonth - bMonth);
+            // Use a minimal 1-month carry equivalent for historical buckets
+            const pts = parseFloat((spot * (bpsPerMonth / 10000) * Math.max(1, monthsAgo)).toFixed(4));
+            buckets[bucket] = pts;
+          }
+        }
+      }
+    }
+  }
+
   return buckets;
 }
 
