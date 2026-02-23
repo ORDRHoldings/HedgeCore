@@ -112,6 +112,176 @@ const SECTION_ICONS: Record<string, string> = {
   ASSUMPTIONS_REGISTRY:"🗝", CUSTOM_NARRATIVE:"✏",
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXPORT UTILITIES — pure client-side, zero external dependencies
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Trigger a browser download of a Blob. */
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** Sanitise a name into a safe filename stem. */
+function safeStem(name: string): string {
+  return (name || "report")
+    .replace(/[^a-zA-Z0-9_\- ]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .slice(0, 40);
+}
+
+/** Build a fully self-contained HTML report document. */
+function buildReportHTML(
+  name: string,
+  desc: string,
+  bindings: DataBindings,
+  sections: ReportSection[],
+): string {
+  const included = sections.filter(s => s.status === "INCLUDED");
+  const ts = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  const tocRows = included
+    .map(
+      (s, i) =>
+        `<tr><td style="width:28px;color:#9CA3AF;font-family:monospace;font-size:11px">${i + 1}</td>` +
+        `<td style="font-size:12px;padding:3px 0">${esc(s.title)}</td>` +
+        `<td style="text-align:right;color:#9CA3AF;font-family:monospace;font-size:10px">p.${i + 2}</td></tr>`,
+    )
+    .join("\n");
+
+  const sectionBlocks = included
+    .filter(s => !["COVER_PAGE", "TABLE_OF_CONTENTS"].includes(s.type))
+    .map((s, i) => {
+      const narrative = s.ai_assisted && s.narrative
+        ? `<div style="background:#F5F3FF;border-left:3px solid #6D28D9;padding:10px 12px;margin-top:8px;font-size:12px;line-height:1.6;color:#3D4451">
+             <span style="font-family:monospace;font-size:9px;font-weight:700;color:#6D28D9;display:block;margin-bottom:4px">AI-ASSISTED NARRATIVE</span>
+             ${esc(s.narrative)}
+           </div>`
+        : `<div style="background:#F4F5F7;padding:16px;text-align:center;font-family:monospace;font-size:10px;color:#9CA3AF;border-radius:2px">[${esc(s.type)}] — data injected at generation time</div>`;
+      return `<div style="margin-bottom:32px;padding-top:${i > 0 ? "28px" : "0"};border-top:${i > 0 ? "1px solid #E8EAF0" : "none"}">
+        <h2 style="font-size:15px;font-weight:700;color:#0D1117;margin:0 0 10px">${esc(s.title)}</h2>
+        ${narrative}
+      </div>`;
+    })
+    .join("\n");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(name || "ORDR Report")}</title>
+<style>
+  body{margin:0;padding:0;background:#FAFAFA;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#0D1117}
+  .page{max-width:800px;margin:40px auto;background:#fff;border:1px solid #DDE0E8;padding:56px 64px;box-shadow:0 2px 12px rgba(0,0,0,.07)}
+  @media print{body{background:#fff}.page{border:none;box-shadow:none;margin:0;padding:40px 48px}}
+  h1,h2,h3{margin:0 0 8px}
+  table{border-collapse:collapse;width:100%}
+  td,th{padding:4px 8px 4px 0;vertical-align:top}
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- COVER -->
+  <div style="border-bottom:3px solid #0284C7;padding-bottom:24px;margin-bottom:32px">
+    <div style="font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.1em;color:#9CA3AF;margin-bottom:8px">ORDR TERMINAL — INSTITUTIONAL REPORT</div>
+    <h1 style="font-size:24px;font-weight:700;color:#0D1117;margin-bottom:6px">${esc(name || "Untitled Report")}</h1>
+    <p style="font-size:13px;color:#3D4451;margin:0 0 16px">${esc(desc || "")}</p>
+    <table style="font-family:monospace;font-size:11px">
+      <tr>
+        <td style="color:#9CA3AF;padding-right:24px">As of Date</td><td><strong>${esc(bindings.as_of_date ?? "—")}</strong></td>
+        <td style="color:#9CA3AF;padding-right:24px;padding-left:32px">Currency</td><td><strong>${esc(bindings.reporting_currency ?? "USD")}</strong></td>
+      </tr>
+      <tr>
+        <td style="color:#9CA3AF;padding-right:24px">Run ID</td><td><strong>${esc(bindings.run_envelope_id?.slice(0, 8) ?? "UNBOUND")}</strong></td>
+        <td style="color:#9CA3AF;padding-right:24px;padding-left:32px">Policy ID</td><td><strong>${esc(bindings.policy_id?.slice(0, 8) ?? "UNBOUND")}</strong></td>
+      </tr>
+      <tr>
+        <td style="color:#9CA3AF">Generated</td><td><strong>${esc(ts)}</strong></td>
+        <td style="color:#9CA3AF;padding-left:32px">Sections</td><td><strong>${included.length}</strong></td>
+      </tr>
+    </table>
+  </div>
+  <!-- TOC -->
+  <div style="margin-bottom:32px">
+    <div style="font-family:monospace;font-size:10px;font-weight:700;letter-spacing:.08em;color:#6B7280;margin-bottom:10px">TABLE OF CONTENTS</div>
+    <table>${tocRows}</table>
+  </div>
+  <!-- SECTIONS -->
+  ${sectionBlocks}
+  <!-- DISCLOSURES FOOTER -->
+  <div style="border-top:2px solid #DDE0E8;padding-top:16px;margin-top:32px">
+    <div style="font-family:monospace;font-size:9px;font-weight:700;letter-spacing:.08em;color:#9CA3AF;margin-bottom:6px">DISCLOSURES &amp; LIMITATIONS</div>
+    <p style="font-family:'IBM Plex Sans',sans-serif;font-size:10px;color:#6B7280;line-height:1.5;margin:0">
+      This report is generated by ORDR and is intended for internal use only. It does not constitute financial, legal, or regulatory advice.
+      All calculations reference Run ID [${esc(bindings.run_envelope_id?.slice(0, 8) ?? "UNBOUND")}] and are reproducible from the same inputs snapshot.
+      FX rates are indicative unless marked LIVE. Stress scenarios are illustrative; past events do not guarantee future outcomes.
+    </p>
+  </div>
+</div>
+</body>
+</html>`;
+}
+
+/** Build a CSV workbook from report metadata + section list. */
+function buildReportCSV(
+  name: string,
+  bindings: DataBindings,
+  sections: ReportSection[],
+): string {
+  const included = sections.filter(s => s.status === "INCLUDED");
+  const esc = (v: string | number | undefined) => {
+    const s = String(v ?? "");
+    return s.includes(",") || s.includes('"') || s.includes("\n")
+      ? `"${s.replace(/"/g, '""')}"`
+      : s;
+  };
+  const lines: string[] = [];
+  // Sheet 1: Report Metadata
+  lines.push("ORDR REPORT STUDIO — EXPORT");
+  lines.push(`Report Name,${esc(name)}`);
+  lines.push(`As-of Date,${esc(bindings.as_of_date)}`);
+  lines.push(`Reporting Currency,${esc(bindings.reporting_currency ?? "USD")}`);
+  lines.push(`Run Envelope ID,${esc(bindings.run_envelope_id)}`);
+  lines.push(`Policy ID,${esc(bindings.policy_id)}`);
+  lines.push(`Generated,${esc(new Date().toISOString())}`);
+  lines.push("");
+  // Sheet 2: Section Register
+  lines.push("SECTION REGISTER");
+  lines.push("Order,Section ID,Title,Type,Status,AI Assisted,Citations");
+  included.forEach((s, i) =>
+    lines.push(
+      [
+        i + 1,
+        esc(s.id),
+        esc(s.title),
+        esc(s.type),
+        esc(s.status),
+        s.ai_assisted ? "YES" : "NO",
+        esc(s.citations.join("; ")),
+      ].join(","),
+    ),
+  );
+  lines.push("");
+  // Sheet 3: AI Narratives
+  const aiSections = included.filter(s => s.ai_assisted && s.narrative);
+  if (aiSections.length > 0) {
+    lines.push("AI NARRATIVE SCAFFOLDS");
+    lines.push("Section Title,Narrative");
+    aiSections.forEach(s => lines.push(`${esc(s.title)},${esc(s.narrative ?? "")}`));
+  }
+  return lines.join("\r\n");
+}
+
 // ─── Navigation tabs ───────────────────────────────────────────────────────────
 type MainView = "HOME" | "LIBRARY" | "BUILDER" | "SAVED" | "SETTINGS";
 
@@ -435,6 +605,7 @@ function BuilderShell({
   const [aiError, setAiError]         = useState<string | null>(null);
   const [validationIssues, setIssues] = useState<ReportValidationIssue[]>([]);
   const [exportFormats, setFormats]   = useState<ExportFormat[]>([template?.default_export_format ?? "PDF"]);
+  const [exportStatus, setExportStatus] = useState<Record<string, "idle"|"running"|"done"|"error">>({});
   // Validate
   const validate = useCallback((): ReportValidationIssue[] => {
     const issues: ReportValidationIssue[] = [];
@@ -500,6 +671,98 @@ function BuilderShell({
       setAiLoading(false);
     }
   };
+
+  // Handle export
+  const handleExport = useCallback(async (fmt: ExportFormat) => {
+    const stem = safeStem(name || "ORDR_Report");
+    setExportStatus(prev => ({ ...prev, [fmt]: "running" }));
+    try {
+      if (fmt === "HTML") {
+        const html = buildReportHTML(name, desc, bindings, sections);
+        triggerDownload(new Blob([html], { type: "text/html;charset=utf-8" }), `${stem}.html`);
+      } else if (fmt === "PDF") {
+        // Build HTML → inject into hidden iframe → print dialog
+        const html = buildReportHTML(name, desc, bindings, sections);
+        const iframe = document.createElement("iframe");
+        iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:800px;height:1100px;border:none";
+        document.body.appendChild(iframe);
+        const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
+        if (!doc) throw new Error("iframe unavailable");
+        doc.open(); doc.write(html); doc.close();
+        // Small delay to let the iframe render before print dialog
+        await new Promise<void>(res => setTimeout(res, 300));
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        // Cleanup after print dialog closes
+        setTimeout(() => document.body.removeChild(iframe), 5_000);
+      } else if (fmt === "EXCEL" || fmt === "CSV") {
+        const csv = buildReportCSV(name, bindings, sections);
+        triggerDownload(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${stem}.csv`);
+      } else if (fmt === "JSON") {
+        const def: ReportDefinition = {
+          report_id:        `ORDR-RPT-${Date.now()}`,
+          template_id:      template?.template_id ?? "CUSTOM",
+          template_version: template?.version ?? 1,
+          name,
+          description:      desc,
+          owner:            ownerEmail ?? "unknown",
+          tenant_id:        "default",
+          status:           "DRAFT",
+          sections,
+          bindings,
+          export_formats:   exportFormats,
+          tags:             template?.tags ?? [],
+          version:          1,
+          ai_plan:          aiPlan ?? undefined,
+          created_at:       new Date().toISOString(),
+          updated_at:       new Date().toISOString(),
+        };
+        const json = JSON.stringify(def, null, 2);
+        triggerDownload(new Blob([json], { type: "application/json;charset=utf-8" }), `${stem}.json`);
+      } else if (fmt === "POWERPOINT") {
+        // No headless renderer — export a CSV-based slide outline + instructions
+        const lines: string[] = [
+          "ORDR REPORT STUDIO — POWERPOINT SLIDE OUTLINE",
+          `Report: ${name}`,
+          `As-of: ${bindings.as_of_date ?? "—"} | Currency: ${bindings.reporting_currency ?? "USD"}`,
+          "",
+          "SLIDE,TITLE,NOTES",
+          "1,Cover: " + (name || "ORDR Report") + ",Insert company logo and date",
+        ];
+        sections
+          .filter(s => s.status === "INCLUDED")
+          .forEach((s, i) => {
+            lines.push(`${i + 2},${s.title},${s.ai_assisted && s.narrative ? s.narrative.slice(0, 80) + "…" : "[Add content]"}`);
+          });
+        lines.push("", "NOTE: Import this CSV into PowerPoint via Insert → Object → From File, or use as a slide outline script.");
+        const csv = lines.join("\r\n");
+        triggerDownload(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${stem}_PPT_Outline.csv`);
+      } else if (fmt === "ZIP_COMMITTEE") {
+        // Sequential download of HTML + CSV + JSON
+        const html = buildReportHTML(name, desc, bindings, sections);
+        triggerDownload(new Blob([html], { type: "text/html;charset=utf-8" }), `${stem}.html`);
+        await new Promise<void>(res => setTimeout(res, 200));
+        const csv = buildReportCSV(name, bindings, sections);
+        triggerDownload(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${stem}.csv`);
+        await new Promise<void>(res => setTimeout(res, 200));
+        const def: ReportDefinition = {
+          report_id: `ORDR-RPT-${Date.now()}`, template_id: template?.template_id ?? "CUSTOM",
+          template_version: template?.version ?? 1, name, description: desc,
+          owner: ownerEmail ?? "unknown", tenant_id: "default", status: "DRAFT",
+          sections, bindings, export_formats: exportFormats, tags: template?.tags ?? [],
+          version: 1, ai_plan: aiPlan ?? undefined,
+          created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        };
+        triggerDownload(new Blob([JSON.stringify(def, null, 2)], { type: "application/json;charset=utf-8" }), `${stem}.json`);
+      }
+      setExportStatus(prev => ({ ...prev, [fmt]: "done" }));
+      setTimeout(() => setExportStatus(prev => ({ ...prev, [fmt]: "idle" })), 3_000);
+    } catch (e) {
+      console.error("Export failed:", e);
+      setExportStatus(prev => ({ ...prev, [fmt]: "error" }));
+      setTimeout(() => setExportStatus(prev => ({ ...prev, [fmt]: "idle" })), 5_000);
+    }
+  }, [name, desc, bindings, sections, exportFormats, template, ownerEmail, aiPlan]);
 
   // Handle save
   const handleSave = () => {
@@ -952,51 +1215,162 @@ function BuilderShell({
 
         {/* ── STEP: EXPORT ── */}
         {step === "EXPORT" && (
-          <div style={{ maxWidth: 600, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
+
+            {/* Validation gate */}
+            {errCount > 0 && (
+              <div style={{ background: S.failBg, border: `1px solid #FECACA`, borderLeft: `3px solid ${S.fail}`, padding: "10px 14px", borderRadius: 2 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.fail, marginBottom: 3 }}>EXPORT BLOCKED — {errCount} ERROR{errCount > 1 ? "S" : ""}</div>
+                <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>Fix validation errors on the Configure tab before exporting.</div>
+              </div>
+            )}
+
+            {/* Export format rows */}
             <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 3, padding: "16px 18px" }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary, marginBottom: 12 }}>EXPORT & PACKAGING</div>
-              {(["PDF","EXCEL","POWERPOINT","HTML","JSON","ZIP_COMMITTEE"] as ExportFormat[]).map(f => {
-                const checked = exportFormats.includes(f);
-                const descriptions: Record<string, string> = {
-                  PDF: "Print-ready. Page numbers, TOC, disclosures footer, institutional layout.",
-                  EXCEL: "Multi-tab workbook: Summary, Position Register, Hedge Plan, Scenarios, Raw Data.",
-                  POWERPOINT: "Executive deck: KPI slides, chart slides, disclosure slide.",
-                  HTML: "Internal portal view. Inline charts, filterable tables.",
-                  JSON: "Machine-readable. Full data model for downstream systems.",
-                  ZIP_COMMITTEE: "Committee ZIP: PDF + XLSX + JSON + Disclosures PDF in one bundle.",
-                };
+              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary, marginBottom: 12 }}>
+                EXPORT &amp; PACKAGING
+              </div>
+
+              {(
+                [
+                  {
+                    fmt: "PDF" as ExportFormat,
+                    badge: "LIVE",
+                    badgeColor: S.pass,
+                    desc: "Print-ready institutional PDF. Opens browser print dialog with styled layout, TOC and disclosures footer.",
+                  },
+                  {
+                    fmt: "HTML" as ExportFormat,
+                    badge: "LIVE",
+                    badgeColor: S.pass,
+                    desc: "Standalone HTML portal file. Self-contained, no server required. Ideal for email distribution.",
+                  },
+                  {
+                    fmt: "EXCEL" as ExportFormat,
+                    badge: "CSV",
+                    badgeColor: S.cyan,
+                    desc: "Downloads a .csv file compatible with Excel and Google Sheets. Contains metadata, section register and AI narratives.",
+                  },
+                  {
+                    fmt: "JSON" as ExportFormat,
+                    badge: "LIVE",
+                    badgeColor: S.pass,
+                    desc: "Machine-readable JSON. Full report definition model for downstream systems, version control or audit logs.",
+                  },
+                  {
+                    fmt: "POWERPOINT" as ExportFormat,
+                    badge: "OUTLINE",
+                    badgeColor: S.amber,
+                    desc: "Downloads a CSV slide outline (import via Insert → Object → From File in PowerPoint). Full PPTX requires PowerPoint import.",
+                  },
+                  {
+                    fmt: "ZIP_COMMITTEE" as ExportFormat,
+                    badge: "BUNDLE",
+                    badgeColor: S.violet,
+                    desc: "Committee bundle — triggers sequential download of HTML + CSV + JSON files. Browser ZIP requires server-side generation.",
+                  },
+                ] as { fmt: ExportFormat; badge: string; badgeColor: string; desc: string }[]
+              ).map(({ fmt, badge, badgeColor, desc }) => {
+                const checked = exportFormats.includes(fmt);
+                const status = exportStatus[fmt] ?? "idle";
+                const isRunning = status === "running";
+                const isDone = status === "done";
+                const isError = status === "error";
+                const canExport = errCount === 0 && checked;
+
+                const btnLabel = isRunning ? "EXPORTING…"
+                  : isDone ? "✓ DOWNLOADED"
+                  : isError ? "✗ FAILED — RETRY"
+                  : "EXPORT ↓";
+                const btnBg = isRunning ? S.muted
+                  : isDone ? S.pass
+                  : isError ? S.fail
+                  : canExport ? S.cyan
+                  : S.muted;
+
                 return (
-                  <div key={f} style={{
-                    display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0",
-                    borderBottom: `1px solid ${S.soft}`,
-                  }}>
-                    <input type="checkbox" checked={checked} onChange={() => setFormats(prev => prev.includes(f) ? prev.filter(x=>x!==f) : [...prev, f])} style={{ accentColor: S.cyan, marginTop: 2 }} />
-                    <div>
-                      <div style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 600, color: S.primary }}>{FORMAT_LABELS[f]}</div>
-                      <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>{descriptions[f]}</div>
+                  <div
+                    key={fmt}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "12px 0", borderBottom: `1px solid ${S.soft}`,
+                      opacity: canExport || !checked ? 1 : 0.6,
+                    }}
+                  >
+                    {/* Checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => setFormats(prev => prev.includes(fmt) ? prev.filter(x => x !== fmt) : [...prev, fmt])}
+                      style={{ accentColor: S.cyan, marginTop: 0, flexShrink: 0 }}
+                    />
+                    {/* Label + description */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <span style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 600, color: S.primary }}>
+                          {FORMAT_LABELS[fmt]}
+                        </span>
+                        <span style={{
+                          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                          color: badgeColor,
+                          background: `color-mix(in srgb, ${badgeColor} 10%, transparent)`,
+                          border: `1px solid color-mix(in srgb, ${badgeColor} 25%, transparent)`,
+                          padding: "1px 5px", borderRadius: 2,
+                        }}>
+                          {badge}
+                        </span>
+                      </div>
+                      <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.4 }}>{desc}</div>
                     </div>
+                    {/* Export button */}
+                    <button
+                      disabled={!canExport || isRunning}
+                      onClick={() => handleExport(fmt)}
+                      style={{
+                        fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                        color: "#FFFFFF",
+                        background: btnBg,
+                        border: "none", borderRadius: 2,
+                        padding: "5px 12px", cursor: canExport && !isRunning ? "pointer" : "not-allowed",
+                        whiteSpace: "nowrap", flexShrink: 0, transition: "background 0.2s",
+                        minWidth: 100,
+                      }}
+                    >
+                      {btnLabel}
+                    </button>
                   </div>
                 );
               })}
             </div>
 
-            <div style={{ background: S.amberBg, border: `1px solid #FDE68A`, borderLeft: `3px solid ${S.amber}`, padding: "10px 14px", borderRadius: 2 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.amber, marginBottom: 3 }}>PENDING IMPLEMENTATION</div>
-              <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>
-                Export rendering is queued: PDF via headless Chrome, XLSX via server-side generation, ZIP bundle packaging. Save the report definition to enable generation.
+            {/* Info panel */}
+            <div style={{ background: S.passBg, border: `1px solid #BBF7D0`, borderLeft: `3px solid ${S.pass}`, padding: "10px 14px", borderRadius: 2 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.pass, marginBottom: 3 }}>CLIENT-SIDE EXPORT — NO SERVER REQUIRED</div>
+              <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.5 }}>
+                HTML, PDF and JSON exports run entirely in the browser.
+                CSV is Excel-compatible. PDF uses the browser print dialog — select &ldquo;Save as PDF&rdquo; as the destination.
+                Check all formats you want, then click each export button individually.
               </div>
             </div>
 
-            <button
-              onClick={handleSave}
-              style={{
-                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
-                color: S.bgPanel, background: S.cyan, border: "none", borderRadius: 2,
-                padding: "10px 20px", cursor: "pointer",
-              }}
-            >
-              SAVE REPORT DEFINITION →
-            </button>
+            {/* Save definition CTA */}
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button
+                onClick={handleSave}
+                disabled={errCount > 0}
+                style={{
+                  fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+                  color: S.bgPanel, background: errCount > 0 ? S.muted : S.pass,
+                  border: "none", borderRadius: 2, padding: "10px 20px",
+                  cursor: errCount > 0 ? "not-allowed" : "pointer",
+                }}
+              >
+                SAVE REPORT DEFINITION →
+              </button>
+              <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.muted }}>
+                Saved reports appear in the Saved Reports tab for re-export.
+              </span>
+            </div>
           </div>
         )}
       </div>
