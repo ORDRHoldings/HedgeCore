@@ -208,10 +208,10 @@ const NAV: NavSection[] = [
     items: [
       { label: "Manual Entry",         desc: "Inline form — add & edit FX positions",         href: "/input",                  icon: Ic.pen },
       { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit", href: "/input?tab=upload",       icon: Ic.upload,   badge: "BULK", badgeColor: S.amber },
-      { label: "Import History",       desc: "Audit log of all file & connector imports",      href: "/import-history",         icon: Ic.clock,    badge: "AUDIT", badgeColor: S.cyan },
       { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",             href: "/database-connection",    icon: Ic.db,       badge: "SQL",  badgeColor: S.cyan  },
       { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",  href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",  badgeColor: S.amber },
       { label: "Accounting Systems",   desc: "QuickBooks, Xero, Sage invoice import",          href: "/accounting-connection",  icon: Ic.reports },
+      { label: "Import History",       desc: "Audit log of all file & connector imports",      href: "/import-history",         icon: Ic.clock,    badge: "AUDIT", badgeColor: S.cyan },
     ],
   },
   {
