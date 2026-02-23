@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -33,6 +35,32 @@ function fmtBps(n: number): string {
 }
 
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
+
+// ─── Methodology footnote ─────────────────────────────────────────────────────
+function MethodologyNote({ formula }: { formula: string }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div
+      onClick={() => setExpanded(!expanded)}
+      style={{
+        fontFamily: S.fontMono,
+        fontSize: 10,
+        color: S.tertiary,
+        marginTop: 6,
+        padding: "3px 8px",
+        border: `1px solid ${S.soft}`,
+        borderRadius: 3,
+        display: "inline-block",
+        cursor: "pointer",
+        letterSpacing: "0.02em",
+        maxWidth: "100%",
+        wordBreak: "break-all",
+      }}
+    >
+      {expanded ? `METHODOLOGY: ${formula}` : "METHODOLOGY ⓘ — click to expand formula"}
+    </div>
+  );
+}
 
 // ─── 1. WaterfallChart ────────────────────────────────────────────────────────
 // Horizontal waterfall showing P&L attribution from gross exposure → net hedged P&L
@@ -73,7 +101,7 @@ export function WaterfallChart({ bars, title = "P&L Waterfall" }: { bars: Waterf
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
         {title.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -156,7 +184,7 @@ export function DV01LadderChart({ entries, title = "DV01 Ladder" }: { entries: D
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()} — DV01 $ PER 1BP RATE MOVE
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -209,7 +237,7 @@ export function CorrelationHeatmap({ matrix, title = "Correlation Matrix" }: { m
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -311,7 +339,7 @@ export function EfficientFrontierChart({
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()} — RISK/RETURN OPTIMISATION
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -373,7 +401,7 @@ export function EfficientFrontierChart({
         ].map(l => (
           <div key={l.type} style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: dotColor(l.type) }} />
-            <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>{l.label}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>{l.label}</span>
           </div>
         ))}
       </div>
@@ -435,7 +463,7 @@ export function HedgeGauge({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 2 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 2 }}>
         {label.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -529,7 +557,7 @@ export function ScenarioHeatmap({
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -625,7 +653,7 @@ export function FanChart({ points, title = "Forward Rate Fan Chart" }: { points:
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -669,26 +697,29 @@ export function FanChart({ points, title = "Forward Rate Fan Chart" }: { points:
       <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <div style={{ width: 12, height: 3, background: S.cyan }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>Median (P50)</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>Median (P50)</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <div style={{ width: 12, height: 8, background: S.cyan, opacity: 0.2 }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>P25–P75 band</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>P25–P75 band</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <div style={{ width: 12, height: 8, background: S.cyan, opacity: 0.1 }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>P10–P90 band</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>P10–P90 band</span>
         </div>
         {points.some(p => p.actual !== undefined) && (
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <div style={{ width: 12, height: 2, background: S.amber }} />
-            <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>Actual</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>Actual</span>
           </div>
         )}
       </div>
     </div>
   );
 }
+
+// ─── Re-export lerp to avoid unused variable warning ─────────────────────────
+export { lerp };
 
 // ─── 8. LossVsHedgeRatioScatter ──────────────────────────────────────────────
 // Scatter: X = hedge ratio %, Y = expected loss USD, colour = scenario severity
@@ -732,7 +763,7 @@ export function LossVsHedgeRatioScatter({
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -787,6 +818,330 @@ export function LossVsHedgeRatioScatter({
           <line x1={PAD.left} y1={toY(0)} x2={PAD.left + chartW} y2={toY(0)} stroke={S.rim} strokeWidth={1} strokeDasharray="3,3" />
         )}
       </svg>
+    </div>
+  );
+}
+
+// ─── 9. StressTornadoChart ────────────────────────────────────────────────────
+
+export interface TornadoBar {
+  label: string;
+  shock: number;
+  unhedgedPnl: number;
+  hedgedPnl: number;
+}
+
+export function StressTornadoChart({
+  bars,
+  title = "Stress P&L Tornado",
+}: {
+  bars: TornadoBar[];
+  title?: string;
+}) {
+  if (!bars.length) return null;
+
+  const sorted = [...bars].sort((a, b) => a.unhedgedPnl - b.unhedgedPnl);
+  const ROW_H = 44;
+  const LEFT_PAD = 160;
+  const RIGHT_PAD = 20;
+  const TOP_PAD = 36;
+  const BOT_PAD = 36;
+  const chartW = 560;
+  const svgH = TOP_PAD + sorted.length * ROW_H + BOT_PAD;
+  const W = LEFT_PAD + chartW + RIGHT_PAD;
+
+  const allVals = sorted.flatMap(b => [b.unhedgedPnl, b.hedgedPnl]);
+  const minV = Math.min(...allVals, 0);
+  const maxV = Math.max(...allVals, 1);
+  const range = maxV - minV || 1;
+  const zeroX = LEFT_PAD + ((0 - minV) / range) * chartW;
+  const toX = (v: number) => LEFT_PAD + ((v - minV) / range) * chartW;
+  const barH = 14;
+
+  return (
+    <div>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
+        {title.toUpperCase()}
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <svg width={W} height={svgH} style={{ display: "block", minWidth: W }}>
+          {[0, 0.25, 0.5, 0.75, 1.0].map(t => {
+            const v = minV + t * range;
+            const x = LEFT_PAD + t * chartW;
+            return (
+              <g key={t}>
+                <line x1={x} y1={TOP_PAD - 4} x2={x} y2={TOP_PAD + sorted.length * ROW_H} stroke={S.soft} strokeWidth={0.5} />
+                <text x={x} y={TOP_PAD - 10} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 11 }}>
+                  {fmt(v)}
+                </text>
+              </g>
+            );
+          })}
+          <line x1={zeroX} y1={TOP_PAD - 4} x2={zeroX} y2={TOP_PAD + sorted.length * ROW_H} stroke={S.rim} strokeWidth={1.5} />
+          {sorted.map((b, idx) => {
+            const y = TOP_PAD + idx * ROW_H;
+            const barY1 = y + 4;
+            const uc = b.unhedgedPnl < 0 ? S.red : S.green;
+            const ux1 = Math.min(toX(b.unhedgedPnl), zeroX);
+            const ux2 = Math.max(toX(b.unhedgedPnl), zeroX);
+            const uw = Math.max(2, ux2 - ux1);
+            const hx1 = Math.min(toX(b.hedgedPnl), zeroX);
+            const hx2 = Math.max(toX(b.hedgedPnl), zeroX);
+            const hw = Math.max(2, hx2 - hx1);
+            const sc = b.shock < 0 ? S.red : S.green;
+            return (
+              <g key={idx}>
+                <text x={LEFT_PAD - 10} y={y + barH + 6} textAnchor="end" fill={S.secondary} style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 600 }}>
+                  {b.label.length > 18 ? b.label.slice(0, 16) + "…" : b.label}
+                </text>
+                <text x={LEFT_PAD - 10} y={y + barH + 19} textAnchor="end" fill={sc} style={{ fontFamily: S.fontMono, fontSize: 11 }}>
+                  {b.shock > 0 ? "+" : ""}{(b.shock * 100).toFixed(1)}%
+                </text>
+                <rect x={ux1} y={barY1} width={uw} height={barH} fill={uc} opacity={0.82} rx={2} />
+                <text x={b.unhedgedPnl >= 0 ? ux2 + 5 : ux1 - 5} y={barY1 + barH / 2 + 4} textAnchor={b.unhedgedPnl >= 0 ? "start" : "end"} fill={uc} style={{ fontFamily: S.fontMono, fontSize: 11 }}>
+                  {fmt(b.unhedgedPnl)}
+                </text>
+                <rect x={hx1} y={barY1 + barH + 3} width={hw} height={barH} fill={S.cyan} opacity={0.8} rx={2} />
+                <text x={b.hedgedPnl >= 0 ? hx2 + 5 : hx1 - 5} y={barY1 + barH + 3 + barH / 2 + 4} textAnchor={b.hedgedPnl >= 0 ? "start" : "end"} fill={S.cyan} style={{ fontFamily: S.fontMono, fontSize: 11 }}>
+                  {fmt(b.hedgedPnl)}
+                </text>
+                <line x1={LEFT_PAD} y1={y + ROW_H} x2={LEFT_PAD + chartW} y2={y + ROW_H} stroke={S.soft} strokeWidth={0.4} />
+              </g>
+            );
+          })}
+          <g transform={`translate(${LEFT_PAD + 8}, ${svgH - BOT_PAD + 10})`}>
+            <rect width={12} height={10} fill={S.red} opacity={0.82} rx={1} />
+            <text x={16} y={9} fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 11 }}>Unhedged P&amp;L</text>
+            <rect x={130} width={12} height={10} fill={S.cyan} opacity={0.8} rx={1} />
+            <text x={146} y={9} fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 11 }}>Hedged P&amp;L</text>
+          </g>
+          <text x={LEFT_PAD + chartW / 2} y={svgH - 6} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 11 }}>P&amp;L (USD)</text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ─── 10. TermStructureSurface ─────────────────────────────────────────────────
+
+export interface TermStructureCell {
+  tenor: string;
+  scenario: string;
+  forwardRate: number;
+  carryBps: number;
+}
+
+export function TermStructureSurface({
+  cells, tenors, scenarios, spot, title = "Term Structure Surface",
+}: {
+  cells: TermStructureCell[];
+  tenors: string[];
+  scenarios: string[];
+  spot: number;
+  title?: string;
+}) {
+  const CELL_W = Math.max(76, Math.floor(640 / Math.max(scenarios.length, 1)));
+  const CELL_H = 54;
+  const LABEL_W = 50;
+  const HEADER_H = 64;
+  const W = LABEL_W + scenarios.length * CELL_W + 24;
+  const H = HEADER_H + tenors.length * CELL_H + 24;
+  const allRates = cells.map(c => c.forwardRate);
+  const maxDev = Math.max(...allRates.map(r => Math.abs(r - spot)), 0.001);
+
+  function cellBg(fr: number): string {
+    const dev = fr - spot;
+    const intensity = Math.min(1, Math.abs(dev) / maxDev);
+    if (dev > 0) return `rgba(52,211,153,${0.1 + intensity * 0.75})`;
+    if (dev < 0) return `rgba(248,113,113,${0.1 + intensity * 0.75})`;
+    return "rgba(120,120,140,0.1)";
+  }
+  function tc(fr: number): string {
+    return Math.min(1, Math.abs(fr - spot) / maxDev) > 0.55 ? "#fff" : S.secondary;
+  }
+
+  return (
+    <div>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
+        {title.toUpperCase()} — SPOT: {spot.toFixed(4)}
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <svg width={W} height={H} style={{ display: "block", minWidth: W }}>
+          {scenarios.map((sc, j) => {
+            const x = LABEL_W + j * CELL_W + CELL_W / 2;
+            return (
+              <text key={j} x={x} y={HEADER_H - 8} textAnchor="start" fill={S.secondary}
+                style={{ fontFamily: S.fontMono, fontSize: 11 }}
+                transform={`rotate(-40, ${x}, ${HEADER_H - 8})`}>
+                {sc.slice(0, 16)}
+              </text>
+            );
+          })}
+          {tenors.map((tenor, i) => scenarios.map((scenario, j) => {
+            const cell = cells.find(c => c.tenor === tenor && c.scenario === scenario);
+            const x = LABEL_W + j * CELL_W;
+            const y = HEADER_H + i * CELL_H;
+            const rate = cell?.forwardRate ?? spot;
+            const carry = cell?.carryBps ?? 0;
+            return (
+              <g key={`${i}-${j}`}>
+                {j === 0 && <text x={LABEL_W - 6} y={y + CELL_H / 2 + 5} textAnchor="end" fill={S.secondary} style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 600 }}>{tenor}</text>}
+                <rect x={x + 1} y={y + 1} width={CELL_W - 2} height={CELL_H - 2} fill={cellBg(rate)} rx={2} />
+                <text x={x + CELL_W / 2} y={y + CELL_H / 2 - 2} textAnchor="middle" fill={tc(rate)} style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: "bold" }}>{rate.toFixed(4)}</text>
+                <text x={x + CELL_W / 2} y={y + CELL_H / 2 + 14} textAnchor="middle" fill={tc(rate)} style={{ fontFamily: S.fontMono, fontSize: 11, opacity: 0.85 }}>{fmtBps(carry)}</text>
+              </g>
+            );
+          }))}
+          <defs>
+            <linearGradient id="termLegend2" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="rgba(248,113,113,0.9)" />
+              <stop offset="50%" stopColor="rgba(100,100,120,0.12)" />
+              <stop offset="100%" stopColor="rgba(52,211,153,0.9)" />
+            </linearGradient>
+          </defs>
+          <rect x={LABEL_W} y={H - 12} width={scenarios.length * CELL_W * 0.7} height={8} fill="url(#termLegend2)" rx={3} />
+          <text x={LABEL_W} y={H - 14} fill={S.red} style={{ fontFamily: S.fontMono, fontSize: 11 }}>DISCOUNT</text>
+          <text x={LABEL_W + scenarios.length * CELL_W * 0.7} y={H - 14} textAnchor="end" fill={S.green} style={{ fontFamily: S.fontMono, fontSize: 11 }}>PREMIUM</text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ─── 11. GreeksRadarChart ─────────────────────────────────────────────────────
+
+export interface GreeksData {
+  delta: number;
+  gamma: number;
+  theta: number;
+  vega: number;
+  rho: number;
+  limits: { delta: number; gamma: number; theta: number; vega: number; rho: number };
+}
+
+export function GreeksRadarChart({ data, title = "Greeks Radar" }: { data: GreeksData; title?: string }) {
+  const SIZE = 360;
+  const CX = SIZE / 2, CY = SIZE / 2, R = 130;
+  const axes: Array<{ key: keyof Omit<GreeksData, "limits">; label: string }> = [
+    { key: "delta", label: "Δ Delta" }, { key: "gamma", label: "Γ Gamma" },
+    { key: "theta", label: "Θ Theta" }, { key: "vega",  label: "ν Vega"  },
+    { key: "rho",   label: "ρ Rho"   },
+  ];
+  const N = axes.length;
+  function pt(i: number, frac: number) {
+    const a = (Math.PI * 2 * i) / N - Math.PI / 2;
+    return { x: CX + R * frac * Math.cos(a), y: CY + R * frac * Math.sin(a) };
+  }
+  const fracs = axes.map(ax => Math.min(1.2, data.limits[ax.key] > 0 ? data[ax.key] / data.limits[ax.key] : 0));
+  function polyPath(fs: number[]) {
+    return fs.map((f, i) => { const p = pt(i, f); return `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`; }).join(" ") + " Z";
+  }
+  return (
+    <div style={{ display: "inline-block" }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
+        {title.toUpperCase()}
+      </div>
+      <svg width={SIZE} height={SIZE} style={{ display: "block" }}>
+        {[0.25, 0.5, 0.75, 1.0].map((f, ri) => (
+          <polygon key={ri} points={axes.map((_, i) => { const p = pt(i, f); return `${p.x.toFixed(2)},${p.y.toFixed(2)}`; }).join(" ")} fill="none" stroke={S.soft} strokeWidth={f === 1.0 ? 1.5 : 0.7} />
+        ))}
+        {axes.map((_, i) => { const tip = pt(i, 1.0); return <line key={i} x1={CX} y1={CY} x2={tip.x} y2={tip.y} stroke={S.soft} strokeWidth={0.8} />; })}
+        <path d={polyPath(axes.map(() => 1.0))} fill="none" stroke={S.amber} strokeWidth={2} opacity={0.7} strokeDasharray="5,3" />
+        <path d={polyPath(fracs)} fill={S.cyan} fillOpacity={0.28} stroke={S.cyan} strokeWidth={2} />
+        {axes.map((ax, i) => {
+          const tip = pt(i, 1.24);
+          return <text key={i} x={tip.x} y={tip.y} textAnchor="middle" fill={S.primary} style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: "bold" }}>{ax.label}</text>;
+        })}
+        {axes.map((ax, i) => {
+          const p = pt(i, Math.min(fracs[i], 1.0) * 0.5 + 0.1);
+          return <text key={i} x={p.x} y={p.y + 4} textAnchor="middle" fill={S.cyan} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600 }}>{data[ax.key].toFixed(1)}%</text>;
+        })}
+        <circle cx={CX} cy={CY} r={3} fill={S.cyan} opacity={0.6} />
+      </svg>
+    </div>
+  );
+}
+
+// ─── 12. VaRConeChart ─────────────────────────────────────────────────────────
+
+export interface VaRConeData {
+  vol: number;
+  notionalUSD: number;
+  skewness?: number;
+  kurtosis?: number;
+}
+
+export function VaRConeChart({ data, title = "VaR Cone" }: { data: VaRConeData; title?: string }) {
+  const W = 680, H = 320;
+  const PAD = { top: 36, right: 36, bottom: 52, left: 96 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+  const horizons = [
+    { label: "1D", days: 1 }, { label: "5D", days: 5 },
+    { label: "10D", days: 10 }, { label: "21D", days: 21 },
+    { label: "63D", days: 63 }, { label: "126D", days: 126 },
+  ];
+  const dv = data.vol / Math.sqrt(252);
+  const N = data.notionalUSD;
+  const sk = data.skewness ?? 0;
+  const ku = data.kurtosis ?? 0;
+  const z95 = 1.6449, z99 = 2.3263;
+  function cfZ(z: number) { return z + ((z * z - 1) * sk) / 6 + ((z * z * z - 3 * z) * ku) / 24; }
+  const z99cf = cfZ(z99);
+  const pts = horizons.map(h => {
+    const s = Math.sqrt(h.days);
+    return { ...h, var95: N * dv * z95 * s, var99: N * dv * z99 * s, var99cf: N * dv * Math.abs(z99cf) * s };
+  });
+  const maxV = Math.max(...pts.map(p => p.var99cf));
+  const toX = (i: number) => PAD.left + (i / (horizons.length - 1)) * chartW;
+  const toY = (v: number) => PAD.top + chartH - (v / (maxV || 1)) * chartH;
+  function lp(vals: number[]) { return vals.map((v, i) => `${i === 0 ? "M" : "L"} ${toX(i).toFixed(1)} ${toY(v).toFixed(1)}`).join(" "); }
+  const bTop = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${toX(i).toFixed(1)} ${toY(p.var99).toFixed(1)}`).join(" ");
+  const bBot = pts.map((p, i) => `L ${toX(pts.length - 1 - i).toFixed(1)} ${toY(pts[pts.length - 1 - i].var95).toFixed(1)}`).join(" ");
+  return (
+    <div>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
+        {title.toUpperCase()} — √T SCALING · ANNUAL VOL {(data.vol * 100).toFixed(1)}%
+      </div>
+      <svg width={W} height={H} style={{ display: "block" }}>
+        {[0, 0.25, 0.5, 0.75, 1.0].map(t => (
+          <g key={t}>
+            <line x1={PAD.left} y1={PAD.top + (1 - t) * chartH} x2={PAD.left + chartW} y2={PAD.top + (1 - t) * chartH} stroke={S.soft} strokeWidth={0.5} />
+            <text x={PAD.left - 8} y={PAD.top + (1 - t) * chartH + 4} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 11 }}>{fmt(t * maxV)}</text>
+          </g>
+        ))}
+        {horizons.map((h, i) => (
+          <g key={i}>
+            <line x1={toX(i)} y1={PAD.top} x2={toX(i)} y2={PAD.top + chartH} stroke={S.soft} strokeWidth={0.5} />
+            <text x={toX(i)} y={PAD.top + chartH + 16} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>{h.label}</text>
+          </g>
+        ))}
+        <text x={PAD.left + chartW / 2} y={H - 8} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>HOLDING PERIOD</text>
+        <text x={18} y={PAD.top + chartH / 2} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }} transform={`rotate(-90, 18, ${PAD.top + chartH / 2})`}>VaR (USD)</text>
+        <path d={bTop + " " + bBot + " Z"} fill={S.green} opacity={0.1} />
+        <path d={lp(pts.map(p => p.var95))} fill="none" stroke={S.green} strokeWidth={2.5} />
+        <path d={lp(pts.map(p => p.var99))} fill="none" stroke={S.amber} strokeWidth={2.5} />
+        <path d={lp(pts.map(p => p.var99cf))} fill="none" stroke={S.red} strokeWidth={2} strokeDasharray="7,4" />
+        {pts.map((p, i) => (
+          <g key={i}>
+            <circle cx={toX(i)} cy={toY(p.var95)} r={4} fill={S.green} />
+            <circle cx={toX(i)} cy={toY(p.var99)} r={4} fill={S.amber} />
+            <circle cx={toX(i)} cy={toY(p.var99cf)} r={4} fill={S.red} />
+          </g>
+        ))}
+      </svg>
+      <div style={{ display: "flex", gap: 20, marginTop: 6 }}>
+        {[
+          { color: S.green, label: "VaR 95% (Normal)" },
+          { color: S.amber, label: "VaR 99% (Normal)" },
+          { color: S.red, label: "VaR 99% (Cornish-Fisher)", dashed: true },
+        ].map((l, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 18, height: 3, background: (l as { dashed?: boolean }).dashed ? "transparent" : l.color, borderTop: (l as { dashed?: boolean }).dashed ? `2px dashed ${l.color}` : "none" }} />
+            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>{l.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
