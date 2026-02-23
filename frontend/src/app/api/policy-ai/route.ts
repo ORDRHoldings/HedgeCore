@@ -22,6 +22,11 @@ export interface QuestionnaireAnswers {
   cost_sensitivity: 'LOW' | 'MEDIUM' | 'HIGH';
   time_horizon_months: number;
   hedge_objective: string;
+  // Extended fields — collected by WizardState, passed to improve AI accuracy
+  ifrs_compliance?: boolean;                // IFRS 9 hedge accounting required
+  instrument_preferences?: string[];        // e.g. ['Forward', 'Option', 'NDF']
+  rolling_hedge?: boolean;                  // rolling programme vs static
+  hedge_ratio_target?: number;             // 0–1 user-declared target ratio
 }
 
 export interface AIPolicyRecommendation {
@@ -104,6 +109,67 @@ function scoreFallback(preset: PolicyPreset, answers: QuestionnaireAnswers): num
   if (/education|university|school|edtech/.test(industry) && preset.id === 'education-institutions') score += 25;
   if (/real estate|property|developer|reib/.test(industry) && preset.id === 'real-estate-dev') score += 25;
 
+  // ── New preset IDs (60-preset library) ──────────────────────────────────────
+
+  // Energy Expanded
+  if (/oil|gas|upstream|e&p|exploration|production/.test(industry) && preset.id === 'oil-gas-upstream') score += 25;
+  if (/lng|liquefied|natural gas export/.test(industry) && preset.id === 'lng-exporter') score += 25;
+  if (/renewable|solar|wind|green energy|clean energy/.test(industry) && preset.id === 'renewable-energy') score += 25;
+  if (/oilfield|field service|drillling|well service|halliburton|schlumberger/.test(industry) && preset.id === 'oil-field-services') score += 25;
+
+  // Healthcare / Pharma
+  if (/cro|clinical research|clinical trial|contract research/.test(industry) && preset.id === 'cro-clinical-research') score += 25;
+  if (/medical device|medtech|surgical|implant|device oem/.test(industry) && preset.id === 'medical-device-oem') score += 25;
+  if (/hospital|health system|clinic|healthcare provider/.test(industry) && preset.id === 'hospital-group-treasury') score += 25;
+
+  // Technology
+  if (/semiconductor|chip|wafer|fab|integrated circuit/.test(industry) && preset.id === 'semiconductor-supply') score += 25;
+  if (/saas|cloud|enterprise software|b2b software/.test(industry) && preset.id === 'cloud-saas-enterprise') score += 25;
+  if (/hardware|oem|device manufacturer|electronics mfg/.test(industry) && preset.id === 'hardware-oem-import') score += 25;
+
+  // Financial Expanded
+  if (/prime broker|fx broker|fx desk|trading desk/.test(industry) && preset.id === 'fx-prime-broker') score += 25;
+  if (/pension|defined benefit|ldi|liability driven/.test(industry) && preset.id === 'pension-ldi') score += 25;
+  if (/endowment|university fund|foundation fund|college invest/.test(industry) && preset.id === 'university-endowment') score += 25;
+  if (/reit|cross.?border real estate|international property/.test(industry) && preset.id === 'reit-crossborder') score += 25;
+  if (/spv|special purpose|securitisation|structured vehicle|abs|clo/.test(industry) && preset.id === 'spv-structured') score += 25;
+
+  // Agriculture
+  if (/coffee|arabica|robusta|cof/.test(industry) && preset.id === 'coffee-exporter') score += 25;
+  if (/cocoa|chocolate|confection|cacao/.test(industry) && preset.id === 'cocoa-chocolate') score += 25;
+  if (/grain|wheat|corn|soy|cereals|commodity grain/.test(industry) && preset.id === 'grain-trader') score += 25;
+  if (/livestock|cattle|meat|beef|pork|poultry|protein export/.test(industry) && preset.id === 'livestock-meat-export') score += 25;
+
+  // Sovereign / Quasi-Sovereign
+  if (/development bank|multilateral|ifc|adb|ebrd|development finance/.test(industry) && preset.id === 'development-bank') score += 25;
+  if (/sovereign wealth|swf|reserve management|national fund/.test(industry) && preset.id === 'sovereign-wealth-fund') score += 25;
+  if (/municipal|city debt|sub.?sovereign|state debt|revenue bond/.test(industry) && preset.id === 'municipal-debt-service') score += 25;
+
+  // EM Specialisation — also reward currency-pair matching
+  const currencyPair = (answers.primary_currency_pair || '').toUpperCase();
+  if ((/brazil|brl|brasil/.test(industry) || /BRL/.test(currencyPair)) && preset.id === 'brazil-brl-corporate') score += 25;
+  if ((/mexico|mxn|nearshore|maquiladora/.test(industry) || /MXN/.test(currencyPair)) && preset.id === 'mexico-mxn-nearshore') score += 25;
+  if ((/turkey|türkiye|try|turkish/.test(industry) || /TRY/.test(currencyPair)) && preset.id === 'turkey-try-corporate') score += 25;
+  if ((/south africa|zar|rand|johannesburg|mining africa/.test(industry) || /ZAR/.test(currencyPair)) && preset.id === 'south-africa-zar-resources') score += 25;
+  if ((/india|inr|rupee|it services|india tech/.test(industry) || /INR/.test(currencyPair)) && preset.id === 'india-inr-tech-services') score += 25;
+
+  // IFRS 9 compliance bonus — reward high-confirmed-ratio presets for IFRS-compliant companies
+  if (answers.ifrs_compliance && preset.policy.hedge_ratios.confirmed >= 0.75) score += 10;
+
+  // Rolling hedge programme preference
+  if (answers.rolling_hedge && preset.policy.hedge_ratios.forecast >= 0.4) score += 5;
+
+  // Declared hedge ratio target — reward presets close to stated target
+  if (answers.hedge_ratio_target !== undefined) {
+    const targetDiff = Math.abs(preset.policy.hedge_ratios.confirmed - answers.hedge_ratio_target);
+    score -= targetDiff * 20; // penalise distance from stated target
+  }
+
+  // Instrument preference — NDF preference for exotic EM instruments
+  if (answers.instrument_preferences?.includes('NDF') && preset.policy.execution_product === 'NDF') score += 8;
+  if (answers.instrument_preferences?.includes('Forward') && preset.policy.execution_product === 'FWD') score += 8;
+  if (answers.instrument_preferences?.includes('Option') && preset.riskPosture !== 'CONSERVATIVE') score += 5;
+
   // SME/startup gets small-business preset
   if (answers.company_size === 'MICRO' && preset.id === 'small-business') score += 30;
 
@@ -173,6 +239,10 @@ Rules:
 async function callClaude(answers: QuestionnaireAnswers): Promise<AIPolicyResult | null> {
   if (!ANTHROPIC_API_KEY) return null;
 
+  const instrumentList = answers.instrument_preferences?.length
+    ? answers.instrument_preferences.join(', ')
+    : 'No preference stated';
+
   const userPrompt = `Generate a tailored FX hedge policy for this company profile:
 
 Industry: ${answers.industry}
@@ -184,6 +254,10 @@ Risk appetite: ${answers.risk_appetite}
 Cost sensitivity: ${answers.cost_sensitivity}
 Hedge time horizon: ${answers.time_horizon_months} months
 Hedge objective: ${answers.hedge_objective}
+IFRS 9 hedge accounting required: ${answers.ifrs_compliance ? 'Yes — confirmed ratio must be ≥75% for effectiveness testing' : 'No'}
+Preferred instruments: ${instrumentList}
+Rolling hedge programme: ${answers.rolling_hedge ? 'Yes — programme rolls forward each month' : 'No — static tenor positions'}
+Declared hedge ratio target: ${answers.hedge_ratio_target !== undefined ? `${Math.round(answers.hedge_ratio_target * 100)}%` : 'Not specified'}
 
 Return ONLY the JSON policy object as specified.`;
 

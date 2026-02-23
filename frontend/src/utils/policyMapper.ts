@@ -148,6 +148,7 @@ export function mapWizardStateToQA(state: WizardState): QuestionnaireAnswers {
     (state.primaryCurrency ? `USD/${state.primaryCurrency}` : 'USD/MXN');
 
   return {
+    // Core 9 fields
     industry:                  state.industrySector || state.companyType || 'Manufacturing',
     company_size:              volumeToCompanySize(vol),
     annual_fx_volume_usd:      vol,
@@ -157,6 +158,11 @@ export function mapWizardStateToQA(state: WizardState): QuestionnaireAnswers {
     cost_sensitivity:          budgetToCostSensitivity(state.premiumBudget),
     time_horizon_months:       TENOR_TO_MONTHS[state.averageTenor] ?? 6,
     hedge_objective:           state.primaryObjective || 'Budget certainty and P&L protection.',
+    // Extended 4 fields — close the 11-field gap, improve AI accuracy
+    ifrs_compliance:           state.ifrsCompliance,
+    instrument_preferences:    state.instrumentPreferences,
+    rolling_hedge:             state.rollingHedge,
+    hedge_ratio_target:        state.hedgeRatioTarget / 100, // slider 0–100 → ratio 0–1
   };
 }
 
