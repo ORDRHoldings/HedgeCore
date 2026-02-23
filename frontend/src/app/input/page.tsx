@@ -31,6 +31,7 @@ import {
   deletePositionThunk,
   clearError as clearPositionError,
   markExecuted,
+  addLocalPosition,
 } from '../../lib/store/slices/positionSlice';
 import type { PositionRow } from '../../api/positionClient';
 import FileUploadLane from '../../components/input/FileUploadLane';
@@ -485,16 +486,30 @@ function InputPageInner() {
     if (!token) return;
     const isDuplicate = editingPosition?.id === '__duplicate__';
     if (editingPosition && !isDuplicate) {
-      // Update existing
-      await dispatch(updatePositionThunk({ id: editingPosition.id, trade, token }));
-      showToast('Position updated');
+      // Update existing — demo mode: update in local state only
+      if (token.startsWith('demo_token_')) {
+        dispatch(addLocalPosition({ ...trade, id: editingPosition.id } as PositionRow));
+        showToast('Position updated');
+      } else {
+        await dispatch(updatePositionThunk({ id: editingPosition.id, trade, token }));
+        showToast('Position updated');
+      }
     } else {
       // Create new (includes duplicate scenario)
+      if (token.startsWith('demo_token_')) {
+        const localPosition: PositionRow = {
+          ...trade,
+          id: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        };
+        dispatch(addLocalPosition(localPosition));
+        showToast(isDuplicate ? 'Position duplicated' : 'Position added');
+      } else {
       const result = await dispatch(createPositionThunk({ trade, token }));
       if (createPositionThunk.fulfilled.match(result)) {
         showToast(isDuplicate ? 'Position duplicated' : 'Position added');
       } else {
         showToast(`Error: ${result.payload as string}`);
+      }
       }
     }
     setTradeModalOpen(false);
@@ -523,6 +538,21 @@ function InputPageInner() {
     setInlineTouched({ record_id: true, entity: true, amount: true, value_date: true });
     if (!inlineValid || !token) return;
     setInlineSaving(true);
+
+    // Demo-mode: skip API call, add position directly to local Redux state
+    if (token.startsWith('demo_token_')) {
+      const localPosition: PositionRow = {
+        ...inlineForm,
+        id: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      };
+      dispatch(addLocalPosition(localPosition));
+      setInlineSaving(false);
+      setInlineForm(EMPTY_INLINE);
+      setInlineTouched({});
+      showToast('Position added');
+      return;
+    }
+
     const result = await dispatch(createPositionThunk({ trade: inlineForm, token }));
     setInlineSaving(false);
     if (createPositionThunk.fulfilled.match(result)) {
