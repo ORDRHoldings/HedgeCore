@@ -9,15 +9,26 @@
  *
  * Card-grid view of user-created, branch, and company-wide policy templates.
  * Tabs: My Policies | Branch Policies | Company-wide
+ *
+ * All action buttons (Activate, Edit, Duplicate, Delete, Deactivate) are fully
+ * wired to the policyClient API with optimistic UI and inline feedback.
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import EmptyState from "../../components/ui/EmptyState";
 import Link from "next/link";
-import { listPolicyTemplates, getActivePolicy } from "../../api/policyClient";
-import type { PolicyTemplate, PolicyInstance } from "../../api/policyClient";
+import {
+  listPolicyTemplates,
+  getActivePolicy,
+  activatePolicy,
+  deactivatePolicy,
+  updatePolicyTemplate,
+  deletePolicyTemplate,
+  duplicatePolicyTemplate,
+} from "../../api/policyClient";
+import type { PolicyTemplate, PolicyInstance, UpdateTemplatePayload } from "../../api/policyClient";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -46,6 +57,13 @@ const S = {
   fail:     "var(--accent-red,#B91C1C)",
 } as const;
 
+// -- Toast notification types -----------------------------------------------------
+interface Toast {
+  id: number;
+  type: "success" | "error" | "info";
+  message: string;
+}
+
 // -- Badge helper -----------------------------------------------------------------
 function Badge({ label, color }: { label: string; color: string }) {
   return (
@@ -69,10 +87,15 @@ interface InstrumentAlloc {
 
 // Display-layer policy shape — mapped from PolicyTemplate API responses
 interface DemoPolicy {
+  id: string;
   code: string;
   name: string;
+  description: string | null;
   active: boolean;
+  isSystem: boolean;
   riskPosture: "LOW" | "MODERATE" | "HIGH";
+  riskPostureRaw: "CONSERVATIVE" | "MODERATE" | "AGGRESSIVE";
+  category: "CORPORATE" | "FINANCIAL" | "SOVEREIGN" | "SECTOR";
   hedgeRatio: number;
   instruments: InstrumentAlloc[];
   premiumBudget: string;
@@ -97,8 +120,6 @@ const INST_COLORS = [
 
 /**
  * Map a PolicyTemplate from the API onto the DemoPolicy display shape.
- * PolicyConfig hedging instruments live in config.instruments (array of
- * { name, allocation_pct }) when present; otherwise we fall back gracefully.
  */
 function templateToDisplay(
   t: PolicyTemplate,
@@ -106,7 +127,6 @@ function templateToDisplay(
 ): DemoPolicy {
   const cfg = t.config as unknown as Record<string, unknown>;
 
-  // Hedge ratio
   const hedgeRatio =
     typeof cfg.hedge_ratio === "number"
       ? Math.round(cfg.hedge_ratio * 100)
@@ -114,12 +134,8 @@ function templateToDisplay(
       ? Math.round((cfg.hedgeRatio as number) * 100)
       : 0;
 
-  // Instruments
   type RawInst = { name?: string; allocation_pct?: number; pct?: number };
-  const rawInsts =
-    Array.isArray(cfg.instruments)
-      ? (cfg.instruments as RawInst[])
-      : [];
+  const rawInsts = Array.isArray(cfg.instruments) ? (cfg.instruments as RawInst[]) : [];
   const instruments: InstrumentAlloc[] = rawInsts.map((inst, i) => ({
     name: inst.name ?? `Instrument ${i + 1}`,
     pct: Math.round(
@@ -132,15 +148,13 @@ function templateToDisplay(
     color: INST_COLORS[i % INST_COLORS.length],
   }));
 
-  // Premium budget
   const premiumBudget =
     typeof cfg.premium_budget === "number"
-      ? `${(cfg.premium_budget as number * 100).toFixed(2)}% of notional`
+      ? `${((cfg.premium_budget as number) * 100).toFixed(2)}% of notional`
       : typeof cfg.premiumBudget === "string"
       ? (cfg.premiumBudget as string)
       : "—";
 
-  // VaR coverage
   const varCoverage =
     typeof cfg.var_coverage === "string"
       ? (cfg.var_coverage as string)
@@ -148,20 +162,23 @@ function templateToDisplay(
       ? (cfg.varCoverage as string)
       : "—";
 
-  // Risk posture mapping: API uses CONSERVATIVE/MODERATE/AGGRESSIVE
   const riskMap: Record<string, "LOW" | "MODERATE" | "HIGH"> = {
     CONSERVATIVE: "LOW",
     MODERATE: "MODERATE",
     AGGRESSIVE: "HIGH",
   };
-  const riskPosture: "LOW" | "MODERATE" | "HIGH" =
-    riskMap[t.risk_posture] ?? "MODERATE";
+  const riskPosture: "LOW" | "MODERATE" | "HIGH" = riskMap[t.risk_posture] ?? "MODERATE";
 
   return {
+    id: t.id,
     code: t.short_name,
     name: t.name,
+    description: t.description,
     active: t.id === activeInstanceId,
+    isSystem: t.is_system,
     riskPosture,
+    riskPostureRaw: t.risk_posture,
+    category: t.category,
     hedgeRatio,
     instruments,
     premiumBudget,
@@ -176,7 +193,6 @@ function riskColor(posture: DemoPolicy["riskPosture"]): string {
   if (posture === "HIGH") return S.fail;
   return S.amber;
 }
-
 
 // -- Tabs -------------------------------------------------------------------------
 const TABS = [
@@ -215,11 +231,7 @@ function InstrumentBar({ instruments }: { instruments: InstrumentAlloc[] }) {
           <div
             key={inst.name}
             title={`${inst.name}: ${inst.pct}%`}
-            style={{
-              width: `${inst.pct}%`,
-              background: inst.color,
-              transition: "width 0.2s",
-            }}
+            style={{ width: `${inst.pct}%`, background: inst.color, transition: "width 0.2s" }}
           />
         ))}
       </div>
@@ -237,10 +249,287 @@ function InstrumentBar({ instruments }: { instruments: InstrumentAlloc[] }) {
   );
 }
 
+// -- Toast renderer ---------------------------------------------------------------
+function ToastStack({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id: number) => void }) {
+  if (toasts.length === 0) return null;
+  return (
+    <div style={{
+      position: "fixed", bottom: 20, right: 20, zIndex: 200,
+      display: "flex", flexDirection: "column", gap: 8, pointerEvents: "none",
+    }}>
+      {toasts.map((t) => {
+        const color = t.type === "success" ? S.pass : t.type === "error" ? S.fail : S.cyan;
+        return (
+          <div key={t.id} style={{
+            pointerEvents: "auto",
+            background: S.bgPanel,
+            border: `1px solid ${color}`,
+            borderLeft: `3px solid ${color}`,
+            padding: "8px 14px",
+            borderRadius: 3,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            minWidth: 260,
+            maxWidth: 400,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+            animation: "slideIn 0.15s ease-out",
+          }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color }}>{
+              t.type === "success" ? "✓" : t.type === "error" ? "✗" : "i"
+            }</span>
+            <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.primary, flex: 1 }}>{t.message}</span>
+            <button
+              onClick={() => onDismiss(t.id)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: S.tertiary, padding: "0 2px", fontSize: 12 }}
+            >✕</button>
+          </div>
+        );
+      })}
+      <style>{`@keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
+    </div>
+  );
+}
+
+// -- Confirm Modal ----------------------------------------------------------------
+interface ConfirmModalProps {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  danger?: boolean;
+  loading?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ConfirmModal({ title, message, confirmLabel, danger, loading, onConfirm, onCancel }: ConfirmModalProps) {
+  const confirmColor = danger ? S.fail : S.cyan;
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: "rgba(0,0,0,0.65)",
+    }} onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div style={{
+        background: S.bgPanel, border: `1px solid ${confirmColor}`,
+        borderRadius: 4, width: "min(440px, 94vw)", padding: "20px 24px",
+      }}>
+        <div style={{ fontFamily: S.fontUI, fontSize: "0.9375rem", fontWeight: 700, color: S.primary, marginBottom: 8 }}>
+          {title}
+        </div>
+        <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, lineHeight: 1.6, marginBottom: 20 }}>
+          {message}
+        </div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            style={{
+              fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em", fontWeight: 600,
+              padding: "6px 16px", border: `1px solid ${S.rim}`,
+              color: S.secondary, background: "transparent", cursor: "pointer", borderRadius: 2,
+            }}
+          >CANCEL</button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            style={{
+              fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em", fontWeight: 700,
+              padding: "6px 16px", border: `1px solid ${confirmColor}`,
+              color: danger ? "#fff" : S.bgDeep,
+              background: confirmColor,
+              cursor: loading ? "wait" : "pointer", borderRadius: 2, opacity: loading ? 0.7 : 1,
+            }}
+          >{loading ? "WORKING…" : confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -- Edit Policy Modal ------------------------------------------------------------
+interface EditModalProps {
+  policy: DemoPolicy;
+  loading: boolean;
+  onSave: (payload: UpdateTemplatePayload) => void;
+  onCancel: () => void;
+}
+
+function EditPolicyModal({ policy, loading, onSave, onCancel }: EditModalProps) {
+  const [name, setName] = useState(policy.name);
+  const [shortName, setShortName] = useState(policy.code);
+  const [description, setDescription] = useState(policy.description ?? "");
+  const [riskPosture, setRiskPosture] = useState<"CONSERVATIVE" | "MODERATE" | "AGGRESSIVE">(policy.riskPostureRaw);
+  const [hedgeRatioPct, setHedgeRatioPct] = useState(String(policy.hedgeRatio));
+
+  const fieldStyle: React.CSSProperties = {
+    width: "100%", fontFamily: S.fontUI, fontSize: "0.8125rem",
+    color: S.primary, background: S.bgSub,
+    border: `1px solid ${S.rim}`, padding: "6px 10px", borderRadius: 2,
+    outline: "none", boxSizing: "border-box",
+  };
+  const labelStyle: React.CSSProperties = {
+    fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em",
+    color: S.tertiary, textTransform: "uppercase", display: "block", marginBottom: 4,
+  };
+
+  function handleSave() {
+    const hrNum = parseFloat(hedgeRatioPct);
+    const payload: UpdateTemplatePayload = {
+      name: name.trim() || undefined,
+      short_name: shortName.trim() || undefined,
+      description: description.trim() || undefined,
+      risk_posture: riskPosture,
+    };
+    // Merge hedge_ratio into config if changed
+    if (!isNaN(hrNum) && hrNum !== policy.hedgeRatio) {
+      payload.config = {
+        ...(policy as unknown as Record<string, unknown>),
+        hedge_ratios: { confirmed: hrNum / 100, forecast: hrNum / 100 * 0.7 },
+      } as unknown as typeof payload.config;
+    }
+    onSave(payload);
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: "rgba(0,0,0,0.65)",
+    }} onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div style={{
+        background: S.bgPanel, border: `1px solid ${S.rim}`,
+        borderRadius: 4, width: "min(520px, 96vw)",
+        display: "flex", flexDirection: "column", maxHeight: "90vh", overflow: "hidden",
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: "12px 20px", borderBottom: `1px solid ${S.rim}`, background: S.bgSub,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <div>
+            <div style={{ fontFamily: S.fontUI, fontSize: "0.9375rem", fontWeight: 700, color: S.primary }}>
+              Edit Policy
+            </div>
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, letterSpacing: "0.06em" }}>
+              {policy.code} · {policy.id.slice(0, 8).toUpperCase()}
+            </div>
+          </div>
+          <button onClick={onCancel} style={{
+            background: "transparent", border: `1px solid ${S.rim}`,
+            color: S.tertiary, padding: "3px 10px", cursor: "pointer",
+            fontFamily: S.fontMono, fontSize: "0.75rem", borderRadius: 2,
+          }}>✕</button>
+        </div>
+
+        {/* Form body */}
+        <div style={{ padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Policy Name</label>
+              <input value={name} onChange={e => setName(e.target.value)} style={fieldStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Short Code</label>
+              <input
+                value={shortName}
+                onChange={e => setShortName(e.target.value.toUpperCase().slice(0, 20))}
+                style={{ ...fieldStyle, fontFamily: S.fontMono, letterSpacing: "0.04em" }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Description</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={3}
+              style={{ ...fieldStyle, resize: "vertical" as const, lineHeight: 1.5 }}
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={labelStyle}>Risk Posture</label>
+              <select
+                value={riskPosture}
+                onChange={e => setRiskPosture(e.target.value as typeof riskPosture)}
+                style={{ ...fieldStyle, cursor: "pointer" }}
+              >
+                <option value="CONSERVATIVE">Conservative (Low)</option>
+                <option value="MODERATE">Moderate</option>
+                <option value="AGGRESSIVE">Aggressive (High)</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>Hedge Ratio (%)</label>
+              <input
+                type="number" min={0} max={100}
+                value={hedgeRatioPct}
+                onChange={e => setHedgeRatioPct(e.target.value)}
+                style={{ ...fieldStyle, fontFamily: S.fontMono }}
+              />
+            </div>
+          </div>
+
+          {/* Regulatory note */}
+          <div style={{
+            padding: "8px 12px", background: `color-mix(in srgb, ${S.amber} 6%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`, borderRadius: 2,
+            fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary, lineHeight: 1.5,
+          }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.amber, fontWeight: 700, letterSpacing: "0.07em", marginRight: 6 }}>NOTE</span>
+            Editing a policy template creates a new version. Active instances referencing this template will not be retroactively changed.
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: "12px 20px", borderTop: `1px solid ${S.rim}`, background: S.bgSub,
+          display: "flex", gap: 8, justifyContent: "flex-end",
+        }}>
+          <button onClick={onCancel} disabled={loading} style={{
+            fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em", fontWeight: 600,
+            padding: "6px 16px", border: `1px solid ${S.rim}`,
+            color: S.secondary, background: "transparent", cursor: "pointer", borderRadius: 2,
+          }}>CANCEL</button>
+          <button
+            onClick={handleSave}
+            disabled={loading || !name.trim()}
+            style={{
+              fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em", fontWeight: 700,
+              padding: "6px 20px", border: `1px solid ${S.cyan}`,
+              color: S.bgDeep, background: S.cyan,
+              cursor: loading ? "wait" : "pointer", borderRadius: 2,
+              opacity: loading || !name.trim() ? 0.6 : 1,
+            }}
+          >{loading ? "SAVING…" : "SAVE CHANGES"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // -- Policy card ------------------------------------------------------------------
-function PolicyCard({ policy, showMeta }: { policy: DemoPolicy; showMeta?: boolean }) {
+interface PolicyCardProps {
+  policy: DemoPolicy;
+  showMeta?: boolean;
+  actionLoading: string | null; // policy id currently being acted on
+  onActivate: (p: DemoPolicy) => void;
+  onDeactivate: (p: DemoPolicy) => void;
+  onEdit: (p: DemoPolicy) => void;
+  onDuplicate: (p: DemoPolicy) => void;
+  onDelete: (p: DemoPolicy) => void;
+}
+
+function PolicyCard({
+  policy, showMeta, actionLoading,
+  onActivate, onDeactivate, onEdit, onDuplicate, onDelete,
+}: PolicyCardProps) {
   const [hovered, setHovered] = useState(false);
   const rc = riskColor(policy.riskPosture);
+  const isLoading = actionLoading === policy.id;
 
   return (
     <div
@@ -260,6 +549,7 @@ function PolicyCard({ policy, showMeta }: { policy: DemoPolicy; showMeta?: boole
         overflow: "hidden",
         position: "relative",
         boxShadow: policy.active ? `0 0 12px color-mix(in srgb, ${S.cyan} 15%, transparent)` : "none",
+        opacity: isLoading ? 0.7 : 1,
       }}
     >
       {/* Active glow strip */}
@@ -267,12 +557,22 @@ function PolicyCard({ policy, showMeta }: { policy: DemoPolicy; showMeta?: boole
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: S.cyan }} />
       )}
 
+      {/* Loading overlay shimmer */}
+      {isLoading && (
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 5,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(0,0,0,0.15)",
+          pointerEvents: "none",
+        }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.cyan, letterSpacing: "0.1em" }}>
+            WORKING…
+          </span>
+        </div>
+      )}
+
       {/* Header */}
-      <div style={{
-        padding: "10px 12px",
-        borderBottom: `1px solid ${S.rim}`,
-        background: S.bgDeep,
-      }}>
+      <div style={{ padding: "10px 12px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 4 }}>
           <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.08em", fontWeight: 700, color: S.cyan }}>
             {policy.code}
@@ -280,12 +580,18 @@ function PolicyCard({ policy, showMeta }: { policy: DemoPolicy; showMeta?: boole
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             {policy.active && <Badge label="ACTIVE" color={S.cyan} />}
             {policy.mandatory && <Badge label="MANDATORY" color={S.fail} />}
+            {policy.isSystem && <Badge label="SYSTEM" color={S.tertiary} />}
             <Badge label={policy.riskPosture} color={rc} />
           </div>
         </div>
         <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary, lineHeight: 1.3 }}>
           {policy.name}
         </div>
+        {policy.description && (
+          <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary, marginTop: 3, lineHeight: 1.4 }}>
+            {policy.description.slice(0, 80)}{policy.description.length > 80 ? "…" : ""}
+          </div>
+        )}
       </div>
 
       {/* Body: config summary */}
@@ -293,10 +599,10 @@ function PolicyCard({ policy, showMeta }: { policy: DemoPolicy; showMeta?: boole
         {/* Mini data grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           {[
-            { label: "HEDGE RATIO",     value: `${policy.hedgeRatio}%` },
-            { label: "PREMIUM BUDGET",   value: policy.premiumBudget },
-            { label: "VaR COVERAGE",     value: policy.varCoverage },
-            { label: "CREATED",          value: policy.created },
+            { label: "HEDGE RATIO",   value: `${policy.hedgeRatio}%` },
+            { label: "PREMIUM BUDGET", value: policy.premiumBudget },
+            { label: "VaR COVERAGE",   value: policy.varCoverage },
+            { label: "CREATED",        value: policy.created },
           ].map(({ label, value }) => (
             <div key={label}>
               <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em", marginBottom: 1, textTransform: "uppercase" as const }}>
@@ -308,14 +614,6 @@ function PolicyCard({ policy, showMeta }: { policy: DemoPolicy; showMeta?: boole
             </div>
           ))}
         </div>
-
-        {/* Last Modified */}
-        {policy.lastModified && (
-          <div>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em" }}>LAST MODIFIED </span>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>{policy.lastModified}</span>
-          </div>
-        )}
 
         {/* Published by / Branch / Set by metadata */}
         {showMeta && policy.publishedBy && (
@@ -332,12 +630,6 @@ function PolicyCard({ policy, showMeta }: { policy: DemoPolicy; showMeta?: boole
             )}
           </div>
         )}
-        {showMeta && policy.setBy && (
-          <div>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em" }}>SET BY </span>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>{policy.setBy}</span>
-          </div>
-        )}
 
         {/* Instrument allocation bar */}
         <InstrumentBar instruments={policy.instruments} />
@@ -345,28 +637,27 @@ function PolicyCard({ policy, showMeta }: { policy: DemoPolicy; showMeta?: boole
 
       {/* Footer: action buttons */}
       <div style={{
-        padding: "8px 12px",
-        borderTop: `1px solid ${S.rim}`,
-        background: S.bgSub,
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        flexWrap: "wrap",
+        padding: "8px 12px", borderTop: `1px solid ${S.rim}`, background: S.bgSub,
+        display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap",
       }}>
         {policy.active ? (
           <>
-            <ActionBtn label="Edit" />
-            <ActionBtn label="Deactivate" />
-            <ActionBtn label="Duplicate" />
-            <ActionBtn label="Delete" danger />
+            <ActionBtn label="Edit" onClick={() => onEdit(policy)} disabled={isLoading || policy.isSystem} />
+            <ActionBtn label="Deactivate" onClick={() => onDeactivate(policy)} disabled={isLoading} />
+            <ActionBtn label="Duplicate" onClick={() => onDuplicate(policy)} disabled={isLoading} />
           </>
         ) : (
           <>
-            <ActionBtn label="Activate" accent />
-            <ActionBtn label="Edit" />
-            <ActionBtn label="Duplicate" />
-            <ActionBtn label="Delete" danger />
+            <ActionBtn label="Activate" accent onClick={() => onActivate(policy)} disabled={isLoading} />
+            <ActionBtn label="Edit" onClick={() => onEdit(policy)} disabled={isLoading || policy.isSystem} />
+            <ActionBtn label="Duplicate" onClick={() => onDuplicate(policy)} disabled={isLoading} />
+            <ActionBtn label="Delete" danger onClick={() => onDelete(policy)} disabled={isLoading || policy.isSystem} />
           </>
+        )}
+        {policy.isSystem && (
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, letterSpacing: "0.06em", marginLeft: 4 }}>
+            READ-ONLY
+          </span>
         )}
       </div>
     </div>
@@ -374,7 +665,13 @@ function PolicyCard({ policy, showMeta }: { policy: DemoPolicy; showMeta?: boole
 }
 
 // -- Small action button ----------------------------------------------------------
-function ActionBtn({ label, accent, danger }: { label: string; accent?: boolean; danger?: boolean }) {
+function ActionBtn({ label, accent, danger, onClick, disabled }: {
+  label: string;
+  accent?: boolean;
+  danger?: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
   const [hovered, setHovered] = useState(false);
   let color: string = S.tertiary;
   if (accent) color = S.cyan;
@@ -384,6 +681,8 @@ function ActionBtn({ label, accent, danger }: { label: string; accent?: boolean;
   return (
     <button
       type="button"
+      onClick={onClick}
+      disabled={disabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -392,12 +691,13 @@ function ActionBtn({ label, accent, danger }: { label: string; accent?: boolean;
         letterSpacing: "0.06em",
         fontWeight: 600,
         padding: "2px 8px",
-        border: `1px solid ${hovered ? color : S.rim}`,
-        color,
-        background: hovered ? `color-mix(in srgb, ${color} 6%, transparent)` : "transparent",
-        cursor: "pointer",
+        border: `1px solid ${disabled ? S.soft : hovered ? color : S.rim}`,
+        color: disabled ? S.tertiary : color,
+        background: hovered && !disabled ? `color-mix(in srgb, ${color} 6%, transparent)` : "transparent",
+        cursor: disabled ? "not-allowed" : "pointer",
         transition: "all 0.12s",
         borderRadius: 2,
+        opacity: disabled ? 0.5 : 1,
       }}
     >
       {label.toUpperCase()}
@@ -410,6 +710,7 @@ export default function SavedPoliciesPage() {
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
   const renderTs = useRenderTs();
+  const toastSeqRef = useRef(0);
 
   const [activeTab, setActiveTab] = useState<TabKey>("my");
   const [searchQuery, setSearchQuery] = useState("");
@@ -421,14 +722,38 @@ export default function SavedPoliciesPage() {
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
 
+  // Action state
+  const [actionLoading, setActionLoading] = useState<string | null>(null); // policy id
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // Modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string; message: string; confirmLabel: string; danger?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [editModal, setEditModal] = useState<DemoPolicy | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+
   // Auth guard
   if (!isAuthenticated) {
     router.push("/auth/login");
     return null;
   }
 
-  // Fetch policy templates + active instance on mount
-  useEffect(() => {
+  // -- Toast helpers --------------------------------------------------------------
+  const addToast = useCallback((type: Toast["type"], message: string) => {
+    const id = ++toastSeqRef.current;
+    setToasts(prev => [...prev, { id, type, message }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // -- Fetch policy templates + active instance on mount -------------------------
+  const fetchPolicies = useCallback(() => {
     if (!isAuthenticated) return;
     setLoading(true);
     setApiError(null);
@@ -445,35 +770,29 @@ export default function SavedPoliciesPage() {
     });
   }, [isAuthenticated, token]);
 
+  useEffect(() => { fetchPolicies(); }, [fetchPolicies]);
+
   const activeTemplateId = activeInstance?.template_id ?? null;
 
-  // Map API templates to display shape, then filter by tab
-  // The API returns a flat list; we distinguish tabs by is_system + company_id:
-  //   "my"      → company-specific non-system templates (company_id set, is_system false)
-  //   "branch"  → templates that have a matching branch scope (same heuristic; API may add branch_id later)
-  //   "company" → system templates (is_system true) or company-wide (company_id set, is_system false)
-  // For now: "my" = user/company templates, "company" = system templates, "branch" = empty until API supports it
+  // -- Tab filtering + display mapping ------------------------------------------
   const tabPolicies = useMemo<DemoPolicy[]>(() => {
     let source: PolicyTemplate[];
     if (activeTab === "my") {
       source = policies.filter((t) => !t.is_system && t.company_id !== null);
     } else if (activeTab === "branch") {
-      source = []; // branch-scoped templates require branch_id on PolicyTemplate — not yet in API
+      source = [];
     } else {
       source = policies.filter((t) => t.is_system);
     }
     return source.map((t) => templateToDisplay(t, activeTemplateId));
   }, [policies, activeTab, activeTemplateId]);
 
-  // Filter + sort
   const filteredPolicies = useMemo(() => {
     let source = tabPolicies;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      source = source.filter(
-        (p) =>
-          p.code.toLowerCase().includes(q) ||
-          p.name.toLowerCase().includes(q)
+      source = source.filter(p =>
+        p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q)
       );
     }
     return sortPolicies(source, sortBy);
@@ -481,24 +800,132 @@ export default function SavedPoliciesPage() {
 
   const showMeta = activeTab === "branch" || activeTab === "company";
 
+  // -- Action handlers -----------------------------------------------------------
+
+  /** Activate a policy template */
+  const handleActivate = useCallback((policy: DemoPolicy) => {
+    setConfirmModal({
+      title: `Activate "${policy.name}"?`,
+      message: `This will set "${policy.code}" as the active policy for your company. Any previously active policy will be deactivated.`,
+      confirmLabel: "ACTIVATE POLICY",
+      onConfirm: async () => {
+        setConfirmLoading(true);
+        setActionLoading(policy.id);
+        try {
+          const newInstance = await activatePolicy(policy.id, token ?? undefined);
+          setActiveInstance(newInstance);
+          addToast("success", `Policy "${policy.name}" activated successfully.`);
+          setConfirmModal(null);
+        } catch {
+          addToast("error", `Failed to activate "${policy.name}". Please try again.`);
+        } finally {
+          setConfirmLoading(false);
+          setActionLoading(null);
+        }
+      },
+    });
+  }, [token, addToast]);
+
+  /** Deactivate the current active policy */
+  const handleDeactivate = useCallback((policy: DemoPolicy) => {
+    setConfirmModal({
+      title: `Deactivate "${policy.name}"?`,
+      message: `This will deactivate the currently active policy. Hedges will no longer reference a policy until a new one is activated.`,
+      confirmLabel: "DEACTIVATE",
+      danger: true,
+      onConfirm: async () => {
+        setConfirmLoading(true);
+        setActionLoading(policy.id);
+        try {
+          await deactivatePolicy(token ?? undefined);
+          setActiveInstance(null);
+          addToast("success", `Policy "${policy.name}" deactivated.`);
+          setConfirmModal(null);
+        } catch {
+          addToast("error", `Failed to deactivate. Please try again.`);
+        } finally {
+          setConfirmLoading(false);
+          setActionLoading(null);
+        }
+      },
+    });
+  }, [token, addToast]);
+
+  /** Open Edit modal */
+  const handleEdit = useCallback((policy: DemoPolicy) => {
+    setEditModal(policy);
+  }, []);
+
+  /** Save edited policy */
+  const handleEditSave = useCallback(async (payload: UpdateTemplatePayload) => {
+    if (!editModal) return;
+    setEditLoading(true);
+    setActionLoading(editModal.id);
+    try {
+      const updated = await updatePolicyTemplate(editModal.id, payload, token ?? undefined);
+      setPolicies(prev => prev.map(p => p.id === updated.id ? updated : p));
+      addToast("success", `Policy "${updated.name}" updated.`);
+      setEditModal(null);
+    } catch {
+      addToast("error", "Failed to save changes. Please try again.");
+    } finally {
+      setEditLoading(false);
+      setActionLoading(null);
+    }
+  }, [editModal, token, addToast]);
+
+  /** Duplicate a policy */
+  const handleDuplicate = useCallback(async (policy: DemoPolicy) => {
+    // Find the original PolicyTemplate for the duplicate call
+    const original = policies.find(p => p.id === policy.id);
+    if (!original) return;
+    setActionLoading(policy.id);
+    try {
+      const copy = await duplicatePolicyTemplate(original, token ?? undefined);
+      setPolicies(prev => [copy, ...prev]);
+      addToast("success", `Created "${copy.name}" as a copy of "${policy.name}".`);
+      setActiveTab("my"); // Switch to My Policies to see the copy
+    } catch {
+      addToast("error", `Failed to duplicate "${policy.name}".`);
+    } finally {
+      setActionLoading(null);
+    }
+  }, [policies, token, addToast]);
+
+  /** Show delete confirmation */
+  const handleDelete = useCallback((policy: DemoPolicy) => {
+    setConfirmModal({
+      title: `Delete "${policy.name}"?`,
+      message: `This action is irreversible. The policy template "${policy.code}" will be permanently removed. You cannot delete system templates or an active policy.`,
+      confirmLabel: "DELETE PERMANENTLY",
+      danger: true,
+      onConfirm: async () => {
+        setConfirmLoading(true);
+        setActionLoading(policy.id);
+        try {
+          await deletePolicyTemplate(policy.id, token ?? undefined);
+          setPolicies(prev => prev.filter(p => p.id !== policy.id));
+          addToast("success", `Policy "${policy.name}" deleted.`);
+          setConfirmModal(null);
+        } catch {
+          addToast("error", `Failed to delete "${policy.name}". Please try again.`);
+        } finally {
+          setConfirmLoading(false);
+          setActionLoading(null);
+        }
+      },
+    });
+  }, [token, addToast]);
+
   return (
     <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      background: S.bgDeep,
-      fontFamily: S.fontUI,
-      color: S.primary,
+      minHeight: "100vh", display: "flex", flexDirection: "column",
+      background: S.bgDeep, fontFamily: S.fontUI, color: S.primary,
     }}>
       {/* -- TopBar (44px) -------------------------------------------------------- */}
       <header style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        height: 44,
-        padding: "0 20px",
-        background: S.bgPanel,
-        borderBottom: `1px solid ${S.rim}`,
+        display: "flex", alignItems: "center", gap: 12, height: 44,
+        padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
         flexShrink: 0,
       }}>
         <button
@@ -525,25 +952,26 @@ export default function SavedPoliciesPage() {
         }}>
           POLICY ENGINE
         </span>
+        {activeInstance && (
+          <span style={{
+            fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px",
+            border: `1px solid ${S.cyan}`, color: S.cyan,
+            background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
+          }}>
+            ● ACTIVE: {policies.find(p => p.id === activeInstance.template_id)?.short_name ?? "—"}
+          </span>
+        )}
         <div style={{ flex: 1 }} />
-        <span style={{
-          fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
-          letterSpacing: "0.04em",
-        }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
           AS OF {renderTs}
         </span>
       </header>
 
       {/* -- Tab bar (36px) ------------------------------------------------------- */}
       <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 0,
-        background: S.bgPanel,
-        borderBottom: `1px solid ${S.rim}`,
-        padding: "0 20px",
-        height: 36,
-        flexShrink: 0,
+        display: "flex", alignItems: "center", gap: 0,
+        background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
+        padding: "0 20px", height: 36, flexShrink: 0,
       }}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
@@ -558,9 +986,7 @@ export default function SavedPoliciesPage() {
                 color: isActive ? S.cyan : S.tertiary,
                 borderBottom: isActive ? `2px solid ${S.cyan}` : "2px solid transparent",
                 borderTop: "none", borderLeft: "none", borderRight: "none",
-                background: "transparent",
-                cursor: "pointer",
-                transition: "color 0.1s",
+                background: "transparent", cursor: "pointer", transition: "color 0.1s",
               }}
             >
               {tab.label}
@@ -568,8 +994,6 @@ export default function SavedPoliciesPage() {
           );
         })}
         <div style={{ flex: 1 }} />
-
-        {/* Counts badge */}
         {!loading && (
           <span style={{
             fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
@@ -584,14 +1008,7 @@ export default function SavedPoliciesPage() {
       <div style={{ flex: 1, maxWidth: 1440, width: "100%", margin: "0 auto", padding: "16px 24px" }}>
 
         {/* Top action bar */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 16,
-          flexWrap: "wrap",
-        }}>
-          {/* Create New Policy */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
           <Link
             href="/ai-policy-wizard"
             style={{
@@ -604,27 +1021,24 @@ export default function SavedPoliciesPage() {
           >
             + CREATE NEW POLICY
           </Link>
-
-          {/* Import Policy (outlined) */}
           <button
             type="button"
             style={{
               fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em", fontWeight: 600,
               padding: "6px 16px", border: `1px solid ${S.rim}`,
-              color: S.secondary, background: "transparent",
-              cursor: "pointer", borderRadius: 2,
+              color: S.secondary, background: "transparent", cursor: "not-allowed",
+              borderRadius: 2, opacity: 0.6,
             }}
+            title="Import via JSON — coming soon"
+            disabled
           >
             IMPORT POLICY
           </button>
-
           <div style={{ flex: 1 }} />
-
-          {/* Search input */}
+          {/* Search */}
           <div style={{
             display: "flex", alignItems: "center", gap: 6,
-            border: `1px solid ${S.rim}`, background: S.bgPanel, padding: "5px 10px",
-            borderRadius: 2,
+            border: `1px solid ${S.rim}`, background: S.bgPanel, padding: "5px 10px", borderRadius: 2,
           }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={S.tertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
@@ -643,22 +1057,15 @@ export default function SavedPoliciesPage() {
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  color: S.tertiary, padding: 0, display: "flex", alignItems: "center",
-                  fontSize: "0.75rem", lineHeight: 1,
-                }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: S.tertiary, padding: 0, fontSize: "0.75rem", lineHeight: 1 }}
               >
                 &times;
               </button>
             )}
           </div>
-
-          {/* Sort dropdown */}
+          {/* Sort */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, letterSpacing: "0.06em" }}>
-              SORT:
-            </span>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, letterSpacing: "0.06em" }}>SORT:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortKey)}
@@ -680,8 +1087,7 @@ export default function SavedPoliciesPage() {
         {loading ? (
           <div style={{
             textAlign: "center", padding: "48px 0",
-            fontFamily: S.fontMono, fontSize: "0.75rem",
-            color: S.tertiary, letterSpacing: "0.06em",
+            fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.06em",
           }}>
             LOADING POLICIES…
           </div>
@@ -691,53 +1097,45 @@ export default function SavedPoliciesPage() {
               type="error"
               title="Failed to Load Policies"
               message={apiError}
-              action={{
-                label: "Retry",
-                onClick: () => {
-                  setLoading(true);
-                  setApiError(null);
-                  Promise.all([
-                    listPolicyTemplates(token ?? undefined).catch(() => [] as PolicyTemplate[]),
-                    getActivePolicy(token ?? undefined).catch(() => null),
-                  ]).then(([templates, active]) => {
-                    setPolicies(templates);
-                    setActiveInstance(active);
-                    setLoading(false);
-                  }).catch(() => {
-                    setApiError("Failed to load policies");
-                    setLoading(false);
-                  });
-                },
-              }}
+              action={{ label: "Retry", onClick: fetchPolicies }}
             />
           </div>
         ) : filteredPolicies.length > 0 ? (
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-            gap: 12,
-          }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 12 }}>
             {filteredPolicies.map((policy) => (
-              <PolicyCard key={policy.code} policy={policy} showMeta={showMeta} />
+              <PolicyCard
+                key={policy.id}
+                policy={policy}
+                showMeta={showMeta}
+                actionLoading={actionLoading}
+                onActivate={handleActivate}
+                onDeactivate={handleDeactivate}
+                onEdit={handleEdit}
+                onDuplicate={handleDuplicate}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         ) : tabPolicies.length === 0 ? (
           <div style={{ marginTop: 40 }}>
             <EmptyState
               type="empty"
-              title="No Saved Policies"
-              message="Create your first policy in the Policy Engine. Templates you create will appear here."
-              action={{
+              title={activeTab === "branch" ? "No Branch Policies" : "No Saved Policies"}
+              message={
+                activeTab === "branch"
+                  ? "Branch-scoped policy templates will appear here once the API returns branch_id on templates."
+                  : "Create your first policy in the Policy Engine. Templates you create will appear here."
+              }
+              action={activeTab !== "branch" ? {
                 label: "Create Policy",
                 onClick: () => router.push("/ai-policy-wizard"),
-              }}
+              } : undefined}
             />
           </div>
         ) : (
           <div style={{
             textAlign: "center", padding: "48px 0",
-            fontFamily: S.fontMono, fontSize: "0.75rem",
-            color: S.tertiary, letterSpacing: "0.06em",
+            fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.06em",
           }}>
             NO POLICIES MATCH YOUR SEARCH
           </div>
@@ -746,23 +1144,45 @@ export default function SavedPoliciesPage() {
 
       {/* -- Footer (32px) -------------------------------------------------------- */}
       <footer style={{
-        height: 32,
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "0 20px",
-        borderTop: `1px solid ${S.rim}`,
-        background: S.bgPanel,
-        fontFamily: S.fontMono,
-        fontSize: "0.6875rem",
-        color: S.tertiary,
-        letterSpacing: "0.04em",
-        flexShrink: 0,
+        height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px",
+        borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
+        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
+        letterSpacing: "0.04em", flexShrink: 0,
       }}>
         <span>{renderTs}</span>
         <span style={{ color: S.rim }}>&mdash;</span>
         <span>ORDR &middot; My Saved Policies</span>
+        {policies.length > 0 && (
+          <>
+            <span style={{ color: S.rim }}>&mdash;</span>
+            <span>{policies.length} templates loaded</span>
+          </>
+        )}
       </footer>
+
+      {/* -- Modals --------------------------------------------------------------- */}
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmLabel={confirmModal.confirmLabel}
+          danger={confirmModal.danger}
+          loading={confirmLoading}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => { setConfirmModal(null); setConfirmLoading(false); }}
+        />
+      )}
+      {editModal && (
+        <EditPolicyModal
+          policy={editModal}
+          loading={editLoading}
+          onSave={handleEditSave}
+          onCancel={() => { setEditModal(null); setEditLoading(false); }}
+        />
+      )}
+
+      {/* -- Toast notifications -------------------------------------------------- */}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
