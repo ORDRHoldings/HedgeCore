@@ -23,35 +23,100 @@ import { makeCreatedAuditEntry } from '../types/canonicalPolicy';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface WizardState {
-  // Step 1 — Business Profile
+  // ── PHASE A: Intent & Scope ──────────────────────────────────────────────
+  // A.1 — Policy Intent Classification
+  primaryObjective: string;
+  regulatoryRegimes: string[];     // IFRS9, ASC815, MiFID2, Basel3, etc.
+  boardResolutionRef: string;      // e.g. "FX-2025-003"
+  boardStatement: string;
+  effectiveFrom: string;           // ISO date
+  effectiveUntil: string;          // ISO date
+  reviewDueDate: string;           // ISO date
+  // A.2 — Portfolio Scope & Currency Universe
   companyType: string;
-  primaryCurrency: string;
-  annualExposure: string;          // categorical tier e.g. "$50-250M"
-  hedgeExperience: string;
   industrySector: string;
+  annualExposure: string;          // categorical tier e.g. "$50-250M"
+  primaryCurrency: string;
   fxCorridors: string[];
-  // Step 2 — Cash Flow
+  portfolioScope: string;          // CONSOLIDATED | SINGLE_ACCOUNT | MULTI_ACCOUNT | BRANCH_LEVEL
+  extendedFlowTypes: string[];     // RECEIVABLE, PAYABLE, INTERCOMPANY, BALANCE_SHEET, DIVIDEND, DEBT_SERVICE
+  geographyFocus: string[];        // EM_LATAM, EM_ASIA, EM_EMEA, G10, ALL
+  // A.3 — Time Horizon Architecture
+  hedgeExperience: string;
+  averageTenor: string;
+  timeHorizonMonths: number;       // 1–36
+  rollingHedge: boolean;
+  rollingTenor: string;
+  layeredApproach: boolean;
+
+  // ── PHASE B: Exposure & Bucketing ───────────────────────────────────────
+  // B.1 — Exposure Classification
   cashFlowVisibility: string;
   cashFlowCertainty: number;       // 0–100 slider
   receivableSplit: number;         // 0–100 slider
   seasonalPatterns: string;
-  averageTenor: string;
+  paymentFrequency: string;        // MONTHLY | QUARTERLY | SEMI_ANNUAL | ANNUAL | IRREGULAR
+  avgTransactionSizeUsd: number;
+  hasIntercompanyFlows: boolean;
+  // B.2 — Netting Rules
   nettingAvailable: boolean;
-  // Step 3 — Risk & Cost
-  maxAcceptableLoss: string;
+  netConfirmedForecast: boolean;
+  settlementCycleDays: number;     // 1–5
+  // B.3 — Materiality Thresholds
+  materialityThresholdUsd: number;
+  minHedgeSizeUsd: number;
+  maxSingleTradeUsd: number;
+
+  // ── PHASE C: Instruments & Eligibility ──────────────────────────────────
+  instrumentPreferences: string[];
+  // Per-instrument constraints (7 instruments)
+  instrAllowed: Record<string, boolean>;
+  instrMaxTenorDays: Record<string, number>;
+  instrRequiresApproval: Record<string, boolean>;
+  instrMaxNotionalUsd: Record<string, number>;
+  // C.3 — Tenor ladder
+  tenorMinDays: number;
+  tenorMaxDays: number;
+  rollAllowed: boolean;
+  rollWindowDays: number;          // days before expiry
+
+  // ── PHASE D: Constraints & Budgets ──────────────────────────────────────
+  // D.1 — Cost & Carry Budget
   premiumBudget: number;           // 0–3 (% of notional)
+  maxCarryCostBpsAnnual: number;
+  maxOptionPremiumPct: number;
+  maxSpreadBps: number;
+  // D.2 — Leverage & Margin
+  leverageCap: number;             // 1.0–10.0
+  marginBudgetUsd: number;
+  // D.3 — Concentration Limits
+  maxInstrumentConcentrationPct: number;
+  maxCounterpartyConcentrationPct: number;
+  maxTenorConcentrationPct: number;
+  maxCurrencyConcentrationPct: number;
+  // D.4 — Risk Controls
+  costProtectionPriority: number;  // 0–100 slider
+  maxAcceptableLoss: string;
+
+  // ── PHASE E: Scenarios & Stress ─────────────────────────────────────────
+  standardStressPack: string;      // MILD | MODERATE | SEVERE | TAIL | CUSTOM
   varConfidence: string;           // "90%", "95%", "99%", "99.5%"
   drawdownTolerance: string;
-  costProtectionPriority: number;  // 0–100 slider
-  boardStatement: string;
-  // Step 4 — Objectives
-  primaryObjective: string;
-  instrumentPreferences: string[];
-  hedgeRatioTarget: number;        // 0–100 slider
-  rollingHedge: boolean;
-  rollingTenor: string;
+  backTestWindowDays: number;
+  worstCaseFocus: boolean;
+  customScenarios: Array<{
+    name: string;
+    spotShockPct: number;
+    volShockPct: number;
+    sourceEvent: string;
+  }>;
+  governanceNotes: string;
+
+  // ── PHASE F/G: Governance & Publish ─────────────────────────────────────
   ifrsCompliance: boolean;
   benchmark: string;
+  hedgeRatioTarget: number;        // 0–100 slider
+  policyStatus: string;            // DRAFT | REVIEW | APPROVED
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -147,6 +212,11 @@ export function mapWizardStateToQA(state: WizardState): QuestionnaireAnswers {
     state.fxCorridors[0] ??
     (state.primaryCurrency ? `USD/${state.primaryCurrency}` : 'USD/MXN');
 
+  // Derive time horizon: prefer explicit timeHorizonMonths, fall back to averageTenor
+  const time_horizon = state.timeHorizonMonths > 0
+    ? state.timeHorizonMonths
+    : (TENOR_TO_MONTHS[state.averageTenor] ?? 6);
+
   return {
     // Core 9 fields
     industry:                  state.industrySector || state.companyType || 'Manufacturing',
@@ -156,10 +226,10 @@ export function mapWizardStateToQA(state: WizardState): QuestionnaireAnswers {
     cash_flow_predictability:  certaintyToPredictability(state.cashFlowCertainty),
     risk_appetite:             priorityToRiskAppetite(state.costProtectionPriority),
     cost_sensitivity:          budgetToCostSensitivity(state.premiumBudget),
-    time_horizon_months:       TENOR_TO_MONTHS[state.averageTenor] ?? 6,
+    time_horizon_months:       time_horizon,
     hedge_objective:           state.primaryObjective || 'Budget certainty and P&L protection.',
-    // Extended 4 fields — close the 11-field gap, improve AI accuracy
-    ifrs_compliance:           state.ifrsCompliance,
+    // Extended fields — full wizard context for AI accuracy
+    ifrs_compliance:           state.ifrsCompliance || state.regulatoryRegimes?.includes('IFRS9'),
     instrument_preferences:    state.instrumentPreferences,
     rolling_hedge:             state.rollingHedge,
     hedge_ratio_target:        state.hedgeRatioTarget / 100, // slider 0–100 → ratio 0–1
@@ -202,6 +272,11 @@ export function buildCanonicalFromPageState(
 
   const regulatory_flags: string[] = [];
   if (state.ifrsCompliance) regulatory_flags.push('IFRS9', 'ASC815');
+  if (state.regulatoryRegimes?.length) {
+    for (const r of state.regulatoryRegimes) {
+      if (!regulatory_flags.includes(r)) regulatory_flags.push(r);
+    }
+  }
 
   return {
     schema_version: '1.0',
@@ -273,11 +348,11 @@ export function buildCanonicalFromPageState(
       hedge_ratio_target:     state.hedgeRatioTarget,
       rolling_hedge:          state.rollingHedge,
       rolling_tenor:          state.rollingTenor,
-      ifrs_compliance:        state.ifrsCompliance,
+      ifrs_compliance:        state.ifrsCompliance || state.regulatoryRegimes?.includes('IFRS9') || false,
       benchmark:              state.benchmark,
       instrument_preferences: state.instrumentPreferences,
-      exclude_ndf:            !state.instrumentPreferences.includes('NDFs'),
-      exclude_fwd:            !state.instrumentPreferences.includes('Forwards'),
+      exclude_ndf:            !state.instrumentPreferences.includes('NDFs') && !state.instrumentPreferences.includes('NDF'),
+      exclude_fwd:            !state.instrumentPreferences.includes('Forwards') && !state.instrumentPreferences.includes('Forward'),
     },
 
     execution_config: preset.policy,
