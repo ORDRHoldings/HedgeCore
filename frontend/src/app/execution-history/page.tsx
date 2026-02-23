@@ -581,6 +581,26 @@ export default function ExecutionHistoryPage() {
       <div style={{ flex: 1, overflow: "auto" }}>
         <div style={{ maxWidth: 1440, margin: "0 auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
 
+          {/* ------ Data Pipeline Log banner ------ */}
+          <div style={{
+            background:   `color-mix(in srgb, ${S.amber} 6%, transparent)`,
+            border:       `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
+            borderLeft:   `3px solid ${S.amber}`,
+            borderRadius: 2,
+            padding:      "8px 16px",
+            display:      "flex",
+            alignItems:   "center",
+            gap:          12,
+            flexWrap:     "wrap",
+          }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, flexShrink: 0 }}>
+              DATA PIPELINE LOG
+            </span>
+            <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
+              This page shows all data import connector runs (CSV, ERP, database). Trade execution records are maintained in your prime broker / IBKR account statements.
+            </span>
+          </div>
+
           {/* ------ KPI Summary Row ------ */}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <KPICard label="Total Runs"    value={loading ? "…" : String(kpiTotal)}    badge="ALL TIME" badgeColor={S.tertiary} />

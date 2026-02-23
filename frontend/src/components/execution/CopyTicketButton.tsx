@@ -10,6 +10,8 @@ interface Props {
   runId: string;
   /** Scenario base currency (e.g. 'JPY', 'EUR', 'MXN'). REQUIRED — no MXN default. */
   baseCcy: string;
+  /** Optional callback fired after successful copy */
+  onCopied?: () => void;
 }
 
 function getBrokerSide(actionMxn: number): string {
@@ -91,13 +93,14 @@ function formatTicket(bucket: BucketResult, mapping: InstrumentMapping, runId: s
   return lines.join('\n');
 }
 
-export default function CopyTicketButton({ bucket, mapping, runId, baseCcy }: Props) {
+export default function CopyTicketButton({ bucket, mapping, runId, baseCcy, onCopied }: Props) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     const text = formatTicket(bucket, mapping, runId, baseCcy);
     await navigator.clipboard.writeText(text);
     setCopied(true);
+    onCopied?.();
     setTimeout(() => setCopied(false), 2000);
   };
 

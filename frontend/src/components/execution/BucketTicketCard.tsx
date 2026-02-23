@@ -14,6 +14,8 @@ interface Props {
   runId: string;
   /** Scenario base currency (e.g. 'JPY', 'EUR', 'MXN'). REQUIRED — no MXN default. */
   baseCcy: string;
+  /** Optional callback fired when the trade ticket is copied */
+  onTicketCopied?: (bucketId: string) => void;
 }
 
 /** BUY or SELL from the sign of the action notional.
@@ -37,13 +39,35 @@ function fmtNotional(amount: number, ccy: string): string {
   return `${Math.abs(amount).toLocaleString('en', { maximumFractionDigits: 0 })} ${ccy}`;
 }
 
-export default function BucketTicketCard({ bucket, mapping, worstCase, runId, baseCcy }: Props) {
+/** Compute the last business day of a given bucket month (YYYY-MM) */
+function lastBusinessDay(bucket: string): string {
+  const [y, m] = bucket.split('-').map(Number);
+  if (!y || !m) return '—';
+  // Start from the last calendar day of the month (month + 1, day 0 = last day of month)
+  let d = new Date(y, m, 0);
+  // Step back if Saturday (6) or Sunday (0)
+  while (d.getDay() === 0 || d.getDay() === 6) {
+    d.setDate(d.getDate() - 1);
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+export default function BucketTicketCard({ bucket, mapping, worstCase, runId, baseCcy, onTicketCopied }: Props) {
   const isFutures = mapping.is_proxy;
   const hasAction = bucket.action_mxn !== 0 && !bucket.suppressed;
   const side = getBrokerSide(bucket.action_mxn);
   const contracts = mapping.suggested_contracts ?? 0;
 
-  // Simplified header action label: "SELL 3 contracts" or "BUY 1 JPY contract"
+  // Settlement date for this bucket
+  const settlementDate = lastBusinessDay(bucket.bucket);
+
+  // Per-ticket DV01
+  const bucketDV01 = Math.abs(bucket.action_usd) * 0.0001;
+
+  // Max loss under worst-case stress
+  const maxLossUsd = worstCase ? Math.abs(worstCase.hedge_benefit_usd) : null;
+
+  // Simplified header action label
   const headerAction = isFutures && hasAction
     ? `${side} ${contracts} ${contracts === 1 ? 'contract' : 'contracts'}`
     : hasAction
@@ -76,6 +100,10 @@ export default function BucketTicketCard({ bucket, mapping, worstCase, runId, ba
             {/* Instrument badge */}
             <span className="text-[9px] font-mono text-[var(--text-tertiary)] border border-[var(--border-soft)] px-1.5 py-0.5">
               {isFutures ? 'FUTURES' : 'NDF'}
+            </span>
+            {/* Settlement date chip */}
+            <span className="text-[9px] font-mono text-[var(--text-tertiary)] border border-[var(--border-soft)] px-1.5 py-0.5">
+              SETT {settlementDate}
             </span>
           </div>
           <span className="text-[10px] font-mono text-[var(--text-tertiary)] tracking-widest">
@@ -205,14 +233,86 @@ export default function BucketTicketCard({ bucket, mapping, worstCase, runId, ba
             </div>
           )}
 
+          {/* ── Settlement & Legal section ── */}
+          <div className="mt-3 pt-3 border-t border-[var(--border-soft)]">
+            <p className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+              Settlement &amp; Legal
+            </p>
+            <div className="space-y-1">
+              {[
+                { label: "Settlement Date", value: settlementDate, note: "Last business day of bucket month" },
+                { label: "Value Date",      value: "T+2 (assumed)",  note: "From execution date" },
+                { label: "ISDA Reference",  value: "2002 ISDA Master Agreement", note: "Schedule Ref. TBD" },
+                { label: "Confirmation",    value: "Electronic · DTCC Deriv/SERV", note: null },
+                { label: "Regulatory",      value: "EMIR Art. 11 / Dodd-Frank §731", note: null },
+              ].map(row => (
+                <div key={row.label} className="flex justify-between items-start gap-2">
+                  <span className="text-[var(--text-secondary)] shrink-0" style={{ fontSize: "0.75rem" }}>{row.label}</span>
+                  <div className="text-right">
+                    <span className="font-mono text-[var(--text-primary)]" style={{ fontSize: "0.75rem" }}>{row.value}</span>
+                    {row.note && (
+                      <span className="block text-[9px] font-mono text-[var(--text-tertiary)]">{row.note}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Risk Metrics section ── */}
+          <div className="mt-3 pt-3 border-t border-[var(--border-soft)]">
+            <p className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+              Risk Metrics
+            </p>
+            <div className="space-y-1">
+              {[
+                {
+                  label: "Initial Margin Est.",
+                  value: mapping.margin_estimate_usd != null
+                    ? fmtUSD(mapping.margin_estimate_usd)
+                    : "—",
+                  color: "var(--text-primary)",
+                },
+                {
+                  label: "DV01 (bucket)",
+                  value: `$${bucketDV01.toFixed(2)}`,
+                  color: "var(--accent-indigo,#818cf8)",
+                  note: "Δ P&L per 1 basis point",
+                },
+                {
+                  label: "Max Loss (stress σ)",
+                  value: maxLossUsd != null ? `$${maxLossUsd.toLocaleString('en', { maximumFractionDigits: 0 })}` : "—",
+                  color: maxLossUsd != null && maxLossUsd > 50000 ? "var(--accent-red,#B91C1C)" : "var(--text-primary)",
+                  note: "Worst-case hedge benefit",
+                },
+                {
+                  label: "Basis Risk",
+                  value: mapping.basis_risk_note ?? (isFutures ? "Proxy correlation risk" : "—"),
+                  color: isFutures ? "var(--accent-amber)" : "var(--status-pass,#4ade80)",
+                },
+              ].map(row => (
+                <div key={row.label} className="flex justify-between items-start gap-2">
+                  <span className="text-[var(--text-secondary)] shrink-0" style={{ fontSize: "0.75rem" }}>{row.label}</span>
+                  <div className="text-right">
+                    <span className="font-mono font-semibold" style={{ fontSize: "0.75rem", color: row.color }}>{row.value}</span>
+                    {'note' in row && row.note && (
+                      <span className="block text-[9px] font-mono text-[var(--text-tertiary)]">{row.note}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex gap-2 pt-2">
             <CopyTicketButton
               bucket={bucket}
               mapping={mapping}
               runId={runId}
               baseCcy={baseCcy}
+              onCopied={onTicketCopied ? () => onTicketCopied(bucket.bucket) : undefined}
             />
-            <IbkrHandoff mapping={mapping} bucket={bucket} baseCcy={baseCcy} />
+            <IbkrHandoff mapping={mapping} bucket={bucket} baseCcy={baseCcy} runId={runId} />
           </div>
         </div>
 
