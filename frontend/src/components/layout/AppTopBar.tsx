@@ -203,11 +203,12 @@ const NAV: NavSection[] = [
   },
   {
     label: "Position Desk", href: "/input", icon: Ic.table,
-    prefixes: ["/input", "/database-connection", "/erp-integration", "/accounting-connection"],
+    prefixes: ["/input", "/upload-csv", "/import-history", "/database-connection", "/erp-integration", "/accounting-connection"],
     header: "Exposure Management",
     items: [
       { label: "Manual Entry",         desc: "Inline form — add & edit FX positions",         href: "/input",                  icon: Ic.pen },
-      { label: "Upload CSV / XLSX",    desc: "Bulk import via structured spreadsheet",         href: "/input?tab=upload",       icon: Ic.upload,   badge: "BULK", badgeColor: S.amber },
+      { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit", href: "/upload-csv",             icon: Ic.upload,   badge: "BULK", badgeColor: S.amber },
+      { label: "Import History",       desc: "Audit log of all file & connector imports",      href: "/import-history",         icon: Ic.clock,    badge: "AUDIT", badgeColor: S.cyan },
       { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",             href: "/database-connection",    icon: Ic.db,       badge: "SQL",  badgeColor: S.cyan  },
       { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",  href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",  badgeColor: S.amber },
       { label: "Accounting Systems",   desc: "QuickBooks, Xero, Sage invoice import",          href: "/accounting-connection",  icon: Ic.reports },
