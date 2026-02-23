@@ -34,8 +34,6 @@ import {
 } from '../../lib/store/slices/positionSlice';
 import type { PositionRow } from '../../api/positionClient';
 import FileUploadLane from '../../components/input/FileUploadLane';
-import DatabaseConnectorLane from '../../components/input/DatabaseConnectorLane';
-import ConnectorPlaceholderLane from '../../components/input/ConnectorPlaceholderLane';
 import ImportHistoryPanel from '../../components/input/ImportHistoryPanel';
 
 import EmptyState from '../../components/ui/EmptyState';
@@ -67,15 +65,12 @@ const EMPTY_MARKET: MarketSnapshot = {
 const STEP_ORDER: StepKey[] = ['exposure', 'policy'];
 
 // ─── Ingestion Desk tabs ──────────────────────────────────────────────────
-type DeskTab = 'manual' | 'upload' | 'database' | 'erp' | 'accounting' | 'history';
+type DeskTab = 'manual' | 'upload' | 'history';
 
 const DESK_TABS: { key: DeskTab; label: string; subtitle: string }[] = [
-  { key: 'manual',      label: 'Manual Entry',      subtitle: 'Inline form + bulk' },
-  { key: 'upload',      label: 'Upload CSV / Excel', subtitle: 'File import' },
-  { key: 'database',    label: 'Connect Database',   subtitle: 'SQL pull' },
-  { key: 'erp',         label: 'ERP Integration',    subtitle: 'SAP · Oracle · MS Dynamics' },
-  { key: 'accounting',  label: 'Accounting System',  subtitle: 'Xero · QuickBooks · NetSuite' },
-  { key: 'history',     label: 'Import History',     subtitle: 'Audit trail' },
+  { key: 'manual',  label: 'Manual Entry',      subtitle: 'Inline form + bulk' },
+  { key: 'upload',  label: 'Upload CSV / Excel', subtitle: 'File import' },
+  { key: 'history', label: 'Import History',     subtitle: 'Audit trail' },
 ];
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
@@ -905,67 +900,6 @@ function InputPageInner() {
                 token={token ?? undefined}
                 onImportComplete={() => { if (token) dispatch(listPositionsThunk({ token })); }}
               />
-            </div>
-          )}
-
-          {/* ── Tab: Connect Database ── */}
-          {deskTab === 'database' && (
-            <div style={{ padding: '16px' }}>
-              <DatabaseConnectorLane />
-            </div>
-          )}
-
-          {/* ── Tab: ERP Integration ── */}
-          {deskTab === 'erp' && (
-            <div style={{ padding: '16px' }}>
-              <ConnectorPlaceholderLane
-                title="ERP integration — coming soon"
-                message="Pull exposure positions directly from SAP, Oracle EBS, or Microsoft Dynamics. One-click sync with field mapping configuration."
-              />
-              <div style={{ marginTop: 12, textAlign: 'center' }}>
-                <button
-                  onClick={() => router.push('/erp-integration')}
-                  style={{
-                    fontFamily: "'IBM Plex Mono', monospace",
-                    fontSize: '0.75rem', fontWeight: 600,
-                    letterSpacing: '0.04em',
-                    padding: '7px 18px',
-                    border: '1px solid var(--accent-cyan)',
-                    color: 'var(--accent-cyan)',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Open full ERP Integration →
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── Tab: Accounting System ── */}
-          {deskTab === 'accounting' && (
-            <div style={{ padding: '16px' }}>
-              <ConnectorPlaceholderLane
-                title="Accounting system connector — coming soon"
-                message="Connect to Xero, QuickBooks, or NetSuite to automatically import foreign currency invoices and payables as exposure positions."
-              />
-              <div style={{ marginTop: 12, textAlign: 'center' }}>
-                <button
-                  onClick={() => router.push('/accounting-connection')}
-                  style={{
-                    fontFamily: "'IBM Plex Mono', monospace",
-                    fontSize: '0.75rem', fontWeight: 600,
-                    letterSpacing: '0.04em',
-                    padding: '7px 18px',
-                    border: '1px solid var(--accent-cyan)',
-                    color: 'var(--accent-cyan)',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Open full Accounting Connection →
-                </button>
-              </div>
             </div>
           )}
 
