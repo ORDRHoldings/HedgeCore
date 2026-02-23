@@ -129,6 +129,11 @@ const positionSlice = createSlice({
       state.executedIds = [];
       state.ibkrRefs    = {};
     },
+    /** Demo-mode only: add a position directly to local state without an API call */
+    addLocalPosition(state, action: { payload: PositionRow }) {
+      state.positions.unshift(action.payload);
+      state.error = null;
+    },
     /** Frontend-only: mark a CONFIRMED position as executed (IBKR workflow) */
     markExecuted(state, action: { payload: { id: string; ibkr_ref?: string } }) {
       const { id, ibkr_ref } = action.payload;
@@ -197,5 +202,5 @@ const positionSlice = createSlice({
   },
 });
 
-export const { clearError, resetPositions, markExecuted } = positionSlice.actions;
+export const { clearError, resetPositions, markExecuted, addLocalPosition } = positionSlice.actions;
 export default positionSlice.reducer;
