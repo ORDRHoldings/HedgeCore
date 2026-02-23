@@ -9,6 +9,7 @@ import TabBar from '../../components/tabs/TabBar';
 import OverviewTab from '../../components/tabs/OverviewTab';
 import ExposureTab from '../../components/tabs/ExposureTab';
 import RiskAnalysisTab from '../../components/tabs/RiskAnalysisTab';
+import HedgeEffectivenessTab from '../../components/tabs/HedgeEffectivenessTab';
 import ExecutionTab from '../../components/tabs/ExecutionTab';
 import AuditTab from '../../components/tabs/AuditTab';
 import ReportsContainer from '../../components/reports/ReportsContainer';
@@ -23,11 +24,12 @@ const TOP_LEVEL_SECTIONS = [
 
 // ── Execution Desk: sub-tab navigation ───────────────────────────────────────
 const EXECUTION_TABS = [
-  { key: 'overview',  label: 'Committee Summary' },
-  { key: 'exposure',  label: 'Exposure & Buckets' },
-  { key: 'risk',      label: 'Scenario Analysis' },
-  { key: 'execution', label: 'Trade Tickets' },
-  { key: 'audit',     label: 'Audit Evidence' },
+  { key: 'overview',       label: 'Committee Summary' },
+  { key: 'exposure',       label: 'Exposure & Buckets' },
+  { key: 'risk',           label: 'Scenario Analysis' },
+  { key: 'effectiveness',  label: 'Hedge Effectiveness' },
+  { key: 'execution',      label: 'Trade Tickets' },
+  { key: 'audit',          label: 'Audit Evidence' },
 ];
 
 const VALID_EXECUTION_TABS = EXECUTION_TABS.map(t => t.key);
@@ -100,6 +102,13 @@ export default function ResultsPage() {
     (result.validation_report.errors?.length ?? 0) +
     (result.validation_report.warnings?.length ?? 0);
 
+  // Convenience aliases for props passed down to tabs
+  const policy   = lastInputs?.policy;
+  const market   = lastInputs?.market;
+  const asOf     = market?.as_of;
+  const spotRate = market?.spot_usdmxn;
+  const runId    = result.run_id;
+
   return (
     <div className="space-y-0">
       {/* ── TIER 1: Run Identity Header ─────────────────────────────────────── */}
@@ -134,7 +143,7 @@ export default function ResultsPage() {
               </div>
               <div className="flex items-center gap-3 text-[11px] font-mono text-[var(--text-tertiary)]">
                 <span>
-                  Run <span className="text-[var(--text-secondary)]">{result.run_id.slice(0, 12)}…</span>
+                  Run <span className="text-[var(--text-secondary)]">{runId.slice(0, 12)}…</span>
                 </span>
                 <span className="text-[var(--border-rim)]">·</span>
                 <span>{runLabel}</span>
@@ -142,6 +151,12 @@ export default function ResultsPage() {
                 <span>
                   Engine <span className="text-[var(--text-secondary)]">v{result.run_envelope.engine_version}</span>
                 </span>
+                {asOf && (
+                  <>
+                    <span className="text-[var(--border-rim)]">·</span>
+                    <span>As-Of <span className="text-[var(--text-secondary)]">{asOf}</span></span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -216,6 +231,11 @@ export default function ResultsPage() {
                 <OverviewTab
                   summary={result.hedge_plan.summary}
                   totals={result.scenario_results.totals}
+                  buckets={result.hedge_plan.buckets}
+                  policy={policy}
+                  runId={runId}
+                  asOf={asOf}
+                  spotRate={spotRate}
                 />
               </div>
             )}
@@ -225,8 +245,12 @@ export default function ResultsPage() {
                 <div className="cp-section-header mb-5">
                   <span className="cp-section-index">02</span>
                   <h3 className="cp-section-title">Exposure &amp; Buckets</h3>
+                  <span className="cp-badge">Confirmed / Forecast / Netted</span>
                 </div>
-                <ExposureTab hedgePlan={result.hedge_plan} />
+                <ExposureTab
+                  hedgePlan={result.hedge_plan}
+                  policy={policy}
+                />
               </div>
             )}
 
@@ -235,6 +259,7 @@ export default function ResultsPage() {
                 <div className="cp-section-header mb-5">
                   <span className="cp-section-index">03</span>
                   <h3 className="cp-section-title">Scenario Analysis</h3>
+                  <span className="cp-badge">VaR · CVaR · Heat Matrix</span>
                 </div>
                 <RiskAnalysisTab
                   scenarioResults={result.scenario_results}
@@ -243,17 +268,35 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {activeExecutionTab === 'execution' && (
+            {activeExecutionTab === 'effectiveness' && (
               <div>
                 <div className="cp-section-header mb-5">
                   <span className="cp-section-index">04</span>
+                  <h3 className="cp-section-title">Hedge Effectiveness</h3>
+                  <span className="cp-badge">IFRS 9 §6.4.1 · Dollar-Offset</span>
+                </div>
+                <HedgeEffectivenessTab
+                  scenarioResults={result.scenario_results}
+                  hedgePlan={result.hedge_plan}
+                  policy={policy}
+                  market={market}
+                  runId={runId}
+                  asOf={asOf}
+                />
+              </div>
+            )}
+
+            {activeExecutionTab === 'execution' && (
+              <div>
+                <div className="cp-section-header mb-5">
+                  <span className="cp-section-index">05</span>
                   <h3 className="cp-section-title">Trade Tickets</h3>
-                  <span className="cp-badge">Run {result.run_id.slice(0, 8)}…</span>
+                  <span className="cp-badge">Run {runId.slice(0, 8)}…</span>
                 </div>
                 <ExecutionTab
                   hedgePlan={result.hedge_plan}
                   scenarioResults={result.scenario_results}
-                  runId={result.run_id}
+                  runId={runId}
                   baseCcy={baseCcy}
                 />
               </div>
@@ -262,7 +305,7 @@ export default function ResultsPage() {
             {activeExecutionTab === 'audit' && (
               <div>
                 <div className="cp-section-header mb-5">
-                  <span className="cp-section-index">05</span>
+                  <span className="cp-section-index">06</span>
                   <h3 className="cp-section-title">Audit Evidence</h3>
                   <span className="cp-badge">Trace &amp; Attestation</span>
                 </div>
