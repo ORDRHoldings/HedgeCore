@@ -14,6 +14,7 @@
  *   R6  Risk narrative / interpretation
  */
 
+import type { CSSProperties } from 'react';
 import type { ScenarioResults, HedgePlanSummary } from '../../api/types';
 import { fmtUSD, fmtPct } from '../../utils/formatters';
 import ScenarioChart from '../results/ScenarioChart';
@@ -112,7 +113,7 @@ export default function RiskAnalysisTab({ scenarioResults, summary }: Props) {
   const heatMax = Math.max(...allBenefits, 0);
   const heatRange = heatMax - heatMin || 1;
 
-  function heatCellStyle(benefit: number | undefined): React.CSSProperties {
+  function heatCellStyle(benefit: number | undefined): CSSProperties {
     if (benefit === undefined) return { background: 'var(--bg-deep)', color: 'var(--text-tertiary)' };
     const norm = (benefit - heatMin) / heatRange;
     if (benefit >= 0) {
