@@ -409,10 +409,12 @@ function BuilderShell({
   template,
   onSave,
   runEnvelopeId,
+  ownerEmail,
 }: {
   template: ReportTemplate | null;
   onSave: (def: ReportDefinition) => void;
   runEnvelopeId?: string;
+  ownerEmail?: string;
 }) {
   const [step, setStep]               = useState<BuilderStep>(template ? "CONFIGURE" : "PRESET");
   const [name, setName]               = useState(template?.name ?? "");
@@ -433,9 +435,6 @@ function BuilderShell({
   const [aiError, setAiError]         = useState<string | null>(null);
   const [validationIssues, setIssues] = useState<ReportValidationIssue[]>([]);
   const [exportFormats, setFormats]   = useState<ExportFormat[]>([template?.default_export_format ?? "PDF"]);
-  const [showPreview, setPreview]     = useState(false);
-  const [showExport, setExport]       = useState(false);
-
   // Validate
   const validate = useCallback((): ReportValidationIssue[] => {
     const issues: ReportValidationIssue[] = [];
@@ -514,7 +513,7 @@ function BuilderShell({
       template_version: template?.version ?? 1,
       name:             name.trim(),
       description:      desc.trim(),
-      owner:            "current-user",
+      owner:            ownerEmail ?? "unknown",
       tenant_id:        "default",
       status:           "DRAFT",
       sections,
@@ -1095,7 +1094,7 @@ function SettingsPanel() {
 // ROOT PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 export default function ReportStudioPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const router = useRouter();
   const { result } = useHedge();
 
@@ -1220,6 +1219,7 @@ export default function ReportStudioPage() {
             template={selectedTemplate}
             onSave={handleSaveReport}
             runEnvelopeId={result?.run_id}
+            ownerEmail={user?.email}
           />
         )}
         {view === "SAVED" && (
