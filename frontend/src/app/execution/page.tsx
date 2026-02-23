@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useHedge } from '../../lib/hedgeContext';
@@ -24,10 +24,15 @@ function ExecutionHubContent() {
   const bucketParam = params.get('bucket') ?? null;
   const tabParam = (params.get('tab') as ExecTab | null) ?? 'bridge';
 
-  const [activeTab, setActiveTab] = useState<ExecTab>(tabParam);
+  const [activeTab,    setActiveTab]    = useState<ExecTab>(tabParam);
+  const [authReady,    setAuthReady]    = useState(false);
 
   const { result, lastInputs } = useHedge();
   const { sandboxResult } = useSelector((s: RootState) => s.pipeline);
+
+  const handleAuthStatusChange = useCallback((ready: boolean) => {
+    setAuthReady(ready);
+  }, []);
 
   const baseCcy = lastInputs
     ? deriveCurrencyContext(lastInputs.trades, lastInputs.market).baseCcy
@@ -107,6 +112,40 @@ function ExecutionHubContent() {
       </div>
 
       <div style={{ flex: 1 }} />
+
+      {/* Auth status chip */}
+      {result && (
+        <span style={{
+          fontFamily:   S.fontMono,
+          fontSize:     '0.625rem',
+          fontWeight:   700,
+          letterSpacing:'0.08em',
+          color:        authReady ? 'var(--status-pass,#4ade80)' : 'var(--accent-amber)',
+          background:   authReady ? 'color-mix(in srgb, var(--status-pass,#4ade80) 10%, transparent)' : 'color-mix(in srgb, var(--accent-amber) 10%, transparent)',
+          border:       `1px solid ${authReady ? 'color-mix(in srgb, var(--status-pass,#4ade80) 25%, transparent)' : 'color-mix(in srgb, var(--accent-amber) 25%, transparent)'}`,
+          padding:      '2px 8px',
+          borderRadius: 2,
+        }}>
+          {authReady ? 'READY' : 'PENDING AUTH'}
+        </span>
+      )}
+
+      {/* Execution History link */}
+      <Link
+        href="/execution-history"
+        style={{
+          fontFamily:   S.fontMono,
+          fontSize:     '0.625rem',
+          color:        'var(--text-tertiary)',
+          textDecoration:'none',
+          padding:      '2px 8px',
+          border:       '1px solid var(--border-rim)',
+          borderRadius: 2,
+          transition:   'color 0.12s',
+        }}
+      >
+        Execution Log →
+      </Link>
 
       {/* Run ID chip */}
       {result && (
@@ -253,6 +292,9 @@ function ExecutionHubContent() {
           runId={result.run_id}
           focusBucket={bucketParam ?? undefined}
           baseCcy={baseCcy}
+          validationReport={result.validation_report}
+          policy={lastInputs?.policy}
+          onAuthStatusChange={handleAuthStatusChange}
         />
       </div>
     </div>
