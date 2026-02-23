@@ -225,6 +225,17 @@ const NAV: NavSection[] = [
     ],
   },
   {
+    label: "Execution", href: "/execution", icon: Ic.execution,
+    prefixes: ["/execution", "/sandbox", "/currency-fx", "/execution-history"],
+    header: "Trade Execution",
+    items: [
+      { label: "Execution Pipeline", desc: "Stage, freeze, and authorize hedge trades",     href: "/execution",         icon: Ic.lightning },
+      { label: "Sandbox",            desc: "What-if calculator & backtest engine",          href: "/sandbox",           icon: Ic.terminal, badge: "DEV",  badgeColor: S.amber },
+      { label: "FX Rates",           desc: "Live spot rates, forward curves, vol surface",  href: "/currency-fx",       icon: Ic.bar_chart },
+      { label: "Execution History",  desc: "Confirmed & executed trade log",                href: "/execution-history", icon: Ic.clock },
+    ],
+  },
+  {
     label: "Reports", href: "/reports", icon: Ic.reports,
     prefixes: ["/reports", "/results"],
     header: "Report Studio",
@@ -234,17 +245,6 @@ const NAV: NavSection[] = [
       { label: "AI Report Builder",    desc: "Goal-driven AI composer — governed, no hallucinated data",        href: "/reports?view=builder",   icon: Ic.ai,         badge: "AI",      badgeColor: S.amber },
       { label: "Saved Reports",        desc: "Your saved, versioned, and scheduled reports",                    href: "/reports?view=saved",     icon: Ic.shield,     badge: "SAVED",   badgeColor: S.cyan  },
       { label: "Hedge Plan Report",    desc: "Full hedge schedule with rationale — results view",               href: "/results",                icon: Ic.bar_chart },
-    ],
-  },
-  {
-    label: "Execution", href: "/execution", icon: Ic.execution,
-    prefixes: ["/execution", "/sandbox", "/currency-fx", "/execution-history"],
-    header: "Trade Execution",
-    items: [
-      { label: "Execution Pipeline", desc: "Stage, freeze, and authorize hedge trades",     href: "/execution",         icon: Ic.lightning },
-      { label: "Sandbox",            desc: "What-if calculator & backtest engine",          href: "/sandbox",           icon: Ic.terminal, badge: "DEV",  badgeColor: S.amber },
-      { label: "FX Rates",           desc: "Live spot rates, forward curves, vol surface",  href: "/currency-fx",       icon: Ic.bar_chart },
-      { label: "Execution History",  desc: "Confirmed & executed trade log",                href: "/execution-history", icon: Ic.clock },
     ],
   },
   {
