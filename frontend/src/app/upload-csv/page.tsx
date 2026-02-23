@@ -24,6 +24,18 @@ export default function UploadCsvPage() {
   const [runResult, setRunResult] = useState<ConnectorRunDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
+  const [clockStr, setClockStr] = useState("");
+
+  // Clock — client-side only to avoid SSR hydration mismatch
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      setClockStr(now.toISOString().split("T")[0] + " " + now.toTimeString().split(" ")[0]);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -338,7 +350,7 @@ export default function UploadCsvPage() {
                 marginBottom: "4px",
               }}
             >
-              {new Date().toISOString().split("T")[0]} {new Date().toTimeString().split(" ")[0]}
+              {clockStr}
             </div>
             <div
               style={{
