@@ -207,7 +207,7 @@ const NAV: NavSection[] = [
     header: "Exposure Management",
     items: [
       { label: "Manual Entry",         desc: "Inline form — add & edit FX positions",         href: "/input",                  icon: Ic.pen },
-      { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit", href: "/upload-csv",             icon: Ic.upload,   badge: "BULK", badgeColor: S.amber },
+      { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit", href: "/input?tab=upload",       icon: Ic.upload,   badge: "BULK", badgeColor: S.amber },
       { label: "Import History",       desc: "Audit log of all file & connector imports",      href: "/import-history",         icon: Ic.clock,    badge: "AUDIT", badgeColor: S.cyan },
       { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",             href: "/database-connection",    icon: Ic.db,       badge: "SQL",  badgeColor: S.cyan  },
       { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",  href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",  badgeColor: S.amber },
@@ -219,7 +219,7 @@ const NAV: NavSection[] = [
     prefixes: ["/policies", "/ai-policy-wizard", "/saved-policies"],
     header: "Hedge Policy",
     items: [
-      { label: "Policy Library",    desc: "Browse 33 institutional preset policies",        href: "/policies",          icon: Ic.book },
+      { label: "Policy Library",    desc: "Browse 60 institutional preset policies",        href: "/policies",          icon: Ic.book },
       { label: "AI Policy Wizard",  desc: "Generate tailored policy from your risk profile",href: "/ai-policy-wizard",  icon: Ic.ai,     badge: "AI",    badgeColor: S.amber },
       { label: "My Saved Policies", desc: "User-scoped & branch-published policies",        href: "/saved-policies",    icon: Ic.shield, badge: "SAVED", badgeColor: S.cyan  },
     ],
