@@ -113,6 +113,84 @@ const RISK_EVENTS = [
     confidence: 99,
     alertTriggered: false,
   },
+  {
+    id: "EVT-2026-0208",
+    ts: "2026-02-08 12:00 UTC",
+    source: "Banco Central do Brasil",
+    region: "BRA",
+    category: "CENTRAL BANK",
+    headline: "Brazil BCB holds Selic at 12.75%; fiscal expansion concerns prompt hawkish hold",
+    rawSignal: "hawkish_hold",
+    impact: "BRL_PRESSURE",
+    severity: 64,
+    confidence: 89,
+    alertTriggered: false,
+  },
+  {
+    id: "EVT-2026-0207",
+    ts: "2026-02-07 07:30 UTC",
+    source: "NBS China Data Release",
+    region: "CHN",
+    category: "MACRO DATA",
+    headline: "China NBS PMI falls to 48.7 in January, below 50 for third consecutive month; property drag continues",
+    rawSignal: "pmi_contraction",
+    impact: "EM_CONTAGION_RISK",
+    severity: 71,
+    confidence: 93,
+    alertTriggered: true,
+  },
+  {
+    id: "EVT-2026-0206",
+    ts: "2026-02-06 10:15 UTC",
+    source: "ECB Governing Council",
+    region: "EUR",
+    category: "CENTRAL BANK",
+    headline: "ECB signals pivot readiness; Lagarde notes inflation approaching 2% target with growth still soft",
+    rawSignal: "dovish_pivot_signal",
+    impact: "EUR_STRENGTHENING",
+    severity: 42,
+    confidence: 86,
+    alertTriggered: false,
+  },
+  {
+    id: "EVT-2026-0205",
+    ts: "2026-02-05 15:00 UTC",
+    source: "UN Security Council",
+    region: "MENA",
+    category: "GEOPOLITICAL",
+    headline: "Red Sea shipping disruptions intensify; Houthi attacks prompt carrier rerouting and oil premium widening",
+    rawSignal: "geopolitical_escalation",
+    impact: "OIL_SUPPLY_RISK",
+    severity: 82,
+    confidence: 94,
+    alertTriggered: true,
+  },
+  {
+    id: "EVT-2026-0204",
+    ts: "2026-02-04 09:45 UTC",
+    source: "RBI Monetary Policy Committee",
+    region: "IND",
+    category: "CENTRAL BANK",
+    headline: "India RBI holds repo rate at 6.50%; growth trajectory stable, inflation within target band",
+    rawSignal: "neutral_hold",
+    impact: "INR_STABLE",
+    severity: 32,
+    confidence: 91,
+    alertTriggered: false,
+  },
+  {
+    id: "EVT-2026-0203",
+    ts: "2026-02-03 11:30 UTC",
+    source: "Lula Administration / FAZENDA",
+    region: "BRA",
+    category: "FISCAL",
+    headline: "Brazil announces BRL 85bn supplementary budget; market concerns on fiscal framework credibility",
+    rawSignal: "fiscal_expansion",
+    impact: "SOVEREIGN_SPREAD_WIDENING",
+    severity: 67,
+    confidence: 88,
+    alertTriggered: false,
+  },
 ];
 
 const RISK_SCORES = [
@@ -124,13 +202,17 @@ const RISK_SCORES = [
   { dimension: "Mexico Fiscal Stability",           score: 58, delta: +6,  regime: "MODERATE",  driver: "Deficit 4.1%, energy transfers" },
   { dimension: "Counterparty Credit Environment",   score: 48, delta: +2,  regime: "MODERATE",  driver: "IG spreads widening modestly" },
   { dimension: "Global Liquidity Conditions",       score: 71, delta: -2,  regime: "ELEVATED",  driver: "QT pace, Fed balance sheet" },
+  { dimension: "Brazil Political Risk",             score: 61, delta: +3,  regime: "MODERATE",  driver: "Lula fiscal expansion pace" },
+  { dimension: "China Growth Slowdown",             score: 58, delta: -2,  regime: "MODERATE",  driver: "PMI contraction, property sector" },
+  { dimension: "ECB Policy Divergence",             score: 45, delta: +1,  regime: "MODERATE",  driver: "Inflation falling, growth soft" },
+  { dimension: "Middle East Supply Risk",           score: 76, delta: +9,  regime: "HIGH",      driver: "Red Sea disruption, oil premium" },
 ];
 
 const MACRO_SCENARIOS = [
   {
     id: "MSC-A",
     name: "Soft Landing + MXN Stabilisation",
-    probability: 28,
+    probability: 22,
     usdmxnPath: "17.80–18.50",
     hedgeImplication: "Reduce confirmed hedge ratio to 65%. Opportunistic option layer.",
     riskScore: 35,
@@ -139,7 +221,7 @@ const MACRO_SCENARIOS = [
   {
     id: "MSC-B",
     name: "Fed Higher-for-Longer + MXN Drift",
-    probability: 42,
+    probability: 38,
     usdmxnPath: "19.50–21.00",
     hedgeImplication: "Maintain 80% NDF program. Add 3M tenor extension to ladder.",
     riskScore: 68,
@@ -148,7 +230,7 @@ const MACRO_SCENARIOS = [
   {
     id: "MSC-C",
     name: "Mexico Fiscal Shock + EM Sell-Off",
-    probability: 19,
+    probability: 15,
     usdmxnPath: "21.00–24.50",
     hedgeImplication: "Increase to 90% confirmed, 70% forecast. Board escalation required.",
     riskScore: 88,
@@ -157,30 +239,73 @@ const MACRO_SCENARIOS = [
   {
     id: "MSC-D",
     name: "Global Risk-Off / USD Rally",
-    probability: 11,
+    probability: 10,
     usdmxnPath: "22.00–26.00",
     hedgeImplication: "Maximum coverage 95%. Activate contingency swap lines.",
     riskScore: 96,
     horizon: "Q2 2026",
   },
+  {
+    id: "MSC-E",
+    name: "ECB Pivot + EUR Rally",
+    probability: 8,
+    usdmxnPath: "17.50–18.20",
+    hedgeImplication: "Reduce coverage opportunistically.",
+    riskScore: 30,
+    horizon: "Q3 2026",
+  },
+  {
+    id: "MSC-F",
+    name: "Middle East Escalation + Oil Spike",
+    probability: 5,
+    usdmxnPath: "20.00–22.50",
+    hedgeImplication: "85% confirmed + energy hedges activated.",
+    riskScore: 91,
+    horizon: "Q2 2026",
+  },
+  {
+    id: "MSC-G",
+    name: "China Hard Landing + EM Contagion",
+    probability: 2,
+    usdmxnPath: "23.00–27.00",
+    hedgeImplication: "95% max coverage · board escalation.",
+    riskScore: 95,
+    horizon: "Q3–Q4 2026",
+  },
 ];
 
 const ALERT_RULES = [
-  { id: "ALR-001", trigger: "MXN score ≥ 75",          action: "Notify Treasury + Risk; auto-schedule hedge review",   status: "ARMED",     lastFired: "—" },
-  { id: "ALR-002", trigger: "Sovereign CDS > 180bps",   action: "Escalate to CFO; freeze new FX exposure approvals",    status: "ARMED",     lastFired: "2026-01-22" },
-  { id: "ALR-003", trigger: "FOMC event + score Δ > 10",action: "Re-run hedge ladder with updated rate curve",          status: "FIRED",     lastFired: "2026-02-11" },
-  { id: "ALR-004", trigger: "Sanctions event (OFAC)",   action: "Counterparty eligibility re-check; halt new trades",   status: "FIRED",     lastFired: "2026-02-13" },
-  { id: "ALR-005", trigger: "Scenario C probability > 25%", action: "Board risk memo; activate contingency protocol", status: "ARMED",     lastFired: "—" },
+  { id: "ALR-001", trigger: "MXN score ≥ 75",               action: "Notify Treasury + Risk; auto-schedule hedge review",              status: "ARMED", lastFired: "—" },
+  { id: "ALR-002", trigger: "Sovereign CDS > 180bps",        action: "Escalate to CFO; freeze new FX exposure approvals",               status: "ARMED", lastFired: "2026-01-22" },
+  { id: "ALR-003", trigger: "FOMC event + score Δ > 10",     action: "Re-run hedge ladder with updated rate curve",                     status: "FIRED", lastFired: "2026-02-11" },
+  { id: "ALR-004", trigger: "Sanctions event (OFAC)",        action: "Counterparty eligibility re-check; halt new trades",              status: "FIRED", lastFired: "2026-02-13" },
+  { id: "ALR-005", trigger: "Scenario C probability > 25%",  action: "Board risk memo; activate contingency protocol",                  status: "ARMED", lastFired: "—" },
+  { id: "ALR-006", trigger: "Middle East score ≥ 80",        action: "Oil hedge review; check energy counterparty exposure",            status: "ARMED", lastFired: "—" },
+  { id: "ALR-007", trigger: "China PMI < 49.0",              action: "EM contagion scan; review Asia-linked receivables",               status: "ARMED", lastFired: "—" },
+  { id: "ALR-008", trigger: "Composite score ≥ 75",          action: "Emergency board meeting; full portfolio stress test",             status: "ARMED", lastFired: "—" },
+];
+
+// ─── Risk Heatmap data ─────────────────────────────────────────────────────────
+
+const HEATMAP_REGIONS = [
+  { name: "North America",           score: 72, regime: "ELEVATED", driver: "Fed hawkish + MXN pressures" },
+  { name: "Western Europe",          score: 48, regime: "MODERATE", driver: "ECB pivot · energy resilience" },
+  { name: "Eastern Europe / Russia", score: 87, regime: "HIGH",     driver: "Ukraine conflict · NATO tensions" },
+  { name: "Middle East",             score: 79, regime: "HIGH",     driver: "Regional conflict escalation · oil disruption risk" },
+  { name: "East Asia",               score: 55, regime: "MODERATE", driver: "Taiwan Strait tension moderate · China slowdown" },
+  { name: "Latin America",           score: 68, regime: "ELEVATED", driver: "Mexico fiscal · Brazil political noise" },
+  { name: "Sub-Saharan Africa",      score: 43, regime: "MODERATE", driver: "Debt distress contained · FX illiquidity" },
+  { name: "South & SE Asia",         score: 51, regime: "MODERATE", driver: "India stable · Vietnam EM flows" },
 ];
 
 // ─── primitives ───────────────────────────────────────────────────────────────
 
 function RegimeChip({ regime }: { regime: string }) {
   const map: Record<string, { color: string; border: string }> = {
-    HIGH:     { color: S.fail,    border: S.fail },
-    ELEVATED: { color: S.amber,   border: S.amber },
-    MODERATE: { color: S.secondary, border: S.rim },
-    LOW:      { color: S.pass,    border: S.pass },
+    HIGH:     { color: S.fail,       border: S.fail },
+    ELEVATED: { color: S.amber,      border: S.amber },
+    MODERATE: { color: S.secondary,  border: S.rim },
+    LOW:      { color: S.pass,       border: S.pass },
   };
   const { color, border } = map[regime] ?? map.MODERATE;
   return (
@@ -206,7 +331,7 @@ function ScoreBar({ score, max = 100 }: { score: number; max?: number }) {
 
 function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setTab: (t: string) => void }) {
   const renderTs = useRenderTs();
-  const tabs = ["Event Feed", "Risk Scores", "Macro Scenarios", "Alert Rules", "My Exposure Risk"];
+  const tabs = ["Event Feed", "Risk Scores", "Macro Scenarios", "Alert Rules", "Risk Heatmap", "My Exposure Risk"];
   return (
     <>
       <header style={{
@@ -235,15 +360,15 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.fail}`, color: S.fail, background: `color-mix(in srgb, var(--accent-red,#B91C1C) 8%, transparent)` }}>
-            ● 4 ACTIVE ALERTS
+            ● 5 ACTIVE ALERTS
           </span>
           {DEMO_MODE ? (
             <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.rim}`, color: S.tertiary }}>
               LIVE FEED DEMO
             </span>
           ) : (
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.amber}`, color: S.amber }}>
-              FEED DISCONNECTED
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.cyan}`, color: S.cyan }}>
+              STATIC DATA · ENRICHED
             </span>
           )}
           <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{renderTs}</span>
@@ -267,7 +392,7 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
         ))}
         <div style={{ flex: 1 }} />
         <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, padding: "1px 6px", border: `1px solid ${S.rim}` }}>
-          {RISK_EVENTS.length} events · {MACRO_SCENARIOS.length} scenarios · engine v1.0
+          {RISK_EVENTS.length} events · {MACRO_SCENARIOS.length} scenarios · {ALERT_RULES.length} rules · engine v1.0
         </span>
       </div>
     </>
@@ -291,16 +416,16 @@ export default function Polisophic() {
   const branchCode = user?.branch?.code?.toUpperCase() ?? "NYC";
   const exposureInfo = BRANCH_CURRENCY[branchCode] ?? BRANCH_CURRENCY["NYC"];
   const relevantScore = RISK_SCORES.find(r => r.dimension === exposureInfo.regimeKey) ?? RISK_SCORES[0];
-  const currencyFilterMap: Record<string, string[]> = {
-    USD: ["USA", "USA"],
-    MXN: ["MEX"],
-    GBP: [],
-  };
   const relevantEvents = RISK_EVENTS.filter(ev =>
     exposureInfo.currency === "USD" ? ev.region === "USA" :
     exposureInfo.currency === "MXN" ? ev.region === "MEX" :
     ev.category === "CENTRAL BANK"
   );
+
+  // heatmap layout: 4 cols × 2 rows
+  const COL_W = 192;
+  const ROW_H = 130;
+  const GAP = 8;
 
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
@@ -309,16 +434,7 @@ export default function Polisophic() {
       <div style={{ flex: 1, overflow: "auto" }}>
 
         {/* ══════════ EVENT FEED ══════════ */}
-        {tab === "Event Feed" && !DEMO_MODE && (
-          <div style={{ padding: "60px 28px" }}>
-            <EmptyState
-              type="empty"
-              title="No risk events"
-              message="Connect a risk intelligence feed to receive structured geopolitical and macro event data."
-            />
-          </div>
-        )}
-        {tab === "Event Feed" && DEMO_MODE && (
+        {tab === "Event Feed" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", height: "100%" }}>
 
             {/* Main feed */}
@@ -326,8 +442,8 @@ export default function Polisophic() {
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
                 <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Structured Event Feed</span>
                 <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RISK_EVENTS.length} events · last 7 days</span>
-                <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.amber }}>
-                  ● AUTO-INGESTED · PENDING LIVE INTEGRATION
+                <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: DEMO_MODE ? S.amber : S.cyan }}>
+                  ● {DEMO_MODE ? "STATIC DEMO · AUTO-INGESTED" : "STATIC DATA · ENRICHED MODEL"}
                 </span>
               </div>
               <div style={{ height: 1, background: S.rim, marginBottom: 0 }} />
@@ -406,7 +522,7 @@ export default function Polisophic() {
                 CURRENT REGIME SIGNALS
               </div>
               {[
-                { label: "USD/MXN Regime",       value: "BEARISH MXN",  color: S.fail },
+                { label: "USD/MXN Regime",       value: "BEARISH MXN",   color: S.fail },
                 { label: "Rate Path (Fed)",       value: "HIGHER LONGER", color: S.amber },
                 { label: "Rate Path (Banxico)",   value: "DOVISH",        color: S.amber },
                 { label: "EM Risk Sentiment",     value: "RISK-OFF BIAS", color: S.amber },
@@ -427,10 +543,12 @@ export default function Polisophic() {
                   SOURCE CATEGORIES
                 </div>
                 {[
-                  { label: "Central Bank", count: 2 },
-                  { label: "Fiscal / Sovereign", count: 2 },
-                  { label: "Sanctions / Regulatory", count: 1 },
-                  { label: "Macro Data Release", count: 1 },
+                  { label: "Central Bank",           count: 4 },
+                  { label: "Fiscal / Sovereign",      count: 3 },
+                  { label: "Sanctions / Regulatory",  count: 1 },
+                  { label: "Macro Data Release",      count: 2 },
+                  { label: "Geopolitical",            count: 1 },
+                  { label: "Credit Rating",           count: 1 },
                 ].map(({ label, count }) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${S.soft}` }}>
                     <span style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.secondary }}>{label}</span>
@@ -440,34 +558,25 @@ export default function Polisophic() {
               </div>
 
               <div style={{ marginTop: "auto", paddingTop: 14, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
-                Live ingestion pending · Static demo
+                {DEMO_MODE ? "Live ingestion pending · Static demo" : "Static data · Enriched model"}
               </div>
             </aside>
           </div>
         )}
 
         {/* ══════════ RISK SCORES ══════════ */}
-        {tab === "Risk Scores" && !DEMO_MODE && (
-          <div style={{ padding: "60px 28px" }}>
-            <EmptyState
-              type="empty"
-              title="No risk scores"
-              message="Connect a risk intelligence feed to see multi-dimensional risk score data."
-            />
-          </div>
-        )}
-        {tab === "Risk Scores" && DEMO_MODE && (
+        {tab === "Risk Scores" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 240px", height: "100%" }}>
             <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, overflow: "auto" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
                 <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Risk Score Matrix</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>8 dimensions · as of {renderTs}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RISK_SCORES.length} dimensions · as of {renderTs}</span>
               </div>
               <div style={{ height: 1, background: S.rim, marginBottom: 0 }} />
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
-                    {["Risk Dimension", "Score", "Δ 7D", "Regime", "Primary Driver"].map((h, i) => (
+                    {["Risk Dimension", "Score", "Δ 7D", "Regime", "Primary Driver"].map((h) => (
                       <th key={h} style={{
                         padding: "6px 12px 6px 0", fontFamily: S.fontMono, fontSize: "0.6875rem",
                         letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
@@ -477,7 +586,7 @@ export default function Polisophic() {
                   </tr>
                 </thead>
                 <tbody>
-                  {RISK_SCORES.sort((a, b) => b.score - a.score).map((row, i) => (
+                  {RISK_SCORES.slice().sort((a, b) => b.score - a.score).map((row) => (
                     <tr key={row.dimension} style={{ borderBottom: `1px solid ${S.soft}` }}>
                       <td style={{ padding: "10px 12px 10px 0", fontFamily: S.fontUI, fontSize: "0.6875rem", fontWeight: 500, color: S.primary }}>
                         {row.dimension}
@@ -503,9 +612,9 @@ export default function Polisophic() {
               <div style={{ marginTop: 16, padding: "12px 16px", background: S.bgSub, border: `1px solid ${S.rim}`, display: "flex", gap: 24 }}>
                 {[
                   { label: "COMPOSITE RISK SCORE", value: Math.round(RISK_SCORES.reduce((s, r) => s + r.score, 0) / RISK_SCORES.length), unit: "/ 100" },
-                  { label: "HIGH REGIME DIMS", value: RISK_SCORES.filter(r => r.regime === "HIGH").length, unit: "dims" },
-                  { label: "ELEVATED DIMS",    value: RISK_SCORES.filter(r => r.regime === "ELEVATED").length, unit: "dims" },
-                  { label: "AVG 7D CHANGE",    value: `+${(RISK_SCORES.reduce((s, r) => s + r.delta, 0) / RISK_SCORES.length).toFixed(1)}`, unit: "pts" },
+                  { label: "HIGH REGIME DIMS",    value: RISK_SCORES.filter(r => r.regime === "HIGH").length, unit: "dims" },
+                  { label: "ELEVATED DIMS",       value: RISK_SCORES.filter(r => r.regime === "ELEVATED").length, unit: "dims" },
+                  { label: "AVG 7D CHANGE",       value: `+${(RISK_SCORES.reduce((s, r) => s + r.delta, 0) / RISK_SCORES.length).toFixed(1)}`, unit: "pts" },
                 ].map(({ label, value, unit }) => (
                   <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em" }}>{label}</span>
@@ -527,7 +636,7 @@ export default function Polisophic() {
                 { condition: "Score 55–79", implication: "Standard program · Quarterly review", color: S.amber },
                 { condition: "Score < 55", implication: "Conservative program · Annual review", color: S.pass },
               ].map(({ condition, implication, color }, i) => (
-                <div key={condition} style={{ padding: "10px 10px", background: S.bgPanel, border: `1px solid ${S.rim}`, borderLeft: `3px solid ${color}`, marginBottom: 8 }}>
+                <div key={i} style={{ padding: "10px 10px", background: S.bgPanel, border: `1px solid ${S.rim}`, borderLeft: `3px solid ${color}`, marginBottom: 8 }}>
                   <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color, letterSpacing: "0.05em", marginBottom: 3 }}>{condition}</div>
                   <div style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.4 }}>{implication}</div>
                 </div>
@@ -540,20 +649,11 @@ export default function Polisophic() {
         )}
 
         {/* ══════════ MACRO SCENARIOS ══════════ */}
-        {tab === "Macro Scenarios" && !DEMO_MODE && (
-          <div style={{ padding: "60px 28px" }}>
-            <EmptyState
-              type="empty"
-              title="No macro scenarios"
-              message="Connect a risk intelligence feed to see macro scenario projections and probability trees."
-            />
-          </div>
-        )}
-        {tab === "Macro Scenarios" && DEMO_MODE && (
+        {tab === "Macro Scenarios" && (
           <div style={{ padding: "20px 28px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Macro Scenario Tree</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>4 scenarios · probability sums to 100%</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{MACRO_SCENARIOS.length} scenarios · probability sums to 100%</span>
             </div>
             <div style={{ height: 1, background: S.rim, marginBottom: 20 }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -613,7 +713,7 @@ export default function Polisophic() {
                   );
                 })}
               </div>
-              <div style={{ display: "flex", gap: 16, marginTop: 6 }}>
+              <div style={{ display: "flex", gap: 16, marginTop: 6, flexWrap: "wrap" as const }}>
                 {MACRO_SCENARIOS.map(sc => (
                   <div key={sc.id} style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{sc.id}: {sc.name.split(" ").slice(0, 2).join(" ")}…</div>
                 ))}
@@ -623,16 +723,7 @@ export default function Polisophic() {
         )}
 
         {/* ══════════ ALERT RULES ══════════ */}
-        {tab === "Alert Rules" && !DEMO_MODE && (
-          <div style={{ padding: "60px 28px" }}>
-            <EmptyState
-              type="empty"
-              title="No alert rules"
-              message="Configure a risk intelligence feed to define and manage alert rules."
-            />
-          </div>
-        )}
-        {tab === "Alert Rules" && DEMO_MODE && (
+        {tab === "Alert Rules" && (
           <div style={{ padding: "20px 28px", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Alert Rule Registry</span>
@@ -652,7 +743,7 @@ export default function Polisophic() {
                 </tr>
               </thead>
               <tbody>
-                {ALERT_RULES.map((rule, i) => {
+                {ALERT_RULES.map((rule) => {
                   const statusColor = rule.status === "FIRED" ? S.fail : S.pass;
                   return (
                     <tr key={rule.id} style={{ borderBottom: `1px solid ${S.soft}` }}>
@@ -692,6 +783,226 @@ export default function Polisophic() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════ RISK HEATMAP ══════════ */}
+        {tab === "Risk Heatmap" && (
+          <div style={{ padding: "20px 28px", overflow: "auto" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
+              <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Region Risk Heatmap</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>8 regions · as of {renderTs}</span>
+              <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: DEMO_MODE ? S.amber : S.cyan }}>
+                ● {DEMO_MODE ? "STATIC DEMO" : "LIVE DATA"}
+              </span>
+            </div>
+            <div style={{ height: 1, background: S.rim, marginBottom: 16 }} />
+
+            {/* SVG Grid Heatmap */}
+            <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "16px", marginBottom: 16 }}>
+              <svg
+                viewBox={`0 0 ${4 * COL_W + 3 * GAP} ${2 * ROW_H + GAP}`}
+                width="100%"
+                style={{ display: "block" }}
+              >
+                {HEATMAP_REGIONS.map((region, idx) => {
+                  const col = idx % 4;
+                  const row = Math.floor(idx / 4);
+                  const x = col * (COL_W + GAP);
+                  const y = row * (ROW_H + GAP);
+                  const fillColor = region.score >= 75
+                    ? "rgba(185,28,28,0.35)"
+                    : region.score >= 55
+                    ? "rgba(217,119,6,0.25)"
+                    : "rgba(74,222,128,0.15)";
+                  const strokeColor = region.score >= 75
+                    ? "#B91C1C"
+                    : region.score >= 55
+                    ? "#D97706"
+                    : "#4ade80";
+                  const scoreTextColor = region.score >= 75
+                    ? "#ef4444"
+                    : region.score >= 55
+                    ? "#f59e0b"
+                    : "#4ade80";
+                  return (
+                    <g key={region.name}>
+                      <rect
+                        x={x}
+                        y={y}
+                        width={COL_W}
+                        height={ROW_H}
+                        fill={fillColor}
+                        stroke={strokeColor}
+                        strokeWidth="1"
+                        rx="2"
+                      />
+                      {/* Region name */}
+                      <text
+                        x={x + 10}
+                        y={y + 22}
+                        fontFamily="'IBM Plex Sans',sans-serif"
+                        fontSize="11"
+                        fontWeight="700"
+                        fill="#e2e8f0"
+                        style={{ letterSpacing: "0.02em" }}
+                      >
+                        {region.name}
+                      </text>
+                      {/* Score badge background */}
+                      <rect
+                        x={x + COL_W - 44}
+                        y={y + 10}
+                        width={34}
+                        height={18}
+                        fill={fillColor}
+                        stroke={strokeColor}
+                        strokeWidth="0.75"
+                        rx="1"
+                      />
+                      {/* Score value */}
+                      <text
+                        x={x + COL_W - 27}
+                        y={y + 23}
+                        fontFamily="'IBM Plex Mono',monospace"
+                        fontSize="11"
+                        fontWeight="700"
+                        fill={scoreTextColor}
+                        textAnchor="middle"
+                      >
+                        {region.score}
+                      </text>
+                      {/* Regime label */}
+                      <text
+                        x={x + 10}
+                        y={y + 44}
+                        fontFamily="'IBM Plex Mono',monospace"
+                        fontSize="9"
+                        fontWeight="600"
+                        fill={strokeColor}
+                        style={{ letterSpacing: "0.06em" }}
+                      >
+                        {region.regime}
+                      </text>
+                      {/* Divider line */}
+                      <line
+                        x1={x + 10}
+                        y1={y + 52}
+                        x2={x + COL_W - 10}
+                        y2={y + 52}
+                        stroke={strokeColor}
+                        strokeWidth="0.5"
+                        opacity="0.4"
+                      />
+                      {/* Score bar track */}
+                      <rect
+                        x={x + 10}
+                        y={y + 62}
+                        width={COL_W - 20}
+                        height={4}
+                        fill="rgba(255,255,255,0.08)"
+                        rx="1"
+                      />
+                      {/* Score bar fill */}
+                      <rect
+                        x={x + 10}
+                        y={y + 62}
+                        width={(region.score / 100) * (COL_W - 20)}
+                        height={4}
+                        fill={strokeColor}
+                        rx="1"
+                        opacity="0.85"
+                      />
+                      {/* Driver text (truncated) */}
+                      <text
+                        x={x + 10}
+                        y={y + 84}
+                        fontFamily="'IBM Plex Sans',sans-serif"
+                        fontSize="8.5"
+                        fill="#94a3b8"
+                        style={{ letterSpacing: "0.01em" }}
+                      >
+                        {region.driver.length > 32 ? region.driver.slice(0, 32) + "…" : region.driver}
+                      </text>
+                      {/* Second line of driver if needed */}
+                      {region.driver.length > 32 && (
+                        <text
+                          x={x + 10}
+                          y={y + 96}
+                          fontFamily="'IBM Plex Sans',sans-serif"
+                          fontSize="8.5"
+                          fill="#94a3b8"
+                        >
+                          {region.driver.slice(32, 60) + (region.driver.length > 60 ? "…" : "")}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: "flex", gap: 16, marginBottom: 16, padding: "10px 14px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em" }}>LEGEND:</span>
+              {[
+                { label: "HIGH ≥ 75", fillColor: "rgba(185,28,28,0.35)", stroke: "#B91C1C", text: "#ef4444" },
+                { label: "ELEVATED 55–74", fillColor: "rgba(217,119,6,0.25)", stroke: "#D97706", text: "#f59e0b" },
+                { label: "MODERATE < 55", fillColor: "rgba(74,222,128,0.15)", stroke: "#4ade80", text: "#4ade80" },
+              ].map(({ label, fillColor, stroke, text }) => (
+                <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{
+                    width: 14, height: 14,
+                    background: fillColor,
+                    border: `1px solid ${stroke}`,
+                    borderRadius: 2,
+                    flexShrink: 0,
+                  }} />
+                  <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: text, letterSpacing: "0.04em" }}>{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Tabular breakdown */}
+            <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}` }}>
+              <div style={{ padding: "10px 16px", borderBottom: `1px solid ${S.rim}` }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>REGIONAL RISK BREAKDOWN</span>
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    {["Region", "Score", "Regime", "Primary Driver", "Trend"].map(h => (
+                      <th key={h} style={{
+                        padding: "6px 12px 6px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem",
+                        letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
+                        textAlign: "left", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
+                        background: S.bgSub,
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {HEATMAP_REGIONS.slice().sort((a, b) => b.score - a.score).map((region, i, arr) => {
+                    const scoreColor = region.score >= 75 ? S.fail : region.score >= 55 ? S.amber : S.pass;
+                    const trendIcon = region.score >= 75 ? "↑ HIGH" : region.score >= 55 ? "→ WATCH" : "↓ STABLE";
+                    const trendColor = region.score >= 75 ? S.fail : region.score >= 55 ? S.amber : S.pass;
+                    return (
+                      <tr key={region.name} style={{ borderBottom: i < arr.length - 1 ? `1px solid ${S.soft}` : "none" }}>
+                        <td style={{ padding: "10px 12px", fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 600, color: S.primary }}>{region.name}</td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <ScoreBar score={region.score} />
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <RegimeChip regime={region.regime} />
+                        </td>
+                        <td style={{ padding: "10px 12px", fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary, lineHeight: 1.4 }}>{region.driver}</td>
+                        <td style={{ padding: "10px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: trendColor, fontWeight: 600 }}>{trendIcon}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -803,7 +1114,7 @@ export default function Polisophic() {
         <span style={{ color: S.rim }}>·</span>
         <span>Political & Macro Risk Intelligence Engine</span>
         <span style={{ color: S.rim }}>·</span>
-        <span>{DEMO_MODE ? "Static Demo" : "Feed disconnected"} · {renderTs}</span>
+        <span>{DEMO_MODE ? "Static Demo" : "Static data · Enriched model"} · {renderTs}</span>
       </footer>
     </div>
   );
