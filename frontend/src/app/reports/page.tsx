@@ -17,8 +17,8 @@
  * - RBAC-aware (admin/editor/viewer)
  */
 
-import { useState, useCallback, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useMemo, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
 import { REPORT_PRESETS, REPORT_CATEGORIES } from "../../constants/reportPresets";
 import { useHedge } from "../../lib/hedgeContext";
@@ -1093,15 +1093,48 @@ function SettingsPanel() {
 // ══════════════════════════════════════════════════════════════════════════════
 // ROOT PAGE
 // ══════════════════════════════════════════════════════════════════════════════
-export default function ReportStudioPage() {
+// Map URL ?view= param to MainView enum
+const VIEW_PARAM_MAP: Record<string, MainView> = {
+  home:     "HOME",
+  library:  "LIBRARY",
+  builder:  "BUILDER",
+  saved:    "SAVED",
+  settings: "SETTINGS",
+};
+const VIEW_TO_PARAM: Record<MainView, string> = {
+  HOME:     "home",
+  LIBRARY:  "library",
+  BUILDER:  "builder",
+  SAVED:    "saved",
+  SETTINGS: "settings",
+};
+
+function ReportStudioInner() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { result } = useHedge();
 
-  const [view, setView]                       = useState<MainView>("HOME");
+  // Initialise view from ?view= URL param (default HOME)
+  const initialView: MainView = VIEW_PARAM_MAP[searchParams.get("view") ?? ""] ?? "HOME";
+  const [view, setViewState]                  = useState<MainView>(initialView);
   const [selectedTemplate, setTemplate]       = useState<ReportTemplate | null>(null);
   const [savedReports, setSaved]              = useState<ReportDefinition[]>([]);
   const [renderTs, setRenderTs]               = useState("");
+
+  // Sync view → URL param (shallow replace so back-button works naturally)
+  const setView = useCallback((v: MainView) => {
+    setViewState(v);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", VIEW_TO_PARAM[v]);
+    router.replace(`/reports?${params.toString()}`);
+  }, [router, searchParams]);
+
+  // Sync inbound URL changes → view state (e.g. browser back/forward)
+  useEffect(() => {
+    const paramView = VIEW_PARAM_MAP[searchParams.get("view") ?? ""] ?? "HOME";
+    setViewState(paramView);
+  }, [searchParams]);
 
   useEffect(() => { setRenderTs(new Date().toISOString().replace("T"," ").slice(0,19) + " UTC"); }, []);
   useEffect(() => { if (!authLoading && !isAuthenticated) router.replace("/auth/login"); }, [authLoading, isAuthenticated, router]);
@@ -1240,5 +1273,18 @@ export default function ReportStudioPage() {
         </span>
       </div>
     </div>
+  );
+}
+
+// Suspense boundary required by Next.js App Router for useSearchParams()
+export default function ReportStudioPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ background: "#FAFAFA", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 11, color: "#9CA3AF", letterSpacing: "0.1em" }}>LOADING…</span>
+      </div>
+    }>
+      <ReportStudioInner />
+    </Suspense>
   );
 }
