@@ -166,6 +166,20 @@ const Ic: Record<string, React.ReactNode> = {
       <polyline points="9 18 15 12 9 6"/>
     </svg>
   ),
+  settings: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
+  plug: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6L6 18"/><path d="M7 17H4a2 2 0 0 1-2-2v-4l3-3"/>
+      <path d="M17 7h3a2 2 0 0 1 2 2v4l-3 3"/>
+      <line x1="8" y1="2" x2="8" y2="5"/><line x1="16" y1="2" x2="16" y2="5"/>
+      <line x1="8" y1="19" x2="8" y2="22"/><line x1="16" y1="19" x2="16" y2="22"/>
+    </svg>
+  ),
 };
 
 // ── Nav data types ─────────────────────────────────────────────────────────────
@@ -203,11 +217,12 @@ const NAV: NavSection[] = [
   },
   {
     label: "Position Desk", href: "/input", icon: Ic.table,
-    prefixes: ["/input", "/upload-csv", "/import-history", "/database-connection", "/erp-integration", "/accounting-connection"],
+    prefixes: ["/input", "/upload-csv", "/import-history", "/database-connection", "/erp-integration", "/accounting-connection", "/connectors"],
     header: "Exposure Management",
     items: [
       { label: "Manual Entry",         desc: "Inline form — add & edit FX positions",         href: "/input",                  icon: Ic.pen },
       { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit", href: "/input?tab=upload",       icon: Ic.upload,   badge: "BULK", badgeColor: S.amber },
+      { label: "Connectors Hub",       desc: "Unified data pipeline status — all connectors",  href: "/connectors",             icon: Ic.plug,     badge: "HUB",  badgeColor: S.cyan  },
       { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",             href: "/database-connection",    icon: Ic.db,       badge: "SQL",  badgeColor: S.cyan  },
       { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",  href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",  badgeColor: S.amber },
       { label: "Accounting Systems",   desc: "QuickBooks, Xero, Sage invoice import",          href: "/accounting-connection",  icon: Ic.reports },
@@ -265,6 +280,18 @@ const NAV: NavSection[] = [
       { label: "Documentation",    desc: "User guide, API reference, release notes",        href: "/help",        icon: Ic.book },
       { label: "FAQ",              desc: "Frequently asked questions & troubleshooting",     href: "/help",        icon: Ic.question },
       { label: "Contact Support",  desc: "Open a ticket or reach the ORDR team",            href: "/help",        icon: Ic.user },
+    ],
+  },
+  {
+    label: "Settings", href: "/settings", icon: Ic.settings,
+    prefixes: ["/settings"],
+    header: "Configuration",
+    items: [
+      { label: "General",          desc: "Organisation name, currency, timezone, branding",        href: "/settings",                icon: Ic.user },
+      { label: "Policy Limits",    desc: "Hedge ratios, trade size limits, governance controls",   href: "/settings#policy_limits",  icon: Ic.shield,   badge: "RISK",  badgeColor: S.amber },
+      { label: "Execution",        desc: "Default product, stress sigma, friction thresholds",     href: "/settings#execution",      icon: Ic.lightning, badge: "EXEC",  badgeColor: S.cyan  },
+      { label: "API & Keys",       desc: "Alpha Vantage, backend URL, IBKR TWS connectivity",     href: "/settings#api_keys",       icon: Ic.key,      badge: "KEYS",  badgeColor: S.red   },
+      { label: "Notifications",    desc: "Alert triggers, email recipients, webhook endpoints",    href: "/settings#notifications",  icon: Ic.clock },
     ],
   },
 ];
