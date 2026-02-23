@@ -9,7 +9,7 @@
  * All market data fetched live from /api/market-autofill.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
@@ -161,28 +161,25 @@ export default function CurrencyFxPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { lastInputs }                      = useHedge();
 
-  // ── Build dynamic pair list from positions ──────────────────────────────────
-  const positionPairs: PairDef[] = (() => {
+  // ── Build dynamic pair list from positions (memoized to stable reference) ──
+  const positionPairs = useMemo<PairDef[]>(() => {
     if (!lastInputs?.trades?.length) return [];
     const ctx = deriveCurrencyContext(lastInputs.trades, lastInputs.market);
-    // Build a pair for each distinct currency found in positions
     const seen = new Set<string>();
-    const pairs: PairDef[] = [];
+    const result: PairDef[] = [];
     for (const ccy of ctx.allCurrencies) {
       if (!seen.has(ccy) && ccy !== 'USD') {
         seen.add(ccy);
-        pairs.push(buildPairDef(ccy, true));
+        result.push(buildPairDef(ccy, true));
       }
     }
-    return pairs;
-  })();
+    return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastInputs]);
 
-  // Initial pairs: position pairs first, then fill with defaults up to 6
-  const initialPairs: PairDef[] = positionPairs.length > 0
-    ? positionPairs
-    : DEFAULT_PAIRS;
-
-  const [pairs,         setPairs]         = useState<PairDef[]>(initialPairs);
+  const [pairs,         setPairs]         = useState<PairDef[]>(() =>
+    positionPairs.length > 0 ? positionPairs : DEFAULT_PAIRS
+  );
   const [activePairIdx, setActivePairIdx] = useState(0);
   const [marketData,    setMarketData]    = useState<MarketData | null>(null);
   const [loading,       setLoading]       = useState(false);
@@ -190,6 +187,8 @@ export default function CurrencyFxPage() {
   const [renderTs,      setRenderTs]      = useState("");
   const [showAddPair,   setShowAddPair]   = useState(false);
   const addPairRef                        = useRef<HTMLDivElement>(null);
+  // Track whether we've done the initial pairs injection so we only do it once
+  const didInitPairs                      = useRef(false);
 
   // Hydration-safe timestamp
   useEffect(() => {
@@ -203,14 +202,22 @@ export default function CurrencyFxPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Update pairs when position context changes (new plan loaded)
+  // When position pairs become available (plan loaded), merge them into the
+  // current pair list (prepend any not already present). Only runs once per
+  // unique positionPairs reference so it never fires on unrelated re-renders.
   useEffect(() => {
-    if (positionPairs.length > 0) {
-      setPairs(positionPairs);
-      setActivePairIdx(0);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastInputs]);
+    if (positionPairs.length === 0) return;
+    if (didInitPairs.current) return;
+    didInitPairs.current = true;
+    setPairs(prev => {
+      // Keep manually added pairs; prepend position pairs that aren't present
+      const existingCodes = new Set(prev.map(p => p.apiCurrency));
+      const newOnes = positionPairs.filter(p => !existingCodes.has(p.apiCurrency));
+      if (newOnes.length === 0) return prev; // nothing to add
+      return [...newOnes, ...prev];
+    });
+    setActivePairIdx(0);
+  }, [positionPairs]);
 
   // Close add-pair dropdown on outside click
   useEffect(() => {
@@ -271,20 +278,24 @@ export default function CurrencyFxPage() {
   }, [activePairIdx, pairs, authLoading, isAuthenticated, fetchMarket]);
 
   // ── Add a new pair from CME list ───────────────────────────────────────────
-  function handleAddPair(ccy: string) {
-    const alreadyAdded = pairs.some(p => p.apiCurrency === ccy);
-    if (alreadyAdded) {
-      // Just navigate to that pair
-      const idx = pairs.findIndex(p => p.apiCurrency === ccy);
-      setActivePairIdx(idx);
-    } else {
+  const handleAddPair = useCallback((ccy: string) => {
+    // Mark as initialized so position-pair injection never fires after a manual add
+    didInitPairs.current = true;
+    setPairs(prev => {
+      const alreadyAdded = prev.some(p => p.apiCurrency === ccy);
+      if (alreadyAdded) {
+        // Switch to the existing pair; don't mutate
+        const idx = prev.findIndex(p => p.apiCurrency === ccy);
+        setActivePairIdx(idx);
+        return prev;
+      }
       const newPair = buildPairDef(ccy, false);
-      const nextPairs = [...pairs, newPair];
-      setPairs(nextPairs);
+      const nextPairs = [...prev, newPair];
       setActivePairIdx(nextPairs.length - 1);
-    }
+      return nextPairs;
+    });
     setShowAddPair(false);
-  }
+  }, []);
 
   // ── Derived values ──────────────────────────────────────────────────────────
   const selectedPair = pairs[activePairIdx] ?? pairs[0];
