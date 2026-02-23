@@ -127,5 +127,76 @@ export async function suggestPolicyAI(
   return (await res.json()) as AIPolicyResult;
 }
 
+// ---------------------------------------------------------------------------
+// Update an existing company template (PATCH)
+// ---------------------------------------------------------------------------
+
+export interface UpdateTemplatePayload {
+  name?: string;
+  short_name?: string;
+  description?: string;
+  risk_posture?: "CONSERVATIVE" | "MODERATE" | "AGGRESSIVE";
+  category?: "CORPORATE" | "FINANCIAL" | "SOVEREIGN" | "SECTOR";
+  config?: PolicyConfig;
+}
+
+export async function updatePolicyTemplate(
+  templateId: string,
+  payload: UpdateTemplatePayload,
+  token?: string,
+): Promise<PolicyTemplate> {
+  const { data } = await axios.patch(
+    `${BASE}/v1/policies/templates/${templateId}`,
+    payload,
+    { headers: authHeaders(token) },
+  );
+  return data as PolicyTemplate;
+}
+
+// ---------------------------------------------------------------------------
+// Delete a company template (only non-system templates)
+// ---------------------------------------------------------------------------
+
+export async function deletePolicyTemplate(
+  templateId: string,
+  token?: string,
+): Promise<void> {
+  await axios.delete(`${BASE}/v1/policies/templates/${templateId}`, {
+    headers: authHeaders(token),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Deactivate the currently active policy (POST to /policies/deactivate)
+// ---------------------------------------------------------------------------
+
+export async function deactivatePolicy(token?: string): Promise<void> {
+  await axios.post(
+    `${BASE}/v1/policies/deactivate`,
+    {},
+    { headers: authHeaders(token) },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Duplicate a template (creates a new company-specific copy)
+// Uses createPolicyTemplate with a "(Copy)" name suffix
+// ---------------------------------------------------------------------------
+
+export async function duplicatePolicyTemplate(
+  source: PolicyTemplate,
+  token?: string,
+): Promise<PolicyTemplate> {
+  const payload: CreateTemplatePayload = {
+    name: `${source.name} (Copy)`,
+    short_name: `${source.short_name}-COPY`.slice(0, 20).toUpperCase(),
+    description: source.description ?? undefined,
+    risk_posture: source.risk_posture,
+    category: source.category,
+    config: source.config,
+  };
+  return createPolicyTemplate(payload, token);
+}
+
 // Re-export the PolicyPreset type for consumers that import from policyClient
 export type { PolicyPreset };
