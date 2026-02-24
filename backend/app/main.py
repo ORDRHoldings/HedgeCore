@@ -680,6 +680,9 @@ async def _ensure_tables():
         "CREATE INDEX IF NOT EXISTS ix_calc_runs_tenant ON calculation_runs(company_id, created_at)",
         "CREATE INDEX IF NOT EXISTS ix_calc_runs_hash ON calculation_runs(run_hash)",
         "CREATE INDEX IF NOT EXISTS ix_calc_runs_positions ON calculation_runs USING gin(position_ids)",
+        # Sprint 1.0: policy version pinning (ADD IF NOT EXISTS — safe migration)
+        "ALTER TABLE calculation_runs ADD COLUMN IF NOT EXISTS policy_revision_id VARCHAR(64)",
+        "CREATE INDEX IF NOT EXISTS ix_calc_runs_policy_rev ON calculation_runs(policy_revision_id)",
 
         # ── Phase 0: Audit event ledger (append-only, tamper-evident, WORM) ──
         """CREATE TABLE IF NOT EXISTS audit_events (
