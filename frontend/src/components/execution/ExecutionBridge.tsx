@@ -6,6 +6,7 @@ import { mapBucketToInstrument } from '../../utils/symbolMapper';
 import { getTradingViewSymbol } from '../../utils/currencySymbolMap';
 import BucketTicketCard from './BucketTicketCard';
 import TradingViewEmbed from './TradingViewEmbed';
+import ExecutionSubmitter from './ExecutionSubmitter';
 
 interface Props {
   hedgePlan: HedgePlan;
@@ -67,13 +68,20 @@ export default function ExecutionBridge({
   policy,
   onAuthStatusChange,
 }: Props) {
-  const [instrumentType, setInstrumentType] = useState<'NDF' | 'FUTURES'>('NDF');
-  const [activeChartIdx, setActiveChartIdx] = useState(0);
-  const [stressSigma,    setStressSigma]    = useState(0.10);
-  const [prefightOpen,   setPrefightOpen]   = useState(true);
-  const [logOpen,        setLogOpen]        = useState(false);
-  const [execLog,        setExecLog]        = useState<string[]>([]);
+  const [instrumentType,  setInstrumentType]  = useState<'NDF' | 'FUTURES'>('NDF');
+  const [activeChartIdx,  setActiveChartIdx]  = useState(0);
+  const [stressSigma,     setStressSigma]     = useState(0.10);
+  const [prefightOpen,    setPrefightOpen]    = useState(true);
+  const [logOpen,         setLogOpen]         = useState(false);
+  const [execLog,         setExecLog]         = useState<string[]>([]);
+  const [showSubmitter,   setShowSubmitter]   = useState(false);
   const focusRef = useRef<HTMLDivElement>(null);
+
+  // ── Read settings from localStorage for submitter ─────────────────────────
+  const settingsRaw = typeof window !== 'undefined' ? localStorage.getItem('ordr_settings') : null;
+  const settings = settingsRaw ? (() => { try { return JSON.parse(settingsRaw); } catch { return {}; } })() : {};
+  const fxDeskEmail    = settings?.execution?.fx_desk_email   as string | undefined;
+  const ibkrAccountId  = settings?.execution?.ibkr_account_id as string | undefined;
 
   // ── Append to session log ──────────────────────────────────────────────────
   const appendLog = useCallback((msg: string) => {
@@ -658,6 +666,51 @@ export default function ExecutionBridge({
               </span>{' '}
               (below min trade threshold): {suppressedBuckets.map(b => b.bucket).join(', ')}
             </p>
+          </div>
+        )}
+      </div>
+
+      {/* ══ Order Submission Tracker ══ */}
+      <div style={{ border: `1px solid ${S.rim}`, background: S.bgPanel, borderRadius: 2 }}>
+        <button
+          onClick={() => setShowSubmitter(prev => !prev)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 16px', background: 'transparent', border: 'none', cursor: 'pointer',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.06em', color: S.tertiary }}>
+              ED-00C
+            </span>
+            <span style={{ fontFamily: S.fontUI, fontSize: '0.875rem', fontWeight: 600, color: S.primary }}>
+              Order Submission & Tracking
+            </span>
+            <span style={{
+              fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
+              color: authStatus === 'READY' ? S.pass : S.amber,
+              border: `1px solid ${authStatus === 'READY' ? S.pass : S.amber}`,
+              padding: '1px 5px',
+            }}>
+              {authStatus === 'READY' ? 'AUTHORIZED' : 'PENDING AUTH'}
+            </span>
+          </div>
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary }}>
+            {showSubmitter ? '▲' : '▼'}
+          </span>
+        </button>
+        {showSubmitter && (
+          <div style={{ borderTop: `1px solid ${S.rim}`, padding: '0 0 8px 0' }}>
+            <ExecutionSubmitter
+              runId={runId}
+              buckets={activeBuckets}
+              mappings={activeBuckets.map(b =>
+                mapBucketToInstrument(b.bucket, instrumentType, b.action_mxn, b.forward_rate, baseCcy)
+              )}
+              authReady={authStatus === 'READY'}
+              fxDeskEmail={fxDeskEmail}
+              ibkrAccountId={ibkrAccountId}
+            />
           </div>
         )}
       </div>
