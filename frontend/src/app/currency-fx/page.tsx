@@ -18,6 +18,8 @@ import { deriveCurrencyContext } from "../../utils/currencyContext";
 import { getCurrencySpec, getTradingViewSymbol } from "../../utils/currencySymbolMap";
 import { FUTURES_CURRENCY_LIST } from "../../api/types";
 import TradingViewEmbed from "../../components/execution/TradingViewEmbed";
+import HelpPanel from "../../components/layout/HelpPanel";
+import { CURRENCY_FX_HELP } from "../../lib/helpContent";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
@@ -334,7 +336,7 @@ export default function CurrencyFxPage() {
   }
 
   return (
-    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI }}>
+    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, display: "flex", flexDirection: "column" }}>
 
       {/* ── Page header ── */}
       <div style={{
@@ -561,7 +563,9 @@ export default function CurrencyFxPage() {
         </div>
       )}
 
-      <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20, maxWidth: 1440, margin: "0 auto" }}>
+      {/* ── Main content + Help Panel ── */}
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20, flex: 1, overflowY: "auto" }}>
 
         {/* ── KPI cards ── */}
         {loading ? (
@@ -995,6 +999,10 @@ export default function CurrencyFxPage() {
           </Link>
         </div>
 
+      </div>
+
+        {/* ── Help Panel ── */}
+        <HelpPanel config={CURRENCY_FX_HELP} storageKey="currency-fx" />
       </div>
     </div>
   );

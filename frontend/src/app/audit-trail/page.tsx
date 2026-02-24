@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
+import HelpPanel from "../../components/layout/HelpPanel";
+import { AUDIT_TRAIL_HELP } from "../../lib/helpContent";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -475,9 +477,10 @@ export default function AuditTrailPage() {
         </span>
       </div>
 
-      {/* Content area */}
+      {/* Content area + Help Panel */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       <div style={{
-        flex: 1, maxWidth: 1440, width: "100%", margin: "0 auto",
+        flex: 1, overflowY: "auto",
         padding: "20px 24px 16px",
         display: "flex", flexDirection: "column", gap: 16,
       }}>
@@ -640,6 +643,9 @@ export default function AuditTrailPage() {
             ))
           )}
         </div>
+      </div>
+
+        <HelpPanel config={AUDIT_TRAIL_HELP} storageKey="audit-trail" />
       </div>
 
       {/* Footer (32px) */}
