@@ -32,6 +32,8 @@ import {
   type CommitteePackTraceEvent,
   type CommitteePackScenario,
 } from "../../api/runsClient";
+import HelpPanel from "../../components/layout/HelpPanel";
+import { COMMITTEE_PACK_HELP } from "../../lib/helpContent";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
@@ -904,20 +906,25 @@ function CommitteePackInner() {
 // ── Page wrapper with Suspense (required by useSearchParams) ───────────────────
 export default function CommitteePackPage() {
   return (
-    <Suspense fallback={
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "center",
-        height: "60vh", gap: 12,
-      }}>
-        <div style={{
-          fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-          fontSize: 11, color: "var(--text-secondary)",
-        }}>
-          Loading…
-        </div>
+    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        <Suspense fallback={
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            height: "60vh", gap: 12,
+          }}>
+            <div style={{
+              fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+              fontSize: 11, color: "var(--text-secondary)",
+            }}>
+              Loading…
+            </div>
+          </div>
+        }>
+          <CommitteePackInner />
+        </Suspense>
       </div>
-    }>
-      <CommitteePackInner />
-    </Suspense>
+      <HelpPanel config={COMMITTEE_PACK_HELP} storageKey="committee-pack" />
+    </div>
   );
 }

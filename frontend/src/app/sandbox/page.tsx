@@ -14,6 +14,9 @@ import type { CalculateRequest } from "../../api/types";
 import { DEMO_FIXTURES, DEFAULT_DEMO_MARKET, DEFAULT_DEMO_POLICY } from "../../constants/demoData";
 import type { DemoFixture } from "../../constants/demoData";
 
+import HelpPanel from "../../components/layout/HelpPanel";
+import { SANDBOX_HELP } from "../../lib/helpContent";
+
 // UI primitives
 import KpiTile from "../../components/ui/KpiTile";
 import XRayDrawer, { JsonViewer } from "../../components/ui/XRayDrawer";
@@ -1268,6 +1271,7 @@ function SandboxPageInner() {
           </div>
         </aside>
 
+        <HelpPanel config={SANDBOX_HELP} storageKey="sandbox" />
       </div>
 
       {/* X-Ray Drawer */}

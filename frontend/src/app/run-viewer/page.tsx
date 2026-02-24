@@ -20,6 +20,8 @@ import { useAuth } from "../../lib/authContext";
 import { fetchRunDetail } from "../../api/runsClient";
 import type { RunDetailResponse } from "../../api/runsClient";
 import type { TraceEvent } from "../../api/types";
+import HelpPanel from "../../components/layout/HelpPanel";
+import { RUN_VIEWER_HELP } from "../../lib/helpContent";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
@@ -813,21 +815,26 @@ function RunViewerContent() {
 
 export default function RunViewerPage() {
   return (
-    <Suspense
-      fallback={
-        <div style={{
-          padding:    "60px 24px",
-          textAlign:  "center",
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontSize:   "0.625rem",
-          color:      "var(--text-tertiary)",
-          letterSpacing: "0.08em",
-        }}>
-          LOADING RUN VIEWER…
-        </div>
-      }
-    >
-      <RunViewerContent />
-    </Suspense>
+    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        <Suspense
+          fallback={
+            <div style={{
+              padding:    "60px 24px",
+              textAlign:  "center",
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize:   "0.625rem",
+              color:      "var(--text-tertiary)",
+              letterSpacing: "0.08em",
+            }}>
+              LOADING RUN VIEWER…
+            </div>
+          }
+        >
+          <RunViewerContent />
+        </Suspense>
+      </div>
+      <HelpPanel config={RUN_VIEWER_HELP} storageKey="run-viewer" />
+    </div>
   );
 }
