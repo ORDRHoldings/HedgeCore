@@ -1489,6 +1489,51 @@ function StepG1({
 // MAIN PAGE COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Per-step validation ────────────────────────────────────────────────────
+function validateStep(idx: number, s: WizardState): string | null {
+  switch (idx) {
+    case 0: // A1 — Intent
+      if (!s.primaryObjective.trim()) return 'Select a primary hedge objective to continue.';
+      return null;
+    case 1: // A2 — Portfolio Scope
+      if (!s.companyType.trim()) return 'Select a company type to continue.';
+      if (!s.primaryCurrency.trim()) return 'Select a primary currency to continue.';
+      return null;
+    case 2: // A3 — Time Horizon
+      if (!s.hedgeExperience.trim()) return "Select your team's hedging experience level to continue.";
+      if (!s.averageTenor.trim()) return 'Select an average hedge tenor to continue.';
+      return null;
+    case 3: // B1 — Exposure Classification
+      if (!s.cashFlowVisibility.trim()) return 'Select cash flow visibility horizon to continue.';
+      if (!s.seasonalPatterns.trim()) return 'Select a seasonal pattern to continue.';
+      if (!s.paymentFrequency.trim()) return 'Select payment frequency to continue.';
+      return null;
+    case 4: // B2 — Netting Rules (optional phase — no hard block)
+      return null;
+    case 5: // C1 — Instrument Eligibility
+      if (!Object.values(s.instrAllowed).some(Boolean)) return 'Enable at least one instrument to continue.';
+      return null;
+    case 6: // C2 — Tenor Ladder (optional)
+      return null;
+    case 7: // D1 — Cost & Risk Budget
+      if (!s.maxAcceptableLoss.trim()) return 'Select a maximum acceptable loss threshold to continue.';
+      return null;
+    case 8: // D2 — Concentration Limits (optional)
+      return null;
+    case 9: // E1 — Stress Pack
+      if (!s.standardStressPack) return 'Select a stress testing pack to continue.';
+      if (!s.drawdownTolerance.trim()) return 'Select a drawdown tolerance to continue.';
+      return null;
+    case 10: // E2 — Custom Scenarios (optional)
+      return null;
+    case 11: // F1 — Governance Review
+      // Warn but don't block — governance is advisory
+      return null;
+    default:
+      return null;
+  }
+}
+
 export default function AIPolicyWizardPage() {
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
@@ -1496,6 +1541,7 @@ export default function AIPolicyWizardPage() {
   const [stepIdx, setStepIdx] = useState(0);
   const [completed, setCompleted] = useState<Set<number>>(new Set());
   const [state, setState] = useState<WizardState>(INITIAL_STATE);
+  const [stepError, setStepError] = useState<string | null>(null);
 
   const [aiResult, setAiResult]     = useState<AIPolicyResult | null>(null);
   const [aiLoading, setAiLoading]   = useState(false);
@@ -1514,41 +1560,60 @@ export default function AIPolicyWizardPage() {
 
   const patchState = useCallback((patch: Partial<WizardState>) => {
     setState(prev => ({ ...prev, ...patch }));
+    setStepError(null); // clear step error on any field change
   }, []);
 
   useEffect(() => { if (!isAuthenticated) router.push('/auth/login'); }, [isAuthenticated, router]);
+
+  // Clear step error when navigating between steps
+  useEffect(() => { setStepError(null); }, [stepIdx]);
+
+  // Redirect to policies after successful save (2s delay so user sees the confirmation)
+  useEffect(() => {
+    if (!saved) return;
+    const t = setTimeout(() => router.push('/policies'), 2000);
+    return () => clearTimeout(t);
+  }, [saved, router]);
+
+  // Warn if company context is missing
+  const companyIdMissing = isAuthenticated && !user?.company?.id;
 
   const IS_LAST = stepIdx === TOTAL_STEPS - 1;
 
   // ── Navigate forward / back ───────────────────────────────────────────────
 
   const goNext = useCallback(async () => {
-    if (stepIdx < TOTAL_STEPS - 1) {
-      // Penultimate step (F1) → G1: trigger AI
-      const nextStep = stepIdx + 1;
-      setCompleted(prev => new Set(prev).add(stepIdx));
-      setStepIdx(nextStep);
-      if (nextStep === TOTAL_STEPS - 1) {
-        // Phase G — trigger AI
-        setAiLoading(true);
-        setAiError('');
-        setAiResult(null);
-        setSelectedRecId(null);
-        setSaved(false);
-        setSaveError('');
-        try {
-          const qa = mapWizardStateToQA(state);
-          const result = await suggestPolicyAI(qa);
-          setAiResult(result);
-          if (result.recommendations[0]) {
-            setPolicyName(result.recommendations[0].preset.name);
-            setPolicyTag(result.recommendations[0].preset.shortName.toLowerCase());
-          }
-        } catch (e) {
-          setAiError(`AI analysis failed. ${String(e)}`);
-        } finally {
-          setAiLoading(false);
+    if (stepIdx >= TOTAL_STEPS - 1) return;
+
+    // Hard validation gate
+    const err = validateStep(stepIdx, state);
+    if (err) { setStepError(err); return; }
+    setStepError(null);
+
+    const nextStep = stepIdx + 1;
+    setCompleted(prev => new Set(prev).add(stepIdx));
+    setStepIdx(nextStep);
+
+    if (nextStep === TOTAL_STEPS - 1) {
+      // Phase G — trigger AI
+      setAiLoading(true);
+      setAiError('');
+      setAiResult(null);
+      setSelectedRecId(null);
+      setSaved(false);
+      setSaveError('');
+      try {
+        const qa = mapWizardStateToQA(state);
+        const result = await suggestPolicyAI(qa);
+        setAiResult(result);
+        if (result.recommendations[0]) {
+          setPolicyName(result.recommendations[0].preset.name);
+          setPolicyTag(result.recommendations[0].preset.shortName.toLowerCase());
         }
+      } catch (e) {
+        setAiError(`AI analysis failed. ${String(e)}`);
+      } finally {
+        setAiLoading(false);
       }
     }
   }, [stepIdx, state]);
@@ -1565,25 +1630,39 @@ export default function AIPolicyWizardPage() {
   // ── Save policy ────────────────────────────────────────────────────────────
 
   const handleSave = useCallback(async (status: string) => {
-    if (!aiResult || !policyName.trim() || !selectedRecId) return;
-    if (!token) { setSaveError('Not authenticated'); return; }
-    const idx = aiResult.recommendations.findIndex((r, i) => `${r.preset.shortName}-${i}` === selectedRecId);
+    if (!aiResult || !policyName.trim() || !selectedRecId) {
+      setSaveError('Select a recommendation and provide a policy name before saving.');
+      return;
+    }
+    if (!token) { setSaveError('Not authenticated — please log in and try again.'); return; }
+
+    const userId    = user?.id ?? 'system';
+    const companyId = user?.company?.id ?? 'unscoped';
+
+    const idx = aiResult.recommendations.findIndex((_r, i) => `${aiResult.recommendations[i].preset.shortName}-${i}` === selectedRecId);
     const selectedRec = aiResult.recommendations[idx >= 0 ? idx : 0];
     setSaving(true); setSaveError('');
     try {
       const canonical = buildCanonicalFromPageState(
         state, aiResult, selectedRec,
-        user?.id ?? 'unknown', user?.company?.id ?? 'unknown',
+        userId, companyId,
         policyName.trim(), policyTag.trim(),
       );
-      // Override status from UI
+      // Apply the status chosen by the user in the UI
       canonical.status = status as "DRAFT" | "REVIEW" | "APPROVED" | "ACTIVE" | "ARCHIVED";
       const payload = toCreateTemplatePayload(canonical);
       await createPolicyTemplate(payload, token);
       setSaved(true);
     } catch (e: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setSaveError(`Save failed: ${(e as any)?.response?.data?.detail ?? String(e)}`);
+      const detail = (e as {response?: {data?: {detail?: string}}})?.response?.data?.detail;
+      const status_code = (e as {response?: {status?: number}})?.response?.status;
+      if (status_code === 401) {
+        setSaveError('Authentication expired — please log in again and retry.');
+      } else if (status_code === 422) {
+        setSaveError(`Validation error from server: ${detail ?? 'check required fields'}`);
+      } else {
+        setSaveError(`Save failed: ${detail ?? String(e)}`);
+      }
     } finally {
       setSaving(false);
     }
@@ -1634,18 +1713,63 @@ export default function AIPolicyWizardPage() {
     }
   };
 
-  const canNext = IS_LAST ? false : true;
+  const canNext = !IS_LAST;
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
       <TopBar onBack={() => router.push('/policies')} pct={pct} />
       <PhaseRail stepIdx={stepIdx} />
 
+      {/* ── Company context warning ── */}
+      {companyIdMissing && (
+        <div style={{
+          background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`,
+          borderLeft: `3px solid ${S.amber}`,
+          padding: "8px 24px", flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 10,
+        }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.1em", color: S.amber, fontWeight: 700 }}>⚠ NO COMPANY CONTEXT</span>
+          <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>
+            Your account is not linked to a company. Policies saved here will be unscoped and may not appear in the Policy Library. Contact your admin.
+          </span>
+        </div>
+      )}
+
+      {/* ── Saved redirect notice ── */}
+      {saved && (
+        <div style={{
+          background: `color-mix(in srgb, ${S.pass} 8%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${S.pass} 25%, transparent)`,
+          padding: "8px 24px", flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 10,
+        }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.1em", color: S.pass, fontWeight: 700 }}>✓ POLICY SAVED</span>
+          <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>
+            Redirecting you to the Policy Library…
+          </span>
+        </div>
+      )}
+
       {/* Main scroll area */}
       <div style={{ flex: 1, overflow: "auto", padding: "24px 32px", display: "flex", flexDirection: "column" }}>
         <StepHeader stepIdx={stepIdx} />
         {renderStep()}
       </div>
+
+      {/* ── Step validation error bar ── */}
+      {stepError && (
+        <div style={{
+          background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`,
+          borderLeft: `3px solid ${S.fail}`,
+          padding: "8px 24px", flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 10,
+        }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.1em", color: S.fail, fontWeight: 700 }}>REQUIRED</span>
+          <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>{stepError}</span>
+        </div>
+      )}
 
       {/* Bottom Action Bar */}
       <div style={{
@@ -1666,10 +1790,14 @@ export default function AIPolicyWizardPage() {
             }}>← Back</button>
           )}
           {canNext && (
-            <button type="button" onClick={goNext} style={{
+            <button type="button" onClick={goNext} disabled={aiLoading} style={{
               fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em", fontWeight: 700,
-              padding: "6px 20px", border: `1px solid ${S.cyan}`, color: S.cyan,
-              background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`, cursor: "pointer",
+              padding: "6px 20px",
+              border: `1px solid ${stepError ? S.fail : S.cyan}`,
+              color: stepError ? S.fail : S.cyan,
+              background: `color-mix(in srgb, ${stepError ? S.fail : S.cyan} 8%, transparent)`,
+              cursor: aiLoading ? "not-allowed" : "pointer",
+              transition: "all 0.12s",
             }}>
               {stepIdx === TOTAL_STEPS - 2 ? "✦ ANALYZE WITH AI →" : "Next →"}
             </button>

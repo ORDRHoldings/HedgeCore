@@ -273,16 +273,6 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Help", href: "/help", icon: Ic.help,
-    prefixes: ["/help"],
-    header: "Support",
-    items: [
-      { label: "Documentation",    desc: "User guide, API reference, release notes",        href: "/help",        icon: Ic.book },
-      { label: "FAQ",              desc: "Frequently asked questions & troubleshooting",     href: "/help",        icon: Ic.question },
-      { label: "Contact Support",  desc: "Open a ticket or reach the ORDR team",            href: "/help",        icon: Ic.user },
-    ],
-  },
-  {
     label: "Settings", href: "/settings", icon: Ic.settings,
     prefixes: ["/settings"],
     header: "Configuration",
@@ -292,6 +282,16 @@ const NAV: NavSection[] = [
       { label: "Execution",        desc: "Default product, stress sigma, friction thresholds",     href: "/settings#execution",      icon: Ic.lightning, badge: "EXEC",  badgeColor: S.cyan  },
       { label: "API & Keys",       desc: "Alpha Vantage, backend URL, IBKR TWS connectivity",     href: "/settings#api_keys",       icon: Ic.key,      badge: "KEYS",  badgeColor: S.red   },
       { label: "Notifications",    desc: "Alert triggers, email recipients, webhook endpoints",    href: "/settings#notifications",  icon: Ic.clock },
+    ],
+  },
+  {
+    label: "Help", href: "/help", icon: Ic.help,
+    prefixes: ["/help"],
+    header: "Support",
+    items: [
+      { label: "Documentation",    desc: "User guide, API reference, release notes",        href: "/help",        icon: Ic.book },
+      { label: "FAQ",              desc: "Frequently asked questions & troubleshooting",     href: "/help",        icon: Ic.question },
+      { label: "Contact Support",  desc: "Open a ticket or reach the ORDR team",            href: "/help",        icon: Ic.user },
     ],
   },
 ];

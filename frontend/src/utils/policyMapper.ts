@@ -479,16 +479,44 @@ import type { CreateTemplatePayload } from '../api/policyClient';
 /**
  * Convert a CanonicalPolicy into the payload accepted by createPolicyTemplate().
  * This bridges the canonical model to the existing backend API.
+ *
+ * The backend POST /api/v1/policies/templates accepts 6 fields.
+ * company_id is derived server-side from the JWT bearer token.
+ * Wizard-only metadata (status, provenance, governance) is encoded
+ * into the description as a structured suffix so it survives the round-trip.
  */
 export function toCreateTemplatePayload(
   canonical: CanonicalPolicy,
 ): CreateTemplatePayload {
+  // Build a structured metadata suffix that survives the description field
+  const meta: Record<string, string> = {
+    status:      canonical.status ?? 'DRAFT',
+    created_by:  canonical.provenance?.created_by ?? 'unknown',
+    created_at:  canonical.provenance?.created_at ?? new Date().toISOString(),
+    source:      canonical.provenance?.source ?? 'AI_WIZARD',
+  };
+  if (canonical.provenance?.ai_model) {
+    meta['ai_model'] = canonical.provenance.ai_model;
+    meta['ai_confidence'] = String(canonical.provenance.ai_confidence ?? 0);
+  }
+  if (canonical.governance?.requires_approval) {
+    meta['requires_approval'] = 'true';
+  }
+  if (canonical.scope?.company_id && canonical.scope.company_id !== 'unknown') {
+    meta['scope_company_id'] = canonical.scope.company_id;
+  }
+
+  // Append as a machine-readable suffix separated by a sentinel
+  const metaSuffix = '\n\n[ORDR_META:' + Object.entries(meta).map(([k, v]) => `${k}=${v}`).join(';') + ']';
+  const baseDescription = canonical.description ?? '';
+  const description = baseDescription + metaSuffix;
+
   return {
-    name:        canonical.display_name,
-    short_name:  canonical.short_name,
-    description: canonical.description,
-    risk_posture: canonical.classification.risk_posture,
-    category:     canonical.classification.category,
-    config:       canonical.execution_config,
+    name:         canonical.display_name,
+    short_name:   canonical.short_name,
+    description,
+    risk_posture:  canonical.classification.risk_posture,
+    category:      canonical.classification.category,
+    config:        canonical.execution_config,
   };
 }
