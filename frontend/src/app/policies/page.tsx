@@ -3,14 +3,15 @@
 /**
  * Policy Engine Page — /policies
  *
- * Shows all 33 system policy presets in a card grid organized by category.
+ * Shows all 60 system policy presets in a card grid organized by category.
  * Allows users to activate a preset as the company-wide hedge policy.
  * Provides a "+ New Policy" wizard powered by Claude AI (3 recommendations).
  * Admin users can publish custom policies company-wide.
  */
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Sparkles, Plus, Check, Zap, Shield, BarChart2, Globe, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Sparkles, Check, Zap, Shield, BarChart2, Globe, Search, X } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { POLICY_PRESETS } from "@/constants/policyPresets";
 import type { PolicyPreset } from "@/constants/policyPresets";
@@ -21,8 +22,6 @@ import {
   type PolicyTemplate,
   type PolicyInstance,
 } from "@/api/policyClient";
-import PolicyWizardModal from "@/components/policies/PolicyWizardModal";
-import type { PolicyConfig } from "@/api/types";
 import Toast from "@/components/shared/Toast";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -151,11 +150,11 @@ function PresetCard({ preset, isActive, isActivating, onActivate }: PresetCardPr
 // ── Main page component ───────────────────────────────────────────────────────
 export default function PoliciesPage() {
   const { token, user } = useAuth();
+  const router = useRouter();
   const isAdmin = user?.roles?.some(r => ['admin', 'cfo', 'ceo'].includes(r)) ?? false;
 
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('ALL');
   const [searchQuery, setSearchQuery]         = useState('');
-  const [wizardOpen, setWizardOpen]           = useState(false);
 
   // Active policy state
   const [activeInstance, setActiveInstance]       = useState<PolicyInstance | null>(null);
@@ -237,16 +236,6 @@ export default function PoliciesPage() {
     dbTemplates.filter(t => !t.is_system),
   [dbTemplates]);
 
-  // Handler when wizard saves a new policy
-  const handleWizardSaved = useCallback((tmpl: PolicyTemplate) => {
-    setDbTemplates(prev => [tmpl, ...prev]);
-    showToast(`Policy saved: ${tmpl.name}`);
-  }, []);
-
-  // Handler when wizard applies to session
-  const handleWizardApply = useCallback((_config: PolicyConfig) => {
-    showToast('Policy applied to session — navigate to Position Desk to run simulation.');
-  }, []);
 
   return (
     <div style={{ minHeight: '100vh', background: S.bgDeep, fontFamily: S.fontUI }}>
@@ -281,7 +270,7 @@ export default function PoliciesPage() {
 
         <button
           type="button"
-          onClick={() => setWizardOpen(true)}
+          onClick={() => router.push('/ai-policy-wizard')}
           style={{
             display: 'flex', alignItems: 'center', gap: 7,
             fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em', fontWeight: 700,
@@ -399,15 +388,6 @@ export default function PoliciesPage() {
           </div>
         )}
       </div>
-
-      {/* ── Policy Wizard Modal ── */}
-      <PolicyWizardModal
-        open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
-        token={token ?? undefined}
-        onApply={handleWizardApply}
-        onSaved={handleWizardSaved}
-      />
 
       <Toast message={toastMsg} visible={toastVisible} onClose={() => setToastVisible(false)} />
     </div>
