@@ -6,9 +6,15 @@ Fail-closed: any CRITICAL validation error returns 422.
 Phase 0: Every run is now persisted to the calculation_runs table (DB-backed).
 The in-memory _run_store is kept as a fast cache (bounded to 50 items) but
 every run also lands in the DB for permanence, replay, and audit chain.
+
+Sprint 1.0: Every run now pins the active policy_revision_id + policy_hash so
+the exact policy governing the calculation is provable for audit/replay.
 """
 
+import logging
 import uuid
+
+_log = logging.getLogger(__name__)
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -75,21 +81,48 @@ async def _persist_run(
     Write the run to calculation_runs. Non-fatal: if DB write fails, the
     calculation result is still returned (we log the failure but don't surface it).
     The in-memory cache already has the result.
+
+    Sprint 1.0: Pins the active policy_revision_id + policy_hash onto the run row
+    so the exact policy config governing this calculation is provable for audit/replay.
     """
+    from app.services.policy_service import get_active_instance
+    from app.services.policy_revision_service import get_latest_revision
+    from app.models.policy_revision import compute_policy_hash
+
     envelope = response.run_envelope
+
+    # Resolve active policy revision for this user (non-fatal)
+    pinned_revision_id: Optional[str] = None
+    pinned_policy_hash: Optional[str] = None
+    if user:
+        try:
+            active_instance = await get_active_instance(session, user)
+            if active_instance:
+                latest_rev = await get_latest_revision(session, active_instance.id)
+                if latest_rev:
+                    pinned_revision_id = str(latest_rev.id)
+                    pinned_policy_hash = latest_rev.policy_hash
+        except Exception:
+            _log.warning(
+                "Failed to resolve active policy revision for run %s. "
+                "policy_revision_id will be NULL for this run.",
+                response.run_id, exc_info=True,
+            )
+
     run_row = CalculationRun(
-        id           = response.run_id,
-        company_id   = user.company_id if user else None,
-        user_id      = user.id         if user else None,
-        inputs_hash  = envelope.inputs_hash,
-        outputs_hash = envelope.outputs_hash,
-        run_hash     = envelope.run_hash,
-        position_ids = [],   # populated by caller if position IDs are known
-        run_envelope = envelope.model_dump(mode="json"),
-        trace_lite   = response.trace_lite.model_dump(mode="json") if response.trace_lite else None,
-        trade_count  = len(trades),
-        hedge_count  = len(response.hedge_plan.buckets) if response.hedge_plan else 0,
-        policy_hash  = None,   # could hash the policy config — left for Phase 1
+        id                 = response.run_id,
+        company_id         = user.company_id if user else None,
+        user_id            = user.id         if user else None,
+        inputs_hash        = envelope.inputs_hash,
+        outputs_hash       = envelope.outputs_hash,
+        run_hash           = envelope.run_hash,
+        position_ids       = [],   # populated by caller if position IDs are known
+        run_envelope       = envelope.model_dump(mode="json"),
+        trace_lite         = response.trace_lite.model_dump(mode="json") if response.trace_lite else None,
+        trade_count        = len(trades),
+        hedge_count        = len(response.hedge_plan.buckets) if response.hedge_plan else 0,
+        policy_revision_id = pinned_revision_id,   # Sprint 1.0: pinned revision UUID
+        policy_hash        = pinned_policy_hash,   # Sprint 1.0: SHA-256 of canonical config
     )
     session.add(run_row)
     await session.commit()
