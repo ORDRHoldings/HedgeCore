@@ -672,7 +672,7 @@ function RunViewerContent() {
                   {run.policy_revision_id ? (
                     <>
                       <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5, marginBottom: 4 }}>
-                        This run was computed under a pinned policy snapshot (Sprint 1.0 — WORM revision):
+                        This run was computed under a pinned policy snapshot (WORM-sealed policy revision):
                       </div>
                       <HashRow label="policy_revision_id" hash={run.policy_revision_id} color={S.cyan} />
                       <HashRow label="policy_hash"        hash={run.policy_hash ?? undefined}      color={S.cyan} />
@@ -702,9 +702,9 @@ function RunViewerContent() {
                         NOT PINNED
                       </span>
                       <br />
-                      This run predates policy version pinning (Sprint 1.0). Activate a policy
-                      and re-run to generate a pinned audit trail. Future runs will reference
-                      a specific PolicyRevision WORM snapshot.
+                      This run was executed before policy version pinning was activated.
+                      Activate a policy and re-run to generate a pinned audit trail.
+                      Future runs will reference a specific PolicyRevision WORM snapshot.
                     </div>
                   )}
                 </div>
@@ -804,7 +804,7 @@ function RunViewerContent() {
         flexShrink:     0,
       }}>
         <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.06em" }}>
-          {renderTs} &middot; ORDR RUN VIEWER &middot; Sprint 1.3
+          {renderTs} &middot; ORDR RUN VIEWER &middot; AUDIT TRAIL
         </span>
       </div>
     </div>
