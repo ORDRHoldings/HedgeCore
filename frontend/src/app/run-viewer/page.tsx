@@ -767,6 +767,26 @@ function RunViewerContent() {
                 >
                   VIEW AUDIT LEDGER →
                 </Link>
+                <Link
+                  href={`/committee-pack?id=${encodeURIComponent(runId ?? "")}`}
+                  style={{
+                    display:       "block",
+                    fontFamily:    S.fontMono,
+                    fontSize:      10,
+                    fontWeight:    700,
+                    letterSpacing: "0.07em",
+                    color:         S.bgDeep,
+                    background:    S.amber,
+                    padding:       "6px 14px",
+                    borderRadius:  2,
+                    textDecoration:"none",
+                    textAlign:     "center",
+                    border:        "none",
+                    marginTop:     4,
+                  }}
+                >
+                  COMMITTEE PACK →
+                </Link>
               </div>
             </div>
           </div>
