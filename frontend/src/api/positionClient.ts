@@ -27,6 +27,9 @@ function authHeaders(token?: string): Record<string, string> {
 /** Shape returned by the positions list endpoint */
 export interface PositionRow extends TradeRow {
   id: string;
+  // Audit timestamps (ISO 8601, UTC)
+  created_at:       string | null;
+  updated_at:       string | null;
   // Lifecycle fields (Phase 0)
   execution_status: "NEW" | "POLICY_ASSIGNED" | "READY_TO_EXECUTE" | "HEDGED" | "REJECTED";
   policy_id:        string | null;
@@ -60,6 +63,9 @@ function mapToPositionRow(p: Record<string, any>): PositionRow {
     value_date:       p.value_date as string,
     status:           p.status as "CONFIRMED" | "FORECAST",
     description:      (p.description as string) ?? "",
+    // Audit timestamps
+    created_at:       (p.created_at as string) ?? null,
+    updated_at:       (p.updated_at as string) ?? null,
     // Lifecycle fields
     execution_status: (p.execution_status as PositionRow["execution_status"]) ?? "NEW",
     policy_id:        (p.policy_id as string) ?? null,
