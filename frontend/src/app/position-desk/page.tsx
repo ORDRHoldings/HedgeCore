@@ -492,7 +492,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
         <ModalOverlay onClose={closeModal}>
           <ModalHeader title="4-Eyes Execution Proposal" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
           <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, padding: "8px 12px", border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 14, lineHeight: 1.7 }}>
-            <strong>4-Eyes Workflow Required (Sprint 1.1)</strong><br />
+            <strong>4-Eyes Workflow Required — Segregation of Duties</strong><br />
             Execution to HEDGED requires a formal approval chain:<br /><br />
             1 · Maker submits: POST /v1/proposals<br />
             2 · Different checker approves: PATCH /v1/proposals/:id/approve<br />
