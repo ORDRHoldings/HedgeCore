@@ -640,7 +640,7 @@ function LineageContent() {
         flexShrink:     0,
       }}>
         <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.06em" }}>
-          {renderTs} &middot; ORDR LINEAGE VIEWER &middot; Sprint 1.4
+          {renderTs} &middot; ORDR LINEAGE VIEWER &middot; PROVENANCE
         </span>
       </footer>
     </div>
