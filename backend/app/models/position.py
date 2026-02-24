@@ -4,6 +4,13 @@ Position ORM model — FX exposure positions, fully tenant-scoped.
 company_id + branch_id scoping enforced at query level (never filter in memory).
 Soft delete via is_active=False (never hard delete positions).
 record_id is unique per company (enforced via DB UNIQUE constraint + service pre-check).
+
+Execution lifecycle state machine (Phase 0):
+  NEW → POLICY_ASSIGNED → READY_TO_EXECUTE → HEDGED
+  Any state → REJECTED (with reason)
+
+Every lifecycle transition is enforced at the API layer (fail-closed) and emits
+an audit_event row. This is the regulated backbone — not feature work.
 """
 import uuid as _uuid
 
@@ -19,6 +26,18 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.core.db import Base
+
+# Valid execution_status values — enforced in service layer + DB CHECK
+EXECUTION_STATUSES = ("NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE", "HEDGED", "REJECTED")
+
+# Legal state machine transitions (from → set of allowed next states)
+EXECUTION_TRANSITIONS: dict[str, set[str]] = {
+    "NEW":               {"POLICY_ASSIGNED", "REJECTED"},
+    "POLICY_ASSIGNED":   {"READY_TO_EXECUTE", "REJECTED", "NEW"},  # allow re-assign
+    "READY_TO_EXECUTE":  {"HEDGED", "REJECTED", "POLICY_ASSIGNED"},
+    "HEDGED":            set(),          # terminal — no transitions out
+    "REJECTED":          {"NEW"},        # allow re-open
+}
 
 
 class Position(Base):
@@ -43,6 +62,27 @@ class Position(Base):
     status      = Column(String(16),  nullable=False, default="CONFIRMED")  # CONFIRMED | FORECAST
     description = Column(String(512), nullable=True)
 
+    # ── Execution lifecycle fields (Phase 0 regulated backbone) ──────────────
+    # execution_status drives the workflow state machine; never set directly —
+    # always transition via position_service.transition_execution_status()
+    execution_status = Column(
+        String(20), nullable=False, default="NEW",
+        comment="Lifecycle: NEW|POLICY_ASSIGNED|READY_TO_EXECUTE|HEDGED|REJECTED",
+    )
+    # FK → policy_instances.id — which policy governs this position's hedge
+    policy_id     = Column(PGUUID(as_uuid=True), nullable=True)
+    # run_id from the last POST /v1/calculate that produced a hedge plan for this position
+    last_run_id   = Column(String(64), nullable=True)
+    # Wall-clock time when the execution was confirmed (IBKR ack / manual confirm)
+    executed_at   = Column(DateTime(timezone=True), nullable=True)
+    # External execution reference (IBKR order ID, bank ref, broker ticket number)
+    execution_ref = Column(String(128), nullable=True)
+    # Hedge notional and rate captured at execution time (immutable after HEDGED)
+    hedge_amount  = Column(Numeric(20, 6), nullable=True)
+    hedge_rate    = Column(Numeric(20, 8), nullable=True)
+    # Rejection reason — populated when execution_status = REJECTED
+    rejection_reason = Column(String(512), nullable=True)
+
     # Soft delete + timestamps
     is_active  = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=text("NOW()"))
@@ -62,4 +102,8 @@ class Position(Base):
         Index("ix_positions_currency", "company_id", "currency"),
         # User history / audit trail
         Index("ix_positions_created_by", "created_by", "created_at"),
+        # Lifecycle status queries (control tower filter presets)
+        Index("ix_positions_exec_status", "company_id", "execution_status"),
+        # Policy assignment queries
+        Index("ix_positions_policy", "policy_id"),
     )
