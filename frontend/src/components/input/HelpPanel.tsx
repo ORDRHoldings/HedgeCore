@@ -313,6 +313,189 @@ function TipsBlock({ tips }: { tips: { tip: string; isError: boolean }[] }) {
   );
 }
 
+// ─── ASCII Field Map Diagrams ────────────────────────────────────────────────
+
+const DIAGRAM_MANUAL = `
+┌─────────────────────────────────────────────────────────────┐
+│  MANUAL ENTRY FORM — FIELD MAP                              │
+│  (Bloomberg Ingestion Desk / /input → Manual Entry tab)     │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────────────┐  ┌──────────────────────────┐    │
+│  │  RECORD ID  [req]    │  │  ENTITY          [req]   │    │
+│  │  Unique key, max 64  │  │  Legal entity / BU       │    │
+│  │  Immutable on save   │  │  Counterparty master     │    │
+│  └──────────────────────┘  └──────────────────────────┘    │
+│                                                             │
+│  ┌─────────────┐  ┌───────────┐  ┌──────────────────┐      │
+│  │ FLOW TYPE   │  │ CURRENCY  │  │  AMOUNT   [req]  │      │
+│  │ AP  │  AR   │  │ ISO 4217  │  │  Notional ≥ 1    │      │
+│  │ ↓   │  ↑   │  │ MXN/EUR…  │  │  No sign needed  │      │
+│  └─────────────┘  └───────────┘  └──────────────────┘      │
+│                                                             │
+│  ┌──────────────────────┐  ┌──────────────────────────┐    │
+│  │  VALUE DATE  [req]   │  │  STATUS          [opt]   │    │
+│  │  Bloomberg calendar  │  │  CONFIRMED / FORECAST    │    │
+│  │  Future dates only   │  │  Affects execution gate  │    │
+│  │  Format: YYYY-MM-DD  │  │                          │    │
+│  └──────────────────────┘  └──────────────────────────┘    │
+│                                                             │
+│  ┌─────────────────────────────────────────────────┐       │
+│  │  DESCRIPTION                          [optional]│       │
+│  │  Free text note — max 512 chars                 │       │
+│  └─────────────────────────────────────────────────┘       │
+│                                                             │
+│  [ + ADD POSITION ]   or   [ UPDATE ] (edit mode)          │
+│   Fires: POST /v1/positions/                               │
+│   Audit: INGEST event written immediately (WORM)           │
+└─────────────────────────────────────────────────────────────┘`;
+
+const DIAGRAM_UPLOAD = `
+┌─────────────────────────────────────────────────────────────┐
+│  CSV / XLSX UPLOAD — FILE SCHEMA                            │
+│  (Ingestion Desk → Upload CSV / Excel tab)                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  REQUIRED COLUMNS (exact header names, case-insensitive):  │
+│                                                             │
+│  record_id   │ Unique ID per row    │ max 64 chars          │
+│  entity      │ Legal entity         │ required              │
+│  flow_type   │ AP or AR             │ required              │
+│  currency    │ ISO 4217 code        │ e.g. MXN, EUR         │
+│  amount      │ Positive number      │ no currency sign      │
+│  value_date  │ YYYY-MM-DD           │ future dates only     │
+│                                                             │
+│  OPTIONAL COLUMNS:                                         │
+│                                                             │
+│  status      │ CONFIRMED or FORECAST │ default: CONFIRMED   │
+│  description │ Free text note        │ max 512 chars        │
+│                                                             │
+│  EXAMPLE ROW:                                              │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ record_id,entity,flow_type,currency,amount,value_date│  │
+│  │ PO-001,SYNEX CORP,AP,MXN,500000,2026-06-30          │  │
+│  │ INV-002,SYNEX CORP,AR,EUR,250000,2026-09-15         │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                                                             │
+│  PROCESS: Drag & Drop or Browse → Validate → Import        │
+│  API: POST /v1/positions/import-csv (multipart/form-data)  │
+│  Audit: One INGEST event per row (WORM)                    │
+│  Max rows: 10,000 per upload                               │
+└─────────────────────────────────────────────────────────────┘`;
+
+const DIAGRAM_CONNECTION = `
+┌─────────────────────────────────────────────────────────────┐
+│  CONNECTION HUB — FEED STATUS MAP                           │
+│  (Ingestion Desk → Connection Hub tab)                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Feed Card Structure:                                       │
+│  ┌─────────────────────────────────────┐                   │
+│  │  [ICON]  FEED NAME        [STATUS]  │                   │
+│  │          Description                │                   │
+│  │          [ CONFIGURE ]  [ TEST ]    │                   │
+│  └─────────────────────────────────────┘                   │
+│                                                             │
+│  Available Feeds:                                          │
+│                                                             │
+│  ① REST API WEBHOOK         ● ACTIVE                       │
+│    POST /v1/positions/      authenticated, live            │
+│                                                             │
+│  ② SQL DATABASE             ○ COMING SOON                  │
+│    Oracle / Postgres / MySQL  JDBC pull                    │
+│                                                             │
+│  ③ ERP CONNECTOR            ○ COMING SOON                  │
+│    SAP / Oracle / NetSuite    native API bridge            │
+│                                                             │
+│  ④ CSV FILE WATCHER         ○ COMING SOON                  │
+│    SFTP / S3 / local folder   polling schedule             │
+│                                                             │
+│  ⑤ BLOOMBERG FEED           ○ COMING SOON                  │
+│    B-PIPE / BLPAPI            real-time exposure feed      │
+│                                                             │
+│  ⑥ ACCOUNTING SYSTEMS       ○ COMING SOON                  │
+│    QuickBooks / Xero / Sage   invoice-level import         │
+│                                                             │
+│  Status colours:  ● ACTIVE = cyan  ○ COMING SOON = amber   │
+└─────────────────────────────────────────────────────────────┘`;
+
+const DIAGRAM_LIFECYCLE = `
+┌─────────────────────────────────────────────────────────────┐
+│  POSITION LIFECYCLE — STATE MACHINE                         │
+│  (Position Desk / /position-desk)                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   CREATE                                                    │
+│     │                                                       │
+│     ▼                                                       │
+│  ┌──────┐   Assign Policy   ┌─────────────────┐            │
+│  │ NEW  │ ─────────────────►│ POLICY_ASSIGNED │            │
+│  │amber │                   │ cyan            │            │
+│  └──────┘                   └────────┬────────┘            │
+│     │                                │                     │
+│     │                     Mark Ready │                     │
+│     │                                ▼                     │
+│     │                   ┌───────────────────────┐          │
+│     │                   │  READY_TO_EXECUTE     │          │
+│     │                   │  bright cyan          │          │
+│     │                   └────────┬──────────────┘          │
+│     │                            │ Execute (IBKR)          │
+│     │                            ▼                         │
+│     │                        ┌────────┐                    │
+│     │                        │ HEDGED │ ← terminal state   │
+│     │                        │ green  │   immutable        │
+│     │                        └────────┘                    │
+│     │                                                       │
+│     │      Reject (from any non-terminal state)            │
+│     │──────────────────────────────────►┌──────────┐       │
+│                                         │ REJECTED │       │
+│                                         │ red      │       │
+│                                         └────┬─────┘       │
+│                                              │ Reopen      │
+│                                              ▼             │
+│                                           back to NEW      │
+│                                                             │
+│  Actions per status:                                       │
+│  NEW           → Edit · Delete · Assign Policy · Reject    │
+│  POLICY_ASSIGN → Mark Ready · Reject · View Lineage        │
+│  READY         → Execute · Reject · View Lineage           │
+│  HEDGED        → View Lineage · Audit Trail (read-only)    │
+│  REJECTED      → Reopen · View Lineage                     │
+│                                                             │
+│  All transitions write a WORM audit event (append-only)    │
+└─────────────────────────────────────────────────────────────┘`;
+
+function FieldDiagram({ diagram }: { diagram: string }) {
+  return (
+    <div style={{
+      marginBottom: 16,
+      background:   `color-mix(in srgb, var(--accent-cyan) 3%, var(--bg-sub))`,
+      border:       `1px solid var(--border-rim)`,
+      borderRadius: 4,
+      padding:      "10px 12px",
+    }}>
+      <div style={{
+        fontFamily:    "'IBM Plex Mono', monospace",
+        fontSize:      "0.5625rem",
+        color:         "var(--text-tertiary)",
+        letterSpacing: "0.1em",
+        marginBottom:  6,
+      }}>FIELD MAP — VISUAL REFERENCE</div>
+      <pre style={{
+        fontFamily:  "'IBM Plex Mono', monospace",
+        fontSize:    "0.5rem",
+        color:       "var(--text-secondary)",
+        lineHeight:  1.55,
+        margin:      0,
+        overflowX:   "auto",
+        whiteSpace:  "pre",
+      }}>{diagram}</pre>
+    </div>
+  );
+}
+
+// ─── Section Content ──────────────────────────────────────────────────────────
+
 function SectionContent({ section }: { section: HelpSection }) {
   const sectionLabels: Record<HelpSection, string> = {
     manual:     "MANUAL ENTRY - FIELD REFERENCE",
@@ -328,6 +511,13 @@ function SectionContent({ section }: { section: HelpSection }) {
     lifecycle:  LIFECYCLE_FIELDS,
   };
 
+  const diagramMap: Record<HelpSection, string> = {
+    manual:     DIAGRAM_MANUAL,
+    upload:     DIAGRAM_UPLOAD,
+    connection: DIAGRAM_CONNECTION,
+    lifecycle:  DIAGRAM_LIFECYCLE,
+  };
+
   return (
     <div>
       <div style={{
@@ -341,6 +531,7 @@ function SectionContent({ section }: { section: HelpSection }) {
       }}>
         {sectionLabels[section]}
       </div>
+      <FieldDiagram diagram={diagramMap[section]} />
       <FieldTable fields={fieldsMap[section]} />
       <TipsBlock tips={TIPS[section]} />
     </div>
