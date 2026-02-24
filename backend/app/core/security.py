@@ -358,3 +358,33 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
         logger.debug("Authenticated user: id=%s, email=%s", user.id, user.email)
         return user
+
+
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
+
+async def get_current_user_optional(token: str | None = Depends(oauth2_scheme_optional)):
+    """
+    Like get_current_user but returns None instead of raising 401 when no token
+    is provided. Used for endpoints that work both authenticated and anonymous
+    (e.g., POST /v1/calculate which stores tenant context when available).
+    """
+    if not token:
+        return None
+    try:
+        from app.core.db import get_session
+        from app.models.user import User as _User
+        payload = decode_token(token, expected_type="access")
+        sub = payload.get("sub")
+        if not sub:
+            return None
+        user_id = UUID(sub)
+        async for session in get_session():
+            stmt = select(_User).where(_User.id == user_id)
+            result = await session.execute(stmt)
+            user = result.scalar_one_or_none()
+            if user and user.is_active:
+                return user
+        return None
+    except Exception:
+        return None

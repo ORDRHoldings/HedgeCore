@@ -30,8 +30,8 @@ import {
   updatePositionThunk,
   deletePositionThunk,
   clearError as clearPositionError,
-  markExecuted,
   addLocalPosition,
+  executePositionThunk,
 } from '../../lib/store/slices/positionSlice';
 import type { PositionRow } from '../../api/positionClient';
 import FileUploadLane from '../../components/input/FileUploadLane';
@@ -161,7 +161,7 @@ function InputPageInner() {
   const { token } = useAuth();
 
   // ── Redux position state ──────────────────────────────────────────────────
-  const { positions, loading: positionsLoading, error: positionError, executedIds, ibkrRefs } = useSelector(
+  const { positions, loading: positionsLoading, error: positionError, lifecycleLoading } = useSelector(
     (s: RootState) => s.positions,
   );
 
@@ -241,13 +241,22 @@ function InputPageInner() {
     setIbkrModalOpen(true);
   }, []);
 
-  const handleConfirmExecution = useCallback(() => {
-    if (!ibkrTargetPosition) return;
-    dispatch(markExecuted({ id: ibkrTargetPosition.id, ibkr_ref: ibkrRefInput || undefined }));
+  const handleConfirmExecution = useCallback(async () => {
+    if (!ibkrTargetPosition || !ibkrRefInput.trim()) return;
+    if (!token) { showToast('Not authenticated'); return; }
+    const result = await dispatch(executePositionThunk({
+      id: ibkrTargetPosition.id,
+      executionRef: ibkrRefInput.trim(),
+      token,
+    }));
     setIbkrModalOpen(false);
     setIbkrTargetPosition(undefined);
-    showToast('Position marked as executed');
-  }, [dispatch, ibkrTargetPosition, ibkrRefInput, showToast]);
+    if (executePositionThunk.fulfilled.match(result)) {
+      showToast(`Position ${ibkrTargetPosition.record_id} marked HEDGED · ref: ${ibkrRefInput.trim()}`);
+    } else {
+      showToast(`Execution failed: ${result.payload as string}`);
+    }
+  }, [dispatch, ibkrTargetPosition, ibkrRefInput, token, showToast]);
 
   // ── Inline trade entry form ───────────────────────────────────────────────
   const EMPTY_INLINE: TradeRow = {
@@ -500,6 +509,9 @@ function InputPageInner() {
         const localPosition: PositionRow = {
           ...trade,
           id: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          execution_status: 'NEW', policy_id: null, last_run_id: null,
+          executed_at: null, execution_ref: null, hedge_amount: null,
+          hedge_rate: null, rejection_reason: null,
         };
         dispatch(addLocalPosition(localPosition));
         showToast(isDuplicate ? 'Position duplicated' : 'Position added');
@@ -544,6 +556,9 @@ function InputPageInner() {
       const localPosition: PositionRow = {
         ...inlineForm,
         id: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        execution_status: 'NEW', policy_id: null, last_run_id: null,
+        executed_at: null, execution_ref: null, hedge_amount: null,
+        hedge_rate: null, rejection_reason: null,
       };
       dispatch(addLocalPosition(localPosition));
       setInlineSaving(false);
@@ -1152,7 +1167,7 @@ function InputPageInner() {
                     <span>TOTAL: {trades.length}</span>
                     <span style={{ color: S.cyan }}>CONFIRMED: {tradeSummary.confirmed}</span>
                     <span style={{ color: S.amber }}>FORECAST: {tradeSummary.forecast}</span>
-                    <span>EXECUTED: {executedIds.length}</span>
+                    <span>HEDGED: {positions.filter(p => p.execution_status === 'HEDGED').length}</span>
                     {detectedCurrencies.length > 0 && (
                       <span style={{ color: S.amber }}>CCY: {detectedCurrencies.join(', ')}</span>
                     )}
@@ -1167,10 +1182,10 @@ function InputPageInner() {
                     </thead>
                     <tbody>
                       {positions.map((pos, idx) => {
-                        const isExecuted = executedIds.includes(pos.id);
-                        const ibkrRef = ibkrRefs[pos.id];
+                        const isHedged = pos.execution_status === 'HEDGED';
+                        const isLifecycleLoading = lifecycleLoading === pos.id;
                         return (
-                          <tr key={pos.id} style={{ borderBottom: `1px solid ${S.borderSoft}`, background: isExecuted ? `color-mix(in srgb, ${S.green} 3%, transparent)` : 'transparent' }}>
+                          <tr key={pos.id} style={{ borderBottom: `1px solid ${S.borderSoft}`, background: isHedged ? `color-mix(in srgb, ${S.green} 3%, transparent)` : 'transparent' }}>
                             <td style={{ padding: '7px 10px', fontFamily: S.fontMono, fontSize: '0.8125rem', color: S.textPrimary }}>{pos.record_id}</td>
                             <td style={{ padding: '7px 10px', color: S.textPrimary }}>{pos.entity}</td>
                             <td style={{ padding: '7px 10px', textAlign: 'center' }}>
@@ -1182,14 +1197,20 @@ function InputPageInner() {
                             <td style={{ padding: '9px 12px', textAlign: 'right', fontFamily: S.fontMono, fontSize: '0.8125rem', color: S.textPrimary }}>{fmtMXN(pos.amount)}</td>
                             <td style={{ padding: '9px 12px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.75rem' }}>{pos.value_date}</td>
                             <td style={{ padding: '7px 10px', textAlign: 'center' }}>
-                              {isExecuted ? (
+                              {isLifecycleLoading ? (
+                                <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', color: S.amber }}>…</span>
+                              ) : isHedged ? (
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 2, fontSize: '0.6875rem', fontWeight: 700, background: `color-mix(in srgb, ${S.green} 12%, transparent)`, color: S.green, fontFamily: S.fontMono, letterSpacing: '0.04em' }}>
-                                  ✓ EXECUTED
-                                  {ibkrRef && <span style={{ fontSize: '0.625rem', opacity: 0.7 }}> · {ibkrRef}</span>}
+                                  ✓ HEDGED
+                                  {pos.execution_ref && <span style={{ fontSize: '0.625rem', opacity: 0.7 }}> · {pos.execution_ref}</span>}
+                                </span>
+                              ) : pos.execution_status === 'REJECTED' ? (
+                                <span style={{ padding: '2px 7px', borderRadius: 2, fontSize: '0.6875rem', fontWeight: 600, fontFamily: S.fontMono, letterSpacing: '0.04em', background: `color-mix(in srgb, ${S.red} 10%, transparent)`, color: S.red }}>
+                                  REJECTED
                                 </span>
                               ) : (
                                 <span style={{ padding: '2px 7px', borderRadius: 2, fontSize: '0.6875rem', fontWeight: 600, fontFamily: S.fontMono, letterSpacing: '0.04em', background: pos.status === 'CONFIRMED' ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : `color-mix(in srgb, ${S.amber} 10%, transparent)`, color: pos.status === 'CONFIRMED' ? S.cyan : S.amber }}>
-                                  {pos.status}
+                                  {pos.execution_status === 'NEW' ? pos.status : pos.execution_status.replace('_', ' ')}
                                 </span>
                               )}
                             </td>
@@ -1212,12 +1233,13 @@ function InputPageInner() {
                                   onMouseEnter={e => (e.currentTarget.style.color = S.amber)}
                                   onMouseLeave={e => (e.currentTarget.style.color = S.textTertiary)}
                                 >✎</button>
-                                {/* Execute via IBKR (only for non-executed CONFIRMED) */}
-                                {!isExecuted && pos.status === 'CONFIRMED' && (
+                                {/* Execute via IBKR (only for READY_TO_EXECUTE or CONFIRMED non-hedged) */}
+                                {!isHedged && pos.execution_status !== 'REJECTED' && pos.status === 'CONFIRMED' && (
                                   <button
                                     title="Execute via IBKR"
                                     onClick={() => openIbkrModal(pos)}
-                                    style={{ background: 'none', border: `1px solid ${S.green}`, cursor: 'pointer', color: S.green, padding: '1px 5px', fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.06em', borderRadius: 2 }}
+                                    disabled={isLifecycleLoading}
+                                    style={{ background: 'none', border: `1px solid ${S.green}`, cursor: isLifecycleLoading ? 'not-allowed' : 'pointer', color: S.green, padding: '1px 5px', fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.06em', borderRadius: 2, opacity: isLifecycleLoading ? 0.5 : 1 }}
                                   >IBKR</button>
                                 )}
                                 {/* Delete */}
