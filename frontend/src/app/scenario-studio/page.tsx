@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import HelpPanel from "../../components/layout/HelpPanel";
+import { SCENARIO_STUDIO_HELP } from "../../lib/helpContent";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -266,6 +268,7 @@ export default function ScenarioStudio() {
       </div>
 
       {/* ── Body: three-column layout ── */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 220px", flex: 1, minHeight: 0, overflow: "auto" }}>
 
         {/* COL 1: Scenario Library */}
@@ -493,6 +496,8 @@ export default function ScenarioStudio() {
           </div>
         </aside>
 
+      </div>
+      <HelpPanel config={SCENARIO_STUDIO_HELP} storageKey="scenario-studio" />
       </div>
 
       {/* Footer */}
