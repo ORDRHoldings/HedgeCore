@@ -30,6 +30,9 @@ from app.api.routes.v1_positions import router as v1_positions_router
 from app.api.routes.v1_policies import router as v1_policies_router
 from app.api.routes.v1_connectors import router as v1_connectors_router
 from app.api.routes.v1_audit import router as v1_audit_router
+# Phase 1 — Institutional governance
+from app.api.routes.v1_execution_proposals import router as v1_proposals_router
+from app.api.routes.v1_policy_revisions import router as v1_policy_revisions_router
 
 router = APIRouter()
 
@@ -98,5 +101,11 @@ router.include_router(v1_connectors_router)
 
 # V1 Audit event ledger (owns /v1/audit)
 router.include_router(v1_audit_router)
+
+# Phase 1 — 4-Eyes Execution Proposal workflow (owns /v1/proposals)
+router.include_router(v1_proposals_router)
+
+# Phase 1 — Policy Revision lineage & diff (owns /v1/policies/revisions)
+router.include_router(v1_policy_revisions_router)
 
 __all__ = ["router"]

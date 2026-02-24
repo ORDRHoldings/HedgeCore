@@ -1,23 +1,22 @@
 "use client";
 
 /**
- * /position-desk — Position Lifecycle Control Tower
+ * /position-desk — Position Control Tower
+ * Sprint 1.2 — Institutional Control Tower Upgrade
  *
- * Status-driven workflow UI. Every row shows the current lifecycle state and
- * exposes the exact set of actions that are legal from that state.
- *
- * State machine mirrored from backend EXECUTION_TRANSITIONS:
- *   NEW               → [Assign Policy, Reject]
- *   POLICY_ASSIGNED   → [Mark Ready, Re-assign Policy, Reject]
- *   READY_TO_EXECUTE  → [Execute, Re-assign Policy (step back), Reject]
- *   HEDGED            → [] (terminal)
- *   REJECTED          → [Reopen]
- *
- * All transitions call the backend (DB is source of truth).
- * Redux state is updated from the server response — never optimistically.
+ * Upgrades over Phase 0:
+ *   - Two new data columns: POLICY ID chip + RUN ID chip (click-to-copy)
+ *   - NEEDS_ACTION preset filter: surfaces NEW + POLICY_ASSIGNED + READY rows
+ *   - Keyboard shortcuts: / (search focus), F (filter cycle), R (refresh), Esc (clear)
+ *   - Disabled action buttons show WHY and HOW TO RESOLVE via tooltip
+ *   - Row checkboxes for bulk visual selection
+ *   - Sprint 1.1 PROPOSE button replaces EXECUTE for READY_TO_EXECUTE rows
+ *   - Status badge tooltip shows next step for each lifecycle state
+ *   - Rejection reason shown on REOPEN hover tooltip
+ *   - Header shows NEEDS ACTION count chip + Execution Desk link
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "../../lib/authContext";
@@ -32,132 +31,134 @@ import {
   clearLifecycleError,
 } from "../../lib/store/slices/positionSlice";
 import type { PositionRow } from "../../api/positionClient";
-
-// ─── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
-  fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-  bgDeep:   "var(--bg-deep)",
-  bgPanel:  "var(--bg-panel)",
-  bgSub:    "var(--bg-sub)",
-  rim:      "var(--border-rim)",
-  soft:     "var(--border-soft)",
-  primary:  "var(--text-primary)",
-  secondary:"var(--text-secondary)",
-  tertiary: "var(--text-tertiary)",
-  cyan:     "var(--accent-cyan)",
-  amber:    "var(--accent-amber)",
-  pass:     "var(--status-pass,#22c55e)",
-  fail:     "var(--accent-red,#ef4444)",
-  purple:   "#a78bfa",
+  fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
+  fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  bgDeep:    "var(--bg-deep)",
+  bgPanel:   "var(--bg-panel)",
+  bgSub:     "var(--bg-sub)",
+  rim:       "var(--border-rim)",
+  soft:      "var(--border-soft)",
+  primary:   "var(--text-primary)",
+  secondary: "var(--text-secondary)",
+  tertiary:  "var(--text-tertiary)",
+  cyan:      "var(--accent-cyan)",
+  amber:     "var(--accent-amber)",
+  pass:      "var(--status-pass,#22c55e)",
+  fail:      "var(--accent-red,#ef4444)",
+  purple:    "#a78bfa",
 } as const;
-
-// ─── Execution status definitions ──────────────────────────────────────────────
 type ExecStatus = "NEW" | "POLICY_ASSIGNED" | "READY_TO_EXECUTE" | "HEDGED" | "REJECTED";
 
-const STATUS_CONFIG: Record<ExecStatus, { label: string; color: string; desc: string }> = {
-  NEW:                { label: "NEW",           color: S.tertiary, desc: "Awaiting policy assignment" },
-  POLICY_ASSIGNED:    { label: "POLICY ASGND",  color: S.cyan,     desc: "Policy assigned, awaiting run" },
-  READY_TO_EXECUTE:   { label: "READY",         color: S.amber,    desc: "Run linked, ready for execution" },
-  HEDGED:             { label: "HEDGED",        color: S.pass,     desc: "Execution confirmed — terminal" },
-  REJECTED:           { label: "REJECTED",      color: S.fail,     desc: "Rejected — can be reopened" },
+const STATUS_CONFIG: Record<ExecStatus, { label: string; color: string; desc: string; nextStep: string }> = {
+  NEW:              { label: "NEW",          color: S.tertiary, desc: "Awaiting policy assignment",                     nextStep: "Click ASSIGN POLICY to attach a hedge policy." },
+  POLICY_ASSIGNED:  { label: "POLICY ASGND", color: S.cyan,     desc: "Policy assigned, awaiting hedge calculation",     nextStep: "Run hedge engine, then click MARK READY with run ID." },
+  READY_TO_EXECUTE: { label: "READY",        color: S.amber,    desc: "Run linked, awaiting 4-eyes execution proposal",  nextStep: "Click PROPOSE to start the 4-eyes approval workflow." },
+  HEDGED:           { label: "HEDGED",       color: S.pass,     desc: "Execution confirmed, terminal state",             nextStep: "No further action. Position is fully hedged." },
+  REJECTED:         { label: "REJECTED",     color: S.fail,     desc: "Rejected, can be reopened",                      nextStep: "Click REOPEN to return to NEW status." },
 };
 
-const ALL_STATUSES: ExecStatus[] = ["NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE", "HEDGED", "REJECTED"];
+type FilterPreset = "ALL" | "NEW" | "POLICY_ASSIGNED" | "READY_TO_EXECUTE" | "HEDGED" | "REJECTED" | "NEEDS_ACTION";
 
-// ─── Modal types ───────────────────────────────────────────────────────────────
-type ModalType = "assign-policy" | "mark-ready" | "execute" | "reject" | null;
+const PRESET_LABELS: Record<FilterPreset, string> = {
+  ALL: "ALL", NEW: "NEW", POLICY_ASSIGNED: "POLICY ASGND",
+  READY_TO_EXECUTE: "READY", HEDGED: "HEDGED", REJECTED: "REJECTED",
+  NEEDS_ACTION: "NEEDS ACTION",
+};
+const NEEDS_ACTION_STATUSES: ExecStatus[] = ["NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE"];
 
-interface ModalState {
-  type: ModalType;
-  position: PositionRow | null;
-}
-
-// ─── Formatting helpers ────────────────────────────────────────────────────────
+type ModalType = "assign-policy" | "mark-ready" | "reject" | "proposal-info" | null;
+interface ModalState { type: ModalType; position: PositionRow | null; }
 function fmtAmt(n: number | null | undefined): string {
   if (n == null) return "—";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
 }
-
-function fmtDate(s: string | null | undefined): string {
-  if (!s) return "—";
-  return s.slice(0, 10);
+function fmtDate(s: string | null | undefined): string { return s ? s.slice(0, 10) : "—"; }
+function truncate(s: string | null | undefined, max = 16): string {
+  if (!s) return "—"; return s.length > max ? s.slice(0, max) + "…" : s;
 }
-
-// ─── Status badge component ────────────────────────────────────────────────────
+function shortId(s: string | null | undefined): string { if (!s) return "—"; return s.slice(0, 8).toUpperCase(); }
+function Tooltip({ tip, children }: { tip: string; children: React.ReactNode }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span style={{ position: "relative", display: "inline-block" }}
+      onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      {children}
+      {show && tip && (
+        <span style={{
+          position: "absolute", bottom: "calc(100% + 6px)", left: "50%",
+          transform: "translateX(-50%)", zIndex: 500,
+          background: "#1a1a2e", border: `1px solid ${S.rim}`,
+          color: S.secondary, fontFamily: S.fontMono, fontSize: 10,
+          padding: "5px 9px", borderRadius: 2, whiteSpace: "pre-wrap",
+          maxWidth: 260, lineHeight: 1.5, pointerEvents: "none",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
+        }}>{tip}</span>
+      )}
+    </span>
+  );
+}
 function StatusBadge({ status }: { status: ExecStatus }) {
   const cfg = STATUS_CONFIG[status];
   return (
     <span style={{
-      fontFamily: S.fontMono,
-      fontSize: 9,
-      fontWeight: 700,
-      letterSpacing: "0.08em",
-      color: cfg.color,
-      background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`,
+      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+      color: cfg.color, background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`,
       border: `1px solid color-mix(in srgb, ${cfg.color} 28%, transparent)`,
-      padding: "2px 6px",
-      borderRadius: 2,
-      whiteSpace: "nowrap",
-    }}>
-      {cfg.label}
-    </span>
+      padding: "2px 6px", borderRadius: 2, whiteSpace: "nowrap",
+    }}>{cfg.label}</span>
   );
 }
 
-// ─── Action button component ───────────────────────────────────────────────────
-function ActionBtn({
-  label, color, onClick, disabled, loading,
-}: {
-  label: string;
-  color: string;
-  onClick: () => void;
-  disabled?: boolean;
-  loading?: boolean;
+function ActionBtn({ label, color, onClick, disabled, loading, disabledReason }: {
+  label: string; color: string; onClick: () => void;
+  disabled?: boolean; loading?: boolean; disabledReason?: string;
 }) {
+  const btn = (
+    <button onClick={onClick} disabled={disabled || loading} style={{
+      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+      color: disabled ? S.tertiary : color, background: "transparent",
+      border: `1px solid ${disabled ? S.rim : `color-mix(in srgb, ${color} 40%, transparent)`}`,
+      padding: "2px 7px", cursor: disabled ? "not-allowed" : "pointer",
+      borderRadius: 2, opacity: loading ? 0.5 : 1, transition: "all 0.1s",
+    }}>{loading ? "…" : label}</button>
+  );
+  if (disabled && disabledReason) return <Tooltip tip={disabledReason}>{btn}</Tooltip>;
+  return btn;
+}
+function RunIdChip({ runId, onCopy }: { runId: string | null; onCopy?: (id: string) => void }) {
+  if (!runId) return <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>—</span>;
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled || loading}
-      style={{
-        fontFamily: S.fontMono,
-        fontSize: 9,
-        fontWeight: 700,
-        letterSpacing: "0.06em",
-        color: disabled ? S.tertiary : color,
-        background: "transparent",
-        border: `1px solid ${disabled ? S.rim : `color-mix(in srgb, ${color} 40%, transparent)`}`,
-        padding: "2px 7px",
-        cursor: disabled ? "not-allowed" : "pointer",
-        borderRadius: 2,
-        opacity: loading ? 0.5 : 1,
-        transition: "all 0.1s",
-      }}
-    >
-      {loading ? "…" : label}
-    </button>
+    <Tooltip tip={`Run: ${runId}
+Click to copy`}>
+      <span onClick={() => onCopy ? onCopy(runId) : navigator.clipboard?.writeText(runId).catch(() => undefined)}
+        style={{
+          fontFamily: S.fontMono, fontSize: 9, color: S.purple,
+          background: `color-mix(in srgb, ${S.purple} 10%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${S.purple} 25%, transparent)`,
+          padding: "1px 5px", borderRadius: 2, cursor: "pointer", letterSpacing: "0.04em",
+        }}>{shortId(runId)}</span>
+    </Tooltip>
   );
 }
 
-// ─── Modal wrapper ─────────────────────────────────────────────────────────────
+function PolicyChip({ policyId }: { policyId: string | null }) {
+  if (!policyId) return <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>—</span>;
+  return (
+    <Tooltip tip={`Policy ID: ${policyId}`}>
+      <span style={{
+        fontFamily: S.fontMono, fontSize: 9, color: S.cyan,
+        background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${S.cyan} 20%, transparent)`,
+        padding: "1px 5px", borderRadius: 2, letterSpacing: "0.04em",
+      }}>{shortId(policyId)}</span>
+    </Tooltip>
+  );
+}
 function ModalOverlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        zIndex: 200,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: S.bgPanel, border: `1px solid ${S.rim}`,
-          padding: "24px 28px", minWidth: 380, maxWidth: 480,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-        }}
-      >
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "24px 28px", minWidth: 400, maxWidth: 500, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
         {children}
       </div>
     </div>
@@ -167,602 +168,333 @@ function ModalOverlay({ onClose, children }: { onClose: () => void; children: Re
 function ModalHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div style={{ marginBottom: 18 }}>
-      <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-        {title}
-      </div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, marginTop: 4 }}>
-        {subtitle}
-      </div>
+      <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary, letterSpacing: "0.04em", textTransform: "uppercase" }}>{title}</div>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, marginTop: 4 }}>{subtitle}</div>
     </div>
   );
 }
 
-function ModalInput({
-  label, value, onChange, placeholder, type = "text",
-}: {
-  label: string; value: string; onChange: (v: string) => void;
-  placeholder?: string; type?: string;
+function ModalInput({ label, value, onChange, placeholder, type = "text" }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
 }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <label style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-        {label}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{
-          width: "100%", padding: "7px 10px", boxSizing: "border-box",
-          background: S.bgSub, border: `1px solid ${S.rim}`,
-          color: S.primary, fontFamily: S.fontMono, fontSize: 12,
-          outline: "none",
-        }}
-      />
+      <label style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</label>
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: "100%", padding: "7px 10px", boxSizing: "border-box", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, fontFamily: S.fontMono, fontSize: 12, outline: "none" }} />
     </div>
   );
 }
 
 function ModalActions({ onCancel, onConfirm, confirmLabel, confirmColor, disabled }: {
-  onCancel: () => void; onConfirm: () => void;
-  confirmLabel: string; confirmColor: string; disabled?: boolean;
+  onCancel: () => void; onConfirm: () => void; confirmLabel: string; confirmColor: string; disabled?: boolean;
 }) {
   return (
     <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
-      <button onClick={onCancel} style={{
-        fontFamily: S.fontMono, fontSize: 11, color: S.secondary,
-        background: "transparent", border: `1px solid ${S.rim}`,
-        padding: "6px 14px", cursor: "pointer",
-      }}>Cancel</button>
-      <button onClick={onConfirm} disabled={disabled} style={{
-        fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep,
-        background: disabled ? S.tertiary : confirmColor,
-        border: "none", padding: "6px 14px",
-        cursor: disabled ? "not-allowed" : "pointer",
-        fontWeight: 700, letterSpacing: "0.04em",
-      }}>{confirmLabel}</button>
+      <button onClick={onCancel} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
+      <button onClick={onConfirm} disabled={disabled} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: disabled ? S.tertiary : confirmColor, border: "none", padding: "6px 14px", cursor: disabled ? "not-allowed" : "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>{confirmLabel}</button>
     </div>
   );
 }
-
-// ─── Page component ────────────────────────────────────────────────────────────
 export default function PositionDeskPage() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { user, token } = useAuth();
-
-  const positions       = useSelector((s: RootState) => s.positions.positions);
-  const loading         = useSelector((s: RootState) => s.positions.loading);
+  const positions        = useSelector((s: RootState) => s.positions.positions);
+  const loading          = useSelector((s: RootState) => s.positions.loading);
   const lifecycleLoading = useSelector((s: RootState) => s.positions.lifecycleLoading);
   const lifecycleError   = useSelector((s: RootState) => s.positions.lifecycleError);
 
-  // ── Filter state ──
-  const [statusFilter, setStatusFilter] = useState<ExecStatus | "ALL">("ALL");
-  const [search, setSearch] = useState("");
-
-  // ── Modal state ──
-  const [modal, setModal] = useState<ModalState>({ type: null, position: null });
-  const [policyId, setPolicyId] = useState("");
-  const [runId, setRunId] = useState("");
-  const [hedgeAmount, setHedgeAmount] = useState("");
-  const [hedgeRate, setHedgeRate] = useState("");
-  const [executionRef, setExecutionRef] = useState("");
+  const [preset, setPreset]       = useState<FilterPreset>("ALL");
+  const [search, setSearch]       = useState("");
+  const [copiedRun, setCopiedRun] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [selected, setSelected]   = useState<Set<string>>(new Set());
+  const [modal, setModal]               = useState<ModalState>({ type: null, position: null });
+  const [policyId, setPolicyId]         = useState("");
+  const [runId, setRunId]               = useState("");
+  const [hedgeAmount, setHedgeAmount]   = useState("");
+  const [hedgeRate, setHedgeRate]       = useState("");
   const [rejectReason, setRejectReason] = useState("");
+  useEffect(() => { if (token) dispatch(listPositionsThunk({ token })); }, [dispatch, token]);
+  useEffect(() => { if (modal.type !== null) dispatch(clearLifecycleError()); }, [modal.type, dispatch]);
 
-  // ── Load on mount ──
   useEffect(() => {
-    if (token) {
-      dispatch(listPositionsThunk({ token }));
-    }
-  }, [dispatch, token]);
-
-  // ── Dismiss lifecycle error on modal open ──
-  useEffect(() => {
-    if (modal.type !== null) {
-      dispatch(clearLifecycleError());
-    }
-  }, [modal.type, dispatch]);
-
-  // ── Filtered positions ──
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") {
+        if (e.key === "Escape") { (e.target as HTMLElement).blur(); setSearch(""); }
+        return;
+      }
+      if (modal.type !== null) { if (e.key === "Escape") closeModal(); return; }
+      switch (e.key) {
+        case "/": e.preventDefault(); searchRef.current?.focus(); break;
+        case "r": case "R": if (token) dispatch(listPositionsThunk({ token })); break;
+        case "f": case "F": {
+          const cycle: FilterPreset[] = ["ALL", "NEEDS_ACTION", "NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE", "HEDGED", "REJECTED"];
+          const idx = cycle.indexOf(preset);
+          setPreset(cycle[(idx + 1) % cycle.length]);
+          break;
+        }
+        case "Escape": setSearch(""); setSelected(new Set()); break;
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dispatch, token, modal.type, preset]);
   const filteredPositions = useMemo(() => {
     let rows = positions;
-    if (statusFilter !== "ALL") {
-      rows = rows.filter((p) => p.execution_status === statusFilter);
-    }
+    if (preset === "NEEDS_ACTION") rows = rows.filter((p) => NEEDS_ACTION_STATUSES.includes(p.execution_status as ExecStatus));
+    else if (preset !== "ALL") rows = rows.filter((p) => p.execution_status === preset);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      rows = rows.filter(
-        (p) =>
-          p.record_id.toLowerCase().includes(q) ||
-          p.entity.toLowerCase().includes(q) ||
-          p.currency.toLowerCase().includes(q),
+      rows = rows.filter((p) =>
+        p.record_id.toLowerCase().includes(q) || p.entity.toLowerCase().includes(q) ||
+        p.currency.toLowerCase().includes(q) || (p.policy_id ?? "").toLowerCase().includes(q) ||
+        (p.last_run_id ?? "").toLowerCase().includes(q),
       );
     }
     return rows;
-  }, [positions, statusFilter, search]);
+  }, [positions, preset, search]);
 
-  // ── Status counts for filter bar ──
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { ALL: positions.length };
-    for (const st of ALL_STATUSES) {
-      counts[st] = positions.filter((p) => p.execution_status === st).length;
-    }
-    return counts;
+    const c: Record<string, number> = { ALL: positions.length };
+    for (const st of ["NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE", "HEDGED", "REJECTED"] as ExecStatus[])
+      c[st] = positions.filter((p) => p.execution_status === st).length;
+    c.NEEDS_ACTION = positions.filter((p) => NEEDS_ACTION_STATUSES.includes(p.execution_status as ExecStatus)).length;
+    return c;
   }, [positions]);
-
-  // ── Open modal helpers ──
   const openModal = useCallback((type: ModalType, position: PositionRow) => {
     setModal({ type, position });
-    // Pre-fill from position state
     setPolicyId(position.policy_id ?? "");
     setRunId(position.last_run_id ?? "");
     setHedgeAmount(position.hedge_amount?.toString() ?? "");
     setHedgeRate(position.hedge_rate?.toString() ?? "");
-    setExecutionRef("");
     setRejectReason("");
   }, []);
 
-  const closeModal = useCallback(() => {
-    setModal({ type: null, position: null });
+  const closeModal = useCallback(() => setModal({ type: null, position: null }), []);
+
+  const handleCopyRun = useCallback((id: string) => {
+    navigator.clipboard?.writeText(id).catch(() => undefined);
+    setCopiedRun(id);
+    setTimeout(() => setCopiedRun(null), 1800);
   }, []);
 
-  // ── Action handlers ──
   const handleAssignPolicy = useCallback(async () => {
     if (!modal.position || !policyId.trim() || !token) return;
-    const result = await dispatch(assignPolicyThunk({
-      id: modal.position.id, policyInstanceId: policyId.trim(), token,
-    }));
-    if (result.meta.requestStatus === "fulfilled") closeModal();
+    const r = await dispatch(assignPolicyThunk({ id: modal.position.id, policyInstanceId: policyId.trim(), token }));
+    if (r.meta.requestStatus === "fulfilled") closeModal();
   }, [dispatch, modal.position, policyId, token, closeModal]);
 
   const handleMarkReady = useCallback(async () => {
     if (!modal.position || !runId.trim() || !token) return;
-    const result = await dispatch(markReadyThunk({
-      id: modal.position.id,
-      runId: runId.trim(),
+    const r = await dispatch(markReadyThunk({
+      id: modal.position.id, runId: runId.trim(),
       hedgeAmount: hedgeAmount ? parseFloat(hedgeAmount) : undefined,
-      hedgeRate: hedgeRate ? parseFloat(hedgeRate) : undefined,
-      token,
+      hedgeRate: hedgeRate ? parseFloat(hedgeRate) : undefined, token,
     }));
-    if (result.meta.requestStatus === "fulfilled") closeModal();
+    if (r.meta.requestStatus === "fulfilled") closeModal();
   }, [dispatch, modal.position, runId, hedgeAmount, hedgeRate, token, closeModal]);
-
-  const handleExecute = useCallback(async () => {
-    if (!modal.position || !executionRef.trim() || !token) return;
-    const result = await dispatch(executePositionThunk({
-      id: modal.position.id,
-      executionRef: executionRef.trim(),
-      hedgeAmount: hedgeAmount ? parseFloat(hedgeAmount) : undefined,
-      hedgeRate: hedgeRate ? parseFloat(hedgeRate) : undefined,
-      token,
-    }));
-    if (result.meta.requestStatus === "fulfilled") closeModal();
-  }, [dispatch, modal.position, executionRef, hedgeAmount, hedgeRate, token, closeModal]);
 
   const handleReject = useCallback(async () => {
     if (!modal.position || !rejectReason.trim() || !token) return;
-    const result = await dispatch(rejectPositionThunk({
-      id: modal.position.id, reason: rejectReason.trim(), token,
-    }));
-    if (result.meta.requestStatus === "fulfilled") closeModal();
+    const r = await dispatch(rejectPositionThunk({ id: modal.position.id, reason: rejectReason.trim(), token }));
+    if (r.meta.requestStatus === "fulfilled") closeModal();
   }, [dispatch, modal.position, rejectReason, token, closeModal]);
 
-  const handleReopen = useCallback(async (pos: PositionRow) => {
+  const handleReopen = useCallback(async (p: PositionRow) => {
     if (!token) return;
-    dispatch(reopenPositionThunk({ id: pos.id, token }));
+    dispatch(reopenPositionThunk({ id: p.id, token }));
   }, [dispatch, token]);
 
-  // ── Redirect if not authenticated ──
-  if (!user) {
-    return (
-      <div style={{ padding: 40, fontFamily: S.fontMono, color: S.secondary, fontSize: 12 }}>
-        Authentication required. <button onClick={() => router.push("/auth/login")} style={{ color: S.cyan, background: "none", border: "none", cursor: "pointer", fontFamily: S.fontMono }}>Sign in</button>
-      </div>
-    );
-  }
+  const allVisibleSelected = filteredPositions.length > 0 && filteredPositions.every((p) => selected.has(p.id));
+  const toggleSelectAll = useCallback(() => {
+    if (allVisibleSelected) setSelected(new Set());
+    else setSelected(new Set(filteredPositions.map((p) => p.id)));
+  }, [allVisibleSelected, filteredPositions]);
+  const toggleSelect = useCallback((id: string) => {
+    setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }, []);
+  if (!user) return (
+    <div style={{ padding: 40, fontFamily: S.fontMono, color: S.secondary, fontSize: 12 }}>
+      Authentication required. <button onClick={() => router.push("/auth/login")} style={{ color: S.cyan, background: "none", border: "none", cursor: "pointer", fontFamily: S.fontMono }}>Sign in</button>
+    </div>
+  );
 
   const pos = modal.position;
   const isTransitioning = lifecycleLoading !== null;
+  const needsActionCount = statusCounts.NEEDS_ACTION ?? 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: S.bgDeep, overflow: "hidden" }}>
-
-      {/* ── Header strip ──────────────────────────────────────────────────────── */}
-      <header style={{
-        display: "flex", alignItems: "center", gap: 12, height: 44, flexShrink: 0,
-        padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
-      }}>
-        <button onClick={() => router.push("/input")} style={{
-          fontFamily: S.fontMono, fontSize: 11, color: S.tertiary,
-          background: "transparent", border: `1px solid ${S.rim}`,
-          padding: "2px 8px", cursor: "pointer",
-        }}>← Ingestion</button>
+      <header style={{ display: "flex", alignItems: "center", gap: 10, height: 44, flexShrink: 0, padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}` }}>
+        <button onClick={() => router.push("/input")} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer" }}>← Ingestion</button>
         <span style={{ color: S.rim }}>|</span>
-        <span style={{
-          fontFamily: S.fontUI, fontSize: 13, fontWeight: 700,
-          letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary,
-        }}>Position Desk</span>
-        <span style={{
-          fontFamily: S.fontMono, fontSize: 10, color: S.secondary,
-          border: `1px solid ${S.rim}`, padding: "1px 5px",
-        }}>CONTROL TOWER · LIFECYCLE</span>
+        <span style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary }}>Position Desk</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, border: `1px solid ${S.rim}`, padding: "1px 5px" }}>CONTROL TOWER</span>
+        {needsActionCount > 0 && (
+          <span onClick={() => setPreset("NEEDS_ACTION")} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.amber, background: `color-mix(in srgb, ${S.amber} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, padding: "1px 7px", borderRadius: 2, cursor: "pointer", letterSpacing: "0.06em" }}>
+            ⚡ {needsActionCount} NEEDS ACTION
+          </span>
+        )}
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
-          {positions.length} positions
-        </span>
-        <button
-          onClick={() => token && dispatch(listPositionsThunk({ token }))}
-          style={{
-            fontFamily: S.fontMono, fontSize: 10, color: S.cyan,
-            background: "transparent", border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
-            padding: "2px 8px", cursor: "pointer",
-          }}
-        >↻ Refresh</button>
+        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{positions.length} positions</span>
+        <button onClick={() => token && dispatch(listPositionsThunk({ token }))} title="Refresh (R)" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, background: "transparent", border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>↻ Refresh</button>
+        <button onClick={() => router.push("/execution")} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.pass, background: `color-mix(in srgb, ${S.pass} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.pass} 25%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>→ Execution</button>
       </header>
-
-      {/* ── Lifecycle error banner ─────────────────────────────────────────────── */}
       {lifecycleError && (
-        <div style={{
-          background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
-          border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`,
-          borderLeft: `3px solid ${S.fail}`,
-          padding: "8px 20px", flexShrink: 0,
-          display: "flex", alignItems: "center", gap: 12,
-        }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.fail, letterSpacing: "0.06em" }}>
-            TRANSITION ERROR
-          </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
-            {lifecycleError}
-          </span>
-          <button
-            onClick={() => dispatch(clearLifecycleError())}
-            style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}
-          >✕</button>
+        <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`, borderLeft: `3px solid ${S.fail}`, padding: "7px 20px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.fail, letterSpacing: "0.06em" }}>TRANSITION ERROR</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>{lifecycleError}</span>
+          <button onClick={() => dispatch(clearLifecycleError())} style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>✕</button>
         </div>
       )}
 
-      {/* ── Status filter bar ──────────────────────────────────────────────────── */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 2, padding: "6px 20px",
-        background: S.bgPanel, borderBottom: `1px solid ${S.soft}`, flexShrink: 0, flexWrap: "wrap",
-      }}>
-        {/* ALL filter */}
-        {(["ALL", ...ALL_STATUSES] as const).map((st) => {
-          const isActive = statusFilter === st;
-          const cfg = st === "ALL" ? null : STATUS_CONFIG[st];
-          const color = cfg?.color ?? S.secondary;
-          const label = st === "ALL" ? "ALL" : cfg!.label;
-          const count = statusCounts[st] ?? 0;
+      {copiedRun && (
+        <div style={{ background: `color-mix(in srgb, ${S.purple} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.purple} 25%, transparent)`, padding: "5px 20px", flexShrink: 0, fontFamily: S.fontMono, fontSize: 10, color: S.purple }}>
+          ✓ Run ID copied: {copiedRun}
+        </div>
+      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "6px 20px", background: S.bgPanel, borderBottom: `1px solid ${S.soft}`, flexShrink: 0, flexWrap: "wrap" }}>
+        {(["ALL", "NEEDS_ACTION", "NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE", "HEDGED", "REJECTED"] as FilterPreset[]).map((p) => {
+          const isActive = preset === p;
+          const color = p === "NEEDS_ACTION" ? S.amber : p === "ALL" ? S.secondary : p === "HEDGED" ? S.pass : p === "REJECTED" ? S.fail : STATUS_CONFIG[p as ExecStatus]?.color ?? S.secondary;
+          const count = statusCounts[p] ?? 0;
           return (
-            <button
-              key={st}
-              onClick={() => setStatusFilter(st as typeof statusFilter)}
-              style={{
-                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
-                color: isActive ? (st === "ALL" ? S.primary : color) : S.tertiary,
-                background: isActive ? `color-mix(in srgb, ${st === "ALL" ? S.cyan : color} 10%, transparent)` : "transparent",
-                border: `1px solid ${isActive ? `color-mix(in srgb, ${st === "ALL" ? S.cyan : color} 35%, transparent)` : S.rim}`,
-                padding: "3px 9px", cursor: "pointer", borderRadius: 2,
-                transition: "all 0.1s",
-              }}
-            >
-              {label} <span style={{ opacity: 0.7 }}>({count})</span>
+            <button key={p} onClick={() => setPreset(p)} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: isActive ? color : S.tertiary, background: isActive ? `color-mix(in srgb, ${color} 12%, transparent)` : "transparent", border: `1px solid ${isActive ? `color-mix(in srgb, ${color} 35%, transparent)` : S.rim}`, padding: "3px 9px", cursor: "pointer", borderRadius: 2, transition: "all 0.1s" }}>
+              {PRESET_LABELS[p]} ({count})
             </button>
           );
         })}
         <div style={{ flex: 1 }} />
-        {/* Search */}
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search record_id / entity / currency…"
-          style={{
-            fontFamily: S.fontMono, fontSize: 11, padding: "3px 10px",
-            background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary,
-            outline: "none", width: 260,
-          }}
-        />
+        <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search… (/ to focus · Esc to clear)" style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 10px", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, outline: "none", width: 280 }} />
       </div>
+      {selected.size > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 20px", background: `color-mix(in srgb, ${S.amber} 6%, ${S.bgPanel})`, borderBottom: `1px solid color-mix(in srgb, ${S.amber} 20%, ${S.soft})`, flexShrink: 0 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, fontWeight: 700, letterSpacing: "0.06em" }}>{selected.size} SELECTED</span>
+          <button onClick={() => setSelected(new Set())} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer", borderRadius: 2 }}>CLEAR</button>
+          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>Per-row actions required (each needs mandatory audit reason)</span>
+        </div>
+      )}
 
-      {/* ── Column header ─────────────────────────────────────────────────────── */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "130px 160px 70px 80px 110px 100px 80px 1fr",
-        padding: "5px 20px",
-        background: S.bgSub, borderBottom: `1px solid ${S.soft}`,
-        flexShrink: 0,
-      }}>
-        {["RECORD ID", "ENTITY", "CCY", "AMOUNT", "STATUS", "VALUE DATE", "FLOW", "ACTIONS"].map((col) => (
-          <span key={col} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700 }}>
-            {col}
-          </span>
+      <div style={{ display: "grid", gridTemplateColumns: "32px 120px 140px 56px 80px 118px 86px 80px 56px 56px 1fr", padding: "5px 20px", background: S.bgSub, borderBottom: `1px solid ${S.soft}`, flexShrink: 0 }}>
+        <div><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} style={{ cursor: "pointer", accentColor: S.amber }} /></div>
+        {["RECORD ID", "ENTITY", "CCY", "AMOUNT", "STATUS", "POLICY ID", "RUN ID", "VALUE DATE", "FLOW", "ACTIONS"].map((col) => (
+          <span key={col} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700 }}>{col}</span>
         ))}
       </div>
-
-      {/* ── Table body ────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: "auto" }}>
-        {loading && (
-          <div style={{ padding: "40px 20px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textAlign: "center" }}>
-            Loading positions…
-          </div>
-        )}
+        {loading && <div style={{ padding: "40px 20px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textAlign: "center" }}>Loading positions…</div>}
         {!loading && filteredPositions.length === 0 && (
           <div style={{ padding: "48px 20px", textAlign: "center" }}>
-            <div style={{ fontFamily: S.fontUI, fontSize: 14, color: S.secondary, marginBottom: 6 }}>
-              No positions found
-            </div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 14, color: S.secondary, marginBottom: 6 }}>No positions found</div>
             <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
-              {statusFilter !== "ALL" ? `No positions with status ${statusFilter}` : "Import positions from the Ingestion Desk"}
+              {preset !== "ALL" ? `No positions with filter "${PRESET_LABELS[preset]}"` : "Import positions from the Ingestion Desk"}
             </div>
           </div>
         )}
-        {filteredPositions.map((pos, idx) => {
-          const isLoading = lifecycleLoading === pos.id;
-          const st = pos.execution_status as ExecStatus;
-
+        {filteredPositions.map((p, idx) => {
+          const isLoading = lifecycleLoading === p.id;
+          const isSelected = selected.has(p.id);
+          const st = p.execution_status as ExecStatus;
+          const cfg = STATUS_CONFIG[st];
           return (
-            <div
-              key={pos.id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "130px 160px 70px 80px 110px 100px 80px 1fr",
-                padding: "8px 20px",
-                borderBottom: `1px solid ${S.soft}`,
-                background: idx % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.bgPanel} 40%, transparent)`,
-                alignItems: "center",
-                opacity: isLoading ? 0.6 : 1,
-                transition: "opacity 0.15s",
-              }}
-            >
-              {/* Record ID */}
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {pos.record_id}
-              </span>
+            <div key={p.id} style={{ display: "grid", gridTemplateColumns: "32px 120px 140px 56px 80px 118px 86px 80px 56px 56px 1fr", padding: "7px 20px", borderBottom: `1px solid ${S.soft}`, background: isSelected ? `color-mix(in srgb, ${S.amber} 5%, ${S.bgPanel})` : idx % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.bgPanel} 40%, transparent)`, alignItems: "center", opacity: isLoading ? 0.6 : 1, transition: "background 0.1s, opacity 0.15s" }}>
+              <div><input type="checkbox" checked={isSelected} onChange={() => toggleSelect(p.id)} style={{ cursor: "pointer", accentColor: S.amber }} /></div>
+              <Tooltip tip={p.record_id}><span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{truncate(p.record_id, 14)}</span></Tooltip>
+              <Tooltip tip={p.entity}><span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{truncate(p.entity, 18)}</span></Tooltip>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, fontWeight: 700 }}>{p.currency}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, textAlign: "right", paddingRight: 8 }}>{fmtAmt(p.amount)}</span>
+              <Tooltip tip={`${cfg.desc}
 
-              {/* Entity */}
-              <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {pos.entity}
-              </span>
-
-              {/* Currency */}
-              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, fontWeight: 700 }}>
-                {pos.currency}
-              </span>
-
-              {/* Amount */}
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, textAlign: "right", paddingRight: 8 }}>
-                {fmtAmt(pos.amount)}
-              </span>
-
-              {/* Execution status badge */}
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <StatusBadge status={st} />
-              </div>
-
-              {/* Value date */}
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
-                {fmtDate(pos.value_date)}
-              </span>
-
-              {/* Flow type */}
-              <span style={{
-                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
-                color: pos.type === "AR" ? S.pass : S.amber,
-              }}>
-                {pos.type}
-              </span>
-
-              {/* Actions */}
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                {st === "NEW" && (
-                  <>
-                    <ActionBtn label="ASSIGN POLICY" color={S.cyan}    onClick={() => openModal("assign-policy", pos)} loading={isLoading} />
-                    <ActionBtn label="REJECT"        color={S.fail}    onClick={() => openModal("reject", pos)}        loading={isLoading} />
-                  </>
-                )}
-                {st === "POLICY_ASSIGNED" && (
-                  <>
-                    <ActionBtn label="MARK READY"    color={S.amber}   onClick={() => openModal("mark-ready", pos)}    loading={isLoading} />
-                    <ActionBtn label="RE-ASSIGN"     color={S.secondary} onClick={() => openModal("assign-policy", pos)} loading={isLoading} />
-                    <ActionBtn label="REJECT"        color={S.fail}    onClick={() => openModal("reject", pos)}        loading={isLoading} />
-                  </>
-                )}
-                {st === "READY_TO_EXECUTE" && (
-                  <>
-                    <ActionBtn label="EXECUTE"       color={S.pass}    onClick={() => openModal("execute", pos)}       loading={isLoading} />
-                    <ActionBtn label="REJECT"        color={S.fail}    onClick={() => openModal("reject", pos)}        loading={isLoading} />
-                  </>
-                )}
-                {st === "HEDGED" && (
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>
-                    {pos.execution_ref ? `REF: ${pos.execution_ref}` : "TERMINAL"}
-                  </span>
-                )}
+Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
+              <PolicyChip policyId={p.policy_id} />
+              <RunIdChip runId={p.last_run_id} onCopy={handleCopyRun} />
+              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{fmtDate(p.value_date)}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: p.type === "AR" ? S.pass : S.amber }}>{p.type}</span>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+                {st === "NEW" && (<>
+                  <ActionBtn label="ASSIGN POLICY" color={S.cyan} onClick={() => openModal("assign-policy", p)} loading={isLoading} />
+                  <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
+                </>)}
+                {st === "POLICY_ASSIGNED" && (<>
+                  <ActionBtn label="MARK READY" color={S.amber} onClick={() => openModal("mark-ready", p)} loading={isLoading} />
+                  <ActionBtn label="RE-ASSIGN" color={S.secondary} onClick={() => openModal("assign-policy", p)} loading={isLoading} />
+                  <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
+                </>)}
+                {st === "READY_TO_EXECUTE" && (<>
+                  <ActionBtn label="PROPOSE" color={S.pass} onClick={() => openModal("proposal-info", p)} loading={isLoading} />
+                  <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
+                </>)}
+                {st === "HEDGED" && <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>{p.execution_ref ? `REF: ${truncate(p.execution_ref, 14)}` : "TERMINAL"}</span>}
                 {st === "REJECTED" && (
-                  <ActionBtn label="REOPEN" color={S.secondary} onClick={() => handleReopen(pos)} loading={isLoading} />
+                  <Tooltip tip={p.rejection_reason ? `Reason: ${p.rejection_reason}` : "No reason recorded"}>
+                    <ActionBtn label="REOPEN" color={S.secondary} onClick={() => handleReopen(p)} loading={isLoading} />
+                  </Tooltip>
                 )}
               </div>
             </div>
           );
         })}
       </div>
-
-      {/* ── Footer ────────────────────────────────────────────────────────────── */}
-      <footer style={{
-        height: 28, flexShrink: 0, display: "flex", alignItems: "center",
-        padding: "0 20px", gap: 16,
-        background: S.bgPanel, borderTop: `1px solid ${S.rim}`,
-      }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>
-          POSITION DESK · PHASE 0 BACKBONE · WORM AUDIT
-        </span>
+      <footer style={{ height: 28, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 20px", gap: 16, background: S.bgPanel, borderTop: `1px solid ${S.rim}` }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>POSITION DESK · PHASE 1 · 4-EYES · WORM AUDIT</span>
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
-          {filteredPositions.length}/{positions.length} rows shown
-        </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{filteredPositions.length}/{positions.length} shown</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>/ = search · R = refresh · F = filter · Esc = clear</span>
       </footer>
-
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-      {/* ── Modals ────────────────────────────────────────────────────────── */}
-      {/* ══════════════════════════════════════════════════════════════════════ */}
-
-      {/* Assign Policy modal */}
       {modal.type === "assign-policy" && pos && (
         <ModalOverlay onClose={closeModal}>
-          <ModalHeader
-            title="Assign Policy"
-            subtitle={`Position: ${pos.record_id} — ${pos.entity} (${pos.currency})`}
-          />
-          <ModalInput
-            label="Policy Instance ID *"
-            value={policyId}
-            onChange={setPolicyId}
-            placeholder="UUID of the active policy instance"
-          />
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>
-            Transition: {pos.execution_status} → POLICY_ASSIGNED
-          </div>
-          {lifecycleError && (
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>
-              {lifecycleError}
-            </div>
-          )}
-          <ModalActions
-            onCancel={closeModal}
-            onConfirm={handleAssignPolicy}
-            confirmLabel="ASSIGN POLICY"
-            confirmColor={S.cyan}
-            disabled={!policyId.trim() || isTransitioning}
-          />
+          <ModalHeader title="Assign Policy" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
+          <ModalInput label="Policy Instance ID *" value={policyId} onChange={setPolicyId} placeholder="UUID of the active policy instance" />
+          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>Transition: {pos.execution_status} → POLICY_ASSIGNED</div>
+          {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
+          <ModalActions onCancel={closeModal} onConfirm={handleAssignPolicy} confirmLabel="ASSIGN POLICY" confirmColor={S.cyan} disabled={!policyId.trim() || isTransitioning} />
         </ModalOverlay>
       )}
 
-      {/* Mark Ready modal */}
       {modal.type === "mark-ready" && pos && (
         <ModalOverlay onClose={closeModal}>
-          <ModalHeader
-            title="Mark Ready to Execute"
-            subtitle={`Position: ${pos.record_id} — ${pos.entity} (${pos.currency})`}
-          />
-          <ModalInput
-            label="Calculation Run ID *"
-            value={runId}
-            onChange={setRunId}
-            placeholder="run_id from POST /v1/calculate"
-          />
-          <ModalInput
-            label="Hedge Amount (optional)"
-            value={hedgeAmount}
-            onChange={setHedgeAmount}
-            placeholder="Notional USD to hedge"
-            type="number"
-          />
-          <ModalInput
-            label="Hedge Rate (optional)"
-            value={hedgeRate}
-            onChange={setHedgeRate}
-            placeholder="Locked forward rate"
-            type="number"
-          />
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>
-            Transition: POLICY_ASSIGNED → READY_TO_EXECUTE
-          </div>
-          {lifecycleError && (
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>
-              {lifecycleError}
-            </div>
-          )}
-          <ModalActions
-            onCancel={closeModal}
-            onConfirm={handleMarkReady}
-            confirmLabel="MARK READY"
-            confirmColor={S.amber}
-            disabled={!runId.trim() || isTransitioning}
-          />
+          <ModalHeader title="Mark Ready to Execute" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
+          <ModalInput label="Calculation Run ID *" value={runId} onChange={setRunId} placeholder="run_id from POST /v1/calculate" />
+          <ModalInput label="Hedge Amount (optional)" value={hedgeAmount} onChange={setHedgeAmount} placeholder="Notional USD to hedge" type="number" />
+          <ModalInput label="Hedge Rate (optional)" value={hedgeRate} onChange={setHedgeRate} placeholder="Locked forward rate" type="number" />
+          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>Transition: POLICY_ASSIGNED → READY_TO_EXECUTE</div>
+          {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
+          <ModalActions onCancel={closeModal} onConfirm={handleMarkReady} confirmLabel="MARK READY" confirmColor={S.amber} disabled={!runId.trim() || isTransitioning} />
         </ModalOverlay>
       )}
-
-      {/* Execute modal */}
-      {modal.type === "execute" && pos && (
+      {modal.type === "proposal-info" && pos && (
         <ModalOverlay onClose={closeModal}>
-          <ModalHeader
-            title="Confirm Execution"
-            subtitle={`Position: ${pos.record_id} — ${pos.entity} (${pos.currency})`}
-          />
-          <div style={{
-            fontFamily: S.fontMono, fontSize: 10, color: S.amber,
-            padding: "6px 10px", border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`,
-            background: `color-mix(in srgb, ${S.amber} 6%, transparent)`,
-            marginBottom: 14, lineHeight: 1.5,
-          }}>
-            This is a TERMINAL transition. HEDGED state cannot be reversed.<br />
-            Requires: trades.execute permission (SoD gate).
+          <ModalHeader title="4-Eyes Execution Proposal" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
+          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, padding: "8px 12px", border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 14, lineHeight: 1.7 }}>
+            <strong>4-Eyes Workflow Required (Sprint 1.1)</strong><br />
+            Execution to HEDGED requires a formal approval chain:<br /><br />
+            1 · Maker submits: POST /v1/proposals<br />
+            2 · Different checker approves: PATCH /v1/proposals/:id/approve<br />
+            3 · Checker executes: POST /v1/proposals/:id/execute<br /><br />
+            SoD enforced at DB layer (approver ≠ proposer).<br />
+            Proposal hash + approval hash chained for tamper evidence.
           </div>
-          <ModalInput
-            label="Execution Reference *"
-            value={executionRef}
-            onChange={setExecutionRef}
-            placeholder="IBKR order ID / bank confirmation ref"
-          />
-          <ModalInput
-            label="Hedge Amount (optional)"
-            value={hedgeAmount}
-            onChange={setHedgeAmount}
-            placeholder="Actual hedged notional USD"
-            type="number"
-          />
-          <ModalInput
-            label="Hedge Rate (optional)"
-            value={hedgeRate}
-            onChange={setHedgeRate}
-            placeholder="Actual execution rate"
-            type="number"
-          />
-          {lifecycleError && (
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>
-              {lifecycleError}
-            </div>
-          )}
-          <ModalActions
-            onCancel={closeModal}
-            onConfirm={handleExecute}
-            confirmLabel="CONFIRM EXECUTION"
-            confirmColor={S.pass}
-            disabled={!executionRef.trim() || isTransitioning}
-          />
+          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, padding: "6px 10px", border: `1px solid ${S.rim}`, marginBottom: 14, lineHeight: 1.6 }}>
+            Position ID: {pos.id}<br />
+            Policy: {pos.policy_id ?? "—"}<br />
+            Last Run: {pos.last_run_id ?? "—"}<br />
+            Hedge Amount: {pos.hedge_amount != null ? fmtAmt(pos.hedge_amount) : "not set"}
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <button onClick={closeModal} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Close</button>
+            <button onClick={() => { closeModal(); router.push("/execution"); }} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: S.pass, border: "none", padding: "6px 14px", cursor: "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>→ Execution Desk</button>
+          </div>
         </ModalOverlay>
       )}
-
-      {/* Reject modal */}
       {modal.type === "reject" && pos && (
         <ModalOverlay onClose={closeModal}>
-          <ModalHeader
-            title="Reject Position"
-            subtitle={`Position: ${pos.record_id} — ${pos.entity} (${pos.currency})`}
-          />
-          <ModalInput
-            label="Rejection Reason * (mandatory for audit)"
-            value={rejectReason}
-            onChange={setRejectReason}
-            placeholder="e.g. Counterparty credit limit exceeded"
-          />
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>
-            Transition: {pos.execution_status} → REJECTED (can be reopened)
-          </div>
-          {lifecycleError && (
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>
-              {lifecycleError}
-            </div>
-          )}
-          <ModalActions
-            onCancel={closeModal}
-            onConfirm={handleReject}
-            confirmLabel="REJECT POSITION"
-            confirmColor={S.fail}
-            disabled={!rejectReason.trim() || isTransitioning}
-          />
+          <ModalHeader title="Reject Position" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
+          <ModalInput label="Rejection Reason * (mandatory for audit)" value={rejectReason} onChange={setRejectReason} placeholder="e.g. Counterparty credit limit exceeded" />
+          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>Transition: {pos.execution_status} → REJECTED (can be reopened)</div>
+          {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
+          <ModalActions onCancel={closeModal} onConfirm={handleReject} confirmLabel="REJECT POSITION" confirmColor={S.fail} disabled={!rejectReason.trim() || isTransitioning} />
         </ModalOverlay>
       )}
     </div>

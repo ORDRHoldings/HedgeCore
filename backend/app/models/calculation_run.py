@@ -45,7 +45,14 @@ class CalculationRun(Base):
     # Summary stats (for list view without deserializing JSONB)
     trade_count   = Column(Integer, nullable=False, default=0)
     hedge_count   = Column(Integer, nullable=False, default=0)
-    policy_hash   = Column(String(128), nullable=True)   # hash of policy config used
+    # Policy version pinning (Sprint 1.0):
+    #   policy_revision_id — UUID of the PolicyRevision row in force at calc time
+    #   policy_hash        — SHA-256 of canonical_policy at that revision
+    # These two fields together allow byte-for-byte proof of which policy
+    # governed this calculation, satisfying the BlackRock replay requirement:
+    #   "same snapshots + same policy revision → identical outputs + identical hashes"
+    policy_revision_id = Column(String(64), nullable=True)   # UUID → policy_revisions.id
+    policy_hash        = Column(String(128), nullable=True)  # SHA-256 hex
 
     # WORM timestamp — set once at insert, never updated
     created_at = Column(

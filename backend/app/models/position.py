@@ -71,6 +71,10 @@ class Position(Base):
     )
     # FK → policy_instances.id — which policy governs this position's hedge
     policy_id     = Column(PGUUID(as_uuid=True), nullable=True)
+    # FK → policy_revisions.id — PINNED revision in force at assign-policy time.
+    # This is the version-pinning anchor: allows exact replay of "which policy
+    # config governed this position" even after subsequent policy changes.
+    policy_revision_id = Column(PGUUID(as_uuid=True), nullable=True)
     # run_id from the last POST /v1/calculate that produced a hedge plan for this position
     last_run_id   = Column(String(64), nullable=True)
     # Wall-clock time when the execution was confirmed (IBKR ack / manual confirm)
@@ -106,4 +110,6 @@ class Position(Base):
         Index("ix_positions_exec_status", "company_id", "execution_status"),
         # Policy assignment queries
         Index("ix_positions_policy", "policy_id"),
+        # Policy revision pinning — for lineage and replay
+        Index("ix_positions_policy_revision", "policy_revision_id"),
     )
