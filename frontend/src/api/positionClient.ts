@@ -261,3 +261,46 @@ export async function reopenPosition(
   );
   return mapToPositionRow(data as Record<string, unknown>);
 }
+
+// ── Lineage (Sprint 1.4) ────────────────────────────────────────────────────
+
+export interface LineageNode {
+  id:     string;
+  type:   "POSITION" | "POLICY" | "POLICY_REVISION" | "CALCULATION_RUN" | "EXECUTION_PROPOSAL";
+  label:  string;
+  status: string;
+  fields: Record<string, unknown>;
+  links:  Record<string, string>;
+}
+
+export interface LineageEdge {
+  from:  string;
+  to:    string;
+  label: string;
+}
+
+export interface LineageResponse {
+  position_id: string;
+  nodes:       LineageNode[];
+  edges:       LineageEdge[];
+  summary: {
+    node_count:           number;
+    edge_count:           number;
+    has_policy:           boolean;
+    has_policy_revision:  boolean;
+    has_run:              boolean;
+    proposal_count:       number;
+    execution_status:     string;
+  };
+}
+
+export async function fetchPositionLineage(
+  positionId: string,
+  token?: string,
+): Promise<LineageResponse> {
+  const { data } = await axios.get(
+    `${BASE}/v1/positions/${positionId}/lineage`,
+    { headers: authHeaders(token) },
+  );
+  return data as LineageResponse;
+}
