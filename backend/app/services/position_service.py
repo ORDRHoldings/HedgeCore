@@ -261,11 +261,35 @@ async def assign_policy(
     Assign a policy instance to a position and transition execution_status
     NEW → POLICY_ASSIGNED (or re-assign from POLICY_ASSIGNED → POLICY_ASSIGNED via NEW path).
     Returns the updated Position. Caller must emit an audit_event.
+
+    Sprint 1.0: Also pins the latest PolicyRevision for the assigned policy
+    instance onto the position (position.policy_revision_id). This satisfies the
+    version-pinning requirement: "which exact policy revision governed this
+    position?" is answerable even after subsequent policy changes.
     """
+    from app.services import policy_revision_service as pr_service
+    import logging
+    _log = logging.getLogger(__name__)
+
     pos = await _get_in_scope(session, user, position_id, all_branches)
     _assert_transition(pos.execution_status, "POLICY_ASSIGNED", position_id)
     pos.policy_id        = data.policy_instance_id
     pos.execution_status = "POLICY_ASSIGNED"
+
+    # Pin the latest policy revision at assignment time (non-fatal if missing)
+    try:
+        latest_rev = await pr_service.get_latest_revision(
+            session, data.policy_instance_id
+        )
+        if latest_rev:
+            pos.policy_revision_id = latest_rev.id
+    except Exception:
+        _log.warning(
+            "Failed to pin policy_revision_id for position %s. "
+            "Version pinning incomplete for this assignment.",
+            position_id, exc_info=True,
+        )
+
     await session.commit()
     await session.refresh(pos)
     return pos
