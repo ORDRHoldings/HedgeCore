@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "../../lib/authContext";
 import type { AppDispatch, RootState } from "../../lib/store";
@@ -130,14 +131,17 @@ function RunIdChip({ runId, onCopy }: { runId: string | null; onCopy?: (id: stri
   if (!runId) return <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>—</span>;
   return (
     <Tooltip tip={`Run: ${runId}
-Click to copy`}>
-      <span onClick={() => onCopy ? onCopy(runId) : navigator.clipboard?.writeText(runId).catch(() => undefined)}
+Click to view audit trail`}>
+      <Link
+        href={`/run-viewer?id=${encodeURIComponent(runId)}`}
+        onClick={() => onCopy?.(runId)}
         style={{
           fontFamily: S.fontMono, fontSize: 9, color: S.purple,
           background: `color-mix(in srgb, ${S.purple} 10%, transparent)`,
           border: `1px solid color-mix(in srgb, ${S.purple} 25%, transparent)`,
           padding: "1px 5px", borderRadius: 2, cursor: "pointer", letterSpacing: "0.04em",
-        }}>{shortId(runId)}</span>
+          textDecoration: "none",
+        }}>{shortId(runId)}</Link>
     </Tooltip>
   );
 }
