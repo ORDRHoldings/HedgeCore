@@ -33,6 +33,8 @@ import { useHedge } from "../../lib/hedgeContext";
 import { listPositions, getExposureAggregation } from "../../api/positionClient";
 import type { PositionRow, ExposureAggregation } from "../../api/positionClient";
 import type { BucketResult, ScenarioTotalResult } from "../../api/types";
+import HelpPanel from "../../components/layout/HelpPanel";
+import { PORTFOLIO_RISK_HELP } from "../../lib/helpContent";
 
 // ── Hydration-safe timestamp ───────────────────────────────────────────────
 
@@ -605,7 +607,8 @@ export default function PortfolioRisk() {
         </div>
       )}
 
-      {/* ── Content area ────────────────────────────────────────────────── */}
+      {/* ── Content area + Help Panel ───────────────────────────────────── */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       <div style={{ flex: 1, overflow: "auto" }}>
 
         {/* ══ R1–R8 Decomposition ══ */}
@@ -1078,6 +1081,10 @@ export default function PortfolioRisk() {
           </div>
         )}
 
+      </div>
+
+        {/* Help Panel */}
+        <HelpPanel config={PORTFOLIO_RISK_HELP} storageKey="portfolio-risk" />
       </div>
 
       {/* ── Footer ────────────────────────────────────────────────────────── */}
