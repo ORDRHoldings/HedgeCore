@@ -25,6 +25,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
+import PolicyHelpPanel from "@/components/policy/PolicyHelpPanel";
 import {
   suggestPolicyAI,
   createPolicyTemplate,
@@ -369,7 +370,7 @@ function CitationNote({ text }: { text: string }) {
 
 // ── TopBar ─────────────────────────────────────────────────────────────────
 
-function TopBar({ onBack, pct }: { onBack: () => void; pct: number }) {
+function TopBar({ onBack, pct, onHelp }: { onBack: () => void; pct: number; onHelp: () => void }) {
   const ts = useRenderTs();
   return (
     <header style={{
@@ -395,6 +396,11 @@ function TopBar({ onBack, pct }: { onBack: () => void; pct: number }) {
           <div style={{ height: "100%", width: `${pct}%`, background: S.cyan, transition: "width 0.3s", borderRadius: 2 }} />
         </div>
       </div>
+      <button type="button" onClick={onHelp} style={{
+        fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
+        padding: "2px 10px", border: `1px solid ${S.rim}`,
+        color: S.tertiary, background: "transparent", cursor: "pointer",
+      }}>? HELP</button>
       <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{ts}</span>
     </header>
   );
@@ -1555,6 +1561,7 @@ export default function AIPolicyWizardPage() {
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [saveError, setSaveError]   = useState('');
+  const [helpOpen, setHelpOpen]     = useState(false);
 
   const pct = useMemo(() => Math.round(((stepIdx + (saved ? 1 : 0)) / TOTAL_STEPS) * 100), [stepIdx, saved]);
 
@@ -1607,11 +1614,16 @@ export default function AIPolicyWizardPage() {
         const result = await suggestPolicyAI(qa);
         setAiResult(result);
         if (result.recommendations[0]) {
+          // Auto-select first recommendation so save button is immediately enabled
+          const firstId = `${result.recommendations[0].preset.shortName}-0`;
+          setSelectedRecId(firstId);
           setPolicyName(result.recommendations[0].preset.name);
           setPolicyTag(result.recommendations[0].preset.shortName.toLowerCase());
         }
       } catch (e) {
-        setAiError(`AI analysis failed. ${String(e)}`);
+        const errMsg = (e as {response?: {data?: {detail?: string}}})?.response?.data?.detail
+          ?? (e instanceof Error ? e.message : String(e));
+        setAiError(`AI analysis failed: ${errMsg}`);
       } finally {
         setAiLoading(false);
       }
@@ -1639,8 +1651,11 @@ export default function AIPolicyWizardPage() {
     const userId    = user?.id ?? 'system';
     const companyId = user?.company?.id ?? 'unscoped';
 
-    const idx = aiResult.recommendations.findIndex((_r, i) => `${aiResult.recommendations[i].preset.shortName}-${i}` === selectedRecId);
-    const selectedRec = aiResult.recommendations[idx >= 0 ? idx : 0];
+    // Parse index from recId format "${shortName}-{i}"
+    const idxFromId = parseInt(selectedRecId.split('-').pop() ?? '0', 10);
+    const idx = Number.isFinite(idxFromId) && idxFromId >= 0 && idxFromId < aiResult.recommendations.length
+      ? idxFromId : 0;
+    const selectedRec = aiResult.recommendations[idx];
     setSaving(true); setSaveError('');
     try {
       const canonical = buildCanonicalFromPageState(
@@ -1717,7 +1732,7 @@ export default function AIPolicyWizardPage() {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
-      <TopBar onBack={() => router.push('/policies')} pct={pct} />
+      <TopBar onBack={() => router.push('/policies')} pct={pct} onHelp={() => setHelpOpen(true)} />
       <PhaseRail stepIdx={stepIdx} />
 
       {/* ── Company context warning ── */}
@@ -1815,6 +1830,8 @@ export default function AIPolicyWizardPage() {
         <span style={{ color: S.rim }}>—</span>
         <span style={{ color: S.purple }}>IFRS 9 · BCBS FRTB · ISDA 2022 · BIS FX Survey 2022</span>
       </footer>
+
+      <PolicyHelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

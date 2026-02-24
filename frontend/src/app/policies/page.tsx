@@ -23,6 +23,7 @@ import {
   type PolicyInstance,
 } from "@/api/policyClient";
 import Toast from "@/components/shared/Toast";
+import PolicyHelpPanel from "@/components/policy/PolicyHelpPanel";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
@@ -162,6 +163,9 @@ export default function PoliciesPage() {
   const [activateMsg, setActivateMsg]             = useState('');
   const [dbTemplates, setDbTemplates]             = useState<PolicyTemplate[]>([]);
 
+  // Help panel
+  const [helpOpen, setHelpOpen] = useState(false);
+
   // Toast
   const [toastMsg, setToastMsg]         = useState('');
   const [toastVisible, setToastVisible] = useState(false);
@@ -170,19 +174,8 @@ export default function PoliciesPage() {
   // Load active policy + templates on mount
   useEffect(() => {
     if (!token) return;
-    if (token.startsWith('demo_token_')) {
-      // For demo users, default active policy to Balanced Corporate (BLNC)
-      const demoPreset = POLICY_PRESETS.find(p => p.shortName === 'BLNC');
-      if (demoPreset) {
-        setActiveInstance({
-          id: 'demo-instance',
-          template: { id: 'demo-tmpl', short_name: 'BLNC', name: 'Balanced Corporate', is_system: true } as PolicyTemplate,
-          activated_by: 'demo',
-          activated_at: new Date().toISOString(),
-        } as PolicyInstance);
-      }
-      return;
-    }
+    // Demo tokens: still hit real API — system templates are seeded and accessible.
+    // No fake demo-instance; show real DB state so demo users see actual templates.
     getActivePolicy(token).then(inst => setActiveInstance(inst)).catch(() => {});
     listPolicyTemplates(token).then(setDbTemplates).catch(() => {});
   }, [token]);
@@ -268,20 +261,31 @@ export default function PoliciesPage() {
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={() => router.push('/ai-policy-wizard')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em', fontWeight: 700,
-            padding: '7px 18px', border: `1px solid ${S.amber}`,
-            color: 'var(--bg-deep)', background: S.amber,
-            cursor: 'pointer',
-          }}
-        >
-          <Sparkles size={13} />
-          + NEW AI POLICY
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            style={{
+              fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em',
+              padding: '7px 14px', border: `1px solid ${S.rim}`,
+              color: S.tertiary, background: 'transparent', cursor: 'pointer',
+            }}
+          >? HELP</button>
+          <button
+            type="button"
+            onClick={() => router.push('/ai-policy-wizard')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em', fontWeight: 700,
+              padding: '7px 18px', border: `1px solid ${S.amber}`,
+              color: 'var(--bg-deep)', background: S.amber,
+              cursor: 'pointer',
+            }}
+          >
+            <Sparkles size={13} />
+            + NEW AI POLICY
+          </button>
+        </div>
       </div>
 
       <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 24px' }}>
@@ -389,6 +393,7 @@ export default function PoliciesPage() {
         )}
       </div>
 
+      <PolicyHelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
       <Toast message={toastMsg} visible={toastVisible} onClose={() => setToastVisible(false)} />
     </div>
   );

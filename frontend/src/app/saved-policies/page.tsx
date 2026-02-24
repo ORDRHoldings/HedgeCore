@@ -29,6 +29,7 @@ import {
   duplicatePolicyTemplate,
 } from "../../api/policyClient";
 import type { PolicyTemplate, PolicyInstance, UpdateTemplatePayload } from "../../api/policyClient";
+import PolicyHelpPanel from "@/components/policy/PolicyHelpPanel";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -726,6 +727,9 @@ export default function SavedPoliciesPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null); // policy id
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  // Help panel
+  const [helpOpen, setHelpOpen] = useState(false);
+
   // Modal state
   const [confirmModal, setConfirmModal] = useState<{
     title: string; message: string; confirmLabel: string; danger?: boolean;
@@ -1063,6 +1067,16 @@ export default function SavedPoliciesPage() {
               </button>
             )}
           </div>
+          {/* Help */}
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            style={{
+              fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
+              padding: "5px 12px", border: `1px solid ${S.rim}`,
+              color: S.tertiary, background: "transparent", cursor: "pointer", borderRadius: 2,
+            }}
+          >? HELP</button>
           {/* Sort */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, letterSpacing: "0.06em" }}>SORT:</span>
@@ -1180,6 +1194,8 @@ export default function SavedPoliciesPage() {
           onCancel={() => { setEditModal(null); setEditLoading(false); }}
         />
       )}
+
+      <PolicyHelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       {/* -- Toast notifications -------------------------------------------------- */}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
