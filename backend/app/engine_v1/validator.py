@@ -271,7 +271,7 @@ def _validate_market(
     spot = market.spot_usdmxn  # field name kept for schema compat; holds generic spot
 
     # V-011: spot out of range (per-currency using USD-equivalent weighting)
-    # Priority 1: use provider_metadata.primary_currency if explicitly set —
+    # Priority 1: use provider_metadata.primary_currency if explicitly set --
     #             this is the authoritative override for multi-currency fixtures.
     # Priority 2: dominant by USD-equivalent amount (JPY/BRL raw numbers are large
     #             and would incorrectly dominate without conversion).
@@ -326,7 +326,7 @@ def _validate_market(
                         severity=Severity.CRITICAL,
                     )
                 )
-            # V-021: forward points sanity — reject pips-like entry errors.
+            # V-021: forward points sanity -- reject pips-like entry errors.
             # Threshold is 50% of spot per bucket: legitimate high-carry currencies
             # (TRY, BRL) can have monthly points of several full rate units, but
             # nobody should have forward points > half the spot rate in a single month.
