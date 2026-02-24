@@ -593,6 +593,23 @@ async def _ensure_tables():
         "CREATE INDEX IF NOT EXISTS ix_positions_currency ON positions(company_id, currency)",
         "CREATE INDEX IF NOT EXISTS ix_positions_created_by ON positions(created_by, created_at)",
 
+        # ── Phase 0: Position lifecycle columns (ADD IF NOT EXISTS — safe migration) ──
+        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS execution_status VARCHAR(20) NOT NULL DEFAULT 'NEW'",
+        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS policy_id UUID",
+        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS last_run_id VARCHAR(64)",
+        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ",
+        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS execution_ref VARCHAR(128)",
+        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS hedge_amount NUMERIC(20,6)",
+        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS hedge_rate NUMERIC(20,8)",
+        "ALTER TABLE positions ADD COLUMN IF NOT EXISTS rejection_reason VARCHAR(512)",
+        # CHECK constraint for execution_status — added separately (IF NOT EXISTS not supported for constraints, wrapped in DO block)
+        """DO $$ BEGIN
+            ALTER TABLE positions ADD CONSTRAINT positions_exec_status_enum
+            CHECK (execution_status IN ('NEW','POLICY_ASSIGNED','READY_TO_EXECUTE','HEDGED','REJECTED'));
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        "CREATE INDEX IF NOT EXISTS ix_positions_exec_status ON positions(company_id, execution_status)",
+        "CREATE INDEX IF NOT EXISTS ix_positions_policy ON positions(policy_id)",
+
         # ── Phase 3: Policy templates + instances ────────────────────────────────
         """CREATE TABLE IF NOT EXISTS policy_templates (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -644,6 +661,49 @@ async def _ensure_tables():
             raw_data JSONB)""",
 
         "CREATE INDEX IF NOT EXISTS ix_connector_run_errors_run ON connector_run_errors(run_id)",
+
+        # ── Phase 0: Calculation runs persistence (replaces in-memory _run_store) ──
+        """CREATE TABLE IF NOT EXISTS calculation_runs (
+            id VARCHAR(64) PRIMARY KEY,
+            company_id UUID,
+            user_id UUID,
+            inputs_hash VARCHAR(128) NOT NULL,
+            outputs_hash VARCHAR(128) NOT NULL,
+            run_hash VARCHAR(128) NOT NULL,
+            position_ids JSONB NOT NULL DEFAULT '[]',
+            run_envelope JSONB NOT NULL,
+            trace_lite JSONB,
+            trade_count INTEGER NOT NULL DEFAULT 0,
+            hedge_count INTEGER NOT NULL DEFAULT 0,
+            policy_hash VARCHAR(128),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_calc_runs_tenant ON calculation_runs(company_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_calc_runs_hash ON calculation_runs(run_hash)",
+        "CREATE INDEX IF NOT EXISTS ix_calc_runs_positions ON calculation_runs USING gin(position_ids)",
+
+        # ── Phase 0: Audit event ledger (append-only, tamper-evident, WORM) ──
+        """CREATE TABLE IF NOT EXISTS audit_events (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            company_id UUID,
+            branch_id UUID,
+            actor_id UUID,
+            actor_email VARCHAR(255),
+            actor_role VARCHAR(64),
+            event_type VARCHAR(32) NOT NULL,
+            description VARCHAR(1024) NOT NULL,
+            entity_type VARCHAR(32),
+            entity_id VARCHAR(64),
+            payload JSONB NOT NULL DEFAULT '{}',
+            event_hash VARCHAR(64) NOT NULL,
+            prev_event_hash VARCHAR(64) NOT NULL DEFAULT '0000000000000000000000000000000000000000000000000000000000000000',
+            request_id VARCHAR(64),
+            ip_address VARCHAR(64),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_audit_tenant_time ON audit_events(company_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_audit_event_type ON audit_events(company_id, event_type)",
+        "CREATE INDEX IF NOT EXISTS ix_audit_entity ON audit_events(entity_type, entity_id)",
+        "CREATE INDEX IF NOT EXISTS ix_audit_actor ON audit_events(actor_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_audit_hash ON audit_events(event_hash)",
     ]
     for stmt in raw_ddl:
         try:

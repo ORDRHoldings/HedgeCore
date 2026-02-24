@@ -29,6 +29,7 @@ from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.v1_positions import router as v1_positions_router
 from app.api.routes.v1_policies import router as v1_policies_router
 from app.api.routes.v1_connectors import router as v1_connectors_router
+from app.api.routes.v1_audit import router as v1_audit_router
 
 router = APIRouter()
 
@@ -94,5 +95,8 @@ router.include_router(v1_policies_router)
 
 # V1 Connector / Ingestion Desk (owns /v1/connectors)
 router.include_router(v1_connectors_router)
+
+# V1 Audit event ledger (owns /v1/audit)
+router.include_router(v1_audit_router)
 
 __all__ = ["router"]

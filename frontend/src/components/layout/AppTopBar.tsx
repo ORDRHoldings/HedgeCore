@@ -216,17 +216,18 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Position Desk", href: "/input", icon: Ic.table,
-    prefixes: ["/input", "/upload-csv", "/import-history", "/database-connection", "/erp-integration", "/accounting-connection", "/connectors"],
+    label: "Position Desk", href: "/position-desk", icon: Ic.table,
+    prefixes: ["/position-desk", "/input", "/upload-csv", "/import-history", "/database-connection", "/erp-integration", "/accounting-connection", "/connectors"],
     header: "Exposure Management",
     items: [
-      { label: "Manual Entry",         desc: "Inline form — add & edit FX positions",         href: "/input",                  icon: Ic.pen },
-      { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit", href: "/input?tab=upload",       icon: Ic.upload,   badge: "BULK", badgeColor: S.amber },
-      { label: "Connectors Hub",       desc: "Unified data pipeline status — all connectors",  href: "/connectors",             icon: Ic.plug,     badge: "HUB",  badgeColor: S.cyan  },
-      { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",             href: "/database-connection",    icon: Ic.db,       badge: "SQL",  badgeColor: S.cyan  },
-      { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",  href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",  badgeColor: S.amber },
-      { label: "Accounting Systems",   desc: "QuickBooks, Xero, Sage invoice import",          href: "/accounting-connection",  icon: Ic.reports },
-      { label: "Import History",       desc: "Audit log of all file & connector imports",      href: "/import-history",         icon: Ic.clock,    badge: "AUDIT", badgeColor: S.cyan },
+      { label: "Position Desk",        desc: "Lifecycle control tower — status, policy, execute, reject", href: "/position-desk",          icon: Ic.table,     badge: "DESK",  badgeColor: S.cyan  },
+      { label: "Ingestion Desk",       desc: "Manual entry, CSV/XLSX import, connector hub",              href: "/input",                  icon: Ic.pen },
+      { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit",            href: "/input?tab=upload",       icon: Ic.upload,    badge: "BULK",  badgeColor: S.amber },
+      { label: "Connectors Hub",       desc: "Unified data pipeline status — all connectors",             href: "/connectors",             icon: Ic.plug,      badge: "HUB",   badgeColor: S.cyan  },
+      { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",                        href: "/database-connection",    icon: Ic.db,        badge: "SQL",   badgeColor: S.cyan  },
+      { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",             href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",   badgeColor: S.amber },
+      { label: "Accounting Systems",   desc: "QuickBooks, Xero, Sage invoice import",                     href: "/accounting-connection",  icon: Ic.reports },
+      { label: "Import History",       desc: "Audit log of all file & connector imports",                 href: "/import-history",         icon: Ic.clock,     badge: "AUDIT", badgeColor: S.cyan  },
     ],
   },
   {
@@ -273,16 +274,6 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Help", href: "/help", icon: Ic.help,
-    prefixes: ["/help"],
-    header: "Support",
-    items: [
-      { label: "Documentation",    desc: "User guide, API reference, release notes",        href: "/help",        icon: Ic.book },
-      { label: "FAQ",              desc: "Frequently asked questions & troubleshooting",     href: "/help",        icon: Ic.question },
-      { label: "Contact Support",  desc: "Open a ticket or reach the ORDR team",            href: "/help",        icon: Ic.user },
-    ],
-  },
-  {
     label: "Settings", href: "/settings", icon: Ic.settings,
     prefixes: ["/settings"],
     header: "Configuration",
@@ -292,6 +283,16 @@ const NAV: NavSection[] = [
       { label: "Execution",        desc: "Default product, stress sigma, friction thresholds",     href: "/settings#execution",      icon: Ic.lightning, badge: "EXEC",  badgeColor: S.cyan  },
       { label: "API & Keys",       desc: "Alpha Vantage, backend URL, IBKR TWS connectivity",     href: "/settings#api_keys",       icon: Ic.key,      badge: "KEYS",  badgeColor: S.red   },
       { label: "Notifications",    desc: "Alert triggers, email recipients, webhook endpoints",    href: "/settings#notifications",  icon: Ic.clock },
+    ],
+  },
+  {
+    label: "Help", href: "/help", icon: Ic.help,
+    prefixes: ["/help"],
+    header: "Support",
+    items: [
+      { label: "Documentation",    desc: "User guide, API reference, release notes",        href: "/help",        icon: Ic.book },
+      { label: "FAQ",              desc: "Frequently asked questions & troubleshooting",     href: "/help",        icon: Ic.question },
+      { label: "Contact Support",  desc: "Open a ticket or reach the ORDR team",            href: "/help",        icon: Ic.user },
     ],
   },
 ];

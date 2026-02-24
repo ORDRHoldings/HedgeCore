@@ -27,6 +27,15 @@ function authHeaders(token?: string): Record<string, string> {
 /** Shape returned by the positions list endpoint */
 export interface PositionRow extends TradeRow {
   id: string;
+  // Lifecycle fields (Phase 0)
+  execution_status: "NEW" | "POLICY_ASSIGNED" | "READY_TO_EXECUTE" | "HEDGED" | "REJECTED";
+  policy_id:        string | null;
+  last_run_id:      string | null;
+  executed_at:      string | null;   // ISO timestamp
+  execution_ref:    string | null;
+  hedge_amount:     number | null;
+  hedge_rate:       number | null;
+  rejection_reason: string | null;
 }
 
 /** Per-currency exposure summary from GET /v1/positions/exposure */
@@ -38,19 +47,28 @@ export interface ExposureAggregation {
   count_forecast: number;
 }
 
-/** Maps API PositionResponse → PositionRow (renames flow_type → type) */
+/** Maps API PositionResponse → PositionRow (renames flow_type → type, includes lifecycle) */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapToPositionRow(p: Record<string, any>): PositionRow {
   return {
-    id:          p.id as string,
-    record_id:   p.record_id as string,
-    entity:      p.entity as string,
-    type:        p.flow_type as "AR" | "AP",
-    currency:    p.currency as FuturesCurrency,
-    amount:      Number(p.amount),
-    value_date:  p.value_date as string,
-    status:      p.status as "CONFIRMED" | "FORECAST",
-    description: (p.description as string) ?? "",
+    id:               p.id as string,
+    record_id:        p.record_id as string,
+    entity:           p.entity as string,
+    type:             p.flow_type as "AR" | "AP",
+    currency:         p.currency as FuturesCurrency,
+    amount:           Number(p.amount),
+    value_date:       p.value_date as string,
+    status:           p.status as "CONFIRMED" | "FORECAST",
+    description:      (p.description as string) ?? "",
+    // Lifecycle fields
+    execution_status: (p.execution_status as PositionRow["execution_status"]) ?? "NEW",
+    policy_id:        (p.policy_id as string) ?? null,
+    last_run_id:      (p.last_run_id as string) ?? null,
+    executed_at:      (p.executed_at as string) ?? null,
+    execution_ref:    (p.execution_ref as string) ?? null,
+    hedge_amount:     p.hedge_amount != null ? Number(p.hedge_amount) : null,
+    hedge_rate:       p.hedge_rate   != null ? Number(p.hedge_rate)   : null,
+    rejection_reason: (p.rejection_reason as string) ?? null,
   };
 }
 
@@ -169,4 +187,77 @@ export async function getExposureAggregation(
     headers: authHeaders(token),
   });
   return data as ExposureAggregation[];
+}
+
+// ---------------------------------------------------------------------------
+// Lifecycle transitions (Phase 0 — regulated backbone)
+// All return the updated PositionRow. Illegal transitions throw 409.
+// ---------------------------------------------------------------------------
+
+export async function assignPolicy(
+  positionId: string,
+  policyInstanceId: string,
+  token?: string,
+): Promise<PositionRow> {
+  const { data } = await axios.patch(
+    `${BASE}/v1/positions/${positionId}/assign-policy`,
+    { policy_instance_id: policyInstanceId },
+    { headers: authHeaders(token) },
+  );
+  return mapToPositionRow(data as Record<string, unknown>);
+}
+
+export async function markReadyToExecute(
+  positionId: string,
+  runId: string,
+  hedgeAmount?: number,
+  hedgeRate?: number,
+  token?: string,
+): Promise<PositionRow> {
+  const { data } = await axios.patch(
+    `${BASE}/v1/positions/${positionId}/ready`,
+    { run_id: runId, hedge_amount: hedgeAmount ?? null, hedge_rate: hedgeRate ?? null },
+    { headers: authHeaders(token) },
+  );
+  return mapToPositionRow(data as Record<string, unknown>);
+}
+
+export async function executePosition(
+  positionId: string,
+  executionRef: string,
+  hedgeAmount?: number,
+  hedgeRate?: number,
+  token?: string,
+): Promise<PositionRow> {
+  const { data } = await axios.patch(
+    `${BASE}/v1/positions/${positionId}/execute`,
+    { execution_ref: executionRef, hedge_amount: hedgeAmount ?? null, hedge_rate: hedgeRate ?? null },
+    { headers: authHeaders(token) },
+  );
+  return mapToPositionRow(data as Record<string, unknown>);
+}
+
+export async function rejectPosition(
+  positionId: string,
+  reason: string,
+  token?: string,
+): Promise<PositionRow> {
+  const { data } = await axios.patch(
+    `${BASE}/v1/positions/${positionId}/reject`,
+    { reason },
+    { headers: authHeaders(token) },
+  );
+  return mapToPositionRow(data as Record<string, unknown>);
+}
+
+export async function reopenPosition(
+  positionId: string,
+  token?: string,
+): Promise<PositionRow> {
+  const { data } = await axios.patch(
+    `${BASE}/v1/positions/${positionId}/reopen`,
+    {},
+    { headers: authHeaders(token) },
+  );
+  return mapToPositionRow(data as Record<string, unknown>);
 }
