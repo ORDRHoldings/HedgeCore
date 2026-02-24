@@ -55,6 +55,7 @@ import {
   parseFieldTarget,
 } from '../../constants/errorKnowledgeBase';
 import type { ResolveActionType } from '../../constants/errorKnowledgeBase';
+import HelpPanel from '../../components/input/HelpPanel';
 
 const EMPTY_MARKET: MarketSnapshot = {
   as_of: new Date().toISOString().slice(0, 19) + 'Z',
@@ -66,12 +67,13 @@ const EMPTY_MARKET: MarketSnapshot = {
 const STEP_ORDER: StepKey[] = ['exposure', 'policy'];
 
 // ─── Ingestion Desk tabs ──────────────────────────────────────────────────
-type DeskTab = 'manual' | 'upload' | 'history';
+type DeskTab = 'manual' | 'upload' | 'connection' | 'history';
 
 const DESK_TABS: { key: DeskTab; label: string; subtitle: string }[] = [
-  { key: 'manual',  label: 'Manual Entry',      subtitle: 'Inline form + bulk' },
-  { key: 'upload',  label: 'Upload CSV / Excel', subtitle: 'File import' },
-  { key: 'history', label: 'Import History',     subtitle: 'Audit trail' },
+  { key: 'manual',     label: 'Manual Entry',      subtitle: 'Inline form + bulk' },
+  { key: 'upload',     label: 'Upload CSV / Excel', subtitle: 'File import' },
+  { key: 'connection', label: 'Connection Hub',     subtitle: 'ERP / API / FTP feeds' },
+  { key: 'history',    label: 'Import History',     subtitle: 'Audit trail' },
 ];
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
@@ -197,7 +199,7 @@ function InlineDatePicker({
   function selectDay(day: number) {
     const mm  = String(viewMonth + 1).padStart(2, '0');
     const dd  = String(day).padStart(2, '0');
-    const iso = `{viewYear}-{mm}-{dd}`;
+    const iso = `${viewYear}-${mm}-${dd}`;
     onChange(iso); setTextInput(iso); setOpen(false); onBlur();
   }
 
@@ -239,7 +241,7 @@ function InlineDatePicker({
         style={{
           fontFamily: 'IBM Plex Mono, monospace', fontSize: '0.875rem',
           color: value ? 'var(--text-primary)' : 'var(--text-tertiary)',
-          borderBottom: `{borderWidth} solid {borderColor}`,
+          borderBottom: `${borderWidth} solid ${borderColor}`,
           padding: '4px 0', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           userSelect: 'none', transition: 'border-color 0.1s',
@@ -283,7 +285,7 @@ function InlineDatePicker({
               const isPast = cellDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
               const selMM = String(viewMonth + 1).padStart(2, '0');
               const selDD = String(day).padStart(2, '0');
-              const iso = `{viewYear}-{selMM}-{selDD}`;
+              const iso = `${viewYear}-${selMM}-${selDD}`;
               const isSelected = iso === value;
               const isToday = cellDate.toDateString() === today.toDateString();
               return (
@@ -374,7 +376,7 @@ function InputPageInner() {
   const [editingHedgeIndex, setEditingHedgeIndex] = useState<number | undefined>();
 
   // ── Policy / Market ───────────────────────────────────────────────────────
-  const [activePresetId, setActivePresetId]       = useState<string | null>('balanced-corporate');
+  const [activePresetId, setActivePresetId]       = useState<string | null>(null);
   // DB-backed active policy template (for activate button)
   const [dbTemplates, setDbTemplates]             = useState<PolicyTemplate[]>([]);
   const [activePolicyTemplateId, setActivePolicyTemplateId] = useState<string | null>(null);
@@ -390,6 +392,7 @@ function InputPageInner() {
   // ── Toast ─────────────────────────────────────────────────────────────────
   const [toastMsg, setToastMsg]       = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const [helpOpen, setHelpOpen]               = useState(false);
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg); setToastVisible(true);
@@ -673,9 +676,11 @@ function InputPageInner() {
     } else {
       // Create new (includes duplicate scenario)
       if (token.startsWith('demo_token_')) {
+        const nowIso = new Date().toISOString();
         const localPosition: PositionRow = {
           ...trade,
           id: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          created_at: nowIso, updated_at: nowIso,
           execution_status: 'NEW', policy_id: null, last_run_id: null,
           executed_at: null, execution_ref: null, hedge_amount: null,
           hedge_rate: null, rejection_reason: null,
@@ -720,9 +725,11 @@ function InputPageInner() {
 
     // Demo-mode: skip API call, add position directly to local Redux state
     if (token.startsWith('demo_token_')) {
+      const nowIso = new Date().toISOString();
       const localPosition: PositionRow = {
         ...inlineForm,
         id: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        created_at: nowIso, updated_at: nowIso,
         execution_status: 'NEW', policy_id: null, last_run_id: null,
         executed_at: null, execution_ref: null, hedge_amount: null,
         hedge_rate: null, rejection_reason: null,
@@ -1103,6 +1110,18 @@ function InputPageInner() {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => setHelpOpen(true)}
+              style={{
+                marginLeft: 'auto', fontFamily: S.fontMono, fontSize: '0.6875rem',
+                letterSpacing: '0.06em', padding: '8px 14px',
+                border: 'none', borderLeft: `1px solid ${S.border}`,
+                color: S.textTertiary, background: 'transparent', cursor: 'pointer',
+                flexShrink: 0,
+              }}
+              title="Help - field reference"
+            >? HELP</button>
           </div>
 
           {/* ── Tab: Upload CSV / Excel ── */}
@@ -1112,6 +1131,33 @@ function InputPageInner() {
                 token={token ?? undefined}
                 onImportComplete={() => { if (token) dispatch(listPositionsThunk({ token })); }}
               />
+            </div>
+          )}
+
+          {/* ── Tab: Connection Hub ── */}
+          {deskTab === 'connection' && (
+            <div style={{ padding: '24px 16px' }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.1em', marginBottom: 16 }}>
+                CONNECTION HUB — EXTERNAL DATA FEEDS
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                {[
+                  { label: 'ERP / SAP Integration', desc: 'Pull open invoices and purchase orders directly from SAP, Oracle, or NetSuite via scheduled API sync.', status: 'COMING SOON', color: S.textTertiary },
+                  { label: 'SWIFT / MT300 Feed',    desc: 'Ingest FX trade confirmations from SWIFT MT300 messages. Automatically reconcile against existing positions.', status: 'COMING SOON', color: S.textTertiary },
+                  { label: 'FTP / SFTP Drop Zone',  desc: 'Monitor a secure FTP folder for CSV or Excel drops. Files are auto-ingested, validated, and added to the audit trail.', status: 'COMING SOON', color: S.textTertiary },
+                  { label: 'REST API Webhook',       desc: 'POST positions from any external system to the HedgeCalc API endpoint. Authenticated via Bearer token or API key.', status: 'ACTIVE', color: S.cyan },
+                  { label: 'Bloomberg B-PIPE',       desc: 'Subscribe to Bloomberg BPIPE for real-time position streaming from Bloomberg AIM.', status: 'COMING SOON', color: S.textTertiary },
+                  { label: 'FactSet Data Feeds',     desc: 'Pull structured exposure data from FactSet workstation exports via automated batch jobs.', status: 'COMING SOON', color: S.textTertiary },
+                ].map(c => (
+                  <div key={c.label} style={{ border: `1px solid ${S.border}`, background: S.bgPanel, padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textPrimary, fontWeight: 600, letterSpacing: '0.04em' }}>{c.label}</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', padding: '1px 5px', border: `1px solid ${c.color}`, color: c.color, letterSpacing: '0.08em' }}>{c.status}</span>
+                    </div>
+                    <p style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.textSecondary, lineHeight: 1.5, margin: 0 }}>{c.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -1380,7 +1426,7 @@ function InputPageInner() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: S.fontUI, fontSize: '0.75rem' }}>
                     <thead>
                       <tr style={{ background: S.bgSub, borderBottom: `1px solid ${S.border}` }}>
-                        {['ID', 'Entity', 'Type', 'CCY', 'Amount', 'Value Date', 'Status', 'Description', 'Actions'].map(h => (
+                        {['ID', 'Entity', 'Type', 'CCY', 'Amount', 'Value Date', 'Status', 'Exec Status', 'Ingested At', 'Actions'].map(h => (
                           <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
@@ -1419,7 +1465,18 @@ function InputPageInner() {
                                 </span>
                               )}
                             </td>
-                            <td style={{ padding: '7px 10px', color: S.textSecondary, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pos.description}</td>
+                            <td style={{ padding: '7px 10px', color: S.textSecondary, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pos.description}</td>
+                            <td style={{ padding: '7px 10px', textAlign: 'center' }}>
+                              <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', padding: '2px 6px', borderRadius: 2,
+                                background: pos.execution_status === 'HEDGED' ? `color-mix(in srgb, ${S.green} 10%, transparent)` : pos.execution_status === 'REJECTED' ? `color-mix(in srgb, ${S.red} 10%, transparent)` : pos.execution_status === 'READY_TO_EXECUTE' ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : pos.execution_status === 'POLICY_ASSIGNED' ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : `color-mix(in srgb, ${S.amber} 6%, transparent)`,
+                                color: pos.execution_status === 'HEDGED' ? S.green : pos.execution_status === 'REJECTED' ? S.red : pos.execution_status === 'READY_TO_EXECUTE' ? S.cyan : pos.execution_status === 'POLICY_ASSIGNED' ? S.cyan : S.amber,
+                              }}>
+                                {pos.execution_status.replace(/_/g, ' ')}
+                              </span>
+                            </td>
+                            <td style={{ padding: '7px 10px', fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, whiteSpace: 'nowrap' }}>
+                              {pos.created_at ? new Date(pos.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
+                            </td>
                             <td style={{ padding: '7px 10px', whiteSpace: 'nowrap' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 {/* Duplicate */}
@@ -1650,6 +1707,7 @@ function InputPageInner() {
         </div>
       </Modal>
 
+      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
       <Toast message={toastMsg} visible={toastVisible} onClose={() => setToastVisible(false)} />
     </div>
   );
