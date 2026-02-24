@@ -23,10 +23,11 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
@@ -46,6 +47,8 @@ from app.schemas_v1.positions import (
 )
 from app.services import position_service, rbac_service
 from sqlalchemy import select as sa_select
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/positions", tags=["v1-positions"])
 
@@ -236,6 +239,24 @@ def _lifecycle_error(e: ValueError, current: str, target: str) -> HTTPException:
     )
 
 
+async def _get_actor_role(session: AsyncSession, user: User) -> str | None:
+    """
+    Resolve the primary role name for the actor from the RBAC service.
+    Returns the first assigned role name, or None if no roles assigned.
+    Non-fatal: returns None on any error so audit emission never blocks.
+    """
+    try:
+        from app.services.rbac_service import get_user_roles
+        roles = await get_user_roles(session, user.id)
+        if roles:
+            # Return the role with the lowest hierarchy level (most privileged)
+            sorted_roles = sorted(roles, key=lambda r: getattr(r, "hierarchy_level", 99))
+            return sorted_roles[0].name
+        return None
+    except Exception:
+        return None
+
+
 async def _emit_lifecycle_audit(
     session:      AsyncSession,
     user:         User,
@@ -243,9 +264,16 @@ async def _emit_lifecycle_audit(
     description:  str,
     position_id:  str,
     payload:      dict,
+    request:      Request | None = None,
 ) -> None:
     """
     Append an audit event for a lifecycle transition.
+
+    Sprint 0.2 additions:
+    - Threads request_id from AuditHeadersMiddleware (X-Request-Id header)
+    - Captures client IP address from request
+    - Resolves actor_role from RBAC service
+
     Fetches the most recent event_hash for this tenant to maintain chain linkage.
     Non-fatal: any DB error is swallowed so lifecycle responses always succeed.
     """
@@ -259,6 +287,17 @@ async def _emit_lifecycle_audit(
         result = await session.execute(q)
         prev_hash = result.scalar_one_or_none() or GENESIS_HASH
 
+        # Extract correlation context from request headers (set by AuditHeadersMiddleware)
+        request_id: str | None = None
+        ip_address: str | None = None
+        if request is not None:
+            request_id = request.headers.get("X-Request-Id")
+            client = request.client
+            ip_address = client.host if client else None
+
+        # Resolve actor's primary role for audit record
+        actor_role = await _get_actor_role(session, user)
+
         event = build_audit_event(
             event_type      = event_type,
             description     = description,
@@ -268,14 +307,16 @@ async def _emit_lifecycle_audit(
             branch_id       = user.branch_id,
             actor_id        = user.id,
             actor_email     = user.email,
+            actor_role      = actor_role,
             entity_type     = "position",
             entity_id       = position_id,
+            request_id      = request_id,
+            ip_address      = ip_address,
         )
         session.add(event)
         await session.commit()
     except Exception:
-        import logging
-        logging.getLogger(__name__).warning(
+        logger.warning(
             "Failed to emit audit event for position %s event_type=%s",
             position_id, event_type, exc_info=True,
         )
@@ -285,6 +326,7 @@ async def _emit_lifecycle_audit(
 async def assign_policy(
     position_id:  UUID,
     data:         AssignPolicyRequest,
+    request:      Request,
     session:      AsyncSession = Depends(get_async_session),
     current_user: User         = Depends(get_current_user),
 ):
@@ -314,6 +356,7 @@ async def assign_policy(
             "policy_instance_id": str(data.policy_instance_id),
             "record_id":          pos.record_id,
         },
+        request     = request,
     )
     return pos
 
@@ -322,6 +365,7 @@ async def assign_policy(
 async def mark_ready(
     position_id:  UUID,
     data:         ReadyToExecuteRequest,
+    request:      Request,
     session:      AsyncSession = Depends(get_async_session),
     current_user: User         = Depends(get_current_user),
 ):
@@ -353,6 +397,7 @@ async def mark_ready(
             "hedge_rate":   data.hedge_rate,
             "record_id":    pos.record_id,
         },
+        request     = request,
     )
     return pos
 
@@ -361,6 +406,7 @@ async def mark_ready(
 async def execute_position(
     position_id:  UUID,
     data:         ExecutePositionRequest,
+    request:      Request,
     session:      AsyncSession = Depends(get_async_session),
     current_user: User         = Depends(get_current_user),
 ):
@@ -394,6 +440,7 @@ async def execute_position(
             "executed_at":   pos.executed_at.isoformat() if pos.executed_at else None,
             "record_id":     pos.record_id,
         },
+        request     = request,
     )
     return pos
 
@@ -402,6 +449,7 @@ async def execute_position(
 async def reject_position(
     position_id:  UUID,
     data:         RejectPositionRequest,
+    request:      Request,
     session:      AsyncSession = Depends(get_async_session),
     current_user: User         = Depends(get_current_user),
 ):
@@ -432,6 +480,7 @@ async def reject_position(
             "rejection_reason": data.reason,
             "record_id":        pos.record_id,
         },
+        request     = request,
     )
     return pos
 
@@ -439,6 +488,7 @@ async def reject_position(
 @router.patch("/{position_id}/reopen", response_model=PositionResponse)
 async def reopen_position(
     position_id:  UUID,
+    request:      Request,
     session:      AsyncSession = Depends(get_async_session),
     current_user: User         = Depends(get_current_user),
 ):
@@ -467,5 +517,6 @@ async def reopen_position(
             "transition": "NEW",
             "record_id":  pos.record_id,
         },
+        request     = request,
     )
     return pos
