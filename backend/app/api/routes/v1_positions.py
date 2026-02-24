@@ -520,3 +520,196 @@ async def reopen_position(
         request     = request,
     )
     return pos
+
+
+# ---------------------------------------------------------------------------
+# Lineage endpoint — Sprint 1.4
+# ---------------------------------------------------------------------------
+
+@router.get("/{position_id}/lineage")
+async def get_position_lineage(
+    position_id:  UUID,
+    session:      AsyncSession = Depends(get_async_session),
+    current_user: User         = Depends(get_current_user),
+):
+    """
+    GET /v1/positions/{id}/lineage
+
+    Returns the full provenance chain for a single position:
+      Position -> PolicyInstance -> PolicyRevision -> CalculationRun -> ExecutionProposals
+
+    Each node includes enough data to render a card: id, type, status, key fields,
+    timestamps, and links to drill-down pages.
+
+    Responds with a flat list of nodes + edges for frontend graph rendering.
+    Requires: trades.view permission.
+    """
+    await _check_permission(session, current_user, "trades.view")
+    all_branches = await _resolve_scope(session, current_user)
+
+    # Fetch the Position
+    from app.models.position import Position
+    pos_q = sa_select(Position).where(Position.id == position_id)
+    if not all_branches and current_user.company_id:
+        pos_q = pos_q.where(Position.company_id == current_user.company_id)
+    pos = (await session.execute(pos_q)).scalar_one_or_none()
+    if pos is None:
+        raise HTTPException(status_code=404, detail=f"Position {position_id!s} not found")
+
+    nodes: list[dict] = []
+    edges: list[dict] = []
+
+    # Node 0: Position
+    pos_node_id = f"position:{pos.id}"
+    nodes.append({
+        "id":     pos_node_id,
+        "type":   "POSITION",
+        "label":  pos.record_id,
+        "status": pos.execution_status,
+        "fields": {
+            "record_id":          pos.record_id,
+            "entity":             pos.entity,
+            "flow_type":          pos.flow_type,
+            "currency":           pos.currency,
+            "amount":             str(pos.amount),
+            "value_date":         pos.value_date,
+            "status":             pos.status,
+            "execution_status":   pos.execution_status,
+            "hedge_amount":       str(pos.hedge_amount) if pos.hedge_amount else None,
+            "hedge_rate":         str(pos.hedge_rate) if pos.hedge_rate else None,
+            "execution_ref":      pos.execution_ref,
+            "executed_at":        pos.executed_at.isoformat() if pos.executed_at else None,
+            "rejection_reason":   pos.rejection_reason,
+            "created_at":         pos.created_at.isoformat() if pos.created_at else None,
+        },
+        "links": { "position_desk": "/position-desk" },
+    })
+
+    # Node 1: PolicyInstance
+    if pos.policy_id:
+        from app.models.policy import PolicyInstance
+        pi = await session.get(PolicyInstance, pos.policy_id)
+        if pi:
+            pi_node_id = f"policy:{pi.id}"
+            nodes.append({
+                "id":     pi_node_id,
+                "type":   "POLICY",
+                "label":  getattr(pi, "name", str(pi.id)[:8].upper()) or str(pi.id)[:8].upper(),
+                "status": "ACTIVE" if getattr(pi, "is_active", True) else "INACTIVE",
+                "fields": {
+                    "id":         str(pi.id),
+                    "is_active":  getattr(pi, "is_active", None),
+                    "created_at": pi.created_at.isoformat() if hasattr(pi, "created_at") and pi.created_at else None,
+                },
+                "links": { "policies": "/policies" },
+            })
+            edges.append({"from": pos_node_id, "to": pi_node_id, "label": "GOVERNED BY"})
+
+    # Node 1b: PolicyRevision pinned to this position
+    if pos.policy_revision_id:
+        from app.models.policy_revision import PolicyRevision
+        pr = await session.get(PolicyRevision, pos.policy_revision_id)
+        if pr:
+            pr_node_id = f"policy_revision:{pr.id}"
+            nodes.append({
+                "id":     pr_node_id,
+                "type":   "POLICY_REVISION",
+                "label":  f"Rev #{getattr(pr, 'revision', '?')} · {str(pr.id)[:8].upper()}",
+                "status": "WORM",
+                "fields": {
+                    "id":               str(pr.id),
+                    "revision":         getattr(pr, "revision", None),
+                    "policy_hash":      getattr(pr, "policy_hash", None),
+                    "change_reason":    getattr(pr, "change_reason", None),
+                    "created_by_email": getattr(pr, "created_by_email", None),
+                    "created_at":       pr.created_at.isoformat() if hasattr(pr, "created_at") and pr.created_at else None,
+                },
+                "links": {},
+            })
+            anchor = f"policy:{pos.policy_id}" if pos.policy_id else pos_node_id
+            edges.append({"from": anchor, "to": pr_node_id, "label": "PINNED REVISION"})
+
+    # Node 2: CalculationRun
+    if pos.last_run_id:
+        from app.models.calculation_run import CalculationRun
+        run = await session.get(CalculationRun, pos.last_run_id)
+        if run:
+            run_node_id = f"run:{run.id}"
+            nodes.append({
+                "id":     run_node_id,
+                "type":   "CALCULATION_RUN",
+                "label":  run.id[:8].upper(),
+                "status": "COMPLETE",
+                "fields": {
+                    "run_id":             run.id,
+                    "trade_count":        run.trade_count,
+                    "hedge_count":        run.hedge_count,
+                    "run_hash":           run.run_hash[:16] + "..." if run.run_hash else None,
+                    "inputs_hash":        run.inputs_hash[:16] + "..." if run.inputs_hash else None,
+                    "outputs_hash":       run.outputs_hash[:16] + "..." if run.outputs_hash else None,
+                    "policy_hash":        run.policy_hash[:16] + "..." if run.policy_hash else None,
+                    "policy_revision_id": run.policy_revision_id,
+                    "created_at":         run.created_at.isoformat() if run.created_at else None,
+                },
+                "links": {"run_viewer": f"/run-viewer?id={run.id}"},
+            })
+            edges.append({"from": pos_node_id, "to": run_node_id, "label": "LAST RUN"})
+            if pos.policy_revision_id and run.policy_revision_id == str(pos.policy_revision_id):
+                edges.append({"from": f"policy_revision:{pos.policy_revision_id}", "to": run_node_id, "label": "GOVERNED"})
+
+    # Node 3: ExecutionProposals
+    from app.models.execution_proposal import ExecutionProposal
+    proposals_q = (
+        sa_select(ExecutionProposal)
+        .where(ExecutionProposal.position_id == position_id)
+        .order_by(ExecutionProposal.created_at.asc())
+    )
+    proposals = list((await session.execute(proposals_q)).scalars().all())
+
+    for ep in proposals:
+        ep_node_id = f"proposal:{ep.id}"
+        payload = ep.proposal_payload or {}
+        nodes.append({
+            "id":     ep_node_id,
+            "type":   "EXECUTION_PROPOSAL",
+            "label":  f"{ep.status} · {str(ep.id)[:8].upper()}",
+            "status": ep.status,
+            "fields": {
+                "id":               str(ep.id),
+                "status":           ep.status,
+                "proposed_by_email":ep.proposed_by_email,
+                "proposed_at":      ep.proposed_at.isoformat() if ep.proposed_at else None,
+                "approved_by_email":ep.approved_by_email,
+                "approved_at":      ep.approved_at.isoformat() if ep.approved_at else None,
+                "approval_notes":   ep.approval_notes,
+                "execution_ref":    ep.execution_ref,
+                "executed_at":      ep.executed_at.isoformat() if ep.executed_at else None,
+                "rejection_reason": ep.rejection_reason,
+                "run_id":           payload.get("run_id"),
+                "hedge_amount":     payload.get("hedge_amount"),
+                "hedge_rate":       payload.get("hedge_rate"),
+                "proposal_hash":    ep.proposal_hash[:16] + "..." if ep.proposal_hash else None,
+                "approval_hash":    ep.approval_hash[:16] + "..." if ep.approval_hash else None,
+                "created_at":       ep.created_at.isoformat() if ep.created_at else None,
+            },
+            "links": {},
+        })
+        edges.append({"from": pos_node_id, "to": ep_node_id, "label": "PROPOSAL"})
+        ep_run_id = payload.get("run_id")
+        if ep_run_id and pos.last_run_id == ep_run_id:
+            edges.append({"from": ep_node_id, "to": f"run:{ep_run_id}", "label": "USES RUN"})
+
+    return {
+        "position_id": str(position_id),
+        "nodes":       nodes,
+        "edges":       edges,
+        "summary": {
+            "node_count":            len(nodes),
+            "edge_count":            len(edges),
+            "has_policy":            pos.policy_id is not None,
+            "has_policy_revision":   pos.policy_revision_id is not None,
+            "has_run":               pos.last_run_id is not None,
+            "proposal_count":        len(proposals),
+            "execution_status":      pos.execution_status,
+        },
+    }
