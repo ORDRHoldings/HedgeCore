@@ -1,4 +1,4 @@
-"""AuditPack.zip builder — bundles all JSON artifacts + PDF + Excel."""
+"""AuditPack.zip builder -- bundles all JSON artifacts + PDF + Excel."""
 
 from __future__ import annotations
 

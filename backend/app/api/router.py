@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
 """
 app/api/router.py
 
-HedgeCalc â€“ Phase VI
+HedgeCalc - Phase VI
 Central API router registration module.
 
 CANONICAL RULE:
@@ -30,7 +31,7 @@ from app.api.routes.v1_positions import router as v1_positions_router
 from app.api.routes.v1_policies import router as v1_policies_router
 from app.api.routes.v1_connectors import router as v1_connectors_router
 from app.api.routes.v1_audit import router as v1_audit_router
-# Phase 1 — Institutional governance
+# Phase 1 ? Institutional governance
 from app.api.routes.v1_execution_proposals import router as v1_proposals_router
 from app.api.routes.v1_policy_revisions import router as v1_policy_revisions_router
 
@@ -44,14 +45,14 @@ router = APIRouter()
 def swagger_docs():
     return get_swagger_ui_html(
         openapi_url="/api/openapi.json",
-        title="HedgeCalc API â€“ Swagger UI",
+        title="HedgeCalc API - Swagger UI",
     )
 
 @router.get("/redoc", include_in_schema=False)
 def redoc_docs():
     return get_redoc_html(
         openapi_url="/api/openapi.json",
-        title="HedgeCalc API â€“ ReDoc",
+        title="HedgeCalc API - ReDoc",
     )
 
 # ---------------------------------------------------------------------
@@ -75,7 +76,7 @@ router.include_router(v1_calculate_router)
 router.include_router(v1_upload_router)
 router.include_router(v1_export_router)
 
-# V1 Pipeline (Tri-State governance: SANDBOX â†’ STAGING â†’ LEDGER)
+# V1 Pipeline (Tri-State governance: SANDBOX -> STAGING -> LEDGER)
 router.include_router(v1_pipeline_router)
 
 # Organization hierarchy (owns /v1/organization)
@@ -102,10 +103,10 @@ router.include_router(v1_connectors_router)
 # V1 Audit event ledger (owns /v1/audit)
 router.include_router(v1_audit_router)
 
-# Phase 1 — 4-Eyes Execution Proposal workflow (owns /v1/proposals)
+# Phase 1 ? 4-Eyes Execution Proposal workflow (owns /v1/proposals)
 router.include_router(v1_proposals_router)
 
-# Phase 1 — Policy Revision lineage & diff (owns /v1/policies/revisions)
+# Phase 1 ? Policy Revision lineage & diff (owns /v1/policies/revisions)
 router.include_router(v1_policy_revisions_router)
 
 __all__ = ["router"]

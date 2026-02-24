@@ -1,4 +1,4 @@
-"""Deterministic scenario engine — fixed sigma shocks only.
+"""Deterministic scenario engine -- fixed sigma shocks only.
 
 No probabilities, no forecasting. Pure function.
 """
