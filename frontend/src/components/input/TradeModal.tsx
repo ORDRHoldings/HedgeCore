@@ -1,10 +1,154 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { TradeRow, FuturesCurrency } from '../../api/types';
 import { FUTURES_CURRENCY_LIST } from '../../api/types';
 import Modal from '../shared/Modal';
 import FieldError from '../shared/FieldError';
+
+// ── Inline date picker (Bloomberg-style, no native OS picker) ────────────────
+function ModalDatePicker({
+  value, onChange, hasError,
+}: { value: string; onChange: (v: string) => void; hasError: boolean }) {
+  const [open, setOpen] = useState(false);
+  const today = new Date();
+  const initDate = value ? new Date(value + 'T00:00:00') : today;
+  const [viewYear, setViewYear] = useState(initDate.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initDate.getMonth());
+  const [textInput, setTextInput] = useState(value);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setTextInput(value); }, [value]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [open]);
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAYS   = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+  const firstDay = new Date(viewYear, viewMonth, 1);
+  const lastDay  = new Date(viewYear, viewMonth + 1, 0);
+  const firstDow = (firstDay.getDay() + 6) % 7;
+  const rows     = Math.ceil((firstDow + lastDay.getDate()) / 7);
+
+  function selectDay(day: number) {
+    const mm  = String(viewMonth + 1).padStart(2, '0');
+    const dd  = String(day).padStart(2, '0');
+    const iso = `${viewYear}-${mm}-${dd}`;
+    onChange(iso); setTextInput(iso); setOpen(false);
+  }
+  function prevMonth() {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  }
+  function jumpToQuarter(qi: number) {
+    const m = (qi - 1) * 3;
+    setViewMonth(m);
+    setViewYear(m < today.getMonth() ? today.getFullYear() + 1 : today.getFullYear());
+  }
+  function handleTextBlur() {
+    const iso = textInput.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      const d = new Date(iso + 'T00:00:00');
+      if (!isNaN(d.getTime())) { onChange(iso); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }
+    }
+  }
+
+  const borderColor = hasError ? 'var(--accent-red)' : 'var(--border-rim)';
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      <div
+        role="button" tabIndex={0}
+        onClick={() => setOpen(v => !v)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(v => !v); }
+          if (e.key === 'Escape') setOpen(false);
+        }}
+        style={{
+          width: '100%', padding: '6px 10px',
+          border: `1px solid ${borderColor}`,
+          background: 'var(--bg-sub)', color: value ? 'var(--text-primary)' : 'var(--text-tertiary)',
+          fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.8125rem',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          userSelect: 'none', outline: 'none',
+        }}
+      >
+        <span>{value || 'YYYY-MM-DD'}</span>
+        <span style={{ fontSize: '0.625rem', color: 'var(--text-tertiary)' }}>{open ? '▲' : '▼'}</span>
+      </div>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 2px)', left: 0, zIndex: 9999,
+          background: 'var(--bg-panel)', border: '1px solid var(--border-rim)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)', width: 260,
+          padding: '10px 10px 8px', fontFamily: "'IBM Plex Mono', monospace",
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <button onClick={prevMonth} style={{ background:'none', border:'1px solid var(--border-rim)', color:'var(--text-secondary)', cursor:'pointer', padding:'2px 7px', fontFamily:'inherit', fontSize:'0.6875rem' }}>◄</button>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.06em' }}>{MONTHS[viewMonth]} {viewYear}</span>
+            <button onClick={nextMonth} style={{ background:'none', border:'1px solid var(--border-rim)', color:'var(--text-secondary)', cursor:'pointer', padding:'2px 7px', fontFamily:'inherit', fontSize:'0.6875rem' }}>►</button>
+          </div>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+            {[1,2,3,4].map(qi => (
+              <button key={qi} onClick={() => jumpToQuarter(qi)} style={{ flex:1, background:'none', border:'1px solid var(--border-rim)', color:'var(--text-tertiary)', cursor:'pointer', fontFamily:'inherit', fontSize:'0.5625rem', letterSpacing:'0.06em', padding:'2px 0' }}>Q{qi}</button>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+            {DAYS.map(d => (
+              <div key={d} style={{ textAlign:'center', fontSize:'0.5625rem', color:'var(--text-tertiary)', letterSpacing:'0.04em', padding:'2px 0' }}>{d}</div>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+            {Array.from({ length: rows * 7 }, (_, i) => {
+              const day = i - firstDow + 1;
+              if (day < 1 || day > lastDay.getDate()) return <div key={i} />;
+              const cellDate = new Date(viewYear, viewMonth, day);
+              const selMM = String(viewMonth + 1).padStart(2, '0');
+              const selDD = String(day).padStart(2, '0');
+              const iso = `${viewYear}-${selMM}-${selDD}`;
+              const isSelected = iso === value;
+              const isToday = cellDate.toDateString() === today.toDateString();
+              const isPast = cellDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              return (
+                <button key={i} onClick={() => !isPast && selectDay(day)} style={{
+                  textAlign:'center', padding:'3px 0', fontSize:'0.6875rem', fontFamily:'inherit',
+                  cursor: isPast ? 'not-allowed' : 'pointer', borderRadius: 2,
+                  border: isToday ? '1px solid var(--accent-amber)' : '1px solid transparent',
+                  background: isSelected ? 'var(--accent-cyan)' : 'transparent',
+                  color: isSelected ? '#0a0f14' : isPast ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  opacity: isPast ? 0.35 : 1, fontWeight: isSelected ? 700 : 400,
+                }}>{day}</button>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-soft)' }}>
+            <div style={{ fontSize:'0.5625rem', color:'var(--text-tertiary)', letterSpacing:'0.08em', marginBottom:4 }}>TYPE DATE</div>
+            <input type="text" value={textInput}
+              onChange={e => setTextInput(e.target.value)}
+              onBlur={handleTextBlur}
+              onKeyDown={e => { if (e.key === 'Enter') handleTextBlur(); if (e.key === 'Escape') setOpen(false); }}
+              placeholder="YYYY-MM-DD"
+              style={{ fontFamily:'inherit', fontSize:'0.75rem', width:'100%', background:'var(--bg-sub)', border:'1px solid var(--border-rim)', color:'var(--text-primary)', padding:'3px 8px', outline:'none' }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   open: boolean;
@@ -108,6 +252,9 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
   const touch = (field: string) => setTouched(t => ({ ...t, [field]: true }));
 
   // Validation
+  const isEdit = !!existingTrade;
+  const isDuplicate = !existingTrade && !!initialValues;
+
   const idDuplicate = form.record_id !== '' && existingIds.has(form.record_id);
   const idEmpty     = form.record_id.trim() === '';
   const entityEmpty = form.entity.trim() === '';
@@ -115,7 +262,7 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
   const dateEmpty   = form.value_date === '';
   const bucketMissing = forwardBuckets.size > 0 && form.value_date !== '' && !forwardBuckets.has(getBucket(form.value_date));
 
-  const canSave = !idEmpty && !idDuplicate && !entityEmpty && !amountInvalid && !dateEmpty;
+  const canSave = (isEdit || (!idEmpty && !idDuplicate)) && !entityEmpty && !amountInvalid && !dateEmpty;
 
   const handleSave = () => {
     if (!canSave) {
@@ -124,9 +271,6 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
     }
     onSave(form);
   };
-
-  const isEdit = !!existingTrade;
-  const isDuplicate = !existingTrade && !!initialValues;
 
   // Selected currency info
   const selectedCcy = FUTURES_CURRENCY_LIST.find(c => c.code === form.currency);
@@ -176,16 +320,17 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
         }}>
           <p style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.08em', marginBottom: 10 }}>IDENTIFICATION</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledField label="RECORD ID *" hint="unique across all positions">
+            <LabeledField label="RECORD ID *" hint={isEdit ? "locked — cannot change after creation" : "unique across all positions"}>
               <input
-                style={{ ...inputStyle, borderColor: (touched.record_id && (idEmpty || idDuplicate)) ? S.red : S.border }}
+                style={{ ...inputStyle, borderColor: (touched.record_id && (idEmpty || idDuplicate)) ? S.red : S.border, opacity: isEdit ? 0.6 : 1, cursor: isEdit ? 'not-allowed' : 'text' }}
                 value={form.record_id}
-                onChange={e => set('record_id', e.target.value)}
+                onChange={e => { if (!isEdit) set('record_id', e.target.value); }}
                 onBlur={() => touch('record_id')}
                 placeholder="e.g. INV-2026-001"
+                readOnly={isEdit}
               />
-              {touched.record_id && idEmpty && <FieldError error="Record ID is required" />}
-              {touched.record_id && idDuplicate && !idEmpty && <FieldError error={`Duplicate ID: ${form.record_id}`} />}
+              {touched.record_id && idEmpty && !isEdit && <FieldError error="Record ID is required" />}
+              {touched.record_id && idDuplicate && !idEmpty && !isEdit && <FieldError error={`Duplicate ID: ${form.record_id}`} />}
             </LabeledField>
             <LabeledField label="ENTITY *" hint="legal entity or business division">
               <input
@@ -260,16 +405,14 @@ export default function TradeModal({ open, onClose, onSave, existingTrade, initi
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
 
             {/* Value Date */}
-            <LabeledField label="VALUE DATE *" hint="ISO 8601 · settlement date">
-              <input
-                style={{ ...inputStyle, borderColor: (touched.value_date && dateEmpty) ? S.red : S.border }}
-                type="date"
-                value={form.value_date}
-                onChange={e => set('value_date', e.target.value)}
-                onBlur={() => touch('value_date')}
-                min="2026-01-01"
-                max="2028-12-31"
-              />
+            <LabeledField label="VALUE DATE *" hint="settlement date · click to pick">
+              <div onClick={() => touch('value_date')}>
+                <ModalDatePicker
+                  value={form.value_date}
+                  onChange={v => { set('value_date', v); touch('value_date'); }}
+                  hasError={!!(touched.value_date && dateEmpty)}
+                />
+              </div>
               {touched.value_date && dateEmpty && <FieldError error="Value date is required" />}
               {!dateEmpty && bucketMissing && (
                 <FieldError warning={`No forward points for bucket ${getBucket(form.value_date)}`} />
