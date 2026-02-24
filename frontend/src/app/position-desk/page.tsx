@@ -48,6 +48,7 @@ const S = {
   pass:      "var(--status-pass,#22c55e)",
   fail:      "var(--accent-red,#ef4444)",
   purple:    "#a78bfa",
+  indigo:    "#818cf8",
 } as const;
 type ExecStatus = "NEW" | "POLICY_ASSIGNED" | "READY_TO_EXECUTE" | "HEDGED" | "REJECTED";
 
@@ -436,6 +437,25 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
                     <ActionBtn label="REOPEN" color={S.secondary} onClick={() => handleReopen(p)} loading={isLoading} />
                   </Tooltip>
                 )}
+                {/* Sprint 1.4: Lineage link — always visible */}
+                <Link
+                  href={`/lineage?position=${encodeURIComponent(p.id)}`}
+                  style={{
+                    fontFamily:    S.fontMono,
+                    fontSize:      8,
+                    fontWeight:    700,
+                    letterSpacing: "0.06em",
+                    color:         S.indigo,
+                    background:    `color-mix(in srgb, #818cf8 8%, transparent)`,
+                    border:        `1px solid color-mix(in srgb, #818cf8 20%, transparent)`,
+                    padding:       "1px 5px",
+                    borderRadius:  2,
+                    textDecoration:"none",
+                    whiteSpace:    "nowrap" as const,
+                  }}
+                >
+                  LINEAGE
+                </Link>
               </div>
             </div>
           );
