@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { useAuth } from '../../lib/authContext';
@@ -152,6 +152,171 @@ function ImportBanner({ created, totalRows, errors, onDismiss }: ImportBannerPro
   );
 }
 
+// ─── Custom Bloomberg-style Inline Date Picker ───────────────────────────────────
+function InlineDatePicker({
+  value, onChange, onBlur, hasError, focusedField, fieldName, onFocus,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onBlur: () => void;
+  hasError: boolean;
+  focusedField: string | null;
+  fieldName: string;
+  onFocus: () => void;
+}) {
+  const [open, setOpen]           = useState(false);
+  const today                     = new Date();
+  const initDate                  = value ? new Date(value + 'T00:00:00') : today;
+  const [viewYear, setViewYear]   = useState(initDate.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initDate.getMonth());
+  const [textInput, setTextInput] = useState(value);
+  const containerRef              = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setTextInput(value); }, [value]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false); onBlur();
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [open, onBlur]);
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAYS   = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+
+  const firstDay   = new Date(viewYear, viewMonth, 1);
+  const lastDay    = new Date(viewYear, viewMonth + 1, 0);
+  const firstDow   = (firstDay.getDay() + 6) % 7;
+  const totalCells = firstDow + lastDay.getDate();
+  const rows       = Math.ceil(totalCells / 7);
+
+  function selectDay(day: number) {
+    const mm  = String(viewMonth + 1).padStart(2, '0');
+    const dd  = String(day).padStart(2, '0');
+    const iso = `{viewYear}-{mm}-{dd}`;
+    onChange(iso); setTextInput(iso); setOpen(false); onBlur();
+  }
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  }
+  function jumpToQuarter(qi: number) {
+    const m = (qi - 1) * 3;
+    setViewMonth(m);
+    setViewYear(m < today.getMonth() ? today.getFullYear() + 1 : today.getFullYear());
+  }
+
+  function handleTextBlur() {
+    const iso = textInput.trim();
+    if (/^\d{4}-\d{2}-\d{2}\$/.test(iso)) {
+      const d = new Date(iso + 'T00:00:00');
+      if (!isNaN(d.getTime())) { onChange(iso); setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }
+    }
+  }
+
+  const isFocused   = focusedField === fieldName;
+  const borderColor = hasError ? 'var(--accent-red)' : isFocused ? 'var(--accent-cyan)' : 'var(--border-soft)';
+  const borderWidth = (hasError || isFocused) ? '2px' : '1px';
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      <div role="button" tabIndex={0}
+        onClick={() => { setOpen(v => !v); onFocus(); }}
+        onFocus={onFocus}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(v => !v); }
+          if (e.key === 'Escape') setOpen(false);
+        }}
+        style={{
+          fontFamily: 'IBM Plex Mono, monospace', fontSize: '0.875rem',
+          color: value ? 'var(--text-primary)' : 'var(--text-tertiary)',
+          borderBottom: `{borderWidth} solid {borderColor}`,
+          padding: '4px 0', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          userSelect: 'none', transition: 'border-color 0.1s',
+        }}>
+        <span>{value || 'YYYY-MM-DD'}</span>
+        <span style={{ fontSize: '0.625rem', color: 'var(--text-tertiary)', marginLeft: 4 }}>{open ? '▲' : '▼'}</span>
+      </div>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 999,
+          background: 'var(--bg-panel)', border: '1px solid var(--border-rim)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)', width: 260,
+          padding: '10px 10px 8px', fontFamily: 'IBM Plex Mono, monospace',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <button onClick={prevMonth} style={{ background:'none', border:'1px solid var(--border-rim)', color:'var(--text-secondary)', cursor:'pointer', padding:'2px 7px', fontFamily:'inherit', fontSize:'0.6875rem' }}>◄</button>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.06em' }}>{MONTHS[viewMonth]} {viewYear}</span>
+            <button onClick={nextMonth} style={{ background:'none', border:'1px solid var(--border-rim)', color:'var(--text-secondary)', cursor:'pointer', padding:'2px 7px', fontFamily:'inherit', fontSize:'0.6875rem' }}>►</button>
+          </div>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+            {[1,2,3,4].map(qi => (
+              <button key={qi} onClick={() => jumpToQuarter(qi)} style={{
+                flex: 1, background: 'none', border: '1px solid var(--border-rim)',
+                color: 'var(--text-tertiary)', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: '0.5625rem', letterSpacing: '0.06em', padding: '2px 0',
+              }}>Q{qi}</button>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+            {DAYS.map(d => (
+              <div key={d} style={{ textAlign: 'center', fontSize: '0.5625rem', color: 'var(--text-tertiary)', letterSpacing: '0.04em', padding: '2px 0' }}>{d}</div>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+            {Array.from({ length: rows * 7 }, (_, i) => {
+              const day = i - firstDow + 1;
+              const valid = day >= 1 && day <= lastDay.getDate();
+              if (!valid) return <div key={i} />;
+              const cellDate = new Date(viewYear, viewMonth, day);
+              const isPast = cellDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              const selMM = String(viewMonth + 1).padStart(2, '0');
+              const selDD = String(day).padStart(2, '0');
+              const iso = `{viewYear}-{selMM}-{selDD}`;
+              const isSelected = iso === value;
+              const isToday = cellDate.toDateString() === today.toDateString();
+              return (
+                <button key={i} onClick={() => !isPast && selectDay(day)}
+                  style={{
+                    textAlign: 'center', padding: '3px 0', fontSize: '0.6875rem',
+                    fontFamily: 'inherit', cursor: isPast ? 'not-allowed' : 'pointer', borderRadius: 2,
+                    border: isToday ? '1px solid var(--accent-amber)' : '1px solid transparent',
+                    background: isSelected ? 'var(--accent-cyan)' : 'transparent',
+                    color: isSelected ? '#0a0f14' : isPast ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    opacity: isPast ? 0.35 : 1, fontWeight: isSelected ? 700 : 400,
+                  }}>{day}</button>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-soft)' }}>
+            <div style={{ fontSize: '0.5625rem', color: 'var(--text-tertiary)', letterSpacing: '0.08em', marginBottom: 4 }}>TYPE DATE</div>
+            <input type="text" value={textInput}
+              onChange={e => setTextInput(e.target.value)}
+              onBlur={handleTextBlur}
+              onKeyDown={e => { if (e.key === 'Enter') handleTextBlur(); if (e.key === 'Escape') setOpen(false); }}
+              placeholder="YYYY-MM-DD"
+              style={{ fontFamily: 'inherit', fontSize: '0.75rem', width: '100%',
+                background: 'var(--bg-sub)', border: '1px solid var(--border-rim)',
+                color: 'var(--text-primary)', padding: '3px 8px', outline: 'none' }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 function InputPageInner() {
   const router       = useRouter();
@@ -266,6 +431,8 @@ function InputPageInner() {
   const [inlineForm, setInlineForm]       = useState<TradeRow>(EMPTY_INLINE);
   const [inlineTouched, setInlineTouched] = useState<Record<string, boolean>>({});
   const [inlineSaving, setInlineSaving]   = useState(false);
+  const [amountDisplay, setAmountDisplay] = useState('');
+  const [focusedField, setFocusedField]   = useState<string | null>(null);
 
   // ── Load positions from DB on mount ───────────────────────────────────────
   useEffect(() => {
@@ -978,173 +1145,211 @@ function InputPageInner() {
                   </span>
                 </div>
 
-                {/* Form grid */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: 1,
-                  background: S.border,
-                  padding: 0,
-                }}>
-                  {/* RECORD ID */}
-                  {(() => {
-                    const err = inlineTouched.record_id && !inlineForm.record_id.trim()
-                      ? 'Required'
-                      : inlineTouched.record_id && inlineIdDuplicate
-                      ? 'ID exists'
-                      : null;
-                    return (
-                      <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
-                          RECORD ID {err && <span style={{ color: S.red }}>— {err}</span>}
+                {/* Form grid — Bloomberg terminal style: 2-row, 4-col */}
+                {(() => {
+                  function fmtAmt(val: number): string {
+                    if (!val || isNaN(val)) return "";
+                    return new Intl.NumberFormat('en-US').format(val);
+                  }
+                  function handleAmountChange(raw: string) {
+                    const stripped = raw.replace(/[^0-9.]/g, '');
+                    setAmountDisplay(stripped);
+                    setInlineField("amount", parseFloat(stripped) || 0);
+                  }
+                  function handleAmountFocus() {
+                    setFocusedField('amount');
+                    setAmountDisplay(inlineForm.amount ? String(inlineForm.amount) : "");
+                  }
+                  function handleAmountBlur() {
+                    setFocusedField(null);
+                    touchInline('amount');
+                    setAmountDisplay(fmtAmt(inlineForm.amount));
+                  }
+                  function fb(field: string, hasErr: boolean): string {
+                    if (hasErr) return `2px solid ${S.red}`;
+                    if (focusedField === field) return `2px solid ${S.cyan}`;
+                    return `1px solid ${S.borderSoft}`;
+                  }
+                  const errRecordId = inlineTouched.record_id && !inlineForm.record_id.trim()
+                    ? 'Required' : inlineTouched.record_id && inlineIdDuplicate ? 'ID exists' : null;
+                  const errEntity = inlineTouched.entity && !inlineForm.entity.trim() ? 'Required' : null;
+                  const errAmount = inlineTouched.amount && !(inlineForm.amount > 0) ? 'Must be > 0' : null;
+                  const errDate   = inlineTouched.value_date && !inlineForm.value_date ? 'Required' : null;
+                  const fieldCell: React.CSSProperties = {
+                    background: S.bgPanel, padding: '10px 14px',
+                    display: 'flex', flexDirection: 'column', gap: 5,
+                  };
+                  const labelStyle: React.CSSProperties = {
+                    fontFamily: S.fontMono, fontSize: '0.625rem',
+                    letterSpacing: '0.12em', color: S.textTertiary,
+                    textTransform: 'uppercase',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  };
+                  const inputStyle: React.CSSProperties = {
+                    fontFamily: S.fontMono, fontSize: '0.875rem',
+                    background: 'transparent', border: 'none',
+                    color: S.textPrimary, padding: '3px 0',
+                    outline: 'none', width: '100%',
+                  };
+
+                  return (
+                    <>
+                    {/* Row 1: Identifiers */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: S.border }}>
+                      {/* RECORD ID */}
+                      <div style={fieldCell}>
+                        <label style={{ ...labelStyle, color: errRecordId ? S.red : S.textTertiary }}>
+                          RECORD ID {errRecordId && <span style={{ color: S.red, fontWeight: 400, letterSpacing: '0.04em' }}> — {errRecordId}</span>}
                         </label>
-                        <input
-                          type="text"
-                          value={inlineForm.record_id}
+                        <input type="text" value={inlineForm.record_id}
                           onChange={e => setInlineField('record_id', e.target.value)}
-                          onBlur={() => touchInline('record_id')}
+                          onFocus={() => setFocusedField('record_id')}
+                          onBlur={() => { setFocusedField(null); touchInline('record_id'); }}
                           placeholder="e.g. TXN-001"
-                          style={{
-                            fontFamily: S.fontMono, fontSize: '0.875rem',
-                            background: 'transparent', border: 'none',
-                            borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
-                            color: S.textPrimary, padding: '4px 0', outline: 'none', width: '100%',
-                          }}
+                          style={{ ...inputStyle, borderBottom: fb('record_id', !!errRecordId) }}
                         />
                       </div>
-                    );
-                  })()}
-
-                  {/* ENTITY */}
-                  {(() => {
-                    const err = inlineTouched.entity && !inlineForm.entity.trim() ? 'Required' : null;
-                    return (
-                      <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
-                          ENTITY {err && <span style={{ color: S.red }}>— {err}</span>}
+                      {/* ENTITY */}
+                      <div style={fieldCell}>
+                        <label style={{ ...labelStyle, color: errEntity ? S.red : S.textTertiary }}>
+                          ENTITY {errEntity && <span style={{ color: S.red, fontWeight: 400, letterSpacing: '0.04em' }}> — {errEntity}</span>}
                         </label>
-                        <input
-                          type="text"
-                          value={inlineForm.entity}
+                        <input type="text" value={inlineForm.entity}
                           onChange={e => setInlineField('entity', e.target.value)}
-                          onBlur={() => touchInline('entity')}
+                          onFocus={() => setFocusedField('entity')}
+                          onBlur={() => { setFocusedField(null); touchInline('entity'); }}
                           placeholder="e.g. Acme Corp"
-                          style={{
-                            fontFamily: S.fontMono, fontSize: '0.875rem',
-                            background: 'transparent', border: 'none',
-                            borderBottom: `1px solid ${err ? S.red : S.borderSoft}`,
-                            color: S.textPrimary, padding: '4px 0', outline: 'none', width: '100%',
-                          }}
+                          style={{ ...inputStyle, borderBottom: fb('entity', !!errEntity) }}
                         />
                       </div>
-                    );
-                  })()}
-
-                  {/* FLOW TYPE */}
-                  <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary }}>FLOW TYPE</label>
-                    <select
-                      value={inlineForm.type}
-                      onChange={e => setInlineField('type', e.target.value as TradeRow['type'])}
-                      style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
-                    >
-                      <option value="AP">AP — Accounts Payable</option>
-                      <option value="AR">AR — Accounts Receivable</option>
-                    </select>
-                  </div>
-
-                  {/* CURRENCY */}
-                  <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary }}>CURRENCY</label>
-                    <select
-                      value={inlineForm.currency}
-                      onChange={e => setInlineField('currency', e.target.value as FuturesCurrency)}
-                      style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
-                    >
-                      {FUTURES_CURRENCY_LIST.map(c => (
-                        <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* AMOUNT */}
-                  {(() => {
-                    const err = inlineTouched.amount && !(inlineForm.amount > 0) ? 'Must be > 0' : null;
-                    return (
-                      <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
-                          AMOUNT ({inlineForm.currency}) {err && <span style={{ color: S.red }}>— {err}</span>}
-                        </label>
-                        <input
-                          type="number" min={0} step={1000}
-                          value={inlineForm.amount || ''}
-                          onChange={e => setInlineField('amount', parseFloat(e.target.value) || 0)}
-                          onBlur={() => touchInline('amount')}
-                          placeholder="0"
-                          style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${err ? S.red : S.borderSoft}`, color: S.textPrimary, padding: '4px 0', outline: 'none', width: '100%' }}
-                        />
+                      {/* FLOW TYPE */}
+                      <div style={fieldCell}>
+                        <label style={labelStyle}>FLOW TYPE</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: fb('type', false), paddingBottom: 3 }}>
+                          <span style={{
+                            fontFamily: S.fontMono, fontSize: '0.5625rem', fontWeight: 700,
+                            padding: '1px 5px', borderRadius: 2, letterSpacing: '0.06em',
+                            background: inlineForm.type === 'AP'
+                              ? `color-mix(in srgb, ${S.red} 12%, transparent)`
+                              : `color-mix(in srgb, ${S.green} 12%, transparent)`,
+                            color: inlineForm.type === 'AP' ? S.red : S.green,
+                          }}>{inlineForm.type}</span>
+                          <select
+                            value={inlineForm.type}
+                            onChange={e => setInlineField('type', e.target.value as TradeRow['type'])}
+                            onFocus={() => setFocusedField('type')}
+                            onBlur={() => setFocusedField(null)}
+                            style={{ ...inputStyle, flex: 1, cursor: 'pointer', borderBottom: 'none', padding: '2px 0', fontSize: '0.75rem' }}
+                          >
+                            <option value="AP">AP — Accounts Payable</option>
+                            <option value="AR">AR — Accounts Receivable</option>
+                          </select>
+                        </div>
                       </div>
-                    );
-                  })()}
+                      {/* CURRENCY */}
+                      <div style={fieldCell}>
+                        <label style={labelStyle}>CURRENCY</label>
+                        <select
+                          value={inlineForm.currency}
+                          onChange={e => setInlineField('currency', e.target.value as FuturesCurrency)}
+                          onFocus={() => setFocusedField('currency')}
+                          onBlur={() => setFocusedField(null)}
+                          style={{ ...inputStyle, cursor: 'pointer', borderBottom: fb('currency', false) }}
+                        >
+                          {FUTURES_CURRENCY_LIST.map(c => (
+                            <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
 
-                  {/* VALUE DATE */}
-                  {(() => {
-                    const err = inlineTouched.value_date && !inlineForm.value_date ? 'Required' : null;
-                    return (
-                      <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: err ? S.red : S.textTertiary }}>
-                          VALUE DATE {err && <span style={{ color: S.red }}>— {err}</span>}
+                    {/* Row 2: Execution Details */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: S.border }}>
+                      {/* AMOUNT */}
+                      <div style={fieldCell}>
+                        <label style={{ ...labelStyle, color: errAmount ? S.red : S.textTertiary }}>
+                          AMOUNT ({inlineForm.currency}) {errAmount && <span style={{ color: S.red, fontWeight: 400, letterSpacing: '0.04em' }}> — {errAmount}</span>}
                         </label>
-                        <input
-                          type="date"
+                        <div style={{ display: 'flex', alignItems: 'center', borderBottom: fb('amount', !!errAmount), paddingBottom: 3 }}>
+                          <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', color: S.textTertiary, marginRight: 6, flexShrink: 0 }}>{inlineForm.currency}</span>
+                          <input type="text" inputMode="numeric"
+                            value={amountDisplay}
+                            onChange={e => handleAmountChange(e.target.value)}
+                            onFocus={handleAmountFocus}
+                            onBlur={handleAmountBlur}
+                            placeholder="0"
+                            style={{ ...inputStyle, textAlign: 'right', flex: 1, borderBottom: 'none', padding: '3px 0' }}
+                          />
+                        </div>
+                      </div>
+                      {/* VALUE DATE */}
+                      <div style={fieldCell}>
+                        <label style={{ ...labelStyle, color: errDate ? S.red : S.textTertiary }}>
+                          VALUE DATE {errDate && <span style={{ color: S.red, fontWeight: 400, letterSpacing: '0.04em' }}> — {errDate}</span>}
+                        </label>
+                        <InlineDatePicker
                           value={inlineForm.value_date}
-                          onChange={e => setInlineField('value_date', e.target.value)}
+                          onChange={v => setInlineField('value_date', v)}
                           onBlur={() => touchInline('value_date')}
-                          style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${err ? S.red : S.borderSoft}`, color: S.textPrimary, padding: '4px 0', outline: 'none', width: '100%', colorScheme: 'dark' }}
+                          hasError={!!errDate}
+                          focusedField={focusedField}
+                          fieldName="value_date"
+                          onFocus={() => setFocusedField('value_date')}
                         />
                       </div>
-                    );
-                  })()}
-
-                  {/* STATUS */}
-                  <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary }}>STATUS</label>
-                    <select
-                      value={inlineForm.status}
-                      onChange={e => setInlineField('status', e.target.value as TradeRow['status'])}
-                      style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: S.bgPanel, border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '2px 0', outline: 'none', width: '100%', cursor: 'pointer' }}
-                    >
-                      <option value="CONFIRMED">CONFIRMED</option>
-                      <option value="FORECAST">FORECAST</option>
-                    </select>
-                  </div>
-
-                  {/* DESCRIPTION */}
-                  <div style={{ background: S.bgPanel, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.textTertiary }}>DESCRIPTION</label>
-                    <input
-                      type="text"
-                      value={inlineForm.description ?? ''}
-                      onChange={e => setInlineField('description', e.target.value)}
-                      placeholder="Optional note"
-                      style={{ fontFamily: S.fontMono, fontSize: '0.875rem', background: 'transparent', border: 'none', borderBottom: `1px solid ${S.borderSoft}`, color: S.textPrimary, padding: '4px 0', outline: 'none', width: '100%' }}
-                    />
-                  </div>
-                </div>
+                      {/* STATUS */}
+                      <div style={fieldCell}>
+                        <label style={labelStyle}>STATUS</label>
+                        <select
+                          value={inlineForm.status}
+                          onChange={e => setInlineField('status', e.target.value as TradeRow['status'])}
+                          onFocus={() => setFocusedField('status')}
+                          onBlur={() => setFocusedField(null)}
+                          style={{ ...inputStyle, cursor: 'pointer', borderBottom: fb('status', false) }}
+                        >
+                          <option value="CONFIRMED">CONFIRMED</option>
+                          <option value="FORECAST">FORECAST</option>
+                        </select>
+                      </div>
+                      {/* DESCRIPTION */}
+                      <div style={fieldCell}>
+                        <label style={labelStyle}>DESCRIPTION</label>
+                        <input type="text" value={inlineForm.description ?? ''}
+                          onChange={e => setInlineField('description', e.target.value)}
+                          onFocus={() => setFocusedField('description')}
+                          onBlur={() => setFocusedField(null)}
+                          placeholder="Optional note"
+                          style={{ ...inputStyle, borderBottom: fb('description', false) }}
+                        />
+                      </div>
+                    </div>
+                    </>
+                  );
+                })()}
 
                 {/* Submit row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '8px 14px', borderTop: `1px solid ${S.borderSoft}` }}>
-                  <button
-                    type="button"
-                    onClick={() => { setInlineForm(EMPTY_INLINE); setInlineTouched({}); }}
-                    style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', padding: '7px 14px', border: `1px solid ${S.border}`, color: S.textTertiary, background: 'transparent', cursor: 'pointer' }}
-                  >CLEAR</button>
-                  <button
-                    type="button"
-                    onClick={handleInlineSave}
-                    disabled={inlineSaving}
-                    style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', fontWeight: 700, padding: '7px 18px', border: `1px solid ${inlineValid ? S.cyan : S.border}`, color: inlineValid ? S.cyan : S.textTertiary, background: inlineValid ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : 'transparent', cursor: inlineSaving ? 'not-allowed' : 'pointer', opacity: inlineSaving ? 0.6 : 1, transition: 'all 0.1s' }}
-                  >{inlineSaving ? 'SAVING…' : '+ ADD POSITION'}</button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 14px', borderTop: `1px solid ${S.borderSoft}` }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {(() => {
+                      const parts: string[] = [];
+                      if (inlineForm.type) parts.push(inlineForm.type);
+                      if (inlineForm.currency) parts.push(inlineForm.currency);
+                      if (inlineForm.amount > 0) parts.push(new Intl.NumberFormat('en-US').format(inlineForm.amount));
+                      if (inlineForm.value_date) parts.push(inlineForm.value_date.slice(0, 7));
+                      return parts.length > 1 ? parts.join(' · ') : 'Fill fields above to preview';
+                    })()}
+                  </span>
+                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                    <button type="button"
+                      onClick={() => { setInlineForm(EMPTY_INLINE); setInlineTouched({}); setAmountDisplay(''); setFocusedField(null); }}
+                      style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', padding: '7px 14px', border: `1px solid ${S.border}`, color: S.textTertiary, background: 'transparent', cursor: 'pointer' }}
+                    >CLEAR</button>
+                    <button type="button"
+                      onClick={handleInlineSave}
+                      disabled={inlineSaving}
+                      style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', fontWeight: 700, padding: '7px 18px', border: `1px solid ${inlineValid ? S.cyan : S.border}`, color: inlineValid ? S.cyan : S.textTertiary, background: inlineValid ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : 'transparent', cursor: inlineSaving ? 'not-allowed' : 'pointer', opacity: inlineSaving ? 0.6 : 1, transition: 'all 0.1s' }}
+                    >{inlineSaving ? 'SAVING…' : '+ ADD POSITION'}</button>
+                  </div>
                 </div>
               </div>
 
@@ -1233,15 +1438,31 @@ function InputPageInner() {
                                   onMouseEnter={e => (e.currentTarget.style.color = S.amber)}
                                   onMouseLeave={e => (e.currentTarget.style.color = S.textTertiary)}
                                 >✎</button>
-                                {/* Execute via IBKR (only for READY_TO_EXECUTE or CONFIRMED non-hedged) */}
-                                {!isHedged && pos.execution_status !== 'REJECTED' && pos.status === 'CONFIRMED' && (
-                                  <button
-                                    title="Execute via IBKR"
-                                    onClick={() => openIbkrModal(pos)}
-                                    disabled={isLifecycleLoading}
-                                    style={{ background: 'none', border: `1px solid ${S.green}`, cursor: isLifecycleLoading ? 'not-allowed' : 'pointer', color: S.green, padding: '1px 5px', fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.06em', borderRadius: 2, opacity: isLifecycleLoading ? 0.5 : 1 }}
-                                  >IBKR</button>
-                                )}
+                                {/* Lifecycle status chips + conditional IBKR */}
+                                {(() => {
+                                  const es = pos.execution_status;
+                                  if (isHedged || es === 'REJECTED') return null;
+                                  if (es === 'NEW') return (
+                                    <>
+                                      <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', padding: '1px 5px', border: `1px solid ${S.amber}`, color: S.amber, borderRadius: 2, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>NO POLICY</span>
+                                      <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', padding: '1px 5px', border: `1px solid ${S.borderSoft}`, color: S.textTertiary, borderRadius: 2, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>UNEXECUTED</span>
+                                    </>
+                                  );
+                                  if (es === 'POLICY_ASSIGNED') return (
+                                    <>
+                                      <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', padding: '1px 5px', border: `1px solid ${S.cyan}`, color: S.cyan, borderRadius: 2, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>POLICY ✓</span>
+                                      <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', padding: '1px 5px', border: `1px solid ${S.borderSoft}`, color: S.textTertiary, borderRadius: 2, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>UNEXECUTED</span>
+                                    </>
+                                  );
+                                  if (es === 'READY_TO_EXECUTE') return (
+                                    <>
+                                      <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', padding: '1px 5px', border: `1px solid ${S.cyan}`, color: S.cyan, borderRadius: 2, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>POLICY ✓</span>
+                                      <button title="Execute via IBKR" onClick={() => openIbkrModal(pos)} disabled={isLifecycleLoading}
+                                        style={{ background: 'none', border: `1px solid ${S.green}`, cursor: isLifecycleLoading ? 'not-allowed' : 'pointer', color: S.green, padding: '1px 5px', fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em', borderRadius: 2, opacity: isLifecycleLoading ? 0.5 : 1, whiteSpace: 'nowrap' }}>IBKR</button>
+                                    </>
+                                  );
+                                  return null;
+                                })()}
                                 {/* Delete */}
                                 <button
                                   title="Delete"
