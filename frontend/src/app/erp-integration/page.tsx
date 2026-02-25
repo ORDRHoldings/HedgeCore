@@ -11,6 +11,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { ERP_INTEGRATION_HELP } from "@/lib/helpContent";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -445,6 +447,7 @@ export default function ERPIntegrationPage() {
   // RENDER
   // ==========================================================================
   return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
     <div style={{
       minHeight:  "100vh",
       display:    "flex",
@@ -452,6 +455,7 @@ export default function ERPIntegrationPage() {
       background: S.bgDeep,
       fontFamily: S.fontUI,
       color:      S.primary,
+      flex:       1,
     }}>
 
       {/* ====== TopBar (44px) ====== */}
@@ -1112,6 +1116,8 @@ export default function ERPIntegrationPage() {
           to   { transform: rotate(360deg); }
         }
       `}</style>
+    </div>
+    <HelpPanel config={ERP_INTEGRATION_HELP} storageKey="erp-integration" />
     </div>
   );
 }

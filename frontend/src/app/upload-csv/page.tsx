@@ -10,6 +10,8 @@ import {
   type ConnectorRun,
   type ConnectorRunDetail,
 } from "@/api/connectorClient";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { UPLOAD_CSV_HELP } from "@/lib/helpContent";
 
 type ImportStatus = "idle" | "uploading" | "parsing" | "validating" | "committing" | "complete" | "error";
 
@@ -254,6 +256,8 @@ export default function UploadCsvPage() {
   }
 
   return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+
     <div
       style={{
         minHeight: "100vh",
@@ -1562,6 +1566,9 @@ export default function UploadCsvPage() {
           }
         }
       `}</style>
+    </div>
+  
+    <HelpPanel config={UPLOAD_CSV_HELP} storageKey="upload-csv" />
     </div>
   );
 }

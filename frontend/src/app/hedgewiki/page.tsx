@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { HEDGEWIKI_HELP } from "@/lib/helpContent";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -296,7 +298,8 @@ export default function HedgeWiki() {
   const entry = ENTRIES[activeEntry] ?? Object.values(ENTRIES)[0];
 
   return (
-    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary, flex: 1 }}>
 
       {/* Header */}
       <header style={{
@@ -533,6 +536,8 @@ export default function HedgeWiki() {
         <span style={{ color: S.rim }}>·</span>
         <span>{Object.keys(ENTRIES).length} articles · {Object.values(ENTRIES).reduce((s, e) => s + e.citations.length, 0)} citations</span>
       </footer>
+    </div>
+    <HelpPanel config={HEDGEWIKI_HELP} storageKey="hedgewiki" />
     </div>
   );
 }

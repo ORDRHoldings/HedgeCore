@@ -13,6 +13,8 @@ import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import { listConnectorRuns } from "../../api/connectorClient";
 import type { ConnectorRun } from "../../api/connectorClient";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { EXECUTION_HISTORY_HELP } from "@/lib/helpContent";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -529,6 +531,7 @@ export default function ExecutionHistoryPage() {
   const pagedData  = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
     <div style={{
       minHeight: "100vh",
       display: "flex",
@@ -536,6 +539,7 @@ export default function ExecutionHistoryPage() {
       background: S.bgDeep,
       fontFamily: S.fontUI,
       color: S.primary,
+      flex: 1,
     }}>
 
       {/* ====== TopBar (44px) ====== */}
@@ -930,6 +934,8 @@ export default function ExecutionHistoryPage() {
           {renderTs} — ORDR &middot; Execution History
         </span>
       </footer>
+    </div>
+    <HelpPanel config={EXECUTION_HISTORY_HELP} storageKey="execution-history" />
     </div>
   );
 }

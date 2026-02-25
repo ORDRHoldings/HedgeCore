@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { HELP_CENTER_HELP } from "@/lib/helpContent";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -411,7 +413,9 @@ export default function HelpPage() {
                     <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>
                       Instant P&amp;L: Unhedged · Hedged · Hedge Benefit · Efficiency %. No backend required.
                     </div>
-                  </div>
+                  
+    <HelpPanel config={HELP_CENTER_HELP} storageKey="help-center" />
+    </div>
                 )}
               </>
             );

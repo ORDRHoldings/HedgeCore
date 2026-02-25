@@ -39,6 +39,8 @@ import PolisophicMiniWidget from "@/components/dashboard/widgets/PolisophicMiniW
 import QuickActionsWidget from "@/components/dashboard/widgets/QuickActionsWidget";
 import ExposureSummaryWidget from "@/components/dashboard/widgets/ExposureSummaryWidget";
 import PipelineStatusWidget from "@/components/dashboard/widgets/PipelineStatusWidget";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { DASHBOARD_HELP } from "@/lib/helpContent";
 
 // ── react-grid-layout setup ───────────────────────────────────────────────────
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -401,7 +403,9 @@ export default function DashboardPage() {
                     user={user}
                     onRemove={() => handleRemove(i)}
                   />
-                </div>
+                
+    <HelpPanel config={DASHBOARD_HELP} storageKey="dashboard" />
+    </div>
               );
             })}
           </ResponsiveGridLayout>

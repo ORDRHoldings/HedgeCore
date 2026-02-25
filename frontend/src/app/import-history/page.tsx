@@ -15,6 +15,8 @@ import {
   type ConnectorRunDetail,
   type ConnectorRunError,
 } from "../../api/connectorClient";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { IMPORT_HISTORY_HELP } from "@/lib/helpContent";
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const S = {
@@ -1274,6 +1276,8 @@ export default function ImportHistoryPage() {
   }
 
   return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+
     <>
       <style>{`
         @keyframes pulse {
@@ -1615,5 +1619,8 @@ export default function ImportHistoryPage() {
         )}
       </div>
     </>
+  
+    <HelpPanel config={IMPORT_HISTORY_HELP} storageKey="import-history" />
+    </div>
   );
 }

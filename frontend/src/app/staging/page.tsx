@@ -7,6 +7,8 @@ import { useAuth } from "../../lib/authContext";
 import type { RootState, AppDispatch } from "../../lib/store";
 import { listStagingThunk } from "../../lib/store/slices/pipelineSlice";
 import type { StagedArtifact } from "../../api/pipelineTypes";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { STAGING_HELP } from "@/lib/helpContent";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
@@ -165,7 +167,8 @@ export default function StagingListPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary, flex: 1 }}>
 
       {/* ── Page header ── */}
       <header style={{
@@ -393,6 +396,8 @@ export default function StagingListPage() {
         <span style={{ color: S.rim }}>·</span>
         <span suppressHydrationWarning>{renderTs}</span>
       </footer>
+    </div>
+    <HelpPanel config={STAGING_HELP} storageKey="staging" />
     </div>
   );
 }
