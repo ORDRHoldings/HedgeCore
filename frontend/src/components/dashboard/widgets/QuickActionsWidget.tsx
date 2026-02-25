@@ -74,6 +74,7 @@ export default function QuickActionsWidget({ token, user, onRemove }: Props) {
     >
       {/* Header */}
       <div
+        className="widget-drag-handle"
         style={{
           display: "flex",
           alignItems: "center",
@@ -81,6 +82,7 @@ export default function QuickActionsWidget({ token, user, onRemove }: Props) {
           padding: "6px 10px",
           borderBottom: `1px solid ${S.rim}`,
           background: S.bgDeep,
+          cursor: "grab",
         }}
       >
         <Zap size={12} color={S.cyan} />

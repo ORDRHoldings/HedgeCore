@@ -52,11 +52,6 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
 
   useEffect(() => {
     if (!token) return;
-    // Demo tokens are not accepted by the backend — show demo policy in demo mode
-    if (token.startsWith("demo_token_")) {
-      setInstance(null);  // null = no active policy (widget shows empty state, no error)
-      return;
-    }
     let cancelled = false;
     getActivePolicy(token)
       .then(p  => { if (!cancelled) setInstance(p); })
@@ -81,6 +76,7 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
     >
       {/* Header */}
       <div
+        className="widget-drag-handle"
         style={{
           display:      "flex",
           alignItems:   "center",
@@ -89,6 +85,7 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
           borderBottom: `1px solid ${S.rim}`,
           background:   S.bgDeep,
           flexShrink:   0,
+          cursor:       "grab",
         }}
       >
         <Radar size={13} color={S.cyan} style={{ flexShrink: 0 }} />
