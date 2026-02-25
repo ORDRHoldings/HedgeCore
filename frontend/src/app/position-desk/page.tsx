@@ -32,7 +32,8 @@ import {
   reopenPositionThunk,
   clearLifecycleError,
 } from "../../lib/store/slices/positionSlice";
-import type { PositionRow } from "../../api/positionClient";
+import type { PositionRow, BulkAssignResult } from "../../api/positionClient";
+import { bulkAssignPolicy } from "../../api/positionClient";
 import {
   listPolicyTemplates,
   listFavorites,
@@ -290,6 +291,13 @@ export default function PositionDeskPage() {
   const [favTemplateIds, setFavTemplateIds]             = useState<Set<string>>(new Set());
   const [policySearchQuery, setPolicySearchQuery]       = useState('');
 
+  // Bulk assign state
+  const [bulkAssignOpen, setBulkAssignOpen]             = useState(false);
+  const [bulkPolicyId, setBulkPolicyId]                 = useState('');
+  const [bulkSearchQuery, setBulkSearchQuery]           = useState('');
+  const [bulkRunning, setBulkRunning]                   = useState(false);
+  const [bulkResult, setBulkResult]                     = useState<BulkAssignResult | null>(null);
+
   // Best-match policy recommendation for assign-policy modal
   const recommendation = useMemo(() => {
     if (modal.type !== 'assign-policy' || !modal.position) return null;
@@ -316,6 +324,25 @@ export default function PositionDeskPage() {
       setActivePolicyInstance(activeInst);
     }).catch(() => {});
   }, [modal.type, token]);
+
+  // Load templates + favorites + active instance when bulk assign modal opens
+  useEffect(() => {
+    if (!bulkAssignOpen || !token) return;
+    setBulkPolicyId('');
+    setBulkSearchQuery('');
+    setBulkResult(null);
+    Promise.all([
+      listPolicyTemplates(token),
+      listFavorites(token),
+      getActivePolicy(token),
+    ]).then(([templates, favs, activeInst]) => {
+      setPolicyTemplates(templates);
+      setFavTemplateIds(new Set(favs.map(f => f.template_id)));
+      setActivePolicyInstance(activeInst);
+      // Auto-select active policy instance if available
+      if (activeInst) setBulkPolicyId(activeInst.id);
+    }).catch(() => {});
+  }, [bulkAssignOpen, token]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -412,6 +439,24 @@ export default function PositionDeskPage() {
     dispatch(reopenPositionThunk({ id: p.id, token }));
   }, [dispatch, token]);
 
+  const handleBulkAssign = useCallback(async () => {
+    if (!token || !bulkPolicyId || selected.size === 0) return;
+    setBulkRunning(true);
+    setBulkResult(null);
+    try {
+      const result = await bulkAssignPolicy(Array.from(selected), bulkPolicyId, token);
+      setBulkResult(result);
+      if (result.assigned > 0) {
+        dispatch(listPositionsThunk({ token }));
+        setSelected(new Set());
+      }
+    } catch {
+      setBulkResult({ assigned: 0, skipped: 0, failed: selected.size, errors: ['Request failed — check network and permissions.'] });
+    } finally {
+      setBulkRunning(false);
+    }
+  }, [token, bulkPolicyId, selected, dispatch]);
+
   const allVisibleSelected = filteredPositions.length > 0 && filteredPositions.every((p) => selected.has(p.id));
   const toggleSelectAll = useCallback(() => {
     if (allVisibleSelected) setSelected(new Set());
@@ -478,8 +523,13 @@ export default function PositionDeskPage() {
       {selected.size > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 20px", background: `color-mix(in srgb, ${S.amber} 6%, ${S.bgPanel})`, borderBottom: `1px solid color-mix(in srgb, ${S.amber} 20%, ${S.soft})`, flexShrink: 0 }}>
           <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, fontWeight: 700, letterSpacing: "0.06em" }}>{selected.size} SELECTED</span>
+          <button
+            onClick={() => setBulkAssignOpen(true)}
+            style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: S.bgDeep, background: S.cyan, border: "none", padding: "3px 12px", cursor: "pointer", borderRadius: 2 }}>
+            BULK ASSIGN POLICY
+          </button>
           <button onClick={() => setSelected(new Set())} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer", borderRadius: 2 }}>CLEAR</button>
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>Per-row actions required (each needs mandatory audit reason)</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>Assign one policy to all {selected.size} selected positions at once</span>
         </div>
       )}
 
@@ -772,6 +822,124 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
           <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>Transition: {pos.execution_status} → REJECTED (can be reopened)</div>
           {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
           <ModalActions onCancel={closeModal} onConfirm={handleReject} confirmLabel="REJECT POSITION" confirmColor={S.fail} disabled={!rejectReason.trim() || isTransitioning} />
+        </ModalOverlay>
+      )}
+
+      {/* ── Bulk Assign Policy Modal ────────────────────────────────────────── */}
+      {bulkAssignOpen && (
+        <ModalOverlay onClose={() => { if (!bulkRunning) setBulkAssignOpen(false); }}>
+          <ModalHeader
+            title="Bulk Assign Policy"
+            subtitle={`Assign one policy to ${selected.size} selected position${selected.size !== 1 ? 's' : ''}`}
+          />
+          {(() => {
+            const activeTemplateId = activePolicyInstance?.template_id ?? null;
+            const instanceIdFor = (t: PolicyTemplate): string | null =>
+              activePolicyInstance && t.id === activeTemplateId ? activePolicyInstance.id : null;
+            const selectedTemplate = bulkPolicyId
+              ? policyTemplates.find(t => instanceIdFor(t) === bulkPolicyId) ?? null
+              : null;
+            const bulkFavTemplates   = policyTemplates.filter(t => favTemplateIds.has(t.id));
+            const bulkOtherTemplates = policyTemplates.filter(t => !favTemplateIds.has(t.id));
+            const bq = bulkSearchQuery.toLowerCase();
+            const filterFn = (t: PolicyTemplate) =>
+              !bq || t.name.toLowerCase().includes(bq) || t.short_name.toLowerCase().includes(bq);
+            const filteredBulkFavs   = bulkFavTemplates.filter(filterFn);
+            const filteredBulkOthers = bulkOtherTemplates.filter(filterFn);
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                {!activePolicyInstance && policyTemplates.length > 0 && (
+                  <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, padding: '6px 10px', border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 4 }}>
+                    ⚡ NO ACTIVE POLICY — activate one on the Policies page first
+                  </div>
+                )}
+                <label style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, display: 'block', marginBottom: 4, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                  Select Policy Instance *
+                </label>
+                <input
+                  type="text"
+                  value={bulkSearchQuery}
+                  onChange={e => setBulkSearchQuery(e.target.value)}
+                  placeholder="Search policies…"
+                  style={{ fontFamily: S.fontUI, fontSize: '0.75rem', padding: '5px 10px', border: `1px solid ${S.rim}`, background: S.bgSub, color: S.primary, outline: 'none', width: '100%', boxSizing: 'border-box' as const }}
+                />
+                <div style={{ maxHeight: 200, overflowY: 'auto' as const, border: `1px solid ${S.rim}`, background: S.bgPanel }}>
+                  {filteredBulkFavs.length > 0 && (<>
+                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem', color: S.amber, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                      ★ FAVORITES
+                    </div>
+                    {filteredBulkFavs.map(t => {
+                      const instId = instanceIdFor(t);
+                      return (
+                        <PolicySelectorRow key={t.id} tmpl={t}
+                          isSelected={!!instId && bulkPolicyId === instId}
+                          isFavorite isActive={t.id === activeTemplateId}
+                          onSelect={() => { if (instId) setBulkPolicyId(instId); }}
+                        />
+                      );
+                    })}
+                  </>)}
+                  {filteredBulkOthers.length > 0 && (<>
+                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem', color: S.tertiary, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                      ALL POLICIES
+                    </div>
+                    {filteredBulkOthers.map(t => {
+                      const instId = instanceIdFor(t);
+                      return (
+                        <PolicySelectorRow key={t.id} tmpl={t}
+                          isSelected={!!instId && bulkPolicyId === instId}
+                          isFavorite={false} isActive={t.id === activeTemplateId}
+                          onSelect={() => { if (instId) setBulkPolicyId(instId); }}
+                        />
+                      );
+                    })}
+                  </>)}
+                  {filteredBulkFavs.length === 0 && filteredBulkOthers.length === 0 && (
+                    <div style={{ padding: '20px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.tertiary }}>
+                      {policyTemplates.length === 0 ? 'LOADING…' : 'NO POLICIES MATCH'}
+                    </div>
+                  )}
+                </div>
+                {bulkPolicyId && (
+                  <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.cyan, letterSpacing: '0.06em', padding: '3px 8px', border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)` }}>
+                    INSTANCE: {bulkPolicyId.slice(0, 8).toUpperCase()}
+                    {selectedTemplate && ` · ${selectedTemplate.short_name} · ${selectedTemplate.name}`}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Result display after run */}
+          {bulkResult && (
+            <div style={{ marginBottom: 14, padding: '8px 12px', border: `1px solid ${bulkResult.failed > 0 ? S.fail : S.pass}`, background: `color-mix(in srgb, ${bulkResult.failed > 0 ? S.fail : S.pass} 6%, transparent)` }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: bulkResult.failed > 0 ? S.fail : S.pass, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 4 }}>
+                RESULT: {bulkResult.assigned} ASSIGNED · {bulkResult.skipped} SKIPPED · {bulkResult.failed} FAILED
+              </div>
+              {bulkResult.errors.length > 0 && (
+                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, maxHeight: 80, overflowY: 'auto' as const }}>
+                  {bulkResult.errors.map((e, i) => <div key={i}>{e}</div>)}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>
+            Transitions: NEW → POLICY_ASSIGNED (positions in later states are skipped)
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+            <button onClick={() => { if (!bulkRunning) setBulkAssignOpen(false); }}
+              style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: bulkRunning ? 'not-allowed' : 'pointer' }}>
+              {bulkResult && bulkResult.assigned > 0 ? 'Done' : 'Cancel'}
+            </button>
+            {!bulkResult && (
+              <button onClick={handleBulkAssign}
+                disabled={!bulkPolicyId.trim() || bulkRunning}
+                style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: S.bgDeep, background: !bulkPolicyId.trim() || bulkRunning ? S.tertiary : S.cyan, border: 'none', padding: '6px 14px', cursor: !bulkPolicyId.trim() || bulkRunning ? 'not-allowed' : 'pointer' }}>
+                {bulkRunning ? `ASSIGNING ${selected.size}…` : `ASSIGN TO ${selected.size} POSITIONS`}
+              </button>
+            )}
+          </div>
         </ModalOverlay>
       )}
     </div>

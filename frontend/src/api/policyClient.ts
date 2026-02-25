@@ -8,8 +8,18 @@ import type { QuestionnaireAnswers, AIPolicyResult, AIPolicyRecommendation } fro
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
-function authHeaders(token?: string) {
-  return token ? { Authorization: `Bearer ${token}` } : {};
+function getApiKey(): string {
+  if (process.env.NEXT_PUBLIC_HEDGECALC_API_KEY) return process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("hc_api_key") ?? "HC_DEV_KEY_001";
+  }
+  return "HC_DEV_KEY_001";
+}
+
+function authHeaders(token?: string): Record<string, string> {
+  const headers: Record<string, string> = { "X-API-Key": getApiKey() };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
 }
 
 // ---------------------------------------------------------------------------
