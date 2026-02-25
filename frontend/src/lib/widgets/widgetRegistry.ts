@@ -125,6 +125,16 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minH: 3,
     requiredPermission: "pipeline.create_proposal",
   },
+  {
+    id: "fx_rates",
+    title: "FX Rates",
+    description: "Live and BIS-calibrated exchange rates for 8 major and EM currency pairs.",
+    defaultW: 6,
+    defaultH: 5,
+    minW: 4,
+    minH: 4,
+    requiredPermission: null,
+  },
 ];
 
 // ─── Default Layouts per Role ─────────────────────────────────────────────────
@@ -153,13 +163,14 @@ const ROLE_LAYOUTS: Record<string, RoleLayout> = {
     ],
   },
   cfo: {
-    widgetIds: ["kpi_summary", "exposure_summary", "branch_comparison", "polisophic_mini", "recent_runs"],
+    widgetIds: ["kpi_summary", "exposure_summary", "fx_rates", "branch_comparison", "polisophic_mini", "recent_runs"],
     grid: [
       { i: "kpi_summary",       x: 0, y: 0,  w: 12, h: 3 },
       { i: "exposure_summary",  x: 0, y: 3,  w: 6,  h: 5 },
-      { i: "branch_comparison", x: 6, y: 3,  w: 6,  h: 5 },
-      { i: "polisophic_mini",   x: 0, y: 8,  w: 6,  h: 5 },
-      { i: "recent_runs",       x: 6, y: 8,  w: 6,  h: 5 },
+      { i: "fx_rates",          x: 6, y: 3,  w: 6,  h: 5 },
+      { i: "branch_comparison", x: 0, y: 8,  w: 8,  h: 5 },
+      { i: "polisophic_mini",   x: 8, y: 8,  w: 4,  h: 5 },
+      { i: "recent_runs",       x: 0, y: 13, w: 12, h: 5 },
     ],
   },
   head_of_risk: {
@@ -193,13 +204,14 @@ const ROLE_LAYOUTS: Record<string, RoleLayout> = {
     ],
   },
   senior_analyst: {
-    widgetIds: ["recent_runs", "exposure_summary", "polisophic_mini", "pipeline_status", "quick_actions"],
+    widgetIds: ["recent_runs", "exposure_summary", "fx_rates", "polisophic_mini", "pipeline_status", "quick_actions"],
     grid: [
-      { i: "recent_runs",       x: 0, y: 0,  w: 6,  h: 5 },
-      { i: "exposure_summary",  x: 6, y: 0,  w: 6,  h: 5 },
-      { i: "polisophic_mini",   x: 0, y: 5,  w: 6,  h: 5 },
-      { i: "pipeline_status",   x: 6, y: 5,  w: 6,  h: 4 },
-      { i: "quick_actions",     x: 6, y: 9,  w: 6,  h: 4 },
+      { i: "recent_runs",      x: 0, y: 0,  w: 6,  h: 5 },
+      { i: "exposure_summary", x: 6, y: 0,  w: 6,  h: 5 },
+      { i: "fx_rates",         x: 0, y: 5,  w: 6,  h: 5 },
+      { i: "polisophic_mini",  x: 6, y: 5,  w: 6,  h: 5 },
+      { i: "pipeline_status",  x: 0, y: 10, w: 6,  h: 4 },
+      { i: "quick_actions",    x: 6, y: 10, w: 6,  h: 4 },
     ],
   },
   risk_analyst: {

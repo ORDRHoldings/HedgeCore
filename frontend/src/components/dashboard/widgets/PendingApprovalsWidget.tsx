@@ -77,8 +77,6 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
   const [forbidden, setForbidden] = useState(false);
 
   const fetchApprovals = useCallback(async () => {
-    // Demo tokens are not accepted by the backend — skip fetch in demo mode
-    if (token.startsWith("demo_token_")) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     setForbidden(false);
@@ -121,6 +119,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
     >
       {/* Header */}
       <div
+        className="widget-drag-handle"
         style={{
           display: "flex",
           alignItems: "center",
@@ -129,6 +128,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
           borderBottom: `1px solid ${S.soft}`,
           background: S.bgSub,
           flexShrink: 0,
+          cursor: "grab",
         }}
       >
         <ClipboardCheck size={13} style={{ color: S.cyan, flexShrink: 0 }} />

@@ -46,8 +46,6 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
   // Fetch on mount (and whenever token changes)
   useEffect(() => {
     if (!token) return;
-    // Demo tokens are not accepted by the backend — skip fetch in demo mode
-    if (token.startsWith("demo_token_")) return;
     dispatch(fetchExposureThunk({ token }));
   }, [dispatch, token]);
 
@@ -77,6 +75,7 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
     >
       {/* Header */}
       <div
+        className="widget-drag-handle"
         style={{
           display:      "flex",
           alignItems:   "center",
@@ -85,6 +84,7 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
           borderBottom: `1px solid ${S.rim}`,
           background:   S.bgDeep,
           flexShrink:   0,
+          cursor:       "grab",
         }}
       >
         <TrendingUp size={12} color={S.cyan} />

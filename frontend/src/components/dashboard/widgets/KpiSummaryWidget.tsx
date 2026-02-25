@@ -64,8 +64,6 @@ export default function KpiSummaryWidget({
   const [error,   setError]   = useState<string | null>(null);
 
   useEffect(() => {
-    // Demo tokens are not accepted by the backend — skip fetch in demo mode
-    if (token.startsWith("demo_token_")) { setLoading(false); return; }
     let cancelled = false;
     const fetchSummary = async () => {
       setLoading(true);
@@ -107,6 +105,7 @@ export default function KpiSummaryWidget({
     >
       {/* Header */}
       <div
+        className="widget-drag-handle"
         style={{
           display:      "flex",
           alignItems:   "center",
@@ -115,6 +114,7 @@ export default function KpiSummaryWidget({
           borderBottom: `1px solid ${S.border}`,
           background:   S.bgSurface,
           borderRadius: "5px 5px 0 0",
+          cursor:       "grab",
         }}
       >
         <BarChart3 size={13} style={{ color: S.accentCyan, flexShrink: 0 }} />

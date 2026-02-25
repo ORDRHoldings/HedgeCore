@@ -244,39 +244,16 @@ export default function PoliciesPage() {
   const [toastVisible, setToastVisible] = useState(false);
   const showToast = (msg: string) => { setToastMsg(msg); setToastVisible(true); };
 
-  // Detect demo mode (demo_token_ prefix = no real backend session)
-  const isDemoToken = !token || token.startsWith('demo_token_');
-
   // Load active policy + templates on mount
   useEffect(() => {
     if (!token) return;
-    if (isDemoToken) {
-      // Demo mode: backend rejects demo tokens with 401 — build template list from
-      // local POLICY_PRESETS so the UI is fully functional without a real login.
-      const localTemplates: PolicyTemplate[] = POLICY_PRESETS.map(p => ({
-        id: p.id,
-        company_id: null,
-        name: p.name,
-        short_name: p.shortName,
-        description: p.description,
-        risk_posture: p.riskPosture,
-        category: p.category,
-        config: p.policy,
-        version: 1,
-        is_system: true,
-        created_at: new Date().toISOString(),
-      }));
-      setDbTemplates(localTemplates);
-      setTemplatesLoading(false);
-      return;
-    }
     getActivePolicy(token).then(inst => setActiveInstance(inst)).catch(() => {});
     setTemplatesLoading(true);
     listPolicyTemplates(token).then(t => { setDbTemplates(t); setTemplatesLoading(false); }).catch(() => setTemplatesLoading(false));
     listFavorites(token).then(favs => {
       setFavoriteIds(new Set(favs.map(f => f.template_id)));
     }).catch(() => {});
-  }, [token, isDemoToken]);
+  }, [token]);
 
   // Determine which preset ID is currently active
   const activePresetId = useMemo(() => {
@@ -288,15 +265,6 @@ export default function PoliciesPage() {
   // Handle toggle favorite
   const handleToggleFavorite = useCallback(async (templateId: string) => {
     if (!token) return;
-    if (isDemoToken) {
-      // Demo mode: toggle favorites locally (in-memory only, not persisted)
-      setFavoriteIds(prev => {
-        const next = new Set(prev);
-        if (next.has(templateId)) next.delete(templateId); else next.add(templateId);
-        return next;
-      });
-      return;
-    }
     try {
       if (favoriteIds.has(templateId)) {
         await removeFavorite(templateId, token);
@@ -306,15 +274,11 @@ export default function PoliciesPage() {
         setFavoriteIds(prev => new Set(prev).add(templateId));
       }
     } catch { /* ignore */ }
-  }, [token, isDemoToken, favoriteIds]);
+  }, [token, favoriteIds]);
 
   // Handle activate preset
   const handleActivate = useCallback(async (preset: PolicyPreset) => {
     if (!token) return;
-    if (isDemoToken) {
-      showToast('Demo mode — log in with a real account to activate policies.');
-      return;
-    }
     const dbTmpl = dbTemplates.find(t => t.short_name === preset.shortName);
     if (!dbTmpl) {
       // Retry: refresh template list once in case of timing issue
@@ -349,7 +313,7 @@ export default function PoliciesPage() {
     } finally {
       setActivatingId(null);
     }
-  }, [token, isDemoToken, dbTemplates]);
+  }, [token, dbTemplates]);
 
   // Filter presets
   const filteredPresets = useMemo(() => {

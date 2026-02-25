@@ -5,9 +5,8 @@
  *
  * Authentication context for HedgeCalc / ORDR Terminal.
  *
- * Supports two modes:
- *   1. Real JWT auth — POST /auth/login → JWT tokens, GET /auth/me → user context
- *   2. Demo mode — NEXT_PUBLIC_DEMO_MODE=true keeps demo/demo working
+ * JWT auth — POST /auth/login → JWT tokens, GET /auth/me → user context.
+ * Supports silent token refresh (25-min schedule for 30-min tokens).
  *
  * Usage:
  *   <AuthProvider>
@@ -31,8 +30,6 @@ import { store } from "./store";
 import { setAuthState } from "./store/slices/authSlice";
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-
 const _PROD_HOSTNAMES = ["hedgecore.vercel.app", "ordr-terminal.vercel.app"];
 const API_BASE = (() => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
@@ -75,33 +72,7 @@ interface AuthContextType {
   logout: () => void;
   hasPermission: (codename: string) => boolean;
   hasAnyPermission: (...codenames: string[]) => boolean;
-  isDemoMode: boolean;
 }
-
-// ── Demo user stub ────────────────────────────────────────────────────────────
-const DEMO_USER: UserContext = {
-  id: "00000000-0000-0000-0000-000000000000",
-  email: "demo@hedgecore.app",
-  full_name: "Demo User",
-  job_title: "Risk Analyst",
-  is_active: true,
-  is_superuser: false,
-  company: { id: "00000000-0000-0000-0000-000000000001", name: "Demo Corp", slug: "demo-corp" },
-  branch: { id: "00000000-0000-0000-0000-000000000002", name: "Headquarters", code: "HQ" },
-  department: null,
-  roles: ["risk_analyst"],
-  permissions: [
-    "trades.view", "trades.create", "trades.edit", "trades.import_csv",
-    "hedges.view", "hedges.create", "hedges.edit",
-    "calculate.run_sandbox",
-    "pipeline.create_proposal",
-    "policy.view",
-    "market.view", "market.autofill",
-    "reports.view_own_branch", "reports.export_pdf",
-    "audit.view_own",
-  ],
-  hierarchy_level: 10,
-};
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
@@ -112,7 +83,6 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   hasPermission: () => false,
   hasAnyPermission: () => false,
-  isDemoMode: DEMO_MODE,
 });
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -180,19 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Initialize session on mount ──
   useEffect(() => {
     const init = async () => {
-      // Demo bypass — only active when NEXT_PUBLIC_DEMO_MODE=true.
-      // When demo mode is off, demo_token_* cookies are treated as invalid and
-      // the user is redirected to real JWT auth.
+      // Try stored access token
       const storedToken = Cookies.get(ACCESS_TOKEN_KEY);
-      if (DEMO_MODE && storedToken?.startsWith("demo_token_")) {
-        setToken(storedToken);
-        setUser(DEMO_USER);
-        store.dispatch(setAuthState({ token: storedToken, user: DEMO_USER }));
-        setIsLoading(false);
-        return;
-      }
-
-      // Real auth: try stored access token
       if (storedToken) {
         const me = await fetchMe(storedToken);
         if (me) {
@@ -240,16 +199,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       username: string,
       password: string,
     ): Promise<{ success: boolean; error?: string }> => {
-      // Demo bypass — only active when NEXT_PUBLIC_DEMO_MODE=true
-      if (DEMO_MODE && username === "demo" && password === "demo") {
-        const demoToken = "demo_token_" + Date.now();
-        Cookies.set(ACCESS_TOKEN_KEY, demoToken, { sameSite: "Strict", expires: 30 });
-        setToken(demoToken);
-        setUser(DEMO_USER);
-        store.dispatch(setAuthState({ token: demoToken, user: DEMO_USER }));
-        return { success: true };
-      }
-
       // Real JWT login (username field is treated as email by backend OAuth2 form)
       try {
         const formData = new URLSearchParams();
@@ -312,7 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     // Fire-and-forget backend logout
     const accessToken = Cookies.get(ACCESS_TOKEN_KEY);
-    if (accessToken && !accessToken.startsWith("demo_token_")) {
+    if (accessToken) {
       fetch(`${API_BASE}/auth/logout`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -357,7 +306,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         hasPermission,
         hasAnyPermission,
-        isDemoMode: DEMO_MODE,
       }}
     >
       {children}

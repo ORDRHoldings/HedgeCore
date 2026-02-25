@@ -17,6 +17,7 @@ import PolisophicMiniWidget from "@/components/dashboard/widgets/PolisophicMiniW
 import QuickActionsWidget from "@/components/dashboard/widgets/QuickActionsWidget";
 import ExposureSummaryWidget from "@/components/dashboard/widgets/ExposureSummaryWidget";
 import PipelineStatusWidget from "@/components/dashboard/widgets/PipelineStatusWidget";
+import FxRatesWidget from "@/components/dashboard/widgets/FxRatesWidget";
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const S = {
   fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -32,6 +33,7 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType<{ token: string; use
   pending_approvals: PendingApprovalsWidget, team_activity: TeamActivityWidget,
   branch_comparison: BranchComparisonWidget, polisophic_mini: PolisophicMiniWidget,
   quick_actions: QuickActionsWidget, exposure_summary: ExposureSummaryWidget, pipeline_status: PipelineStatusWidget,
+  fx_rates: FxRatesWidget,
 };
 const layoutKey = (uid: string) => `dashboard_layout_${uid}`;
 const helpOpenKey = (uid: string) => `dashboard_help_open_${uid}`;

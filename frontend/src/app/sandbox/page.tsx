@@ -10,9 +10,19 @@ import {
   setXRayOpen,
   setXRayContext,
 } from "../../lib/store/slices/pipelineSlice";
-import type { CalculateRequest } from "../../api/types";
-import { DEMO_FIXTURES, DEFAULT_DEMO_MARKET, DEFAULT_DEMO_POLICY } from "../../constants/demoData";
-import type { DemoFixture } from "../../constants/demoData";
+import type { CalculateRequest, PolicyConfig } from "../../api/types";
+
+// ─── Fallback policy (used when no active policy is loaded) ───────────────────
+const DEFAULT_POLICY: PolicyConfig = {
+  bucket_mode: "CALENDAR_MONTH",
+  hedge_ratios: { confirmed: 0.80, forecast: 0.50 },
+  cost_assumptions: { spread_bps: 5.0 },
+  execution_product: "NDF",
+  min_trade_size_usd: 0,
+};
+
+// ─── Fallback spot rate (BIS-calibrated USD/MXN baseline) ─────────────────────
+const FALLBACK_SPOT_USDMXN = 18.97;
 
 import HelpPanel from "../../components/layout/HelpPanel";
 import { SANDBOX_HELP } from "../../lib/helpContent";
@@ -26,7 +36,6 @@ import EmptyState from "../../components/ui/EmptyState";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 
 // Sandbox components — institutional grade
-import DemoFixtureSelector from "../../components/sandbox/DemoFixtureSelector";
 import WaterfallEngine from "../../components/sandbox/WaterfallEngine";
 import AllocatorSummary from "../../components/sandbox/AllocatorSummary";
 import ScenarioStressTester from "../../components/sandbox/ScenarioStressTester";
@@ -39,8 +48,6 @@ import WhitepaperExport from "../../components/sandbox/WhitepaperExport";
 import { HedgeGauge } from "../../components/sandbox/VisualizationSuite";
 import AuditEngine from "../../components/sandbox/AuditEngine";
 import { AICommentaryPanel } from "../../components/sandbox/AICommentaryPanel";
-
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const S = {
@@ -172,7 +179,7 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
 }) {
   const waterfall = sandboxResult.waterfall_result;
   const envelope = sandboxResult.run_envelope as Record<string, unknown> | undefined;
-  const isRealEngine = envelope?.inputs_hash !== "DEMO" && !!envelope?.inputs_hash;
+  const isRealEngine = !!envelope?.inputs_hash;
   const hasTrace = Array.isArray(sandboxResult.trace_events) && sandboxResult.trace_events.length > 0;
 
   const govRules = [
@@ -180,13 +187,13 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
       id: "GOV-001", name: "Run Hash Integrity",
       status: isRealEngine ? "PASS" : "INFO",
       ref: "MiFID II RTS 6 §4",
-      evidence: isRealEngine ? `SHA-256: ${String(envelope?.inputs_hash).slice(0, 16)}…` : "Demo mode — hashes not computed",
+      evidence: isRealEngine ? `SHA-256: ${String(envelope?.inputs_hash).slice(0, 16)}…` : "Hashes not computed for this run",
     },
     {
       id: "GOV-002", name: "Trace Event Completeness",
       status: hasTrace ? "PASS" : "INFO",
       ref: "EMIR Art. 9(1)",
-      evidence: hasTrace ? `${(sandboxResult.trace_events as unknown[]).length} events logged` : "Demo mode — trace empty",
+      evidence: hasTrace ? `${(sandboxResult.trace_events as unknown[]).length} events logged` : "No trace events in this run",
     },
     {
       id: "GOV-003", name: "Market Data Source",
@@ -275,23 +282,9 @@ function WidgetMode({ currency, notional, tab }: { currency: string; notional: n
   const dispatch = useDispatch<AppDispatch>();
   const { token } = useAuth();
   const { sandboxResult, sandboxLoading } = useSelector((s: RootState) => s.pipeline);
-  const [loaded, setLoaded] = useState(false);
   const { liveSpot, liveStatus } = useLiveSpot(currency);
 
-  useEffect(() => {
-    if (!loaded && DEMO_MODE) {
-      const fixture = DEMO_FIXTURES.find(f => f.id === "2026_CORPORATE_BALANCED") ?? DEMO_FIXTURES[0];
-      if (fixture) {
-        dispatch(sandboxCalculateThunk({ request: {
-          trades: fixture.trades, hedges: fixture.hedges,
-          market: fixture.market, policy: fixture.policy,
-        }, token: token ?? "demo_token" }));
-        setLoaded(true);
-      }
-    }
-  }, [dispatch, token, loaded]);
-
-  const spot = liveSpot ?? (sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined)?.spot_usdmxn as number ?? 18.97;
+  const spot = liveSpot ?? (sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined)?.spot_usdmxn as number ?? FALLBACK_SPOT_USDMXN;
 
   return (
     <div style={{
@@ -324,12 +317,12 @@ function WidgetMode({ currency, notional, tab }: { currency: string; notional: n
           {tab === "stress" && (
             <ScenarioStressTester
               sandboxResult={sandboxResult}
-              defaultPolicy={DEFAULT_DEMO_POLICY}
-              defaultSpot={liveSpot ?? DEFAULT_DEMO_MARKET.spot_usdmxn}
+              defaultPolicy={DEFAULT_POLICY}
+              defaultSpot={liveSpot ?? FALLBACK_SPOT_USDMXN}
             />
           )}
           {tab === "attribution" && <RiskAttributionPanel sandboxResult={sandboxResult} spot={spot} />}
-          {tab === "whatif" && <WhatIfBuilder sandboxResult={sandboxResult} defaultPolicy={DEFAULT_DEMO_POLICY} defaultSpot={spot} />}
+          {tab === "whatif" && <WhatIfBuilder sandboxResult={sandboxResult} defaultPolicy={DEFAULT_POLICY} defaultSpot={spot} />}
           {tab === "regulatory" && <RegulatoryCapital sandboxResult={sandboxResult} spot={spot} />}
           {tab === "microstructure" && <MarketMicrostructure notionalUSD={notional / spot} primaryCurrency={currency} spot={spot} />}
         </div>
@@ -360,7 +353,6 @@ function SandboxPageInner() {
     decisionPacketMode,
   } = useSelector((s: RootState) => s.pipeline);
 
-  const [fixtureId, setFixtureId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SandboxTab>("stress");
   const [selectedCrisis, setSelectedCrisis] = useState<CrisisEvent | null>(null);
   const [showWhitepaper, setShowWhitepaper] = useState(false);
@@ -374,25 +366,12 @@ function SandboxPageInner() {
   const waterfall = sandboxResult?.waterfall_result;
   const v2 = sandboxResult?.v2_results;
 
-  // Primary currency derived from fixture / result
+  // Primary currency derived from sandbox result market metadata
   const primaryCurrency = useMemo(() => {
     const m = sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined;
     const meta = m?.provider_metadata as Record<string, unknown> | undefined;
-    if (meta?.primary_currency) return meta.primary_currency as string;
-    // Infer from fixture
-    const fixture = DEMO_FIXTURES.find(f => f.id === fixtureId);
-    if (fixture) {
-      const ids: Record<string, string> = {
-        "2026_EUR_GERMAN_MANUFACTURER": "EUR",
-        "2026_BRL_AGRO_EXPORT": "BRL",
-        "2026_JPY_ELECTRONICS": "JPY",
-        "2026_ZAR_MINING": "ZAR",
-        "2026_TRY_CONSTRUCTION": "TRY",
-      };
-      return ids[fixture.id] ?? "MXN";
-    }
-    return "MXN";
-  }, [sandboxResult, fixtureId]);
+    return (meta?.primary_currency as string | undefined) ?? "MXN";
+  }, [sandboxResult]);
 
   // Live spot hook
   const { liveSpot, liveStatus, fetchedAt, refreshSpot } = useLiveSpot(primaryCurrency);
@@ -400,7 +379,7 @@ function SandboxPageInner() {
   const spot = useMemo(() => {
     if (liveSpot && liveSpot > 0) return liveSpot;
     const m = sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined;
-    return (m?.spot_usdmxn as number | undefined) ?? DEFAULT_DEMO_MARKET.spot_usdmxn;
+    return (m?.spot_usdmxn as number | undefined) ?? FALLBACK_SPOT_USDMXN;
   }, [liveSpot, sandboxResult]);
 
   const notionalUSD = useMemo(() => {
@@ -418,26 +397,6 @@ function SandboxPageInner() {
     const hedged = summary.total_hedge_position_mxn ?? summary.total_hedge_notional_mxn ?? 0;
     return Math.min(1.25, hedged / Math.max(exp, 1));
   }, [sandboxResult]);
-
-  const handleRunDemo = useCallback(
-    (selectedId: string) => {
-      const fixture = DEMO_FIXTURES.find((f: DemoFixture) => f.id === selectedId);
-      if (!fixture) return;
-      setFixtureId(fixture.id);
-      const req: CalculateRequest = {
-        trades: fixture.trades,
-        hedges: fixture.hedges,
-        market: {
-          ...fixture.market,
-          // Inject live spot if available
-          ...(liveSpot && liveSpot > 0 ? { spot_usdmxn: liveSpot } : {}),
-        },
-        policy: fixture.policy,
-      };
-      dispatch(sandboxCalculateThunk({ request: req, token: token! }));
-    },
-    [dispatch, token, liveSpot]
-  );
 
   const handleXRay = useCallback(
     (context: Record<string, unknown>) => {
@@ -482,7 +441,7 @@ function SandboxPageInner() {
           <KpiTile label="Margin Used" value={v2?.margin_summary ? `$${((v2.margin_summary as Record<string, unknown>).total_margin as number ?? 0).toLocaleString()}` : "—"} />
           <KpiTile label="Live Spot" value={`${spot.toFixed(4)} ${primaryCurrency}`} />
         </div>
-        <ScenarioStressTester sandboxResult={sandboxResult} defaultPolicy={DEFAULT_DEMO_POLICY} defaultSpot={spot} />
+        <ScenarioStressTester sandboxResult={sandboxResult} defaultPolicy={DEFAULT_POLICY} defaultSpot={spot} />
       </div>
     );
   }
@@ -596,10 +555,6 @@ function SandboxPageInner() {
           overflowY: "auto",
           display: "flex", flexDirection: "column",
         }}>
-          {DEMO_MODE && (
-            <DemoFixtureSelector fixtureId={fixtureId} loading={sandboxLoading} onSelect={handleRunDemo} />
-          )}
-
           {sandboxResult && waterfall && (
             <div style={{ padding: "12px 14px", borderTop: `1px solid ${S.rim}` }}>
               <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 10 }}>
@@ -646,7 +601,7 @@ function SandboxPageInner() {
                 padding: "8px 12px", border: `1px solid ${S.soft}`, borderRadius: 3,
                 fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5,
               }}>
-                Select a scenario above to run the simulation engine. Live spot data is being fetched automatically.
+                Load positions from the Position Desk to run the simulation engine. Live spot data is fetched automatically.
               </div>
               <DataSourceBadge status={liveStatus} fetchedAt={fetchedAt} />
               {liveSpot && (
@@ -721,40 +676,14 @@ function SandboxPageInner() {
 
             {error && <ErrorBanner code={error.code} message={error.message} />}
 
-            {/* Empty states */}
-            {!sandboxResult && !sandboxLoading && !DEMO_MODE && (
+            {/* Empty state */}
+            {!sandboxResult && !sandboxLoading && (
               <EmptyState
                 type="empty"
                 title="No simulation data"
                 message="Upload exposure positions via the Position Desk to run a hedge calculation."
                 action={{ label: "Go to Position Desk", onClick: () => router.push("/input") }}
               />
-            )}
-
-            {!sandboxResult && !sandboxLoading && DEMO_MODE && !fixtureId && (
-              <div style={{
-                background: `color-mix(in srgb, ${S.cyan} 4%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${S.cyan} 18%, transparent)`,
-                borderRadius: 4, padding: "24px 28px", marginBottom: 18,
-              }}>
-                <p style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.1em", color: S.cyan, marginBottom: 8 }}>
-                  SANDBOX READY
-                </p>
-                <p style={{ fontFamily: S.fontUI, fontSize: 14, color: S.secondary, marginBottom: 6, lineHeight: 1.6 }}>
-                  Select a scenario from the left rail to run the simulation engine.
-                  {liveSpot && ` Live spot loaded: ${liveSpot.toFixed(4)} ${primaryCurrency}/USD.`}
-                </p>
-                <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginBottom: 18, lineHeight: 1.5 }}>
-                  All calculations use real mathematical models: GARCH(1,1) volatility, Cornish-Fisher VaR,
-                  Garman-Kohlhagen FX pricing, IFRS 9.6.4.1 effectiveness testing, Basel III SA-CCR,
-                  ISDA SIMM v2.6, and Almgren-Chriss optimal execution.
-                </p>
-                <button onClick={() => router.push("/input")} style={{
-                  fontFamily: S.fontUI, fontSize: 13, fontWeight: 500,
-                  padding: "8px 18px", border: `1px solid ${S.rim}`,
-                  color: S.secondary, background: "transparent", cursor: "pointer", borderRadius: 2,
-                }}>Load from Position Desk</button>
-              </div>
             )}
 
             {sandboxLoading && <EmptyState type="loading" message="Running simulation engine…" />}
@@ -862,7 +791,7 @@ function SandboxPageInner() {
                 {/* Stress tester */}
                 <ScenarioStressTester
                   sandboxResult={sandboxResult}
-                  defaultPolicy={DEFAULT_DEMO_POLICY}
+                  defaultPolicy={DEFAULT_POLICY}
                   defaultSpot={spot}
                 />
 
@@ -938,7 +867,7 @@ function SandboxPageInner() {
             {activeTab === "whatif" && (
               <WhatIfBuilder
                 sandboxResult={sandboxResult}
-                defaultPolicy={DEFAULT_DEMO_POLICY}
+                defaultPolicy={DEFAULT_POLICY}
                 defaultSpot={spot}
               />
             )}
@@ -1024,9 +953,9 @@ function SandboxPageInner() {
                       />
                       <BigKpi
                         label="Governance"
-                        value={((sandboxResult.run_envelope as Record<string, unknown> | undefined)?.inputs_hash !== "DEMO") ? "REAL ENGINE" : "DEMO MODE"}
+                        value={((sandboxResult.run_envelope as Record<string, unknown> | undefined)?.inputs_hash) ? "REAL ENGINE" : "PENDING"}
                         sub="Hash integrity"
-                        accent={((sandboxResult.run_envelope as Record<string, unknown> | undefined)?.inputs_hash !== "DEMO") ? S.green : S.amber}
+                        accent={((sandboxResult.run_envelope as Record<string, unknown> | undefined)?.inputs_hash) ? S.green : S.amber}
                       />
                     </div>
 
