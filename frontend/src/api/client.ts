@@ -3,9 +3,10 @@ import type { CalculateRequest, CalculateResponse } from './types';
 
 // ── Base URL resolution ─────────────────────────────────────────────────────
 // Priority: NEXT_PUBLIC_API_URL env var > detect production hostname > local proxy
+const _PROD_HOSTNAMES = ['hedgecore.vercel.app', 'ordr-terminal.vercel.app'];
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname === 'hedgecore.vercel.app'
+  (typeof window !== 'undefined' && _PROD_HOSTNAMES.includes(window.location.hostname)
     ? 'https://hedgecore.onrender.com/api'
     : '/api');
 
