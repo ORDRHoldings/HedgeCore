@@ -276,6 +276,26 @@ async def seed_positions():
 
     async with Session() as session:
         # -- Find the presenter user (s.williams) ----------------------------
+        # Import ALL models up-front so SQLAlchemy can resolve every
+        # relationship string reference before executing any query.
+        import app.models.organization     # noqa: F401 — Company, Branch, Dept
+        import app.models.refresh_token    # noqa: F401 — User.refresh_tokens
+        import app.models.api_key          # noqa: F401
+        import app.models.api_key_audit    # noqa: F401
+        import app.models.audit_event      # noqa: F401
+        import app.models.audit_log        # noqa: F401
+        import app.models.auth_audit_log   # noqa: F401
+        import app.models.calculation_run  # noqa: F401
+        import app.models.connector        # noqa: F401
+        import app.models.execution_proposal  # noqa: F401
+        import app.models.ledger           # noqa: F401
+        import app.models.permission       # noqa: F401
+        import app.models.policy           # noqa: F401
+        import app.models.policy_favorite  # noqa: F401
+        import app.models.policy_revision  # noqa: F401
+        import app.models.proposal         # noqa: F401
+        import app.models.rbac             # noqa: F401
+        import app.models.staging          # noqa: F401
         from app.models.user import User
         from app.models.position import Position
 
