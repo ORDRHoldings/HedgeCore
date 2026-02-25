@@ -407,21 +407,21 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
 
     "risk_analyst": [
 
-        "trades.view", "trades.create", "trades.edit", "trades.import_csv",
+        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv",
 
         "hedges.view", "hedges.create", "hedges.edit",
 
-        "calculate.run_sandbox",
+        "calculate.run_sandbox", "calculate.run_production",
 
-        "pipeline.create_proposal",
+        "pipeline.create_proposal", "pipeline.submit_staging",
 
-        "policy.view",
+        "policy.view", "policy.edit", "policy.activate", "policy.create_preset",
 
         "market.view", "market.autofill",
 
         "reports.view_own_branch", "reports.export_pdf",
 
-        "audit.view_own",
+        "audit.view_own", "audit.view_branch",
 
     ],
 
