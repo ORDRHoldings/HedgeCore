@@ -253,6 +253,7 @@ SEED_PERMISSIONS: list[tuple[str, str, str, str]] = [
     ("trades.delete", "trades", "delete", "Delete trade positions"),
 
     ("trades.import_csv", "trades", "import_csv", "Import trades from CSV files"),
+    ("trades.execute", "trades", "execute", "Execute (confirm) hedged trades -- READY_TO_EXECUTE -> HEDGED"),
 
 
 
@@ -377,7 +378,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
 
     "supervisor": [
 
-        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv",
+        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv", "trades.execute",
 
         "hedges.view", "hedges.create", "hedges.edit", "hedges.delete",
 
@@ -407,7 +408,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
 
     "risk_analyst": [
 
-        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv",
+        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv", "trades.execute",
 
         "hedges.view", "hedges.create", "hedges.edit",
 
