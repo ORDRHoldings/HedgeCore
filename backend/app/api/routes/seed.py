@@ -438,6 +438,10 @@ EMPLOYEES = [
     ("t.okonkwo@synexcapital.com",   "TOkon@2026!",     "Tunde Okonkwo",          "FX Desk Supervisor",         "supervisor",     BRANCH_LN_ID, DEPT_FX_LN),
     ("k.mueller@synexcapital.com",   "KMuel@2026!",     "Katrin Mueller",         "Senior EMEA Analyst",        "senior_analyst", BRANCH_LN_ID, DEPT_FX_LN),
     ("j.patel@synexcapital.com",     "JPate@2026!",     "Jai Patel",              "FX Risk Analyst",            "risk_analyst",   BRANCH_LN_ID, DEPT_FX_LN),
+
+    # Demo account (partner demonstrations) -- real senior_analyst on HQ FX Risk Desk
+    # Logs in as demo/demo; all data is live from the database (no static/fake data).
+    ("demo",                         "demo",            "Demo User",              "FX Risk Analyst (Demo)",     "senior_analyst", BRANCH_HQ_ID, DEPT_FX_HQ),
 ]
 
 
