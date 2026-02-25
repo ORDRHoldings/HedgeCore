@@ -75,6 +75,7 @@ class RunEnvelope(BaseModel):
     engine_version: str
     inputs_hash: str
     outputs_hash: str
+    run_hash: str
     trades_hash: str
     hedges_hash: str
     market_hash: str

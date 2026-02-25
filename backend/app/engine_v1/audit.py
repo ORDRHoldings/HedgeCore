@@ -30,12 +30,15 @@ def build_run_envelope(
     inputs_hash = sha256_of_dict(inputs_combined)
     outputs_hash = sha256_of_dict(outputs_raw)
 
+    run_hash = sha256_of_dict({"inputs_hash": inputs_hash, "outputs_hash": outputs_hash})
+
     return RunEnvelope(
         run_id=run_id,
         timestamp=datetime.now(timezone.utc),
         engine_version="1.0.0",
         inputs_hash=inputs_hash,
         outputs_hash=outputs_hash,
+        run_hash=run_hash,
         trades_hash=trades_hash,
         hedges_hash=hedges_hash,
         market_hash=market_hash,
