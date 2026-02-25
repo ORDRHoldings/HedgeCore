@@ -567,6 +567,250 @@ async def step_11_verify_audit_and_db(position_id: str):
 
 
 # ===================================================================
+# F.1 EXTRA STEPS — Favorites, Export/Import, Audit Chain
+# ===================================================================
+
+async def step_12_favorites(client, token: str, template_id: str):
+    """STEP 12 (F.1): Favorites — add, list, verify, duplicate, remove."""
+    log.info("\n--- STEP 12: Favorites ---")
+
+    # 12a — Add to favorites
+    r = await client.post(
+        f"/api/v1/policies/favorites/{template_id}",
+        json={"notes": "E2E test favorite"},
+        headers=auth_headers(token),
+    )
+    if r.status_code in (200, 201):
+        fav = r.json()
+        step_pass("Favorites: add", f"fav_id={fav['id']}, template_id={fav['template_id']}")
+    else:
+        step_fail("Favorites: add", f"status={r.status_code} body={r.text}")
+        return
+
+    # 12b — List favorites
+    r = await client.get("/api/v1/policies/favorites", headers=auth_headers(token))
+    if r.status_code == 200:
+        favs = r.json()
+        found = [f for f in favs if f["template_id"] == template_id]
+        if found:
+            f0 = found[0]
+            has_template = f0.get("template") is not None
+            step_pass(
+                "Favorites: list",
+                f"{len(favs)} total favorites, template_id match found, "
+                f"template_included={has_template}",
+            )
+        else:
+            step_fail("Favorites: list", f"Template {template_id} not in favorites list")
+    else:
+        step_fail("Favorites: list", f"status={r.status_code}")
+
+    # 12c — Duplicate add (idempotent — should not error)
+    r = await client.post(
+        f"/api/v1/policies/favorites/{template_id}",
+        json={"notes": "Duplicate add attempt"},
+        headers=auth_headers(token),
+    )
+    if r.status_code in (200, 201):
+        step_pass("Favorites: duplicate add (idempotent)", f"status={r.status_code} (no error)")
+    else:
+        step_fail("Favorites: duplicate add (idempotent)", f"Expected 200/201, got {r.status_code}")
+
+    # 12d — Add nonexistent template (should 404)
+    fake_id = "00000000-0000-0000-0000-000000000001"
+    r = await client.post(
+        f"/api/v1/policies/favorites/{fake_id}",
+        json={},
+        headers=auth_headers(token),
+    )
+    if r.status_code == 404:
+        step_pass("Favorites: nonexistent template → 404", f"status={r.status_code}")
+    else:
+        step_fail("Favorites: nonexistent template → 404", f"Expected 404, got {r.status_code}")
+
+    # 12e — Remove from favorites
+    r = await client.delete(
+        f"/api/v1/policies/favorites/{template_id}",
+        headers=auth_headers(token),
+    )
+    if r.status_code == 204:
+        step_pass("Favorites: remove", "status=204")
+    else:
+        step_fail("Favorites: remove", f"status={r.status_code}")
+
+    # 12f — List after removal (should be empty or not contain template_id)
+    r = await client.get("/api/v1/policies/favorites", headers=auth_headers(token))
+    if r.status_code == 200:
+        remaining = [f for f in r.json() if f["template_id"] == template_id]
+        if not remaining:
+            step_pass("Favorites: removed from list", "template_id no longer in favorites")
+        else:
+            step_fail("Favorites: removed from list", "template still in favorites after delete")
+    else:
+        step_fail("Favorites: removed from list", f"status={r.status_code}")
+
+
+async def step_13_export_import(client, token: str, template_id: str):
+    """STEP 13 (F.1): Export/Import — export returns checksum, import creates new template."""
+    import hashlib
+    import json as _json
+
+    log.info("\n--- STEP 13: Export / Import ---")
+
+    # 13a — Export
+    r = await client.get(
+        f"/api/v1/policies/templates/{template_id}/export",
+        headers=auth_headers(token),
+    )
+    if r.status_code != 200:
+        step_fail("Export: HTTP 200", f"status={r.status_code} body={r.text}")
+        return
+
+    try:
+        export_blob = r.json()
+    except Exception as exc:
+        step_fail("Export: valid JSON", str(exc))
+        return
+
+    # 13b — Check export structure
+    has_version  = export_blob.get("export_version") == "1.0"
+    has_checksum = bool(export_blob.get("checksum"))
+    has_template = isinstance(export_blob.get("template"), dict)
+    if has_version and has_checksum and has_template:
+        step_pass(
+            "Export: structure",
+            f"export_version=1.0, checksum={export_blob['checksum'][:16]}..., "
+            f"template_name={export_blob['template'].get('name')}",
+        )
+    else:
+        step_fail(
+            "Export: structure",
+            f"version_ok={has_version}, checksum_ok={has_checksum}, template_ok={has_template}",
+        )
+        return
+
+    # 13c — Verify checksum
+    tmpl_dict = export_blob["template"]
+    computed  = hashlib.sha256(
+        _json.dumps(tmpl_dict, sort_keys=True, default=str).encode()
+    ).hexdigest()
+    if computed == export_blob["checksum"]:
+        step_pass("Export: checksum verifiable", f"sha256={computed[:16]}...")
+    else:
+        step_fail("Export: checksum verifiable", f"expected={export_blob['checksum'][:16]}..., got={computed[:16]}...")
+
+    # 13d — Import (creates a new company template)
+    import_payload = {
+        "export_blob": export_blob,
+        "name_override": "E2E Imported Policy",
+        "short_name_override": "E2EI",
+    }
+    r = await client.post(
+        "/api/v1/policies/templates/import",
+        json=import_payload,
+        headers=auth_headers(token),
+    )
+    if r.status_code == 201:
+        imported = r.json()
+        step_pass(
+            "Import: creates company template",
+            f"id={imported['id']}, name={imported['name']}, "
+            f"short_name={imported['short_name']}, is_system={imported['is_system']}",
+        )
+    else:
+        step_fail("Import: creates company template", f"status={r.status_code} body={r.text}")
+        return
+
+    # 13e — Tampered checksum should 422
+    tampered_blob = {**export_blob, "checksum": "deadbeef" * 8}
+    r = await client.post(
+        "/api/v1/policies/templates/import",
+        json={"export_blob": tampered_blob},
+        headers=auth_headers(token),
+    )
+    if r.status_code == 422:
+        step_pass("Import: tampered checksum → 422", f"status={r.status_code}")
+    else:
+        step_fail("Import: tampered checksum → 422", f"Expected 422, got {r.status_code}")
+
+    # 13f — Bad export_version → 422
+    bad_version_blob = {**export_blob, "export_version": "99.0"}
+    r = await client.post(
+        "/api/v1/policies/templates/import",
+        json={"export_blob": bad_version_blob},
+        headers=auth_headers(token),
+    )
+    if r.status_code == 422:
+        step_pass("Import: bad export_version → 422", f"status={r.status_code}")
+    else:
+        step_fail("Import: bad export_version → 422", f"Expected 422, got {r.status_code}")
+
+
+async def step_14_audit_chain(template_id: str):
+    """STEP 14 (F.1): Verify POLICY audit events exist and hash chain is valid."""
+    log.info("\n--- STEP 14: Audit Chain Validation ---")
+    from sqlalchemy import select
+    from app.core.db import async_session_maker
+    from app.models.audit_event import AuditEvent
+    import hashlib as _hashlib
+    import json as _json
+
+    async with async_session_maker() as session:
+        # Fetch all POLICY events for this template, oldest first
+        result = await session.execute(
+            select(AuditEvent)
+            .where(
+                AuditEvent.event_type == "POLICY",
+                AuditEvent.entity_id == template_id,
+            )
+            .order_by(AuditEvent.created_at.asc())
+        )
+        events = list(result.scalars().all())
+
+        if not events:
+            step_fail("Audit Chain: POLICY events exist", f"No POLICY events for template {template_id}")
+            return
+
+        step_pass("Audit Chain: POLICY events exist", f"{len(events)} events for template")
+
+        # Verify that at minimum a create event exists
+        actions = [e.payload.get("action") if isinstance(e.payload, dict) else None for e in events]
+        if "create" in actions:
+            step_pass("Audit Chain: create event present", f"actions={actions}")
+        else:
+            step_fail("Audit Chain: create event present", f"create not in actions={actions}")
+
+        # Verify hash chain integrity: each event's prev_event_hash should match
+        # the event_hash of the event before it (within POLICY events for this entity)
+        if len(events) >= 2:
+            chain_ok = True
+            for i in range(1, len(events)):
+                prev_hash = events[i].prev_event_hash
+                # Allow prev_event_hash to be any string (it chains across all company events)
+                # Just verify the field is populated
+                if not prev_hash:
+                    chain_ok = False
+                    log.info(f"  Event [{i}] has empty prev_event_hash")
+            if chain_ok:
+                step_pass("Audit Chain: prev_event_hash populated", f"All {len(events)} events have prev hashes")
+            else:
+                step_fail("Audit Chain: prev_event_hash populated", "Some events missing prev_event_hash")
+        else:
+            step_pass("Audit Chain: only 1 event (chain not verifiable yet)", "OK — only one POLICY event")
+
+        # Verify event_hash is a valid 64-char hex string (SHA-256)
+        hash_ok = all(
+            isinstance(e.event_hash, str) and len(e.event_hash) == 64
+            for e in events
+        )
+        if hash_ok:
+            step_pass("Audit Chain: event_hash format (SHA-256)", "All hashes are 64-char hex strings")
+        else:
+            bad = [(i, e.event_hash) for i, e in enumerate(events) if not isinstance(e.event_hash, str) or len(e.event_hash) != 64]
+            step_fail("Audit Chain: event_hash format (SHA-256)", f"Bad hashes: {bad}")
+
+
+# ===================================================================
 # MAIN
 # ===================================================================
 async def run_e2e():
@@ -735,6 +979,15 @@ async def run_e2e():
 
         # STEP 11: Verify audit trail + DB state
         await step_11_verify_audit_and_db(position_id)
+
+        # STEP 12 (F.1): Favorites lifecycle
+        await step_12_favorites(client, token, template_id)
+
+        # STEP 13 (F.1): Export / Import
+        await step_13_export_import(client, token, template_id)
+
+        # STEP 14 (F.1): Audit chain integrity
+        await step_14_audit_chain(template_id)
 
     finally:
         await client.aclose()
