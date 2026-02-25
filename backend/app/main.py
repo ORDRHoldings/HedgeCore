@@ -59,7 +59,7 @@ async def _seed_roles():
     async with async_session_maker() as session:
         for name, description, level in default_roles:
             result = await session.execute(select(Role).where(Role.name == name))
-            existing = result.scalar_one_or_none()
+            existing = result.scalars().first()
             if not existing:
                 session.add(Role(
                     name=name,
@@ -93,7 +93,7 @@ async def _seed_permissions():
             result = await session.execute(
                 select(Permission).where(Permission.codename == codename)
             )
-            if not result.scalar_one_or_none():
+            if not result.scalars().first():
                 session.add(Permission(
                     codename=codename,
                     module=module,
@@ -107,7 +107,7 @@ async def _seed_permissions():
             role_result = await session.execute(
                 select(Role).where(Role.name == role_name)
             )
-            role = role_result.scalar_one_or_none()
+            role = role_result.scalars().first()
             if not role:
                 continue
 
@@ -115,7 +115,7 @@ async def _seed_permissions():
                 perm_result = await session.execute(
                     select(Permission).where(Permission.codename == codename)
                 )
-                perm = perm_result.scalar_one_or_none()
+                perm = perm_result.scalars().first()
                 if not perm:
                     continue
 
@@ -125,7 +125,7 @@ async def _seed_permissions():
                         RolePermission.permission_id == perm.id,
                     )
                 )
-                if not existing.scalar_one_or_none():
+                if not existing.scalars().first():
                     session.add(RolePermission(
                         role_id=role.id,
                         permission_id=perm.id,
@@ -155,7 +155,7 @@ async def _seed_policy_templates():
                     PolicyTemplate.short_name == tmpl["short_name"],
                 )
             )
-            if not existing.scalar_one_or_none():
+            if not existing.scalars().first():
                 session.add(PolicyTemplate(
                     company_id=None,
                     is_system=True,

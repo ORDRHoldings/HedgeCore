@@ -284,7 +284,7 @@ async def _seed_policy_templates(db: AsyncSession) -> int:
                 PolicyTemplate.company_id.is_(None),
             )
         )
-        if r.scalar_one_or_none():
+        if r.scalars().first():
             continue  # already exists -- idempotent
         db.add(PolicyTemplate(
             name=preset["name"],
@@ -554,7 +554,7 @@ async def seed_company(
 
         # ?? Company (must be created FIRST -- roles/users reference it) ??
         r = await db.execute(select(Company).where(Company.id == COMPANY_ID))
-        if not r.scalar_one_or_none():
+        if not r.scalars().first():
             db.add(Company(
                 id=COMPANY_ID, name="Synex Capital Partners",
                 slug="synex-capital", domain="synexcapital.com",
@@ -565,7 +565,7 @@ async def seed_company(
         # ?? Permissions ??
         for codename, module, action, desc in SEED_PERMISSIONS:
             r = await db.execute(select(Permission).where(Permission.codename == codename))
-            if not r.scalar_one_or_none():
+            if not r.scalars().first():
                 db.add(Permission(codename=codename, module=module, action=action, description=desc))
                 results["permissions"] += 1
         await db.flush()
@@ -574,7 +574,7 @@ async def seed_company(
         role_map = {}
         for name, desc, level, is_sys in ROLES:
             r = await db.execute(select(Role).where(Role.name == name))
-            role = r.scalar_one_or_none()
+            role = r.scalars().first()
             if not role:
                 role = Role(name=name, description=desc, hierarchy_level=level,
                             is_system=is_sys, company_id=COMPANY_ID if not is_sys else None)
@@ -594,7 +594,7 @@ async def seed_company(
                 continue
             for codename in codenames:
                 pr = await db.execute(select(Permission).where(Permission.codename == codename))
-                perm = pr.scalar_one_or_none()
+                perm = pr.scalars().first()
                 if not perm:
                     continue
                 er = await db.execute(
@@ -603,7 +603,7 @@ async def seed_company(
                         RolePermission.permission_id == perm.id,
                     )
                 )
-                if not er.scalar_one_or_none():
+                if not er.scalars().first():
                     db.add(RolePermission(role_id=role.id, permission_id=perm.id))
         await db.flush()
 
@@ -614,7 +614,7 @@ async def seed_company(
             (BRANCH_LN_ID, "London Office",            "LDN", "EMEA",          "Europe/London"),
         ]:
             r = await db.execute(select(Branch).where(Branch.id == bid))
-            if not r.scalar_one_or_none():
+            if not r.scalars().first():
                 db.add(Branch(id=bid, company_id=COMPANY_ID, name=bname, code=bcode, region=bregion, timezone=btz))
                 results["branches"] += 1
         await db.flush()
@@ -627,7 +627,7 @@ async def seed_company(
             (DEPT_FX_LN, BRANCH_LN_ID, "FX Desk -- EMEA",       "FXE"),
         ]:
             r = await db.execute(select(Department).where(Department.id == did))
-            if not r.scalar_one_or_none():
+            if not r.scalars().first():
                 db.add(Department(id=did, branch_id=bid, name=dname, code=dcode))
                 results["departments"] += 1
         await db.flush()
@@ -635,7 +635,7 @@ async def seed_company(
         # ?? Users ??
         for email, pw, full_name, job_title, role_name, branch_id, dept_id in EMPLOYEES:
             r = await db.execute(select(User).where(User.email == email))
-            user = r.scalar_one_or_none()
+            user = r.scalars().first()
             if not user:
                 user = User(
                     email=email, hashed_password=hash_password(pw),
@@ -659,7 +659,7 @@ async def seed_company(
                 er = await db.execute(
                     select(UserRole).where(UserRole.user_id == user.id, UserRole.role_id == role.id)
                 )
-                if not er.scalar_one_or_none():
+                if not er.scalars().first():
                     db.add(UserRole(user_id=user.id, role_id=role.id))
 
         # ?? Policy Templates ??
