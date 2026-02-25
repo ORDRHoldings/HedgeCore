@@ -19,6 +19,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
+import HelpPanel from "../../components/layout/HelpPanel";
+import { SETTINGS_HELP } from "../../lib/helpContent";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -943,7 +945,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI }}>
+    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, display: "flex" }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
       <ToastStack toasts={toasts} />
 
       {/* ── Top bar ── */}
@@ -1108,6 +1111,8 @@ export default function SettingsPage() {
           {renderTs} · ORDR Settings · {user?.email ?? ""}
         </span>
       </div>
+      </div>
+      <HelpPanel config={SETTINGS_HELP} storageKey="settings" />
     </div>
   );
 }
