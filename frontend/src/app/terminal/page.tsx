@@ -8,6 +8,8 @@ import { useHedge } from "@/lib/hedgeContext";
 import type { RootState, AppDispatch } from "@/lib/store";
 import { listPositionsThunk } from "@/lib/store/slices/positionSlice";
 import type { PositionRow } from "@/api/positionClient";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { TERMINAL_HELP } from "@/lib/helpContent";
 
 const S = {
   bgDeep: "var(--bg-deep,#0a0c10)", bgPanel: "var(--bg-panel,#0f1117)",
@@ -226,6 +228,8 @@ export default function TerminalPage() {
           style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", padding: "3px 10px",
             border: `1px solid ${S.soft}`, color: S.tertiary, background: "transparent", cursor: "pointer" }}>EXEC</button>
       </div>
+    
+    <HelpPanel config={TERMINAL_HELP} storageKey="terminal" />
     </div>
   );
 }

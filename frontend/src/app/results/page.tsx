@@ -14,6 +14,8 @@ import ExecutionTab from '../../components/tabs/ExecutionTab';
 import AuditTab from '../../components/tabs/AuditTab';
 import ReportsContainer from '../../components/reports/ReportsContainer';
 import NotificationsContainer from '../../components/notifications/NotificationsContainer';
+import HelpPanel from "@/components/layout/HelpPanel";
+import { RESULTS_HELP } from "@/lib/helpContent";
 
 // ── Committee Pack: Top-level module navigation ───────────────────────────────
 const TOP_LEVEL_SECTIONS = [
@@ -110,7 +112,8 @@ export default function ResultsPage() {
   const runId    = result.run_id;
 
   return (
-    <div className="space-y-0">
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="space-y-0" style={{ flex: 1 }}>
       {/* ── TIER 1: Run Identity Header ─────────────────────────────────────── */}
       <div className="bg-[var(--bg-panel)] border-b border-[var(--border-rim)] px-6 py-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -378,6 +381,8 @@ export default function ResultsPage() {
           flex-shrink: 0;
         }
       `}</style>
+    </div>
+    <HelpPanel config={RESULTS_HELP} storageKey="results" />
     </div>
   );
 }

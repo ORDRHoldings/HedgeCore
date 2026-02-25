@@ -8,6 +8,8 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../../lib/store';
 import ExecutionBridge from '../../components/execution/ExecutionBridge';
 import { deriveCurrencyContext } from '../../utils/currencyContext';
+import HelpPanel from "@/components/layout/HelpPanel";
+import { EXECUTION_HELP } from "@/lib/helpContent";
 
 // ─── Internal sub-nav tabs ─────────────────────────────────────────────────────
 type ExecTab = 'bridge' | 'sim';
@@ -163,12 +165,14 @@ function ExecutionHubContent() {
   // ── No plan yet — empty state ────────────────────────────────────────────────
   if (!hasPlan) {
     return (
+      <div style={{ display: 'flex', minHeight: '100vh' }}>
       <div style={{
         minHeight: '100%',
         fontFamily: S.fontUI,
         color: 'var(--text-primary)',
         background: 'var(--bg-deep)',
         display: 'flex', flexDirection: 'column',
+        flex: 1,
       }}>
         {header}
 
@@ -255,17 +259,21 @@ function ExecutionHubContent() {
           </div>
         </div>
       </div>
+      <HelpPanel config={EXECUTION_HELP} storageKey="execution" />
+      </div>
     );
   }
 
   // ── Have hedge plan — show Execution Bridge ──────────────────────────────────
   return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
     <div style={{
       minHeight: '100%',
       fontFamily: S.fontUI,
       color: 'var(--text-primary)',
       background: 'var(--bg-deep)',
       display: 'flex', flexDirection: 'column',
+      flex: 1,
     }}>
       {header}
 
@@ -297,6 +305,8 @@ function ExecutionHubContent() {
           onAuthStatusChange={handleAuthStatusChange}
         />
       </div>
+    </div>
+    <HelpPanel config={EXECUTION_HELP} storageKey="execution" />
     </div>
   );
 }

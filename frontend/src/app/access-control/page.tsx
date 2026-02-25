@@ -10,6 +10,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { ACCESS_CONTROL_HELP } from "@/lib/helpContent";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -530,6 +532,8 @@ function BranchHierarchyPanel() {
           Contact your administrator to configure the organizational branch hierarchy and approval chains.
         </div>
       </div>
+    
+    <HelpPanel config={ACCESS_CONTROL_HELP} storageKey="access-control" />
     </div>
   );
 }

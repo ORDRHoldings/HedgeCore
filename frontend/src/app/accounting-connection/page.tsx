@@ -16,6 +16,8 @@ import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import { listConnectorRuns } from "../../api/connectorClient";
 import type { ConnectorRun } from "../../api/connectorClient";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { CONNECTORS_HELP } from "@/lib/helpContent";
 
 // ── Hydration-safe timestamp ───────────────────────────────────────────────
 function useRenderTs(): string {
@@ -484,7 +486,8 @@ export default function AccountingConnectionPage() {
   //  Render
   // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, display: "flex", flexDirection: "column" }}>
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, display: "flex", flexDirection: "column", flex: 1 }}>
 
       {/* ── TopBar (44px) ──────────────────────────────────────────────────── */}
       <div style={{
@@ -1411,6 +1414,8 @@ export default function AccountingConnectionPage() {
       {/* ── Spinner keyframe (injected once) ─────────────────────────────────── */}
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
+    </div>
+    <HelpPanel config={CONNECTORS_HELP} storageKey="accounting-connection" />
     </div>
   );
 }

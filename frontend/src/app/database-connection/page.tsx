@@ -12,6 +12,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import EmptyState from "../../components/ui/EmptyState";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { DATABASE_CONNECTION_HELP } from "@/lib/helpContent";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -811,6 +813,8 @@ function ActionRow({
       }}>
         {activeTab === "config" ? "STEP 1 OF 3" : activeTab === "mapping" ? "STEP 2 OF 3" : "STEP 3 OF 3"}
       </span>
+    
+    <HelpPanel config={DATABASE_CONNECTION_HELP} storageKey="database-connection" />
     </div>
   );
 }

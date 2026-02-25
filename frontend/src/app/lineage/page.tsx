@@ -20,6 +20,8 @@ import Link from "next/link";
 import { useAuth } from "../../lib/authContext";
 import { fetchPositionLineage } from "../../api/positionClient";
 import type { LineageNode, LineageEdge, LineageResponse } from "../../api/positionClient";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { LINEAGE_HELP } from "@/lib/helpContent";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
@@ -649,6 +651,8 @@ function LineageContent() {
 
 export default function LineagePage() {
   return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+
     <Suspense
       fallback={
         <div style={{
@@ -665,5 +669,8 @@ export default function LineagePage() {
     >
       <LineageContent />
     </Suspense>
+  
+    <HelpPanel config={LINEAGE_HELP} storageKey="lineage" />
+    </div>
   );
 }

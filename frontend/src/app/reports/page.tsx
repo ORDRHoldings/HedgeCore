@@ -27,6 +27,8 @@ import type {
   AIReportGoal, ReportModule, ExportFormat, DataBindings,
   ReportValidationIssue, AIReportPlan,
 } from "../../types/reportTypes";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { REPORTS_HELP } from "@/lib/helpContent";
 // Inline UUID v4 — no external dep
 function uuidv4(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
@@ -1656,7 +1658,9 @@ export default function ReportStudioPage() {
     <Suspense fallback={
       <div style={{ background: "#FAFAFA", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 11, color: "#9CA3AF", letterSpacing: "0.1em" }}>LOADING…</span>
-      </div>
+      
+    <HelpPanel config={REPORTS_HELP} storageKey="reports" />
+    </div>
     }>
       <ReportStudioInner />
     </Suspense>

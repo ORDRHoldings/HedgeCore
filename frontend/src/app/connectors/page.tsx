@@ -24,6 +24,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
 import { listConnectorRuns } from "../../api/connectorClient";
 import type { ConnectorRun } from "../../api/connectorClient";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { CONNECTORS_HELP } from "@/lib/helpContent";
 
 // ── Hydration-safe timestamp ───────────────────────────────────────────────────
 function useRenderTs(): string {
@@ -247,7 +249,8 @@ export default function ConnectorsPage() {
   }
 
   return (
-    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI }}>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, flex: 1 }}>
 
       {/* ── Top bar ── */}
       <div style={{
@@ -639,6 +642,8 @@ export default function ConnectorsPage() {
           {renderTs} · ORDR Connectors Hub · {connectors.filter(c => c.status !== "NOT_CONFIGURED").length}/{CONNECTOR_DEFS.length} configured
         </span>
       </div>
+    </div>
+    <HelpPanel config={CONNECTORS_HELP} storageKey="connectors" />
     </div>
   );
 }

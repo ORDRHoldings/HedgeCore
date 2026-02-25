@@ -12,6 +12,8 @@ import StatusChip from "../../components/ui/StatusChip";
 import EmptyState from "../../components/ui/EmptyState";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import type { LedgerEntry } from "../../api/pipelineTypes";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { LEDGER_HELP } from "@/lib/helpContent";
 
 export default function LedgerListPage() {
   const dispatch = useDispatch<AppDispatch>();
@@ -82,6 +84,8 @@ export default function LedgerListPage() {
   );
 
   return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+
     <div className="max-w-6xl mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-sm font-semibold text-[var(--text-primary)]">
@@ -112,6 +116,9 @@ export default function LedgerListPage() {
           />
         </div>
       )}
+    </div>
+  
+    <HelpPanel config={LEDGER_HELP} storageKey="ledger" />
     </div>
   );
 }

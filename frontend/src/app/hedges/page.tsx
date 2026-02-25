@@ -8,6 +8,8 @@ import Spinner from "../../components/ui/Spinner";
 import Toast from "../../components/ui/Toast";
 import { runHedge } from "../../lib/api";
 import type { HedgeRequest, HedgeRunResponse } from "../../lib/types";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { HEDGES_HELP } from "@/lib/helpContent";
 
 export default function HedgesPage() {
   const [result, setResult] = useState<HedgeRunResponse | null>(null);
@@ -35,6 +37,8 @@ export default function HedgesPage() {
   };
 
   return (
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+
     <div className="min-h-screen bg-gray-50">
       <Nav />
       <main className="mx-auto max-w-4xl px-4 py-8">
@@ -57,6 +61,9 @@ export default function HedgesPage() {
           <Toast message={error} type="error" onClose={() => setError(null)} />
         )}
       </main>
+    </div>
+  
+    <HelpPanel config={HEDGES_HELP} storageKey="hedges" />
     </div>
   );
 }

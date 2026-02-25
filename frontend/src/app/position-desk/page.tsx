@@ -40,6 +40,8 @@ import {
   type PolicyTemplate,
   type PolicyInstance,
 } from "../../api/policyClient";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { POSITION_DESK_HELP } from "@/lib/helpContent";
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -429,7 +431,8 @@ export default function PositionDeskPage() {
   const needsActionCount = statusCounts.NEEDS_ACTION ?? 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: S.bgDeep, overflow: "hidden" }}>
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: S.bgDeep, overflow: "hidden", flex: 1 }}>
       <header style={{ display: "flex", alignItems: "center", gap: 10, height: 44, flexShrink: 0, padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}` }}>
         <button onClick={() => router.push("/input")} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer" }}>← Ingestion</button>
         <span style={{ color: S.rim }}>|</span>
@@ -771,6 +774,8 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
           <ModalActions onCancel={closeModal} onConfirm={handleReject} confirmLabel="REJECT POSITION" confirmColor={S.fail} disabled={!rejectReason.trim() || isTransitioning} />
         </ModalOverlay>
       )}
+    </div>
+    <HelpPanel config={POSITION_DESK_HELP} storageKey="position-desk" />
     </div>
   );
 }

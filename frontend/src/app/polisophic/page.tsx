@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import EmptyState from "../../components/ui/EmptyState";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { POLISOPHIC_HELP } from "@/lib/helpContent";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -1085,7 +1087,9 @@ export default function Polisophic() {
                     <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: sev, fontWeight: 600 }}>SEV {ev.severity}</span>
                   </div>
                   <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.primary, lineHeight: 1.45 }}>{ev.headline}</div>
-                </div>
+                
+    <HelpPanel config={POLISOPHIC_HELP} storageKey="polisophic" />
+    </div>
               );
             })}
 
