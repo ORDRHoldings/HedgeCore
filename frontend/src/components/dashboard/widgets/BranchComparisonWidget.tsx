@@ -49,14 +49,6 @@ function coverageColor(pct: number): string {
   return S.fail;
 }
 
-const DEMO: BranchRow[] = [
-  { branch_id: "1", branch_name: "New York HQ", currency: "USD", total_exposure_usd: 48_200_000, hedge_coverage_pct: 82, active_proposals: 3, pending_approvals: 1 },
-  { branch_id: "2", branch_name: "London",      currency: "GBP", total_exposure_usd: 31_700_000, hedge_coverage_pct: 67, active_proposals: 2, pending_approvals: 0 },
-  { branch_id: "3", branch_name: "Singapore",   currency: "SGD", total_exposure_usd: 22_100_000, hedge_coverage_pct: 55, active_proposals: 1, pending_approvals: 2 },
-  { branch_id: "4", branch_name: "Frankfurt",   currency: "EUR", total_exposure_usd: 18_500_000, hedge_coverage_pct: 44, active_proposals: 0, pending_approvals: 0 },
-  { branch_id: "5", branch_name: "Dubai",       currency: "AED", total_exposure_usd:  9_800_000, hedge_coverage_pct: 71, active_proposals: 1, pending_approvals: 1 },
-];
-
 export default function BranchComparisonWidget({ token, onRemove }: Props) {
   const router  = useRouter();
   const [data,    setData]    = useState<BranchRow[]>([]);
@@ -64,11 +56,6 @@ export default function BranchComparisonWidget({ token, onRemove }: Props) {
   const [view,    setView]    = useState<"exposure" | "coverage">("exposure");
 
   useEffect(() => {
-    if (token.startsWith("demo_token_")) {
-      setData(DEMO);
-      setLoading(false);
-      return;
-    }
     let cancelled = false;
     (async () => {
       setLoading(true);

@@ -24,8 +24,6 @@ function useRenderTs(): string {
   return renderTs;
 }
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -84,34 +82,6 @@ const DEFAULT_PORTS: Record<DbDriver, number> = {
   "Oracle DB": 1521,
 };
 
-// ── Demo data ─────────────────────────────────────────────────────────────────
-const DEMO_MAPPINGS: ColumnMapping[] = [
-  { sourceColumn: "trade_ref",        dataType: "VARCHAR",   ordrField: "trade_ref",       transform: "\u2014",         status: "MAPPED" },
-  { sourceColumn: "currency_code",    dataType: "CHAR(3)",   ordrField: "currency",        transform: "UPPERCASE",   status: "MAPPED" },
-  { sourceColumn: "notional_amount",  dataType: "DECIMAL",   ordrField: "notional",        transform: "ABS()",       status: "MAPPED" },
-  { sourceColumn: "trade_date",       dataType: "DATE",      ordrField: "trade_date",      transform: "ISO_FORMAT",  status: "MAPPED" },
-  { sourceColumn: "settlement_date",  dataType: "DATE",      ordrField: "settlement_date", transform: "ISO_FORMAT",  status: "MAPPED" },
-  { sourceColumn: "counterparty",     dataType: "VARCHAR",   ordrField: "counterparty",    transform: "\u2014",         status: "MAPPED" },
-  { sourceColumn: "direction",        dataType: "VARCHAR",   ordrField: "direction",       transform: "ENUM_MAP",    status: "PENDING" },
-  { sourceColumn: "fx_rate",          dataType: "DECIMAL",   ordrField: "forward_rate",    transform: "\u2014",         status: "MAPPED" },
-];
-
-const DEMO_PREVIEW: PreviewRow[] = [
-  { trade_ref: "MFG-2026-00147", currency: "USD", notional: "2,450,000.00",  trade_date: "2026-02-10", settlement_date: "2026-04-10", counterparty: "Banamex",        direction: "BUY",  forward_rate: "19.1240" },
-  { trade_ref: "MFG-2026-00148", currency: "EUR", notional: "1,820,000.00",  trade_date: "2026-02-11", settlement_date: "2026-05-11", counterparty: "BBVA Mexico",    direction: "SELL", forward_rate: "20.6380" },
-  { trade_ref: "MFG-2026-00149", currency: "USD", notional: "3,100,000.00",  trade_date: "2026-02-12", settlement_date: "2026-06-12", counterparty: "Santander MX",   direction: "BUY",  forward_rate: "19.2870" },
-  { trade_ref: "MFG-2026-00150", currency: "JPY", notional: "185,000,000",   trade_date: "2026-02-13", settlement_date: "2026-05-13", counterparty: "MUFG Mexico",    direction: "BUY",  forward_rate: "0.1268" },
-  { trade_ref: "MFG-2026-00151", currency: "USD", notional: "4,750,000.00",  trade_date: "2026-02-14", settlement_date: "2026-08-14", counterparty: "Banamex",        direction: "SELL", forward_rate: "19.4510" },
-];
-
-const DEMO_IMPORT_HISTORY: ImportRun[] = [
-  { runId: "RUN-A8F2C1", timestamp: "2026-02-22 06:00:14 UTC", rowsImported: 342,  status: "SUCCESS" },
-  { runId: "RUN-7D91E4", timestamp: "2026-02-21 06:00:09 UTC", rowsImported: 338,  status: "SUCCESS" },
-  { runId: "RUN-3B20F8", timestamp: "2026-02-20 06:00:22 UTC", rowsImported: 0,    status: "FAILED" },
-  { runId: "RUN-C4E67A", timestamp: "2026-02-19 06:01:03 UTC", rowsImported: 291,  status: "PARTIAL" },
-  { runId: "RUN-19DA5C", timestamp: "2026-02-18 06:00:11 UTC", rowsImported: 335,  status: "SUCCESS" },
-];
-
 const PREVIEW_COLUMNS: { key: keyof PreviewRow; label: string }[] = [
   { key: "trade_ref",       label: "Trade Ref" },
   { key: "currency",        label: "CCY" },
@@ -144,7 +114,7 @@ const TABS: { key: PageTab; label: string }[] = [
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function DatabaseConnectionPage() {
   const renderTs = useRenderTs();
-  const { isAuthenticated, token, user, isDemoMode } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
 
   // Auth guard
@@ -154,133 +124,21 @@ export default function DatabaseConnectionPage() {
     }
   }, [isAuthenticated, router]);
 
-  // State
-  const [activeTab, setActiveTab] = useState<PageTab>("config");
-  const [driver, setDriver] = useState<DbDriver>("PostgreSQL");
-  const [host, setHost] = useState("db.aceros-del-norte.mx");
-  const [port, setPort] = useState<number>(5432);
-  const [dbName, setDbName] = useState("fx_treasury_prod");
-  const [schema, setSchema] = useState("public");
-  const [queryMode, setQueryMode] = useState<QueryMode>("table");
-  const [tableName, setTableName] = useState("fx_trade_positions");
-  const [customQuery, setCustomQuery] = useState("SELECT * FROM fx_trade_positions WHERE trade_date >= CURRENT_DATE - INTERVAL '90 days'");
-  const [username, setUsername] = useState("svc_ordr_reader");
-  const [connectionTested, setConnectionTested] = useState(false);
-  const [testingConnection, setTestingConnection] = useState(false);
-
-  // Update port when driver changes
-  useEffect(() => {
-    setPort(DEFAULT_PORTS[driver]);
-  }, [driver]);
-
   if (!isAuthenticated) return null;
 
-  // ── Non-demo empty state ──────────────────────────────────────────────────
-  if (!DEMO_MODE && !isDemoMode) {
-    return (
-      <div style={{
-        background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI,
-        display: "flex", flexDirection: "column",
-      }}>
-        <TopBar renderTs={renderTs} onBack={() => router.push("/input")} />
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
-          <EmptyState
-            type="empty"
-            title="No Database Configured"
-            message="Configure a SQL data source to pull FX positions into ORDR."
-          />
-        </div>
-        <Footer renderTs={renderTs} />
-      </div>
-    );
-  }
-
-  // ── Handlers ────────────────────────────────────────────────────────────────
-  const handleTestConnection = () => {
-    setTestingConnection(true);
-    setTimeout(() => {
-      setTestingConnection(false);
-      setConnectionTested(true);
-    }, 1800);
-  };
-
-  // ── Main render ─────────────────────────────────────────────────────────────
   return (
     <div style={{
       background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI,
       display: "flex", flexDirection: "column",
     }}>
-      {/* TopBar */}
       <TopBar renderTs={renderTs} onBack={() => router.push("/input")} />
-
-      {/* Tab bar */}
-      <div style={{
-        height: 36, display: "flex", alignItems: "stretch",
-        background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
-        padding: "0 20px", gap: 0, flexShrink: 0,
-      }}>
-        {TABS.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              fontFamily: S.fontUI, fontSize: "0.6875rem", fontWeight: activeTab === tab.key ? 600 : 400,
-              padding: "0 16px", border: "none",
-              borderBottom: activeTab === tab.key ? `2px solid ${S.cyan}` : "2px solid transparent",
-              color: activeTab === tab.key ? S.cyan : S.tertiary,
-              background: "transparent", cursor: "pointer",
-              display: "flex", alignItems: "center",
-              transition: "color 0.15s, border-color 0.15s",
-              letterSpacing: "0.04em",
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-        <div style={{ flex: 1 }} />
-        {connectionTested && (
-          <span style={{
-            fontFamily: S.fontMono, fontSize: "0.625rem", color: S.pass,
-            display: "flex", alignItems: "center", gap: 4, letterSpacing: "0.06em",
-          }}>
-            CONNECTED
-          </span>
-        )}
-      </div>
-
-      {/* Content area */}
-      <div style={{
-        flex: 1, maxWidth: 1440, width: "100%", margin: "0 auto",
-        padding: "24px 24px 16px",
-      }}>
-        {activeTab === "config" && (
-          <ConnectionConfigPanel
-            driver={driver} setDriver={setDriver}
-            host={host} setHost={setHost}
-            port={port} setPort={setPort}
-            dbName={dbName} setDbName={setDbName}
-            schema={schema} setSchema={setSchema}
-            queryMode={queryMode} setQueryMode={setQueryMode}
-            tableName={tableName} setTableName={setTableName}
-            customQuery={customQuery} setCustomQuery={setCustomQuery}
-            username={username} setUsername={setUsername}
-            connectionTested={connectionTested}
-            testingConnection={testingConnection}
-            onTestConnection={handleTestConnection}
-          />
-        )}
-        {activeTab === "mapping" && <FieldMappingPanel />}
-        {activeTab === "import" && <ImportPreviewPanel />}
-
-        {/* Action Row */}
-        <ActionRow
-          activeTab={activeTab}
-          testingConnection={testingConnection}
-          onTestConnection={handleTestConnection}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
+        <EmptyState
+          type="empty"
+          title="No Database Configured"
+          message="Configure a SQL data source to pull FX positions into ORDR."
         />
       </div>
-
-      {/* Footer */}
       <Footer renderTs={renderTs} />
     </div>
   );
@@ -545,7 +403,7 @@ function ConnectionConfigPanel({
 // Field Mapping Panel
 // ═══════════════════════════════════════════════════════════════════════════════
 function FieldMappingPanel() {
-  const mappings = DEMO_MAPPINGS;
+  const mappings: ColumnMapping[] = [];
   const mappedCount = mappings.filter(m => m.status === "MAPPED").length;
 
   const thStyle: React.CSSProperties = {
@@ -635,8 +493,8 @@ function FieldMappingPanel() {
 // Import Preview & History Panel
 // ═══════════════════════════════════════════════════════════════════════════════
 function ImportPreviewPanel() {
-  const preview = DEMO_PREVIEW;
-  const history = DEMO_IMPORT_HISTORY;
+  const preview: PreviewRow[] = [];
+  const history: ImportRun[] = [];
 
   const thStyle: React.CSSProperties = {
     fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 600,
