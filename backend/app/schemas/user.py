@@ -45,7 +45,7 @@ class UserMeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    email: EmailStr
+    email: str  # str (not EmailStr) — allows non-RFC-5321 usernames like 'demo'
     full_name: Optional[str] = None
     job_title: Optional[str] = None
     is_active: bool
