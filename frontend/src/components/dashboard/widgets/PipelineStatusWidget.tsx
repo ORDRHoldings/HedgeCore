@@ -42,15 +42,6 @@ export default function PipelineStatusWidget({ token, onRemove }: Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token.startsWith("demo_token_")) {
-      setData({
-        sandbox: { total: 24, passed: 18, rejected: 6  },
-        staging: { total: 18, approved: 14, pending: 4 },
-        ledger:  { total: 14, committed: 14            },
-      });
-      setLoading(false);
-      return;
-    }
     let cancelled = false;
     (async () => {
       setLoading(true);

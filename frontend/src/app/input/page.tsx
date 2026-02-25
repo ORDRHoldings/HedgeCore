@@ -30,7 +30,6 @@ import {
   updatePositionThunk,
   deletePositionThunk,
   clearError as clearPositionError,
-  addLocalPosition,
   executePositionThunk,
 } from '../../lib/store/slices/positionSlice';
 import type { PositionRow } from '../../api/positionClient';
@@ -440,20 +439,12 @@ function InputPageInner() {
   // ── Load positions from DB on mount ───────────────────────────────────────
   useEffect(() => {
     if (!token) return;
-    // Demo tokens are not accepted by the backend — skip fetch and clear any
-    // stale error state left over from a previous session so no banner appears
-    if (token.startsWith('demo_token_')) {
-      dispatch(clearPositionError());
-      return;
-    }
     dispatch(listPositionsThunk({ token }));
   }, [dispatch, token]);
 
   // ── Load policy templates + active policy on mount ────────────────────────
   useEffect(() => {
     if (!token) return;
-    // Demo tokens are not accepted by the backend — skip fetch in demo mode
-    if (token.startsWith('demo_token_')) return;
     // Fetch templates (for matching DB template IDs to preset IDs)
     listPolicyTemplates(token).then(setDbTemplates).catch(() => {/* ignore */});
     // Fetch active policy → pre-select preset if found
@@ -665,35 +656,16 @@ function InputPageInner() {
     if (!token) return;
     const isDuplicate = editingPosition?.id === '__duplicate__';
     if (editingPosition && !isDuplicate) {
-      // Update existing — demo mode: update in local state only
-      if (token.startsWith('demo_token_')) {
-        dispatch(addLocalPosition({ ...trade, id: editingPosition.id } as PositionRow));
-        showToast('Position updated');
-      } else {
-        await dispatch(updatePositionThunk({ id: editingPosition.id, trade, token }));
-        showToast('Position updated');
-      }
+      // Update existing
+      await dispatch(updatePositionThunk({ id: editingPosition.id, trade, token }));
+      showToast('Position updated');
     } else {
       // Create new (includes duplicate scenario)
-      if (token.startsWith('demo_token_')) {
-        const nowIso = new Date().toISOString();
-        const localPosition: PositionRow = {
-          ...trade,
-          id: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          created_at: nowIso, updated_at: nowIso,
-          execution_status: 'NEW', policy_id: null, last_run_id: null,
-          executed_at: null, execution_ref: null, hedge_amount: null,
-          hedge_rate: null, rejection_reason: null,
-        };
-        dispatch(addLocalPosition(localPosition));
-        showToast(isDuplicate ? 'Position duplicated' : 'Position added');
-      } else {
       const result = await dispatch(createPositionThunk({ trade, token }));
       if (createPositionThunk.fulfilled.match(result)) {
         showToast(isDuplicate ? 'Position duplicated' : 'Position added');
       } else {
         showToast(`Error: ${result.payload as string}`);
-      }
       }
     }
     setTradeModalOpen(false);
@@ -723,24 +695,6 @@ function InputPageInner() {
     if (!inlineValid || !token) return;
     setInlineSaving(true);
 
-    // Demo-mode: skip API call, add position directly to local Redux state
-    if (token.startsWith('demo_token_')) {
-      const nowIso = new Date().toISOString();
-      const localPosition: PositionRow = {
-        ...inlineForm,
-        id: `demo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        created_at: nowIso, updated_at: nowIso,
-        execution_status: 'NEW', policy_id: null, last_run_id: null,
-        executed_at: null, execution_ref: null, hedge_amount: null,
-        hedge_rate: null, rejection_reason: null,
-      };
-      dispatch(addLocalPosition(localPosition));
-      setInlineSaving(false);
-      setInlineForm(EMPTY_INLINE);
-      setInlineTouched({});
-      showToast('Position added');
-      return;
-    }
 
     const result = await dispatch(createPositionThunk({ trade: inlineForm, token }));
     setInlineSaving(false);
@@ -1014,7 +968,7 @@ function InputPageInner() {
         )}
 
         {/* ── Position load error (suppressed for demo users) ── */}
-        {positionError && !token?.startsWith('demo_token_') && (
+        {positionError && (
           <div style={{
             marginTop: 8, padding: '8px 14px',
             border: `1px solid ${S.red}`,

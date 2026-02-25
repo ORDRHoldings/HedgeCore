@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/authContext";
 import { Shield, ChevronRight } from "lucide-react";
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-
 // ── Design tokens — dark institutional terminal ──────────────────────────────
 const T = {
   bg: "#0A0E12",
@@ -493,56 +491,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Demo hint bar — only shown in demo mode */}
-          {DEMO_MODE && (
-            <div
-              style={{
-                padding: "10px 24px",
-                borderTop: `1px solid ${T.border}`,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontFamily: T.fontMono,
-                fontSize: "0.75rem",
-                color: T.textTertiary,
-              }}
-            >
-              <span
-                style={{
-                  fontWeight: 600,
-                  color: T.textSecondary,
-                  letterSpacing: "0.06em",
-                }}
-              >
-                DEMO ACCESS
-              </span>
-              <span style={{ color: T.border }}>|</span>
-              <span>
-                username{" "}
-                <code
-                  style={{
-                    color: T.accent,
-                    background: T.accentDim,
-                    padding: "1px 5px",
-                    borderRadius: 1,
-                  }}
-                >
-                  demo
-                </code>
-                {"  "}password{" "}
-                <code
-                  style={{
-                    color: T.accent,
-                    background: T.accentDim,
-                    padding: "1px 5px",
-                    borderRadius: 1,
-                  }}
-                >
-                  demo
-                </code>
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Compliance notice */}

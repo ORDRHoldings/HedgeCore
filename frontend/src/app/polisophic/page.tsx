@@ -15,8 +15,6 @@ function useRenderTs(): string {
   }, []);
   return renderTs;
 }
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -364,15 +362,9 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
           <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.fail}`, color: S.fail, background: `color-mix(in srgb, var(--accent-red,#B91C1C) 8%, transparent)` }}>
             ● 5 ACTIVE ALERTS
           </span>
-          {DEMO_MODE ? (
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.rim}`, color: S.tertiary }}>
-              LIVE FEED DEMO
-            </span>
-          ) : (
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.cyan}`, color: S.cyan }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.cyan}`, color: S.cyan }}>
               STATIC DATA · ENRICHED
             </span>
-          )}
           <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{renderTs}</span>
         </div>
       </header>
@@ -444,8 +436,8 @@ export default function Polisophic() {
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
                 <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Structured Event Feed</span>
                 <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{RISK_EVENTS.length} events · last 7 days</span>
-                <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: DEMO_MODE ? S.amber : S.cyan }}>
-                  ● {DEMO_MODE ? "STATIC DEMO · AUTO-INGESTED" : "STATIC DATA · ENRICHED MODEL"}
+                <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.cyan }}>
+                  ● STATIC DATA · ENRICHED MODEL
                 </span>
               </div>
               <div style={{ height: 1, background: S.rim, marginBottom: 0 }} />
@@ -560,7 +552,7 @@ export default function Polisophic() {
               </div>
 
               <div style={{ marginTop: "auto", paddingTop: 14, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
-                {DEMO_MODE ? "Live ingestion pending · Static demo" : "Static data · Enriched model"}
+                {"Static data · Enriched model"}
               </div>
             </aside>
           </div>
@@ -795,8 +787,8 @@ export default function Polisophic() {
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
               <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Region Risk Heatmap</span>
               <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>8 regions · as of {renderTs}</span>
-              <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: DEMO_MODE ? S.amber : S.cyan }}>
-                ● {DEMO_MODE ? "STATIC DEMO" : "LIVE DATA"}
+              <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.cyan }}>
+                ● LIVE DATA
               </span>
             </div>
             <div style={{ height: 1, background: S.rim, marginBottom: 16 }} />
@@ -1118,7 +1110,7 @@ export default function Polisophic() {
         <span style={{ color: S.rim }}>·</span>
         <span>Political & Macro Risk Intelligence Engine</span>
         <span style={{ color: S.rim }}>·</span>
-        <span>{DEMO_MODE ? "Static Demo" : "Static data · Enriched model"} · {renderTs}</span>
+        <span>{"Static data · Enriched model"} · {renderTs}</span>
       </footer>
     </div>
   );

@@ -16,7 +16,6 @@ import Cookies from "js-cookie";
 import type { UserContext } from "../../authContext";
 
 // ── Config ─────────────────────────────────────────────────────────────────────
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 const _PROD_HOSTNAMES = ["hedgecore.vercel.app", "ordr-terminal.vercel.app"];
 const API_BASE = (() => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
@@ -78,39 +77,6 @@ export const loginThunk = createAsyncThunk(
     credentials: { username: string; password: string },
     { rejectWithValue },
   ) => {
-    // ── Demo bypass (username=demo, password=demo) ──────────────────────────
-    // Kept here so the thunk can be used stand-alone, but the primary login
-    // path goes through authContext.login() which also handles this case.
-    const DEMO_USER: UserContext = {
-      id:              "00000000-0000-0000-0000-000000000000",
-      email:           "demo@hedgecore.app",
-      full_name:       "Demo User",
-      job_title:       "Risk Analyst",
-      is_active:       true,
-      is_superuser:    false,
-      company:         { id: "00000000-0000-0000-0000-000000000001", name: "Demo Corp", slug: "demo-corp" },
-      branch:          { id: "00000000-0000-0000-0000-000000000002", name: "Headquarters", code: "HQ" },
-      department:      null,
-      roles:           ["risk_analyst"],
-      permissions: [
-        "trades.view", "trades.create", "trades.edit", "trades.import_csv",
-        "hedges.view", "hedges.create", "hedges.edit",
-        "calculate.run_sandbox",
-        "pipeline.create_proposal",
-        "policy.view",
-        "market.view", "market.autofill",
-        "reports.view_own_branch", "reports.export_pdf",
-        "audit.view_own",
-      ],
-      hierarchy_level: 10,
-    };
-
-    if (DEMO_MODE && credentials.username === "demo" && credentials.password === "demo") {
-      const demoToken = "demo_token_" + Date.now();
-      Cookies.set(ACCESS_TOKEN_KEY, demoToken, { sameSite: "Strict", expires: 30 });
-      return { token: demoToken, user: DEMO_USER };
-    }
-
     // ── Real JWT login ─────────────────────────────────────────────────────
     try {
       const formData = new URLSearchParams();
@@ -163,7 +129,7 @@ export const loginThunk = createAsyncThunk(
 export const logoutThunk = createAsyncThunk("auth/logout", async (_, { getState }) => {
   const state = getState() as { auth: AuthState };
   const accessToken = state.auth.token;
-  if (accessToken && !accessToken.startsWith("demo_token_")) {
+  if (accessToken) {
     fetch(`${API_BASE}/auth/logout`, {
       method:  "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
