@@ -213,6 +213,26 @@ export async function assignPolicy(
   return mapToPositionRow(data as Record<string, unknown>);
 }
 
+export interface BulkAssignResult {
+  assigned: number;
+  skipped:  number;
+  failed:   number;
+  errors:   string[];
+}
+
+export async function bulkAssignPolicy(
+  positionIds: string[],
+  policyInstanceId: string,
+  token?: string,
+): Promise<BulkAssignResult> {
+  const { data } = await axios.patch(
+    `${BASE}/v1/positions/bulk-assign-policy`,
+    { position_ids: positionIds, policy_instance_id: policyInstanceId },
+    { headers: authHeaders(token) },
+  );
+  return data as BulkAssignResult;
+}
+
 export async function markReadyToExecute(
   positionId: string,
   runId: string,

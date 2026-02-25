@@ -150,7 +150,7 @@ ROLE_PERMISSIONS = {
 
         "pipeline.approve", "pipeline.reject", "pipeline.authorize_ledger",
 
-        "policy.view", "policy.edit",
+        "policy.view", "policy.edit", "policy.activate",
 
         "market.view",
 
@@ -182,7 +182,7 @@ ROLE_PERMISSIONS = {
 
         "pipeline.approve", "pipeline.reject", "pipeline.authorize_ledger",
 
-        "policy.view", "policy.edit", "policy.create_preset",
+        "policy.view", "policy.edit", "policy.activate", "policy.create_preset",
 
         "market.view", "market.edit", "market.autofill",
 
@@ -212,7 +212,7 @@ ROLE_PERMISSIONS = {
 
         "pipeline.approve", "pipeline.reject",
 
-        "policy.view", "policy.edit",
+        "policy.view", "policy.edit", "policy.activate",
 
         "market.view", "market.edit", "market.autofill",
 
@@ -240,7 +240,7 @@ ROLE_PERMISSIONS = {
 
         "pipeline.approve", "pipeline.reject",
 
-        "policy.view", "policy.edit",
+        "policy.view", "policy.edit", "policy.activate",
 
         "market.view", "market.edit", "market.autofill",
 
