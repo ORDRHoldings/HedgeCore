@@ -99,7 +99,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchMe = useCallback(async (accessToken: string): Promise<UserContext | null> => {
     try {
       const res = await fetch(`${API_BASE}/auth/me`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "X-API-Key": (typeof window !== "undefined" && localStorage.getItem("hc_api_key")) || "HC_DEV_KEY_001",
+        },
       });
       if (!res.ok) return null;
       return await res.json();
