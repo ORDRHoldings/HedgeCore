@@ -133,14 +133,16 @@ export default function HelpPanel({
     }
   }, [activeSection]);
 
-  // Collapse button (always visible on right edge)
+  // Collapse button — fixed when closed so it stays in viewport regardless of scroll,
+  // absolute when open so it docks flush to the left edge of the panel.
   const toggleBtn = (
     <button
       onClick={toggle}
       title={open ? "Close help panel" : "Open help panel"}
       style={{
-        position:       "absolute",
-        left:           open ? -30 : -30,
+        position:       open ? "absolute" : "fixed",
+        left:           open ? -30 : undefined,
+        right:          open ? undefined : 0,
         top:            "50%",
         transform:      "translateY(-50%)",
         width:          30,
@@ -158,7 +160,7 @@ export default function HelpPanel({
         fontSize:       10,
         writingMode:    "vertical-rl" as const,
         letterSpacing:  "0.08em",
-        zIndex:         10,
+        zIndex:         100,
         flexShrink:     0,
       }}
     >
@@ -171,12 +173,16 @@ export default function HelpPanel({
   return (
     <div
       style={{
-        position:    "relative",
+        position:    "sticky",
+        top:         0,
+        alignSelf:   "flex-start",
+        height:      "100vh",
         width:       open ? width : 0,
         minWidth:    open ? width : 0,
         flexShrink:  0,
         transition:  "width 200ms ease, min-width 200ms ease",
         overflow:    "visible",
+        zIndex:      50,
       }}
     >
       {/* Toggle tab (always visible) */}
@@ -187,7 +193,7 @@ export default function HelpPanel({
         <div
           style={{
             width:        width,
-            height:       "100%",
+            height:       "100vh",
             background:   S.bgPanel,
             borderLeft:   `1px solid ${S.rim}`,
             display:      "flex",
