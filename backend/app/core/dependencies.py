@@ -60,7 +60,7 @@ async def _load_active_user(db: AsyncSession, user_id: UUID) -> User:
         HTTPException(401): if user is missing or inactive.
     """
     res = await db.execute(select(User).where(User.id == user_id))
-    user = res.scalar_one_or_none()
+    user = res.scalars().first()
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -112,7 +112,7 @@ async def get_committee_pack(
         result = await session.execute(
             select(CalculationRun).where(CalculationRun.id == run_id)
         )
-        run_row = result.scalar_one_or_none()
+        run_row = result.scalars().first()
     except Exception as e:
         logger.error("committee-pack: DB error fetching run %s: %s", run_id, e)
         raise HTTPException(status_code=500, detail="Database error fetching run.")
@@ -134,7 +134,7 @@ async def get_committee_pack(
             rev_result = await session.execute(
                 select(PolicyRevision).where(PolicyRevision.id == rev_uuid)
             )
-            rev_row = rev_result.scalar_one_or_none()
+            rev_row = rev_result.scalars().first()
             if rev_row:
                 policy_revision_data = _serialize_policy_revision(rev_row)
         except Exception as e:

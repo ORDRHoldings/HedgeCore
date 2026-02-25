@@ -101,7 +101,7 @@ async def create_position(
             Position.is_active == True,
         )
     )
-    if existing.scalar_one_or_none():
+    if existing.scalars().first():
         raise ValueError(
             f"record_id '{data.record_id}' already exists in this company"
         )

@@ -108,7 +108,7 @@ async def revoke_api_key(session: AsyncSession, key_id: str) -> Optional[ApiKey]
 
     stmt = select(ApiKey).where(ApiKey.key_id == key_id)
     res = await session.execute(stmt)
-    api_key = res.scalar_one_or_none()
+    api_key = res.scalars().first()
 
     if not api_key:
         return None
@@ -141,7 +141,7 @@ async def verify_api_key_header(
 
     stmt = select(ApiKey).where(ApiKey.key_id == key_id)
     res = await session.execute(stmt)
-    api_key = res.scalar_one_or_none()
+    api_key = res.scalars().first()
 
     if not api_key:
         return None

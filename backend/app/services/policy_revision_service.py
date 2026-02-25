@@ -67,7 +67,7 @@ async def create_revision(
         .limit(1)
     )
     result = await session.execute(q)
-    prev = result.scalar_one_or_none()
+    prev = result.scalars().first()
 
     next_revision = (prev.revision + 1) if prev else 1
     prev_id = prev.id if prev else None
@@ -118,7 +118,7 @@ async def get_latest_revision(
         .limit(1)
     )
     result = await session.execute(q)
-    return result.scalar_one_or_none()
+    return result.scalars().first()
 
 
 async def list_revisions(

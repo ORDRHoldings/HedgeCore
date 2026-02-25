@@ -158,7 +158,7 @@ async def _emit_proposal_audit(
             .limit(1)
         )
         result = await session.execute(q)
-        prev_hash = result.scalar_one_or_none() or GENESIS_HASH
+        prev_hash = result.scalars().first() or GENESIS_HASH
 
         request_id = ip_address = None
         if request:

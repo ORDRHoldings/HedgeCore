@@ -127,7 +127,7 @@ async def seed_org_and_user():
             existing = await session.execute(
                 select(Permission).where(Permission.codename == codename)
             )
-            if not existing.scalar_one_or_none():
+            if not existing.scalars().first():
                 session.add(Permission(
                     codename=codename, module=module,
                     action=action, description=desc,
@@ -138,7 +138,7 @@ async def seed_org_and_user():
         result = await session.execute(
             select(Role).where(Role.name == "admin")
         )
-        admin_role = result.scalar_one_or_none()
+        admin_role = result.scalars().first()
         if not admin_role:
             admin_role = Role(
                 name="admin", description="Full access",
@@ -156,7 +156,7 @@ async def seed_org_and_user():
                     RolePermission.permission_id == p.id,
                 )
             )
-            if not existing.scalar_one_or_none():
+            if not existing.scalars().first():
                 session.add(RolePermission(
                     role_id=admin_role.id, permission_id=p.id,
                 ))
@@ -519,7 +519,7 @@ async def step_11_verify_audit_and_db(position_id: str):
             await session.execute(
                 select(Position).where(Position.id == uuid.UUID(position_id))
             )
-        ).scalar_one_or_none()
+        ).scalars().first()
         if pos:
             step_pass(
                 "Position in DB",
@@ -538,7 +538,7 @@ async def step_11_verify_audit_and_db(position_id: str):
                     PolicyTemplate.company_id == COMPANY_ID,
                 )
             )
-        ).scalar_one_or_none()
+        ).scalars().first()
         if tmpl:
             step_pass(
                 "Policy Template in DB",
@@ -555,7 +555,7 @@ async def step_11_verify_audit_and_db(position_id: str):
                     PolicyInstance.is_active == True,
                 )
             )
-        ).scalar_one_or_none()
+        ).scalars().first()
         if inst:
             step_pass(
                 "Policy Instance in DB",

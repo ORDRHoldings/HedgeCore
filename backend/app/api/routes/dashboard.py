@@ -50,7 +50,7 @@ async def _resolve_user(request: Request, db: AsyncSession) -> User:
         raise HTTPException(status_code=401, detail="Invalid token payload")
     user_id = UUID(str(sub))
     result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+    user = result.scalars().first()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Invalid or inactive user")
     return user

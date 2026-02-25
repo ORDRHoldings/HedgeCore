@@ -91,7 +91,7 @@ async def test_register_creates_user_and_tokens(client):
 
     async with async_session_maker() as session:
         res = await session.execute(select(User).where(User.email == "test@hedgecalc.ai"))
-        user = res.scalar_one_or_none()
+        user = res.scalars().first()
         assert user is not None
         assert user.is_active
 
@@ -135,7 +135,7 @@ async def test_refresh_rotates_token_and_revokes_old(client):
         res = await session.execute(
             select(RefreshToken).where(RefreshToken.jti == old_claims["jti"])
         )
-        token_row = res.scalar_one_or_none()
+        token_row = res.scalars().first()
         assert token_row is not None
         assert token_row.revoked is True
 
@@ -208,7 +208,7 @@ async def test_single_session_policy(client):
         res = await session.execute(
             select(RefreshToken).where(RefreshToken.jti == old_claims["jti"])
         )
-        old_row = res.scalar_one_or_none()
+        old_row = res.scalars().first()
         assert old_row is not None
         assert old_row.revoked is True
 
@@ -216,6 +216,6 @@ async def test_single_session_policy(client):
         res = await session.execute(
             select(RefreshToken).where(RefreshToken.jti == new_claims["jti"])
         )
-        new_row = res.scalar_one_or_none()
+        new_row = res.scalars().first()
         assert new_row is not None
         assert new_row.revoked is False

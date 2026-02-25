@@ -94,7 +94,7 @@ async def create_role(
     """Create a new custom role with permissions."""
     # Check name uniqueness
     existing = await db.execute(select(Role).where(Role.name == payload.name.lower()))
-    if existing.scalar_one_or_none():
+    if existing.scalars().first():
         raise HTTPException(status_code=409, detail=f"Role '{payload.name}' already exists")
 
     company_id = getattr(current_user, "company_id", None)
