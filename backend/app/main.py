@@ -175,15 +175,37 @@ async def _seed_policy_templates():
 
 async def _sync_seed_users():
     """
-    Resync demo user passwords to seed data on every startup.
-    Idempotent -- only updates existing users, never creates.
-    Ensures production DB always accepts seeded credentials after deploy.
+    Deduplicate users table and resync demo user passwords on every startup.
+    Safe to run repeatedly -- idempotent.
     """
-    from sqlalchemy import select
+    from sqlalchemy import select, delete, func, text
     from app.models.user import User
     from app.api.routes.seed import EMPLOYEES
     from app.core.security import hash_password
     async with async_session_maker() as session:
+        # Step 1a: deduplicate users table (keep row with smallest id for each email)
+        try:
+            dedup_sql = text(
+                "DELETE FROM users WHERE id NOT IN ("
+                "    SELECT MIN(id::text)::uuid FROM users GROUP BY email"
+                ")"
+            )
+            await session.execute(dedup_sql)
+            await session.flush()
+        except Exception as e:
+            logger.warning(f"_sync_seed_users dedup users failed (non-fatal): {e}")
+        # Step 1b: deduplicate system policy_templates (keep row with smallest id per short_name)
+        try:
+            dedup_policy_sql = text(
+                "DELETE FROM policy_templates WHERE is_system = TRUE AND company_id IS NULL AND id NOT IN ("
+                "    SELECT MIN(id::text)::uuid FROM policy_templates WHERE is_system = TRUE AND company_id IS NULL GROUP BY short_name"
+                ")"
+            )
+            await session.execute(dedup_policy_sql)
+            await session.flush()
+        except Exception as e:
+            logger.warning(f"_sync_seed_users dedup policy_templates failed (non-fatal): {e}")
+        # Step 2: update passwords for all seed users
         for email, pw, full_name, job_title, role_name, branch_id, dept_id in EMPLOYEES:
             try:
                 r = await session.execute(select(User).where(User.email == email))
@@ -191,10 +213,12 @@ async def _sync_seed_users():
                 if user:
                     user.hashed_password = hash_password(pw)
                     user.is_active = True
-            except Exception:
+            except Exception as e:
+                logger.warning(f"_sync_seed_users update {email} failed: {e}")
                 continue
         try:
             await session.commit()
+            logger.info("_sync_seed_users: passwords resynced for seed users")
         except Exception as e:
             logger.warning(f"_sync_seed_users commit failed: {e}")
 
