@@ -35,9 +35,13 @@ class PolicyTemplate(Base):
     config     = Column(JSONB, nullable=False)
     version    = Column(Integer, nullable=False, default=1)
     is_system  = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=text("NOW()"))
-
-
+    created_at  = Column(DateTime(timezone=True), server_default=text("NOW()"))
+    created_by  = Column(PGUUID(as_uuid=True), nullable=True)
+    updated_by  = Column(PGUUID(as_uuid=True), nullable=True)
+    updated_at  = Column(DateTime(timezone=True), nullable=True)
+    status      = Column(String(16), nullable=False, default='ACTIVE')
+
+
 class PolicyInstance(Base):
     """
     An activation record linking a branch to a PolicyTemplate.

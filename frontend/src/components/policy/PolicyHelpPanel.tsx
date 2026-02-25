@@ -396,6 +396,11 @@ export interface HelpPanelProps {
   onClose: () => void;
 }
 
+/**
+ * @deprecated Use HelpPanel from @/components/layout/HelpPanel with policy-specific
+ * HelpPanelConfig from @/lib/helpContent instead.
+ * This slide-over component is kept for backwards compatibility only.
+ */
 export default function PolicyHelpPanel({ open, onClose }: HelpPanelProps) {
   const [activeSection, setActiveSection] = useState<HelpSection>("library");
 

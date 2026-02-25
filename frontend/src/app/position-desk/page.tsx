@@ -17,6 +17,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { recommendPolicyForPosition } from "@/utils/policyRecommender";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,6 +33,13 @@ import {
   clearLifecycleError,
 } from "../../lib/store/slices/positionSlice";
 import type { PositionRow } from "../../api/positionClient";
+import {
+  listPolicyTemplates,
+  listFavorites,
+  getActivePolicy,
+  type PolicyTemplate,
+  type PolicyInstance,
+} from "../../api/policyClient";
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -200,6 +208,59 @@ function ModalActions({ onCancel, onConfirm, confirmLabel, confirmColor, disable
     </div>
   );
 }
+function PolicySelectorRow({
+  tmpl, isSelected, isFavorite, isActive, onSelect
+}: {
+  tmpl: PolicyTemplate;
+  isSelected: boolean;
+  isFavorite: boolean;
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const conf = Math.round((tmpl.config.hedge_ratios?.confirmed ?? 0) * 100);
+  const fcst = Math.round((tmpl.config.hedge_ratios?.forecast ?? 0) * 100);
+  return (
+    <div
+      onClick={isActive ? onSelect : undefined}
+      style={{
+        padding: '6px 10px',
+        cursor: isActive ? 'pointer' : 'not-allowed',
+        background: isSelected
+          ? `color-mix(in srgb, ${S.cyan} 8%, ${S.bgPanel})`
+          : !isActive
+            ? `color-mix(in srgb, ${S.rim} 20%, transparent)`
+            : 'transparent',
+        borderBottom: `1px solid ${S.rim}`,
+        display: 'flex', alignItems: 'center', gap: 8,
+        transition: 'background 0.1s',
+        opacity: isActive ? 1 : 0.45,
+      }}
+    >
+      {isFavorite && <span style={{ color: S.amber, fontSize: '0.625rem' }}>★</span>}
+      <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem',
+        color: S.cyan, letterSpacing: '0.06em', minWidth: 48 }}>
+        {tmpl.short_name}
+      </span>
+      <span style={{ fontFamily: S.fontUI, fontSize: '0.75rem',
+        color: S.primary, flex: 1 }}>
+        {tmpl.name}
+      </span>
+      {isActive && (
+        <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem',
+          color: S.pass, letterSpacing: '0.08em',
+          border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
+          padding: '1px 4px' }}>
+          ACTIVE
+        </span>
+      )}
+      <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem',
+        color: S.tertiary, letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
+        {conf}% · {fcst}%
+      </span>
+    </div>
+  );
+}
+
 export default function PositionDeskPage() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
@@ -220,8 +281,39 @@ export default function PositionDeskPage() {
   const [hedgeAmount, setHedgeAmount]   = useState("");
   const [hedgeRate, setHedgeRate]       = useState("");
   const [rejectReason, setRejectReason] = useState("");
+
+  // Policy selector state (for assign-policy modal)
+  const [policyTemplates, setPolicyTemplates]           = useState<PolicyTemplate[]>([]);
+  const [activePolicyInstance, setActivePolicyInstance] = useState<PolicyInstance | null>(null);
+  const [favTemplateIds, setFavTemplateIds]             = useState<Set<string>>(new Set());
+  const [policySearchQuery, setPolicySearchQuery]       = useState('');
+
+  // Best-match policy recommendation for assign-policy modal
+  const recommendation = useMemo(() => {
+    if (modal.type !== 'assign-policy' || !modal.position) return null;
+    return recommendPolicyForPosition(
+      modal.position,
+      policyTemplates,
+      favTemplateIds,
+    );
+  }, [modal, policyTemplates, favTemplateIds]);
+
   useEffect(() => { if (token) dispatch(listPositionsThunk({ token })); }, [dispatch, token]);
   useEffect(() => { if (modal.type !== null) dispatch(clearLifecycleError()); }, [modal.type, dispatch]);
+
+  // Load templates + favorites + active instance when assign-policy modal opens
+  useEffect(() => {
+    if (modal.type !== 'assign-policy' || !token) return;
+    Promise.all([
+      listPolicyTemplates(token),
+      listFavorites(token),
+      getActivePolicy(token),
+    ]).then(([templates, favs, activeInst]) => {
+      setPolicyTemplates(templates);
+      setFavTemplateIds(new Set(favs.map(f => f.template_id)));
+      setActivePolicyInstance(activeInst);
+    }).catch(() => {});
+  }, [modal.type, token]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -275,6 +367,12 @@ export default function PositionDeskPage() {
     setHedgeAmount(position.hedge_amount?.toString() ?? "");
     setHedgeRate(position.hedge_rate?.toString() ?? "");
     setRejectReason("");
+    setPolicySearchQuery("");
+    // Reset selector so stale data doesn't show while loading
+    if (type === 'assign-policy') {
+      setPolicyTemplates([]);
+      setActivePolicyInstance(null);
+    }
   }, []);
 
   const closeModal = useCallback(() => setModal({ type: null, position: null }), []);
@@ -470,7 +568,159 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
       {modal.type === "assign-policy" && pos && (
         <ModalOverlay onClose={closeModal}>
           <ModalHeader title="Assign Policy" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
-          <ModalInput label="Policy Instance ID *" value={policyId} onChange={setPolicyId} placeholder="UUID of the active policy instance" />
+          {/* Policy selector */}
+          {(() => {
+            // activeTemplateId: the template currently activated as an instance
+            const activeTemplateId = activePolicyInstance?.template_id ?? null;
+            // Helper: given template t, return the instance ID to assign (only valid for active template)
+            const instanceIdFor = (t: PolicyTemplate): string | null =>
+              activePolicyInstance && t.id === activeTemplateId ? activePolicyInstance.id : null;
+            // selectedTemplate: template whose active instance ID matches policyId
+            const selectedTemplate = policyId
+              ? policyTemplates.find(t => instanceIdFor(t) === policyId) ?? null
+              : null;
+
+            const favTemplates   = policyTemplates.filter(t => favTemplateIds.has(t.id));
+            const otherTemplates = policyTemplates.filter(t => !favTemplateIds.has(t.id));
+            const query = policySearchQuery.toLowerCase();
+            const filterFn = (t: PolicyTemplate) =>
+              !query || t.name.toLowerCase().includes(query) || t.short_name.toLowerCase().includes(query);
+            const filteredFavs   = favTemplates.filter(filterFn);
+            const filteredOthers = otherTemplates.filter(filterFn);
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                {recommendation && (recommendation.confidence === 'HIGH' || recommendation.confidence === 'MEDIUM') && (
+                  <div style={{
+                    padding: '8px 12px', marginBottom: 8,
+                    border: `1px solid color-mix(in srgb, var(--accent-cyan,#22d3ee) 30%, transparent)`,
+                    background: `color-mix(in srgb, var(--accent-cyan,#22d3ee) 4%, var(--bg-panel))`,
+                  }}>
+                    <div style={{
+                      fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5rem',
+                      color: 'var(--accent-cyan,#22d3ee)', letterSpacing: '0.12em', marginBottom: 4,
+                    }}>
+                      BEST MATCH · {recommendation.confidence}
+                    </div>
+                    <div style={{
+                      fontFamily: "'IBM Plex Sans',sans-serif", fontSize: '0.8125rem',
+                      color: 'var(--text-primary)', fontWeight: 600, marginBottom: 2,
+                    }}>
+                      [{recommendation.shortName}] {recommendation.name}
+                    </div>
+                    <div style={{
+                      fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5625rem',
+                      color: 'var(--text-tertiary)', marginBottom: 6,
+                    }}>
+                      {recommendation.reason}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPolicyId(recommendation.templateId)}
+                      style={{
+                        fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5625rem',
+                        letterSpacing: '0.08em', padding: '3px 10px',
+                        border: `1px solid var(--accent-cyan,#22d3ee)`,
+                        color: 'var(--accent-cyan,#22d3ee)', background: 'transparent',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      USE THIS POLICY
+                    </button>
+                  </div>
+                )}
+                <label style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, display: 'block', marginBottom: 4, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                  Policy Instance *
+                  {!activePolicyInstance && policyTemplates.length > 0 && (
+                    <span style={{ color: S.amber, marginLeft: 8, fontSize: '0.5625rem' }}>
+                      NO ACTIVE POLICY — activate one on the Policies page first
+                    </span>
+                  )}
+                </label>
+                {/* Search */}
+                <input
+                  type="text"
+                  value={policySearchQuery}
+                  onChange={e => setPolicySearchQuery(e.target.value)}
+                  placeholder="Search policies…"
+                  style={{
+                    fontFamily: S.fontUI, fontSize: '0.75rem', padding: '5px 10px',
+                    border: `1px solid ${S.rim}`, background: S.bgSub,
+                    color: S.primary, outline: 'none', width: '100%', boxSizing: 'border-box' as const,
+                  }}
+                />
+                {/* Policy list */}
+                <div style={{
+                  maxHeight: 240, overflowY: 'auto' as const,
+                  border: `1px solid ${S.rim}`, background: S.bgPanel,
+                }}>
+                  {/* FAVORITES section */}
+                  {filteredFavs.length > 0 && (
+                    <>
+                      <div style={{
+                        padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem',
+                        color: S.amber, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`,
+                        background: S.bgSub,
+                      }}>
+                        ★ FAVORITES
+                      </div>
+                      {filteredFavs.map(t => {
+                        const instId = instanceIdFor(t);
+                        return (
+                          <PolicySelectorRow
+                            key={t.id} tmpl={t}
+                            isSelected={!!instId && policyId === instId}
+                            isFavorite
+                            isActive={t.id === activeTemplateId}
+                            onSelect={() => { if (instId) setPolicyId(instId); }}
+                          />
+                        );
+                      })}
+                    </>
+                  )}
+                  {/* ALL POLICIES section */}
+                  {filteredOthers.length > 0 && (
+                    <>
+                      <div style={{
+                        padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem',
+                        color: S.tertiary, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`,
+                        background: S.bgSub,
+                      }}>
+                        ALL POLICIES
+                      </div>
+                      {filteredOthers.map(t => {
+                        const instId = instanceIdFor(t);
+                        return (
+                          <PolicySelectorRow
+                            key={t.id} tmpl={t}
+                            isSelected={!!instId && policyId === instId}
+                            isFavorite={false}
+                            isActive={t.id === activeTemplateId}
+                            onSelect={() => { if (instId) setPolicyId(instId); }}
+                          />
+                        );
+                      })}
+                    </>
+                  )}
+                  {filteredFavs.length === 0 && filteredOthers.length === 0 && (
+                    <div style={{ padding: '20px', textAlign: 'center', fontFamily: S.fontMono,
+                      fontSize: '0.5625rem', color: S.tertiary }}>
+                      {policyTemplates.length === 0 ? 'LOADING…' : 'NO POLICIES MATCH'}
+                    </div>
+                  )}
+                </div>
+                {/* Selected policy display */}
+                {policyId && (
+                  <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.cyan,
+                    letterSpacing: '0.06em', padding: '3px 8px',
+                    border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)` }}>
+                    INSTANCE: {policyId.slice(0, 8).toUpperCase()}
+                    {selectedTemplate && ` · ${selectedTemplate.short_name} · ${selectedTemplate.name}`}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>Transition: {pos.execution_status} → POLICY_ASSIGNED</div>
           {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
           <ModalActions onCancel={closeModal} onConfirm={handleAssignPolicy} confirmLabel="ASSIGN POLICY" confirmColor={S.cyan} disabled={!policyId.trim() || isTransitioning} />

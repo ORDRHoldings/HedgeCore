@@ -55,7 +55,7 @@ export interface HelpSection {
   id:          string;
   title:       string;        // section heading
   icon?:       string;        // single emoji or 2-char code
-  type:        "text" | "variables" | "workflow" | "pipeline" | "glossary";
+  type:        "text" | "variables" | "workflow" | "pipeline" | "glossary" | "formula";
   content?:    string;        // for "text" sections
   variables?:  HelpVariable[];
   steps?:      HelpWorkflowStep[];
@@ -68,6 +68,12 @@ export interface HelpSection {
     description: string;
   };
   glossary?:   { term: string; definition: string }[];
+  formulas?: {
+    label:       string;   // e.g. "Optimal Hedge Ratio"
+    latex:       string;   // e.g. "H* = ρ(ΔS,ΔF) × (σS / σF)"
+    explanation: string;   // 1-2 sentence explanation
+    source?:     string;   // e.g. "Johnson (1960); IFRS 9.B6.4"
+  }[];
 }
 
 export interface HelpPanelConfig {
@@ -82,6 +88,7 @@ interface HelpPanelProps {
   config:       HelpPanelConfig;
   storageKey:   string;       // localStorage key for open/collapsed state
   width?:       number;       // default 280
+  activeSection?: string;     // auto-expand this section ID when changed
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -90,6 +97,7 @@ export default function HelpPanel({
   config,
   storageKey,
   width = 280,
+  activeSection,
 }: HelpPanelProps) {
   const [open, setOpen]             = useState(false);
   const [expandedSection, setExpanded] = useState<string | null>(null);
@@ -117,6 +125,13 @@ export default function HelpPanel({
   const toggleSection = useCallback((id: string) => {
     setExpanded(prev => prev === id ? null : id);
   }, []);
+
+  // Auto-expand section when activeSection changes externally (e.g., wizard phase changes)
+  useEffect(() => {
+    if (activeSection) {
+      setExpanded(activeSection);
+    }
+  }, [activeSection]);
 
   // Collapse button (always visible on right edge)
   const toggleBtn = (
@@ -406,6 +421,55 @@ export default function HelpPanel({
                           </div>
                         ))}
                       </dl>
+                    )}
+
+                    {/* FORMULA section */}
+                    {section.type === "formula" && section.formulas && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {section.formulas.map((f, i) => (
+                          <div key={i} style={{
+                            background:   S.bgSub,
+                            border:       `1px solid ${S.soft}`,
+                            padding:      "10px 12px",
+                          }}>
+                            <div style={{
+                              fontFamily:    S.fontMono,
+                              fontSize:      9,
+                              color:         S.cyan,
+                              letterSpacing: "0.10em",
+                              marginBottom:  4,
+                              textTransform: "uppercase" as const,
+                            }}>{f.label}</div>
+                            <div style={{
+                              fontFamily:  S.fontMono,
+                              fontSize:    13,
+                              fontWeight:  700,
+                              color:       S.primary,
+                              marginBottom: 6,
+                              lineHeight:  1.4,
+                              wordBreak:   "break-all" as const,
+                            }}>{f.latex}</div>
+                            <p style={{
+                              fontFamily: S.fontUI,
+                              fontSize:   10,
+                              color:      S.secondary,
+                              lineHeight: 1.55,
+                              margin:     "0 0 4px",
+                            }}>{f.explanation}</p>
+                            {f.source && (
+                              <div style={{
+                                fontFamily:    S.fontMono,
+                                fontSize:      9,
+                                color:         S.tertiary,
+                                letterSpacing: "0.04em",
+                                marginTop:     2,
+                              }}>
+                                &#x2197; {f.source}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
 
                   </div>

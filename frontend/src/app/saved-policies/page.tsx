@@ -19,6 +19,7 @@ import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import EmptyState from "../../components/ui/EmptyState";
 import Link from "next/link";
+import { Bookmark, Download, Upload } from "lucide-react";
 import {
   listPolicyTemplates,
   getActivePolicy,
@@ -27,9 +28,15 @@ import {
   updatePolicyTemplate,
   deletePolicyTemplate,
   duplicatePolicyTemplate,
+  listFavorites,
+  addFavorite,
+  removeFavorite,
+  exportPolicyTemplate,
+  importPolicyTemplate,
 } from "../../api/policyClient";
-import type { PolicyTemplate, PolicyInstance, UpdateTemplatePayload } from "../../api/policyClient";
-import PolicyHelpPanel from "@/components/policy/PolicyHelpPanel";
+import type { PolicyTemplate, PolicyInstance, UpdateTemplatePayload, PolicyFavorite } from "../../api/policyClient";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { SAVED_POLICIES_HELP } from "@/lib/helpContent";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -197,9 +204,10 @@ function riskColor(posture: DemoPolicy["riskPosture"]): string {
 
 // -- Tabs -------------------------------------------------------------------------
 const TABS = [
-  { key: "my",       label: "My Policies" },
-  { key: "branch",   label: "Branch Policies" },
-  { key: "company",  label: "Company-wide" },
+  { key: "my",        label: "My Policies" },
+  { key: "branch",    label: "Branch Policies" },
+  { key: "company",   label: "Company-wide" },
+  { key: "favorites", label: "Favorites" },
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
@@ -522,11 +530,15 @@ interface PolicyCardProps {
   onEdit: (p: DemoPolicy) => void;
   onDuplicate: (p: DemoPolicy) => void;
   onDelete: (p: DemoPolicy) => void;
+  isFavorited?: boolean;
+  onToggleFavorite?: () => void;
+  onExport?: () => void;
 }
 
 function PolicyCard({
   policy, showMeta, actionLoading,
   onActivate, onDeactivate, onEdit, onDuplicate, onDelete,
+  isFavorited, onToggleFavorite, onExport,
 }: PolicyCardProps) {
   const [hovered, setHovered] = useState(false);
   const rc = riskColor(policy.riskPosture);
@@ -583,6 +595,20 @@ function PolicyCard({
             {policy.mandatory && <Badge label="MANDATORY" color={S.fail} />}
             {policy.isSystem && <Badge label="SYSTEM" color={S.tertiary} />}
             <Badge label={policy.riskPosture} color={rc} />
+            {onToggleFavorite && (
+              <button
+                type="button"
+                onClick={onToggleFavorite}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+                  color: isFavorited ? S.amber : S.tertiary,
+                  display: 'flex', alignItems: 'center',
+                }}
+                title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Bookmark size={11} fill={isFavorited ? S.amber : 'none'} />
+              </button>
+            )}
           </div>
         </div>
         <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary, lineHeight: 1.3 }}>
@@ -660,6 +686,20 @@ function PolicyCard({
             READ-ONLY
           </span>
         )}
+        {!policy.isSystem && onExport && (
+          <button
+            type="button"
+            onClick={onExport}
+            style={{
+              fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+              padding: "3px 8px", border: `1px solid ${S.rim}`,
+              color: S.tertiary, background: "transparent", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 4,
+            }}
+          >
+            <Download size={9} /> EXPORT
+          </button>
+        )}
       </div>
     </div>
   );
@@ -727,8 +767,13 @@ export default function SavedPoliciesPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null); // policy id
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  // Help panel
-  const [helpOpen, setHelpOpen] = useState(false);
+  // Favorites state
+  const [favorites, setFavorites] = useState<PolicyFavorite[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  // Import state
+  const [importing, setImporting] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   // Modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -772,6 +817,11 @@ export default function SavedPoliciesPage() {
       setApiError("Failed to load policies");
       setLoading(false);
     });
+    // Load favorites in parallel (non-blocking)
+    listFavorites(token ?? undefined).then(favs => {
+      setFavorites(favs);
+      setFavoriteIds(new Set(favs.map(f => f.template_id)));
+    }).catch(() => {});
   }, [isAuthenticated, token]);
 
   useEffect(() => { fetchPolicies(); }, [fetchPolicies]);
@@ -785,11 +835,16 @@ export default function SavedPoliciesPage() {
       source = policies.filter((t) => !t.is_system && t.company_id !== null);
     } else if (activeTab === "branch") {
       source = [];
+    } else if (activeTab === "favorites") {
+      // Build from favorites list which include full template data
+      source = favorites
+        .filter(f => f.template !== null)
+        .map(f => f.template as PolicyTemplate);
     } else {
       source = policies.filter((t) => t.is_system);
     }
     return source.map((t) => templateToDisplay(t, activeTemplateId));
-  }, [policies, activeTab, activeTemplateId]);
+  }, [policies, activeTab, activeTemplateId, favorites]);
 
   const filteredPolicies = useMemo(() => {
     let source = tabPolicies;
@@ -922,9 +977,10 @@ export default function SavedPoliciesPage() {
   }, [token, addToast]);
 
   return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: S.bgDeep }}>
     <div style={{
-      minHeight: "100vh", display: "flex", flexDirection: "column",
-      background: S.bgDeep, fontFamily: S.fontUI, color: S.primary,
+      flex: 1, display: "flex", flexDirection: "column", overflowY: 'auto', minWidth: 0,
+      fontFamily: S.fontUI, color: S.primary,
     }}>
       {/* -- TopBar (44px) -------------------------------------------------------- */}
       <header style={{
@@ -1025,19 +1081,47 @@ export default function SavedPoliciesPage() {
           >
             + CREATE NEW POLICY
           </Link>
-          <button
-            type="button"
-            style={{
-              fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em", fontWeight: 600,
-              padding: "6px 16px", border: `1px solid ${S.rim}`,
-              color: S.secondary, background: "transparent", cursor: "not-allowed",
-              borderRadius: 2, opacity: 0.6,
-            }}
-            title="Import via JSON — coming soon"
-            disabled
-          >
-            IMPORT POLICY
-          </button>
+          <>
+            <input
+              ref={importFileRef}
+              type="file"
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file || !token) return;
+                setImporting(true);
+                try {
+                  const text = await file.text();
+                  const parsed = JSON.parse(text) as Record<string, unknown>;
+                  await importPolicyTemplate(parsed, undefined, undefined, token);
+                  addToast("success", 'Policy imported successfully');
+                  // Refresh templates
+                  listPolicyTemplates(token).then(setPolicies).catch(() => {});
+                } catch (err: unknown) {
+                  addToast("error", `Import failed: ${(err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Invalid file'}`);
+                } finally {
+                  setImporting(false);
+                  if (importFileRef.current) importFileRef.current.value = '';
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => importFileRef.current?.click()}
+              disabled={importing}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.06em", fontWeight: 600,
+                padding: "6px 16px", border: `1px solid ${S.rim}`,
+                color: S.secondary, background: "transparent",
+                cursor: importing ? "not-allowed" : "pointer",
+                borderRadius: 2, opacity: importing ? 0.7 : 1,
+              }}
+            >
+              <Upload size={12} /> {importing ? 'IMPORTING…' : 'IMPORT POLICY'}
+            </button>
+          </>
           <div style={{ flex: 1 }} />
           {/* Search */}
           <div style={{
@@ -1067,16 +1151,6 @@ export default function SavedPoliciesPage() {
               </button>
             )}
           </div>
-          {/* Help */}
-          <button
-            type="button"
-            onClick={() => setHelpOpen(true)}
-            style={{
-              fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
-              padding: "5px 12px", border: `1px solid ${S.rim}`,
-              color: S.tertiary, background: "transparent", cursor: "pointer", borderRadius: 2,
-            }}
-          >? HELP</button>
           {/* Sort */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, letterSpacing: "0.06em" }}>SORT:</span>
@@ -1127,6 +1201,30 @@ export default function SavedPoliciesPage() {
                 onEdit={handleEdit}
                 onDuplicate={handleDuplicate}
                 onDelete={handleDelete}
+                isFavorited={favoriteIds.has(policy.id)}
+                onToggleFavorite={async () => {
+                  if (!token) return;
+                  if (favoriteIds.has(policy.id)) {
+                    await removeFavorite(policy.id, token).catch(() => {});
+                    setFavoriteIds(prev => { const next = new Set(prev); next.delete(policy.id); return next; });
+                    setFavorites(prev => prev.filter(f => f.template_id !== policy.id));
+                  } else {
+                    await addFavorite(policy.id, undefined, token).catch(() => {});
+                    setFavoriteIds(prev => new Set(prev).add(policy.id));
+                  }
+                }}
+                onExport={!policy.isSystem ? async () => {
+                  if (!token) return;
+                  try {
+                    const blob = await exportPolicyTemplate(policy.id, token);
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `policy-${policy.code}-v1.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } catch { addToast("error", 'Export failed'); }
+                } : undefined}
               />
             ))}
           </div>
@@ -1134,13 +1232,15 @@ export default function SavedPoliciesPage() {
           <div style={{ marginTop: 40 }}>
             <EmptyState
               type="empty"
-              title={activeTab === "branch" ? "No Branch Policies" : "No Saved Policies"}
+              title={activeTab === "branch" ? "No Branch Policies" : activeTab === "favorites" ? "No Favorites Yet" : "No Saved Policies"}
               message={
                 activeTab === "branch"
                   ? "Branch-scoped policy templates will appear here once the API returns branch_id on templates."
+                  : activeTab === "favorites"
+                  ? "Bookmark policy templates from My Policies or Company-wide to add them to your favorites list."
                   : "Create your first policy in the Policy Engine. Templates you create will appear here."
               }
-              action={activeTab !== "branch" ? {
+              action={activeTab !== "branch" && activeTab !== "favorites" ? {
                 label: "Create Policy",
                 onClick: () => router.push("/ai-policy-wizard"),
               } : undefined}
@@ -1195,10 +1295,10 @@ export default function SavedPoliciesPage() {
         />
       )}
 
-      <PolicyHelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
-
       {/* -- Toast notifications -------------------------------------------------- */}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
+    </div>
+    <HelpPanel config={SAVED_POLICIES_HELP} storageKey="saved-policies" />
     </div>
   );
 }
