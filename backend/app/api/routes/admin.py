@@ -32,7 +32,7 @@ async def get_api_key_by_id(db: AsyncSession, api_key_id: str) -> ApiKey:
     result = await db.execute(
         select(ApiKey).where(ApiKey.key_id == api_key_id)
     )
-    api_key = result.scalar_one_or_none()
+    api_key = result.scalars().first()
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

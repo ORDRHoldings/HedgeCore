@@ -92,7 +92,7 @@ async def update_proposal_status(session: AsyncSession, proposal_id: str, status
     result = await session.execute(
         select(ProposalORM).where(ProposalORM.proposal_id == proposal_id)
     )
-    row = result.scalar_one_or_none()
+    row = result.scalars().first()
     if row:
         row.status = status
         await session.commit()
@@ -103,7 +103,7 @@ async def load_proposal(session: AsyncSession, proposal_id: str) -> Proposal | N
     result = await session.execute(
         select(ProposalORM).where(ProposalORM.proposal_id == proposal_id)
     )
-    row = result.scalar_one_or_none()
+    row = result.scalars().first()
     if not row:
         return None
     return _proposal_orm_to_schema(row)
@@ -180,7 +180,7 @@ async def save_approval(
     result = await session.execute(
         select(StagingORM).where(StagingORM.staging_id == staging_id)
     )
-    staging_row = result.scalar_one_or_none()
+    staging_row = result.scalars().first()
     if not staging_row:
         return
 
@@ -212,7 +212,7 @@ async def update_staging_status(
     result = await session.execute(
         select(StagingORM).where(StagingORM.staging_id == staging_id)
     )
-    row = result.scalar_one_or_none()
+    row = result.scalars().first()
     if row:
         row.authorization_status = status
         await session.commit()
@@ -225,7 +225,7 @@ async def load_staging(session: AsyncSession, staging_id: str) -> StagedArtifact
         .options(selectinload(StagingORM.approvals))
         .where(StagingORM.staging_id == staging_id)
     )
-    row = result.scalar_one_or_none()
+    row = result.scalars().first()
     if not row:
         return None
     return _staging_orm_to_schema(row)
@@ -295,7 +295,7 @@ async def load_ledger(session: AsyncSession, ledger_id: str) -> LedgerEntry | No
     result = await session.execute(
         select(LedgerORM).where(LedgerORM.ledger_id == ledger_id)
     )
-    row = result.scalar_one_or_none()
+    row = result.scalars().first()
     if not row:
         return None
     return _ledger_orm_to_schema(row)

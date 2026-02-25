@@ -36,7 +36,7 @@ async def async_client():
 
 async def _get_user_by_email(db_session, email: str) -> User | None:
     res = await db_session.execute(select(User).where(User.email == email))
-    return res.scalar_one_or_none()
+    return res.scalars().first()
 
 
 # -------------------------------------------------------------------

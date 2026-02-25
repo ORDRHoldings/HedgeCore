@@ -56,7 +56,7 @@ async def get_company(
         .where(Company.id == company_id)
     )
     result = await db.execute(stmt)
-    company = result.scalar_one_or_none()
+    company = result.scalars().first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     return company

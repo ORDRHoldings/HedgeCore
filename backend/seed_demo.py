@@ -22,7 +22,7 @@ async def seed():
     Session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with Session() as session:
         res = await session.execute(select(User).where(User.email == "demo"))
-        existing = res.scalar_one_or_none()
+        existing = res.scalars().first()
         if not existing:
             user = User(
                 email="demo",

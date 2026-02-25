@@ -573,7 +573,7 @@ async def _emit_lifecycle_audit(
 
         result = await session.execute(q)
 
-        prev_hash = result.scalar_one_or_none() or GENESIS_HASH
+        prev_hash = result.scalars().first() or GENESIS_HASH
 
 
 
@@ -1107,7 +1107,7 @@ async def get_position_lineage(
 
         pos_q = pos_q.where(Position.company_id == current_user.company_id)
 
-    pos = (await session.execute(pos_q)).scalar_one_or_none()
+    pos = (await session.execute(pos_q)).scalars().first()
 
     if pos is None:
 

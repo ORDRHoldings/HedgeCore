@@ -106,7 +106,7 @@ async def _get_prev_hash(session: AsyncSession, company_id) -> str:
         .limit(1)
     )
     result = await session.execute(q)
-    row = result.scalar_one_or_none()
+    row = result.scalars().first()
     return row or GENESIS_HASH
 
 

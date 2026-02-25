@@ -73,7 +73,7 @@ async def create(
 # -------------------------------------------------------------------
 async def get_by_jti(db: AsyncSession, *, jti: str) -> Optional[RefreshToken]:
     res = await db.execute(select(RefreshToken).where(RefreshToken.jti == jti))
-    token = res.scalar_one_or_none()
+    token = res.scalars().first()
     logger.debug("RefreshToken:get_by_jti jti=%s found=%s", jti, bool(token))
     return token
 

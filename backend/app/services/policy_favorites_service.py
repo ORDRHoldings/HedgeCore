@@ -42,7 +42,7 @@ async def add_favorite(
             PolicyFavorite.template_id == template_id,
         )
     )
-    existing = existing_q.scalar_one_or_none()
+    existing = existing_q.scalars().first()
     if existing:
         return existing
 
@@ -113,4 +113,4 @@ async def is_favorite(
             PolicyFavorite.template_id == template_id,
         )
     )
-    return result.scalar_one_or_none() is not None
+    return result.scalars().first() is not None

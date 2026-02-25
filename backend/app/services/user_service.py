@@ -27,7 +27,7 @@ class UserService:
     async def get_by_email(db: AsyncSession, email: str) -> Optional[User]:
         stmt = select(User).where(User.email == email)
         result = await db.execute(stmt)
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
     @staticmethod
     async def create_user(db: AsyncSession, email: str, password: str) -> User:

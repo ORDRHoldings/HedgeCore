@@ -63,7 +63,7 @@ def _extract_bearer_token(request: Request) -> str:
 
 async def _get_user_or_401(db: AsyncSession, user_id: UUID) -> User:
     res = await db.execute(select(User).where(User.id == user_id))
-    user: Optional[User] = res.scalar_one_or_none()
+    user: Optional[User] = res.scalars().first()
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     return user
@@ -79,7 +79,7 @@ async def register(request: Request, payload: RegisterRequest, db: AsyncSession 
 
     try:
         existing = await db.execute(select(User).where(User.email == payload.email))
-        if existing.scalar_one_or_none():
+        if existing.scalars().first():
             msg = "Email already registered"
             await record_auth_event(
                 db,
@@ -155,7 +155,7 @@ async def login(
 
     try:
         res = await db.execute(select(User).where(User.email == email))
-        user: Optional[User] = res.scalar_one_or_none()
+        user: Optional[User] = res.scalars().first()
 
         if not user or not verify_password(form_data.password, user.hashed_password):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")

@@ -89,7 +89,7 @@ async def update_role(session: AsyncSession, role_id: int, update_data: RoleUpda
     try:
         result = await session.execute(stmt)
         await session.commit()
-        updated_role = result.scalar_one_or_none()
+        updated_role = result.scalars().first()
         if updated_role:
             logger.info(f"Updated role {updated_role.id}: {updated_role.description}")
         return updated_role
@@ -114,7 +114,7 @@ async def assign_role_to_user(session: AsyncSession, user_id: int, role_name: st
         return False
 
     stmt_role = select(Role).where(Role.name == role_name)
-    role = (await session.execute(stmt_role)).scalar_one_or_none()
+    role = (await session.execute(stmt_role)).scalars().first()
     if not role:
         logger.warning(f"Role '{role_name}' not found.")
         return False
@@ -123,7 +123,7 @@ async def assign_role_to_user(session: AsyncSession, user_id: int, role_name: st
     stmt_existing = select(UserRole).where(
         and_(UserRole.user_id == user_id, UserRole.role_id == role.id)
     )
-    existing = (await session.execute(stmt_existing)).scalar_one_or_none()
+    existing = (await session.execute(stmt_existing)).scalars().first()
     if existing:
         logger.info(f"User {user_id} already has role '{role_name}'")
         return True
@@ -147,7 +147,7 @@ async def remove_role_from_user(session: AsyncSession, user_id: int, role_name: 
     logger.info(f"Removing role '{role_name}' from user_id={user_id}")
 
     stmt_role = select(Role).where(Role.name == role_name)
-    role = (await session.execute(stmt_role)).scalar_one_or_none()
+    role = (await session.execute(stmt_role)).scalars().first()
     if not role:
         logger.warning(f"Role '{role_name}' not found.")
         return False
@@ -219,7 +219,7 @@ async def get_user_hierarchy_level(session: AsyncSession, user_id) -> Optional[i
         .where(UserRole.user_id == user_id)
     )
     result = await session.execute(stmt)
-    level = result.scalar_one_or_none()
+    level = result.scalars().first()
     logger.debug(f"User {user_id} hierarchy_level: {level}")
     return level
 

@@ -218,7 +218,7 @@ async def seed():
             result = await session.execute(
                 select(Permission).where(Permission.codename == codename)
             )
-            if not result.scalar_one_or_none():
+            if not result.scalars().first():
                 session.add(Permission(
                     codename=codename, module=module,
                     action=action, description=description,
@@ -232,7 +232,7 @@ async def seed():
         role_map = {}
         for name, description, level, is_sys in ROLES:
             result = await session.execute(select(Role).where(Role.name == name))
-            role = result.scalar_one_or_none()
+            role = result.scalars().first()
             if not role:
                 role = Role(
                     name=name, description=description,
@@ -261,7 +261,7 @@ async def seed():
                 perm_result = await session.execute(
                     select(Permission).where(Permission.codename == codename)
                 )
-                perm = perm_result.scalar_one_or_none()
+                perm = perm_result.scalars().first()
                 if not perm:
                     continue
                 existing = await session.execute(
@@ -270,7 +270,7 @@ async def seed():
                         RolePermission.permission_id == perm.id,
                     )
                 )
-                if not existing.scalar_one_or_none():
+                if not existing.scalars().first():
                     session.add(RolePermission(role_id=role.id, permission_id=perm.id))
             print(f"         {role_name:20s} -> {len(perm_codenames)} permissions")
         await session.flush()
@@ -278,7 +278,7 @@ async def seed():
         # ??? 5. Create Company ????????????????????????????????????????
         print("  [5/7] Creating company & branches...")
         result = await session.execute(select(Company).where(Company.id == COMPANY_ID))
-        company = result.scalar_one_or_none()
+        company = result.scalars().first()
         if not company:
             company = Company(
                 id=COMPANY_ID,
@@ -306,7 +306,7 @@ async def seed():
         ]
         for bid, bname, bcode, bregion, btz in branches_data:
             result = await session.execute(select(Branch).where(Branch.id == bid))
-            branch = result.scalar_one_or_none()
+            branch = result.scalars().first()
             if not branch:
                 session.add(Branch(
                     id=bid, company_id=COMPANY_ID,
@@ -326,7 +326,7 @@ async def seed():
         ]
         for did, bid, dname, dcode in depts_data:
             result = await session.execute(select(Department).where(Department.id == did))
-            if not result.scalar_one_or_none():
+            if not result.scalars().first():
                 session.add(Department(id=did, branch_id=bid, name=dname, code=dcode))
                 print(f"         Dept:   [{dcode}] {dname}")
         await session.flush()
@@ -335,7 +335,7 @@ async def seed():
         print("  [6/7] Creating employee accounts...")
         for email, password, full_name, job_title, role_name, branch_id, dept_id in EMPLOYEES:
             result = await session.execute(select(User).where(User.email == email))
-            user = result.scalar_one_or_none()
+            user = result.scalars().first()
             if not user:
                 user = User(
                     email=email,
@@ -370,7 +370,7 @@ async def seed():
                         UserRole.role_id == role.id,
                     )
                 )
-                if not existing_ur.scalar_one_or_none():
+                if not existing_ur.scalars().first():
                     session.add(UserRole(user_id=user.id, role_id=role.id))
 
         await session.flush()

@@ -63,7 +63,7 @@ async def _get_prev_hash(session: AsyncSession, company_id) -> str:
         .limit(1)
     )
     result = await session.execute(q)
-    row = result.scalar_one_or_none()
+    row = result.scalars().first()
     return row if row else GENESIS_HASH
 
 
@@ -227,7 +227,7 @@ async def get_active_instance(
 
     result = await session.execute(q)
 
-    return result.scalar_one_or_none()
+    return result.scalars().first()
 
 
 async def activate_policy(

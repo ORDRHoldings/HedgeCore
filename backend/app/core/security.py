@@ -252,7 +252,7 @@ async def verify_api_key(raw_api_key: str, db: AsyncSession) -> "app.models.api_
     key_id, secret = _parse_api_key(raw_api_key)
 
     result = await db.execute(select(ApiKey).where(ApiKey.key_id == key_id))
-    key = result.scalar_one_or_none()
+    key = result.scalars().first()
 
     if not key:
         logger.warning("API key not found key_id=%s", _redact_key_id(key_id))
@@ -346,7 +346,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
         stmt = select(User).where(User.id == user_id)
         result = await session.execute(stmt)
-        user = result.scalar_one_or_none()
+        user = result.scalars().first()
 
         if not user:
             logger.warning("User not found for ID=%s", user_id)
@@ -382,7 +382,7 @@ async def get_current_user_optional(token: str | None = Depends(oauth2_scheme_op
         async for session in get_session():
             stmt = select(_User).where(_User.id == user_id)
             result = await session.execute(stmt)
-            user = result.scalar_one_or_none()
+            user = result.scalars().first()
             if user and user.is_active:
                 return user
         return None

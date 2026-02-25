@@ -271,7 +271,7 @@ async def _validate_db_refresh_token(
     res = await db.execute(
         select(RefreshToken).where(RefreshToken.user_id == user_id, RefreshToken.jti == jti)
     )
-    row = res.scalar_one_or_none()
+    row = res.scalars().first()
     if row is None:
         return None
     if getattr(row, "revoked", True) is True:
@@ -323,7 +323,7 @@ async def register_user(
 
     # Check uniqueness
     res = await db.execute(select(User).where(User.email == payload.email))
-    exists = res.scalar_one_or_none()
+    exists = res.scalars().first()
     if exists:
         log.warning("register.email_exists", extra={"rid": rid, "route": "/auth/register"})
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
@@ -368,7 +368,7 @@ async def login_user(
     rid = x_request_id or request.headers.get("x-request-id") or _new_jti()
 
     res = await db.execute(select(User).where(User.email == payload.email))
-    user: Optional[User] = res.scalar_one_or_none()
+    user: Optional[User] = res.scalars().first()
     if (not user) or (not _verify_password(payload.password, user.hashed_password)):
         # Uniform 401 to avoid user enumeration / timing info
         log.warning("login.invalid_credentials", extra={"rid": rid, "route": "/auth/login"})
@@ -440,7 +440,7 @@ async def refresh_tokens(
 
     # Load user
     res_user = await db.execute(select(User).where(User.id == int(sub)))
-    user: Optional[User] = res_user.scalar_one_or_none()
+    user: Optional[User] = res_user.scalars().first()
     if not user:
         log.warning("refresh.user_not_found", extra={"rid": rid, "sub": sub})
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
@@ -529,7 +529,7 @@ async def get_me(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token claims")
 
     res = await db.execute(select(User).where(User.id == int(sub)))
-    user: Optional[User] = res.scalar_one_or_none()
+    user: Optional[User] = res.scalars().first()
     if not user:
         log.warning("me.user_not_found", extra={"rid": rid, "uid": sub})
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")

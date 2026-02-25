@@ -79,7 +79,7 @@ async def get_active_proposal_for_position(
         .limit(1)
     )
     result = await session.execute(q)
-    return result.scalar_one_or_none()
+    return result.scalars().first()
 
 
 async def list_proposals_for_position(
