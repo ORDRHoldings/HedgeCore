@@ -172,6 +172,32 @@ async def _seed_policy_templates():
     logger.info("? System policy templates seeded (33 presets)")
 
 
+
+async def _sync_seed_users():
+    """
+    Resync demo user passwords to seed data on every startup.
+    Idempotent -- only updates existing users, never creates.
+    Ensures production DB always accepts seeded credentials after deploy.
+    """
+    from sqlalchemy import select
+    from app.models.user import User
+    from app.api.routes.seed import EMPLOYEES
+    from app.core.security import hash_password
+    async with async_session_maker() as session:
+        for email, pw, full_name, job_title, role_name, branch_id, dept_id in EMPLOYEES:
+            try:
+                r = await session.execute(select(User).where(User.email == email))
+                user = r.scalars().first()
+                if user:
+                    user.hashed_password = hash_password(pw)
+                    user.is_active = True
+            except Exception:
+                continue
+        try:
+            await session.commit()
+        except Exception as e:
+            logger.warning(f"_sync_seed_users commit failed: {e}")
+
 async def _ensure_tables():
     """Create any missing tables (non-destructive -- skips existing)."""
     from sqlalchemy import text
@@ -483,6 +509,11 @@ async def lifespan(app: FastAPI):
         await _seed_policy_templates()
     except Exception as e:
         logger.warning(f"?? _seed_policy_templates skipped: {e}")
+
+    try:
+        await _sync_seed_users()
+    except Exception as e:
+        logger.warning(f"?? _sync_seed_users skipped: {e}")
 
     try:
         yield
