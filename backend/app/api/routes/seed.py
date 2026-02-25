@@ -647,8 +647,12 @@ async def seed_company(
                 await db.flush()
                 results["users"] += 1
             else:
+                # Resync all fields including password so prod DB stays in sync
+                user.hashed_password = hash_password(pw)
                 user.full_name = full_name
                 user.job_title = job_title
+                user.is_active = True
+                user.is_superuser = (role_name == "admin")
                 user.company_id = COMPANY_ID
                 user.branch_id = branch_id
                 user.department_id = dept_id
