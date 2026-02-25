@@ -273,8 +273,20 @@ async def _seed_policy_templates(db: AsyncSession) -> int:
     """
     Idempotently insert all system policy presets.
     Checks by (short_name, is_system=True, company_id IS NULL).
+    Deduplicates any existing duplicate rows first.
     Returns the number of new templates inserted.
     """
+    # Dedup: keep only the row with min(id) per short_name for system templates
+    from sqlalchemy import text
+    try:
+        await db.execute(text(
+            "DELETE FROM policy_templates WHERE is_system = TRUE AND company_id IS NULL AND id NOT IN ("
+            "    SELECT MIN(id::text)::uuid FROM policy_templates WHERE is_system = TRUE AND company_id IS NULL GROUP BY short_name"
+            ")"
+        ))
+        await db.flush()
+    except Exception as e:
+        logger.warning(f"Policy template dedup failed (non-fatal): {e}")
     inserted = 0
     for preset in _POLICY_PRESETS_SEED:
         r = await db.execute(
