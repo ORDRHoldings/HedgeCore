@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Check, Zap, Shield, BarChart2, Globe, Search, X } from "lucide-react";
+import { Sparkles, Check, Zap, Shield, BarChart2, Globe, Search, X, Bookmark, GitCompare } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { POLICY_PRESETS } from "@/constants/policyPresets";
 import type { PolicyPreset } from "@/constants/policyPresets";
@@ -19,11 +19,17 @@ import {
   listPolicyTemplates,
   getActivePolicy,
   activatePolicy,
+  listFavorites,
+  addFavorite,
+  removeFavorite,
   type PolicyTemplate,
   type PolicyInstance,
 } from "@/api/policyClient";
 import Toast from "@/components/shared/Toast";
-import PolicyHelpPanel from "@/components/policy/PolicyHelpPanel";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { POLICY_LIBRARY_HELP } from "@/lib/helpContent";
+import PolicyCompareModal from "@/components/policy/PolicyCompareModal";
+import { computeEffectivenessScore, getEffectivenessColor } from "@/utils/policyEffectivenessScore";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
@@ -68,9 +74,21 @@ interface PresetCardProps {
   isActive: boolean;
   isActivating: boolean;
   onActivate: (preset: PolicyPreset) => void;
+  isFavorited: boolean;
+  onToggleFavorite: () => void;
+  effectivenessScore?: number;
+  effectivenessBadge?: string;
+  effectivenessColor?: string;
+  compareMode?: boolean;
+  isCompared?: boolean;
+  onCompareToggle?: () => void;
 }
 
-function PresetCard({ preset, isActive, isActivating, onActivate }: PresetCardProps) {
+function PresetCard({
+  preset, isActive, isActivating, onActivate, isFavorited, onToggleFavorite,
+  effectivenessScore, effectivenessBadge, effectivenessColor,
+  compareMode, isCompared, onCompareToggle,
+}: PresetCardProps) {
   const [hovered, setHovered] = useState(false);
   const risk = preset.riskPosture;
   const rc   = riskColor(risk);
@@ -80,25 +98,74 @@ function PresetCard({ preset, isActive, isActivating, onActivate }: PresetCardPr
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        border: `1.5px solid ${isActive ? S.cyan : hovered ? S.soft : S.rim}`,
-        background: isActive ? `color-mix(in srgb, ${S.cyan} 5%, ${S.bgPanel})` : S.bgPanel,
+        border: `1.5px solid ${isCompared ? S.amber : isActive ? S.cyan : hovered ? S.soft : S.rim}`,
+        background: isCompared
+          ? `color-mix(in srgb, ${S.amber} 6%, ${S.bgPanel})`
+          : isActive ? `color-mix(in srgb, ${S.cyan} 5%, ${S.bgPanel})` : S.bgPanel,
         borderRadius: 3, display: 'flex', flexDirection: 'column', gap: 0,
         transition: 'border-color 0.15s', overflow: 'hidden',
         position: 'relative',
       }}
     >
       {/* Active indicator strip */}
-      {isActive && (
+      {isActive && !isCompared && (
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: S.cyan }} />
+      )}
+      {/* Compare selected strip */}
+      {isCompared && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: S.amber }} />
       )}
 
       {/* Header */}
       <div style={{ padding: '10px 12px', borderBottom: `1px solid ${S.rim}`, background: S.bgDeep }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
           <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em', color: S.tertiary }}>{preset.category}</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', padding: '1px 5px', borderRadius: 2, background: `color-mix(in srgb, ${rc} 12%, transparent)`, color: rc, letterSpacing: '0.06em' }}>
-            {risk}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {/* Effectiveness score badge */}
+            {effectivenessScore !== undefined && effectivenessColor && effectivenessBadge && (
+              <span style={{
+                fontFamily: S.fontMono, fontSize: '0.5rem', padding: '1px 5px', borderRadius: 2,
+                background: `color-mix(in srgb, ${effectivenessColor} 12%, transparent)`,
+                color: effectivenessColor, letterSpacing: '0.06em',
+              }}>
+                {effectivenessScore} {effectivenessBadge}
+              </span>
+            )}
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', padding: '1px 5px', borderRadius: 2, background: `color-mix(in srgb, ${rc} 12%, transparent)`, color: rc, letterSpacing: '0.06em' }}>
+              {risk}
+            </span>
+            {/* Compare checkbox — shown only in compare mode */}
+            {compareMode && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onCompareToggle?.(); }}
+                style={{
+                  background: isCompared ? S.amber : 'none',
+                  border: `1px solid ${isCompared ? S.amber : S.tertiary}`,
+                  cursor: 'pointer', padding: '1px 3px',
+                  color: isCompared ? 'var(--bg-deep)' : S.tertiary,
+                  display: 'flex', alignItems: 'center',
+                  fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.04em',
+                  borderRadius: 1,
+                }}
+                title={isCompared ? 'Remove from compare' : 'Add to compare'}
+              >
+                {isCompared ? '✓' : '+'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+                color: isFavorited ? S.amber : S.tertiary,
+                display: 'flex', alignItems: 'center',
+              }}
+              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Bookmark size={11} fill={isFavorited ? S.amber : 'none'} />
+            </button>
+          </div>
         </div>
         <div style={{ fontFamily: S.fontUI, fontSize: '0.8125rem', fontWeight: 600, color: S.primary, lineHeight: 1.3 }}>{preset.name}</div>
         <div style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.tertiary, letterSpacing: '0.05em', marginTop: 2 }}>{preset.shortName}</div>
@@ -162,9 +229,15 @@ export default function PoliciesPage() {
   const [activatingId, setActivatingId]           = useState<string | null>(null);
   const [activateMsg, setActivateMsg]             = useState('');
   const [dbTemplates, setDbTemplates]             = useState<PolicyTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading]   = useState(false);
 
-  // Help panel
-  const [helpOpen, setHelpOpen] = useState(false);
+  // Favorites state
+  const [favoriteIds, setFavoriteIds]             = useState<Set<string>>(new Set());
+
+  // Compare mode state
+  const [compareMode, setCompareMode]           = useState(false);
+  const [compareIds, setCompareIds]             = useState<Set<string>>(new Set());
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
   // Toast
   const [toastMsg, setToastMsg]         = useState('');
@@ -177,7 +250,11 @@ export default function PoliciesPage() {
     // Demo tokens: still hit real API — system templates are seeded and accessible.
     // No fake demo-instance; show real DB state so demo users see actual templates.
     getActivePolicy(token).then(inst => setActiveInstance(inst)).catch(() => {});
-    listPolicyTemplates(token).then(setDbTemplates).catch(() => {});
+    setTemplatesLoading(true);
+    listPolicyTemplates(token).then(t => { setDbTemplates(t); setTemplatesLoading(false); }).catch(() => setTemplatesLoading(false));
+    listFavorites(token).then(favs => {
+      setFavoriteIds(new Set(favs.map(f => f.template_id)));
+    }).catch(() => {});
   }, [token]);
 
   // Determine which preset ID is currently active
@@ -187,11 +264,45 @@ export default function PoliciesPage() {
     return POLICY_PRESETS.find(p => p.shortName === tmpl.short_name)?.id ?? null;
   }, [activeInstance]);
 
+  // Handle toggle favorite
+  const handleToggleFavorite = useCallback(async (templateId: string) => {
+    if (!token) return;
+    try {
+      if (favoriteIds.has(templateId)) {
+        await removeFavorite(templateId, token);
+        setFavoriteIds(prev => { const next = new Set(prev); next.delete(templateId); return next; });
+      } else {
+        await addFavorite(templateId, undefined, token);
+        setFavoriteIds(prev => new Set(prev).add(templateId));
+      }
+    } catch { /* ignore */ }
+  }, [token, favoriteIds]);
+
   // Handle activate preset
   const handleActivate = useCallback(async (preset: PolicyPreset) => {
     if (!token) return;
     const dbTmpl = dbTemplates.find(t => t.short_name === preset.shortName);
-    if (!dbTmpl) { showToast('Template not found in database'); return; }
+    if (!dbTmpl) {
+      // Retry: refresh template list once in case of timing issue
+      try {
+        const refreshed = await listPolicyTemplates(token);
+        setDbTemplates(refreshed);
+        const retryTmpl = refreshed.find(t => t.short_name === preset.shortName);
+        if (!retryTmpl) {
+          showToast(`System template "${preset.shortName}" not yet available. Try refreshing the page.`);
+          return;
+        }
+        // Proceed with retry template
+        setActivatingId(preset.id);
+        const inst = await activatePolicy(retryTmpl.id, token);
+        setActiveInstance(inst);
+        showToast(`Policy activated: ${preset.shortName}`);
+        return;
+      } catch {
+        showToast(`Template "${preset.shortName}" not found. Contact your administrator.`);
+        return;
+      }
+    }
     setActivatingId(preset.id);
     setActivateMsg('');
     try {
@@ -231,7 +342,8 @@ export default function PoliciesPage() {
 
 
   return (
-    <div style={{ minHeight: '100vh', background: S.bgDeep, fontFamily: S.fontUI }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: S.bgDeep }}>
+    <div style={{ flex: 1, overflowY: 'auto', minWidth: 0, fontFamily: S.fontUI }}>
 
       {/* ── Page header ── */}
       <div style={{
@@ -264,13 +376,25 @@ export default function PoliciesPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             type="button"
-            onClick={() => setHelpOpen(true)}
-            style={{
-              fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em',
-              padding: '7px 14px', border: `1px solid ${S.rim}`,
-              color: S.tertiary, background: 'transparent', cursor: 'pointer',
+            onClick={() => {
+              setCompareMode(prev => {
+                if (prev) { setCompareIds(new Set()); setShowCompareModal(false); }
+                return !prev;
+              });
             }}
-          >? HELP</button>
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.08em', fontWeight: 700,
+              padding: '7px 18px',
+              border: `1px solid ${compareMode ? S.amber : S.rim}`,
+              color: compareMode ? 'var(--bg-deep)' : S.tertiary,
+              background: compareMode ? S.amber : 'transparent',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}
+          >
+            <GitCompare size={13} />
+            {compareMode ? 'EXIT COMPARE' : 'COMPARE'}
+          </button>
           <button
             type="button"
             onClick={() => router.push('/ai-policy-wizard')}
@@ -337,16 +461,43 @@ export default function PoliciesPage() {
 
         {/* ── Preset grid ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10, marginBottom: 24 }}>
-          {filteredPresets.map(preset => (
-            <PresetCard
-              key={preset.id}
-              preset={preset}
-              isActive={preset.id === activePresetId}
-              isActivating={activatingId === preset.id}
-              onActivate={handleActivate}
-            />
-          ))}
-          {filteredPresets.length === 0 && (
+          {templatesLoading && dbTemplates.length === 0 && (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px',
+              fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.tertiary, letterSpacing: '0.1em' }}>
+              LOADING TEMPLATES…
+            </div>
+          )}
+          {filteredPresets.map(preset => {
+            const dbTmpl = dbTemplates.find(t => t.short_name === preset.shortName);
+            const eff    = computeEffectivenessScore(preset.policy, preset.riskPosture);
+            const effColor = getEffectivenessColor(eff.score, S as unknown as Record<string, string>);
+            return (
+              <PresetCard
+                key={preset.id}
+                preset={preset}
+                isActive={preset.id === activePresetId}
+                isActivating={activatingId === preset.id}
+                onActivate={handleActivate}
+                isFavorited={dbTmpl ? favoriteIds.has(dbTmpl.id) : false}
+                onToggleFavorite={() => dbTmpl && handleToggleFavorite(dbTmpl.id)}
+                effectivenessScore={eff.score}
+                effectivenessBadge={eff.badge}
+                effectivenessColor={effColor}
+                compareMode={compareMode}
+                isCompared={compareIds.has(preset.id)}
+                onCompareToggle={() => {
+                  setCompareIds(prev => {
+                    const next = new Set(prev);
+                    if (next.has(preset.id)) { next.delete(preset.id); }
+                    else if (next.size < 4)  { next.add(preset.id); }
+                    else { showToast('Maximum 4 policies can be compared at once.'); }
+                    return next;
+                  });
+                }}
+              />
+            );
+          })}
+          {filteredPresets.length === 0 && !templatesLoading && (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px 0', fontFamily: S.fontMono, fontSize: '0.75rem', color: S.tertiary, letterSpacing: '0.06em' }}>
               NO POLICIES MATCH YOUR SEARCH
             </div>
@@ -393,8 +544,56 @@ export default function PoliciesPage() {
         )}
       </div>
 
-      <PolicyHelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
       <Toast message={toastMsg} visible={toastVisible} onClose={() => setToastVisible(false)} />
+
+      {/* ── Floating compare bar ── */}
+      {compareMode && compareIds.size >= 2 && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 100, display: 'flex', alignItems: 'center', gap: 12,
+          padding: '10px 20px',
+          background: S.bgPanel, border: `1px solid ${S.amber}`,
+          boxShadow: `0 0 24px color-mix(in srgb, ${S.amber} 20%, transparent)`,
+        }}>
+          <GitCompare size={14} color={S.amber} />
+          <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.amber, letterSpacing: '0.06em' }}>
+            {compareIds.size} POLICIES SELECTED
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowCompareModal(true)}
+            style={{
+              fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.08em',
+              padding: '5px 16px', border: `1px solid ${S.amber}`,
+              color: 'var(--bg-deep)', background: S.amber,
+              cursor: 'pointer', fontWeight: 700,
+            }}
+          >
+            VIEW COMPARISON
+          </button>
+          <button
+            type="button"
+            onClick={() => setCompareIds(new Set())}
+            style={{
+              fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.06em',
+              padding: '5px 12px', border: `1px solid ${S.rim}`,
+              color: S.tertiary, background: 'transparent', cursor: 'pointer',
+            }}
+          >
+            CLEAR
+          </button>
+        </div>
+      )}
+
+      {/* ── Compare modal ── */}
+      {showCompareModal && compareIds.size >= 2 && (
+        <PolicyCompareModal
+          presets={POLICY_PRESETS.filter(p => compareIds.has(p.id))}
+          onClose={() => setShowCompareModal(false)}
+        />
+      )}
+    </div>
+    <HelpPanel config={POLICY_LIBRARY_HELP} storageKey="policy-library" />
     </div>
   );
 }

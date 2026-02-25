@@ -200,3 +200,101 @@ export async function duplicatePolicyTemplate(
 
 // Re-export the PolicyPreset type for consumers that import from policyClient
 export type { PolicyPreset };
+
+// ---------------------------------------------------------------------------
+// Favorites
+// ---------------------------------------------------------------------------
+
+export interface PolicyFavorite {
+  id: string;
+  user_id: string;
+  template_id: string;
+  notes: string | null;
+  created_at: string;
+  template: PolicyTemplate | null;
+}
+
+export async function listFavorites(token?: string): Promise<PolicyFavorite[]> {
+  const { data } = await axios.get(`${BASE}/v1/policies/favorites`, {
+    headers: authHeaders(token),
+  });
+  return data as PolicyFavorite[];
+}
+
+export async function addFavorite(
+  templateId: string,
+  notes?: string,
+  token?: string,
+): Promise<PolicyFavorite> {
+  const { data } = await axios.post(
+    `${BASE}/v1/policies/favorites/${templateId}`,
+    notes ? { notes } : {},
+    { headers: authHeaders(token) },
+  );
+  return data as PolicyFavorite;
+}
+
+export async function removeFavorite(
+  templateId: string,
+  token?: string,
+): Promise<void> {
+  await axios.delete(`${BASE}/v1/policies/favorites/${templateId}`, {
+    headers: authHeaders(token),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Export / Import
+// ---------------------------------------------------------------------------
+
+export async function exportPolicyTemplate(
+  templateId: string,
+  token?: string,
+): Promise<Blob> {
+  const response = await axios.get(
+    `${BASE}/v1/policies/templates/${templateId}/export`,
+    {
+      headers: authHeaders(token),
+      responseType: 'blob',
+    },
+  );
+  return response.data as Blob;
+}
+
+export async function importPolicyTemplate(
+  exportBlob: Record<string, unknown>,
+  nameOverride?: string,
+  shortNameOverride?: string,
+  token?: string,
+): Promise<PolicyTemplate> {
+  const { data } = await axios.post(
+    `${BASE}/v1/policies/templates/import`,
+    {
+      export_blob: exportBlob,
+      name_override: nameOverride,
+      short_name_override: shortNameOverride,
+    },
+    { headers: authHeaders(token) },
+  );
+  return data as PolicyTemplate;
+}
+
+// ---------------------------------------------------------------------------
+// Seed status
+// ---------------------------------------------------------------------------
+
+export interface PolicySeedStatus {
+  seeded: boolean;
+  count: number;
+  expected_count: number;
+  missing_short_names: string[];
+}
+
+export async function getPolicyTemplateSeedStatus(
+  token?: string,
+): Promise<PolicySeedStatus> {
+  const { data } = await axios.get(`${BASE}/v1/policies/templates/seed-status`, {
+    headers: authHeaders(token),
+  });
+  return data as PolicySeedStatus;
+}

@@ -67,9 +67,10 @@ class PolicyTemplateResponse(BaseModel):
     is_system:   bool
 
     created_at:  datetime
-
-
-
+    created_by:  Optional[UUID] = None
+    updated_by:  Optional[UUID] = None
+    updated_at:  Optional[datetime] = None
+    status:      Optional[str] = None
 
 
 class PolicyInstanceResponse(BaseModel):
@@ -131,3 +132,46 @@ class UpdateTemplateRequest(BaseModel):
     risk_posture: Optional[str]               = Field(default=None, pattern=r"^(CONSERVATIVE|MODERATE|AGGRESSIVE)$")
     category:     Optional[str]               = Field(default=None, pattern=r"^(CORPORATE|FINANCIAL|SOVEREIGN|SECTOR)$")
     config:       Optional[PolicyConfigSchema] = Field(default=None)
+
+class PolicyFavoriteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id:          UUID
+    user_id:     UUID
+    template_id: UUID
+    notes:       Optional[str] = None
+    created_at:  datetime
+    template:    Optional[PolicyTemplateResponse] = None
+
+
+class AddFavoriteRequest(BaseModel):
+    notes: Optional[str] = Field(default=None)
+
+
+class PolicyExportResponse(BaseModel):
+    """Used for export/import of policy templates."""
+    export_version: str
+    exported_at:    str
+    checksum:       str
+    template:       PolicyTemplateResponse
+
+
+class ImportTemplateRequest(BaseModel):
+    export_blob:          dict = Field(...)
+    name_override:        Optional[str] = Field(default=None, max_length=255)
+    short_name_override:  Optional[str] = Field(default=None, max_length=16)
+
+
+class PolicyAuditEventResponse(BaseModel):
+    id:          UUID
+    event_type:  str
+    description: str
+    payload:     dict
+    actor_email: Optional[str] = None
+    created_at:  datetime
+
+
+class PolicySeedStatusResponse(BaseModel):
+    seeded:               bool
+    count:                int
+    expected_count:       int
+    missing_short_names:  list[str]

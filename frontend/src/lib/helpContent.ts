@@ -1028,6 +1028,148 @@ export const SETTINGS_HELP: HelpPanelConfig = {
         },
       ],
     },
+    {
+      id:          "env_vars",
+      title:       "Windows Environment Variables",
+      icon:        "⊠",
+      type:        "variables",
+      variables: [
+        {
+          name:        "DATABASE_URL",
+          type:        "connection string",
+          description: "PostgreSQL connection URL for the backend. Format: postgresql+asyncpg://user:password@host:port/dbname. On Render cloud, append ?ssl=require. For local dev on Windows, use 127.0.0.1.",
+          example:     "postgresql+asyncpg://hedgecalc:pw@127.0.0.1:5432/hedgecalc",
+          source:      "backend/.env or system environment",
+        },
+        {
+          name:        "ASYNC_DATABASE_URL",
+          type:        "connection string",
+          description: "Async variant of DATABASE_URL used by SQLAlchemy async engine. Must use the postgresql+asyncpg:// driver prefix. Typically mirrors DATABASE_URL.",
+          example:     "postgresql+asyncpg://hedgecalc:pw@127.0.0.1:5432/hedgecalc",
+          source:      "backend/.env",
+        },
+        {
+          name:        "JWT_SECRET",
+          type:        "string (secret)",
+          description: "HMAC secret key for HS256 JWT token signing. Used to create 30-minute access tokens and 7-day refresh tokens. Must match between all backend instances.",
+          example:     "dev_secret_key_hedgecalc_2026",
+          source:      "backend/.env — never commit production secrets",
+        },
+        {
+          name:        "ENV",
+          type:        "dev | test | production",
+          description: "Runtime environment flag. Controls logging verbosity, CORS origins, debug endpoints, and seed behaviour. Set to 'test' for E2E testing, 'dev' for local development.",
+          example:     "dev",
+          source:      "backend/.env",
+        },
+        {
+          name:        "DB_HOST",
+          type:        "hostname or IP",
+          description: "PostgreSQL host. Use 127.0.0.1 for local Windows dev, hedgecalc_db for Docker Compose, or the Render external hostname for cloud.",
+          example:     "127.0.0.1 (Windows) / hedgecalc_db (Docker)",
+          source:      "backend/.env",
+        },
+        {
+          name:        "DB_PORT",
+          type:        "integer",
+          description: "PostgreSQL port. Default is 5432. Ensure Windows Firewall allows inbound connections on this port if running PostgreSQL locally.",
+          example:     "5432",
+          source:      "backend/.env",
+        },
+        {
+          name:        "DB_USER / DB_PASSWORD",
+          type:        "string",
+          description: "PostgreSQL credentials. Created during pg_ctl initdb or via CREATE ROLE. The user must have CREATEDB privilege for test database creation.",
+          example:     "hedgecalc / hedgecalc_pw",
+          source:      "backend/.env",
+        },
+        {
+          name:        "DB_NAME",
+          type:        "string",
+          description: "PostgreSQL database name. The backend connects to this database. Create with: CREATE DATABASE hedgecalc OWNER hedgecalc.",
+          example:     "hedgecalc",
+          source:      "backend/.env",
+        },
+        {
+          name:        "REDIS_URL",
+          type:        "connection string",
+          description: "Redis connection URL for rate limiting and caching. Format: redis://host:port/db. Optional for local dev — rate limiter falls back to in-memory if unavailable.",
+          example:     "redis://127.0.0.1:6379/0",
+          source:      "root .env (Docker Compose)",
+        },
+        {
+          name:        "ALPHA_VANTAGE_API_KEY",
+          type:        "string (secret)",
+          description: "API key for Alpha Vantage FX rate provider. Without this key, the Currency FX module shows INDICATIVE data. Free tier: 25 requests/day. Premium: unlimited.",
+          example:     "ABCD1234EFGH5678",
+          source:      "Settings → API & Keys or system environment",
+        },
+      ],
+    },
+    {
+      id:    "win_setup",
+      title: "Windows Dev Setup",
+      icon:  "→",
+      type:  "workflow",
+      steps: [
+        {
+          step:        1,
+          label:       "Install PostgreSQL 14+",
+          description: "Download from postgresql.org. During install, set superuser password and add to PATH. Verify: psql --version. Create the hedgecalc user and database.",
+        },
+        {
+          step:        2,
+          label:       "Install Python 3.12+",
+          description: "Download from python.org. Check 'Add to PATH' during install. Verify: python --version. Create venv: python -m venv .venv && .\\.venv\\Scripts\\activate.",
+        },
+        {
+          step:        3,
+          label:       "Install Node.js 20+",
+          description: "Download LTS from nodejs.org. Verify: node --version && npm --version. Install pnpm globally: npm install -g pnpm.",
+        },
+        {
+          step:        4,
+          label:       "Configure backend/.env",
+          description: "Copy backend/.env.example to backend/.env. Set DATABASE_URL to your local PostgreSQL. Set JWT_SECRET. Set ENV=dev. Ensure DB_HOST=127.0.0.1.",
+        },
+        {
+          step:        5,
+          label:       "Install backend dependencies",
+          description: "cd backend && pip install -r requirements.txt. Key packages: fastapi, uvicorn, sqlalchemy[asyncio], asyncpg, pydantic, python-jose, passlib, httpx.",
+        },
+        {
+          step:        6,
+          label:       "Install frontend dependencies",
+          description: "cd frontend && pnpm install. Key packages: next, react, @reduxjs/toolkit, tailwindcss, echarts, recharts, jspdf.",
+        },
+        {
+          step:        7,
+          label:       "Start services",
+          description: "Backend: cd backend && uvicorn app.main:app --reload --port 8000. Frontend: cd frontend && pnpm dev. Health check: GET http://localhost:8000/api/health.",
+        },
+      ],
+    },
+    {
+      id:      "modules",
+      title:   "Platform Module Reference",
+      icon:    "⊞",
+      type:    "glossary",
+      glossary: [
+        { term: "Position Desk", definition: "Step 1/7. Treasury Control Tower — import, create, and manage FX hedge positions. Lifecycle: NEW > POLICY_ASSIGNED > READY_TO_EXECUTE > HEDGED. Routes: /api/v1/positions. Key vars: record_id, flow_type (AR/AP), amount, currency, value_date, execution_status." },
+        { term: "Currency FX", definition: "Step 2/7. Market Data Hub — live FX spot rates and 12-month forward curves from Alpha Vantage. Key vars: spot rate, forward_points, all_in_rate, ann_basis, data_class (LIVE/INDICATIVE). Requires ALPHA_VANTAGE_API_KEY." },
+        { term: "Scenario Studio", definition: "Step 3/7. Stress testing and Monte Carlo simulation. Shock ladder (-20% to +20%), crisis library, what-if builder. Key vars: sigma, shocked_spot, hedge_benefit_usd, monte_carlo_paths." },
+        { term: "Execution Hub", definition: "Step 4/7. Pre-trade compliance and IBKR handoff. 6-item pre-flight checklist, per-bucket instrument tickets, JSON/FIX order payloads. Key vars: action_direction, action_usd, ibkr_symbol, settlement_date, DV01." },
+        { term: "Portfolio Risk", definition: "Step 5/7. R1-R8 risk decomposition (Basel III taxonomy). R1 Delta, R4 Carry, R5 Correlation, R6 CVA, R7 Liquidity, R8 Tail. Key metrics: VaR 99%, CVaR, Hedge Cover %, IFRS 9 Effectiveness." },
+        { term: "Committee Pack", definition: "Step 6/7. IFRS 9 §B6.4 print-ready governance documentation. 7 sections: Cover, Hash Chain, TraceLite, Policy Config, Hedge Plan, Scenario Grid, Regulatory Notes. WORM-sealed." },
+        { term: "Audit Trail", definition: "Step 7/7. WORM governance ledger with SHA-256 hash chaining. Event types: INGEST, LIFECYCLE, PROPOSAL, APPROVAL, EXECUTION, POLICY, IMPORT. Tamper-evident, append-only." },
+        { term: "Sandbox", definition: "Step 3 (Alt). Non-committing simulation engine. 7 analysis tabs: Stress Testing, Risk Attribution, Crisis Library, What-If Builder, Regulatory Capital, Market Microstructure, Audit." },
+        { term: "Policy Engine", definition: "AI wizard + policy library. 20 system templates (SME, FULL, CNSV, BLNC, ACTV). PolicyTemplate > PolicyInstance (activation) > PolicyRevision (WORM snapshot). Key vars: bucket_mode, hedge_ratios, cost_assumptions." },
+        { term: "Run Viewer", definition: "TraceLite audit replay. 8-field RunEnvelope SHA-256 hash chain: run_hash, inputs_hash, outputs_hash, trades_hash, hedges_hash, market_hash, policy_hash, engine_version. Immutable CalculationRun records." },
+        { term: "Dashboard", definition: "Role-based widget grid. Widgets: KPI Summary (VaR, exposure), Recent Runs, Pending Approvals (4-eyes), Team Activity, Branch Comparison, Pipeline Status, Exposure Summary." },
+        { term: "HedgeWiki", definition: "Governance knowledge graph. 20 articles across 6 domains: FX Instruments, ISDA Framework, IFRS 9, ASC 815, Policy Templates, HedgeCore Architecture." },
+        { term: "Settings", definition: "Platform configuration. 5 tabs: General (org, currency, timezone), Policy Limits (ratios, min trade), Execution (product, sigma), API & Keys (Alpha Vantage, IBKR), Notifications (alerts, webhooks)." },
+      ],
+    },
   ],
 };
 
@@ -1090,6 +1232,391 @@ export const RUN_VIEWER_HELP: HelpPanelConfig = {
           description: "Ordered list of pipeline stage events: PARSE, VALIDATE, NORMALIZE, KERNEL, SCENARIO, AUDIT. Each event has a timestamp, description, and structured data payload capturing the stage output.",
           source:      "CalculationRun.trace_lite.events[]",
         },
+      ],
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POLICY ENGINE — Policy Library
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const POLICY_LIBRARY_HELP: HelpPanelConfig = {
+  pageTitle:    "Policy Engine",
+  pageSubtitle: "FX HEDGE POLICY LIBRARY · SYSTEM PRESETS",
+  sections: [
+    {
+      id:    "pipeline",
+      title: "Pipeline Position",
+      icon:  "⬡",
+      type:  "pipeline",
+      pipelinePos: {
+        position:    4,
+        total:       7,
+        label:       "Step 4 of 7 — Policy Engine",
+        description: "The Policy Engine governs every hedge calculation. Select a system preset or build a custom policy using the AI Wizard. Activate one policy per branch — all subsequent calculations use that policy's parameters until changed.",
+        prev: { label: "Position Desk",   href: "/position-desk" },
+        next: { label: "Run Engine",      href: "/input" },
+      },
+    },
+    {
+      id:      "overview",
+      title:   "What this page does",
+      icon:    "ℹ",
+      type:    "text",
+      content: "The Policy Library shows all 33 system-defined hedge presets organised by category (Corporate, Financial, Sovereign, Sector). Each preset encodes a full hedge governance mandate: confirmed and forecast ratios, spread budget, execution instrument, and minimum trade size.\n\nClick ACTIVATE POLICY on any preset to make it the live policy for your branch. Only one policy can be active at a time — activating a new one automatically deactivates the previous one and creates an immutable WORM audit revision.\n\nCustom AI-generated policies appear in the CUSTOM POLICIES section below the presets. Use the ★ bookmark icon to add any policy to your favorites for quick access from the Position Desk.",
+    },
+    {
+      id:        "variables",
+      title:     "Key Policy Variables",
+      icon:      "≡",
+      type:      "variables",
+      variables: [
+        {
+          name:        "hedge_ratio_confirmed",
+          type:        "float · 0.0 – 1.0",
+          description: "Fraction of CONFIRMED (firm order / invoice) FX exposure to hedge. A value of 1.0 means 100% of all confirmed payables/receivables are hedged. IFRS 9.6.4.1(a) requires the hedged item to be reliably measurable.",
+          example:     "1.0 (full coverage)",
+          source:      "IFRS 9.6.4.1(a); BIS FX Survey 2022 median: 0.85",
+        },
+        {
+          name:        "hedge_ratio_forecast",
+          type:        "float · 0.0 – 1.0",
+          description: "Fraction of FORECAST (highly probable) FX exposure to hedge. Must not exceed confirmed ratio to satisfy IFRS 9.6.4.1(b) 'highly probable' criterion. Sovereign and EM issuers typically set 0.0–0.3.",
+          example:     "0.5 (50% of forecast flows)",
+          source:      "IFRS 9.6.4.1(b); ECB Occasional Paper No. 312",
+        },
+        {
+          name:        "spread_bps",
+          type:        "float · basis points",
+          description: "All-in transaction cost assumption per leg, in basis points. Covers bid-offer spread plus any brokerage commission. Interbank desks operate at 1–3 bps; corporate treasury typically pays 4–10 bps; SME / NDF desks 15–30 bps.",
+          example:     "5.0 bps (mid-market corporate)",
+          source:      "ISDA 2022 FX Working Group; Chatham Financial 2023 Cost Survey",
+        },
+        {
+          name:        "execution_product",
+          type:        "enum · FWD | NDF",
+          description: "FWD (Deliverable Forward): physically settled, used for G10 and convertible EM currencies. NDF (Non-Deliverable Forward): cash-settled in USD, used for restricted EM currencies (MXN, BRL, INR, KRW, IDR). NDFs carry additional basis risk vs spot.",
+          example:     "NDF for MXN/USD; FWD for EUR/USD",
+          source:      "ISDA Master Agreement 2002; CLS Settlement Rules",
+        },
+        {
+          name:        "min_trade_size_usd",
+          type:        "float · USD equivalent",
+          description: "Minimum notional per hedge leg. Buckets below this threshold are skipped (unhedged). Interbank desks require $500K+. Mid-market corporates use $50K–$250K. SME/FinTech platforms accept $0 (no minimum).",
+          example:     "50000 (skip sub-$50K buckets)",
+          source:      "LCH ForexClear eligibility rules; CME FX minimum lot sizes",
+        },
+      ],
+    },
+    {
+      id:    "workflow",
+      title: "Activation Workflow",
+      icon:  "→",
+      type:  "workflow",
+      steps: [
+        {
+          step:        1,
+          label:       "Browse Presets",
+          description: "Filter by category (Corporate, Financial, Sovereign, Sector) and search by name or audience. Each card shows confirmed %, forecast %, spread budget, and execution product.",
+        },
+        {
+          step:        2,
+          label:       "Review Parameters",
+          description: "Check CONF and FCST ratios against your board mandate. Verify spread_bps against your treasury dealing desk rates. Confirm execution product matches your FX settlement agreement (FWD vs NDF).",
+        },
+        {
+          step:        3,
+          label:       "Activate Policy",
+          description: "Click ACTIVATE POLICY. The backend deactivates the previous policy, creates a new PolicyInstance, and writes an immutable PolicyRevision WORM record with SHA-256 hash for audit.",
+          link:        "/policies",
+        },
+        {
+          step:        4,
+          label:       "Verify on Position Desk",
+          description: "Navigate to the Position Desk. Use ASSIGN POLICY on any NEW position — your activated policy will appear first. The policy short code (e.g. BLNC) will show in the POLICY ID column.",
+          link:        "/position-desk",
+        },
+      ],
+    },
+    {
+      id:      "formulas",
+      title:   "Hedge Ratio Formulas",
+      icon:    "∑",
+      type:    "formula",
+      formulas: [
+        {
+          label:       "Optimal Hedge Ratio (OHR)",
+          latex:       "H* = ρ(ΔS, ΔF) × (σS / σF)",
+          explanation: "The Johnson–Ederington OHR minimises portfolio variance. ρ is the correlation between spot changes ΔS and forward changes ΔF; σS and σF are their standard deviations. In practice, treasury teams round H* to the nearest 5% band (e.g., 0.75, 0.80, 0.85).",
+          source:      "Johnson (1960); Ederington (1979); Hull & White (1988)",
+        },
+        {
+          label:       "IFRS 9 Effectiveness Test",
+          latex:       "0.80 ≤ ΔFV(hedging) / ΔFV(hedged) ≤ 1.25",
+          explanation: "IFRS 9.B6.4.4 requires the hedge to be 'highly effective': the ratio of fair value changes must stay within 80–125%. The engine enforces forecast_ratio ≤ confirmed_ratio as a necessary (but not sufficient) precondition.",
+          source:      "IFRS 9 §6.5.2; IAS 39 §AG105 (superseded)",
+        },
+        {
+          label:       "Basel III VaR (Simplified)",
+          latex:       "VaR₁₀ = VaR₁ × √10",
+          explanation: "10-day Value at Risk scales from 1-day VaR by the square root of time (assuming i.i.d. returns). Financial institution presets (BANK, HFND) are calibrated to remain within 10-day VaR limits at 99% confidence.",
+          source:      "BCBS 2019 (Basel III); FRTB SA §MAR21",
+        },
+        {
+          label:       "IMF ARA Reserve Adequacy (Sovereign)",
+          latex:       "ARA = 0.3×STD + 0.15×OPL + 0.05×M2 + 0.05×Exports",
+          explanation: "The IMF Assessing Reserve Adequacy metric weights short-term debt (STD), other portfolio liabilities (OPL), broad money (M2), and export receipts. Sovereign presets target reserves ≥ 100% ARA.",
+          source:      "IMF ARA Metric (2011, revised 2016); WEO April 2024",
+        },
+      ],
+    },
+    {
+      id:      "glossary",
+      title:   "Glossary",
+      icon:    "§",
+      type:    "glossary",
+      glossary: [
+        { term: "IFRS 9",        definition: "International Financial Reporting Standard 9 (Financial Instruments). Chapter 6 governs hedge accounting: designating hedge relationships, effectiveness testing, and discontinuation rules." },
+        { term: "FRTB ES",       definition: "Fundamental Review of the Trading Book — Expected Shortfall. Replaces VaR for market risk capital under Basel III.5. Expected Shortfall at 97.5% confidence over 10-day horizon." },
+        { term: "NDF",           definition: "Non-Deliverable Forward. A cash-settled FX forward used where currency controls restrict physical delivery (e.g., BRL, INR, KRW, PHP, IDR). Settlement is in USD at the WMR fixing rate." },
+        { term: "FWD",           definition: "Deliverable Forward. A physically settled FX contract where both currencies are exchanged on the value date. Used for G10 and convertible EM currencies (MXN, CLP, COP)." },
+        { term: "Basis Risk",    definition: "The residual risk when the hedging instrument does not perfectly offset the hedged item — e.g., NDF settlement basis vs. actual spot, or tenor mismatch between hedge and exposure." },
+        { term: "PolicyRevision", definition: "An immutable WORM snapshot of the canonical policy configuration at the moment of activation. SHA-256 hashed, chain-linked to prior revisions. Referenced by all calculation runs for audit traceability." },
+      ],
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POLICY ENGINE — AI Policy Wizard
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const AI_WIZARD_HELP: HelpPanelConfig = {
+  pageTitle:    "AI Policy Wizard",
+  pageSubtitle: "7-PHASE POLICY CONSTRUCTION · CLAUDE AI",
+  sections: [
+    {
+      id:      "overview",
+      title:   "7-Phase Overview",
+      icon:    "ℹ",
+      type:    "text",
+      content: "The AI Wizard constructs a bespoke FX hedge policy through 7 institutional-grade questionnaire phases:\n\nA · Intent & Scope — policy mandate, portfolio perimeter, time horizon\nB · Exposure & Bucketing — flow classification, netting rules, materiality thresholds\nC · Instruments — eligible products, tenor ladder, execution constraints\nD · Constraints & Budget — cost/carry budget, concentration limits, VaR budget\nE · Scenarios & Stress — stress test families, tail scenarios, custom shocks\nF · Governance Review — approval checklist, IFRS 9 designation statement\nG · Publish — AI analysis, ranked recommendations, name & save\n\nYour progress is auto-saved to localStorage every 500ms. Use CLEAR PROGRESS to restart.",
+    },
+    {
+      id:      "exposure",
+      title:   "Exposure Classification",
+      icon:    "≡",
+      type:    "text",
+      content: "Phase B determines how your cash flows are classified and netted:\n\n• CONFIRMED flows: firm purchase orders, invoiced payables/receivables, contracted payments. IFRS 9.6.4.1(a) — reliably measurable. Hedge ratio: 0.85–1.0.\n\n• FORECAST flows: highly probable transactions without firm commitment. IFRS 9.6.4.1(b) — must be 'highly probable' (>90% confidence historically). Hedge ratio: 0.3–0.7.\n\n• Materiality: sub-threshold buckets (< min_trade_size_usd) are excluded to avoid uneconomic micro-hedges.",
+    },
+    {
+      id:    "instruments",
+      title: "Instrument Eligibility",
+      icon:  "⊞",
+      type:  "text",
+      content: "Phase C maps your currency pairs and tenor buckets to eligible hedging instruments:\n\n• G10 currencies (EUR, GBP, JPY, CHF, AUD, CAD, NZD, SEK, NOK, DKK): FWD preferred, liquid up to 10Y.\n\n• Convertible EM (MXN, CLP, COP, ILS, PLN, CZK, HUF, RON): FWD available, but NDF preferred for tenors >90 days due to lower cost.\n\n• Restricted EM (BRL, INR, KRW, IDR, PHP, THB, TRY, ZAR): NDF only. Settlement at WMR fixing; basis risk applies.\n\n• Tenor ladder: standard ORDR buckets are CALENDAR_MONTH (1M–12M). Longer tenors require supervisor approval.",
+    },
+    {
+      id:      "constraints",
+      title:   "Cost & Risk Budget",
+      icon:    "◈",
+      type:    "text",
+      content: "Phase D sets your governance guardrails:\n\n• Spread budget (bps): the maximum transaction cost per leg you are willing to pay. Drives instrument selection and broker selection.\n\n• Carry cost: the net interest differential between currencies. FWDs embed this in forward points; NDFs settle at spot with separate carry.\n\n• Concentration limit: max % of total notional in a single tenor bucket (e.g., 40% in M+3). Prevents cliff-risk at rollover.\n\n• IFRS 9 constraint: forecast ratio must not exceed confirmed ratio. The wizard enforces this inline.",
+    },
+    {
+      id:      "governance",
+      title:   "Governance & Approval",
+      icon:    "✓",
+      type:    "text",
+      content: "Phase F generates the policy approval checklist:\n\n□ Board mandate letter on file\n□ IFRS 9 designation documentation prepared\n□ Internal credit limit for FX counterparty confirmed\n□ Dual-control approval workflow configured\n□ Policy reviewed by external auditor (if required)\n□ Cooling-off period compliant with internal control framework\n\nThe FINAL status locks the policy for production activation. DRAFT status allows editing but cannot be activated on the Position Desk.",
+    },
+    {
+      id:      "publish",
+      title:   "AI Analysis & Save",
+      icon:    "★",
+      type:    "text",
+      content: "Phase G sends your questionnaire responses to Claude AI, which generates 3 ranked policy recommendations scored on:\n\n• Coverage adequacy (vs. your stated risk appetite)\n• Cost efficiency (spread_bps optimised for your instrument access)\n• IFRS 9 compliance (effectiveness test probability)\n• Regulatory alignment (Basel III / FRTB / local requirements)\n\nThe first recommendation is auto-selected. Review all 3 before confirming. Name your policy clearly — it will appear in your Saved Policies and Position Desk favorites.\n\nThe saved policy creates a company-specific PolicyTemplate in the database, owned by your user account.",
+    },
+    {
+      id:      "formulas",
+      title:   "Hedge Math Reference",
+      icon:    "∑",
+      type:    "formula",
+      formulas: [
+        {
+          label:       "IFRS 9 Effectiveness (Ratio Method)",
+          latex:       "0.80 ≤ ΔFV_hedge / ΔFV_hedged ≤ 1.25",
+          explanation: "The ratio of fair value change of the hedging instrument to the fair value change of the hedged item must stay within 80–125% throughout the hedge relationship. Below 80% = under-hedge; above 125% = over-hedge.",
+          source:      "IFRS 9.B6.4.4; IAS 39.AG105",
+        },
+        {
+          label:       "Hedge Effectiveness (Regression R²)",
+          latex:       "R² ≥ 0.80  (95% confidence)",
+          explanation: "Statistical test: the R² of regressing spot changes on forward price changes must be ≥ 0.80 to qualify for hedge accounting. Rolling 24-period regression used for ongoing assessment.",
+          source:      "IFRS 9.B6.4.15; KPMG Hedge Accounting Guide (2023)",
+        },
+        {
+          label:       "Basel III 10-Day VaR Scaling",
+          latex:       "VaR₁₀ = VaR₁ × √10",
+          explanation: "10-day VaR required for market risk capital calculations. Assumes i.i.d. daily returns. For FX, daily VaR is computed at 99% confidence using a 250-day historical window.",
+          source:      "BCBS (2019) Minimum capital requirements for market risk, §MAR21",
+        },
+        {
+          label:       "IFRS 9 Highly Probable Threshold",
+          latex:       "P(transaction) > 0.90  (historically verified)",
+          explanation: "IFRS 9.6.4.1(b) requires forecast transactions to be 'highly probable' — interpreted as >90% probability based on transaction history, budget plans, and contractual agreements.",
+          source:      "IFRS 9.B6.3.7; IASB ED/2010/13 basis for conclusions",
+        },
+      ],
+    },
+    {
+      id:      "glossary",
+      title:   "AI Wizard Glossary",
+      icon:    "§",
+      type:    "glossary",
+      glossary: [
+        { term: "Canonical Policy",    definition: "The complete, deterministic JSON representation of all policy parameters at a point in time. SHA-256 hashed and stored as a WORM PolicyRevision. Used to prove 'what exact policy governed this calculation?'" },
+        { term: "Highly Probable",     definition: "IFRS 9 term for forecast hedged items. Requires >90% probability based on historical transaction patterns. Failure causes hedge accounting discontinuation." },
+        { term: "WizardState",         definition: "The 60+ field in-memory object capturing all questionnaire responses across all 7 phases. Auto-saved to localStorage every 500ms as 'ai_wizard_state_v1'." },
+        { term: "ΔS / ΔF",            definition: "Changes in spot price (ΔS) and forward price (ΔF) over a measurement period. Used in the Johnson–Ederington OHR formula and IFRS 9 effectiveness regression." },
+        { term: "Hedge Effectiveness", definition: "The degree to which changes in the fair value of the hedging instrument offset changes in the fair value of the hedged item. Must be in the 80–125% range per IFRS 9." },
+      ],
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POLICY ENGINE — Saved Policies
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const SAVED_POLICIES_HELP: HelpPanelConfig = {
+  pageTitle:    "Saved Policies",
+  pageSubtitle: "USER POLICY HUB · VERSION-CONTROLLED",
+  sections: [
+    {
+      id:    "pipeline",
+      title: "Pipeline Position",
+      icon:  "⬡",
+      type:  "pipeline",
+      pipelinePos: {
+        position:    4,
+        total:       7,
+        label:       "Step 4 of 7 — Policy Engine",
+        description: "Saved Policies is the governance library for all custom policies created by your team. Activate any policy here to make it live for your branch — it immediately governs all new hedge calculations.",
+        prev: { label: "Policy Library",  href: "/policies" },
+        next: { label: "Run Engine",      href: "/input" },
+      },
+    },
+    {
+      id:      "overview",
+      title:   "What this page does",
+      icon:    "ℹ",
+      type:    "text",
+      content: "This page is your personal and team policy library. It shows all AI-generated and manually created policy templates belonging to your company.\n\nTabs:\n• MY POLICIES — templates you created\n• BRANCH POLICIES — all templates for your branch\n• COMPANY-WIDE — all templates across all branches\n• FAVORITES — templates you have bookmarked (★)\n\nActions available per card:\n• ACTIVATE — make this the live branch policy (requires policy.activate permission)\n• DEACTIVATE — remove the live policy (leaves positions unprotected)\n• EDIT — update name, risk posture, or hedge ratios (increments version)\n• DUPLICATE — create a copy for iteration\n• DELETE — permanent removal (blocked if policy is currently active)\n• EXPORT — download as JSON for sharing or backup\n\nUse IMPORT POLICY in the header to upload a previously exported JSON file.",
+    },
+    {
+      id:        "variables",
+      title:     "Policy Card Fields",
+      icon:      "≡",
+      type:      "variables",
+      variables: [
+        {
+          name:        "version",
+          type:        "integer · monotonic",
+          description: "Version number, incremented on every PATCH (edit). Version 1 is the initial creation. The version number is immutable once a PolicyRevision is created — editing creates a new version, never overwrites the old one.",
+          example:     "v3 (edited 3 times since creation)",
+          source:      "policy_templates.version (DB column)",
+        },
+        {
+          name:        "policy_hash",
+          type:        "string · SHA-256 hex",
+          description: "64-character SHA-256 hash of the canonical policy JSON. Computed at activation time and stored in PolicyRevision. Any change to any parameter changes the hash — tamper-evident.",
+          example:     "a3f8c2d1… (first 8 chars shown)",
+          source:      "policy_revisions.policy_hash (WORM)",
+        },
+        {
+          name:        "revision_id",
+          type:        "UUID",
+          description: "The PolicyRevision record ID created at activation time. All CalculationRun records pin to this revision_id, enabling 'point-in-time policy reconstruction' for audit.",
+          example:     "e2c1a4b3-…",
+          source:      "policy_revisions.id (WORM, append-only)",
+        },
+        {
+          name:        "status",
+          type:        "enum · DRAFT | ACTIVE | ARCHIVED",
+          description: "DRAFT: editable, not yet activated. ACTIVE: currently governing hedge calculations for this branch. ARCHIVED: superseded by a newer version.",
+          example:     "ACTIVE (live policy)",
+          source:      "policy_templates.status",
+        },
+      ],
+    },
+    {
+      id:    "workflow",
+      title: "Policy Lifecycle",
+      icon:  "→",
+      type:  "workflow",
+      steps: [
+        {
+          step:        1,
+          label:       "Create via AI Wizard",
+          description: "Build a custom policy using the 7-phase AI Wizard. The saved template appears in MY POLICIES with status DRAFT.",
+          link:        "/ai-policy-wizard",
+        },
+        {
+          step:        2,
+          label:       "Review & Edit",
+          description: "Use EDIT to refine hedge ratios, name, or risk posture. Each edit increments the version number. DUPLICATE to branch for A/B testing.",
+        },
+        {
+          step:        3,
+          label:       "Activate",
+          description: "Click ACTIVATE to make the policy live. Previous active policy is deactivated automatically. A WORM PolicyRevision is created, hash-chained to prior revisions.",
+        },
+        {
+          step:        4,
+          label:       "Pin to Positions",
+          description: "On the Position Desk, use ASSIGN POLICY on any NEW position. Favorited policies appear at the top of the selector for quick access.",
+          link:        "/position-desk",
+        },
+        {
+          step:        5,
+          label:       "Export & Share",
+          description: "EXPORT generates a JSON blob with SHA-256 checksum. Share with other branches or archive for regulatory retention. Import on any ORDR instance via IMPORT POLICY.",
+        },
+      ],
+    },
+    {
+      id:      "formulas",
+      title:   "WORM Hash Formula",
+      icon:    "∑",
+      type:    "formula",
+      formulas: [
+        {
+          label:       "Policy Hash (SHA-256)",
+          latex:       "H = hex(SHA-256(sort_keys(canonical_json)))",
+          explanation: "The canonical policy is serialised to JSON with sorted keys and no whitespace, then SHA-256 hashed. Any modification to any field produces a completely different hash — detectable tampering.",
+          source:      "SEC Rule 17a-4 (WORM); CFTC 1.31 (electronic records)",
+        },
+        {
+          label:       "Hash Chain Integrity",
+          latex:       "H(n) = SHA-256(event_type + actor + entity + payload + H(n-1))",
+          explanation: "Each audit event includes the hash of the previous event. A chain verifier can recompute all hashes; any gap or mismatch proves tampering. The first event uses GENESIS_HASH = '0000...0000'.",
+          source:      "ORDR Audit Model v1.0; analogous to Merkle tree leaves",
+        },
+      ],
+    },
+    {
+      id:      "glossary",
+      title:   "Glossary",
+      icon:    "§",
+      type:    "glossary",
+      glossary: [
+        { term: "WORM",            definition: "Write Once, Read Many. Immutable storage semantics enforced by DB-level BEFORE UPDATE/DELETE triggers on audit_events and policy_revisions. Required by SEC 17a-4 and CFTC 1.31 for financial record retention." },
+        { term: "PolicyRevision",  definition: "An append-only snapshot of the canonical policy config created at each activation. Contains policy_hash, canonical_policy JSONB, created_by, prev_revision_id. Never modified after creation." },
+        { term: "Version Pinning", definition: "The practice of storing policy_revision_id on each CalculationRun row. Enables point-in-time reconstruction: 'exactly which policy parameters governed this specific calculation?'" },
+        { term: "SEC 17a-4",       definition: "US SEC rule requiring broker-dealers to retain electronic records in non-rewritable, non-erasable format (WORM). ORDR's audit_events table is compliant by design." },
+        { term: "CFTC 1.31",       definition: "US CFTC recordkeeping rule requiring swap dealers to retain records for 5 years in a readily accessible format. Applies to FX forward and NDF positions." },
       ],
     },
   ],

@@ -22,10 +22,11 @@
  *   Journal of Finance Vol.53 No.3 (Allayannis & Weston 1998)
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
-import PolicyHelpPanel from "@/components/policy/PolicyHelpPanel";
+import HelpPanel from "@/components/layout/HelpPanel";
+import { AI_WIZARD_HELP } from "@/lib/helpContent";
 import {
   suggestPolicyAI,
   createPolicyTemplate,
@@ -370,7 +371,10 @@ function CitationNote({ text }: { text: string }) {
 
 // ── TopBar ─────────────────────────────────────────────────────────────────
 
-function TopBar({ onBack, pct, onHelp }: { onBack: () => void; pct: number; onHelp: () => void }) {
+function TopBar({ onBack, pct, onHelp, lastSaved, onClearProgress }: {
+  onBack: () => void; pct: number; onHelp: () => void;
+  lastSaved: string | null; onClearProgress: () => void;
+}) {
   const ts = useRenderTs();
   return (
     <header style={{
@@ -389,6 +393,27 @@ function TopBar({ onBack, pct, onHelp }: { onBack: () => void; pct: number; onHe
         INSTITUTIONAL GRADE · 7 PHASES · WHITEPAPER-BACKED
       </span>
       <div style={{ flex: 1 }} />
+      {/* Draft saved indicator */}
+      {lastSaved && (
+        <span style={{
+          fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
+          letterSpacing: "0.06em", opacity: 0.7,
+        }}>
+          DRAFT SAVED · {lastSaved}
+        </span>
+      )}
+      {/* Clear progress button */}
+      <button
+        type="button"
+        onClick={onClearProgress}
+        style={{
+          fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em",
+          padding: "4px 10px", border: `1px solid ${S.rim}`,
+          color: S.tertiary, background: "transparent", cursor: "pointer",
+        }}
+      >
+        CLEAR PROGRESS
+      </button>
       {/* Progress meter */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{Math.round(pct)}%</span>
@@ -408,32 +433,47 @@ function TopBar({ onBack, pct, onHelp }: { onBack: () => void; pct: number; onHe
 
 // ── Phase Progress Rail ────────────────────────────────────────────────────
 
-function PhaseRail({ stepIdx }: { stepIdx: number }) {
+function PhaseRail({ stepIdx, onJump }: { stepIdx: number; onJump: (idx: number) => void }) {
   let globalIdx = 0;
+
+  // Build phase start indices
+  const phaseStarts: number[] = [];
+  let accum = 0;
+  for (const ph of PHASES) {
+    phaseStarts.push(accum);
+    accum += ph.steps.length;
+  }
+
   return (
     <div style={{
       display: "flex", alignItems: "stretch",
       borderBottom: `1px solid ${S.rim}`, background: S.bgPanel, flexShrink: 0, overflowX: "auto",
     }}>
-      {PHASES.map((ph) => {
+      {PHASES.map((ph, phIdx) => {
         const phaseStartIdx = globalIdx;
         const stepCount = ph.steps.length;
         const activeInPhase = stepIdx >= phaseStartIdx && stepIdx < phaseStartIdx + stepCount;
         const donePhase = stepIdx >= phaseStartIdx + stepCount;
         globalIdx += stepCount;
         return (
-          <div key={ph.id} style={{
-            flex: 1, minWidth: 80, padding: "8px 10px",
-            borderRight: `1px solid ${S.rim}`,
-            borderBottom: `2px solid ${activeInPhase ? ph.color : donePhase ? S.pass : "transparent"}`,
-            background: activeInPhase ? `color-mix(in srgb, ${ph.color} 6%, ${S.bgPanel})` : "transparent",
-            transition: "all 0.2s",
-          }}>
+          <div
+            key={ph.id}
+            onClick={() => donePhase ? onJump(phaseStarts[phIdx]) : undefined}
+            style={{
+              flex: 1, minWidth: 80, padding: "8px 10px",
+              borderRight: `1px solid ${S.rim}`,
+              borderBottom: `2px solid ${activeInPhase ? ph.color : donePhase ? S.pass : "transparent"}`,
+              background: activeInPhase ? `color-mix(in srgb, ${ph.color} 6%, ${S.bgPanel})` : "transparent",
+              transition: "all 0.2s",
+              cursor: donePhase ? "pointer" : "default",
+            }}
+          >
             <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.1em", color: activeInPhase ? ph.color : donePhase ? S.pass : S.tertiary }}>
               {donePhase ? "✓ " : ""}{ph.id} · {ph.label}
             </div>
             <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, marginTop: 2 }}>
               {ph.steps.length} step{ph.steps.length > 1 ? "s" : ""}
+              {donePhase && <span style={{ color: S.pass, marginLeft: 4 }}>↩ jump</span>}
             </div>
           </div>
         );
@@ -965,6 +1005,15 @@ function StepC2({ s, set }: { s: WizardState; set: (p: Partial<WizardState>) => 
         hint="declared target ratio — engine uses this as the optimisation objective. IFRS 9 requires hedge ratio = ratio of actual hedged item to hedging instrument"
         value={s.hedgeRatioTarget} onChange={(v) => set({ hedgeRatioTarget: v })}
         min={0} max={100} step={5} format={(v) => `${v}%`} />
+      {(s.hedgeRatioTarget ?? 0) > (s.cashFlowCertainty ?? 100) && (
+        <div style={{
+          fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+          padding: "3px 8px", border: `1px solid ${S.fail}`, color: S.fail,
+          marginTop: 4, display: "inline-block",
+        }}>
+          IFRS 9 VIOLATION: FORECAST MUST NOT EXCEED CONFIRMED ({s.cashFlowCertainty}%)
+        </div>
+      )}
     </div>
   );
 }
@@ -1365,6 +1414,21 @@ function StepG1({
   onStartOver: () => void;
   policyStatus: string; setPolicyStatus: (v: string) => void;
 }) {
+  // Auto-populate policy name when a recommendation is selected and name is empty
+  useEffect(() => {
+    if (selectedRecId && !policyName.trim() && aiResult?.recommendations) {
+      const idx = aiResult.recommendations.findIndex(
+        (_, i) => `${aiResult.recommendations[i].preset.shortName}-${i}` === selectedRecId
+      );
+      const rec = aiResult.recommendations[idx >= 0 ? idx : 0];
+      if (rec) {
+        const dateStr = new Date().toISOString().slice(0, 10);
+        setPolicyName(`${rec.preset?.name ?? 'Custom Policy'} — ${dateStr}`);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRecId, aiResult]);
+
   if (aiLoading) return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, minHeight: 280 }}>
       <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.cyan, letterSpacing: "0.12em" }}>ANALYZING PROFILE — CLAUDE AI + 60 PRESET LIBRARY…</div>
@@ -1425,12 +1489,28 @@ function StepG1({
       {/* Policy naming + status + save */}
       {selectedRecId && (
         <div style={{ borderTop: `1px solid ${S.rim}`, paddingTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12 }}>
-            <div>
-              <FL label="POLICY NAME *" hint="descriptive name" />
-              <input type="text" value={policyName} onChange={e => setPolicyName(e.target.value)}
-                placeholder="e.g. Q1 2026 Conservative EM Hedge" style={inputBase} />
-            </div>
+          {/* POLICY NAME — most prominent, full width */}
+          <div>
+            <FL label="POLICY NAME *" hint="descriptive name for this policy template" />
+            <input
+              type="text"
+              value={policyName}
+              onChange={e => setPolicyName(e.target.value)}
+              placeholder="e.g. Q1 2026 Conservative EM Hedge"
+              style={{
+                ...inputBase,
+                fontSize: "0.9375rem",
+                fontWeight: 600,
+                border: `1px solid ${!policyName.trim() && saveError ? S.fail : S.rim}`,
+              }}
+            />
+            {!policyName.trim() && saveError && (
+              <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.fail, marginTop: 3, letterSpacing: "0.06em" }}>
+                POLICY NAME IS REQUIRED
+              </div>
+            )}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <FL label="TAG" hint="short identifier ≤20 chars" />
               <input type="text" value={policyTag} onChange={e => setPolicyTag(e.target.value)}
@@ -1523,6 +1603,10 @@ function validateStep(idx: number, s: WizardState): string | null {
       return null;
     case 7: // D1 — Cost & Risk Budget
       if (!s.maxAcceptableLoss.trim()) return 'Select a maximum acceptable loss threshold to continue.';
+      // IFRS 9.6.4.1(b): hedge ratio target (forecast) must not exceed confirmed cash flow certainty
+      if ((s.hedgeRatioTarget ?? 0) > (s.cashFlowCertainty ?? 100)) {
+        return 'IFRS 9.6.4.1(b): forecast hedge ratio cannot exceed confirmed ratio — lower hedge ratio target or increase cash flow certainty (Phase B1)';
+      }
       return null;
     case 8: // D2 — Concentration Limits (optional)
       return null;
@@ -1539,6 +1623,8 @@ function validateStep(idx: number, s: WizardState): string | null {
       return null;
   }
 }
+
+const WIZARD_STORAGE_KEY = 'ai_wizard_state_v1';
 
 export default function AIPolicyWizardPage() {
   const { isAuthenticated, token, user } = useAuth();
@@ -1561,9 +1647,52 @@ export default function AIPolicyWizardPage() {
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [saveError, setSaveError]   = useState('');
-  const [helpOpen, setHelpOpen]     = useState(false);
+
+  // localStorage persistence
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load saved state on mount
+  useEffect(() => {
+    try {
+      const storedJson = localStorage.getItem(WIZARD_STORAGE_KEY);
+      if (storedJson) {
+        const parsed = JSON.parse(storedJson) as Partial<typeof INITIAL_STATE>;
+        setState(prev => ({ ...prev, ...parsed }));
+      }
+    } catch { /* ignore parse errors */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save state on every change (debounced 500ms)
+  useEffect(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(state));
+        setLastSaved(new Date().toLocaleTimeString());
+      } catch { /* ignore quota errors */ }
+    }, 500);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [state]);
 
   const pct = useMemo(() => Math.round(((stepIdx + (saved ? 1 : 0)) / TOTAL_STEPS) * 100), [stepIdx, saved]);
+
+  const activePanelSection = useMemo(() => {
+    // Map wizard phase letters to help panel section IDs
+    const phaseMap: Record<string, string> = {
+      'A': 'overview',
+      'B': 'exposure',
+      'C': 'instruments',
+      'D': 'constraints',
+      'E': 'governance',
+      'F': 'governance',
+      'G': 'publish',
+    };
+    const currentStep = ALL_STEPS?.[stepIdx];
+    const phase = currentStep?.phase ?? 'A';
+    return phaseMap[phase] ?? 'overview';
+  }, [stepIdx]);
 
   const patchState = useCallback((patch: Partial<WizardState>) => {
     setState(prev => ({ ...prev, ...patch }));
@@ -1634,6 +1763,17 @@ export default function AIPolicyWizardPage() {
 
   const startOver = useCallback(() => {
     setStepIdx(0); setCompleted(new Set()); setState(INITIAL_STATE);
+    setAiResult(null); setAiLoading(false); setAiError('');
+    setSelectedRecId(null); setExpandedId(null);
+    setPolicyName(''); setPolicyTag(''); setSaved(false); setSaveError('');
+  }, []);
+
+  const handleClearProgress = useCallback(() => {
+    localStorage.removeItem(WIZARD_STORAGE_KEY);
+    setLastSaved(null);
+    setState(INITIAL_STATE);
+    setStepIdx(0);
+    setCompleted(new Set());
     setAiResult(null); setAiLoading(false); setAiError('');
     setSelectedRecId(null); setExpandedId(null);
     setPolicyName(''); setPolicyTag(''); setSaved(false); setSaveError('');
@@ -1731,9 +1871,16 @@ export default function AIPolicyWizardPage() {
   const canNext = !IS_LAST;
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
-      <TopBar onBack={() => router.push('/policies')} pct={pct} onHelp={() => setHelpOpen(true)} />
-      <PhaseRail stepIdx={stepIdx} />
+    <div style={{ display: 'flex', minHeight: '100vh', background: S.bgDeep }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: 'auto', minWidth: 0, fontFamily: S.fontUI, color: S.primary }}>
+      <TopBar
+        onBack={() => router.push('/policies')}
+        pct={pct}
+        onHelp={() => {}}
+        lastSaved={lastSaved}
+        onClearProgress={handleClearProgress}
+      />
+      <PhaseRail stepIdx={stepIdx} onJump={(idx) => { setStepIdx(idx); setStepError(null); }} />
 
       {/* ── Company context warning ── */}
       {companyIdMissing && (
@@ -1831,7 +1978,8 @@ export default function AIPolicyWizardPage() {
         <span style={{ color: S.purple }}>IFRS 9 · BCBS FRTB · ISDA 2022 · BIS FX Survey 2022</span>
       </footer>
 
-      <PolicyHelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
+    </div>
+    <HelpPanel config={AI_WIZARD_HELP} storageKey="ai-wizard" activeSection={activePanelSection} />
     </div>
   );
 }

@@ -24,15 +24,18 @@ from __future__ import annotations
 
 
 
+import hashlib
+import json
 import logging
 
 import uuid as _uuid
 
+from datetime import datetime, timezone
 from typing import Optional
 
 
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, desc, select
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +45,8 @@ from app.models.policy import PolicyInstance, PolicyTemplate
 
 from app.models.user import User
 
+from app.models.audit_event import AuditEvent, build_audit_event, GENESIS_HASH
+
 from app.services import policy_revision_service as pr_service
 
 
@@ -49,7 +54,17 @@ from app.services import policy_revision_service as pr_service
 logger = logging.getLogger(__name__)
 
 
-
+async def _get_prev_hash(session: AsyncSession, company_id) -> str:
+    """Get the most recent audit event hash for the tenant's hash chain."""
+    q = (
+        select(AuditEvent.event_hash)
+        .where(AuditEvent.company_id == company_id)
+        .order_by(AuditEvent.created_at.desc())
+        .limit(1)
+    )
+    result = await session.execute(q)
+    row = result.scalar_one_or_none()
+    return row if row else GENESIS_HASH
 
 
 async def list_templates(
@@ -87,9 +102,6 @@ async def list_templates(
     return list(result.scalars().all())
 
 
-
-
-
 async def get_template(
 
     session: AsyncSession,
@@ -113,9 +125,6 @@ async def get_template(
         return None  # not accessible
 
     return tmpl
-
-
-
 
 
 async def create_template(
@@ -160,6 +169,8 @@ async def create_template(
 
         is_system=False,
 
+        created_by=user.id,
+
     )
 
     session.add(tmpl)
@@ -168,10 +179,30 @@ async def create_template(
 
     await session.refresh(tmpl)
 
+    # Emit audit event
+    try:
+        prev_hash = await _get_prev_hash(session, user.company_id)
+        event = build_audit_event(
+            event_type="POLICY",
+            description=f"Policy template created: {tmpl.name} ({tmpl.short_name})",
+            payload={"action": "create", "template_id": str(tmpl.id),
+                     "name": tmpl.name, "short_name": tmpl.short_name,
+                     "risk_posture": tmpl.risk_posture, "category": tmpl.category,
+                     "version": tmpl.version},
+            prev_event_hash=prev_hash,
+            company_id=user.company_id,
+            branch_id=user.branch_id,
+            actor_id=user.id,
+            actor_email=user.email,
+            entity_type="policy_template",
+            entity_id=str(tmpl.id),
+        )
+        session.add(event)
+        await session.commit()
+    except Exception:
+        logger.warning("Failed to emit audit event for policy template create", exc_info=True)
+
     return tmpl
-
-
-
 
 
 async def get_active_instance(
@@ -197,9 +228,6 @@ async def get_active_instance(
     result = await session.execute(q)
 
     return result.scalar_one_or_none()
-
-
-
 
 
 async def activate_policy(
@@ -330,14 +358,34 @@ async def activate_policy(
 
         )
 
-
+    # Emit audit event for activation (same session, committed together)
+    try:
+        _revision = instance.__dict__.get("_latest_revision")
+        _revision_id = str(_revision.id) if _revision and hasattr(_revision, "id") else None
+        prev_hash = await _get_prev_hash(session, user.company_id)
+        audit_event = build_audit_event(
+            event_type="POLICY",
+            description=f"Policy activated: {tmpl.name} ({tmpl.short_name})",
+            payload={"action": "activate", "instance_id": str(instance.id),
+                     "template_id": str(template_id), "template_name": tmpl.name,
+                     "short_name": tmpl.short_name, "revision_id": _revision_id},
+            prev_event_hash=prev_hash,
+            company_id=user.company_id,
+            branch_id=user.branch_id,
+            actor_id=user.id,
+            actor_email=user.email,
+            entity_type="policy_instance",
+            entity_id=str(instance.id),
+        )
+        session.add(audit_event)
+    except Exception:
+        logger.warning("Failed to build audit event for policy activation", exc_info=True)
 
     await session.commit()
 
     await session.refresh(instance)
 
     return instance
-
 
 
 async def update_template(
@@ -363,8 +411,32 @@ async def update_template(
         if value is not None and hasattr(tmpl, field):
             setattr(tmpl, field, value)
     tmpl.version = (tmpl.version or 1) + 1
+    tmpl.updated_by = user.id
+    tmpl.updated_at = datetime.now(timezone.utc)
     await session.commit()
     await session.refresh(tmpl)
+
+    # Emit audit event
+    try:
+        prev_hash = await _get_prev_hash(session, user.company_id)
+        event = build_audit_event(
+            event_type="POLICY",
+            description=f"Policy template updated: {tmpl.name} v{tmpl.version}",
+            payload={"action": "update", "template_id": str(tmpl.id),
+                     "fields_changed": list(updates.keys()), "new_version": tmpl.version},
+            prev_event_hash=prev_hash,
+            company_id=user.company_id,
+            branch_id=user.branch_id,
+            actor_id=user.id,
+            actor_email=user.email,
+            entity_type="policy_template",
+            entity_id=str(tmpl.id),
+        )
+        session.add(event)
+        await session.commit()
+    except Exception:
+        logger.warning("Failed to emit audit event for policy template update", exc_info=True)
+
     return tmpl
 
 
@@ -390,6 +462,27 @@ async def delete_template(
     if active and active.template_id == template_id:
         raise ValueError("Cannot delete an active policy template. Deactivate it first.")
 
+    # Emit audit event before deletion
+    try:
+        prev_hash = await _get_prev_hash(session, user.company_id)
+        event = build_audit_event(
+            event_type="POLICY",
+            description=f"Policy template deleted: {tmpl.name} ({tmpl.short_name})",
+            payload={"action": "delete", "template_id": str(tmpl.id),
+                     "name": tmpl.name, "short_name": tmpl.short_name},
+            prev_event_hash=prev_hash,
+            company_id=user.company_id,
+            branch_id=user.branch_id,
+            actor_id=user.id,
+            actor_email=user.email,
+            entity_type="policy_template",
+            entity_id=str(tmpl.id),
+        )
+        session.add(event)
+        await session.flush()
+    except Exception:
+        logger.warning("Failed to emit audit event for policy template delete", exc_info=True)
+
     await session.delete(tmpl)
     await session.commit()
 
@@ -405,4 +498,25 @@ async def deactivate_policy(
     current = await get_active_instance(session, user)
     if current:
         current.is_active = False
+
+        # Emit audit event
+        try:
+            prev_hash = await _get_prev_hash(session, user.company_id)
+            event = build_audit_event(
+                event_type="POLICY",
+                description=f"Policy deactivated for company {user.company_id} / branch {user.branch_id}",
+                payload={"action": "deactivate", "instance_id": str(current.id),
+                         "template_id": str(current.template_id)},
+                prev_event_hash=prev_hash,
+                company_id=user.company_id,
+                branch_id=user.branch_id,
+                actor_id=user.id,
+                actor_email=user.email,
+                entity_type="policy_instance",
+                entity_id=str(current.id),
+            )
+            session.add(event)
+        except Exception:
+            logger.warning("Failed to emit audit event for policy deactivation", exc_info=True)
+
         await session.commit()
