@@ -37,6 +37,7 @@ import {
 import type { PolicyTemplate, PolicyInstance, UpdateTemplatePayload, PolicyFavorite } from "../../api/policyClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { SAVED_POLICIES_HELP } from "@/lib/helpContent";
+import { POLICY_PRESETS } from "@/constants/policyPresets";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -749,6 +750,7 @@ function ActionBtn({ label, accent, danger, onClick, disabled }: {
 // -- Main page component ----------------------------------------------------------
 export default function SavedPoliciesPage() {
   const { isAuthenticated, token, user } = useAuth();
+  const isDemoToken = !token || token.startsWith('demo_token_');
   const router = useRouter();
   const renderTs = useRenderTs();
   const toastSeqRef = useRef(0);
@@ -806,6 +808,26 @@ export default function SavedPoliciesPage() {
     if (!isAuthenticated) return;
     setLoading(true);
     setApiError(null);
+    if (isDemoToken) {
+      // Demo mode: build template list from local POLICY_PRESETS (backend rejects demo tokens)
+      const localTemplates: PolicyTemplate[] = POLICY_PRESETS.map(p => ({
+        id: p.id,
+        company_id: null,
+        name: p.name,
+        short_name: p.shortName,
+        description: p.description,
+        risk_posture: p.riskPosture,
+        category: p.category,
+        config: p.policy,
+        version: 1,
+        is_system: true,
+        created_at: new Date().toISOString(),
+      }));
+      setPolicies(localTemplates);
+      setActiveInstance(null);
+      setLoading(false);
+      return;
+    }
     Promise.all([
       listPolicyTemplates(token ?? undefined).catch(() => [] as PolicyTemplate[]),
       getActivePolicy(token ?? undefined).catch(() => null),
@@ -822,7 +844,7 @@ export default function SavedPoliciesPage() {
       setFavorites(favs);
       setFavoriteIds(new Set(favs.map(f => f.template_id)));
     }).catch(() => {});
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, isDemoToken]);
 
   useEffect(() => { fetchPolicies(); }, [fetchPolicies]);
 
