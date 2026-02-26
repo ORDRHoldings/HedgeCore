@@ -356,9 +356,7 @@ ROLE_PERMS = {
 
         "pipeline.approve", "pipeline.reject",
 
-        "policy.view", "policy.edit",
-
-        "market.view", "market.edit", "market.autofill",
+        "policy.view", "policy.edit", "policy.activate",        "market.view", "market.edit", "market.autofill",
 
         "reports.view_own_branch", "reports.view_all_branches",
 
@@ -382,8 +380,7 @@ ROLE_PERMS = {
 
         "pipeline.create_proposal", "pipeline.submit_staging",
 
-        "policy.view",
-
+        "policy.view", "policy.activate",
         "market.view", "market.autofill",
 
         "reports.view_own_branch", "reports.export_pdf",
@@ -1015,6 +1012,7 @@ async def reset_seed_passwords(
         raise HTTPException(status_code=403, detail="Invalid API key")
 
     reset_count = 0
+    perms_added = 0
     try:
         for email, pw, full_name, job_title, role_name, branch_id, dept_id in EMPLOYEES:
             r = await db.execute(select(User).where(User.email == email))
@@ -1026,9 +1024,31 @@ async def reset_seed_passwords(
                 user.branch_id = branch_id
                 user.department_id = dept_id
                 reset_count += 1
+        await db.flush()
+
+        # Also sync role permissions from ROLE_PERMS (idempotent -- adds missing entries)
+        for role_name_rp, codenames in ROLE_PERMS.items():
+            rr = await db.execute(select(Role).where(Role.name == role_name_rp))
+            role = rr.scalars().first()
+            if not role:
+                continue
+            for codename in codenames:
+                pr = await db.execute(select(Permission).where(Permission.codename == codename))
+                perm = pr.scalars().first()
+                if not perm:
+                    continue
+                er = await db.execute(
+                    select(RolePermission).where(
+                        RolePermission.role_id == role.id,
+                        RolePermission.permission_id == perm.id,
+                    )
+                )
+                if not er.scalars().first():
+                    db.add(RolePermission(role_id=role.id, permission_id=perm.id))
+                    perms_added += 1
         await db.commit()
-        logger.info(f"reset-passwords: resynced {reset_count} seed users")
-        return {"status": "ok", "reset_count": reset_count, "employees": [e[0] for e in EMPLOYEES]}
+        logger.info(f"reset-passwords: resynced {reset_count} seed users, added {perms_added} missing permissions")
+        return {"status": "ok", "reset_count": reset_count, "perms_added": perms_added, "employees": [e[0] for e in EMPLOYEES]}
     except Exception as e:
         await db.rollback()
         logger.exception(f"reset-passwords failed: {e}")
