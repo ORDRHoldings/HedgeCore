@@ -267,6 +267,26 @@ export default function ExecutionDeskPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [actionMode, setActionMode] = useState<ActionMode>(null);
+
+  // Advanced filters
+  const [currencyFilter, setCurrencyFilter] = useState<string[]>([]);
+  const [minAmount, setMinAmount] = useState<number | null>(null);
+  const [maxAmount, setMaxAmount] = useState<number | null>(null);
+  const [dateRangeFrom, setDateRangeFrom] = useState<string>("");
+  const [dateRangeTo, setDateRangeTo] = useState<string>("");
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Custom scenario builder
+  const [showScenarioBuilder, setShowScenarioBuilder] = useState(false);
+  const [customScenario, setCustomScenario] = useState<{
+    name: string;
+    description: string;
+    shocks: { currency: string; change: number }[];
+  }>({
+    name: "",
+    description: "",
+    shocks: [],
+  });
   const [simulationResults, setSimulationResults] = useState<Map<string, MonteCarloResult>>(new Map());
   const [portfolioRisk, setPortfolioRisk] = useState<PortfolioRisk | null>(null);
   const [complianceChecks, setComplianceChecks] = useState<ComplianceCheck[]>([]);
@@ -327,8 +347,34 @@ export default function ExecutionDeskPage() {
       );
     }
 
+    // Currency filter
+    if (currencyFilter.length > 0) {
+      filtered = filtered.filter((p) => currencyFilter.includes(p.currency));
+    }
+
+    // Amount range filter
+    if (minAmount !== null) {
+      filtered = filtered.filter((p) => Math.abs(p.amount) >= minAmount);
+    }
+    if (maxAmount !== null) {
+      filtered = filtered.filter((p) => Math.abs(p.amount) <= maxAmount);
+    }
+
+    // Date range filter
+    if (dateRangeFrom) {
+      filtered = filtered.filter((p) => p.value_date >= dateRangeFrom);
+    }
+    if (dateRangeTo) {
+      filtered = filtered.filter((p) => p.value_date <= dateRangeTo);
+    }
+
     return filtered;
-  }, [positions, search]);
+  }, [positions, search, currencyFilter, minAmount, maxAmount, dateRangeFrom, dateRangeTo]);
+
+  // Get unique currencies from ready positions
+  const availableCurrencies = useMemo(() => {
+    return [...new Set(positions.filter(p => p.execution_status === "POLICY_ASSIGNED").map(p => p.currency))].sort();
+  }, [positions]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelected((prev) => {
@@ -645,6 +691,85 @@ export default function ExecutionDeskPage() {
     );
   }, [complianceChecks, user, addHistoryEntry]);
 
+  // Batch operations
+  const runBatchSimulation = useCallback(async () => {
+    // Select all filtered positions
+    const allIds = new Set(readyPositions.map(p => p.id));
+    setSelected(allIds);
+
+    // Run simulation
+    setTimeout(() => runSimulation(), 100);
+  }, [readyPositions, runSimulation]);
+
+  const runBatchCompliance = useCallback(() => {
+    // Select all filtered positions
+    const allIds = new Set(readyPositions.map(p => p.id));
+    setSelected(allIds);
+
+    // Run compliance
+    setTimeout(() => runComplianceChecks(), 100);
+  }, [readyPositions, runComplianceChecks]);
+
+  // Custom scenario execution
+  const executeCustomScenario = useCallback(() => {
+    if (!customScenario.name || customScenario.shocks.length === 0) {
+      return;
+    }
+
+    const selectedPositions = readyPositions.filter((p) => selected.has(p.id));
+    const scenario: StressScenario = {
+      id: `custom_${Date.now()}`,
+      name: customScenario.name,
+      description: customScenario.description || "Custom stress test scenario",
+      shocks: customScenario.shocks,
+    };
+
+    const result = runStressTest(selectedPositions, scenario);
+    setStressResults(result);
+    setStressScenario(scenario.id);
+    setActionMode("STRESS_TEST");
+    setShowScenarioBuilder(false);
+
+    // Log to history
+    addHistoryEntry(
+      "STRESS_TEST",
+      selectedPositions.map(p => p.id),
+      `Custom stress test "${scenario.name}": Portfolio impact ${result.totalImpact >= 0 ? "+" : ""}$${fmtAmt(result.totalImpact)} (${result.percentageImpact.toFixed(1)}%)`
+    );
+  }, [customScenario, selected, readyPositions, addHistoryEntry]);
+
+  const addShockToCustomScenario = useCallback((currency: string, change: number) => {
+    setCustomScenario(prev => ({
+      ...prev,
+      shocks: [...prev.shocks.filter(s => s.currency !== currency), { currency, change }],
+    }));
+  }, []);
+
+  const removeShockFromCustomScenario = useCallback((currency: string) => {
+    setCustomScenario(prev => ({
+      ...prev,
+      shocks: prev.shocks.filter(s => s.currency !== currency),
+    }));
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setCurrencyFilter([]);
+    setMinAmount(null);
+    setMaxAmount(null);
+    setDateRangeFrom("");
+    setDateRangeTo("");
+  }, []);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (currencyFilter.length > 0) count++;
+    if (minAmount !== null) count++;
+    if (maxAmount !== null) count++;
+    if (dateRangeFrom) count++;
+    if (dateRangeTo) count++;
+    return count;
+  }, [currencyFilter, minAmount, maxAmount, dateRangeFrom, dateRangeTo]);
+
   // Export hedge plans to CSV
   const exportHedgePlansCSV = useCallback(() => {
     if (hedgePlans.size === 0) return;
@@ -854,6 +979,171 @@ export default function ExecutionDeskPage() {
               />
             </div>
 
+            {/* Filters */}
+            <div style={{ borderBottom: `1px solid ${S.soft}` }}>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                style={{
+                  width: "100%",
+                  fontFamily: S.fontMono,
+                  fontSize: 9,
+                  color: showFilters ? S.cyan : S.secondary,
+                  background: showFilters ? S.bgSub : "transparent",
+                  border: "none",
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}>
+                {showFilters ? "▼" : "▶"} FILTERS
+                {activeFilterCount > 0 && (
+                  <span style={{
+                    background: S.cyan,
+                    color: S.bgPanel,
+                    padding: "1px 5px",
+                    borderRadius: 2,
+                    fontSize: 8,
+                    fontWeight: 700,
+                  }}>
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {showFilters && (
+                <div style={{ padding: "12px", background: S.bgSub }}>
+                  {/* Currency filter */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginBottom: 6, letterSpacing: "0.06em" }}>
+                      CURRENCY
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {availableCurrencies.map(curr => {
+                        const isSelected = currencyFilter.includes(curr);
+                        return (
+                          <button
+                            key={curr}
+                            onClick={() => {
+                              if (isSelected) {
+                                setCurrencyFilter(currencyFilter.filter(c => c !== curr));
+                              } else {
+                                setCurrencyFilter([...currencyFilter, curr]);
+                              }
+                            }}
+                            style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 9,
+                              color: isSelected ? S.bgPanel : S.primary,
+                              background: isSelected ? S.cyan : S.bgPanel,
+                              border: `1px solid ${isSelected ? S.cyan : S.rim}`,
+                              padding: "3px 8px",
+                              cursor: "pointer",
+                            }}>
+                            {curr}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Amount range */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginBottom: 6, letterSpacing: "0.06em" }}>
+                      AMOUNT RANGE
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input
+                        type="number"
+                        placeholder="Min"
+                        value={minAmount || ""}
+                        onChange={(e) => setMinAmount(e.target.value ? parseFloat(e.target.value) : null)}
+                        style={{
+                          flex: 1,
+                          fontFamily: S.fontMono,
+                          fontSize: 9,
+                          padding: "4px 6px",
+                          background: S.bgPanel,
+                          border: `1px solid ${S.rim}`,
+                          color: S.primary,
+                        }}
+                      />
+                      <input
+                        type="number"
+                        placeholder="Max"
+                        value={maxAmount || ""}
+                        onChange={(e) => setMaxAmount(e.target.value ? parseFloat(e.target.value) : null)}
+                        style={{
+                          flex: 1,
+                          fontFamily: S.fontMono,
+                          fontSize: 9,
+                          padding: "4px 6px",
+                          background: S.bgPanel,
+                          border: `1px solid ${S.rim}`,
+                          color: S.primary,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Date range */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginBottom: 6, letterSpacing: "0.06em" }}>
+                      VALUE DATE RANGE
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input
+                        type="date"
+                        value={dateRangeFrom}
+                        onChange={(e) => setDateRangeFrom(e.target.value)}
+                        style={{
+                          flex: 1,
+                          fontFamily: S.fontMono,
+                          fontSize: 9,
+                          padding: "4px 6px",
+                          background: S.bgPanel,
+                          border: `1px solid ${S.rim}`,
+                          color: S.primary,
+                        }}
+                      />
+                      <input
+                        type="date"
+                        value={dateRangeTo}
+                        onChange={(e) => setDateRangeTo(e.target.value)}
+                        style={{
+                          flex: 1,
+                          fontFamily: S.fontMono,
+                          fontSize: 9,
+                          padding: "4px 6px",
+                          background: S.bgPanel,
+                          border: `1px solid ${S.rim}`,
+                          color: S.primary,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {activeFilterCount > 0 && (
+                    <button
+                      onClick={clearFilters}
+                      style={{
+                        width: "100%",
+                        fontFamily: S.fontMono,
+                        fontSize: 9,
+                        color: S.tertiary,
+                        background: "transparent",
+                        border: `1px solid ${S.rim}`,
+                        padding: "4px",
+                        cursor: "pointer",
+                      }}>
+                      CLEAR ALL FILTERS
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Selection controls */}
             {selected.size > 0 && (
               <div style={{
@@ -986,6 +1276,42 @@ export default function ExecutionDeskPage() {
                 }}>
                 {allSelected ? "Deselect All" : "Select All"} (⌘A)
               </button>
+              <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 6 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginBottom: 6, letterSpacing: "0.06em" }}>
+                  BATCH OPERATIONS
+                </div>
+                <button
+                  onClick={runBatchSimulation}
+                  disabled={readyPositions.length === 0}
+                  style={{
+                    width: "100%",
+                    fontFamily: S.fontMono,
+                    fontSize: 9,
+                    color: readyPositions.length === 0 ? S.tertiary : S.cyan,
+                    background: "transparent",
+                    border: `1px solid ${readyPositions.length === 0 ? S.rim : S.cyan}`,
+                    padding: "5px 10px",
+                    cursor: readyPositions.length === 0 ? "not-allowed" : "pointer",
+                    marginBottom: 4,
+                  }}>
+                  ⚡ SIMULATE ALL ({readyPositions.length})
+                </button>
+                <button
+                  onClick={runBatchCompliance}
+                  disabled={readyPositions.length === 0}
+                  style={{
+                    width: "100%",
+                    fontFamily: S.fontMono,
+                    fontSize: 9,
+                    color: readyPositions.length === 0 ? S.tertiary : S.amber,
+                    background: "transparent",
+                    border: `1px solid ${readyPositions.length === 0 ? S.rim : S.amber}`,
+                    padding: "5px 10px",
+                    cursor: readyPositions.length === 0 ? "not-allowed" : "pointer",
+                  }}>
+                  ✓ CHECK ALL ({readyPositions.length})
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1618,6 +1944,26 @@ export default function ExecutionDeskPage() {
                   {/* Scenario Selection */}
                   {!stressResults && !showComparison && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {/* Custom Scenario Button */}
+                      <button
+                        onClick={() => setShowScenarioBuilder(true)}
+                        style={{
+                          padding: 16,
+                          border: `2px dashed ${S.cyan}`,
+                          background: S.bgPanel,
+                          cursor: "pointer",
+                          fontFamily: S.fontMono,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: S.cyan,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 8,
+                        }}>
+                        + CREATE CUSTOM SCENARIO
+                      </button>
+
                       {STRESS_SCENARIOS.map((scenario) => {
                         const inComparison = scenarioComparison.some(s => s.scenarioId === scenario.id);
                         return (
@@ -2633,6 +2979,323 @@ export default function ExecutionDeskPage() {
                 For persistent audit trail, see <span style={{ color: S.cyan }}>Audit Trail</span> page (linked to database audit_events table).
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Custom Scenario Builder Modal */}
+      {showScenarioBuilder && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.7)",
+            backdropFilter: "blur(4px)",
+            zIndex: 1001,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 40,
+          }}
+          onClick={() => setShowScenarioBuilder(false)}>
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 700,
+              maxHeight: "80vh",
+              background: S.bgPanel,
+              border: `1px solid ${S.rim}`,
+              borderRadius: 4,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              padding: "16px 20px",
+              borderBottom: `1px solid ${S.rim}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}>
+              <div style={{
+                fontFamily: S.fontMono,
+                fontSize: 12,
+                fontWeight: 700,
+                color: S.primary,
+                letterSpacing: "0.06em",
+              }}>
+                CUSTOM STRESS TEST SCENARIO BUILDER
+              </div>
+              <button
+                onClick={() => setShowScenarioBuilder(false)}
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 10,
+                  color: S.tertiary,
+                  background: "transparent",
+                  border: `1px solid ${S.darkBorder}`,
+                  padding: "4px 12px",
+                  cursor: "pointer",
+                }}>
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ flex: 1, overflow: "auto", padding: 20 }}>
+              {/* Scenario Name */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 9,
+                  color: S.tertiary,
+                  marginBottom: 6,
+                  letterSpacing: "0.06em",
+                }}>
+                  SCENARIO NAME *
+                </div>
+                <input
+                  type="text"
+                  value={customScenario.name}
+                  onChange={(e) => setCustomScenario({ ...customScenario, name: e.target.value })}
+                  placeholder="e.g., Euro Crisis 2026"
+                  style={{
+                    width: "100%",
+                    fontFamily: S.fontMono,
+                    fontSize: 11,
+                    padding: "8px 12px",
+                    background: S.bgSub,
+                    border: `1px solid ${S.rim}`,
+                    color: S.primary,
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 9,
+                  color: S.tertiary,
+                  marginBottom: 6,
+                  letterSpacing: "0.06em",
+                }}>
+                  DESCRIPTION
+                </div>
+                <textarea
+                  value={customScenario.description}
+                  onChange={(e) => setCustomScenario({ ...customScenario, description: e.target.value })}
+                  placeholder="Describe the scenario assumptions..."
+                  rows={3}
+                  style={{
+                    width: "100%",
+                    fontFamily: S.fontMono,
+                    fontSize: 10,
+                    padding: "8px 12px",
+                    background: S.bgSub,
+                    border: `1px solid ${S.rim}`,
+                    color: S.primary,
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              {/* Shocks */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 9,
+                  color: S.tertiary,
+                  marginBottom: 6,
+                  letterSpacing: "0.06em",
+                }}>
+                  CURRENCY SHOCKS * (at least one required)
+                </div>
+
+                {/* Current shocks */}
+                {customScenario.shocks.length > 0 && (
+                  <div style={{ marginBottom: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                    {customScenario.shocks.map((shock) => (
+                      <div
+                        key={shock.currency}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "8px 12px",
+                          background: S.bgSub,
+                          border: `1px solid ${S.rim}`,
+                        }}>
+                        <div style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 10,
+                          color: S.primary,
+                          fontWeight: 700,
+                          width: 50,
+                        }}>
+                          {shock.currency}
+                        </div>
+                        <div style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 10,
+                          color: shock.change < 0 ? S.fail : S.pass,
+                          flex: 1,
+                        }}>
+                          {shock.change > 0 ? "+" : ""}{(shock.change * 100).toFixed(1)}%
+                        </div>
+                        <button
+                          onClick={() => removeShockFromCustomScenario(shock.currency)}
+                          style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 9,
+                            color: S.tertiary,
+                            background: "transparent",
+                            border: `1px solid ${S.rim}`,
+                            padding: "2px 8px",
+                            cursor: "pointer",
+                          }}>
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add shock form */}
+                <div style={{
+                  padding: 12,
+                  background: S.bgDeep,
+                  border: `1px solid ${S.rim}`,
+                }}>
+                  <div style={{
+                    fontFamily: S.fontMono,
+                    fontSize: 9,
+                    color: S.tertiary,
+                    marginBottom: 8,
+                  }}>
+                    Add Currency Shock:
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <select
+                      id="shock-currency"
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 10,
+                        padding: "6px 10px",
+                        background: S.bgPanel,
+                        border: `1px solid ${S.rim}`,
+                        color: S.primary,
+                        flex: 1,
+                      }}>
+                      <option value="">Select currency...</option>
+                      {availableCurrencies.map(curr => (
+                        <option key={curr} value={curr}>{curr}</option>
+                      ))}
+                    </select>
+                    <input
+                      id="shock-change"
+                      type="number"
+                      step="0.01"
+                      placeholder="% change"
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 10,
+                        padding: "6px 10px",
+                        background: S.bgPanel,
+                        border: `1px solid ${S.rim}`,
+                        color: S.primary,
+                        width: 100,
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        const currencySelect = document.getElementById("shock-currency") as HTMLSelectElement;
+                        const changeInput = document.getElementById("shock-change") as HTMLInputElement;
+                        const currency = currencySelect.value;
+                        const change = parseFloat(changeInput.value);
+
+                        if (currency && !isNaN(change)) {
+                          addShockToCustomScenario(currency, change / 100);
+                          currencySelect.value = "";
+                          changeInput.value = "";
+                        }
+                      }}
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 9,
+                        color: S.primary,
+                        background: S.cyan,
+                        border: "none",
+                        padding: "6px 12px",
+                        cursor: "pointer",
+                      }}>
+                      + Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info */}
+              <div style={{
+                padding: 12,
+                background: `color-mix(in srgb, ${S.cyan} 10%, transparent)`,
+                border: `1px solid ${S.cyan}`,
+                fontFamily: S.fontMono,
+                fontSize: 9,
+                color: S.secondary,
+              }}>
+                <strong style={{ color: S.primary }}>Tip:</strong> Enter shock as percentage. Positive values = currency strengthens, negative = weakens.
+                Example: EUR +10% = Euro strengthens 10% vs USD, MXN -15% = Peso weakens 15%.
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: "12px 20px",
+              borderTop: `1px solid ${S.rim}`,
+              display: "flex",
+              gap: 8,
+              justifyContent: "flex-end",
+            }}>
+              <button
+                onClick={() => {
+                  setCustomScenario({ name: "", description: "", shocks: [] });
+                  setShowScenarioBuilder(false);
+                }}
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 10,
+                  color: S.tertiary,
+                  background: "transparent",
+                  border: `1px solid ${S.darkBorder}`,
+                  padding: "6px 16px",
+                  cursor: "pointer",
+                }}>
+                Cancel
+              </button>
+              <button
+                onClick={executeCustomScenario}
+                disabled={!customScenario.name || customScenario.shocks.length === 0 || selected.size === 0}
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: (!customScenario.name || customScenario.shocks.length === 0 || selected.size === 0) ? S.tertiary : S.bgPanel,
+                  background: (!customScenario.name || customScenario.shocks.length === 0 || selected.size === 0) ? S.bgSub : S.cyan,
+                  border: "none",
+                  padding: "6px 16px",
+                  cursor: (!customScenario.name || customScenario.shocks.length === 0 || selected.size === 0) ? "not-allowed" : "pointer",
+                }}>
+                RUN TEST ({selected.size} positions)
+              </button>
+            </div>
           </div>
         </div>
       )}
