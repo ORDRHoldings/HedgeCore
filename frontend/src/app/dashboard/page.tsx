@@ -18,6 +18,13 @@ import QuickActionsWidget from "@/components/dashboard/widgets/QuickActionsWidge
 import ExposureSummaryWidget from "@/components/dashboard/widgets/ExposureSummaryWidget";
 import PipelineStatusWidget from "@/components/dashboard/widgets/PipelineStatusWidget";
 import FxRatesWidget from "@/components/dashboard/widgets/FxRatesWidget";
+import CurrencyIntelWidget from "@/components/dashboard/widgets/CurrencyIntelWidget";
+import HedgeHealthWidget from "@/components/dashboard/widgets/HedgeHealthWidget";
+import MarketPulseWidget from "@/components/dashboard/widgets/MarketPulseWidget";
+import CommandHubWidget from "@/components/dashboard/widgets/CommandHubWidget";
+import GeoPoliticalWidget from "@/components/dashboard/widgets/GeoPoliticalWidget";
+import UsdExposureRadarWidget from "@/components/dashboard/widgets/UsdExposureRadarWidget";
+import SystemPulseWidget from "@/components/dashboard/widgets/SystemPulseWidget";
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const S = {
   fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -33,7 +40,10 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType<{ token: string; use
   pending_approvals: PendingApprovalsWidget, team_activity: TeamActivityWidget,
   branch_comparison: BranchComparisonWidget, polisophic_mini: PolisophicMiniWidget,
   quick_actions: QuickActionsWidget, exposure_summary: ExposureSummaryWidget, pipeline_status: PipelineStatusWidget,
-  fx_rates: FxRatesWidget,
+  fx_rates: FxRatesWidget, currency_intel: CurrencyIntelWidget,
+  hedge_health: HedgeHealthWidget, market_pulse: MarketPulseWidget,
+  command_hub: CommandHubWidget, geopolitical: GeoPoliticalWidget,
+  usd_exposure_radar: UsdExposureRadarWidget, system_pulse: SystemPulseWidget,
 };
 const layoutKey = (uid: string) => `dashboard_layout_${uid}`;
 const helpOpenKey = (uid: string) => `dashboard_help_open_${uid}`;
@@ -161,7 +171,7 @@ export default function DashboardPage() {
         {helpOpen && (<div style={{ width: 300, flexShrink: 0, borderLeft: `1px solid ${S.rim}`, background: S.bgPanel, overflow: "auto", position: "sticky", top: 0, alignSelf: "flex-start", maxHeight: "calc(100vh - 76px)" }}><DashboardHelpPanel onClose={toggleHelp} role={role} /></div>)}
       </div>
       <footer style={{ height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px", background: S.bgPanel, borderTop: `1px solid ${S.rim}`, fontFamily: S.fontMono, fontSize: "0.6rem", color: S.tertiary, letterSpacing: "0.04em", flexShrink: 0 }}>
-        <span style={{ color: S.cyan }}>ORDR</span><span style={{ color: S.rim }}>·</span><span>Synex Capital Partners</span><span style={{ color: S.rim }}>·</span><span>Institutional Risk Infrastructure</span><div style={{ flex: 1 }} /><span>Drag handle to reposition · Resize from corner · Layout auto-saved</span>
+        <span style={{ color: S.cyan }}>ORDR</span><span style={{ color: S.rim }}>·</span><span>{user.company?.name ?? "HedgeCalc"}</span><span style={{ color: S.rim }}>·</span><span>Institutional Risk Infrastructure</span><div style={{ flex: 1 }} /><span>Drag handle to reposition · Resize from corner · Layout auto-saved</span>
       </footer>
       <WidgetCatalog open={catalogOpen} onClose={() => setCatalogOpen(false)} activeWidgetIds={widgetIds} onAdd={handleAdd} onReset={() => { handleReset(); setCatalogOpen(false); }} />
       <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } } .react-grid-item { transition: none !important; } .react-grid-item.react-grid-placeholder { background: color-mix(in srgb, var(--accent-cyan) 8%, transparent) !important; border: 1px dashed var(--accent-cyan) !important; border-radius: 0 !important; opacity: 1 !important; } .react-resizable-handle { opacity: 0; transition: opacity 150ms; } .react-grid-item:hover .react-resizable-handle { opacity: 0.5; } .react-resizable-handle::after { border-color: var(--accent-cyan) !important; } .dashboard-grid { min-height: 100%; }`}</style>

@@ -135,6 +135,76 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minH: 4,
     requiredPermission: null,
   },
+  {
+    id: "currency_intel",
+    title: "Currency Intelligence",
+    description: "Macro data, central bank policy, risk scores, and POLISOPHIC news feed for your exposure currencies.",
+    defaultW: 6,
+    defaultH: 8,
+    minW: 5,
+    minH: 6,
+    requiredPermission: null,
+  },
+  {
+    id: "hedge_health",
+    title: "Hedge Health",
+    description: "Composite health score across coverage, policy, approvals, positions, and pipeline. Shows setup checklist when starting fresh.",
+    defaultW: 4,
+    defaultH: 6,
+    minW: 3,
+    minH: 5,
+    requiredPermission: null,
+  },
+  {
+    id: "market_pulse",
+    title: "Market Pulse",
+    description: "Real-time market context: key indices, FX pairs, commodities, and bond yields in a Bloomberg-style ticker grid.",
+    defaultW: 8,
+    defaultH: 4,
+    minW: 6,
+    minH: 3,
+    requiredPermission: null,
+  },
+  {
+    id: "command_hub",
+    title: "Command Hub",
+    description: "Stunning visual navigation grid to every module in the application. Role-filtered, color-coded, with keyboard shortcuts.",
+    defaultW: 6,
+    defaultH: 6,
+    minW: 4,
+    minH: 4,
+    requiredPermission: null,
+  },
+  {
+    id: "geopolitical",
+    title: "Geopolitical & Macro",
+    description: "POLISOPHIC-powered political risk events, macro tape, and central bank tracker. Tabbed 3-panel intelligence view.",
+    defaultW: 6,
+    defaultH: 7,
+    minW: 5,
+    minH: 5,
+    requiredPermission: null,
+  },
+  {
+    id: "usd_exposure_radar",
+    title: "USD Exposure Radar",
+    description: "Deep-dive into USD dynamics: DXY, real yields, Fed positioning, FX matrix with vol/carry, and USD strength chart.",
+    defaultW: 6,
+    defaultH: 7,
+    minW: 5,
+    minH: 5,
+    requiredPermission: null,
+  },
+  {
+    id: "system_pulse",
+    title: "System Pulse",
+    description: "Application KPIs with health scoring, pipeline funnel, and status indicators. Live system dashboard.",
+    defaultW: 6,
+    defaultH: 6,
+    minW: 4,
+    minH: 4,
+    requiredPermission: null,
+  },
 ];
 
 // ─── Default Layouts per Role ─────────────────────────────────────────────────
@@ -143,13 +213,14 @@ type RoleLayout = { widgetIds: string[]; grid: GridItem[] };
 
 const ROLE_LAYOUTS: Record<string, RoleLayout> = {
   admin: {
-    widgetIds: ["kpi_summary", "branch_comparison", "pending_approvals", "polisophic_mini", "team_activity"],
+    widgetIds: ["system_pulse", "command_hub", "geopolitical", "usd_exposure_radar", "market_pulse", "currency_intel"],
     grid: [
-      { i: "kpi_summary",       x: 0, y: 0,  w: 12, h: 3 },
-      { i: "branch_comparison", x: 0, y: 3,  w: 8,  h: 5 },
-      { i: "pending_approvals", x: 8, y: 3,  w: 4,  h: 5 },
-      { i: "polisophic_mini",   x: 0, y: 8,  w: 6,  h: 5 },
-      { i: "team_activity",     x: 6, y: 8,  w: 6,  h: 6 },
+      { i: "system_pulse",        x: 0, y: 0,  w: 6,  h: 6 },
+      { i: "command_hub",         x: 6, y: 0,  w: 6,  h: 6 },
+      { i: "geopolitical",        x: 0, y: 6,  w: 6,  h: 7 },
+      { i: "usd_exposure_radar",  x: 6, y: 6,  w: 6,  h: 7 },
+      { i: "market_pulse",        x: 0, y: 13, w: 6,  h: 4 },
+      { i: "currency_intel",      x: 6, y: 13, w: 6,  h: 8 },
     ],
   },
   ceo: {
@@ -244,11 +315,12 @@ const ROLE_LAYOUTS: Record<string, RoleLayout> = {
 
 // Default fallback layout for unknown roles
 const DEFAULT_LAYOUT: RoleLayout = {
-  widgetIds: ["recent_runs", "quick_actions", "polisophic_mini"],
+  widgetIds: ["system_pulse", "command_hub", "geopolitical", "usd_exposure_radar"],
   grid: [
-    { i: "recent_runs",     x: 0, y: 0, w: 7, h: 5 },
-    { i: "quick_actions",   x: 7, y: 0, w: 5, h: 4 },
-    { i: "polisophic_mini", x: 0, y: 5, w: 12, h: 5 },
+    { i: "system_pulse",       x: 0, y: 0, w: 6, h: 6 },
+    { i: "command_hub",        x: 6, y: 0, w: 6, h: 6 },
+    { i: "geopolitical",       x: 0, y: 6, w: 6, h: 7 },
+    { i: "usd_exposure_radar", x: 6, y: 6, w: 6, h: 7 },
   ],
 };
 
