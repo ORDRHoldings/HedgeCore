@@ -1,0 +1,689 @@
+[2026-02-26T00:22:37.124Z] === STEP 0B: Authentication ===
+[2026-02-26T00:22:37.202Z] POST https://hedgecore.onrender.com/api/auth/login [demo@hedgecore.io]
+[2026-02-26T00:22:37.917Z] HTTP 422 | 329ms
+[2026-02-26T00:22:38.005Z] Response: {"detail":[{"type":"missing","loc":["body","username"],"msg":"Field required","input":null},{"type":"missing","loc":["body","password"],"msg":"Field required","input":null}]}
+[2026-02-26T00:22:38.087Z] demo login failed (HTTP 422), trying admin...
+[2026-02-26T00:22:38.592Z] HTTP 422
+[2026-02-26T00:22:38.662Z] Response: {"detail":[{"type":"missing","loc":["body","username"],"msg":"Field required","input":null},{"type":"missing","loc":["body","password"],"msg":"Field required","input":null}]}
+[2026-02-26T00:22:38.734Z] ALL AUTH FAILED - using API key only
+[2026-02-26T00:23:04.032Z] === AUTH: Testing form-encoded login (OAuth2 password flow) ===
+[2026-02-26T00:23:04.693Z] OAuth2 form: HTTP 401 | 353ms
+[2026-02-26T00:23:04.776Z] Body: {"detail":"Invalid credentials"}
+[2026-02-26T00:23:04.851Z] Trying form with content-type application/x-www-form-urlencoded...
+[2026-02-26T00:23:05.403Z] form-urlencoded: HTTP 401
+[2026-02-26T00:23:05.473Z] Body: {"detail":"Invalid credentials"}
+[2026-02-26T00:23:05.542Z] === Checking available auth endpoints ===
+[2026-02-26T00:23:06.030Z] openapi.json: HTTP 500
+[2026-02-26T00:24:22Z] === STEP 0B: Authentication ===
+[2026-02-26T00:24:22Z] Trying demo/demo (OAuth2 form)
+[2026-02-26T00:24:24Z] HTTP 200 | Body: {"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJoZWRnZWNhbGMiLCJhdWQiOiJ1c2VycyIsImlhdCI6MTc3MjA2NTQ2MywibmJmIjoxNzcyMDY1NDYzLCJleHAiOjE3NzIwNjcyNjMsInN1YiI6IjYzNDBmNTQ0LTU2ZjgtNGY3Mi
+[2026-02-26T00:24:25Z] SUCCESS: email= role= id= token_len=369
+[2026-02-26T00:24:51Z] Verifying token via GET /auth/me
+[2026-02-26T00:24:51Z] GET /auth/me → HTTP 200
+[2026-02-26T00:24:52Z] Body: {"id":"6340f544-56f8-4f72-9c6d-79586c1c058c","email":"demo","full_name":"Demo User","job_title":"FX Risk Analyst (Demo)","is_active":true,"is_superuser":false,"created_at":"2026-02-25T16:34:24.012331Z","company":{"id":"11111111-1111-1111-1111-111111111111","name":"Synex Capital Partners","slug":"synex-capital"},"branch":{"id":"22222222-2222-2222-2222-222222222201","name":"Headquarters -- New York","code":"NYC"},"department":{"id":"33333333-3333-3333-3333-333333333301","name":"FX Risk Desk","code":"FXD"},"roles":["senior_analyst"],"permissions":["audit.view_own","calculate.run_production","calculate.run_sandbox","hedges.create","hedges.edit","hedges.view","market.autofill","market.view","pipeline.create_proposal","pipeline.submit_staging","policy.view","reports.export_pdf","reports.view_own_branch","trades.create","trades.edit","trades.import_csv","trades.view"],"hierarchy_level":7}
+[2026-02-26T00:24:52Z] user=demo role= id=6340f544-56f8-4f72-9c6d-79586c1c058c company=
+[2026-02-26T00:25:26Z] === Getting supervisor token (e.nakamura / SoD) ===
+[2026-02-26T00:25:26Z] e.nakamura login: HTTP 401
+[2026-02-26T00:25:27Z] e.nakamura failed, trying c.ortega supervisor...
+[2026-02-26T00:25:27Z] c.ortega login: HTTP 401
+[2026-02-26T00:25:27Z] All supervisor logins failed, will test SoD enforcement with same token
+[2026-02-26T00:26:01Z] Trying c.ortega supervisor login
+[2026-02-26T00:26:01Z] c.ortega: HTTP 401
+[2026-02-26T00:26:01Z] Trying admin@synexcapital.com
+[2026-02-26T00:26:02Z] admin: HTTP 401
+[2026-02-26T00:26:02Z] Trying s.williams (head_of_risk)
+[2026-02-26T00:26:03Z] s.williams: HTTP 401
+[2026-02-26T00:26:46Z] Demo user permissions check:
+[2026-02-26T00:26:47Z] Has trades.execute: NO
+[2026-02-26T00:26:47Z] Checking users via admin endpoint...
+[2026-02-26T00:26:47Z] GET /v1/admin/users: HTTP 404
+[2026-02-26T00:27:09Z] === Checking user management endpoints ===
+[2026-02-26T00:27:09Z] POST /v1/seed/all: HTTP 404
+[2026-02-26T00:27:17Z] POST /v1/seed/company: HTTP 200
+[2026-02-26T00:27:46Z] === Seed completed: trying supervisor login again ===
+[2026-02-26T00:27:47Z] c.ortega after seed: HTTP 401
+[2026-02-26T00:27:47Z] admin after seed: HTTP 401
+[2026-02-26T00:28:48Z] === PRECONDITION: Getting fresh tokens ===
+[2026-02-26T00:28:48Z] demo login: HTTP 200
+[2026-02-26T00:28:49Z] demo token len=369
+[2026-02-26T00:28:50Z] c.ortega login: HTTP 401
+[2026-02-26T00:28:50Z] c.ortega token len=0
+[2026-02-26T00:29:28Z] c.ortega token: len=0
+[2026-02-26T00:29:29Z] c.ortega me: email: None | roles: None | has_execute: False
+[2026-02-26T00:30:26Z] demo token: eyJhbGciOiJIUzI1NiIsInR5cCI6Ik...
+[2026-02-26T00:30:26Z] admin token: ...
+[2026-02-26T00:30:27Z] admin me: email: None | roles: None | execute: False
+[2026-02-26T00:37:14Z] ================================================================
+[2026-02-26T00:37:14Z] ORDR Terminal — E2E Lifecycle Test
+[2026-02-26T00:37:14Z] ================================================================
+[2026-02-26T00:37:14Z] === STEP 0B: Authentication ===
+[2026-02-26T00:37:16Z]   ✅ PASS: demo login
+[2026-02-26T00:37:20Z]   ✅ PASS: admin login (SoD approver)
+[2026-02-26T00:37:21Z] Maker: email=demo id=6340f544-56f8-4f72-9c6d-79586c1c058c
+[2026-02-26T00:37:24Z] Checker: email=admin@synexcapital.com id=c21aa1be-f086-4bd1-b34e-16ba52ca5a0c has_execute=NO
+[2026-02-26T00:37:24Z]   ❌ FAIL: admin has trades.execute permission (expected=YES got=NO)
+[2026-02-26T00:37:24Z] 
+[2026-02-26T00:37:24Z] === STEP 1: Create Position ===
+[2026-02-26T00:37:25Z] position_id=a6059ea7-735b-4e0f-a93e-c0350976a59c
+[2026-02-26T00:37:25Z] execution_status=NEW
+[2026-02-26T00:37:26Z]   ✅ PASS: position_id is UUID
+[2026-02-26T00:37:26Z]   ✅ PASS: execution_status=NEW
+[2026-02-26T00:37:26Z] 
+[2026-02-26T00:37:26Z] === STEP 2: Get Active Policy Instance ===
+[2026-02-26T00:37:27Z] active policy_instance_id=28ccde70-6b7f-483e-ae7a-451eeb2f86e7
+[2026-02-26T00:37:27Z]   ✅ PASS: policy_instance_id present
+[2026-02-26T00:37:27Z] 
+[2026-02-26T00:37:27Z] === STEP 2B: Assign Policy to Position ===
+[2026-02-26T00:37:28Z] execution_status after assign=POLICY_ASSIGNED
+[2026-02-26T00:37:28Z]   ✅ PASS: execution_status=POLICY_ASSIGNED
+[2026-02-26T00:37:28Z] 
+[2026-02-26T00:37:29Z] === STEP 3: Run Hedge Calculation ===
+[2026-02-26T00:37:31Z] run_id=
+[2026-02-26T00:37:31Z] validation=
+[2026-02-26T00:37:31Z] bucket_count=0
+[2026-02-26T00:37:31Z] total_action_usd=0
+[2026-02-26T00:37:31Z] inputs_hash=...
+[2026-02-26T00:37:31Z] outputs_hash=...
+[2026-02-26T00:37:32Z] run_hash=...
+[2026-02-26T00:37:32Z]   ❌ FAIL: run_id present (empty)
+[2026-02-26T00:37:32Z]   ❌ FAIL: validation_report.status=PASS (expected=PASS got=)
+[2026-02-26T00:37:32Z]   ❌ FAIL: hedge_plan.buckets non-empty (expected NOT 0)
+[2026-02-26T00:37:32Z]   ❌ FAIL: inputs_hash present (empty)
+[2026-02-26T00:37:32Z]   ❌ FAIL: outputs_hash present (empty)
+[2026-02-26T00:37:32Z]   ❌ FAIL: run_hash present (empty)
+[2026-02-26T00:37:32Z] 
+[2026-02-26T00:37:32Z] === STEP 4: Mark READY_TO_EXECUTE ===
+[2026-02-26T00:37:33Z] execution_status= last_run_id=
+[2026-02-26T00:37:33Z]   ❌ FAIL: execution_status=READY_TO_EXECUTE (expected=READY_TO_EXECUTE got=)
+[2026-02-26T00:37:33Z]   ✅ PASS: last_run_id linked to run
+[2026-02-26T00:37:33Z] 
+[2026-02-26T00:37:33Z] === STEP 5: Create Execution Proposal (Maker=demo) ===
+[2026-02-26T00:37:35Z] proposal_id= status= hash=...
+[2026-02-26T00:37:35Z]   ❌ FAIL: proposal_id present (empty)
+[2026-02-26T00:37:35Z]   ❌ FAIL: proposal.status=PROPOSED (expected=PROPOSED got=)
+[2026-02-26T00:37:35Z] 
+[2026-02-26T00:37:35Z] === STEP 5B: SoD Test — same-user approval (expect 409/403) ===
+[2026-02-26T00:37:36Z] SoD self-approve result: Not Found
+[2026-02-26T00:37:36Z]   ✅ PASS: SoD enforced: same-user cannot approve own proposal
+[2026-02-26T00:37:37Z] 
+[2026-02-26T00:37:37Z] === STEP 5C: Approve Proposal (Checker=admin) ===
+[2026-02-26T00:37:40Z]   ✅ PASS: admin token refresh
+[2026-02-26T00:37:41Z] proposal.status= approval_hash=...
+[2026-02-26T00:37:41Z]   ❌ FAIL: proposal.status=APPROVED (expected=APPROVED got=)
+[2026-02-26T00:37:41Z]   ❌ FAIL: approval_hash present (empty)
+[2026-02-26T00:37:41Z] 
+[2026-02-26T00:37:41Z] === STEP 5D: Execute Proposal ===
+[2026-02-26T00:37:42Z] proposal.status after execute=
+[2026-02-26T00:37:42Z]   ❌ FAIL: proposal.status=EXECUTED (expected=EXECUTED got=)
+[2026-02-26T00:37:44Z] position.execution_status=
+[2026-02-26T00:37:44Z]   ❌ FAIL: position.execution_status=HEDGED (expected=HEDGED got=)
+[2026-02-26T00:37:44Z] 
+[2026-02-26T00:37:44Z] === STEP 6: Audit Trail Verification ===
+[2026-02-26T00:37:45Z] audit chain integrity=UNKNOWN
+[2026-02-26T00:37:48Z] audit events for position: 2
+  event: LIFECYCLE | Position E2E-ORDR-001 policy assigned -> POLICY_ASSIGNED | 2026-02-26T00:37:28.
+  event: INGEST | Position E2E-ORDR-001 created via manual entry | 2026-02-26T00:37:25.
+[2026-02-26T00:37:48Z]   ✅ PASS: audit events present for position
+[2026-02-26T00:37:48Z] 
+[2026-02-26T00:37:48Z] === STEP 7: Run Detail (Run Viewer) ===
+[2026-02-26T01:23:00Z] ================================================================
+[2026-02-26T01:23:00Z] ORDR Terminal — E2E Lifecycle Test
+[2026-02-26T01:23:01Z] ================================================================
+[2026-02-26T01:23:01Z] === STEP 0B: Authentication ===
+[2026-02-26T01:23:03Z]   ✅ PASS: demo login
+[2026-02-26T01:23:09Z] Password reset response: reset_count=16
+[2026-02-26T01:23:11Z]   ✅ PASS: c.ortega login (SoD approver / supervisor)
+[2026-02-26T01:23:13Z] Maker: email=demo id=6340f544-56f8-4f72-9c6d-79586c1c058c
+[2026-02-26T01:23:15Z] Checker: email=c.ortega@synexcapital.com id=b935a7d9-93f5-4389-b078-1f8c74842481 has_execute=YES
+[2026-02-26T01:23:15Z]   ✅ PASS: c.ortega has trades.execute permission
+[2026-02-26T01:23:15Z] 
+[2026-02-26T01:23:15Z] === STEP 1: Create Position ===
+[2026-02-26T01:23:17Z] position_id=
+[2026-02-26T01:23:17Z] execution_status=
+[2026-02-26T01:23:17Z]   ❌ FAIL: position_id is UUID (empty)
+[2026-02-26T01:23:17Z]   ❌ FAIL: execution_status=NEW (expected=NEW got=)
+[2026-02-26T01:23:17Z] 
+[2026-02-26T01:23:17Z] === STEP 2: Get Active Policy Instance ===
+[2026-02-26T01:23:18Z] active policy_instance_id=28ccde70-6b7f-483e-ae7a-451eeb2f86e7
+[2026-02-26T01:23:18Z]   ✅ PASS: policy_instance_id present
+[2026-02-26T01:23:18Z] 
+[2026-02-26T01:23:18Z] === STEP 2B: Assign Policy to Position ===
+[2026-02-26T01:23:19Z] execution_status after assign=
+[2026-02-26T01:23:19Z]   ❌ FAIL: execution_status=POLICY_ASSIGNED (expected=POLICY_ASSIGNED got=)
+[2026-02-26T01:23:19Z] 
+[2026-02-26T01:23:19Z] === STEP 3: Run Hedge Calculation ===
+[2026-02-26T01:23:22Z] run_id=6885e9c8-8147-4fac-b60e-8a0f2c86890e
+[2026-02-26T01:23:22Z] validation=PASS
+[2026-02-26T01:23:22Z] bucket_count=2
+[2026-02-26T01:23:22Z] total_action_usd=192534.55025003332
+[2026-02-26T01:23:23Z] inputs_hash=7aba506c00060eda...
+[2026-02-26T01:23:23Z] outputs_hash=4043742f3e80cfd1...
+[2026-02-26T01:23:23Z] run_hash=ce391aeb27979c1c...
+[2026-02-26T01:23:23Z]   ✅ PASS: run_id present
+[2026-02-26T01:23:23Z]   ✅ PASS: validation_report.status=PASS
+[2026-02-26T01:23:23Z]   ✅ PASS: hedge_plan.buckets non-empty
+[2026-02-26T01:23:23Z]   ✅ PASS: inputs_hash present
+[2026-02-26T01:23:23Z]   ✅ PASS: outputs_hash present
+[2026-02-26T01:23:23Z]   ✅ PASS: run_hash present
+[2026-02-26T01:23:23Z] 
+[2026-02-26T01:23:23Z] === STEP 4: Mark READY_TO_EXECUTE ===
+[2026-02-26T01:23:24Z] execution_status= last_run_id=
+[2026-02-26T01:23:24Z]   ❌ FAIL: execution_status=READY_TO_EXECUTE (expected=READY_TO_EXECUTE got=)
+[2026-02-26T01:23:24Z]   ❌ FAIL: last_run_id linked to run (expected=6885e9c8-8147-4fac-b60e-8a0f2c86890e got=)
+[2026-02-26T01:23:24Z] 
+[2026-02-26T01:23:24Z] === STEP 5: Create Execution Proposal (Maker=demo) ===
+[2026-02-26T01:23:26Z] proposal_id= status= hash=...
+[2026-02-26T01:23:26Z]   ❌ FAIL: proposal_id present (empty)
+[2026-02-26T01:23:26Z]   ❌ FAIL: proposal.status=PROPOSED (expected=PROPOSED got=)
+[2026-02-26T01:23:26Z] 
+[2026-02-26T01:23:26Z] === STEP 5B: SoD Test — same-user approval (expect 409/403) ===
+[2026-02-26T01:23:27Z] SoD self-approve result: Not Found
+[2026-02-26T01:23:27Z]   ✅ PASS: SoD enforced: same-user cannot approve own proposal
+[2026-02-26T01:23:27Z] 
+[2026-02-26T01:23:27Z] === STEP 5C: Approve Proposal (Checker=c.ortega / supervisor) ===
+[2026-02-26T01:23:30Z]   ✅ PASS: c.ortega token refresh (supervisor/SoD approver)
+[2026-02-26T01:23:31Z] proposal.status= approval_hash=...
+[2026-02-26T01:23:31Z]   ❌ FAIL: proposal.status=APPROVED (expected=APPROVED got=)
+[2026-02-26T01:23:31Z]   ❌ FAIL: approval_hash present (empty)
+[2026-02-26T01:23:31Z] 
+[2026-02-26T01:23:31Z] === STEP 5D: Execute Proposal ===
+[2026-02-26T01:23:32Z] proposal.status after execute=
+[2026-02-26T01:23:32Z]   ❌ FAIL: proposal.status=EXECUTED (expected=EXECUTED got=)
+[2026-02-26T01:24:04Z] ================================================================
+[2026-02-26T01:24:04Z] ORDR Terminal — E2E Lifecycle Test
+[2026-02-26T01:24:04Z] ================================================================
+[2026-02-26T01:24:04Z] === STEP 0B: Authentication ===
+[2026-02-26T01:24:06Z]   ✅ PASS: demo login
+[2026-02-26T01:24:13Z] Password reset response: reset_count=16
+[2026-02-26T01:24:15Z]   ✅ PASS: c.ortega login (SoD approver / supervisor)
+[2026-02-26T01:24:16Z] Maker: email=demo id=6340f544-56f8-4f72-9c6d-79586c1c058c
+[2026-02-26T01:24:19Z] Checker: email=c.ortega@synexcapital.com id=b935a7d9-93f5-4389-b078-1f8c74842481 has_execute=YES
+[2026-02-26T01:24:19Z]   ✅ PASS: c.ortega has trades.execute permission
+[2026-02-26T01:24:19Z] 
+[2026-02-26T01:24:19Z] === STEP 1: Create Position ===
+[2026-02-26T01:24:19Z] Using record_id=E2E-ORDR-20260226012419
+[2026-02-26T01:24:21Z] position_id=a914da19-88ec-45e6-adee-9b5c440f9052
+[2026-02-26T01:24:21Z] execution_status=NEW
+[2026-02-26T01:24:21Z]   ✅ PASS: position_id is UUID
+[2026-02-26T01:24:21Z]   ✅ PASS: execution_status=NEW
+[2026-02-26T01:24:21Z] 
+[2026-02-26T01:24:21Z] === STEP 2: Get Active Policy Instance ===
+[2026-02-26T01:24:23Z] active policy_instance_id=28ccde70-6b7f-483e-ae7a-451eeb2f86e7
+[2026-02-26T01:24:23Z]   ✅ PASS: policy_instance_id present
+[2026-02-26T01:24:23Z] 
+[2026-02-26T01:24:23Z] === STEP 2B: Assign Policy to Position ===
+[2026-02-26T01:24:24Z] execution_status after assign=POLICY_ASSIGNED
+[2026-02-26T01:24:24Z]   ✅ PASS: execution_status=POLICY_ASSIGNED
+[2026-02-26T01:24:24Z] 
+[2026-02-26T01:24:24Z] === STEP 3: Run Hedge Calculation ===
+[2026-02-26T01:24:27Z] run_id=2d5afe89-2269-49b7-bf03-3499a17b2824
+[2026-02-26T01:24:27Z] validation=PASS
+[2026-02-26T01:24:27Z] bucket_count=2
+[2026-02-26T01:24:27Z] total_action_usd=192534.55025003332
+[2026-02-26T01:24:27Z] inputs_hash=7aba506c00060eda...
+[2026-02-26T01:24:27Z] outputs_hash=4043742f3e80cfd1...
+[2026-02-26T01:24:27Z] run_hash=ce391aeb27979c1c...
+[2026-02-26T01:24:27Z]   ✅ PASS: run_id present
+[2026-02-26T01:24:28Z]   ✅ PASS: validation_report.status=PASS
+[2026-02-26T01:24:28Z]   ✅ PASS: hedge_plan.buckets non-empty
+[2026-02-26T01:24:28Z]   ✅ PASS: inputs_hash present
+[2026-02-26T01:24:28Z]   ✅ PASS: outputs_hash present
+[2026-02-26T01:24:28Z]   ✅ PASS: run_hash present
+[2026-02-26T01:24:28Z] 
+[2026-02-26T01:24:28Z] === STEP 4: Mark READY_TO_EXECUTE ===
+[2026-02-26T01:24:29Z] execution_status=READY_TO_EXECUTE last_run_id=2d5afe89-2269-49b7-bf03-3499a17b2824
+[2026-02-26T01:24:30Z]   ✅ PASS: execution_status=READY_TO_EXECUTE
+[2026-02-26T01:24:30Z]   ✅ PASS: last_run_id linked to run
+[2026-02-26T01:24:30Z] 
+[2026-02-26T01:24:30Z] === STEP 5: Create Execution Proposal (Maker=demo) ===
+[2026-02-26T01:24:31Z] proposal_id= status= hash=...
+[2026-02-26T01:24:31Z]   ❌ FAIL: proposal_id present (empty)
+[2026-02-26T01:24:31Z]   ❌ FAIL: proposal.status=PROPOSED (expected=PROPOSED got=)
+[2026-02-26T01:24:31Z] 
+[2026-02-26T01:24:32Z] === STEP 5B: SoD Test — same-user approval (expect 409/403) ===
+[2026-02-26T01:24:32Z] SoD self-approve result: Not Found
+[2026-02-26T01:24:33Z]   ✅ PASS: SoD enforced: same-user cannot approve own proposal
+[2026-02-26T01:24:33Z] 
+[2026-02-26T01:24:33Z] === STEP 5C: Approve Proposal (Checker=c.ortega / supervisor) ===
+[2026-02-26T01:24:36Z]   ✅ PASS: c.ortega token refresh (supervisor/SoD approver)
+[2026-02-26T01:24:37Z] proposal.status= approval_hash=...
+[2026-02-26T01:24:37Z]   ❌ FAIL: proposal.status=APPROVED (expected=APPROVED got=)
+[2026-02-26T01:24:37Z]   ❌ FAIL: approval_hash present (empty)
+[2026-02-26T01:24:37Z] 
+[2026-02-26T01:24:37Z] === STEP 5D: Execute Proposal ===
+[2026-02-26T01:24:38Z] proposal.status after execute=
+[2026-02-26T01:24:38Z]   ❌ FAIL: proposal.status=EXECUTED (expected=EXECUTED got=)
+[2026-02-26T01:24:40Z] position.execution_status=
+[2026-02-26T01:24:40Z]   ❌ FAIL: position.execution_status=HEDGED (expected=HEDGED got=)
+[2026-02-26T01:24:40Z] 
+[2026-02-26T01:24:40Z] === STEP 6: Audit Trail Verification ===
+[2026-02-26T01:24:41Z] audit chain integrity=UNKNOWN
+[2026-02-26T01:24:44Z] audit events for position: 3
+  event: LIFECYCLE | Position E2E-ORDR-20260226012419 run linked -> READY_TO_EXEC | 2026-02-26T01:24:29.
+  event: LIFECYCLE | Position E2E-ORDR-20260226012419 policy assigned -> POLICY_A | 2026-02-26T01:24:24.
+  event: INGEST | Position E2E-ORDR-20260226012419 created via manual entry | 2026-02-26T01:24:21.
+[2026-02-26T01:24:44Z]   ✅ PASS: audit events present for position
+[2026-02-26T01:24:44Z] 
+[2026-02-26T01:24:44Z] === STEP 7: Run Detail (Run Viewer) ===
+[2026-02-26T01:24:45Z] run_detail inputs_hash=7aba506c00060eda...
+[2026-02-26T01:24:45Z] run_detail policy_revision_id=
+[2026-02-26T01:24:45Z] trace events=6
+[2026-02-26T01:24:45Z]   ✅ PASS: run_detail.inputs_hash matches calculate response
+[2026-02-26T01:24:45Z]   ✅ PASS: trace_lite has events (>0)
+[2026-02-26T01:24:45Z]   ❌ FAIL: policy_revision_id NOT PINNED in run_detail (BUG: backend not returning field)
+[2026-02-26T01:24:45Z] 
+[2026-02-26T01:24:46Z] === STEP 8: Committee Pack ===
+[2026-02-26T01:24:47Z] committee_pack inputs_hash=7aba506c00060eda...
+[2026-02-26T01:24:47Z] committee_pack hedge_plan.buckets=2
+[2026-02-26T01:24:47Z] committee_pack policy_revision=
+[2026-02-26T01:24:47Z]   ✅ PASS: committee_pack.run_envelope.inputs_hash matches
+[2026-02-26T01:24:47Z]   ✅ PASS: committee_pack.hedge_plan.buckets non-empty (2 buckets)
+[2026-02-26T01:24:47Z]   ❌ FAIL: committee_pack.policy_revision NULL (BUG: policy not pinned at calc time)
+[2026-02-26T01:24:47Z] 
+[2026-02-26T01:24:47Z] ================================================================
+[2026-02-26T01:24:47Z] === E2E LIFECYCLE SUMMARY ===
+[2026-02-26T01:24:47Z] ================================================================
+[2026-02-26T01:24:47Z] Environment:       https://hedgecore.onrender.com (Render)
+[2026-02-26T01:24:48Z] Frontend:          https://ordr-terminal.vercel.app
+[2026-02-26T01:24:48Z] Test Record:       E2E-ORDR-20260226012419
+[2026-02-26T01:24:48Z] Position ID:       a914da19-88ec-45e6-adee-9b5c440f9052
+[2026-02-26T01:24:48Z] Run ID:            2d5afe89-2269-49b7-bf03-3499a17b2824
+[2026-02-26T01:24:48Z] Proposal ID:       
+[2026-02-26T01:24:48Z] Policy Instance:   28ccde70-6b7f-483e-ae7a-451eeb2f86e7
+[2026-02-26T01:24:48Z] Maker:             demo (senior_analyst)
+[2026-02-26T01:24:48Z] Checker:           c.ortega@synexcapital.com (supervisor)
+[2026-02-26T01:24:48Z] ---
+[2026-02-26T01:24:48Z] Final Position:    
+[2026-02-26T01:24:48Z] Final Proposal:    
+[2026-02-26T01:24:48Z] Audit Events:      3
+[2026-02-26T01:24:48Z] Bucket Count:      2 (engine) / 2 (committee pack)
+[2026-02-26T01:24:48Z] Policy Pin:        
+[2026-02-26T01:24:48Z] ---
+[2026-02-26T01:24:48Z] SHA-256 Hashes:
+[2026-02-26T01:24:48Z]   inputs_hash:  7aba506c00060edadd557570dae1ffed8121d73c346873d8fc473814ad5c9b31
+[2026-02-26T01:24:48Z]   outputs_hash: 4043742f3e80cfd1760a86ff448eddc9e58c2229ad9c32bbf0b4a221a8d85899
+[2026-02-26T01:24:48Z]   run_hash:     ce391aeb27979c1cf46f652437ddee5ffa0c9bd13565230cddbde34e2b05e550
+[2026-02-26T01:24:48Z]   trades_hash:  5dc359b0c15d23a3499557846c5385a7c2779db557a14b56695b88c0e19603c4
+[2026-02-26T01:24:48Z]   hedges_hash:  4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+[2026-02-26T01:24:48Z]   market_hash:  b3ff82333956e21008e6b93582ad871b1c84bb28ac6bcb83a4d30d6c88c5e618
+[2026-02-26T01:24:49Z]   policy_hash:  34cbb2635cefa14b39f1193ffcd4db80af186889d1cc7bd6d9240b74f2647e85
+[2026-02-26T01:24:49Z] ---
+[2026-02-26T01:24:49Z] Tests PASSED: 22
+[2026-02-26T01:24:49Z] Tests FAILED: 8
+[2026-02-26T01:24:49Z] OVERALL: FAIL
+[2026-02-26T01:24:49Z] ================================================================
+[2026-02-26T01:33:55Z] ================================================================
+[2026-02-26T01:33:55Z] ORDR Terminal — E2E Lifecycle Test
+[2026-02-26T01:33:55Z] ================================================================
+[2026-02-26T01:33:55Z] === STEP 0B: Authentication ===
+[2026-02-26T01:33:58Z]   ✅ PASS: demo login
+[2026-02-26T01:34:04Z] Password reset response: reset_count=16
+[2026-02-26T01:34:06Z]   ✅ PASS: c.ortega login (SoD approver / supervisor)
+[2026-02-26T01:34:08Z] Maker: email=demo id=6340f544-56f8-4f72-9c6d-79586c1c058c
+[2026-02-26T01:34:10Z] Checker: email=c.ortega@synexcapital.com id=b935a7d9-93f5-4389-b078-1f8c74842481 has_execute=YES
+[2026-02-26T01:34:10Z]   ✅ PASS: c.ortega has trades.execute permission
+[2026-02-26T01:34:10Z] 
+[2026-02-26T01:34:10Z] === STEP 1: Create Position ===
+[2026-02-26T01:34:10Z] Using record_id=E2E-ORDR-20260226013410
+[2026-02-26T01:34:12Z] position_id=fd161274-e353-4ec1-9dbc-511dbf948a84
+[2026-02-26T01:34:12Z] execution_status=NEW
+[2026-02-26T01:34:12Z]   ✅ PASS: position_id is UUID
+[2026-02-26T01:34:12Z]   ✅ PASS: execution_status=NEW
+[2026-02-26T01:34:12Z] 
+[2026-02-26T01:34:12Z] === STEP 2: Get Active Policy Instance ===
+[2026-02-26T01:34:13Z] active policy_instance_id=28ccde70-6b7f-483e-ae7a-451eeb2f86e7
+[2026-02-26T01:34:13Z]   ✅ PASS: policy_instance_id present
+[2026-02-26T01:34:14Z] 
+[2026-02-26T01:34:14Z] === STEP 2B: Assign Policy to Position ===
+[2026-02-26T01:34:15Z] execution_status after assign=POLICY_ASSIGNED
+[2026-02-26T01:34:15Z]   ✅ PASS: execution_status=POLICY_ASSIGNED
+[2026-02-26T01:34:15Z] 
+[2026-02-26T01:34:15Z] === STEP 3: Run Hedge Calculation ===
+[2026-02-26T01:34:18Z] run_id=d7fe284b-b6b0-49a5-8c07-cf2aa77e9910
+[2026-02-26T01:34:18Z] validation=PASS
+[2026-02-26T01:34:18Z] bucket_count=2
+[2026-02-26T01:34:18Z] total_action_usd=192534.55025003332
+[2026-02-26T01:34:19Z] inputs_hash=7aba506c00060eda...
+[2026-02-26T01:34:19Z] outputs_hash=4043742f3e80cfd1...
+[2026-02-26T01:34:19Z] run_hash=ce391aeb27979c1c...
+[2026-02-26T01:34:19Z]   ✅ PASS: run_id present
+[2026-02-26T01:34:19Z]   ✅ PASS: validation_report.status=PASS
+[2026-02-26T01:34:19Z]   ✅ PASS: hedge_plan.buckets non-empty
+[2026-02-26T01:34:19Z]   ✅ PASS: inputs_hash present
+[2026-02-26T01:34:19Z]   ✅ PASS: outputs_hash present
+[2026-02-26T01:34:19Z]   ✅ PASS: run_hash present
+[2026-02-26T01:34:19Z] 
+[2026-02-26T01:34:19Z] === STEP 4: Mark READY_TO_EXECUTE ===
+[2026-02-26T01:34:21Z] execution_status=READY_TO_EXECUTE last_run_id=d7fe284b-b6b0-49a5-8c07-cf2aa77e9910
+[2026-02-26T01:34:21Z]   ✅ PASS: execution_status=READY_TO_EXECUTE
+[2026-02-26T01:34:21Z]   ✅ PASS: last_run_id linked to run
+[2026-02-26T01:34:21Z] 
+[2026-02-26T01:34:21Z] === STEP 5: Create Execution Proposal (Maker=demo) ===
+[2026-02-26T01:34:23Z] proposal_id= status= hash=...
+[2026-02-26T01:34:23Z]   ❌ FAIL: proposal_id present (empty)
+[2026-02-26T01:34:23Z]   ❌ FAIL: proposal.status=PROPOSED (expected=PROPOSED got=)
+[2026-02-26T01:34:23Z] 
+[2026-02-26T01:34:23Z] === STEP 5B: SoD Test — same-user approval (expect 409/403) ===
+[2026-02-26T01:34:24Z] SoD self-approve result: Not Found
+[2026-02-26T01:34:24Z]   ✅ PASS: SoD enforced: same-user cannot approve own proposal
+[2026-02-26T01:34:24Z] 
+[2026-02-26T01:34:24Z] === STEP 5C: Approve Proposal (Checker=c.ortega / supervisor) ===
+[2026-02-26T01:34:28Z]   ✅ PASS: c.ortega token refresh (supervisor/SoD approver)
+[2026-02-26T01:34:29Z] proposal.status= approval_hash=...
+[2026-02-26T01:34:29Z]   ❌ FAIL: proposal.status=APPROVED (expected=APPROVED got=)
+[2026-02-26T01:34:29Z]   ❌ FAIL: approval_hash present (empty)
+[2026-02-26T01:34:29Z] 
+[2026-02-26T01:34:29Z] === STEP 5D: Execute Proposal ===
+[2026-02-26T01:34:30Z] proposal.status after execute=
+[2026-02-26T01:34:30Z]   ❌ FAIL: proposal.status=EXECUTED (expected=EXECUTED got=)
+[2026-02-26T01:34:32Z] position.execution_status=
+[2026-02-26T01:34:32Z]   ❌ FAIL: position.execution_status=HEDGED (expected=HEDGED got=)
+[2026-02-26T01:34:32Z] 
+[2026-02-26T01:34:32Z] === STEP 6: Audit Trail Verification ===
+[2026-02-26T01:34:34Z] audit chain integrity=UNKNOWN
+[2026-02-26T01:34:36Z] audit events for position: 3
+  event: LIFECYCLE | Position E2E-ORDR-20260226013410 run linked -> READY_TO_EXEC | 2026-02-26T01:34:21.
+  event: LIFECYCLE | Position E2E-ORDR-20260226013410 policy assigned -> POLICY_A | 2026-02-26T01:34:15.
+  event: INGEST | Position E2E-ORDR-20260226013410 created via manual entry | 2026-02-26T01:34:12.
+[2026-02-26T01:34:36Z]   ✅ PASS: audit events present for position
+[2026-02-26T01:34:36Z] 
+[2026-02-26T01:34:36Z] === STEP 7: Run Detail (Run Viewer) ===
+[2026-02-26T01:34:38Z] run_detail inputs_hash=7aba506c00060eda...
+[2026-02-26T01:34:38Z] run_detail policy_revision_id=
+[2026-02-26T01:34:38Z] trace events=6
+[2026-02-26T01:34:38Z]   ✅ PASS: run_detail.inputs_hash matches calculate response
+[2026-02-26T01:34:38Z]   ✅ PASS: trace_lite has events (>0)
+[2026-02-26T01:34:38Z]   ❌ FAIL: policy_revision_id NOT PINNED in run_detail (BUG: backend not returning field)
+[2026-02-26T01:34:38Z] 
+[2026-02-26T01:34:38Z] === STEP 8: Committee Pack ===
+[2026-02-26T01:34:39Z] committee_pack inputs_hash=7aba506c00060eda...
+[2026-02-26T01:34:39Z] committee_pack hedge_plan.buckets=2
+[2026-02-26T01:34:39Z] committee_pack policy_revision=c499ccf6-b3d2-4fd8-9cd8-d19fc9f7a35d
+[2026-02-26T01:34:40Z]   ✅ PASS: committee_pack.run_envelope.inputs_hash matches
+[2026-02-26T01:34:40Z]   ✅ PASS: committee_pack.hedge_plan.buckets non-empty (2 buckets)
+[2026-02-26T01:34:40Z]   ✅ PASS: committee_pack.policy_revision present
+[2026-02-26T01:34:40Z] 
+[2026-02-26T01:34:40Z] ================================================================
+[2026-02-26T01:34:40Z] === E2E LIFECYCLE SUMMARY ===
+[2026-02-26T01:34:40Z] ================================================================
+[2026-02-26T01:34:40Z] Environment:       https://hedgecore.onrender.com (Render)
+[2026-02-26T01:34:40Z] Frontend:          https://ordr-terminal.vercel.app
+[2026-02-26T01:34:40Z] Test Record:       E2E-ORDR-20260226013410
+[2026-02-26T01:34:40Z] Position ID:       fd161274-e353-4ec1-9dbc-511dbf948a84
+[2026-02-26T01:34:40Z] Run ID:            d7fe284b-b6b0-49a5-8c07-cf2aa77e9910
+[2026-02-26T01:34:40Z] Proposal ID:       
+[2026-02-26T01:34:40Z] Policy Instance:   28ccde70-6b7f-483e-ae7a-451eeb2f86e7
+[2026-02-26T01:34:40Z] Maker:             demo (senior_analyst)
+[2026-02-26T01:34:40Z] Checker:           c.ortega@synexcapital.com (supervisor)
+[2026-02-26T01:34:40Z] ---
+[2026-02-26T01:34:40Z] Final Position:    
+[2026-02-26T01:34:40Z] Final Proposal:    
+[2026-02-26T01:34:41Z] Audit Events:      3
+[2026-02-26T01:34:41Z] Bucket Count:      2 (engine) / 2 (committee pack)
+[2026-02-26T01:34:41Z] Policy Pin:        
+[2026-02-26T01:34:41Z] ---
+[2026-02-26T01:34:41Z] SHA-256 Hashes:
+[2026-02-26T01:34:41Z]   inputs_hash:  7aba506c00060edadd557570dae1ffed8121d73c346873d8fc473814ad5c9b31
+[2026-02-26T01:34:41Z]   outputs_hash: 4043742f3e80cfd1760a86ff448eddc9e58c2229ad9c32bbf0b4a221a8d85899
+[2026-02-26T01:34:41Z]   run_hash:     ce391aeb27979c1cf46f652437ddee5ffa0c9bd13565230cddbde34e2b05e550
+[2026-02-26T01:34:41Z]   trades_hash:  5dc359b0c15d23a3499557846c5385a7c2779db557a14b56695b88c0e19603c4
+[2026-02-26T01:34:41Z]   hedges_hash:  4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+[2026-02-26T01:34:41Z]   market_hash:  b3ff82333956e21008e6b93582ad871b1c84bb28ac6bcb83a4d30d6c88c5e618
+[2026-02-26T01:34:41Z]   policy_hash:  34cbb2635cefa14b39f1193ffcd4db80af186889d1cc7bd6d9240b74f2647e85
+[2026-02-26T01:34:41Z] ---
+[2026-02-26T01:34:41Z] Tests PASSED: 23
+[2026-02-26T01:34:41Z] Tests FAILED: 7
+[2026-02-26T01:34:41Z] OVERALL: FAIL
+[2026-02-26T01:34:41Z] ================================================================
+[2026-02-26T01:49:00Z] ================================================================
+[2026-02-26T01:49:00Z] ORDR Terminal — E2E Lifecycle Test
+[2026-02-26T01:49:00Z] ================================================================
+[2026-02-26T01:49:00Z] === STEP 0B: Authentication ===
+[2026-02-26T01:49:02Z]   ✅ PASS: demo login
+[2026-02-26T01:49:09Z] Password reset response: reset_count=16
+[2026-02-26T01:49:11Z]   ✅ PASS: c.ortega login (SoD approver / supervisor)
+[2026-02-26T01:49:12Z] Maker: email=demo id=6340f544-56f8-4f72-9c6d-79586c1c058c
+[2026-02-26T01:49:15Z] Checker: email=c.ortega@synexcapital.com id=b935a7d9-93f5-4389-b078-1f8c74842481 has_execute=YES
+[2026-02-26T01:49:15Z]   ✅ PASS: c.ortega has trades.execute permission
+[2026-02-26T01:49:15Z] 
+[2026-02-26T01:49:15Z] === STEP 1: Create Position ===
+[2026-02-26T01:49:15Z] Using record_id=E2E-ORDR-20260226014915
+[2026-02-26T01:49:17Z] position_id=a67de2d7-a83a-4196-9551-5e5aa4a32190
+[2026-02-26T01:49:17Z] execution_status=NEW
+[2026-02-26T01:49:17Z]   ✅ PASS: position_id is UUID
+[2026-02-26T01:49:17Z]   ✅ PASS: execution_status=NEW
+[2026-02-26T01:49:17Z] 
+[2026-02-26T01:49:17Z] === STEP 2: Get Active Policy Instance ===
+[2026-02-26T01:49:19Z] active policy_instance_id=28ccde70-6b7f-483e-ae7a-451eeb2f86e7
+[2026-02-26T01:49:21Z] ACTV template_id=db537738-fc23-494d-8add-6bf3843a0436
+[2026-02-26T01:49:23Z] Activated/refreshed policy_instance_id=
+[2026-02-26T01:49:23Z] ACTV activation failed — checking for existing active policy...
+[2026-02-26T01:49:24Z] Fallback policy_instance_id=28ccde70-6b7f-483e-ae7a-451eeb2f86e7
+[2026-02-26T01:49:24Z]   ✅ PASS: policy_instance_id present
+[2026-02-26T01:49:24Z] 
+[2026-02-26T01:49:24Z] === STEP 2B: Assign Policy to Position ===
+[2026-02-26T01:49:25Z] execution_status after assign=POLICY_ASSIGNED
+[2026-02-26T01:49:25Z]   ✅ PASS: execution_status=POLICY_ASSIGNED
+[2026-02-26T01:49:26Z] 
+[2026-02-26T01:49:26Z] === STEP 3: Run Hedge Calculation ===
+[2026-02-26T01:49:29Z] run_id=e0c1b744-47a7-4263-aa5d-7c1df7a7349b
+[2026-02-26T01:49:29Z] validation=PASS
+[2026-02-26T01:49:29Z] bucket_count=2
+[2026-02-26T01:49:29Z] total_action_usd=192534.55025003332
+[2026-02-26T01:49:29Z] inputs_hash=7aba506c00060eda...
+[2026-02-26T01:49:29Z] outputs_hash=4043742f3e80cfd1...
+[2026-02-26T01:49:29Z] run_hash=ce391aeb27979c1c...
+[2026-02-26T01:49:29Z]   ✅ PASS: run_id present
+[2026-02-26T01:49:29Z]   ✅ PASS: validation_report.status=PASS
+[2026-02-26T01:49:29Z]   ✅ PASS: hedge_plan.buckets non-empty
+[2026-02-26T01:49:29Z]   ✅ PASS: inputs_hash present
+[2026-02-26T01:49:29Z]   ✅ PASS: outputs_hash present
+[2026-02-26T01:49:29Z]   ✅ PASS: run_hash present
+[2026-02-26T01:49:30Z] 
+[2026-02-26T01:49:30Z] === STEP 4: Mark READY_TO_EXECUTE ===
+[2026-02-26T01:49:31Z] execution_status=READY_TO_EXECUTE last_run_id=e0c1b744-47a7-4263-aa5d-7c1df7a7349b
+[2026-02-26T01:49:31Z]   ✅ PASS: execution_status=READY_TO_EXECUTE
+[2026-02-26T01:49:31Z]   ✅ PASS: last_run_id linked to run
+[2026-02-26T01:49:31Z] 
+[2026-02-26T01:49:31Z] === STEP 5: Create Execution Proposal (Maker=demo) ===
+[2026-02-26T01:49:33Z] proposal_id= status= hash=...
+[2026-02-26T01:49:33Z]   ❌ FAIL: proposal_id present (empty)
+[2026-02-26T01:49:33Z]   ❌ FAIL: proposal.status=PROPOSED (expected=PROPOSED got=)
+[2026-02-26T01:49:33Z] 
+[2026-02-26T01:49:33Z] === STEP 5B: SoD Test — same-user approval (expect 409/403) ===
+[2026-02-26T01:49:34Z] SoD self-approve result: Not Found
+[2026-02-26T01:49:35Z]   ✅ PASS: SoD enforced: same-user cannot approve own proposal
+[2026-02-26T01:49:35Z] 
+[2026-02-26T01:49:35Z] === STEP 5C: Approve Proposal (Checker=c.ortega / supervisor) ===
+[2026-02-26T01:49:38Z]   ✅ PASS: c.ortega token refresh (supervisor/SoD approver)
+[2026-02-26T01:49:39Z] proposal.status= approval_hash=...
+[2026-02-26T01:49:39Z]   ❌ FAIL: proposal.status=APPROVED (expected=APPROVED got=)
+[2026-02-26T01:49:39Z]   ❌ FAIL: approval_hash present (empty)
+[2026-02-26T01:49:39Z] 
+[2026-02-26T01:49:39Z] === STEP 5D: Execute Proposal ===
+[2026-02-26T01:49:40Z] proposal.status after execute=
+[2026-02-26T01:49:40Z]   ❌ FAIL: proposal.status=EXECUTED (expected=EXECUTED got=)
+[2026-02-26T01:49:42Z] position.execution_status=
+[2026-02-26T01:49:42Z]   ❌ FAIL: position.execution_status=HEDGED (expected=HEDGED got=)
+[2026-02-26T01:49:42Z] 
+[2026-02-26T01:49:42Z] === STEP 6: Audit Trail Verification ===
+[2026-02-26T01:49:44Z] audit chain integrity=UNKNOWN
+[2026-02-26T01:49:46Z] audit events for position: 3
+  event: LIFECYCLE | Position E2E-ORDR-20260226014915 run linked -> READY_TO_EXEC | 2026-02-26T01:49:31.
+  event: LIFECYCLE | Position E2E-ORDR-20260226014915 policy assigned -> POLICY_A | 2026-02-26T01:49:25.
+  event: INGEST | Position E2E-ORDR-20260226014915 created via manual entry | 2026-02-26T01:49:17.
+[2026-02-26T01:49:46Z]   ✅ PASS: audit events present for position
+[2026-02-26T01:49:46Z] 
+[2026-02-26T01:49:46Z] === STEP 7: Run Detail (Run Viewer) ===
+[2026-02-26T01:49:48Z] run_detail inputs_hash=7aba506c00060eda...
+[2026-02-26T01:49:48Z] run_detail policy_revision_id=
+[2026-02-26T01:49:48Z] trace events=6
+[2026-02-26T01:49:48Z]   ✅ PASS: run_detail.inputs_hash matches calculate response
+[2026-02-26T01:49:48Z]   ✅ PASS: trace_lite has events (>0)
+[2026-02-26T01:49:48Z]   ❌ FAIL: policy_revision_id NOT PINNED in run_detail (BUG: backend not returning field)
+[2026-02-26T01:49:48Z] 
+[2026-02-26T01:49:48Z] === STEP 8: Committee Pack ===
+[2026-02-26T01:49:50Z] committee_pack inputs_hash=7aba506c00060eda...
+[2026-02-26T01:49:50Z] committee_pack hedge_plan.buckets=2
+[2026-02-26T01:49:50Z] committee_pack policy_revision=c499ccf6-b3d2-4fd8-9cd8-d19fc9f7a35d
+[2026-02-26T01:49:50Z]   ✅ PASS: committee_pack.run_envelope.inputs_hash matches
+[2026-02-26T01:49:50Z]   ✅ PASS: committee_pack.hedge_plan.buckets non-empty (2 buckets)
+[2026-02-26T01:49:50Z]   ✅ PASS: committee_pack.policy_revision present
+[2026-02-26T01:49:50Z] 
+[2026-02-26T01:49:50Z] ================================================================
+[2026-02-26T01:49:50Z] === E2E LIFECYCLE SUMMARY ===
+[2026-02-26T01:49:50Z] ================================================================
+[2026-02-26T01:49:50Z] Environment:       https://hedgecore.onrender.com (Render)
+[2026-02-26T01:49:50Z] Frontend:          https://ordr-terminal.vercel.app
+[2026-02-26T01:49:50Z] Test Record:       E2E-ORDR-20260226014915
+[2026-02-26T01:49:50Z] Position ID:       a67de2d7-a83a-4196-9551-5e5aa4a32190
+[2026-02-26T01:49:50Z] Run ID:            e0c1b744-47a7-4263-aa5d-7c1df7a7349b
+[2026-02-26T01:49:51Z] Proposal ID:       
+[2026-02-26T01:49:51Z] Policy Instance:   28ccde70-6b7f-483e-ae7a-451eeb2f86e7
+[2026-02-26T01:49:51Z] Maker:             demo (senior_analyst)
+[2026-02-26T01:49:51Z] Checker:           c.ortega@synexcapital.com (supervisor)
+[2026-02-26T01:49:51Z] ---
+[2026-02-26T01:49:51Z] Final Position:    
+[2026-02-26T01:49:51Z] Final Proposal:    
+[2026-02-26T01:49:51Z] Audit Events:      3
+[2026-02-26T01:49:51Z] Bucket Count:      2 (engine) / 2 (committee pack)
+[2026-02-26T01:49:51Z] Policy Pin:        
+[2026-02-26T01:49:51Z] ---
+[2026-02-26T01:49:51Z] SHA-256 Hashes:
+[2026-02-26T01:49:51Z]   inputs_hash:  7aba506c00060edadd557570dae1ffed8121d73c346873d8fc473814ad5c9b31
+[2026-02-26T01:49:51Z]   outputs_hash: 4043742f3e80cfd1760a86ff448eddc9e58c2229ad9c32bbf0b4a221a8d85899
+[2026-02-26T01:49:51Z]   run_hash:     ce391aeb27979c1cf46f652437ddee5ffa0c9bd13565230cddbde34e2b05e550
+[2026-02-26T01:49:51Z]   trades_hash:  5dc359b0c15d23a3499557846c5385a7c2779db557a14b56695b88c0e19603c4
+[2026-02-26T01:49:51Z]   hedges_hash:  4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+[2026-02-26T01:49:51Z]   market_hash:  b3ff82333956e21008e6b93582ad871b1c84bb28ac6bcb83a4d30d6c88c5e618
+[2026-02-26T01:49:51Z]   policy_hash:  34cbb2635cefa14b39f1193ffcd4db80af186889d1cc7bd6d9240b74f2647e85
+[2026-02-26T01:49:52Z] ---
+[2026-02-26T01:49:52Z] Tests PASSED: 23
+[2026-02-26T01:49:52Z] Tests FAILED: 7
+[2026-02-26T01:49:52Z] OVERALL: FAIL
+[2026-02-26T01:49:52Z] ================================================================
+[2026-02-26T01:56:03Z] ================================================================
+[2026-02-26T01:56:03Z] ORDR Terminal — E2E Lifecycle Test
+[2026-02-26T01:56:03Z] ================================================================
+[2026-02-26T01:56:03Z] === STEP 0B: Authentication ===
+[2026-02-26T01:56:05Z]   ✅ PASS: demo login
+[2026-02-26T01:56:13Z] Password reset response: reset_count=16
+[2026-02-26T01:56:15Z]   ✅ PASS: c.ortega login (SoD approver / supervisor)
+[2026-02-26T01:56:16Z] Maker: email=demo id=6340f544-56f8-4f72-9c6d-79586c1c058c
+[2026-02-26T01:56:18Z] Checker: email=c.ortega@synexcapital.com id=b935a7d9-93f5-4389-b078-1f8c74842481 has_execute=YES
+[2026-02-26T01:56:18Z]   ✅ PASS: c.ortega has trades.execute permission
+[2026-02-26T01:56:19Z] 
+[2026-02-26T01:56:19Z] === STEP 1: Create Position ===
+[2026-02-26T01:56:19Z] Using record_id=E2E-ORDR-20260226015619
+[2026-02-26T01:56:20Z] position_id=fee81949-29da-48a2-9cdc-63fd2cc14abd
+[2026-02-26T01:56:20Z] execution_status=NEW
+[2026-02-26T01:56:20Z]   ✅ PASS: position_id is UUID
+[2026-02-26T01:56:20Z]   ✅ PASS: execution_status=NEW
+[2026-02-26T01:56:20Z] 
+[2026-02-26T01:56:20Z] === STEP 2: Get Active Policy Instance ===
+[2026-02-26T01:56:22Z] active policy_instance_id=28ccde70-6b7f-483e-ae7a-451eeb2f86e7
+[2026-02-26T01:56:24Z] ACTV template_id=db537738-fc23-494d-8add-6bf3843a0436
+[2026-02-26T01:56:26Z] Activated/refreshed policy_instance_id=880dc4d9-474c-4594-a461-5e1949e3c70d
+[2026-02-26T01:56:26Z]   ✅ PASS: policy_instance_id present
+[2026-02-26T01:56:26Z] 
+[2026-02-26T01:56:26Z] === STEP 2B: Assign Policy to Position ===
+[2026-02-26T01:56:28Z] execution_status after assign=POLICY_ASSIGNED
+[2026-02-26T01:56:28Z]   ✅ PASS: execution_status=POLICY_ASSIGNED
+[2026-02-26T01:56:28Z] 
+[2026-02-26T01:56:28Z] === STEP 3: Run Hedge Calculation ===
+[2026-02-26T01:56:31Z] run_id=5ad242b1-1b1b-4575-acb1-c45f2197d6ac
+[2026-02-26T01:56:31Z] validation=PASS
+[2026-02-26T01:56:31Z] bucket_count=2
+[2026-02-26T01:56:31Z] total_action_usd=192534.55025003332
+[2026-02-26T01:56:31Z] inputs_hash=7aba506c00060eda...
+[2026-02-26T01:56:31Z] outputs_hash=4043742f3e80cfd1...
+[2026-02-26T01:56:31Z] run_hash=ce391aeb27979c1c...
+[2026-02-26T01:56:31Z]   ✅ PASS: run_id present
+[2026-02-26T01:56:31Z]   ✅ PASS: validation_report.status=PASS
+[2026-02-26T01:56:31Z]   ✅ PASS: hedge_plan.buckets non-empty
+[2026-02-26T01:56:31Z]   ✅ PASS: inputs_hash present
+[2026-02-26T01:56:31Z]   ✅ PASS: outputs_hash present
+[2026-02-26T01:56:31Z]   ✅ PASS: run_hash present
+[2026-02-26T01:56:31Z] 
+[2026-02-26T01:56:31Z] === STEP 4: Mark READY_TO_EXECUTE ===
+[2026-02-26T01:56:33Z] execution_status=READY_TO_EXECUTE last_run_id=5ad242b1-1b1b-4575-acb1-c45f2197d6ac
+[2026-02-26T01:56:33Z]   ✅ PASS: execution_status=READY_TO_EXECUTE
+[2026-02-26T01:56:33Z]   ✅ PASS: last_run_id linked to run
+[2026-02-26T01:56:33Z] 
+[2026-02-26T01:56:33Z] === STEP 5: Create Execution Proposal (Maker=demo) ===
+[2026-02-26T01:56:35Z] proposal_id= status= hash=...
+[2026-02-26T01:56:35Z]   ❌ FAIL: proposal_id present (empty)
+[2026-02-26T01:56:35Z]   ❌ FAIL: proposal.status=PROPOSED (expected=PROPOSED got=)
+[2026-02-26T01:56:35Z] 
+[2026-02-26T01:56:35Z] === STEP 5B: SoD Test — same-user approval (expect 409/403) ===
+[2026-02-26T01:56:36Z] SoD self-approve result: Not Found
+[2026-02-26T01:56:36Z]   ✅ PASS: SoD enforced: same-user cannot approve own proposal
+[2026-02-26T01:56:36Z] 
+[2026-02-26T01:56:36Z] === STEP 5C: Approve Proposal (Checker=c.ortega / supervisor) ===
+[2026-02-26T01:56:39Z]   ✅ PASS: c.ortega token refresh (supervisor/SoD approver)
+[2026-02-26T01:56:40Z] proposal.status= approval_hash=...
+[2026-02-26T01:56:40Z]   ❌ FAIL: proposal.status=APPROVED (expected=APPROVED got=)
+[2026-02-26T01:56:40Z]   ❌ FAIL: approval_hash present (empty)
+[2026-02-26T01:56:40Z] 
+[2026-02-26T01:56:40Z] === STEP 5D: Execute Proposal ===
+[2026-02-26T01:56:41Z] proposal.status after execute=
+[2026-02-26T01:56:41Z]   ❌ FAIL: proposal.status=EXECUTED (expected=EXECUTED got=)
+[2026-02-26T01:56:43Z] position.execution_status=
+[2026-02-26T01:56:43Z]   ❌ FAIL: position.execution_status=HEDGED (expected=HEDGED got=)
+[2026-02-26T01:56:44Z] 
+[2026-02-26T01:56:44Z] === STEP 6: Audit Trail Verification ===
+[2026-02-26T01:56:45Z] audit chain integrity=UNKNOWN
+[2026-02-26T01:56:47Z] audit events for position: 3
+  event: LIFECYCLE | Position E2E-ORDR-20260226015619 run linked -> READY_TO_EXEC | 2026-02-26T01:56:33.
+  event: LIFECYCLE | Position E2E-ORDR-20260226015619 policy assigned -> POLICY_A | 2026-02-26T01:56:28.
+  event: INGEST | Position E2E-ORDR-20260226015619 created via manual entry | 2026-02-26T01:56:20.
+[2026-02-26T01:56:47Z]   ✅ PASS: audit events present for position
+[2026-02-26T01:56:47Z] 
+[2026-02-26T01:56:47Z] === STEP 7: Run Detail (Run Viewer) ===
+[2026-02-26T01:56:49Z] run_detail inputs_hash=7aba506c00060eda...
+[2026-02-26T01:56:49Z] run_detail policy_revision_id=07dfea40-2494-46f9-b910-861114adcdc3
+[2026-02-26T01:56:49Z] trace events=6
+[2026-02-26T01:56:49Z]   ✅ PASS: run_detail.inputs_hash matches calculate response
+[2026-02-26T01:56:49Z]   ✅ PASS: trace_lite has events (>0)
+[2026-02-26T01:56:49Z]   ✅ PASS: policy_revision_id pinned in run_detail
+[2026-02-26T01:56:49Z] 
+[2026-02-26T01:56:49Z] === STEP 8: Committee Pack ===
+[2026-02-26T01:56:51Z] committee_pack inputs_hash=7aba506c00060eda...
+[2026-02-26T01:56:51Z] committee_pack hedge_plan.buckets=2
+[2026-02-26T01:56:51Z] committee_pack policy_revision=07dfea40-2494-46f9-b910-861114adcdc3
+[2026-02-26T01:56:51Z]   ✅ PASS: committee_pack.run_envelope.inputs_hash matches
+[2026-02-26T01:56:51Z]   ✅ PASS: committee_pack.hedge_plan.buckets non-empty (2 buckets)
+[2026-02-26T01:56:51Z]   ✅ PASS: committee_pack.policy_revision present
+[2026-02-26T01:56:51Z] 
+[2026-02-26T01:56:51Z] ================================================================
+[2026-02-26T01:56:51Z] === E2E LIFECYCLE SUMMARY ===
+[2026-02-26T01:56:51Z] ================================================================
+[2026-02-26T01:56:51Z] Environment:       https://hedgecore.onrender.com (Render)
+[2026-02-26T01:56:51Z] Frontend:          https://ordr-terminal.vercel.app
+[2026-02-26T01:56:51Z] Test Record:       E2E-ORDR-20260226015619
+[2026-02-26T01:56:51Z] Position ID:       fee81949-29da-48a2-9cdc-63fd2cc14abd
+[2026-02-26T01:56:51Z] Run ID:            5ad242b1-1b1b-4575-acb1-c45f2197d6ac
+[2026-02-26T01:56:51Z] Proposal ID:       
+[2026-02-26T01:56:51Z] Policy Instance:   880dc4d9-474c-4594-a461-5e1949e3c70d
+[2026-02-26T01:56:52Z] Maker:             demo (senior_analyst)
+[2026-02-26T01:56:52Z] Checker:           c.ortega@synexcapital.com (supervisor)
+[2026-02-26T01:56:52Z] ---
+[2026-02-26T01:56:52Z] Final Position:    
+[2026-02-26T01:56:52Z] Final Proposal:    
+[2026-02-26T01:56:52Z] Audit Events:      3
+[2026-02-26T01:56:52Z] Bucket Count:      2 (engine) / 2 (committee pack)
+[2026-02-26T01:56:52Z] Policy Pin:        07dfea40-2494-46f9-b910-861114adcdc3
+[2026-02-26T01:56:52Z] ---
+[2026-02-26T01:56:52Z] SHA-256 Hashes:
+[2026-02-26T01:56:52Z]   inputs_hash:  7aba506c00060edadd557570dae1ffed8121d73c346873d8fc473814ad5c9b31
+[2026-02-26T01:56:52Z]   outputs_hash: 4043742f3e80cfd1760a86ff448eddc9e58c2229ad9c32bbf0b4a221a8d85899
+[2026-02-26T01:56:52Z]   run_hash:     ce391aeb27979c1cf46f652437ddee5ffa0c9bd13565230cddbde34e2b05e550
+[2026-02-26T01:56:52Z]   trades_hash:  5dc359b0c15d23a3499557846c5385a7c2779db557a14b56695b88c0e19603c4
+[2026-02-26T01:56:52Z]   hedges_hash:  4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+[2026-02-26T01:56:52Z]   market_hash:  b3ff82333956e21008e6b93582ad871b1c84bb28ac6bcb83a4d30d6c88c5e618
+[2026-02-26T01:56:52Z]   policy_hash:  34cbb2635cefa14b39f1193ffcd4db80af186889d1cc7bd6d9240b74f2647e85
+[2026-02-26T01:56:52Z] ---
+[2026-02-26T01:56:52Z] Tests PASSED: 24
+[2026-02-26T01:56:52Z] Tests FAILED: 6
+[2026-02-26T01:56:52Z] OVERALL: FAIL
+[2026-02-26T01:56:53Z] ================================================================
