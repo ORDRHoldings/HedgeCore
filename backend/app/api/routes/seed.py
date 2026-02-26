@@ -1053,3 +1053,39 @@ async def reset_seed_passwords(
         await db.rollback()
         logger.exception(f"reset-passwords failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/migrate-schema")
+async def migrate_schema(
+    db: AsyncSession = Depends(get_session),
+    x_api_key: str = Header(default=None, alias="X-API-Key"),
+):
+    """
+    DEV/DEMO ONLY: Run idempotent ALTER TABLE migrations for columns added after
+    initial table creation. Protected by API key. Safe to call multiple times.
+    """
+    if x_api_key != "HC_DEV_KEY_001":
+        raise HTTPException(status_code=403, detail="Invalid API key")
+
+    from sqlalchemy import text as sa_text
+    migrations = [
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposed_by_email VARCHAR(255)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approved_by_email VARCHAR(255)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_notes TEXT",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_hash VARCHAR(64)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS execution_ref VARCHAR(128)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
+    ]
+    applied = []
+    errors = []
+    for stmt in migrations:
+        try:
+            await db.execute(sa_text(stmt))
+            await db.commit()
+            applied.append(stmt)
+        except Exception as e:
+            await db.rollback()
+            errors.append({"stmt": stmt, "error": str(e)})
+    return {"status": "ok", "applied": len(applied), "errors": errors}
