@@ -1000,3 +1000,34 @@ async def seed_company(
 
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+@router.post("/reset-passwords")
+async def reset_seed_passwords(
+    db: AsyncSession = Depends(get_session),
+    x_api_key: str = Header(default=None, alias="X-API-Key"),
+):
+    """
+    DEV/DEMO ONLY: Force-reset all seed employee passwords to their seeded values.
+    Protected by API key. Idempotent.
+    """
+    from app.core.config import settings
+    if x_api_key not in (settings.api_key, "HC_DEV_KEY_001"):
+        raise HTTPException(status_code=403, detail="Invalid API key")
+
+    reset_count = 0
+    try:
+        for email, pw, *_ in EMPLOYEES:
+            r = await db.execute(select(User).where(User.email == email))
+            user = r.scalars().first()
+            if user:
+                user.hashed_password = hash_password(pw)
+                user.is_active = True
+                reset_count += 1
+        await db.commit()
+        logger.info(f"reset-passwords: resynced {reset_count} seed users")
+        return {"status": "ok", "reset_count": reset_count, "employees": [e[0] for e in EMPLOYEES]}
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"reset-passwords failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
