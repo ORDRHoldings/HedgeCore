@@ -243,9 +243,10 @@ const NAV: NavSection[] = [
   },
   {
     label: "Execution", href: "/execution", icon: Ic.execution,
-    prefixes: ["/execution", "/sandbox", "/currency-fx", "/execution-history"],
+    prefixes: ["/execution", "/execution-desk", "/sandbox", "/currency-fx", "/execution-history"],
     header: "Trade Execution",
     items: [
+      { label: "Execution Desk",      desc: "Institutional execution hub — simulation, stress test, IBKR",  href: "/execution-desk",    icon: Ic.terminal,  badge: "HUB",  badgeColor: S.cyan  },
       { label: "Execution Pipeline",  desc: "Pre-flight auth checklist, DV01, ticket desk, IBKR handoff",  href: "/execution",         icon: Ic.lightning },
       { label: "Sandbox",             desc: "What-if calculator & backtest engine",                         href: "/sandbox",           icon: Ic.terminal,  badge: "DEV",  badgeColor: S.amber },
       { label: "FX Rates",            desc: "Live spot rates, forward curves, vol surface — position-aware",href: "/currency-fx",       icon: Ic.bar_chart },
