@@ -44,10 +44,13 @@ import {
   generateIBKRPayload,
   performComplianceChecks,
   optimizeHedgePlan,
+  runStressTest,
   type MonteCarloResult,
   type PortfolioRisk,
   type ComplianceCheck,
   type HedgePlan,
+  type StressScenario,
+  type PortfolioStressResult,
 } from "@/utils/executionAnalytics";
 
 const S = {
@@ -70,13 +73,6 @@ const S = {
 } as const;
 
 type ActionMode = "SIMULATE" | "STRESS_TEST" | "HEDGE_PLAN" | "IBKR_EXECUTE" | "COMPLIANCE" | null;
-
-interface StressScenario {
-  id: string;
-  name: string;
-  description: string;
-  shocks: { currency: string; change: number }[];
-}
 
 const STRESS_SCENARIOS: StressScenario[] = [
   {
@@ -276,6 +272,7 @@ export default function ExecutionDeskPage() {
   const [complianceChecks, setComplianceChecks] = useState<ComplianceCheck[]>([]);
   const [hedgePlans, setHedgePlans] = useState<Map<string, HedgePlan>>(new Map());
   const [stressScenario, setStressScenario] = useState<string>("");
+  const [stressResults, setStressResults] = useState<PortfolioStressResult | null>(null);
   const [showRiskPanel, setShowRiskPanel] = useState(true);
   const [isSimulating, setIsSimulating] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -446,6 +443,25 @@ export default function ExecutionDeskPage() {
     );
 
     setActionMode("HEDGE_PLAN");
+  }, [selected, readyPositions, addHistoryEntry]);
+
+  // Run stress test scenario
+  const executeStressTest = useCallback((scenarioId: string) => {
+    const selectedPositions = readyPositions.filter((p) => selected.has(p.id));
+    const scenario = STRESS_SCENARIOS.find((s) => s.id === scenarioId);
+    if (!scenario) return;
+
+    const result = runStressTest(selectedPositions, scenario);
+    setStressResults(result);
+    setStressScenario(scenarioId);
+    setActionMode("STRESS_TEST");
+
+    // Log to history
+    addHistoryEntry(
+      "STRESS_TEST",
+      selectedPositions.map(p => p.id),
+      `Stress test "${scenario.name}": Portfolio impact ${result.totalImpact >= 0 ? "+" : ""}$${fmtAmt(result.totalImpact)} (${result.percentageImpact.toFixed(1)}%)`
+    );
   }, [selected, readyPositions, addHistoryEntry]);
 
   // Export IBKR payload (real FIX format)
@@ -789,7 +805,11 @@ export default function ExecutionDeskPage() {
                 {isSimulating ? "SIMULATING..." : "SIMULATE MONTE CARLO"}
               </button>
               <button
-                onClick={() => setActionMode("STRESS_TEST")}
+                onClick={() => {
+                  setActionMode("STRESS_TEST");
+                  setStressResults(null);
+                  setStressScenario("");
+                }}
                 disabled={selected.size === 0}
                 style={{
                   fontFamily: S.fontMono,
@@ -1127,45 +1147,228 @@ export default function ExecutionDeskPage() {
                   }}>
                     STRESS TEST SCENARIOS
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {STRESS_SCENARIOS.map((scenario) => (
-                      <div
-                        key={scenario.id}
-                        style={{
-                          padding: 16,
-                          border: `1px solid ${S.rim}`,
-                          background: S.bgSub,
-                          cursor: "pointer",
-                          transition: "background 0.1s",
-                        }}
-                        onClick={() => setStressScenario(scenario.id)}>
+
+                  {/* Scenario Selection */}
+                  {!stressResults && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {STRESS_SCENARIOS.map((scenario) => (
+                        <div
+                          key={scenario.id}
+                          style={{
+                            padding: 16,
+                            border: `1px solid ${S.rim}`,
+                            background: S.bgSub,
+                            cursor: "pointer",
+                            transition: "background 0.15s",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = S.bgDeep; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = S.bgSub; }}
+                          onClick={() => executeStressTest(scenario.id)}>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: S.primary,
+                            marginBottom: 8,
+                          }}>
+                            {scenario.name}
+                          </div>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 10,
+                            color: S.secondary,
+                            marginBottom: 12,
+                          }}>
+                            {scenario.description}
+                          </div>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 9,
+                            color: S.tertiary,
+                          }}>
+                            Shocks: {scenario.shocks.map((s) => `${s.currency} ${s.change > 0 ? "+" : ""}${(s.change * 100).toFixed(0)}%`).join(", ")}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Stress Test Results */}
+                  {stressResults && (
+                    <div>
+                      {/* Portfolio Impact Summary */}
+                      <div style={{
+                        padding: 16,
+                        border: `2px solid ${stressResults.totalImpact < 0 ? S.fail : S.pass}`,
+                        background: S.bgPanel,
+                        marginBottom: 16,
+                      }}>
                         <div style={{
                           fontFamily: S.fontMono,
                           fontSize: 11,
                           fontWeight: 700,
                           color: S.primary,
-                          marginBottom: 8,
+                          marginBottom: 12,
+                          letterSpacing: "0.06em",
                         }}>
-                          {scenario.name}
+                          PORTFOLIO IMPACT — {stressResults.scenarioName.toUpperCase()}
                         </div>
                         <div style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(4, 1fr)",
+                          gap: 12,
                           fontFamily: S.fontMono,
                           fontSize: 10,
-                          color: S.secondary,
-                          marginBottom: 12,
                         }}>
-                          {scenario.description}
-                        </div>
-                        <div style={{
-                          fontFamily: S.fontMono,
-                          fontSize: 9,
-                          color: S.tertiary,
-                        }}>
-                          Shocks: {scenario.shocks.map((s) => `${s.currency} ${s.change > 0 ? "+" : ""}${(s.change * 100).toFixed(0)}%`).join(", ")}
+                          <div>
+                            <div style={{ color: S.tertiary, marginBottom: 4 }}>Total Impact</div>
+                            <div style={{
+                              color: stressResults.totalImpact < 0 ? S.fail : S.pass,
+                              fontWeight: 700,
+                              fontSize: 14,
+                            }}>
+                              {stressResults.totalImpact >= 0 ? "+" : ""}${fmtAmt(stressResults.totalImpact)}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: S.tertiary, marginBottom: 4 }}>Percentage Impact</div>
+                            <div style={{
+                              color: stressResults.percentageImpact < 0 ? S.fail : S.pass,
+                              fontWeight: 700,
+                              fontSize: 14,
+                            }}>
+                              {stressResults.percentageImpact >= 0 ? "+" : ""}{stressResults.percentageImpact.toFixed(2)}%
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: S.tertiary, marginBottom: 4 }}>Affected Positions</div>
+                            <div style={{ color: S.primary, fontWeight: 700 }}>
+                              {stressResults.affectedPositions} / {stressResults.totalPositions}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: S.tertiary, marginBottom: 4 }}>Worst Position</div>
+                            <div style={{ color: S.fail, fontWeight: 700 }}>
+                              {stressResults.worstPosition.recordId.slice(0, 8)}
+                              <br />
+                              ${fmtAmt(stressResults.worstPosition.impact)}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+
+                      {/* Position-Level Results */}
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 12,
+                      }}>
+                        <div style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: S.primary,
+                          letterSpacing: "0.06em",
+                        }}>
+                          POSITION-LEVEL RESULTS
+                        </div>
+                        <button
+                          onClick={() => {
+                            setStressResults(null);
+                            setStressScenario("");
+                          }}
+                          style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 9,
+                            color: S.primary,
+                            background: "transparent",
+                            border: `1px solid ${S.darkBorder}`,
+                            padding: "4px 10px",
+                            cursor: "pointer",
+                          }}>
+                          ← Back to Scenarios
+                        </button>
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {stressResults.results
+                          .sort((a, b) => a.pnlImpact - b.pnlImpact) // Worst first
+                          .map((result) => (
+                            <div
+                              key={result.positionId}
+                              style={{
+                                padding: 16,
+                                border: `1px solid ${S.rim}`,
+                                borderLeft: `4px solid ${result.pnlImpact < 0 ? S.fail : result.pnlImpact > 0 ? S.pass : S.neutral}`,
+                                background: S.bgSub,
+                              }}>
+                              <div style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "flex-start",
+                                marginBottom: 10,
+                              }}>
+                                <div style={{
+                                  fontFamily: S.fontMono,
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: S.primary,
+                                }}>
+                                  {result.recordId} — {result.currency} ${fmtAmt(result.baseNotional)}
+                                </div>
+                                {result.shocked && (
+                                  <div style={{
+                                    fontFamily: S.fontMono,
+                                    fontSize: 9,
+                                    color: S.amber,
+                                    background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
+                                    border: `1px solid ${S.amber}`,
+                                    padding: "2px 6px",
+                                  }}>
+                                    SHOCKED
+                                  </div>
+                                )}
+                              </div>
+                              <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(4, 1fr)",
+                                gap: 12,
+                                fontFamily: S.fontMono,
+                                fontSize: 10,
+                              }}>
+                                <div>
+                                  <div style={{ color: S.tertiary, marginBottom: 4 }}>Base Value</div>
+                                  <div style={{ color: S.primary }}>${fmtAmt(result.baseValue)}</div>
+                                </div>
+                                <div>
+                                  <div style={{ color: S.tertiary, marginBottom: 4 }}>Stressed Value</div>
+                                  <div style={{ color: S.primary }}>${fmtAmt(result.stressedValue)}</div>
+                                </div>
+                                <div>
+                                  <div style={{ color: S.tertiary, marginBottom: 4 }}>P&L Impact</div>
+                                  <div style={{
+                                    color: result.pnlImpact < 0 ? S.fail : result.pnlImpact > 0 ? S.pass : S.neutral,
+                                    fontWeight: 700,
+                                  }}>
+                                    {result.pnlImpact >= 0 ? "+" : ""}${fmtAmt(result.pnlImpact)}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ color: S.tertiary, marginBottom: 4 }}>Impact %</div>
+                                  <div style={{
+                                    color: result.percentageImpact < 0 ? S.fail : result.percentageImpact > 0 ? S.pass : S.neutral,
+                                    fontWeight: 700,
+                                  }}>
+                                    {result.percentageImpact >= 0 ? "+" : ""}{result.percentageImpact.toFixed(2)}%
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
