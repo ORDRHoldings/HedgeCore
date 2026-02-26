@@ -257,6 +257,13 @@ export default function PolicyDeskPage() {
   const [bulkRunning, setBulkRunning] = useState(false);
   const [bulkResult, setBulkResult] = useState<BulkAssignResult | null>(null);
 
+  // Advanced features state
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [currencyFilter, setCurrencyFilter] = useState("");
+  const [riskPostureFilter, setRiskPostureFilter] = useState("");
+  const [showComparison, setShowComparison] = useState(false);
+  const [comparisonPolicies, setComparisonPolicies] = useState<string[]>([]);
+
   // Load positions on mount
   useEffect(() => {
     if (token) dispatch(listPositionsThunk({ token }));
@@ -323,8 +330,21 @@ export default function PolicyDeskPage() {
       );
     }
 
+    // Advanced filters
+    if (currencyFilter) {
+      filtered = filtered.filter((p) => p.currency === currencyFilter);
+    }
+    if (riskPostureFilter) {
+      // Filter by policy risk posture (requires matching policy)
+      const policyMap = new Map(templates.map((t) => [t.id, t.risk_posture]));
+      filtered = filtered.filter((p) => {
+        if (!p.policy_id) return false;
+        return policyMap.get(p.policy_id) === riskPostureFilter;
+      });
+    }
+
     return filtered;
-  }, [positions, preset, search]);
+  }, [positions, preset, search, currencyFilter, riskPostureFilter, templates]);
 
   // Status counts
   const statusCounts = useMemo(() => {
@@ -472,6 +492,51 @@ export default function PolicyDeskPage() {
     }
   }, [token, aiRecommendations, dispatch]);
 
+  // Export selected positions to CSV
+  const handleExportCSV = useCallback(() => {
+    const exportData = filteredPositions
+      .filter((p) => selected.size === 0 || selected.has(p.id))
+      .map((p) => ({
+        RecordID: p.record_id,
+        Entity: p.entity,
+        Type: p.type,
+        Currency: p.currency,
+        Amount: p.amount,
+        ValueDate: fmtDate(p.value_date),
+        Status: p.status,
+        ExecStatus: p.execution_status,
+        PolicyID: p.policy_id ?? "—",
+      }));
+
+    const headers = Object.keys(exportData[0] || {});
+    const csvContent = [
+      headers.join(","),
+      ...exportData.map((row) =>
+        headers.map((h) => {
+          const val = row[h as keyof typeof row];
+          return typeof val === "string" && val.includes(",") ? `"${val}"` : val;
+        }).join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `policy-desk-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [filteredPositions, selected]);
+
+  // Policy comparison handler
+  const handleComparePolicy = useCallback((policyId: string) => {
+    setComparisonPolicies((prev) => {
+      if (prev.includes(policyId)) return prev.filter((id) => id !== policyId);
+      if (prev.length >= 3) return prev; // Max 3 policies
+      return [...prev, policyId];
+    });
+  }, []);
+
   if (!user) {
     return (
       <div style={{ padding: 40, fontFamily: S.fontMono, color: S.secondary, fontSize: 12 }}>
@@ -581,6 +646,46 @@ export default function PolicyDeskPage() {
             }}>
             → Position Desk
           </button>
+          <button
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 10,
+              color: S.primary,
+              background: showAdvancedFilters ? S.bgSub : "transparent",
+              border: `1px solid ${S.darkBorder}`,
+              padding: "2px 8px",
+              cursor: "pointer",
+            }}>
+            {showAdvancedFilters ? "↑" : "↓"} FILTERS
+          </button>
+          <button
+            onClick={handleExportCSV}
+            disabled={filteredPositions.length === 0}
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 10,
+              color: filteredPositions.length === 0 ? S.tertiary : S.primary,
+              background: "transparent",
+              border: `1px solid ${S.darkBorder}`,
+              padding: "2px 8px",
+              cursor: filteredPositions.length === 0 ? "not-allowed" : "pointer",
+            }}>
+            ↓ EXPORT CSV
+          </button>
+          <button
+            onClick={() => setShowComparison(!showComparison)}
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 10,
+              color: S.primary,
+              background: showComparison ? S.bgSub : "transparent",
+              border: `1px solid ${S.darkBorder}`,
+              padding: "2px 8px",
+              cursor: "pointer",
+            }}>
+            ⊕ COMPARE
+          </button>
         </header>
 
         {/* Error banner */}
@@ -669,6 +774,80 @@ export default function PolicyDeskPage() {
             }}
           />
         </div>
+
+        {/* Advanced Filters Panel */}
+        {showAdvancedFilters && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "10px 20px",
+            background: S.bgSub,
+            borderBottom: `1px solid ${S.soft}`,
+            flexShrink: 0,
+          }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, fontWeight: 700, letterSpacing: "0.06em" }}>
+              ADVANCED FILTERS:
+            </span>
+            <select
+              value={currencyFilter}
+              onChange={(e) => setCurrencyFilter(e.target.value)}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: 10,
+                color: S.primary,
+                background: S.bgPanel,
+                border: `1px solid ${S.darkBorder}`,
+                padding: "4px 8px",
+                cursor: "pointer",
+              }}>
+              <option value="">All Currencies</option>
+              {Array.from(new Set(positions.map((p) => p.currency))).sort().map((curr) => (
+                <option key={curr} value={curr}>{curr}</option>
+              ))}
+            </select>
+            <select
+              value={riskPostureFilter}
+              onChange={(e) => setRiskPostureFilter(e.target.value)}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: 10,
+                color: S.primary,
+                background: S.bgPanel,
+                border: `1px solid ${S.darkBorder}`,
+                padding: "4px 8px",
+                cursor: "pointer",
+              }}>
+              <option value="">All Risk Postures</option>
+              <option value="CONSERVATIVE">CONSERVATIVE</option>
+              <option value="MODERATE">MODERATE</option>
+              <option value="AGGRESSIVE">AGGRESSIVE</option>
+              <option value="CUSTOM">CUSTOM</option>
+            </select>
+            {(currencyFilter || riskPostureFilter) && (
+              <button
+                onClick={() => {
+                  setCurrencyFilter("");
+                  setRiskPostureFilter("");
+                }}
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 9,
+                  color: S.tertiary,
+                  background: "transparent",
+                  border: `1px solid ${S.rim}`,
+                  padding: "3px 8px",
+                  cursor: "pointer",
+                }}>
+                Clear Filters
+              </button>
+            )}
+            <div style={{ flex: 1 }} />
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+              {filteredPositions.length} filtered
+            </span>
+          </div>
+        )}
 
         {/* Bulk action bar */}
         {selected.size > 0 && (
@@ -1109,6 +1288,151 @@ export default function PolicyDeskPage() {
             confirmColor={S.darkBorder}
             disabled={bulkRunning}
           />
+        </ModalOverlay>
+      )}
+
+      {/* Policy Comparison Modal */}
+      {showComparison && (
+        <ModalOverlay onClose={() => setShowComparison(false)}>
+          <ModalHeader
+            title="Policy Comparison"
+            subtitle="Select up to 3 policies to compare side-by-side"
+          />
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, marginBottom: 12 }}>
+              Select policies to compare:
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflow: "auto" }}>
+              {templates.map((tmpl) => {
+                const isSelected = comparisonPolicies.includes(tmpl.id);
+                return (
+                  <div
+                    key={tmpl.id}
+                    onClick={() => handleComparePolicy(tmpl.id)}
+                    style={{
+                      padding: "10px 12px",
+                      border: `1px solid ${isSelected ? S.darkBorder : S.rim}`,
+                      background: isSelected ? S.bgDeep : S.bgSub,
+                      cursor: "pointer",
+                      transition: "all 0.1s",
+                    }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleComparePolicy(tmpl.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ cursor: "pointer" }}
+                      />
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>
+                        {tmpl.name}
+                      </span>
+                      <span style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 9,
+                        color: S.tertiary,
+                        border: `1px solid ${S.rim}`,
+                        padding: "1px 5px",
+                      }}>
+                        {tmpl.risk_posture}
+                      </span>
+                    </div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary }}>
+                      Hedge Ratio: {tmpl.config?.hedge_ratios?.confirmed ?? "N/A"}% confirmed, {tmpl.config?.hedge_ratios?.forecast ?? "N/A"}% forecast |
+                      Instrument: {tmpl.config?.execution_product ?? "N/A"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {comparisonPolicies.length > 0 && (
+            <div style={{ marginTop: 20, borderTop: `1px solid ${S.soft}`, paddingTop: 16 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, fontWeight: 700, marginBottom: 12 }}>
+                COMPARISON TABLE ({comparisonPolicies.length} selected):
+              </div>
+              <div style={{ overflow: "auto", maxHeight: 300 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 10 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
+                      <th style={{ textAlign: "left", padding: "6px 8px", color: S.secondary }}>Attribute</th>
+                      {comparisonPolicies.map((pId) => {
+                        const tmpl = templates.find((t) => t.id === pId);
+                        return (
+                          <th key={pId} style={{ textAlign: "left", padding: "6px 8px", color: S.primary }}>
+                            {truncate(tmpl?.name ?? "N/A", 15)}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: `1px solid ${S.soft}` }}>
+                      <td style={{ padding: "6px 8px", color: S.secondary }}>Risk Posture</td>
+                      {comparisonPolicies.map((pId) => {
+                        const tmpl = templates.find((t) => t.id === pId);
+                        return <td key={pId} style={{ padding: "6px 8px", color: S.primary }}>{tmpl?.risk_posture ?? "—"}</td>;
+                      })}
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${S.soft}` }}>
+                      <td style={{ padding: "6px 8px", color: S.secondary }}>Hedge Ratio (Confirmed)</td>
+                      {comparisonPolicies.map((pId) => {
+                        const tmpl = templates.find((t) => t.id === pId);
+                        return <td key={pId} style={{ padding: "6px 8px", color: S.primary }}>
+                          {tmpl?.config?.hedge_ratios?.confirmed ?? "—"}%
+                        </td>;
+                      })}
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${S.soft}` }}>
+                      <td style={{ padding: "6px 8px", color: S.secondary }}>Hedge Ratio (Forecast)</td>
+                      {comparisonPolicies.map((pId) => {
+                        const tmpl = templates.find((t) => t.id === pId);
+                        return <td key={pId} style={{ padding: "6px 8px", color: S.primary }}>
+                          {tmpl?.config?.hedge_ratios?.forecast ?? "—"}%
+                        </td>;
+                      })}
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${S.soft}` }}>
+                      <td style={{ padding: "6px 8px", color: S.secondary }}>Instrument</td>
+                      {comparisonPolicies.map((pId) => {
+                        const tmpl = templates.find((t) => t.id === pId);
+                        return <td key={pId} style={{ padding: "6px 8px", color: S.primary }}>
+                          {tmpl?.config?.execution_product ?? "—"}
+                        </td>;
+                      })}
+                    </tr>
+                    <tr>
+                      <td style={{ padding: "6px 8px", color: S.secondary }}>Min Trade Size (USD)</td>
+                      {comparisonPolicies.map((pId) => {
+                        const tmpl = templates.find((t) => t.id === pId);
+                        return <td key={pId} style={{ padding: "6px 8px", color: S.primary }}>
+                          ${fmtAmt(tmpl?.config?.min_trade_size_usd)}
+                        </td>;
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+            <button
+              onClick={() => {
+                setShowComparison(false);
+                setComparisonPolicies([]);
+              }}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: 11,
+                color: S.secondary,
+                background: "transparent",
+                border: `1px solid ${S.rim}`,
+                padding: "7px 16px",
+                cursor: "pointer",
+              }}>
+              Close
+            </button>
+          </div>
         </ModalOverlay>
       )}
 
