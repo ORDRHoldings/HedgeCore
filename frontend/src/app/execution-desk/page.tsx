@@ -273,6 +273,8 @@ export default function ExecutionDeskPage() {
   const [hedgePlans, setHedgePlans] = useState<Map<string, HedgePlan>>(new Map());
   const [stressScenario, setStressScenario] = useState<string>("");
   const [stressResults, setStressResults] = useState<PortfolioStressResult | null>(null);
+  const [scenarioComparison, setScenarioComparison] = useState<PortfolioStressResult[]>([]);
+  const [showComparison, setShowComparison] = useState(false);
   const [showRiskPanel, setShowRiskPanel] = useState(true);
   const [isSimulating, setIsSimulating] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -446,23 +448,66 @@ export default function ExecutionDeskPage() {
   }, [selected, readyPositions, addHistoryEntry]);
 
   // Run stress test scenario
-  const executeStressTest = useCallback((scenarioId: string) => {
+  const executeStressTest = useCallback((scenarioId: string, addToComparison = false) => {
     const selectedPositions = readyPositions.filter((p) => selected.has(p.id));
     const scenario = STRESS_SCENARIOS.find((s) => s.id === scenarioId);
     if (!scenario) return;
 
     const result = runStressTest(selectedPositions, scenario);
-    setStressResults(result);
-    setStressScenario(scenarioId);
-    setActionMode("STRESS_TEST");
 
-    // Log to history
-    addHistoryEntry(
-      "STRESS_TEST",
-      selectedPositions.map(p => p.id),
-      `Stress test "${scenario.name}": Portfolio impact ${result.totalImpact >= 0 ? "+" : ""}$${fmtAmt(result.totalImpact)} (${result.percentageImpact.toFixed(1)}%)`
-    );
+    if (addToComparison) {
+      // Add to comparison array (avoid duplicates)
+      setScenarioComparison(prev => {
+        const exists = prev.some(r => r.scenarioId === scenarioId);
+        if (exists) {
+          return prev.map(r => r.scenarioId === scenarioId ? result : r);
+        }
+        return [...prev, result];
+      });
+    } else {
+      setStressResults(result);
+      setStressScenario(scenarioId);
+      setActionMode("STRESS_TEST");
+
+      // Log to history
+      addHistoryEntry(
+        "STRESS_TEST",
+        selectedPositions.map(p => p.id),
+        `Stress test "${scenario.name}": Portfolio impact ${result.totalImpact >= 0 ? "+" : ""}$${fmtAmt(result.totalImpact)} (${result.percentageImpact.toFixed(1)}%)`
+      );
+    }
   }, [selected, readyPositions, addHistoryEntry]);
+
+  // Export scenario comparison as JSON
+  const exportComparison = useCallback(() => {
+    if (scenarioComparison.length === 0) return;
+
+    const exportData = {
+      metadata: {
+        exportDate: new Date().toISOString(),
+        user: user?.email || "unknown",
+        positionCount: scenarioComparison[0]?.totalPositions || 0,
+        scenarioCount: scenarioComparison.length,
+      },
+      scenarios: scenarioComparison.map(s => ({
+        scenarioName: s.scenarioName,
+        totalImpact: s.totalImpact,
+        percentageImpact: s.percentageImpact,
+        affectedPositions: s.affectedPositions,
+        worstPosition: s.worstPosition,
+        bestPosition: s.bestPosition,
+      })),
+      fullResults: scenarioComparison,
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `stress-test-comparison-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [scenarioComparison, user]);
 
   // Export IBKR payload (real FIX format)
   const exportIBKRPayload = useCallback(() => {
@@ -1138,58 +1183,324 @@ export default function ExecutionDeskPage() {
               {actionMode === "STRESS_TEST" && (
                 <div>
                   <div style={{
-                    fontFamily: S.fontMono,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: S.primary,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                     marginBottom: 16,
-                    letterSpacing: "0.06em",
                   }}>
-                    STRESS TEST SCENARIOS
-                  </div>
-
-                  {/* Scenario Selection */}
-                  {!stressResults && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                      {STRESS_SCENARIOS.map((scenario) => (
-                        <div
-                          key={scenario.id}
+                    <div style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: S.primary,
+                      letterSpacing: "0.06em",
+                    }}>
+                      STRESS TEST SCENARIOS
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {scenarioComparison.length > 0 && (
+                        <button
+                          onClick={() => setShowComparison(!showComparison)}
                           style={{
-                            padding: 16,
-                            border: `1px solid ${S.rim}`,
-                            background: S.bgSub,
+                            fontFamily: S.fontMono,
+                            fontSize: 9,
+                            color: showComparison ? S.cyan : S.primary,
+                            background: showComparison ? S.bgSub : "transparent",
+                            border: `1px solid ${showComparison ? S.cyan : S.darkBorder}`,
+                            padding: "4px 10px",
                             cursor: "pointer",
-                            transition: "background 0.15s",
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = S.bgDeep; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = S.bgSub; }}
-                          onClick={() => executeStressTest(scenario.id)}>
-                          <div style={{
+                          }}>
+                          {showComparison ? "✓ " : ""}COMPARE ({scenarioComparison.length})
+                        </button>
+                      )}
+                      {scenarioComparison.length > 0 && (
+                        <button
+                          onClick={exportComparison}
+                          style={{
                             fontFamily: S.fontMono,
-                            fontSize: 11,
-                            fontWeight: 700,
+                            fontSize: 9,
                             color: S.primary,
-                            marginBottom: 8,
+                            background: "transparent",
+                            border: `1px solid ${S.darkBorder}`,
+                            padding: "4px 10px",
+                            cursor: "pointer",
                           }}>
-                            {scenario.name}
-                          </div>
-                          <div style={{
-                            fontFamily: S.fontMono,
-                            fontSize: 10,
-                            color: S.secondary,
-                            marginBottom: 12,
-                          }}>
-                            {scenario.description}
-                          </div>
-                          <div style={{
+                          ↓ EXPORT
+                        </button>
+                      )}
+                      {scenarioComparison.length > 0 && (
+                        <button
+                          onClick={() => setScenarioComparison([])}
+                          style={{
                             fontFamily: S.fontMono,
                             fontSize: 9,
                             color: S.tertiary,
+                            background: "transparent",
+                            border: `1px solid ${S.darkBorder}`,
+                            padding: "4px 10px",
+                            cursor: "pointer",
                           }}>
-                            Shocks: {scenario.shocks.map((s) => `${s.currency} ${s.change > 0 ? "+" : ""}${(s.change * 100).toFixed(0)}%`).join(", ")}
-                          </div>
+                          CLEAR
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Scenario Comparison View */}
+                  {showComparison && scenarioComparison.length > 0 && (
+                    <div style={{ marginBottom: 20 }}>
+                      <div style={{
+                        padding: 16,
+                        border: `2px solid ${S.cyan}`,
+                        background: S.bgPanel,
+                        marginBottom: 16,
+                      }}>
+                        <div style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: S.primary,
+                          marginBottom: 16,
+                          letterSpacing: "0.06em",
+                        }}>
+                          SCENARIO COMPARISON — {scenarioComparison.length} SCENARIOS
                         </div>
-                      ))}
+
+                        {/* Comparison Table */}
+                        <div style={{ overflowX: "auto" }}>
+                          <table style={{
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            fontFamily: S.fontMono,
+                            fontSize: 10,
+                          }}>
+                            <thead>
+                              <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
+                                <th style={{ textAlign: "left", padding: "8px 12px", color: S.tertiary }}>Scenario</th>
+                                <th style={{ textAlign: "right", padding: "8px 12px", color: S.tertiary }}>Total Impact</th>
+                                <th style={{ textAlign: "right", padding: "8px 12px", color: S.tertiary }}>Impact %</th>
+                                <th style={{ textAlign: "right", padding: "8px 12px", color: S.tertiary }}>Affected</th>
+                                <th style={{ textAlign: "right", padding: "8px 12px", color: S.tertiary }}>Worst Position</th>
+                                <th style={{ textAlign: "right", padding: "8px 12px", color: S.tertiary }}>Worst Impact</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {scenarioComparison
+                                .sort((a, b) => a.totalImpact - b.totalImpact) // Worst first
+                                .map((scenario, idx) => (
+                                  <tr
+                                    key={scenario.scenarioId}
+                                    style={{
+                                      borderBottom: `1px solid ${S.soft}`,
+                                      background: idx % 2 === 0 ? S.bgSub : "transparent",
+                                    }}>
+                                    <td style={{ padding: "10px 12px", color: S.primary, fontWeight: 700 }}>
+                                      {scenario.scenarioName}
+                                    </td>
+                                    <td style={{
+                                      padding: "10px 12px",
+                                      textAlign: "right",
+                                      color: scenario.totalImpact < 0 ? S.fail : S.pass,
+                                      fontWeight: 700,
+                                    }}>
+                                      {scenario.totalImpact >= 0 ? "+" : ""}${fmtAmt(scenario.totalImpact)}
+                                    </td>
+                                    <td style={{
+                                      padding: "10px 12px",
+                                      textAlign: "right",
+                                      color: scenario.percentageImpact < 0 ? S.fail : S.pass,
+                                    }}>
+                                      {scenario.percentageImpact >= 0 ? "+" : ""}{scenario.percentageImpact.toFixed(2)}%
+                                    </td>
+                                    <td style={{ padding: "10px 12px", textAlign: "right", color: S.secondary }}>
+                                      {scenario.affectedPositions} / {scenario.totalPositions}
+                                    </td>
+                                    <td style={{ padding: "10px 12px", textAlign: "right", color: S.secondary }}>
+                                      {scenario.worstPosition.recordId.slice(0, 8)}
+                                    </td>
+                                    <td style={{
+                                      padding: "10px 12px",
+                                      textAlign: "right",
+                                      color: S.fail,
+                                      fontWeight: 700,
+                                    }}>
+                                      ${fmtAmt(scenario.worstPosition.impact)}
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Comparison Chart */}
+                        <div style={{ marginTop: 20 }}>
+                          <ReactECharts
+                            option={{
+                              backgroundColor: "transparent",
+                              tooltip: {
+                                trigger: "axis",
+                                axisPointer: { type: "shadow" },
+                                backgroundColor: "#1A2535EE",
+                                borderColor: S.darkBorder,
+                                borderWidth: 1,
+                                textStyle: { color: S.primary, fontSize: 10, fontFamily: S.fontMono },
+                              },
+                              grid: { left: 100, right: 20, top: 30, bottom: 50 },
+                              xAxis: {
+                                type: "value",
+                                name: "Portfolio Impact ($)",
+                                nameLocation: "center",
+                                nameGap: 30,
+                                nameTextStyle: { color: S.tertiary, fontSize: 10, fontFamily: S.fontMono },
+                                axisLabel: {
+                                  color: S.tertiary,
+                                  fontSize: 9,
+                                  fontFamily: S.fontMono,
+                                  formatter: (v: number) =>
+                                    v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M`
+                                    : v >= 1_000 ? `$${(v / 1_000).toFixed(0)}K`
+                                    : v <= -1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M`
+                                    : v <= -1_000 ? `$${(v / 1_000).toFixed(0)}K`
+                                    : `$${v.toFixed(0)}`,
+                                },
+                                axisLine: { lineStyle: { color: S.darkBorder } },
+                                splitLine: { lineStyle: { color: S.darkBorder, type: "dashed", opacity: 0.3 } },
+                              },
+                              yAxis: {
+                                type: "category",
+                                data: scenarioComparison.map(s => s.scenarioName),
+                                axisLabel: { color: S.primary, fontSize: 10, fontFamily: S.fontMono },
+                                axisLine: { lineStyle: { color: S.darkBorder } },
+                              },
+                              series: [{
+                                type: "bar",
+                                data: scenarioComparison.map(s => ({
+                                  value: s.totalImpact,
+                                  itemStyle: {
+                                    color: s.totalImpact < 0 ? {
+                                      type: "linear",
+                                      x: 1, y: 0, x2: 0, y2: 0,
+                                      colorStops: [
+                                        { offset: 0, color: S.fail + "DD" },
+                                        { offset: 1, color: S.fail + "88" },
+                                      ],
+                                    } : {
+                                      type: "linear",
+                                      x: 0, y: 0, x2: 1, y2: 0,
+                                      colorStops: [
+                                        { offset: 0, color: S.pass + "DD" },
+                                        { offset: 1, color: S.pass + "88" },
+                                      ],
+                                    },
+                                  },
+                                })),
+                                barMaxWidth: 40,
+                                label: {
+                                  show: true,
+                                  position: "right",
+                                  fontSize: 9,
+                                  fontFamily: S.fontMono,
+                                  color: S.primary,
+                                  formatter: (p: { value: number }) =>
+                                    `${p.value >= 0 ? "+" : ""}$${fmtAmt(p.value)}`,
+                                },
+                              }],
+                            } as EChartsOption}
+                            style={{ height: 200 + scenarioComparison.length * 40, width: "100%" }}
+                            opts={{ renderer: "canvas" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scenario Selection */}
+                  {!stressResults && !showComparison && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {STRESS_SCENARIOS.map((scenario) => {
+                        const inComparison = scenarioComparison.some(s => s.scenarioId === scenario.id);
+                        return (
+                          <div
+                            key={scenario.id}
+                            style={{
+                              padding: 16,
+                              border: `1px solid ${inComparison ? S.cyan : S.rim}`,
+                              background: S.bgSub,
+                              position: "relative",
+                            }}>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: S.primary,
+                              marginBottom: 8,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}>
+                              {scenario.name}
+                              {inComparison && (
+                                <span style={{
+                                  fontFamily: S.fontMono,
+                                  fontSize: 8,
+                                  color: S.cyan,
+                                  background: `color-mix(in srgb, ${S.cyan} 10%, transparent)`,
+                                  border: `1px solid ${S.cyan}`,
+                                  padding: "2px 6px",
+                                }}>
+                                  IN COMPARISON
+                                </span>
+                              )}
+                            </div>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 10,
+                              color: S.secondary,
+                              marginBottom: 12,
+                            }}>
+                              {scenario.description}
+                            </div>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 9,
+                              color: S.tertiary,
+                              marginBottom: 12,
+                            }}>
+                              Shocks: {scenario.shocks.map((s) => `${s.currency} ${s.change > 0 ? "+" : ""}${(s.change * 100).toFixed(0)}%`).join(", ")}
+                            </div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button
+                                onClick={() => executeStressTest(scenario.id, false)}
+                                style={{
+                                  fontFamily: S.fontMono,
+                                  fontSize: 9,
+                                  color: S.primary,
+                                  background: S.bgPanel,
+                                  border: `1px solid ${S.darkBorder}`,
+                                  padding: "4px 12px",
+                                  cursor: "pointer",
+                                  flex: 1,
+                                }}>
+                                RUN TEST
+                              </button>
+                              <button
+                                onClick={() => executeStressTest(scenario.id, true)}
+                                style={{
+                                  fontFamily: S.fontMono,
+                                  fontSize: 9,
+                                  color: inComparison ? S.cyan : S.secondary,
+                                  background: "transparent",
+                                  border: `1px solid ${inComparison ? S.cyan : S.darkBorder}`,
+                                  padding: "4px 12px",
+                                  cursor: "pointer",
+                                  flex: 1,
+                                }}>
+                                {inComparison ? "✓ " : "+ "}ADD TO COMPARE
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
