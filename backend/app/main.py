@@ -946,6 +946,17 @@ async def _ensure_tables():
         "CREATE INDEX IF NOT EXISTS ix_exec_proposals_company ON execution_proposals(company_id, status, proposed_at)",
         "CREATE INDEX IF NOT EXISTS ix_exec_proposals_proposer ON execution_proposals(proposed_by, status)",
 
+        # ?? BUG-4 FIX: Add missing columns to execution_proposals (table may have been
+        # created by an older SQLAlchemy create_all before these columns were in the model)
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposed_by_email VARCHAR(255)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approved_by_email VARCHAR(255)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_notes TEXT",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_hash VARCHAR(64)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS execution_ref VARCHAR(128)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+
     ]
 
     for stmt in raw_ddl:
