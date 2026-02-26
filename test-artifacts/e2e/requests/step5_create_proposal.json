@@ -1,0 +1,8 @@
+{
+  "position_id": "fee81949-29da-48a2-9cdc-63fd2cc14abd",
+  "execution_ref": "IBKR-E2E-ORDR-001",
+  "hedge_amount": 192534.55025003332,
+  "hedge_rate": 20.369,
+  "run_id": "5ad242b1-1b1b-4575-acb1-c45f2197d6ac",
+  "notes": "E2E lifecycle test proposal - ORDR Terminal QA"
+}

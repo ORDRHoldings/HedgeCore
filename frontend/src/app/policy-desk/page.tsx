@@ -53,8 +53,8 @@ const S = {
   amber:     "var(--accent-amber)",
   pass:      "var(--status-pass,#22c55e)",
   fail:      "var(--accent-red,#ef4444)",
-  purple:    "#a78bfa",
-  indigo:    "#818cf8)",
+  neutral:   "#6b7280",
+  darkBorder: "#374151",
 } as const;
 
 type ExecStatus = "NEW" | "POLICY_ASSIGNED" | "READY_TO_EXECUTE" | "HEDGED" | "REJECTED";
@@ -107,11 +107,11 @@ function StatusBadge({ status }: { status: ExecStatus }) {
       fontSize: 9,
       fontWeight: 700,
       letterSpacing: "0.08em",
-      color: cfg.color,
-      background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`,
-      border: `1px solid color-mix(in srgb, ${cfg.color} 28%, transparent)`,
+      color: S.primary,
+      background: S.bgSub,
+      border: `1px solid ${S.darkBorder}`,
       padding: "2px 6px",
-      borderRadius: 2,
+      borderRadius: 0,
       whiteSpace: "nowrap",
     }}>
       {cfg.label}
@@ -125,11 +125,11 @@ function PolicyChip({ policyId, policyName }: { policyId: string | null; policyN
     <span style={{
       fontFamily: S.fontMono,
       fontSize: 9,
-      color: S.cyan,
-      background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
-      border: `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`,
+      color: S.primary,
+      background: S.bgSub,
+      border: `1px solid ${S.darkBorder}`,
       padding: "2px 6px",
-      borderRadius: 2,
+      borderRadius: 0,
       whiteSpace: "nowrap",
     }}
     title={policyName ?? policyId}>
@@ -478,7 +478,7 @@ export default function PolicyDeskPage() {
         Authentication required.{" "}
         <button
           onClick={() => router.push("/auth/login")}
-          style={{ color: S.cyan, background: "none", border: "none", cursor: "pointer", fontFamily: S.fontMono }}>
+          style={{ color: S.primary, background: "none", border: "none", cursor: "pointer", fontFamily: S.fontMono }}>
           Sign in
         </button>
       </div>
@@ -539,15 +539,15 @@ export default function PolicyDeskPage() {
                 fontFamily: S.fontMono,
                 fontSize: 9,
                 fontWeight: 700,
-                color: S.amber,
-                background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
+                color: S.primary,
+                background: S.bgSub,
+                border: `1px solid ${S.darkBorder}`,
                 padding: "1px 7px",
-                borderRadius: 2,
+                borderRadius: 0,
                 cursor: "pointer",
                 letterSpacing: "0.06em",
               }}>
-              ⚡ {needsPolicyCount} NEEDS POLICY
+              {needsPolicyCount} NEEDS POLICY
             </span>
           )}
           <div style={{ flex: 1 }} />
@@ -560,9 +560,9 @@ export default function PolicyDeskPage() {
             style={{
               fontFamily: S.fontMono,
               fontSize: 10,
-              color: S.cyan,
+              color: S.primary,
               background: "transparent",
-              border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
+              border: `1px solid ${S.darkBorder}`,
               padding: "2px 8px",
               cursor: "pointer",
             }}>
@@ -639,12 +639,12 @@ export default function PolicyDeskPage() {
                   fontSize: 9,
                   fontWeight: 700,
                   letterSpacing: "0.06em",
-                  color: isActive ? color : S.tertiary,
-                  background: isActive ? `color-mix(in srgb, ${color} 12%, transparent)` : "transparent",
-                  border: `1px solid ${isActive ? `color-mix(in srgb, ${color} 35%, transparent)` : S.rim}`,
+                  color: isActive ? S.primary : S.tertiary,
+                  background: isActive ? S.bgSub : "transparent",
+                  border: `1px solid ${isActive ? S.darkBorder : S.rim}`,
                   padding: "3px 9px",
                   cursor: "pointer",
-                  borderRadius: 2,
+                  borderRadius: 0,
                   transition: "all 0.1s",
                 }}>
                 {PRESET_LABELS[p]} ({count})
@@ -677,11 +677,11 @@ export default function PolicyDeskPage() {
             alignItems: "center",
             gap: 10,
             padding: "8px 20px",
-            background: `color-mix(in srgb, ${S.cyan} 6%, ${S.bgPanel})`,
-            borderBottom: `1px solid color-mix(in srgb, ${S.cyan} 20%, ${S.soft})`,
+            background: S.bgSub,
+            borderBottom: `1px solid ${S.darkBorder}`,
             flexShrink: 0,
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, fontWeight: 700, letterSpacing: "0.06em" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.primary, fontWeight: 700, letterSpacing: "0.06em" }}>
               {selected.size} SELECTED
             </span>
 
@@ -694,14 +694,14 @@ export default function PolicyDeskPage() {
                   fontSize: 9,
                   fontWeight: 700,
                   letterSpacing: "0.06em",
-                  color: S.bgDeep,
-                  background: bulkRunning ? S.tertiary : S.cyan,
-                  border: "none",
+                  color: bulkRunning ? S.tertiary : S.primary,
+                  background: bulkRunning ? S.bgSub : S.bgPanel,
+                  border: `1px solid ${bulkRunning ? S.soft : S.darkBorder}`,
                   padding: "4px 12px",
                   cursor: bulkRunning ? "not-allowed" : "pointer",
-                  borderRadius: 2,
+                  borderRadius: 0,
                 }}>
-                {bulkRunning ? "ASSIGNING..." : `⚡ ASSIGN ACTIVE POLICY`}
+                {bulkRunning ? "ASSIGNING..." : "ASSIGN ACTIVE POLICY"}
               </button>
             )}
 
@@ -713,14 +713,14 @@ export default function PolicyDeskPage() {
                 fontSize: 9,
                 fontWeight: 700,
                 letterSpacing: "0.06em",
-                color: S.bgDeep,
-                background: bulkRunning ? S.tertiary : S.indigo,
-                border: "none",
+                color: bulkRunning ? S.tertiary : S.primary,
+                background: bulkRunning ? S.bgSub : S.bgPanel,
+                border: `1px solid ${bulkRunning ? S.soft : S.darkBorder}`,
                 padding: "4px 12px",
                 cursor: bulkRunning ? "not-allowed" : "pointer",
-                borderRadius: 2,
+                borderRadius: 0,
               }}>
-              📋 FROM TEMPLATE
+              FROM TEMPLATE
             </button>
 
             {favorites.length > 0 && (
@@ -732,14 +732,14 @@ export default function PolicyDeskPage() {
                   fontSize: 9,
                   fontWeight: 700,
                   letterSpacing: "0.06em",
-                  color: S.bgDeep,
-                  background: bulkRunning ? S.tertiary : S.amber,
-                  border: "none",
+                  color: bulkRunning ? S.tertiary : S.primary,
+                  background: bulkRunning ? S.bgSub : S.bgPanel,
+                  border: `1px solid ${bulkRunning ? S.soft : S.darkBorder}`,
                   padding: "4px 12px",
                   cursor: bulkRunning ? "not-allowed" : "pointer",
-                  borderRadius: 2,
+                  borderRadius: 0,
                 }}>
-              ⭐ FROM FAVORITES
+                FROM FAVORITES
               </button>
             )}
 
@@ -751,14 +751,14 @@ export default function PolicyDeskPage() {
                 fontSize: 9,
                 fontWeight: 700,
                 letterSpacing: "0.06em",
-                color: S.bgDeep,
-                background: bulkRunning || generatingAI ? S.tertiary : S.purple,
-                border: "none",
+                color: bulkRunning || generatingAI ? S.tertiary : S.primary,
+                background: bulkRunning || generatingAI ? S.bgSub : S.bgPanel,
+                border: `1px solid ${bulkRunning || generatingAI ? S.soft : S.darkBorder}`,
                 padding: "4px 12px",
                 cursor: bulkRunning || generatingAI ? "not-allowed" : "pointer",
-                borderRadius: 2,
+                borderRadius: 0,
               }}>
-              {generatingAI ? "ANALYZING..." : "🤖 AI RECOMMEND"}
+              {generatingAI ? "ANALYZING..." : "AI RECOMMEND"}
             </button>
 
             <button
@@ -876,7 +876,7 @@ export default function PolicyDeskPage() {
                       key={pos.id}
                       style={{
                         borderBottom: `1px solid ${S.soft}`,
-                        background: isSelected ? `color-mix(in srgb, ${S.cyan} 4%, transparent)` : "transparent",
+                        background: isSelected ? S.bgSub : "transparent",
                         cursor: "pointer",
                       }}
                       onClick={() => toggleSelect(pos.id)}>
@@ -898,7 +898,7 @@ export default function PolicyDeskPage() {
                       <td style={{ padding: "8px 10px", textAlign: "center" }}>
                         <span style={{
                           padding: "2px 6px",
-                          borderRadius: 2,
+                          borderRadius: 0,
                           fontSize: 9,
                           fontWeight: 700,
                           background: pos.type === "AR" ? `color-mix(in srgb, ${S.pass} 12%, transparent)` : `color-mix(in srgb, ${S.fail} 12%, transparent)`,
@@ -947,8 +947,8 @@ export default function PolicyDeskPage() {
                   onClick={() => setSelectedTemplate(tmpl.id)}
                   style={{
                     padding: "10px 12px",
-                    border: `1px solid ${isSelected ? S.cyan : S.rim}`,
-                    background: isSelected ? `color-mix(in srgb, ${S.cyan} 8%, transparent)` : S.bgSub,
+                    border: `1px solid ${isSelected ? S.darkBorder : S.rim}`,
+                    background: isSelected ? S.bgDeep : S.bgSub,
                     marginBottom: 8,
                     cursor: "pointer",
                     transition: "all 0.1s",
@@ -970,8 +970,8 @@ export default function PolicyDeskPage() {
                       <span style={{
                         fontFamily: S.fontMono,
                         fontSize: 9,
-                        color: S.cyan,
-                        border: `1px solid ${S.cyan}`,
+                        color: S.primary,
+                        border: `1px solid ${S.darkBorder}`,
                         padding: "1px 5px",
                       }}>
                         SYSTEM
@@ -991,7 +991,7 @@ export default function PolicyDeskPage() {
             onCancel={() => setAssignMode(null)}
             onConfirm={handleAssignTemplate}
             confirmLabel="ASSIGN TO SELECTED"
-            confirmColor={S.cyan}
+            confirmColor={S.primary}
             disabled={!selectedTemplate || bulkRunning}
           />
         </ModalOverlay>
@@ -1022,7 +1022,7 @@ export default function PolicyDeskPage() {
                     transition: "all 0.1s",
                   }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                    <span>⭐</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, fontWeight: 700 }}>FAV</span>
                     <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>
                       {tmpl.name}
                     </span>
@@ -1071,8 +1071,8 @@ export default function PolicyDeskPage() {
                   key={posId}
                   style={{
                     padding: "12px 14px",
-                    border: `1px solid ${S.purple}`,
-                    background: `color-mix(in srgb, ${S.purple} 6%, transparent)`,
+                    border: `1px solid ${S.darkBorder}`,
+                    background: `color-mix(in srgb, ${S.darkBorder} 6%, transparent)`,
                     marginBottom: 10,
                   }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -1082,16 +1082,16 @@ export default function PolicyDeskPage() {
                     <span style={{
                       fontFamily: S.fontMono,
                       fontSize: 9,
-                      color: S.purple,
-                      border: `1px solid ${S.purple}`,
+                      color: S.darkBorder,
+                      border: `1px solid ${S.darkBorder}`,
                       padding: "2px 6px",
-                      borderRadius: 2,
+                      borderRadius: 0,
                     }}>
                       {rec.confidence} CONFIDENCE
                     </span>
                   </div>
                   <div style={{ marginBottom: 6 }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.cyan }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary }}>
                       → {rec.templateName}
                     </span>
                   </div>
@@ -1106,7 +1106,7 @@ export default function PolicyDeskPage() {
             onCancel={() => { setAssignMode(null); setAiRecommendations(new Map()); }}
             onConfirm={handleApplyAI}
             confirmLabel="APPLY RECOMMENDATIONS"
-            confirmColor={S.purple}
+            confirmColor={S.darkBorder}
             disabled={bulkRunning}
           />
         </ModalOverlay>

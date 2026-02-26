@@ -1,0 +1,10 @@
+{
+  "record_id": "E2E-ORDR-20260226015619",
+  "entity": "Synex Capital Partners",
+  "flow_type": "AR",
+  "currency": "MXN",
+  "amount": 2500000,
+  "value_date": "2026-06-15",
+  "status": "CONFIRMED",
+  "description": "E2E lifecycle test position - ORDR Terminal QA"
+}
