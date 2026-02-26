@@ -420,9 +420,11 @@ async def propose_execution(
 
     """
 
-    await _check_permission(session, current_user, "trades.edit")
+    import traceback as _tb
 
     try:
+
+        await _check_permission(session, current_user, "trades.edit")
 
         proposal = await ep_service.propose_execution(
 
@@ -446,6 +448,10 @@ async def propose_execution(
 
         )
 
+    except HTTPException:
+
+        raise
+
     except ValueError as e:
 
         raise HTTPException(status_code=422, detail=str(e))
@@ -454,10 +460,7 @@ async def propose_execution(
 
         # BUG-4 DEBUG: surface unhandled exceptions as structured 422 detail
 
-        import traceback
-
-        logger.error("propose_execution unhandled exception: %s
-%s", e, traceback.format_exc())
+        logger.error("propose_execution unhandled exception: %s\n%s", e, _tb.format_exc())
 
         raise HTTPException(status_code=422, detail=f"[DEBUG] {type(e).__name__}: {str(e)}")
 
