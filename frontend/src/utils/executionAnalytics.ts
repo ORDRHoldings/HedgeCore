@@ -358,6 +358,133 @@ export function performComplianceChecks(positions: PositionRow[]): ComplianceChe
 }
 
 // ============================================================================
+// STRESS TESTING
+// ============================================================================
+
+export interface StressScenario {
+  id: string;
+  name: string;
+  description: string;
+  shocks: { currency: string; change: number }[]; // Percentage change (e.g., 0.15 = 15%)
+}
+
+export interface StressTestResult {
+  scenarioId: string;
+  scenarioName: string;
+  positionId: string;
+  recordId: string;
+  currency: string;
+  baseNotional: number;
+  baseValue: number; // Current value
+  stressedValue: number; // Value after shock
+  pnlImpact: number; // Difference
+  percentageImpact: number; // Percentage change
+  shocked: boolean; // Whether this currency was shocked
+}
+
+export interface PortfolioStressResult {
+  scenarioId: string;
+  scenarioName: string;
+  totalPositions: number;
+  affectedPositions: number;
+  totalBasePnL: number;
+  totalStressedPnL: number;
+  totalImpact: number;
+  percentageImpact: number;
+  worstPosition: { recordId: string; impact: number };
+  bestPosition: { recordId: string; impact: number };
+  results: StressTestResult[];
+}
+
+/**
+ * Run stress test scenario on a portfolio of positions
+ */
+export function runStressTest(
+  positions: PositionRow[],
+  scenario: StressScenario
+): PortfolioStressResult {
+  const results: StressTestResult[] = [];
+  let totalBasePnL = 0;
+  let totalStressedPnL = 0;
+  let worstImpact = 0;
+  let bestImpact = 0;
+  let worstRecordId = "";
+  let bestRecordId = "";
+  let affectedCount = 0;
+
+  positions.forEach((pos) => {
+    // Find shock for this currency
+    const shock = scenario.shocks.find((s) => s.currency === pos.currency);
+    const shockPct = shock ? shock.change : 0;
+    const shocked = !!shock;
+
+    if (shocked) affectedCount++;
+
+    // Base value (current notional)
+    const baseValue = pos.amount;
+    const baseNotional = Math.abs(pos.amount);
+
+    // Stressed value after FX shock
+    // For AR (receivable), if currency weakens (negative shock), we lose value
+    // For AP (payable), if currency weakens, we gain value (pay less)
+    const fxMultiplier = 1 + shockPct;
+    const stressedValue = pos.type === "AR"
+      ? baseValue * fxMultiplier
+      : baseValue / fxMultiplier;
+
+    // P&L impact
+    const pnlImpact = stressedValue - baseValue;
+    const percentageImpact = baseValue !== 0 ? (pnlImpact / Math.abs(baseValue)) * 100 : 0;
+
+    // Track worst and best
+    if (pnlImpact < worstImpact) {
+      worstImpact = pnlImpact;
+      worstRecordId = pos.record_id;
+    }
+    if (pnlImpact > bestImpact) {
+      bestImpact = pnlImpact;
+      bestRecordId = pos.record_id;
+    }
+
+    totalBasePnL += baseValue;
+    totalStressedPnL += stressedValue;
+
+    results.push({
+      scenarioId: scenario.id,
+      scenarioName: scenario.name,
+      positionId: pos.id,
+      recordId: pos.record_id,
+      currency: pos.currency,
+      baseNotional,
+      baseValue,
+      stressedValue,
+      pnlImpact,
+      percentageImpact,
+      shocked,
+    });
+  });
+
+  const totalImpact = totalStressedPnL - totalBasePnL;
+  const portfolioPercentageImpact = totalBasePnL !== 0
+    ? (totalImpact / Math.abs(totalBasePnL)) * 100
+    : 0;
+
+  return {
+    scenarioId: scenario.id,
+    scenarioName: scenario.name,
+    totalPositions: positions.length,
+    affectedPositions: affectedCount,
+    totalBasePnL,
+    totalStressedPnL,
+    totalImpact,
+    percentageImpact: portfolioPercentageImpact,
+    worstPosition: { recordId: worstRecordId, impact: worstImpact },
+    bestPosition: { recordId: bestRecordId, impact: bestImpact },
+    results,
+  };
+}
+
+// ============================================================================
 // HEDGE PLAN OPTIMIZATION
 // ============================================================================
 
