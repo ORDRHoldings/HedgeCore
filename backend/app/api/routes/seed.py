@@ -1016,12 +1016,15 @@ async def reset_seed_passwords(
 
     reset_count = 0
     try:
-        for email, pw, *_ in EMPLOYEES:
+        for email, pw, full_name, job_title, role_name, branch_id, dept_id in EMPLOYEES:
             r = await db.execute(select(User).where(User.email == email))
             user = r.scalars().first()
             if user:
                 user.hashed_password = hash_password(pw)
                 user.is_active = True
+                user.company_id = COMPANY_ID
+                user.branch_id = branch_id
+                user.department_id = dept_id
                 reset_count += 1
         await db.commit()
         logger.info(f"reset-passwords: resynced {reset_count} seed users")
