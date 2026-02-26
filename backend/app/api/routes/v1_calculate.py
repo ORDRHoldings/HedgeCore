@@ -117,7 +117,12 @@ async def _persist_run(
         outputs_hash       = envelope.outputs_hash,
         run_hash           = envelope.run_hash,
         position_ids       = [],   # populated by caller if position IDs are known
-        run_envelope       = envelope.model_dump(mode="json"),
+        run_envelope       = {
+            # BUG-1 fix: persist hash chain + outputs so committee pack can read hedge_plan
+            **envelope.model_dump(mode="json"),
+            "hedge_plan":       response.hedge_plan.model_dump(mode="json") if response.hedge_plan else None,
+            "scenario_results": response.scenario_results.model_dump(mode="json") if response.scenario_results else None,
+        },
         trace_lite         = response.trace_lite.model_dump(mode="json") if response.trace_lite else None,
         trade_count        = len(trades),
         hedge_count        = len(response.hedge_plan.buckets) if response.hedge_plan else 0,
@@ -337,13 +342,15 @@ async def get_run_detail(
         raise HTTPException(status_code=404, detail=f"Run {run_id!r} not found")
 
     return {
-        "run_id":       row.id,
-        "run_envelope": row.run_envelope,
-        "trace_lite":   row.trace_lite,
-        "trade_count":  row.trade_count,
-        "hedge_count":  row.hedge_count,
-        "inputs_hash":  row.inputs_hash,
-        "outputs_hash": row.outputs_hash,
-        "run_hash":     row.run_hash,
-        "created_at":   row.created_at.isoformat() if row.created_at else None,
+        "run_id":             row.id,
+        "run_envelope":       row.run_envelope,
+        "trace_lite":         row.trace_lite,
+        "trade_count":        row.trade_count,
+        "hedge_count":        row.hedge_count,
+        "inputs_hash":        row.inputs_hash,
+        "outputs_hash":       row.outputs_hash,
+        "run_hash":           row.run_hash,
+        "policy_revision_id": row.policy_revision_id,   # BUG-2 fix: Sprint 1.0 policy pin
+        "policy_hash":        row.policy_hash,           # BUG-2 fix: Sprint 1.0 policy pin
+        "created_at":         row.created_at.isoformat() if row.created_at else None,
     }
