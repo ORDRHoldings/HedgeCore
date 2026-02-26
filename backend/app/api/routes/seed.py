@@ -1109,14 +1109,19 @@ async def migrate_schema(
 
     from sqlalchemy import text as sa_text
     migrations = [
+        # ADD missing columns (idempotent)
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposed_by_email VARCHAR(255)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approved_by UUID",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approved_by_email VARCHAR(255)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_notes TEXT",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_hash VARCHAR(64)",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS execution_ref VARCHAR(128)",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
+        # DROP NOT NULL constraints that shouldn't be there (original schema had extra constraints)
+        "ALTER TABLE execution_proposals ALTER COLUMN run_id DROP NOT NULL",
     ]
     applied = []
     errors = []
