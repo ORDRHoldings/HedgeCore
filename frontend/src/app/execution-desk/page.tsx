@@ -278,6 +278,36 @@ export default function ExecutionDeskPage() {
   const [stressScenario, setStressScenario] = useState<string>("");
   const [showRiskPanel, setShowRiskPanel] = useState(true);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Execution history log (in-session tracking)
+  interface ExecutionHistoryEntry {
+    id: string;
+    timestamp: string;
+    action: "SIMULATION" | "STRESS_TEST" | "HEDGE_PLAN" | "COMPLIANCE" | "IBKR_EXPORT";
+    positionCount: number;
+    positionIds: string[];
+    user: string;
+    summary: string;
+  }
+  const [executionHistory, setExecutionHistory] = useState<ExecutionHistoryEntry[]>([]);
+
+  const addHistoryEntry = useCallback((
+    action: ExecutionHistoryEntry["action"],
+    positionIds: string[],
+    summary: string
+  ) => {
+    const entry: ExecutionHistoryEntry = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      action,
+      positionCount: positionIds.length,
+      positionIds,
+      user: user?.email || "unknown",
+      summary,
+    };
+    setExecutionHistory(prev => [entry, ...prev]);
+  }, [user]);
 
   // Load positions on mount
   useEffect(() => {
@@ -366,17 +396,34 @@ export default function ExecutionDeskPage() {
     const portRisk = calculatePortfolioRisk(selectedPositions, results);
     setPortfolioRisk(portRisk);
 
+    // Log to history
+    addHistoryEntry(
+      "SIMULATION",
+      selectedPositions.map(p => p.id),
+      `Monte Carlo simulation (10K paths) on ${selectedPositions.length} position(s). Portfolio VaR 95%: $${fmtAmt(portRisk.totalVar95)}`
+    );
+
     setActionMode("SIMULATE");
     setIsSimulating(false);
-  }, [selected, readyPositions]);
+  }, [selected, readyPositions, addHistoryEntry]);
 
   // Run compliance checks
   const runComplianceChecks = useCallback(() => {
     const selectedPositions = readyPositions.filter((p) => selected.has(p.id));
     const checks = performComplianceChecks(selectedPositions);
     setComplianceChecks(checks);
+
+    // Log to history
+    const passCount = checks.filter(c => c.status === "PASS").length;
+    const failCount = checks.filter(c => c.status === "FAIL").length;
+    addHistoryEntry(
+      "COMPLIANCE",
+      selectedPositions.map(p => p.id),
+      `Pre-flight compliance check: ${passCount} passed, ${failCount} failed (${selectedPositions.length} positions)`
+    );
+
     setActionMode("COMPLIANCE");
-  }, [selected, readyPositions]);
+  }, [selected, readyPositions, addHistoryEntry]);
 
   // Generate hedge plans
   const generateHedgePlans = useCallback(() => {
@@ -389,8 +436,17 @@ export default function ExecutionDeskPage() {
     });
 
     setHedgePlans(plans);
+
+    // Log to history
+    const totalCost = Array.from(plans.values()).reduce((sum, p) => sum + p.estimatedCost, 0);
+    addHistoryEntry(
+      "HEDGE_PLAN",
+      selectedPositions.map(p => p.id),
+      `Generated optimized hedge plans for ${selectedPositions.length} position(s). Total estimated cost: $${fmtAmt(totalCost)}`
+    );
+
     setActionMode("HEDGE_PLAN");
-  }, [selected, readyPositions]);
+  }, [selected, readyPositions, addHistoryEntry]);
 
   // Export IBKR payload (real FIX format)
   const exportIBKRPayload = useCallback(() => {
@@ -409,9 +465,16 @@ export default function ExecutionDeskPage() {
     link.click();
     URL.revokeObjectURL(url);
 
+    // Log to history
+    addHistoryEntry(
+      "IBKR_EXPORT",
+      selectedPositions.map(p => p.id),
+      `Exported IBKR FIX payload (${payload.metadata.totalOrders} orders, $${fmtAmt(payload.metadata.totalNotional)} total)`
+    );
+
     // Also show in UI
     setActionMode("IBKR_EXECUTE");
-  }, [readyPositions, selected, user]);
+  }, [readyPositions, selected, user, addHistoryEntry]);
 
   if (!user) {
     return (
@@ -504,6 +567,19 @@ export default function ExecutionDeskPage() {
               cursor: "pointer",
             }}>
             ↻ Refresh
+          </button>
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 10,
+              color: showHistory ? S.cyan : S.primary,
+              background: showHistory ? S.bgSub : "transparent",
+              border: `1px solid ${showHistory ? S.cyan : S.darkBorder}`,
+              padding: "2px 8px",
+              cursor: "pointer",
+            }}>
+            📜 History {executionHistory.length > 0 && `(${executionHistory.length})`}
           </button>
           <button
             onClick={() => router.push("/policy-desk")}
@@ -1590,6 +1666,204 @@ export default function ExecutionDeskPage() {
           )}
         </div>
       </div>
+
+      {/* Execution History Overlay */}
+      {showHistory && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0, 0, 0, 0.7)",
+          backdropFilter: "blur(4px)",
+          zIndex: 1000,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 40,
+        }}
+        onClick={() => setShowHistory(false)}>
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 900,
+              maxHeight: "80vh",
+              background: S.bgPanel,
+              border: `1px solid ${S.rim}`,
+              borderRadius: 4,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              padding: "16px 20px",
+              borderBottom: `1px solid ${S.rim}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}>
+              <div>
+                <div style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: S.primary,
+                  letterSpacing: "0.06em",
+                }}>
+                  EXECUTION HISTORY & AUDIT TRAIL
+                </div>
+                <div style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 9,
+                  color: S.tertiary,
+                  marginTop: 4,
+                }}>
+                  Session log of all execution desk actions (in-memory)
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHistory(false)}
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 10,
+                  color: S.tertiary,
+                  background: "transparent",
+                  border: `1px solid ${S.darkBorder}`,
+                  padding: "4px 12px",
+                  cursor: "pointer",
+                }}>
+                ✕ Close
+              </button>
+            </div>
+
+            {/* History List */}
+            <div style={{ flex: 1, overflow: "auto", padding: 20 }}>
+              {executionHistory.length === 0 ? (
+                <div style={{
+                  textAlign: "center",
+                  padding: 60,
+                  fontFamily: S.fontMono,
+                  fontSize: 11,
+                  color: S.tertiary,
+                }}>
+                  No execution history yet.
+                  <br /><br />
+                  Run simulations, compliance checks, or generate hedge plans to see activity here.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {executionHistory.map((entry) => {
+                    const actionColors = {
+                      SIMULATION: S.cyan,
+                      STRESS_TEST: S.amber,
+                      HEDGE_PLAN: S.pass,
+                      COMPLIANCE: S.neutral,
+                      IBKR_EXPORT: S.fail,
+                    };
+                    const actionLabels = {
+                      SIMULATION: "MONTE CARLO SIMULATION",
+                      STRESS_TEST: "STRESS TEST",
+                      HEDGE_PLAN: "HEDGE PLAN OPTIMIZATION",
+                      COMPLIANCE: "COMPLIANCE CHECK",
+                      IBKR_EXPORT: "IBKR PAYLOAD EXPORT",
+                    };
+                    const actionColor = actionColors[entry.action];
+                    const actionLabel = actionLabels[entry.action];
+
+                    return (
+                      <div
+                        key={entry.id}
+                        style={{
+                          padding: 16,
+                          border: `1px solid ${S.rim}`,
+                          borderLeft: `4px solid ${actionColor}`,
+                          background: S.bgSub,
+                        }}>
+                        <div style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 12,
+                          marginBottom: 10,
+                        }}>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 9,
+                            color: actionColor,
+                            background: `color-mix(in srgb, ${actionColor} 10%, transparent)`,
+                            border: `1px solid ${actionColor}`,
+                            padding: "3px 8px",
+                            letterSpacing: "0.06em",
+                            fontWeight: 700,
+                          }}>
+                            {actionLabel}
+                          </div>
+                          <div style={{ flex: 1 }} />
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 9,
+                            color: S.tertiary,
+                          }}>
+                            {new Date(entry.timestamp).toLocaleString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })}
+                          </div>
+                        </div>
+                        <div style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 10,
+                          color: S.secondary,
+                          marginBottom: 8,
+                        }}>
+                          {entry.summary}
+                        </div>
+                        <div style={{
+                          display: "flex",
+                          gap: 16,
+                          fontFamily: S.fontMono,
+                          fontSize: 9,
+                          color: S.tertiary,
+                        }}>
+                          <div>
+                            <span style={{ color: S.primary }}>Positions:</span> {entry.positionCount}
+                          </div>
+                          <div>
+                            <span style={{ color: S.primary }}>User:</span> {entry.user}
+                          </div>
+                          <div>
+                            <span style={{ color: S.primary }}>ID:</span> {entry.id.slice(0, 12)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {executionHistory.length > 0 && (
+              <div style={{
+                padding: "12px 20px",
+                borderTop: `1px solid ${S.rim}`,
+                background: S.bgDeep,
+                fontFamily: S.fontMono,
+                fontSize: 9,
+                color: S.tertiary,
+              }}>
+                <strong style={{ color: S.primary }}>Note:</strong> This history is session-based (in-memory).
+                For persistent audit trail, see <span style={{ color: S.cyan }}>Audit Trail</span> page (linked to database audit_events table).
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <HelpPanel config={EXECUTION_DESK_HELP} storageKey="execution-desk" />
     </div>
