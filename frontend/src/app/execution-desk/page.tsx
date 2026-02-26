@@ -36,6 +36,17 @@ import { listPositionsThunk } from "@/lib/store/slices/positionSlice";
 import type { PositionRow } from "@/api/positionClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { EXECUTION_DESK_HELP } from "@/lib/helpContent";
+import {
+  runMonteCarloSimulation,
+  calculatePortfolioRisk,
+  generateIBKRPayload,
+  performComplianceChecks,
+  optimizeHedgePlan,
+  type MonteCarloResult,
+  type PortfolioRisk,
+  type ComplianceCheck,
+  type HedgePlan,
+} from "@/utils/executionAnalytics";
 
 const S = {
   fontUI:      "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -56,18 +67,7 @@ const S = {
   darkBorder:  "#374151",
 } as const;
 
-type ActionMode = "SIMULATE" | "STRESS_TEST" | "HEDGE_PLAN" | "IBKR_EXECUTE" | null;
-
-interface SimulationResult {
-  positionId: string;
-  meanPnL: number;
-  stdDev: number;
-  var95: number;
-  cvar95: number;
-  worstCase: number;
-  bestCase: number;
-  paths: number;
-}
+type ActionMode = "SIMULATE" | "STRESS_TEST" | "HEDGE_PLAN" | "IBKR_EXECUTE" | "COMPLIANCE" | null;
 
 interface StressScenario {
   id: string;
@@ -122,9 +122,13 @@ export default function ExecutionDeskPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [actionMode, setActionMode] = useState<ActionMode>(null);
-  const [simulationResults, setSimulationResults] = useState<Map<string, SimulationResult>>(new Map());
+  const [simulationResults, setSimulationResults] = useState<Map<string, MonteCarloResult>>(new Map());
+  const [portfolioRisk, setPortfolioRisk] = useState<PortfolioRisk | null>(null);
+  const [complianceChecks, setComplianceChecks] = useState<ComplianceCheck[]>([]);
+  const [hedgePlans, setHedgePlans] = useState<Map<string, HedgePlan>>(new Map());
   const [stressScenario, setStressScenario] = useState<string>("");
   const [showRiskPanel, setShowRiskPanel] = useState(true);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   // Load positions on mount
   useEffect(() => {
@@ -192,54 +196,73 @@ export default function ExecutionDeskPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [dispatch, token, toggleSelectAll]);
 
-  // Monte Carlo simulation (mock implementation)
-  const runSimulation = useCallback(() => {
-    const results = new Map<string, SimulationResult>();
-    selected.forEach((posId) => {
-      const pos = readyPositions.find((p) => p.id === posId);
-      if (!pos) return;
+  // Monte Carlo simulation (real implementation)
+  const runSimulation = useCallback(async () => {
+    setIsSimulating(true);
+    const results = new Map<string, MonteCarloResult>();
+    const selectedPositions = readyPositions.filter((p) => selected.has(p.id));
 
-      // Mock simulation: generate random P&L distribution
-      const meanPnL = pos.amount * 0.02; // 2% expected gain
-      const stdDev = pos.amount * 0.05;  // 5% volatility
-      results.set(posId, {
-        positionId: posId,
-        meanPnL,
-        stdDev,
-        var95: meanPnL - 1.645 * stdDev,
-        cvar95: meanPnL - 2.0 * stdDev,
-        worstCase: meanPnL - 3 * stdDev,
-        bestCase: meanPnL + 3 * stdDev,
-        paths: 10000,
-      });
-    });
+    // Run simulations (in chunks to avoid UI freeze)
+    for (const pos of selectedPositions) {
+      const result = runMonteCarloSimulation(pos, 10000, 30);
+      results.set(pos.id, result);
+
+      // Small delay to keep UI responsive
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
     setSimulationResults(results);
+
+    // Calculate portfolio-level risk
+    const portRisk = calculatePortfolioRisk(selectedPositions, results);
+    setPortfolioRisk(portRisk);
+
     setActionMode("SIMULATE");
+    setIsSimulating(false);
   }, [selected, readyPositions]);
 
-  // Export IBKR payload (mock)
+  // Run compliance checks
+  const runComplianceChecks = useCallback(() => {
+    const selectedPositions = readyPositions.filter((p) => selected.has(p.id));
+    const checks = performComplianceChecks(selectedPositions);
+    setComplianceChecks(checks);
+    setActionMode("COMPLIANCE");
+  }, [selected, readyPositions]);
+
+  // Generate hedge plans
+  const generateHedgePlans = useCallback(() => {
+    const plans = new Map<string, HedgePlan>();
+    const selectedPositions = readyPositions.filter((p) => selected.has(p.id));
+
+    selectedPositions.forEach((pos) => {
+      const plan = optimizeHedgePlan(pos, 75, 100);
+      plans.set(pos.id, plan);
+    });
+
+    setHedgePlans(plans);
+    setActionMode("HEDGE_PLAN");
+  }, [selected, readyPositions]);
+
+  // Export IBKR payload (real FIX format)
   const exportIBKRPayload = useCallback(() => {
-    const payload = readyPositions
-      .filter((p) => selected.has(p.id))
-      .map((p) => ({
-        symbol: p.currency,
-        side: p.type === "AR" ? "BUY" : "SELL",
-        quantity: p.amount,
-        orderType: "LIMIT",
-        limitPrice: null,
-        tif: "GTC",
-        account: "U1234567",
-        clientOrderId: p.record_id,
-      }));
+    const selectedPositions = readyPositions.filter((p) => selected.has(p.id));
+    const payload = generateIBKRPayload(
+      selectedPositions,
+      "DU1234567", // Demo account
+      user?.email || "unknown"
+    );
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `ibkr-payload-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `ibkr-fix-payload-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
-  }, [readyPositions, selected]);
+
+    // Also show in UI
+    setActionMode("IBKR_EXECUTE");
+  }, [readyPositions, selected, user]);
 
   if (!user) {
     return (
@@ -526,19 +549,19 @@ export default function ExecutionDeskPage() {
             }}>
               <button
                 onClick={runSimulation}
-                disabled={selected.size === 0}
+                disabled={selected.size === 0 || isSimulating}
                 style={{
                   fontFamily: S.fontMono,
                   fontSize: 10,
                   fontWeight: 700,
                   letterSpacing: "0.04em",
-                  color: selected.size === 0 ? S.tertiary : S.primary,
-                  background: selected.size === 0 ? S.bgSub : S.bgPanel,
+                  color: selected.size === 0 || isSimulating ? S.tertiary : S.primary,
+                  background: selected.size === 0 || isSimulating ? S.bgSub : S.bgPanel,
                   border: `1px solid ${S.darkBorder}`,
                   padding: "6px 14px",
-                  cursor: selected.size === 0 ? "not-allowed" : "pointer",
+                  cursor: selected.size === 0 || isSimulating ? "not-allowed" : "pointer",
                 }}>
-                SIMULATE MONTE CARLO
+                {isSimulating ? "SIMULATING..." : "SIMULATE MONTE CARLO"}
               </button>
               <button
                 onClick={() => setActionMode("STRESS_TEST")}
@@ -557,7 +580,7 @@ export default function ExecutionDeskPage() {
                 STRESS TEST
               </button>
               <button
-                onClick={() => setActionMode("HEDGE_PLAN")}
+                onClick={generateHedgePlans}
                 disabled={selected.size === 0}
                 style={{
                   fontFamily: S.fontMono,
@@ -573,7 +596,7 @@ export default function ExecutionDeskPage() {
                 BUILD HEDGE PLAN
               </button>
               <button
-                onClick={() => setActionMode("IBKR_EXECUTE")}
+                onClick={runComplianceChecks}
                 disabled={selected.size === 0}
                 style={{
                   fontFamily: S.fontMono,
@@ -586,7 +609,7 @@ export default function ExecutionDeskPage() {
                   padding: "6px 14px",
                   cursor: selected.size === 0 ? "not-allowed" : "pointer",
                 }}>
-                GENERATE IBKR PAYLOAD
+                COMPLIANCE CHECK
               </button>
               <button
                 onClick={exportIBKRPayload}
