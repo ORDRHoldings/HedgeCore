@@ -1047,8 +1047,31 @@ async def reset_seed_passwords(
                     db.add(RolePermission(role_id=role.id, permission_id=perm.id))
                     perms_added += 1
         await db.commit()
-        logger.info(f"reset-passwords: resynced {reset_count} seed users, added {perms_added} missing permissions")
-        return {"status": "ok", "reset_count": reset_count, "perms_added": perms_added, "employees": [e[0] for e in EMPLOYEES]}
+
+        # Also apply idempotent schema migrations for execution_proposals columns
+        # (these columns may be missing if table was created before the model was updated)
+        schema_migrations = [
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposed_by_email VARCHAR(255)",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approved_by_email VARCHAR(255)",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_notes TEXT",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_hash VARCHAR(64)",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS execution_ref VARCHAR(128)",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
+        ]
+        from sqlalchemy import text as sa_text
+        migrations_applied = 0
+        for migration_stmt in schema_migrations:
+            try:
+                await db.execute(sa_text(migration_stmt))
+                await db.commit()
+                migrations_applied += 1
+            except Exception:
+                await db.rollback()
+
+        logger.info(f"reset-passwords: resynced {reset_count} seed users, added {perms_added} missing permissions, {migrations_applied} schema migrations applied")
+        return {"status": "ok", "reset_count": reset_count, "perms_added": perms_added, "migrations_applied": migrations_applied, "employees": [e[0] for e in EMPLOYEES]}
     except Exception as e:
         await db.rollback()
         logger.exception(f"reset-passwords failed: {e}")
