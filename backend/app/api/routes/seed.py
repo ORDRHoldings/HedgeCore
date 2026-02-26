@@ -1051,20 +1051,28 @@ async def reset_seed_passwords(
         # Also apply idempotent schema migrations for execution_proposals columns
         # (these columns may be missing if table was created before the model was updated)
         schema_migrations = [
-            # Core proposal fields
+            # Full execution_proposals column set - idempotent ADD COLUMN IF NOT EXISTS
+            # Covers all columns in app.models.execution_proposal.ExecutionProposal
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS position_id UUID",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS company_id UUID",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS branch_id UUID",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS status VARCHAR(16) DEFAULT 'PROPOSED'",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposed_by UUID",
             "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposed_by_email VARCHAR(255)",
-            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposal_payload JSONB NOT NULL DEFAULT '{}'",
-            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposal_hash VARCHAR(64) NOT NULL DEFAULT ''",
-            # Approval fields
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposed_at TIMESTAMPTZ DEFAULT NOW()",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposal_payload JSONB DEFAULT '{}'",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS proposal_hash VARCHAR(64) DEFAULT ''",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approved_by UUID",
             "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approved_by_email VARCHAR(255)",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ",
             "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_notes TEXT",
             "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS approval_hash VARCHAR(64)",
-            # Execution outcome fields
             "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS execution_ref VARCHAR(128)",
             "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ",
             "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
+            "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()",
             "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
-            # Indexes for new columns (idempotent)
+            # Indexes
             "CREATE INDEX IF NOT EXISTS ix_exec_proposals_position ON execution_proposals(position_id, status)",
             "CREATE INDEX IF NOT EXISTS ix_exec_proposals_company ON execution_proposals(company_id, status, proposed_at)",
             "CREATE INDEX IF NOT EXISTS ix_exec_proposals_proposer ON execution_proposals(proposed_by, status)",
