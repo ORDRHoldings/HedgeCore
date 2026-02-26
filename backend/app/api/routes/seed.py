@@ -1011,8 +1011,7 @@ async def reset_seed_passwords(
     DEV/DEMO ONLY: Force-reset all seed employee passwords to their seeded values.
     Protected by API key. Idempotent.
     """
-    from app.core.config import settings
-    if x_api_key not in (settings.api_key, "HC_DEV_KEY_001"):
+    if x_api_key != "HC_DEV_KEY_001":
         raise HTTPException(status_code=403, detail="Invalid API key")
 
     reset_count = 0
