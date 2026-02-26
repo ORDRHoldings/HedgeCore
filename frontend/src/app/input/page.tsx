@@ -54,7 +54,8 @@ import {
   parseFieldTarget,
 } from '../../constants/errorKnowledgeBase';
 import type { ResolveActionType } from '../../constants/errorKnowledgeBase';
-import HelpPanel from '../../components/input/HelpPanel';
+import HelpPanel from '../../components/layout/HelpPanel';
+import { INPUT_HELP } from '../../lib/helpContent';
 
 const EMPTY_MARKET: MarketSnapshot = {
   as_of: new Date().toISOString().slice(0, 19) + 'Z',
@@ -391,7 +392,6 @@ function InputPageInner() {
   // ── Toast ─────────────────────────────────────────────────────────────────
   const [toastMsg, setToastMsg]       = useState('');
   const [toastVisible, setToastVisible] = useState(false);
-  const [helpOpen, setHelpOpen]               = useState(false);
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg); setToastVisible(true);
@@ -1064,18 +1064,6 @@ function InputPageInner() {
                 </button>
               );
             })}
-            <button
-              type="button"
-              onClick={() => setHelpOpen(true)}
-              style={{
-                marginLeft: 'auto', fontFamily: S.fontMono, fontSize: '0.6875rem',
-                letterSpacing: '0.06em', padding: '8px 14px',
-                border: 'none', borderLeft: `1px solid ${S.border}`,
-                color: S.textTertiary, background: 'transparent', cursor: 'pointer',
-                flexShrink: 0,
-              }}
-              title="Help - field reference"
-            >? HELP</button>
           </div>
 
           {/* ── Tab: Upload CSV / Excel ── */}
@@ -1661,7 +1649,7 @@ function InputPageInner() {
         </div>
       </Modal>
 
-      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpPanel config={INPUT_HELP} storageKey="input" />
       <Toast message={toastMsg} visible={toastVisible} onClose={() => setToastVisible(false)} />
     </div>
   );
