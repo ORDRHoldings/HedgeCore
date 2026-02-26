@@ -226,8 +226,22 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
         )}
 
         {error && !loading && (
-          <div style={{ padding: 12 }}>
-            <EmptyState type="error" message="Failed to load KPI data" />
+          <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
+            <Activity size={28} color={S.cyan} style={{ opacity: 0.4 }} />
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, letterSpacing: "0.04em", fontWeight: 600 }}>
+              AWAITING DATA
+            </div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.5, maxWidth: 260 }}>
+              System metrics will populate once positions are ingested and calculations are run.
+            </div>
+            <div style={{
+              fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.06em",
+              background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${S.cyan} 20%, transparent)`,
+              borderRadius: 3, padding: "3px 10px",
+            }}>
+              INGEST DATA → POSITION DESK
+            </div>
           </div>
         )}
 
@@ -357,8 +371,22 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
         )}
 
         {!loading && !error && !kpis && (
-          <div style={{ padding: 12 }}>
-            <EmptyState type="empty" title="No data yet" message="System metrics will appear once positions are entered." />
+          <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
+            <Activity size={28} color={S.cyan} style={{ opacity: 0.4 }} />
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, letterSpacing: "0.04em", fontWeight: 600 }}>
+              AWAITING DATA
+            </div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.5, maxWidth: 260 }}>
+              System metrics will populate once positions are ingested and calculations are run.
+            </div>
+            <div style={{
+              fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.06em",
+              background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${S.cyan} 20%, transparent)`,
+              borderRadius: 3, padding: "3px 10px",
+            }}>
+              INGEST DATA → POSITION DESK
+            </div>
           </div>
         )}
       </div>
