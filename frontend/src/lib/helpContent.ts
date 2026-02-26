@@ -2690,3 +2690,97 @@ export const HELP_CENTER_HELP: HelpPanelConfig = {
     },
   ],
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXECUTION DESK — Institutional Position Execution Hub
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const EXECUTION_DESK_HELP: HelpPanelConfig = {
+  pageTitle:    "Execution Desk",
+  pageSubtitle: "EXECUTION HUB · POSITION MANAGEMENT",
+  sections: [
+    {
+      id:    "pipeline",
+      title: "Pipeline Position",
+      icon:  "⬡",
+      type:  "pipeline",
+      pipelinePos: {
+        position: 5,
+        total:    7,
+        label:    "Step 5 of 7 — Execution Hub",
+        description: "Convert policy-assigned positions into executable hedge transactions via simulation, stress testing, and IBKR payload generation.",
+      },
+    },
+    {
+      id:    "overview",
+      title: "What this page does",
+      icon:  "ℹ",
+      type:  "text",
+      content:
+        "Execution Desk is the institutional nerve center for converting policy-assigned positions into executable hedge transactions. Positions flow here automatically from Policy Desk once they have an assigned hedge policy.\n\nDesigned to Bloomberg FXGO and BlackRock Aladdin execution standards, it provides Monte Carlo simulation, stress testing, hedge plan optimization, and IBKR FIX message generation — all with terminal-grade efficiency and keyboard-first UX.",
+    },
+    {
+      id:    "workflow",
+      title: "Execution Workflow",
+      icon:  "▶",
+      type:  "workflow",
+      steps: [
+        { step: 1, label: "SELECT",    description: "Choose positions from the execution queue. Multi-select with keyboard shortcuts (⌘A, ⌘K). All positions here have status POLICY_ASSIGNED." },
+        { step: 2, label: "SIMULATE",  description: "Run Monte Carlo simulation (10,000 paths). Get VaR, CVaR, P&L distribution, worst/best case scenarios." },
+        { step: 3, label: "STRESS",    description: "Apply market shock scenarios (2008 crisis, COVID, EM crisis). Test resilience against tail events." },
+        { step: 4, label: "OPTIMIZE",  description: "Build optimal hedge plan using constraint solver. Minimize cost while meeting policy risk constraints." },
+        { step: 5, label: "GENERATE",  description: "Create IBKR execution payload (JSON/FIX format). Includes order validation and compliance pre-checks." },
+        { step: 6, label: "EXECUTE",   description: "Export payload and send to IBKR via TWS API or manual order entry.", link: "/execution" },
+      ],
+    },
+    {
+      id:    "actions",
+      title: "Available Actions",
+      icon:  "≡",
+      type:  "variables",
+      variables: [
+        { name: "SIMULATE MONTE CARLO", type: "simulation", description: "10,000-path Monte Carlo simulation. Returns mean P&L, standard deviation, VaR (95%), CVaR (95%), worst case, best case.", example: "VaR $125K loss at 95% confidence", source: "Simulation engine" },
+        { name: "STRESS TEST",          type: "scenario",   description: "Apply historical market shock scenarios. Tests: 2008 financial crisis, COVID March 2020, EM currency crisis.", example: "Position loses $200K in 2008 scenario", source: "Historical scenario library" },
+        { name: "BUILD HEDGE PLAN",     type: "optimizer",  description: "Constraint-based hedge optimization. Minimizes execution cost while satisfying policy hedge ratio, tenor, and instrument constraints.", example: "Optimal plan: 75% FWD, 25% NDF", source: "Constraint solver" },
+        { name: "GENERATE IBKR PAYLOAD", type: "export",    description: "Creates JSON payload for IBKR TWS execution. Includes order type, size, price, TIF, account validation.", example: "ibkr-payload-2026-02-26.json", source: "FIX message generator" },
+      ],
+    },
+    {
+      id:    "shortcuts",
+      title: "Keyboard Shortcuts",
+      icon:  "⌨",
+      type:  "variables",
+      variables: [
+        { name: "⌘K",  type: "search",  description: "Focus search box. Instantly filter positions by record ID, entity, or currency.", example: "Type to filter", source: "Keyboard" },
+        { name: "Esc", type: "clear",   description: "Clear search and unfocus. Returns to position queue view.", example: "Press to clear", source: "Keyboard" },
+        { name: "⌘A",  type: "select",  description: "Select all visible positions. Works with current filters applied.", example: "Select all", source: "Keyboard" },
+        { name: "R",   type: "refresh", description: "Refresh position queue. Fetches latest data from backend.", example: "Press to refresh", source: "Keyboard" },
+      ],
+    },
+    {
+      id:    "metrics",
+      title: "Risk Metrics Explained",
+      icon:  "≡",
+      type:  "variables",
+      variables: [
+        { name: "VaR (Value at Risk)",    type: "95% CI", description: "Maximum expected loss at 95% confidence level. 1 in 20 days will be worse than this.", example: "$125K loss", source: "Monte Carlo simulation" },
+        { name: "CVaR (Conditional VaR)", type: "95% CI", description: "Average loss in the worst 5% of outcomes. Also called Expected Shortfall (ES).", example: "$175K loss", source: "Tail risk calculation" },
+        { name: "Mean P&L",               type: "USD",    description: "Expected profit/loss from simulation. Positive = expected gain, negative = expected loss.", example: "+$15K", source: "Monte Carlo mean" },
+        { name: "Std Dev",                type: "USD",    description: "Standard deviation of P&L distribution. Higher = more volatile outcomes.", example: "$85K", source: "Monte Carlo std dev" },
+      ],
+    },
+    {
+      id:    "glossary",
+      title: "Glossary",
+      icon:  "§",
+      type:  "glossary",
+      glossary: [
+        { term: "Monte Carlo Simulation", definition: "Statistical technique that runs thousands of random scenarios to estimate probability distribution of outcomes. ORDR uses 10,000 paths for hedge P&L estimation." },
+        { term: "Stress Testing",         definition: "Analysis technique applying extreme but plausible market shocks to test portfolio resilience. Required by Basel III for financial institutions." },
+        { term: "VaR (Value at Risk)",    definition: "Maximum expected loss at a given confidence level (typically 95% or 99%). Industry-standard risk metric used by banks and asset managers worldwide." },
+        { term: "IBKR FIX Payload",       definition: "Financial Information eXchange (FIX) protocol message for order execution via Interactive Brokers TWS API. Standard format for institutional order routing." },
+        { term: "Hedge Plan Optimization", definition: "Mathematical optimization to find the lowest-cost hedge strategy that satisfies all policy constraints (hedge ratio, tenor, instrument mix)." },
+      ],
+    },
+  ],
+};
