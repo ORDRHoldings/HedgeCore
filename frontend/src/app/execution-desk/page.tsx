@@ -36,6 +36,8 @@ import { listPositionsThunk } from "@/lib/store/slices/positionSlice";
 import type { PositionRow } from "@/api/positionClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { EXECUTION_DESK_HELP } from "@/lib/helpContent";
+import ReactECharts from "echarts-for-react";
+import type { EChartsOption } from "echarts";
 import {
   runMonteCarloSimulation,
   calculatePortfolioRisk,
@@ -109,6 +111,153 @@ function fmtDate(s: string | null | undefined): string {
 function shortId(s: string | null | undefined): string {
   if (!s) return "—";
   return s.slice(0, 8).toUpperCase();
+}
+
+/**
+ * P&L Distribution Histogram with VaR/CVaR markers
+ */
+function PnLDistributionChart({ result, height = 300 }: { result: MonteCarloResult; height?: number }) {
+  // Convert histogram bins to chart data
+  const binCount = result.distribution.length;
+  const min = result.worstCase;
+  const max = result.bestCase;
+  const binWidth = (max - min) / binCount;
+
+  const histogramData = result.distribution.map((count, idx) => {
+    const binStart = min + idx * binWidth;
+    const binCenter = binStart + binWidth / 2;
+    return { x: binCenter, y: count };
+  });
+
+  const option: EChartsOption = {
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      backgroundColor: "#1A2535EE",
+      borderColor: S.darkBorder,
+      borderWidth: 1,
+      textStyle: { color: S.primary, fontSize: 10, fontFamily: S.fontMono },
+      formatter: (params: unknown) => {
+        const arr = params as Array<{ axisValue: number; data: number }>;
+        if (arr.length === 0) return "";
+        const x = arr[0].axisValue;
+        const count = arr[0].data;
+        return `<b>P&L: $${fmtAmt(x)}</b><br/>Frequency: ${count}`;
+      },
+    },
+    grid: { left: 60, right: 20, top: 30, bottom: 50 },
+    xAxis: {
+      type: "value",
+      name: "P&L ($)",
+      nameLocation: "center",
+      nameGap: 30,
+      nameTextStyle: { color: S.tertiary, fontSize: 10, fontFamily: S.fontMono },
+      axisLabel: {
+        color: S.tertiary,
+        fontSize: 9,
+        fontFamily: S.fontMono,
+        formatter: (v: number) =>
+          v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M`
+          : v >= 1_000 ? `${(v / 1_000).toFixed(0)}K`
+          : v <= -1_000_000 ? `${(v / 1_000_000).toFixed(1)}M`
+          : v <= -1_000 ? `${(v / 1_000).toFixed(0)}K`
+          : v.toFixed(0),
+      },
+      axisLine: { lineStyle: { color: S.darkBorder } },
+      splitLine: { lineStyle: { color: S.darkBorder, type: "dashed", opacity: 0.3 } },
+    },
+    yAxis: {
+      type: "value",
+      name: "Frequency",
+      nameTextStyle: { color: S.tertiary, fontSize: 10, fontFamily: S.fontMono },
+      axisLabel: { color: S.tertiary, fontSize: 9, fontFamily: S.fontMono },
+      splitLine: { lineStyle: { color: S.darkBorder, type: "dashed", opacity: 0.3 } },
+    },
+    series: [
+      // Histogram bars
+      {
+        type: "bar",
+        data: histogramData.map(d => [d.x, d.y]),
+        barWidth: "95%",
+        itemStyle: {
+          color: {
+            type: "linear",
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: S.cyan + "DD" },
+              { offset: 0.6, color: S.cyan + "BB" },
+              { offset: 1, color: S.cyan + "88" },
+            ],
+          },
+          borderRadius: [2, 2, 0, 0],
+        },
+        emphasis: {
+          itemStyle: {
+            color: {
+              type: "linear",
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: S.cyan + "FF" },
+                { offset: 1, color: S.cyan + "CC" },
+              ],
+            },
+          },
+        },
+      },
+    ],
+    // Mark lines for VaR, CVaR, Mean
+    markLine: {
+      silent: true,
+      symbol: "none",
+      label: {
+        show: true,
+        position: "end",
+        fontSize: 9,
+        fontFamily: S.fontMono,
+      },
+      data: [
+        {
+          name: "Mean",
+          xAxis: result.meanPnL,
+          lineStyle: { color: S.primary, type: "solid", width: 2 },
+          label: { formatter: "MEAN", color: S.primary },
+        },
+        {
+          name: "VaR 95%",
+          xAxis: result.var95,
+          lineStyle: { color: S.amber, type: "dashed", width: 2 },
+          label: { formatter: "VaR 95%", color: S.amber },
+        },
+        {
+          name: "VaR 99%",
+          xAxis: result.var99,
+          lineStyle: { color: S.fail, type: "dashed", width: 2 },
+          label: { formatter: "VaR 99%", color: S.fail },
+        },
+        {
+          name: "CI Lower",
+          xAxis: result.confidenceInterval.lower,
+          lineStyle: { color: S.neutral, type: "dotted", width: 1 },
+          label: { formatter: "95% CI", color: S.neutral },
+        },
+        {
+          name: "CI Upper",
+          xAxis: result.confidenceInterval.upper,
+          lineStyle: { color: S.neutral, type: "dotted", width: 1 },
+          label: { show: false },
+        },
+      ],
+    },
+  };
+
+  return (
+    <ReactECharts
+      option={option}
+      style={{ height, width: "100%" }}
+      opts={{ renderer: "canvas" }}
+    />
+  );
 }
 
 export default function ExecutionDeskPage() {
@@ -697,6 +846,76 @@ export default function ExecutionDeskPage() {
                   }}>
                     MONTE CARLO SIMULATION RESULTS
                   </div>
+
+                  {/* Portfolio-level risk metrics */}
+                  {portfolioRisk && (
+                    <div style={{
+                      padding: 16,
+                      border: `2px solid ${S.darkBorder}`,
+                      background: S.bgPanel,
+                      marginBottom: 16,
+                    }}>
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: S.primary,
+                        marginBottom: 12,
+                        letterSpacing: "0.06em",
+                      }}>
+                        PORTFOLIO RISK SUMMARY
+                      </div>
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, 1fr)",
+                        gap: 12,
+                        fontFamily: S.fontMono,
+                        fontSize: 10,
+                      }}>
+                        <div>
+                          <div style={{ color: S.tertiary, marginBottom: 4 }}>Total Notional</div>
+                          <div style={{ color: S.primary, fontWeight: 700 }}>${fmtAmt(portfolioRisk.totalNotional)}</div>
+                        </div>
+                        <div>
+                          <div style={{ color: S.tertiary, marginBottom: 4 }}>Portfolio VaR 95%</div>
+                          <div style={{ color: S.fail, fontWeight: 700 }}>${fmtAmt(portfolioRisk.totalVar95)}</div>
+                        </div>
+                        <div>
+                          <div style={{ color: S.tertiary, marginBottom: 4 }}>Portfolio CVaR 95%</div>
+                          <div style={{ color: S.fail }}>${fmtAmt(portfolioRisk.totalCVar95)}</div>
+                        </div>
+                        <div>
+                          <div style={{ color: S.tertiary, marginBottom: 4 }}>Diversification Benefit</div>
+                          <div style={{ color: S.pass }}>{portfolioRisk.diversificationBenefit.toFixed(1)}%</div>
+                        </div>
+                      </div>
+                      <div style={{
+                        marginTop: 12,
+                        paddingTop: 12,
+                        borderTop: `1px solid ${S.soft}`,
+                      }}>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>
+                          Currency Breakdown:
+                        </div>
+                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                          {portfolioRisk.currencyBreakdown.map((c) => (
+                            <div key={c.currency} style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 10,
+                              color: S.primary,
+                              background: S.bgSub,
+                              padding: "4px 8px",
+                              border: `1px solid ${S.rim}`,
+                            }}>
+                              {c.currency}: ${fmtAmt(c.notional)} ({c.percentage.toFixed(1)}%)
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Individual position results */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {Array.from(simulationResults.entries()).map(([posId, result]) => {
                       const pos = readyPositions.find((p) => p.id === posId);
@@ -716,14 +935,15 @@ export default function ExecutionDeskPage() {
                             color: S.primary,
                             marginBottom: 12,
                           }}>
-                            {pos.record_id} — {pos.currency} ${fmtAmt(pos.amount)}
+                            {result.recordId} — {result.currency} ${fmtAmt(result.notional)}
                           </div>
                           <div style={{
                             display: "grid",
-                            gridTemplateColumns: "repeat(3, 1fr)",
+                            gridTemplateColumns: "repeat(4, 1fr)",
                             gap: 12,
                             fontFamily: S.fontMono,
                             fontSize: 10,
+                            marginBottom: 12,
                           }}>
                             <div>
                               <div style={{ color: S.tertiary, marginBottom: 4 }}>Mean P&L</div>
@@ -738,8 +958,16 @@ export default function ExecutionDeskPage() {
                               <div style={{ color: S.fail, fontWeight: 700 }}>${fmtAmt(result.var95)}</div>
                             </div>
                             <div>
+                              <div style={{ color: S.tertiary, marginBottom: 4 }}>VaR 99%</div>
+                              <div style={{ color: S.fail, fontWeight: 700 }}>${fmtAmt(result.var99)}</div>
+                            </div>
+                            <div>
                               <div style={{ color: S.tertiary, marginBottom: 4 }}>CVaR 95%</div>
                               <div style={{ color: S.fail }}>${fmtAmt(result.cvar95)}</div>
+                            </div>
+                            <div>
+                              <div style={{ color: S.tertiary, marginBottom: 4 }}>CVaR 99%</div>
+                              <div style={{ color: S.fail }}>${fmtAmt(result.cvar99)}</div>
                             </div>
                             <div>
                               <div style={{ color: S.tertiary, marginBottom: 4 }}>Worst Case</div>
@@ -751,14 +979,58 @@ export default function ExecutionDeskPage() {
                             </div>
                           </div>
                           <div style={{
-                            marginTop: 12,
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: 12,
                             paddingTop: 12,
                             borderTop: `1px solid ${S.soft}`,
                             fontFamily: S.fontMono,
-                            fontSize: 9,
-                            color: S.tertiary,
+                            fontSize: 10,
                           }}>
-                            {result.paths.toLocaleString()} simulation paths | 95% confidence interval
+                            <div>
+                              <div style={{ color: S.tertiary, marginBottom: 4 }}>95% Confidence Interval</div>
+                              <div style={{ color: S.primary }}>
+                                ${fmtAmt(result.confidenceInterval.lower)} to ${fmtAmt(result.confidenceInterval.upper)}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ color: S.tertiary, marginBottom: 4 }}>Simulation Info</div>
+                              <div style={{ color: S.primary }}>
+                                {result.paths.toLocaleString()} paths × 30-day horizon
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* P&L Distribution Visualization */}
+                          <div style={{
+                            marginTop: 16,
+                            paddingTop: 16,
+                            borderTop: `1px solid ${S.soft}`,
+                          }}>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 10,
+                              color: S.tertiary,
+                              marginBottom: 12,
+                              letterSpacing: "0.06em",
+                            }}>
+                              P&L DISTRIBUTION — {result.paths.toLocaleString()} MONTE CARLO PATHS
+                            </div>
+                            <PnLDistributionChart result={result} height={280} />
+                            <div style={{
+                              marginTop: 8,
+                              fontFamily: S.fontMono,
+                              fontSize: 9,
+                              color: S.tertiary,
+                              display: "flex",
+                              gap: 16,
+                              flexWrap: "wrap",
+                            }}>
+                              <div><span style={{ color: S.primary }}>━</span> Mean P&L</div>
+                              <div><span style={{ color: S.amber }}>- -</span> VaR 95% ({fmtAmt(result.var95)})</div>
+                              <div><span style={{ color: S.fail }}>- -</span> VaR 99% ({fmtAmt(result.var99)})</div>
+                              <div><span style={{ color: S.neutral }}>···</span> 95% Confidence Interval</div>
+                            </div>
                           </div>
                         </div>
                       );
@@ -821,31 +1093,201 @@ export default function ExecutionDeskPage() {
                 </div>
               )}
 
-              {actionMode === "HEDGE_PLAN" && (
-                <div style={{
-                  padding: 20,
-                  border: `1px solid ${S.rim}`,
-                  background: S.bgSub,
-                }}>
+              {actionMode === "HEDGE_PLAN" && hedgePlans.size > 0 && (
+                <div>
                   <div style={{
                     fontFamily: S.fontMono,
                     fontSize: 12,
                     fontWeight: 700,
                     color: S.primary,
-                    marginBottom: 12,
+                    marginBottom: 16,
                     letterSpacing: "0.06em",
                   }}>
-                    HEDGE PLAN BUILDER
+                    OPTIMIZED HEDGE PLANS
                   </div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
-                    Advanced hedge optimization coming soon. Will include:
-                    <ul style={{ marginTop: 8, marginLeft: 20 }}>
-                      <li>Constraint solver (min/max hedge ratios, tenor limits)</li>
-                      <li>Instrument optimization (FWD vs NDF cost analysis)</li>
-                      <li>Multi-currency portfolio netting</li>
-                      <li>Basis risk quantification</li>
-                      <li>Execution schedule recommendation</li>
-                    </ul>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {Array.from(hedgePlans.entries()).map(([posId, plan]) => {
+                      const pos = readyPositions.find((p) => p.id === posId);
+                      if (!pos) return null;
+                      return (
+                        <div
+                          key={posId}
+                          style={{
+                            padding: 16,
+                            border: `1px solid ${S.rim}`,
+                            background: S.bgSub,
+                          }}>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: S.primary,
+                            marginBottom: 12,
+                          }}>
+                            {pos.record_id} — {pos.currency} ${fmtAmt(pos.amount)}
+                          </div>
+                          <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(2, 1fr)",
+                            gap: 12,
+                            fontFamily: S.fontMono,
+                            fontSize: 10,
+                            marginBottom: 12,
+                          }}>
+                            <div>
+                              <div style={{ color: S.tertiary, marginBottom: 4 }}>Recommended Instrument</div>
+                              <div style={{
+                                color: S.primary,
+                                fontWeight: 700,
+                                background: S.bgPanel,
+                                padding: "4px 8px",
+                                border: `1px solid ${S.darkBorder}`,
+                                display: "inline-block",
+                              }}>
+                                {plan.recommendedInstrument}
+                              </div>
+                            </div>
+                            <div>
+                              <div style={{ color: S.tertiary, marginBottom: 4 }}>Optimal Hedge Ratio</div>
+                              <div style={{ color: S.primary, fontWeight: 700 }}>{plan.recommendedHedgeRatio.toFixed(1)}%</div>
+                            </div>
+                            <div>
+                              <div style={{ color: S.tertiary, marginBottom: 4 }}>Hedge Notional</div>
+                              <div style={{ color: S.primary }}>${fmtAmt(plan.recommendedNotional)}</div>
+                            </div>
+                            <div>
+                              <div style={{ color: S.tertiary, marginBottom: 4 }}>Estimated Cost</div>
+                              <div style={{ color: S.amber }}>${fmtAmt(plan.estimatedCost)}</div>
+                            </div>
+                          </div>
+                          <div style={{
+                            paddingTop: 12,
+                            borderTop: `1px solid ${S.soft}`,
+                            fontFamily: S.fontMono,
+                            fontSize: 10,
+                            color: S.secondary,
+                            fontStyle: "italic",
+                          }}>
+                            {plan.reasoning}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{
+                    marginTop: 16,
+                    padding: 12,
+                    background: S.bgPanel,
+                    border: `1px solid ${S.rim}`,
+                    fontFamily: S.fontMono,
+                    fontSize: 10,
+                    color: S.tertiary,
+                  }}>
+                    <strong style={{ color: S.primary }}>Optimization Notes:</strong> Plans use constraint-based optimization
+                    with currency-specific instrument selection. NDF recommended for non-deliverable currencies (MXN, BRL, INR, KRW, CNH).
+                    FWD recommended for G10 currencies. Cost estimates include spread + time value.
+                  </div>
+                </div>
+              )}
+
+              {actionMode === "COMPLIANCE" && complianceChecks.length > 0 && (
+                <div>
+                  <div style={{
+                    fontFamily: S.fontMono,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: S.primary,
+                    marginBottom: 16,
+                    letterSpacing: "0.06em",
+                  }}>
+                    COMPLIANCE PRE-FLIGHT CHECKS
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {complianceChecks.map((check, idx) => {
+                      const statusColor = check.status === "PASS" ? S.pass : check.status === "WARN" ? S.amber : S.fail;
+                      const statusIcon = check.status === "PASS" ? "✓" : check.status === "WARN" ? "⚠" : "✕";
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: 16,
+                            border: `1px solid ${check.critical && check.status === "FAIL" ? S.fail : S.rim}`,
+                            background: S.bgSub,
+                            borderLeft: `4px solid ${statusColor}`,
+                          }}>
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            marginBottom: 8,
+                          }}>
+                            <span style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 16,
+                              color: statusColor,
+                            }}>
+                              {statusIcon}
+                            </span>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              color: S.primary,
+                            }}>
+                              {check.checkName}
+                            </div>
+                            {check.critical && (
+                              <span style={{
+                                fontFamily: S.fontMono,
+                                fontSize: 9,
+                                color: S.fail,
+                                background: `color-mix(in srgb, ${S.fail} 10%, transparent)`,
+                                border: `1px solid ${S.fail}`,
+                                padding: "2px 6px",
+                              }}>
+                                CRITICAL
+                              </span>
+                            )}
+                            <span style={{
+                              marginLeft: "auto",
+                              fontFamily: S.fontMono,
+                              fontSize: 9,
+                              fontWeight: 700,
+                              color: statusColor,
+                              letterSpacing: "0.08em",
+                            }}>
+                              {check.status}
+                            </span>
+                          </div>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 10,
+                            color: S.secondary,
+                          }}>
+                            {check.message}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{
+                    marginTop: 16,
+                    padding: 12,
+                    background: S.bgPanel,
+                    border: `1px solid ${S.rim}`,
+                    fontFamily: S.fontMono,
+                    fontSize: 10,
+                    color: S.tertiary,
+                  }}>
+                    <strong style={{ color: S.primary }}>Compliance Summary:</strong>{" "}
+                    {complianceChecks.filter((c) => c.status === "PASS").length} passed,{" "}
+                    {complianceChecks.filter((c) => c.status === "WARN").length} warnings,{" "}
+                    {complianceChecks.filter((c) => c.status === "FAIL").length} failed.{" "}
+                    {complianceChecks.some((c) => c.critical && c.status === "FAIL") && (
+                      <span style={{ color: S.fail, fontWeight: 700 }}>
+                        Critical failures must be resolved before execution.
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -934,15 +1376,215 @@ export default function ExecutionDeskPage() {
                 </button>
               </div>
               <div style={{ padding: 16 }}>
-                <div style={{
-                  fontFamily: S.fontMono,
-                  fontSize: 10,
-                  color: S.secondary,
-                  textAlign: "center",
-                  padding: 40,
-                }}>
-                  Risk analytics will display here when positions are selected and simulations are run.
-                </div>
+                {selected.size === 0 ? (
+                  <div style={{
+                    fontFamily: S.fontMono,
+                    fontSize: 10,
+                    color: S.tertiary,
+                    textAlign: "center",
+                    padding: 40,
+                  }}>
+                    Select positions to view real-time risk analytics
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    {/* Selection Summary */}
+                    <div>
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 10,
+                        color: S.tertiary,
+                        marginBottom: 8,
+                        letterSpacing: "0.06em",
+                      }}>
+                        SELECTION
+                      </div>
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 20,
+                        color: S.primary,
+                        fontWeight: 700,
+                      }}>
+                        {selected.size}
+                      </div>
+                      <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary }}>
+                        position{selected.size > 1 ? "s" : ""} selected
+                      </div>
+                    </div>
+
+                    {/* Total Notional */}
+                    <div>
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 10,
+                        color: S.tertiary,
+                        marginBottom: 8,
+                        letterSpacing: "0.06em",
+                      }}>
+                        TOTAL NOTIONAL
+                      </div>
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 16,
+                        color: S.primary,
+                        fontWeight: 700,
+                      }}>
+                        ${fmtAmt(
+                          readyPositions
+                            .filter((p) => selected.has(p.id))
+                            .reduce((sum, p) => sum + Math.abs(p.amount), 0)
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Currency Breakdown */}
+                    <div>
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 10,
+                        color: S.tertiary,
+                        marginBottom: 8,
+                        letterSpacing: "0.06em",
+                      }}>
+                        CURRENCIES
+                      </div>
+                      {(() => {
+                        const currMap = new Map<string, number>();
+                        readyPositions
+                          .filter((p) => selected.has(p.id))
+                          .forEach((p) => {
+                            const curr = currMap.get(p.currency) || 0;
+                            currMap.set(p.currency, curr + Math.abs(p.amount));
+                          });
+                        return Array.from(currMap.entries())
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([curr, amt]) => (
+                            <div
+                              key={curr}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                fontFamily: S.fontMono,
+                                fontSize: 10,
+                                marginBottom: 6,
+                              }}>
+                              <span style={{ color: S.primary, fontWeight: 700 }}>{curr}</span>
+                              <span style={{ color: S.secondary }}>${fmtAmt(amt)}</span>
+                            </div>
+                          ));
+                      })()}
+                    </div>
+
+                    {/* Portfolio Risk (if simulation run) */}
+                    {portfolioRisk && (
+                      <>
+                        <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 16 }}>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 10,
+                            color: S.tertiary,
+                            marginBottom: 8,
+                            letterSpacing: "0.06em",
+                          }}>
+                            PORTFOLIO VaR 95%
+                          </div>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 16,
+                            color: S.fail,
+                            fontWeight: 700,
+                          }}>
+                            ${fmtAmt(portfolioRisk.totalVar95)}
+                          </div>
+                          <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, marginTop: 4 }}>
+                            Max loss at 95% confidence
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 10,
+                            color: S.tertiary,
+                            marginBottom: 8,
+                            letterSpacing: "0.06em",
+                          }}>
+                            CONCENTRATION RISK
+                          </div>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 16,
+                            color: portfolioRisk.concentrationRisk > 25 ? S.amber : S.pass,
+                            fontWeight: 700,
+                          }}>
+                            {portfolioRisk.concentrationRisk.toFixed(0)}
+                          </div>
+                          <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, marginTop: 4 }}>
+                            Herfindahl-Hirschman Index
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 10,
+                            color: S.tertiary,
+                            marginBottom: 8,
+                            letterSpacing: "0.06em",
+                          }}>
+                            DIVERSIFICATION
+                          </div>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 16,
+                            color: S.pass,
+                            fontWeight: 700,
+                          }}>
+                            {portfolioRisk.diversificationBenefit.toFixed(1)}%
+                          </div>
+                          <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, marginTop: 4 }}>
+                            Risk reduction from portfolio effects
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Compliance Status */}
+                    {complianceChecks.length > 0 && (
+                      <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 16 }}>
+                        <div style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 10,
+                          color: S.tertiary,
+                          marginBottom: 8,
+                          letterSpacing: "0.06em",
+                        }}>
+                          COMPLIANCE
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {complianceChecks.map((check, idx) => {
+                            const statusColor = check.status === "PASS" ? S.pass : check.status === "WARN" ? S.amber : S.fail;
+                            const statusIcon = check.status === "PASS" ? "✓" : check.status === "WARN" ? "⚠" : "✕";
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  fontFamily: S.fontMono,
+                                  fontSize: 9,
+                                }}>
+                                <span style={{ color: statusColor }}>{statusIcon}</span>
+                                <span style={{ color: S.secondary, flex: 1 }}>{check.checkName}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
