@@ -33,8 +33,6 @@ import {
   executePositionThunk,
 } from '../../lib/store/slices/positionSlice';
 import type { PositionRow } from '../../api/positionClient';
-import FileUploadLane from '../../components/input/FileUploadLane';
-import ImportHistoryPanel from '../../components/input/ImportHistoryPanel';
 
 import EmptyState from '../../components/ui/EmptyState';
 import type { StepKey } from '../../components/input/StepSection';
@@ -67,13 +65,10 @@ const EMPTY_MARKET: MarketSnapshot = {
 const STEP_ORDER: StepKey[] = ['exposure', 'policy'];
 
 // ─── Ingestion Desk tabs ──────────────────────────────────────────────────
-type DeskTab = 'manual' | 'upload' | 'connection' | 'history';
+type DeskTab = 'manual';
 
 const DESK_TABS: { key: DeskTab; label: string; subtitle: string }[] = [
   { key: 'manual',     label: 'Manual Entry',      subtitle: 'Inline form + bulk' },
-  { key: 'upload',     label: 'Upload CSV / Excel', subtitle: 'File import' },
-  { key: 'connection', label: 'Connection Hub',     subtitle: 'ERP / API / FTP feeds' },
-  { key: 'history',    label: 'Import History',     subtitle: 'Audit trail' },
 ];
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
@@ -332,18 +327,6 @@ function InputPageInner() {
     (s: RootState) => s.positions,
   );
 
-  // ── Ingestion desk tab — reads ?tab= query param for deep-linking ─────────
-  const initialTab = (() => {
-    const t = searchParams.get('tab') as DeskTab | null;
-    return (t && DESK_TABS.some(d => d.key === t)) ? t : 'manual';
-  })();
-  const [deskTab, setDeskTab] = useState<DeskTab>(initialTab);
-
-  // Respond to URL changes (e.g. back/forward navigation)
-  useEffect(() => {
-    const t = searchParams.get('tab') as DeskTab | null;
-    if (t && DESK_TABS.some(d => d.key === t)) setDeskTab(t);
-  }, [searchParams]);
 
   // ── Local state ───────────────────────────────────────────────────────────
   const [hedges, setHedges]  = useState<HedgeRow[]>([]);
@@ -941,7 +924,8 @@ function InputPageInner() {
   const _autofillMsg = autofillMsg; // shown below market button
 
   return (
-    <div>
+    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
       {/* ── Governance strip ── */}
       <GovernanceStrip
         tradeCount={trades.length} hedgeCount={hedges.length} policyName={activePresetName}
@@ -953,7 +937,7 @@ function InputPageInner() {
       />
 
       {/* ── Page content ── */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px' }}>
+      <div style={{ maxWidth: 'none', margin: '0', padding: '0 16px' }}>
 
         {/* ── Import result banner ── */}
         {importResult && (
@@ -985,33 +969,6 @@ function InputPageInner() {
           </div>
         )}
 
-        {/* ── Action bar: Generate Hedge Plan ── */}
-        <div style={{
-          marginTop: 8, display: 'flex', alignItems: 'center', gap: 12,
-          padding: '8px 0', borderBottom: `1px solid ${S.border}`,
-        }}>
-          <button
-            type="button"
-            onClick={() => handleCalculate()}
-            disabled={!canCalculate}
-            style={{
-              fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', fontWeight: 700,
-              padding: '5px 20px',
-              border: `1px solid ${canCalculate ? S.cyan : S.border}`,
-              color: canCalculate ? 'var(--bg-deep)' : S.textTertiary,
-              background: canCalculate ? S.cyan : 'transparent',
-              cursor: canCalculate ? 'pointer' : 'not-allowed',
-              transition: 'all 0.1s',
-            }}
-          >
-            {loading ? 'GENERATING…' : '⚡ GENERATE HEDGE PLAN'}
-          </button>
-          {trades.length > 0 && (
-            <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.04em' }}>
-              {trades.length} POSITIONS · {tradeSummary.confirmed} CONFIRMED · {tradeSummary.forecast} FORECAST
-            </span>
-          )}
-        </div>
 
         {/* ── Backend error banner ── */}
         {backendErrorMsg && (
@@ -1026,93 +983,6 @@ function InputPageInner() {
 
         {/* ── Ingestion Desk ── */}
         <div style={{ marginTop: 8 }}>
-
-          {/* ── Tab strip ── */}
-          <div style={{
-            display:      'flex',
-            borderBottom: `1px solid ${S.border}`,
-            background:   S.bgSub,
-            overflowX:    'auto',
-          }}>
-            {DESK_TABS.map(tab => {
-              const active = deskTab === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setDeskTab(tab.key)}
-                  style={{
-                    fontFamily:    S.fontMono,
-                    fontSize:      '0.75rem',
-                    letterSpacing: '0.06em',
-                    padding:       '8px 16px',
-                    border:        'none',
-                    borderBottom:  active ? `2px solid ${S.cyan}` : '2px solid transparent',
-                    background:    active ? `color-mix(in srgb, ${S.cyan} 5%, ${S.bgPanel})` : 'transparent',
-                    color:         active ? S.cyan : S.textTertiary,
-                    cursor:        'pointer',
-                    display:       'flex',
-                    flexDirection: 'column',
-                    gap:           2,
-                    whiteSpace:    'nowrap',
-                    transition:    'all 0.1s',
-                  }}
-                >
-                  <span style={{ textTransform: 'uppercase' }}>{tab.label}</span>
-                  <span style={{ fontSize: '0.625rem', opacity: 0.6, fontFamily: S.fontUI, textTransform: 'none', letterSpacing: 0 }}>
-                    {tab.subtitle}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* ── Tab: Upload CSV / Excel ── */}
-          {deskTab === 'upload' && (
-            <div style={{ padding: '16px' }}>
-              <FileUploadLane
-                token={token ?? undefined}
-                onImportComplete={() => { if (token) dispatch(listPositionsThunk({ token })); }}
-              />
-            </div>
-          )}
-
-          {/* ── Tab: Connection Hub ── */}
-          {deskTab === 'connection' && (
-            <div style={{ padding: '24px 16px' }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.1em', marginBottom: 16 }}>
-                CONNECTION HUB — EXTERNAL DATA FEEDS
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                {[
-                  { label: 'ERP / SAP Integration', desc: 'Pull open invoices and purchase orders directly from SAP, Oracle, or NetSuite via scheduled API sync.', status: 'COMING SOON', color: S.textTertiary },
-                  { label: 'SWIFT / MT300 Feed',    desc: 'Ingest FX trade confirmations from SWIFT MT300 messages. Automatically reconcile against existing positions.', status: 'COMING SOON', color: S.textTertiary },
-                  { label: 'FTP / SFTP Drop Zone',  desc: 'Monitor a secure FTP folder for CSV or Excel drops. Files are auto-ingested, validated, and added to the audit trail.', status: 'COMING SOON', color: S.textTertiary },
-                  { label: 'REST API Webhook',       desc: 'POST positions from any external system to the HedgeCalc API endpoint. Authenticated via Bearer token or API key.', status: 'ACTIVE', color: S.cyan },
-                  { label: 'Bloomberg B-PIPE',       desc: 'Subscribe to Bloomberg BPIPE for real-time position streaming from Bloomberg AIM.', status: 'COMING SOON', color: S.textTertiary },
-                  { label: 'FactSet Data Feeds',     desc: 'Pull structured exposure data from FactSet workstation exports via automated batch jobs.', status: 'COMING SOON', color: S.textTertiary },
-                ].map(c => (
-                  <div key={c.label} style={{ border: `1px solid ${S.border}`, background: S.bgPanel, padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textPrimary, fontWeight: 600, letterSpacing: '0.04em' }}>{c.label}</span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: '0.5rem', padding: '1px 5px', border: `1px solid ${c.color}`, color: c.color, letterSpacing: '0.08em' }}>{c.status}</span>
-                    </div>
-                    <p style={{ fontFamily: S.fontUI, fontSize: '0.75rem', color: S.textSecondary, lineHeight: 1.5, margin: 0 }}>{c.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Tab: Import History ── */}
-          {deskTab === 'history' && (
-            <div style={{ padding: '16px' }}>
-              <ImportHistoryPanel token={token ?? undefined} />
-            </div>
-          )}
-
-          {/* ── Tab: Manual Entry ── */}
-          {deskTab === 'manual' && (
-            <div>
               {/* ── Inline Trade Entry Form (always visible at top) ── */}
               <div
                 data-section="add-exposure-line"
@@ -1483,8 +1353,6 @@ function InputPageInner() {
                   </table>
                 </div>
               )}
-            </div>
-          )}
 
         </div>
       </div>
@@ -1649,8 +1517,9 @@ function InputPageInner() {
         </div>
       </Modal>
 
-      <HelpPanel config={INPUT_HELP} storageKey="input" />
       <Toast message={toastMsg} visible={toastVisible} onClose={() => setToastVisible(false)} />
+    </div>
+    <HelpPanel config={INPUT_HELP} storageKey="input" />
     </div>
   );
 }
