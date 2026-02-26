@@ -478,6 +478,79 @@ export default function ExecutionDeskPage() {
     }
   }, [selected, readyPositions, addHistoryEntry]);
 
+  // Export simulation results to CSV
+  const exportSimulationCSV = useCallback(() => {
+    if (simulationResults.size === 0) return;
+
+    // Header row
+    let csv = "Position ID,Record ID,Currency,Notional,Mean P&L,Std Dev,VaR 95%,VaR 99%,CVaR 95%,CVaR 99%,Worst Case,Best Case,CI Lower,CI Upper,Paths\n";
+
+    // Data rows
+    simulationResults.forEach((result) => {
+      csv += `${result.positionId},${result.recordId},${result.currency},${result.notional},${result.meanPnL},${result.stdDev},${result.var95},${result.var99},${result.cvar95},${result.cvar99},${result.worstCase},${result.bestCase},${result.confidenceInterval.lower},${result.confidenceInterval.upper},${result.paths}\n`;
+    });
+
+    // Portfolio summary
+    if (portfolioRisk) {
+      csv += "\n\nPORTFOLIO SUMMARY\n";
+      csv += `Total Notional,Portfolio VaR 95%,Portfolio CVaR 95%,Concentration Risk (HHI),Diversification Benefit (%)\n`;
+      csv += `${portfolioRisk.totalNotional},${portfolioRisk.totalVar95},${portfolioRisk.totalCVar95},${portfolioRisk.concentrationRisk},${portfolioRisk.diversificationBenefit}\n`;
+      csv += "\n\nCURRENCY BREAKDOWN\n";
+      csv += "Currency,Notional,Percentage\n";
+      portfolioRisk.currencyBreakdown.forEach(c => {
+        csv += `${c.currency},${c.notional},${c.percentage}\n`;
+      });
+    }
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `monte-carlo-simulation-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    addHistoryEntry(
+      "SIMULATION",
+      Array.from(simulationResults.keys()),
+      `Exported Monte Carlo simulation results (${simulationResults.size} positions) to CSV`
+    );
+  }, [simulationResults, portfolioRisk, addHistoryEntry]);
+
+  // Export stress test results to CSV
+  const exportStressTestCSV = useCallback(() => {
+    if (!stressResults) return;
+
+    // Header row
+    let csv = `STRESS TEST: ${stressResults.scenarioName}\n`;
+    csv += `Export Date: ${new Date().toISOString()}\n`;
+    csv += `User: ${user?.email || "unknown"}\n`;
+    csv += `Total Positions: ${stressResults.totalPositions}\n`;
+    csv += `Affected Positions: ${stressResults.affectedPositions}\n`;
+    csv += `Total Impact: ${stressResults.totalImpact}\n`;
+    csv += `Percentage Impact: ${stressResults.percentageImpact}%\n\n`;
+
+    csv += "Position ID,Record ID,Currency,Base Notional,Base Value,Stressed Value,P&L Impact,Impact %,Shocked\n";
+
+    stressResults.results.forEach((result) => {
+      csv += `${result.positionId},${result.recordId},${result.currency},${result.baseNotional},${result.baseValue},${result.stressedValue},${result.pnlImpact},${result.percentageImpact},${result.shocked}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `stress-test-${stressResults.scenarioId}-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    addHistoryEntry(
+      "STRESS_TEST",
+      stressResults.results.map(r => r.positionId),
+      `Exported stress test "${stressResults.scenarioName}" results to CSV`
+    );
+  }, [stressResults, user, addHistoryEntry]);
+
   // Export scenario comparison as JSON
   const exportComparison = useCallback(() => {
     if (scenarioComparison.length === 0) return;
@@ -508,6 +581,100 @@ export default function ExecutionDeskPage() {
     link.click();
     URL.revokeObjectURL(url);
   }, [scenarioComparison, user]);
+
+  // Export scenario comparison to CSV
+  const exportComparisonCSV = useCallback(() => {
+    if (scenarioComparison.length === 0) return;
+
+    let csv = "MULTI-SCENARIO COMPARISON\n";
+    csv += `Export Date: ${new Date().toISOString()}\n`;
+    csv += `User: ${user?.email || "unknown"}\n`;
+    csv += `Scenario Count: ${scenarioComparison.length}\n\n`;
+
+    csv += "Scenario,Total Impact,Impact %,Total Positions,Affected Positions,Worst Position,Worst Impact,Best Position,Best Impact\n";
+
+    scenarioComparison.forEach((scenario) => {
+      csv += `${scenario.scenarioName},${scenario.totalImpact},${scenario.percentageImpact},${scenario.totalPositions},${scenario.affectedPositions},${scenario.worstPosition.recordId},${scenario.worstPosition.impact},${scenario.bestPosition.recordId},${scenario.bestPosition.impact}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `scenario-comparison-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    addHistoryEntry(
+      "STRESS_TEST",
+      [],
+      `Exported scenario comparison (${scenarioComparison.length} scenarios) to CSV`
+    );
+  }, [scenarioComparison, user, addHistoryEntry]);
+
+  // Export compliance checks to CSV
+  const exportComplianceCSV = useCallback(() => {
+    if (complianceChecks.length === 0) return;
+
+    let csv = "COMPLIANCE PRE-FLIGHT CHECKS\n";
+    csv += `Export Date: ${new Date().toISOString()}\n`;
+    csv += `User: ${user?.email || "unknown"}\n`;
+    csv += `Total Checks: ${complianceChecks.length}\n`;
+    csv += `Passed: ${complianceChecks.filter(c => c.status === "PASS").length}\n`;
+    csv += `Warnings: ${complianceChecks.filter(c => c.status === "WARN").length}\n`;
+    csv += `Failed: ${complianceChecks.filter(c => c.status === "FAIL").length}\n\n`;
+
+    csv += "Check Name,Status,Critical,Message\n";
+
+    complianceChecks.forEach((check) => {
+      csv += `${check.checkName},${check.status},${check.critical ? "YES" : "NO"},"${check.message}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `compliance-checks-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    addHistoryEntry(
+      "COMPLIANCE",
+      [],
+      `Exported compliance checks (${complianceChecks.length} checks) to CSV`
+    );
+  }, [complianceChecks, user, addHistoryEntry]);
+
+  // Export hedge plans to CSV
+  const exportHedgePlansCSV = useCallback(() => {
+    if (hedgePlans.size === 0) return;
+
+    let csv = "HEDGE PLAN RECOMMENDATIONS\n";
+    csv += `Export Date: ${new Date().toISOString()}\n`;
+    csv += `User: ${user?.email || "unknown"}\n`;
+    csv += `Total Plans: ${hedgePlans.size}\n\n`;
+
+    csv += "Position ID,Instrument,Hedge Ratio %,Hedge Notional,Estimated Cost,Reasoning\n";
+
+    hedgePlans.forEach((plan, posId) => {
+      const pos = readyPositions.find(p => p.id === posId);
+      csv += `${pos?.record_id || posId},${plan.recommendedInstrument},${plan.recommendedHedgeRatio},${plan.recommendedNotional},${plan.estimatedCost},"${plan.reasoning}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `hedge-plans-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    addHistoryEntry(
+      "HEDGE_PLAN",
+      Array.from(hedgePlans.keys()),
+      `Exported hedge plans (${hedgePlans.size} positions) to CSV`
+    );
+  }, [hedgePlans, readyPositions, user, addHistoryEntry]);
 
   // Export IBKR payload (real FIX format)
   const exportIBKRPayload = useCallback(() => {
@@ -978,14 +1145,33 @@ export default function ExecutionDeskPage() {
               {actionMode === "SIMULATE" && simulationResults.size > 0 && (
                 <div>
                   <div style={{
-                    fontFamily: S.fontMono,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: S.primary,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                     marginBottom: 16,
-                    letterSpacing: "0.06em",
                   }}>
-                    MONTE CARLO SIMULATION RESULTS
+                    <div style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: S.primary,
+                      letterSpacing: "0.06em",
+                    }}>
+                      MONTE CARLO SIMULATION RESULTS
+                    </div>
+                    <button
+                      onClick={exportSimulationCSV}
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 9,
+                        color: S.primary,
+                        background: "transparent",
+                        border: `1px solid ${S.darkBorder}`,
+                        padding: "4px 10px",
+                        cursor: "pointer",
+                      }}>
+                      ↓ EXPORT CSV
+                    </button>
                   </div>
 
                   {/* Portfolio-level risk metrics */}
@@ -1214,19 +1400,34 @@ export default function ExecutionDeskPage() {
                         </button>
                       )}
                       {scenarioComparison.length > 0 && (
-                        <button
-                          onClick={exportComparison}
-                          style={{
-                            fontFamily: S.fontMono,
-                            fontSize: 9,
-                            color: S.primary,
-                            background: "transparent",
-                            border: `1px solid ${S.darkBorder}`,
-                            padding: "4px 10px",
-                            cursor: "pointer",
-                          }}>
-                          ↓ EXPORT
-                        </button>
+                        <>
+                          <button
+                            onClick={exportComparisonCSV}
+                            style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 9,
+                              color: S.primary,
+                              background: "transparent",
+                              border: `1px solid ${S.darkBorder}`,
+                              padding: "4px 10px",
+                              cursor: "pointer",
+                            }}>
+                            ↓ CSV
+                          </button>
+                          <button
+                            onClick={exportComparison}
+                            style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 9,
+                              color: S.primary,
+                              background: "transparent",
+                              border: `1px solid ${S.darkBorder}`,
+                              padding: "4px 10px",
+                              cursor: "pointer",
+                            }}>
+                            ↓ JSON
+                          </button>
+                        </>
                       )}
                       {scenarioComparison.length > 0 && (
                         <button
@@ -1515,14 +1716,33 @@ export default function ExecutionDeskPage() {
                         marginBottom: 16,
                       }}>
                         <div style={{
-                          fontFamily: S.fontMono,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: S.primary,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                           marginBottom: 12,
-                          letterSpacing: "0.06em",
                         }}>
-                          PORTFOLIO IMPACT — {stressResults.scenarioName.toUpperCase()}
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: S.primary,
+                            letterSpacing: "0.06em",
+                          }}>
+                            PORTFOLIO IMPACT — {stressResults.scenarioName.toUpperCase()}
+                          </div>
+                          <button
+                            onClick={exportStressTestCSV}
+                            style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 9,
+                              color: S.primary,
+                              background: "transparent",
+                              border: `1px solid ${S.darkBorder}`,
+                              padding: "4px 10px",
+                              cursor: "pointer",
+                            }}>
+                            ↓ EXPORT CSV
+                          </button>
                         </div>
                         <div style={{
                           display: "grid",
@@ -1686,14 +1906,33 @@ export default function ExecutionDeskPage() {
               {actionMode === "HEDGE_PLAN" && hedgePlans.size > 0 && (
                 <div>
                   <div style={{
-                    fontFamily: S.fontMono,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: S.primary,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                     marginBottom: 16,
-                    letterSpacing: "0.06em",
                   }}>
-                    OPTIMIZED HEDGE PLANS
+                    <div style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: S.primary,
+                      letterSpacing: "0.06em",
+                    }}>
+                      OPTIMIZED HEDGE PLANS
+                    </div>
+                    <button
+                      onClick={exportHedgePlansCSV}
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 9,
+                        color: S.primary,
+                        background: "transparent",
+                        border: `1px solid ${S.darkBorder}`,
+                        padding: "4px 10px",
+                        cursor: "pointer",
+                      }}>
+                      ↓ EXPORT CSV
+                    </button>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {Array.from(hedgePlans.entries()).map(([posId, plan]) => {
@@ -1783,14 +2022,33 @@ export default function ExecutionDeskPage() {
               {actionMode === "COMPLIANCE" && complianceChecks.length > 0 && (
                 <div>
                   <div style={{
-                    fontFamily: S.fontMono,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: S.primary,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                     marginBottom: 16,
-                    letterSpacing: "0.06em",
                   }}>
-                    COMPLIANCE PRE-FLIGHT CHECKS
+                    <div style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: S.primary,
+                      letterSpacing: "0.06em",
+                    }}>
+                      COMPLIANCE PRE-FLIGHT CHECKS
+                    </div>
+                    <button
+                      onClick={exportComplianceCSV}
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 9,
+                        color: S.primary,
+                        background: "transparent",
+                        border: `1px solid ${S.darkBorder}`,
+                        padding: "4px 10px",
+                        cursor: "pointer",
+                      }}>
+                      ↓ EXPORT CSV
+                    </button>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {complianceChecks.map((check, idx) => {
