@@ -232,9 +232,10 @@ const NAV: NavSection[] = [
   },
   {
     label: "Policy Engine", href: "/policies", icon: Ic.policy,
-    prefixes: ["/policies", "/ai-policy-wizard", "/saved-policies"],
+    prefixes: ["/policies", "/ai-policy-wizard", "/saved-policies", "/policy-desk"],
     header: "Hedge Policy",
     items: [
+      { label: "Policy Desk",       desc: "Assign policies to positions — active, template, favorite, AI", href: "/policy-desk",       icon: Ic.table,  badge: "DESK",  badgeColor: S.cyan  },
       { label: "Policy Library",    desc: "Browse 60 institutional preset policies",        href: "/policies",          icon: Ic.book },
       { label: "AI Policy Wizard",  desc: "Generate tailored policy from your risk profile",href: "/ai-policy-wizard",  icon: Ic.ai,     badge: "AI",    badgeColor: S.amber },
       { label: "My Saved Policies", desc: "User-scoped & branch-published policies",        href: "/saved-policies",    icon: Ic.shield, badge: "SAVED", badgeColor: S.cyan  },

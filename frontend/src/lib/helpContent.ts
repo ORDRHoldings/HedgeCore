@@ -559,6 +559,187 @@ export const POSITION_DESK_HELP: HelpPanelConfig = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POLICY DESK — Policy Assignment Control Center
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const POLICY_DESK_HELP: HelpPanelConfig = {
+  pageTitle:    "Policy Desk",
+  pageSubtitle: "ASSIGNMENT CENTER · POLICY GOVERNANCE",
+  sections: [
+    {
+      id:    "pipeline",
+      title: "Pipeline Position",
+      icon:  "⬡",
+      type:  "pipeline",
+      pipelinePos: {
+        position: 2,
+        total:    7,
+        label:    "Step 2 of 7 — Policy Assignment",
+        description:
+          "Policy assignment is the critical governance step between position ingestion and hedge execution. Every FX position must be assigned a hedge policy before it can progress to calculation and execution. This desk provides four assignment modes: active policy quick-assign, template selection, favorites, and AI recommendations.",
+        prev: { label: "Ingestion Desk", href: "/input" },
+        next: { label: "Position Desk", href: "/position-desk" },
+      },
+    },
+    {
+      id:    "overview",
+      title: "What this page does",
+      icon:  "ℹ",
+      type:  "text",
+      content:
+        "Policy Desk is the central hub for assigning hedge policies to FX positions. Positions arrive from the Ingestion Desk in NEW status, meaning they have no policy attached. Before a position can be hedged, it must be assigned a policy that defines hedge ratios, instruments, bucket allocation, and risk limits.\n\nThe desk supports four assignment modes:\n\n1. ACTIVE POLICY — Quick-assign using your company's currently activated policy (fastest for bulk operations)\n2. FROM TEMPLATE — Choose any policy from the library (system or company templates)\n3. FROM FAVORITES — Select from your frequently-used policies\n4. AI RECOMMEND — Let AI analyze position characteristics and suggest the optimal policy\n\nSelect positions using checkboxes, then click one of the assignment buttons in the bulk action bar.",
+    },
+    {
+      id:    "workflow",
+      title: "Assignment Workflow",
+      icon:  "⚙",
+      type:  "workflow",
+      steps: [
+        {
+          step:        1,
+          label:       "Filter Positions",
+          description: "Use the NEEDS POLICY filter to show only positions in NEW status (no policy assigned). You can also search by record ID, entity, or currency.",
+        },
+        {
+          step:        2,
+          label:       "Select Positions",
+          description: "Click checkboxes to select one or more positions. Use the header checkbox to select all visible positions. Selected count appears in the bulk action bar.",
+        },
+        {
+          step:        3,
+          label:       "Choose Assignment Mode",
+          description: "Click one of the assignment buttons: ⚡ ACTIVE POLICY (instant), 📋 FROM TEMPLATE (library), ⭐ FROM FAVORITES (starred), or 🤖 AI RECOMMEND (intelligent suggestion).",
+        },
+        {
+          step:        4,
+          label:       "Confirm Assignment",
+          description: "For template/favorite modes, a modal opens to select the policy. For AI mode, the system analyzes each position and suggests the best-fit policy with reasoning. Click ASSIGN to apply.",
+        },
+        {
+          step:        5,
+          label:       "Verify Status",
+          description: "After assignment, positions transition from NEW → POLICY_ASSIGNED and appear in the POLICY ASSIGNED filter. The POLICY column shows the assigned policy name. Positions are now ready for hedge calculation.",
+        },
+      ],
+    },
+    {
+      id:    "assignment-modes",
+      title: "Assignment Modes",
+      icon:  "⚡",
+      type:  "glossary",
+      glossary: [
+        {
+          term:       "Active Policy",
+          definition: "The company's currently activated policy instance. This is the fastest assignment mode — no selection required. Ideal for bulk operations when all positions should use the same policy. The active policy is shown at the top of the library with an ACTIVE badge.",
+        },
+        {
+          term:       "Template Selection",
+          definition: "Choose any policy template from the library (system or company-specific). The modal shows template name, risk posture (CONSERVATIVE/MODERATE/AGGRESSIVE), category (CORPORATE/FINANCIAL/SOVEREIGN/SECTOR), and description. System templates are pre-seeded and marked with a SYSTEM badge.",
+        },
+        {
+          term:       "Favorites",
+          definition: "Your starred policies appear in the favorites modal for quick access. Star a policy from the Policy Library page to add it to favorites. You can add notes to each favorite (e.g., 'Use for EMEA AR positions'). Favorites persist per-user.",
+        },
+        {
+          term:       "AI Recommendation",
+          definition: "Click AI RECOMMEND to analyze selected positions and suggest the optimal policy for each. The AI considers currency, amount, value_date, entity, and flow type (AR/AP). Recommendations show confidence score (0-100%) and reasoning. You can review before applying.",
+        },
+      ],
+    },
+    {
+      id:          "variables",
+      title:       "Key Variables",
+      icon:        "≡",
+      type:        "variables",
+      variables: [
+        {
+          name:        "execution_status",
+          type:        "enum",
+          description: "Position lifecycle state: NEW (no policy) → POLICY_ASSIGNED (policy attached) → READY_TO_EXECUTE (hedge calculated) → HEDGED (execution confirmed) or REJECTED (rejected at any stage). Policy Desk focuses on NEW → POLICY_ASSIGNED transition.",
+          example:     "NEW",
+          source:      "positions.execution_status",
+        },
+        {
+          name:        "policy_id",
+          type:        "UUID | null",
+          description: "Foreign key to policy_instances table. NULL for NEW positions, populated after assignment. The policy instance captures which template was activated and when. Immutable after assignment (policy pinning for audit trail).",
+          example:     "a1b2c3d4-e5f6-...",
+          source:      "positions.policy_id",
+        },
+        {
+          name:        "policy_revision_id",
+          type:        "UUID | null",
+          description: "Foreign key to policy_revisions table. Pinned revision at assignment time. Allows exact replay of 'which policy config governed this position' even after subsequent policy changes. This is the version-pinning anchor for regulatory compliance.",
+          example:     "z9y8x7w6-v5u4-...",
+          source:      "positions.policy_revision_id",
+        },
+        {
+          name:        "risk_posture",
+          type:        "CONSERVATIVE | MODERATE | AGGRESSIVE",
+          description: "Policy template risk classification. CONSERVATIVE = max hedge ratios, min risk tolerance. MODERATE = balanced approach. AGGRESSIVE = min hedge ratios, max flexibility. Shown as a badge in template selection.",
+          example:     "CONSERVATIVE",
+          source:      "policy_templates.risk_posture",
+        },
+        {
+          name:        "is_system",
+          type:        "boolean",
+          description: "TRUE = system-seeded template (cannot be deleted or modified). FALSE = company-specific template (user-created). System templates are marked with a SYSTEM badge in the library.",
+          example:     "true",
+          source:      "policy_templates.is_system",
+        },
+        {
+          name:        "confidence",
+          type:        "number (0.0-1.0)",
+          description: "AI recommendation confidence score. 1.0 = perfect match, 0.5 = weak match. Based on position currency, amount range, tenor, and historical assignment patterns. Displayed as percentage (e.g., 87% CONFIDENCE).",
+          example:     "0.87",
+          source:      "AI engine output",
+        },
+      ],
+    },
+    {
+      id:    "keyboard",
+      title: "Keyboard Shortcuts",
+      icon:  "⌨",
+      type:  "glossary",
+      glossary: [
+        {
+          term:       "/ (slash)",
+          definition: "Focus the search box. Type a query to filter positions by record ID, entity, or currency. Press Esc to clear search.",
+        },
+        {
+          term:       "Esc (escape)",
+          definition: "Clear search query and unfocus search box. Also closes modals.",
+        },
+        {
+          term:       "R (refresh)",
+          definition: "Reload positions from the server. Useful after bulk assignment to verify status changes.",
+        },
+        {
+          term:       "Space",
+          definition: "Toggle row selection when a position row is focused (click row first).",
+        },
+      ],
+    },
+    {
+      id:    "best-practices",
+      title: "Best Practices",
+      icon:  "✓",
+      type:  "text",
+      content:
+        "**Use Active Policy for Bulk Operations**: When all positions follow the same hedge strategy, assign them all to the active policy in one click. This is the fastest workflow.\n\n**Star Frequently-Used Policies**: If you regularly assign different policies to different position types (e.g., one policy for AR, another for AP), star them both and use the favorites modal.\n\n**Let AI Handle Edge Cases**: For positions with unusual currencies, tenors, or amounts, use AI RECOMMEND to get a data-driven suggestion rather than guessing.\n\n**Verify Before Proceeding**: After bulk assignment, use the POLICY ASSIGNED filter to verify all positions have the correct policy. Click the policy chip to view policy details.\n\n**Policy Pinning Matters**: Once a position is assigned a policy, that policy revision is pinned. Even if you later modify the template, already-assigned positions retain the original configuration. This ensures audit trail integrity.",
+    },
+    {
+      id:    "compliance",
+      title: "Regulatory & Compliance",
+      icon:  "⚖",
+      type:  "text",
+      content:
+        "Policy assignment is a regulated operation under IFRS 9 hedge accounting rules. Every assignment creates an audit event that logs:\n\n- Actor (who assigned)\n- Timestamp (when)\n- Policy ID & Revision ID (which policy version)\n- Position IDs (which positions)\n- IP address & request ID (where/how)\n\nThe audit trail is tamper-evident (SHA-256 hash chain) and append-only. Policy pinning via policy_revision_id ensures that hedge effectiveness tests can be replayed exactly as they were at assignment time, even if the policy template is later modified or deleted.\n\nBulk operations are atomic: either all positions in a batch are assigned, or none are (fail-safe). Partial failures are logged with error messages in the bulk result banner.",
+    },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // EXECUTION — Execution Hub
 // ─────────────────────────────────────────────────────────────────────────────
 
