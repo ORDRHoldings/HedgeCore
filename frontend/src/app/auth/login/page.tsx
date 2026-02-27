@@ -3,91 +3,153 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/authContext";
-import { Shield, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
-// ── Design tokens — dark institutional terminal ──────────────────────────────
+// ── Design tokens — obsidian + molten orange ──────────────────────────────────
 const T = {
-  bg: "#0A0E12",
-  panelBg: "#141821",
-  cardBg: "#111722",
-  border: "#1E2835",
-  borderHi: "#2A3544",
-  textPrimary: "#E8EDF4",
-  textSecondary: "#8A94A6",
-  textTertiary: "#4A5568",
-  accent: "#3B82F6",
-  accentDim: "rgba(59,130,246,0.12)",
-  accentGlow: "rgba(59,130,246,0.06)",
-  success: "#10B981",
-  danger: "#EF4444",
-  dangerDim: "rgba(239,68,68,0.12)",
-  fontUI: "'IBM Plex Sans', 'Inter', sans-serif",
-  fontMono: "'IBM Plex Mono', 'JetBrains Mono', monospace",
+  // Backgrounds — true black with warm depth
+  bg:        "#08070A",
+  bgLayer:   "#0D0C10",
+  bgCard:    "#0F0E13",
+  bgInput:   "#0A0910",
+
+  // Borders
+  border:    "rgba(255,255,255,0.06)",
+  borderHi:  "rgba(255,255,255,0.10)",
+  borderFoc: "rgba(245,130,32,0.55)",
+
+  // Brand orange from logo
+  orange:    "#F58220",
+  orangeDim: "rgba(245,130,32,0.10)",
+  orangeGlow:"rgba(245,130,32,0.18)",
+  orangeDeep:"rgba(245,130,32,0.04)",
+
+  // Text
+  textPrimary:   "#F0EDE8",
+  textSecondary: "#7A7570",
+  textTertiary:  "#3D3A38",
+
+  // Utility
+  success:  "#22C55E",
+  danger:   "#F43F5E",
+  dangerDim:"rgba(244,63,94,0.10)",
+
+  // Typography
+  fontUI:   "'IBM Plex Sans','Inter',sans-serif",
+  fontMono: "'IBM Plex Mono','JetBrains Mono',monospace",
+  fontHead: "'Manrope','IBM Plex Sans',sans-serif",
 } as const;
 
-// ── Animated grid background ─────────────────────────────────────────────────
-function GridBackground() {
+// ── Particle / ambient layer ──────────────────────────────────────────────────
+function AmbientBackground() {
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
         zIndex: 0,
-        overflow: "hidden",
         background: T.bg,
+        overflow: "hidden",
       }}
     >
-      {/* Subtle grid pattern */}
+      {/* Subtle noise grain via SVG filter */}
+      <svg style={{ position: "absolute", width: 0, height: 0 }}>
+        <filter id="grain">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+          <feBlend in="SourceGraphic" mode="multiply" />
+        </filter>
+      </svg>
+
+      {/* Grain overlay */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: `
-            linear-gradient(${T.border}33 1px, transparent 1px),
-            linear-gradient(90deg, ${T.border}33 1px, transparent 1px)
-          `,
-          backgroundSize: "48px 48px",
-          opacity: 0.4,
+          backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E\")",
+          backgroundRepeat: "repeat",
+          backgroundSize: "128px 128px",
+          opacity: 0.5,
+          mixBlendMode: "overlay",
         }}
       />
-      {/* Radial glow behind form */}
+
+      {/* Left vertical accent rule */}
       <div
         style={{
           position: "absolute",
-          top: "38%",
+          top: 0,
           left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 700,
-          height: 700,
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${T.accentGlow} 0%, transparent 70%)`,
+          transform: "translateX(-220px)",
+          width: 1,
+          height: "100%",
+          background: `linear-gradient(180deg, transparent 0%, ${T.border} 20%, ${T.border} 80%, transparent 100%)`,
         }}
       />
-      {/* Top-left corner accent line */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: "50%",
+          transform: "translateX(220px)",
+          width: 1,
+          height: "100%",
+          background: `linear-gradient(180deg, transparent 0%, ${T.border} 20%, ${T.border} 80%, transparent 100%)`,
+        }}
+      />
+
+      {/* Central molten orange glow — deep and atmospheric */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -58%)",
+          width: 900,
+          height: 600,
+          borderRadius: "50%",
+          background: `radial-gradient(ellipse at center, ${T.orangeGlow} 0%, ${T.orangeDeep} 45%, transparent 75%)`,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Secondary warm bloom — bottom */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: -100,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 600,
+          height: 300,
+          background: `radial-gradient(ellipse at center, ${T.orangeDeep} 0%, transparent 70%)`,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Horizontal hairline — top */}
       <div
         style={{
           position: "absolute",
           top: 0,
           left: 0,
-          width: "100%",
+          right: 0,
           height: 1,
-          background: `linear-gradient(90deg, ${T.accent}44, transparent 40%)`,
+          background: `linear-gradient(90deg, transparent 0%, ${T.orange}55 30%, ${T.orange}88 50%, ${T.orange}55 70%, transparent 100%)`,
         }}
       />
     </div>
   );
 }
 
-// ── System status ticker ─────────────────────────────────────────────────────
-function StatusBar() {
-  const [ts, setTs] = useState("--:--:--");
+// ── Live clock strip ──────────────────────────────────────────────────────────
+function StatusStrip() {
+  const [ts, setTs] = useState("──:──:── UTC");
 
   useEffect(() => {
     const tick = () => {
       const d = new Date();
-      setTs(
-        d.toISOString().replace("T", " ").slice(0, 19) + " UTC"
-      );
+      setTs(d.toISOString().replace("T", "  ").slice(0, 22) + " UTC");
     };
     tick();
     const id = setInterval(tick, 1000);
@@ -101,57 +163,62 @@ function StatusBar() {
         bottom: 0,
         left: 0,
         right: 0,
-        height: 32,
-        background: T.panelBg,
+        height: 28,
+        background: "rgba(8,7,10,0.95)",
         borderTop: `1px solid ${T.border}`,
         display: "flex",
         alignItems: "center",
-        gap: 16,
-        padding: "0 24px",
+        padding: "0 28px",
+        gap: 20,
         fontFamily: T.fontMono,
-        fontSize: "0.75rem",
+        fontSize: "0.625rem",
         color: T.textTertiary,
-        letterSpacing: "0.05em",
-        zIndex: 10,
+        letterSpacing: "0.1em",
+        zIndex: 20,
+        backdropFilter: "blur(8px)",
       }}
     >
+      {/* Online indicator */}
       <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <span
           style={{
-            width: 5,
-            height: 5,
+            width: 4,
+            height: 4,
             borderRadius: "50%",
             background: T.success,
-            boxShadow: `0 0 6px ${T.success}66`,
+            boxShadow: `0 0 6px ${T.success}`,
           }}
         />
-        <span style={{ color: T.textSecondary }}>SYSTEMS ONLINE</span>
+        <span style={{ color: T.textSecondary, letterSpacing: "0.08em" }}>SYSTEMS ONLINE</span>
       </span>
-      <span style={{ color: T.border }}>|</span>
+      <span style={{ color: T.textTertiary, opacity: 0.4 }}>—</span>
+      <span>TLS 1.3</span>
+      <span style={{ color: T.textTertiary, opacity: 0.4 }}>—</span>
       <span>AUTH GATEWAY v1.0</span>
-      <span style={{ color: T.border }}>|</span>
-      <span>TLS 1.3 ENCRYPTED</span>
       <span style={{ marginLeft: "auto", color: T.textSecondary }}>{ts}</span>
     </div>
   );
 }
 
-// ── Main Login Page ──────────────────────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fadeIn, setFadeIn] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [warmingUp, setWarmingUp] = useState(false);
+  const [focusedField, setFocusedField] = useState<"user" | "pass" | null>(null);
   const { login } = useAuth();
   const router = useRouter();
   const usernameRef = useRef<HTMLInputElement>(null);
   const warmupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setFadeIn(true);
+    // Stagger mount for silky entrance
+    const t = setTimeout(() => setMounted(true), 60);
     usernameRef.current?.focus();
+    return () => clearTimeout(t);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -159,22 +226,34 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     setWarmingUp(false);
-
-    // After 8 s of waiting, show "server waking up" notice
     warmupTimerRef.current = setTimeout(() => setWarmingUp(true), 8_000);
-
     const result = await login(username, password);
-
     if (warmupTimerRef.current) clearTimeout(warmupTimerRef.current);
     setWarmingUp(false);
     setLoading(false);
-
     if (result.success) {
       router.push("/dashboard");
     } else {
       setError(result.error ?? "Authentication failed");
     }
   };
+
+  // Input style factory
+  const inputStyle = (focused: boolean): React.CSSProperties => ({
+    width: "100%",
+    padding: "13px 16px",
+    fontFamily: T.fontMono,
+    fontSize: "0.8125rem",
+    color: T.textPrimary,
+    background: focused ? "rgba(245,130,32,0.03)" : T.bgInput,
+    border: `1px solid ${focused ? T.borderFoc : T.border}`,
+    borderRadius: 2,
+    outline: "none",
+    transition: "border-color 200ms ease, background 200ms ease",
+    boxSizing: "border-box" as const,
+    letterSpacing: "0.02em",
+    caretColor: T.orange,
+  });
 
   return (
     <div
@@ -187,89 +266,96 @@ export default function LoginPage() {
         position: "relative",
       }}
     >
-      <GridBackground />
-      <StatusBar />
+      <AmbientBackground />
+      <StatusStrip />
 
-      {/* ── Login Card ── */}
+      {/* ── Main column ── */}
       <div
         style={{
           position: "relative",
           zIndex: 1,
           width: "100%",
-          maxWidth: 400,
-          padding: "0 20px",
-          opacity: fadeIn ? 1 : 0,
-          transform: fadeIn ? "translateY(0)" : "translateY(12px)",
-          transition: "opacity 500ms ease, transform 500ms ease",
+          maxWidth: 420,
+          padding: "0 24px",
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? "translateY(0)" : "translateY(20px)",
+          transition: "opacity 600ms cubic-bezier(0.16,1,0.3,1), transform 600ms cubic-bezier(0.16,1,0.3,1)",
         }}
       >
-        {/* Brand Identity */}
+
+        {/* ── Logo block ── */}
         <div
           style={{
-            textAlign: "center",
-            marginBottom: 36,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginBottom: 44,
           }}
         >
-          {/* Shield icon in circle */}
+          {/* Logo image — rendered large and proud */}
           <div
             style={{
-              width: 52,
-              height: 52,
-              margin: "0 auto 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: `1px solid ${T.borderHi}`,
-              borderRadius: 12,
-              background: T.panelBg,
+              width: 140,
+              height: 140,
+              position: "relative",
+              marginBottom: 20,
+              // Subtle orange glow halo behind logo
+              filter: "drop-shadow(0 0 28px rgba(245,130,32,0.20)) drop-shadow(0 0 8px rgba(245,130,32,0.12))",
             }}
           >
-            <Shield
-              size={24}
-              strokeWidth={1.4}
-              style={{ color: T.accent }}
+            <Image
+              src="/ordr-logo.svg"
+              alt="ORDR Terminal"
+              fill
+              sizes="140px"
+              style={{ objectFit: "contain" }}
+              priority
             />
           </div>
-          <div
-            style={{
-              fontSize: "1.25rem",
-              fontWeight: 700,
-              color: T.textPrimary,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              lineHeight: 1.2,
-            }}
-          >
-            <span>ORDR</span>{" "}
-            <span style={{ color: T.accent }}>Terminal</span>
-          </div>
+
+          {/* Platform descriptor */}
           <div
             style={{
               fontFamily: T.fontMono,
-              fontSize: "0.625rem",
+              fontSize: "0.6rem",
               color: T.textTertiary,
-              marginTop: 8,
-              letterSpacing: "0.12em",
+              letterSpacing: "0.22em",
               textTransform: "uppercase",
+              marginTop: 2,
             }}
           >
-            Institutional Risk Infrastructure
+            Institutional FX Risk Infrastructure
           </div>
         </div>
 
-        {/* Card */}
+        {/* ── Auth card ── */}
         <div
           style={{
-            background: T.cardBg,
+            background: `linear-gradient(160deg, rgba(20,18,26,0.95) 0%, rgba(13,12,18,0.98) 100%)`,
             border: `1px solid ${T.border}`,
-            borderRadius: 2,
+            borderRadius: 3,
+            backdropFilter: "blur(24px)",
             overflow: "hidden",
+            boxShadow: `
+              0 0 0 1px rgba(255,255,255,0.02),
+              0 32px 80px rgba(0,0,0,0.6),
+              0 4px 20px rgba(0,0,0,0.4),
+              inset 0 1px 0 rgba(255,255,255,0.04)
+            `,
           }}
         >
-          {/* Card header bar */}
+          {/* Card header — ultra thin accent bar top */}
           <div
             style={{
-              padding: "12px 24px",
+              height: 2,
+              background: `linear-gradient(90deg, transparent 0%, ${T.orange}CC 40%, ${T.orange} 50%, ${T.orange}CC 60%, transparent 100%)`,
+            }}
+          />
+
+          {/* Card title row */}
+          <div
+            style={{
+              padding: "16px 24px 14px",
               borderBottom: `1px solid ${T.border}`,
               display: "flex",
               alignItems: "center",
@@ -279,47 +365,65 @@ export default function LoginPage() {
             <span
               style={{
                 fontFamily: T.fontMono,
-                fontSize: "0.625rem",
+                fontSize: "0.65rem",
                 fontWeight: 600,
                 color: T.textSecondary,
-                letterSpacing: "0.08em",
+                letterSpacing: "0.12em",
                 textTransform: "uppercase",
               }}
             >
               Authenticate
             </span>
-            <span
+            <div
               style={{
-                fontFamily: T.fontMono,
-                fontSize: "0.75rem",
-                color: T.textTertiary,
-                letterSpacing: "0.04em",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
               }}
             >
-              SECURE SESSION
-            </span>
+              <span
+                style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: "50%",
+                  background: T.orange,
+                  boxShadow: `0 0 8px ${T.orange}`,
+                  opacity: 0.8,
+                }}
+              />
+              <span
+                style={{
+                  fontFamily: T.fontMono,
+                  fontSize: "0.6rem",
+                  color: T.textTertiary,
+                  letterSpacing: "0.10em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Secure Session
+              </span>
+            </div>
           </div>
 
-          {/* Form body */}
-          <form
-            onSubmit={handleSubmit}
-            style={{ padding: "24px 24px 20px" }}
-          >
-            {/* Email / Username field */}
-            <div style={{ marginBottom: 16 }}>
+          {/* Form */}
+          <form onSubmit={handleSubmit} style={{ padding: "28px 24px 24px" }}>
+
+            {/* Username */}
+            <div style={{ marginBottom: 18 }}>
               <label
                 style={{
                   display: "block",
                   fontFamily: T.fontMono,
-                  fontSize: "0.75rem",
-                  fontWeight: 500,
-                  color: T.textTertiary,
-                  letterSpacing: "0.08em",
+                  fontSize: "0.6rem",
+                  fontWeight: 600,
+                  color: focusedField === "user" ? T.orange : T.textTertiary,
+                  letterSpacing: "0.14em",
                   textTransform: "uppercase",
-                  marginBottom: 6,
+                  marginBottom: 7,
+                  transition: "color 200ms ease",
                 }}
               >
-                Username / Email
+                Username · Email
               </label>
               <input
                 ref={usernameRef}
@@ -329,40 +433,25 @@ export default function LoginPage() {
                 placeholder="demo  ·  or  user@company.com"
                 required
                 autoComplete="username"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  fontFamily: T.fontMono,
-                  fontSize: "0.8125rem",
-                  color: T.textPrimary,
-                  background: T.bg,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 1,
-                  outline: "none",
-                  transition: "border-color 150ms",
-                  boxSizing: "border-box",
-                }}
-                onFocus={(e) =>
-                  (e.currentTarget.style.borderColor = T.accent)
-                }
-                onBlur={(e) =>
-                  (e.currentTarget.style.borderColor = T.border)
-                }
+                style={inputStyle(focusedField === "user")}
+                onFocus={() => setFocusedField("user")}
+                onBlur={() => setFocusedField(null)}
               />
             </div>
 
-            {/* Password field */}
-            <div style={{ marginBottom: 20 }}>
+            {/* Password */}
+            <div style={{ marginBottom: 24 }}>
               <label
                 style={{
                   display: "block",
                   fontFamily: T.fontMono,
-                  fontSize: "0.75rem",
-                  fontWeight: 500,
-                  color: T.textTertiary,
-                  letterSpacing: "0.08em",
+                  fontSize: "0.6rem",
+                  fontWeight: 600,
+                  color: focusedField === "pass" ? T.orange : T.textTertiary,
+                  letterSpacing: "0.14em",
                   textTransform: "uppercase",
-                  marginBottom: 6,
+                  marginBottom: 7,
+                  transition: "color 200ms ease",
                 }}
               >
                 Password
@@ -374,147 +463,179 @@ export default function LoginPage() {
                 placeholder="demo  ·  or  your password"
                 required
                 autoComplete="current-password"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  fontFamily: T.fontMono,
-                  fontSize: "0.8125rem",
-                  color: T.textPrimary,
-                  background: T.bg,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 1,
-                  outline: "none",
-                  transition: "border-color 150ms",
-                  boxSizing: "border-box",
-                }}
-                onFocus={(e) =>
-                  (e.currentTarget.style.borderColor = T.accent)
-                }
-                onBlur={(e) =>
-                  (e.currentTarget.style.borderColor = T.border)
-                }
+                style={inputStyle(focusedField === "pass")}
+                onFocus={() => setFocusedField("pass")}
+                onBlur={() => setFocusedField(null)}
               />
             </div>
 
-            {/* Error display */}
+            {/* Error */}
             {error && (
               <div
                 style={{
-                  padding: "8px 12px",
-                  marginBottom: 16,
+                  padding: "10px 14px",
+                  marginBottom: 20,
                   fontFamily: T.fontMono,
-                  fontSize: "0.6875rem",
+                  fontSize: "0.7rem",
                   color: T.danger,
                   background: T.dangerDim,
-                  border: `1px solid ${T.danger}33`,
-                  borderRadius: 1,
+                  border: `1px solid rgba(244,63,94,0.20)`,
+                  borderRadius: 2,
+                  letterSpacing: "0.04em",
                 }}
               >
-                {error}
+                ✕  {error}
               </div>
             )}
 
-            {/* Submit button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
               className="no-scale"
               style={{
                 width: "100%",
-                padding: "11px 16px",
+                padding: "13px 16px",
                 fontFamily: T.fontUI,
                 fontSize: "0.75rem",
-                fontWeight: 600,
-                letterSpacing: "0.06em",
+                fontWeight: 700,
+                letterSpacing: "0.10em",
                 textTransform: "uppercase",
-                color: loading ? T.textTertiary : "#fff",
-                background: loading ? T.border : T.accent,
-                border: "none",
-                borderRadius: 1,
+                color: loading ? T.textSecondary : T.bg,
+                background: loading
+                  ? "rgba(245,130,32,0.12)"
+                  : `linear-gradient(135deg, ${T.orange} 0%, #E8710A 100%)`,
+                border: loading ? `1px solid ${T.border}` : "none",
+                borderRadius: 2,
                 cursor: loading ? "wait" : "pointer",
-                transition: "all 150ms",
+                transition: "all 200ms cubic-bezier(0.16,1,0.3,1)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8,
+                gap: 10,
+                boxShadow: loading ? "none" : `0 4px 24px rgba(245,130,32,0.30), 0 1px 4px rgba(245,130,32,0.20)`,
               }}
               onMouseEnter={(e) => {
-                if (!loading)
-                  e.currentTarget.style.background = "#2563EB";
+                if (!loading) {
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                  e.currentTarget.style.boxShadow = `0 8px 32px rgba(245,130,32,0.40), 0 2px 8px rgba(245,130,32,0.25)`;
+                }
               }}
               onMouseLeave={(e) => {
-                if (!loading)
-                  e.currentTarget.style.background = T.accent;
+                if (!loading) {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = `0 4px 24px rgba(245,130,32,0.30), 0 1px 4px rgba(245,130,32,0.20)`;
+                }
               }}
             >
               {loading ? (
                 <>
                   <span
                     style={{
-                      width: 14,
-                      height: 14,
-                      border: `2px solid ${T.textTertiary}44`,
-                      borderTop: `2px solid ${T.textSecondary}`,
+                      width: 13,
+                      height: 13,
+                      border: `1.5px solid rgba(245,130,32,0.2)`,
+                      borderTop: `1.5px solid ${T.orange}`,
                       borderRadius: "50%",
-                      animation: "htSpin 800ms linear infinite",
+                      animation: "ordrSpin 700ms linear infinite",
                       flexShrink: 0,
                     }}
                   />
-                  {warmingUp ? "Waking up server..." : "Authenticating..."}
+                  {warmingUp ? "Waking up server…" : "Authenticating…"}
                 </>
               ) : (
                 <>
                   Initialize Session
-                  <ChevronRight size={14} strokeWidth={2} />
+                  {/* Thin arrow */}
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M2 7h10M8 3l4 4-4 4" stroke={T.bg} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </>
               )}
             </button>
           </form>
 
-          {/* Warm-up notice — shown after 8 s of waiting */}
+          {/* Cold start notice */}
           {warmingUp && (
             <div
               style={{
-                padding: "10px 24px",
+                padding: "12px 24px",
                 borderTop: `1px solid ${T.border}`,
                 fontFamily: T.fontMono,
-                fontSize: "0.75rem",
+                fontSize: "0.7rem",
                 color: T.textSecondary,
                 lineHeight: 1.7,
-                background: `rgba(59,130,246,0.04)`,
+                background: T.orangeDeep,
               }}
             >
-              <span style={{ color: T.accent, fontWeight: 600 }}>SERVER COLD START</span>
+              <span style={{ color: T.orange, fontWeight: 600, letterSpacing: "0.08em" }}>SERVER COLD START</span>
               <br />
-              The backend is waking up from sleep (free tier).
-              This takes up to 30 seconds — please wait.
+              Backend waking from sleep (free tier) — up to 30 s. Please wait.
             </div>
           )}
 
+          {/* Card footer */}
+          <div
+            style={{
+              padding: "10px 24px",
+              borderTop: `1px solid ${T.border}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: T.fontMono,
+                fontSize: "0.58rem",
+                color: T.textTertiary,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              ORDR Terminal v1.0
+            </span>
+            <span
+              style={{
+                fontFamily: T.fontMono,
+                fontSize: "0.58rem",
+                color: T.textTertiary,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              © 2026 Synexiun
+            </span>
+          </div>
         </div>
 
-        {/* Compliance notice */}
+        {/* ── Compliance notice ── */}
         <div
           style={{
-            marginTop: 20,
+            marginTop: 24,
             textAlign: "center",
             fontFamily: T.fontMono,
-            fontSize: "0.6875rem",
+            fontSize: "0.6rem",
             color: T.textTertiary,
-            letterSpacing: "0.05em",
-            lineHeight: 1.8,
+            letterSpacing: "0.06em",
+            lineHeight: 1.9,
+            opacity: 0.7,
           }}
         >
-          Authorized personnel only. All sessions are monitored and logged.
+          Authorized personnel only — all sessions are monitored and logged.
           <br />
-          Unauthorized access is prohibited and may be subject to legal action.
+          Unauthorized access may be subject to legal action.
         </div>
       </div>
 
-      {/* Spinner keyframe */}
+      {/* Keyframes */}
       <style>{`
-        @keyframes htSpin {
+        @keyframes ordrSpin {
           to { transform: rotate(360deg); }
+        }
+        input::placeholder {
+          color: ${T.textTertiary};
+          opacity: 0.6;
         }
       `}</style>
     </div>
