@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+/**
+ * StepCalculate — Step 2 of the Execution Pipeline
+ *
+ * Runs the hedge calculation engine PER CURRENCY GROUP.
+ * Each currency has its own spot rate, forward curve, and risk characteristics.
+ * Results are aggregated for display and passed to Step 3.
+ */
+
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { PositionRow } from "@/api/positionClient";
 import type {
   TradeRow,
@@ -32,13 +40,21 @@ const S = {
 
 /* ── Formatters ────────────────────────────────────────────────────────── */
 const fmtNum = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
-const fmtDec = new Intl.NumberFormat("en-US", {
-  minimumFractionDigits: 4,
-  maximumFractionDigits: 4,
-});
-const fmtUsd = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 0,
-});
+const fmtDec = new Intl.NumberFormat("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+const fmtUsd = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+
+/* ── PRICE_CCY currencies (quoted as CCY/USD) ─────────────────────────── */
+const PRICE_CCY = new Set(["EUR", "GBP", "AUD", "NZD", "CHF"]);
+
+/* ── Per-currency calculation result ──────────────────────────────────── */
+interface CurrencyCalcResult {
+  currency: string;
+  positions: PositionRow[];
+  market: MarketSnapshot;
+  result: CalculateResponse | null;
+  error: string | null;
+  status: "pending" | "running" | "done" | "error";
+}
 
 /* ── Props ─────────────────────────────────────────────────────────────── */
 interface Props {
@@ -49,90 +65,77 @@ interface Props {
 }
 
 /* ── Component ─────────────────────────────────────────────────────────── */
-export default function StepCalculate({
-  positions,
-  token,
-  onApprove,
-  onBack,
-}: Props) {
-  const [result, setResult] = useState<CalculateResponse | null>(null);
+export default function StepCalculate({ positions, token, onApprove, onBack }: Props) {
+  const [currencyResults, setCurrencyResults] = useState<CurrencyCalcResult[]>([]);
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Market data state — auto-fetched on mount
-  const [market, setMarket] = useState<MarketSnapshot | null>(null);
   const [marketLoading, setMarketLoading] = useState(true);
-  const [marketError, setMarketError] = useState<string | null>(null);
-  const [marketSource, setMarketSource] = useState<string>("");
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const fetchedRef = useRef(false);
 
-  /* ── Detect currencies and value dates from positions ─────────────── */
-  const detectedCurrencies = useMemo(
-    () => [...new Set(positions.map((p) => p.currency))],
-    [positions]
-  );
-  const tradeValueDates = useMemo(
-    () => positions.map((p) => p.value_date),
-    [positions]
-  );
-  const primaryCurrency = detectedCurrencies[0] ?? "MXN";
+  /* ── Group positions by currency ────────────────────────────────────── */
+  const currencyGroups = useMemo(() => {
+    const map = new Map<string, PositionRow[]>();
+    for (const p of positions) {
+      const arr = map.get(p.currency) ?? [];
+      arr.push(p);
+      map.set(p.currency, arr);
+    }
+    return Array.from(map.entries()).sort((a, b) => {
+      // Sort by total notional descending
+      const totalA = a[1].reduce((s, p) => s + Math.abs(p.amount), 0);
+      const totalB = b[1].reduce((s, p) => s + Math.abs(p.amount), 0);
+      return totalB - totalA;
+    });
+  }, [positions]);
 
-  /* ── Auto-fetch market data on mount ──────────────────────────────── */
+  /* ── Fetch market data for each currency on mount ───────────────────── */
   useEffect(() => {
-    let cancelled = false;
-    async function fetchMarket() {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+
+    async function fetchAllMarkets() {
       setMarketLoading(true);
-      setMarketError(null);
-      try {
-        const res = await fetch("/api/market-autofill", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            currencies: detectedCurrencies,
-            trade_value_dates: tradeValueDates,
-          }),
-        });
-        if (!cancelled) {
+      const results: CurrencyCalcResult[] = [];
+
+      for (const [currency, posGroup] of currencyGroups) {
+        const valueDates = posGroup.map((p) => p.value_date);
+        let market: MarketSnapshot;
+
+        try {
+          const res = await fetch("/api/market-autofill", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              currencies: [currency],
+              trade_value_dates: valueDates,
+            }),
+          });
           if (res.ok) {
             const data = await res.json();
-            setMarket(data.market);
-            const src = data.market?.provider_metadata?.source ?? "unknown";
-            setMarketSource(src);
+            market = data.market;
           } else {
-            setMarketError(`Market data fetch failed (HTTP ${res.status})`);
-            // Fallback: construct minimal market data
-            setMarket(buildFallbackMarket(primaryCurrency, tradeValueDates));
-            setMarketSource("local_fallback");
+            market = buildFallbackMarket(currency, valueDates);
           }
+        } catch {
+          market = buildFallbackMarket(currency, valueDates);
         }
-      } catch (err) {
-        if (!cancelled) {
-          setMarketError(`Market data unavailable: ${err instanceof Error ? err.message : "Network error"}`);
-          setMarket(buildFallbackMarket(primaryCurrency, tradeValueDates));
-          setMarketSource("local_fallback");
-        }
-      } finally {
-        if (!cancelled) setMarketLoading(false);
-      }
-    }
-    fetchMarket();
-    return () => { cancelled = true; };
-  }, [detectedCurrencies, tradeValueDates, primaryCurrency]);
 
-  /* ── Position → TradeRow mapping ──────────────────────────────────── */
-  const trades: TradeRow[] = useMemo(
-    () =>
-      positions.map((p) => ({
-        record_id: p.record_id,
-        entity: p.entity ?? "UNKNOWN",
-        type: (p.type ?? "AR") as "AR" | "AP",
-        currency: p.currency as FuturesCurrency,
-        amount: p.amount,
-        value_date: p.value_date,
-        status: (p.status ?? "CONFIRMED") as "CONFIRMED" | "FORECAST",
-        description: p.description ?? "",
-      })),
-    [positions],
-  );
+        results.push({
+          currency,
+          positions: posGroup,
+          market,
+          result: null,
+          error: null,
+          status: "pending",
+        });
+      }
+
+      setCurrencyResults(results);
+      setMarketLoading(false);
+    }
+
+    fetchAllMarkets();
+  }, [currencyGroups]);
 
   /* ── Policy defaults ────────────────────────────────────────────── */
   const policy: PolicyConfig = useMemo(
@@ -146,386 +149,269 @@ export default function StepCalculate({
     [],
   );
 
-  /* ── Currency summary line ────────────────────────────────────────── */
-  const ccySummary = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const p of positions) {
-      map.set(p.currency, (map.get(p.currency) ?? 0) + 1);
-    }
-    return Array.from(map.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([ccy, count]) => ({ ccy, count }));
-  }, [positions]);
-
-  /* ── Run engine ───────────────────────────────────────────────────── */
+  /* ── Run engine for ALL currency groups ──────────────────────────── */
   const runEngine = useCallback(async () => {
-    if (!market) return;
     setRunning(true);
-    setError(null);
-    setResult(null);
-    try {
-      const res = await calculate({
-        trades,
-        hedges: [],
-        market,
-        policy,
-      });
-      setResult(res);
-    } catch (err: unknown) {
-      // Extract detailed validation errors from 422 response
-      let msg = "Unknown calculation error";
-      if (err instanceof Error) {
-        msg = err.message;
+    setGlobalError(null);
+
+    const updated = [...currencyResults];
+
+    for (let i = 0; i < updated.length; i++) {
+      const cr = { ...updated[i], status: "running" as const, error: null, result: null };
+      updated[i] = cr;
+      setCurrencyResults([...updated]);
+
+      // Build trades for this currency group
+      const trades: TradeRow[] = cr.positions.map((p) => ({
+        record_id: p.record_id,
+        entity: p.entity ?? "UNKNOWN",
+        type: (p.type ?? "AR") as "AR" | "AP",
+        currency: p.currency as FuturesCurrency,
+        amount: p.amount,
+        value_date: p.value_date,
+        status: (p.status ?? "CONFIRMED") as "CONFIRMED" | "FORECAST",
+        description: p.description ?? "",
+      }));
+
+      try {
+        const res = await calculate({ trades, hedges: [], market: cr.market, policy });
+        updated[i] = { ...cr, result: res, status: "done" };
+      } catch (err: unknown) {
+        let msg = "Calculation error";
+        if (err instanceof Error) msg = err.message;
+
+        // Extract validation details from 422 response
+        const axiosErr = err as { response?: { data?: { detail?: string | { validation_report?: { errors?: Array<{ code?: string; message?: string }> } } } } };
+        const detail = axiosErr?.response?.data?.detail;
+        if (typeof detail === "string") {
+          msg = detail;
+        } else if (detail?.validation_report?.errors?.length) {
+          msg = detail.validation_report.errors.map((e) => `[${e.code}] ${e.message}`).join(" · ");
+        }
+        updated[i] = { ...cr, error: msg, status: "error" };
       }
-      // Try to get validation details from axios response
-      const axiosErr = err as { response?: { data?: { detail?: { validation_report?: { errors?: Array<{ code?: string; message?: string }> } } } } };
-      const valErrors = axiosErr?.response?.data?.detail?.validation_report?.errors;
-      if (valErrors && valErrors.length > 0) {
-        msg = valErrors.map((e) => `[${e.code}] ${e.message}`).join(" · ");
-      }
-      setError(msg);
-    } finally {
-      setRunning(false);
+
+      setCurrencyResults([...updated]);
     }
-  }, [trades, market, policy]);
 
-  /* ── Derived ──────────────────────────────────────────────────────── */
-  const validationPassed = result?.validation_report?.status === "PASS";
-  const buckets: BucketResult[] = result?.hedge_plan?.buckets ?? [];
-  const summary = result?.hedge_plan?.summary;
-  const scenarios = result?.scenario_results?.totals ?? [];
+    setRunning(false);
+  }, [currencyResults, policy]);
 
-  /* ── Spot display label ────────────────────────────────────────────── */
-  const spotLabel = market?.provider_metadata?.currency_pair
-    ? String(market.provider_metadata.currency_pair)
-    : `USD/${primaryCurrency}`;
+  /* ── Derived aggregations ────────────────────────────────────────── */
+  const allDone = currencyResults.length > 0 && currencyResults.every((cr) => cr.status === "done");
+  const anyError = currencyResults.some((cr) => cr.status === "error");
+  const allValidationPassed = currencyResults.every(
+    (cr) => cr.result?.validation_report?.status === "PASS"
+  );
+
+  // Merge run IDs for downstream pipeline
+  const mergedRunIds = currencyResults
+    .filter((cr) => cr.result)
+    .map((cr) => cr.result!.run_envelope?.run_id ?? cr.result!.run_id);
+
+  // Build a merged CalculateResponse for passing to Step 3
+  // Uses the first successful result as the base, then merges buckets
+  const mergedResult: CalculateResponse | null = useMemo(() => {
+    const successful = currencyResults.filter((cr) => cr.result);
+    if (successful.length === 0) return null;
+
+    const base = successful[0].result!;
+    if (successful.length === 1) return base;
+
+    // Merge buckets from all currency results
+    const allBuckets: BucketResult[] = [];
+    let totalExposure = 0, totalAction = 0, totalActionUsd = 0, totalFriction = 0;
+    let totalHedgePos = 0, totalResidual = 0, totalExistingHedges = 0;
+
+    for (const cr of successful) {
+      const hp = cr.result!.hedge_plan;
+      for (const b of hp.buckets) {
+        // Tag bucket with currency for display
+        allBuckets.push({
+          ...b,
+          bucket: `${cr.currency} ${b.bucket}`,
+        });
+      }
+      if (hp.summary) {
+        totalExposure += hp.summary.total_commercial_exposure_mxn;
+        totalAction += hp.summary.total_action_mxn;
+        totalActionUsd += hp.summary.total_action_usd;
+        totalFriction += hp.summary.total_friction_usd;
+        totalHedgePos += hp.summary.total_hedge_position_mxn;
+        totalResidual += hp.summary.total_residual_mxn;
+        totalExistingHedges += hp.summary.total_existing_hedges_mxn;
+      }
+    }
+
+    return {
+      ...base,
+      hedge_plan: {
+        buckets: allBuckets,
+        summary: {
+          total_commercial_exposure_mxn: totalExposure,
+          total_existing_hedges_mxn: totalExistingHedges,
+          total_action_mxn: totalAction,
+          total_action_usd: totalActionUsd,
+          total_friction_usd: totalFriction,
+          total_hedge_position_mxn: totalHedgePos,
+          total_residual_mxn: totalResidual,
+        },
+      },
+    };
+  }, [currencyResults]);
 
   /* ── Render ─────────────────────────────────────────────────────────── */
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        minHeight: 0,
-        fontFamily: S.fontUI,
-        color: S.primary,
-      }}
-    >
-      {/* ═══ Section 1: Selected Positions Summary ═══ */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 16px",
-          background: S.bgSub,
-          borderBottom: `1px solid ${S.rim}`,
-          flexShrink: 0,
-          flexWrap: "wrap",
-        }}
-      >
+    <div style={{
+      display: "flex", flexDirection: "column", height: "100%",
+      minHeight: 0, fontFamily: S.fontUI, color: S.primary,
+    }}>
+      {/* ═══ Header: Position Summary ═══ */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
+        background: S.bgSub, borderBottom: `1px solid ${S.rim}`,
+        flexShrink: 0, flexWrap: "wrap",
+      }}>
         <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
           {positions.length} position{positions.length !== 1 ? "s" : ""} selected
         </span>
         <span style={{ width: 1, height: 14, background: S.soft, flexShrink: 0 }} />
-        {ccySummary.map(({ ccy, count }) => (
-          <span
-            key={ccy}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              height: 22,
-              padding: "0 8px",
-              borderRadius: 3,
-              background: S.bgDeep,
-              border: `1px solid ${S.soft}`,
-              fontFamily: S.fontMono,
-              fontSize: 10,
-              fontWeight: 600,
-              color: S.primary,
-              letterSpacing: "0.04em",
-            }}
-          >
-            {count} {ccy}
+        {currencyGroups.map(([ccy, posGroup]) => (
+          <span key={ccy} style={{
+            display: "inline-flex", alignItems: "center", height: 22,
+            padding: "0 8px", borderRadius: 3, background: S.bgDeep,
+            border: `1px solid ${S.soft}`, fontFamily: S.fontMono,
+            fontSize: 10, fontWeight: 600, color: S.primary, letterSpacing: "0.04em",
+          }}>
+            {posGroup.length} {ccy}
           </span>
         ))}
+        <span style={{ width: 1, height: 14, background: S.soft, flexShrink: 0 }} />
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+          {currencyGroups.length} currency group{currencyGroups.length !== 1 ? "s" : ""}
+          {" · "}separate engine run per currency
+        </span>
       </div>
 
-      {/* ═══ Section 2: Engine Control ═══ */}
-      <div style={{ padding: "16px 16px", borderBottom: `1px solid ${S.rim}`, flexShrink: 0 }}>
-        {/* Market snapshot info */}
+      {/* ═══ Market Data + Engine Control ═══ */}
+      <div style={{ padding: "12px 16px", borderBottom: `1px solid ${S.rim}`, flexShrink: 0 }}>
         {marketLoading ? (
           <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.amber, marginBottom: 14 }}>
-            ⟳ Fetching live market data for {detectedCurrencies.join(", ")}...
+            ⟳ Fetching market data for {currencyGroups.map(([c]) => c).join(", ")}...
           </div>
         ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14, flexWrap: "wrap" }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" as const }}>
-              Spot {spotLabel}:{" "}
-              <span style={{ color: S.primary, fontWeight: 600 }}>
-                {market ? fmtDec.format(market.spot_usdmxn) : "—"}
-              </span>
-            </span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
-              As of: {market ? new Date(market.as_of).toLocaleString() : "—"}
-            </span>
-            <span
-              style={{
-                fontFamily: S.fontMono,
-                fontSize: 8,
-                letterSpacing: "0.06em",
-                padding: "1px 6px",
-                borderRadius: 2,
-                background: marketSource.includes("live") ? "rgba(34,197,94,0.1)" : "rgba(245,158,11,0.1)",
-                color: marketSource.includes("live") ? S.pass : S.amber,
-                border: `1px solid ${marketSource.includes("live") ? S.pass : S.amber}`,
-              }}
-            >
-              {marketSource.includes("live") ? "LIVE" : marketSource.includes("fallback") ? "INDICATIVE" : "FALLBACK"}
-            </span>
-            {market?.forward_points_by_month && (
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
-                {Object.keys(market.forward_points_by_month).length} fwd points loaded
-              </span>
-            )}
-          </div>
-        )}
+          <>
+            {/* Market data per currency */}
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+              {currencyResults.map((cr) => {
+                const isPrice = PRICE_CCY.has(cr.currency);
+                const pairLabel = cr.market.provider_metadata?.currency_pair
+                  ? String(cr.market.provider_metadata.currency_pair)
+                  : isPrice ? `${cr.currency}/USD` : `USD/${cr.currency}`;
+                const src = String(cr.market.provider_metadata?.source ?? "fallback");
+                const isLive = src.includes("live");
+                const fwdCount = Object.keys(cr.market.forward_points_by_month ?? {}).length;
 
-        {marketError && (
-          <div style={{
-            marginBottom: 10, padding: "6px 10px", background: "rgba(245,158,11,0.08)",
-            border: `1px solid ${S.amber}`, borderRadius: 3,
-            fontFamily: S.fontMono, fontSize: 10, color: S.amber,
-          }}>
-            ⚠ {marketError} — using fallback rates
-          </div>
+                return (
+                  <div key={cr.currency} style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "6px 10px", borderRadius: 4,
+                    background: S.bgDeep, border: `1px solid ${S.soft}`,
+                  }}>
+                    <span style={{
+                      fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+                      color: S.cyan, letterSpacing: "0.04em",
+                    }}>
+                      {cr.currency}
+                    </span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                      {pairLabel}:
+                    </span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, color: S.primary }}>
+                      {fmtDec.format(cr.market.spot_usdmxn)}
+                    </span>
+                    <span style={{
+                      fontFamily: S.fontMono, fontSize: 7, padding: "1px 4px",
+                      borderRadius: 2, letterSpacing: "0.06em",
+                      background: isLive ? "rgba(34,197,94,0.1)" : "rgba(245,158,11,0.1)",
+                      color: isLive ? S.pass : S.amber,
+                      border: `1px solid ${isLive ? S.pass : S.amber}`,
+                    }}>
+                      {isLive ? "LIVE" : "IND"}
+                    </span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+                      {fwdCount}fwd
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {/* Run button */}
         <button
           onClick={runEngine}
-          disabled={running || marketLoading || !market}
+          disabled={running || marketLoading || currencyResults.length === 0}
           style={{
-            height: 44,
-            padding: "0 32px",
+            height: 44, padding: "0 32px",
             background: running || marketLoading ? S.bgSub : S.cyan,
             color: running || marketLoading ? S.tertiary : S.bgDeep,
             border: running || marketLoading ? `1px solid ${S.soft}` : `2px solid ${S.cyan}`,
-            borderRadius: 4,
-            fontFamily: S.fontMono,
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: "0.10em",
+            borderRadius: 4, fontFamily: S.fontMono, fontSize: 13,
+            fontWeight: 700, letterSpacing: "0.10em",
             cursor: running || marketLoading ? "not-allowed" : "pointer",
             transition: "all 0.15s",
-            animation: !running && !result && !marketLoading && market ? "pulse-border 2s infinite" : "none",
+            animation: !running && !allDone && !marketLoading ? "pulse-border 2s infinite" : "none",
           }}
         >
-          {running ? "COMPUTING HEDGE PLAN..." : marketLoading ? "LOADING MARKET DATA..." : "\u25B6 RUN HEDGE ENGINE"}
+          {running
+            ? `COMPUTING... (${currencyResults.filter((c) => c.status === "done").length}/${currencyResults.length})`
+            : marketLoading
+              ? "LOADING MARKET DATA..."
+              : `▶ RUN HEDGE ENGINE (${currencyGroups.length} CURRENCIES)`
+          }
         </button>
 
-        {/* Error banner */}
-        {error && (
+        {globalError && (
           <div style={{
-            marginTop: 12, padding: "10px 14px",
-            background: "rgba(239,68,68,0.08)", border: `1px solid ${S.fail}`,
-            borderRadius: 4, fontFamily: S.fontMono, fontSize: 11, color: S.fail,
-            lineHeight: 1.5,
+            marginTop: 12, padding: "10px 14px", background: "rgba(239,68,68,0.08)",
+            border: `1px solid ${S.fail}`, borderRadius: 4,
+            fontFamily: S.fontMono, fontSize: 11, color: S.fail, lineHeight: 1.5,
           }}>
-            {error}
+            {globalError}
           </div>
         )}
       </div>
 
-      {/* ═══ Section 3: Results ═══ */}
-      {result && (
-        <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-          {/* Validation banner */}
-          <div style={{
-            margin: "12px 16px 0", padding: "8px 14px", borderRadius: 4,
-            background: validationPassed ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
-            border: `1px solid ${validationPassed ? S.pass : S.fail}`,
-            fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
-            letterSpacing: "0.08em", color: validationPassed ? S.pass : S.fail,
-          }}>
-            {validationPassed ? "✓ VALIDATION PASSED" : "✗ VALIDATION FAILED"}
-            {result.validation_report?.errors?.length > 0 && (
-              <span style={{ fontWeight: 400, marginLeft: 12 }}>
-                {result.validation_report.errors.map((e) => e.message).join("; ")}
-              </span>
-            )}
-          </div>
+      {/* ═══ Results: Per-Currency Cards ═══ */}
+      {currencyResults.some((cr) => cr.status !== "pending") && (
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "0 0 16px" }}>
+          {currencyResults.map((cr) => (
+            <CurrencyResultCard key={cr.currency} cr={cr} />
+          ))}
 
-          {/* Run ID */}
-          {result.run_id && (
+          {/* Aggregate Summary */}
+          {allDone && mergedResult?.hedge_plan?.summary && (
             <div style={{
-              margin: "8px 16px 0", fontFamily: S.fontMono, fontSize: 9,
-              color: S.tertiary, letterSpacing: "0.06em",
+              margin: "16px 16px 0", padding: "12px 16px", borderRadius: 6,
+              background: S.bgSub, border: `1px solid ${S.rim}`,
             }}>
-              RUN ID: {result.run_id.slice(0, 12).toUpperCase()}
-              {result.run_envelope?.inputs_hash && (
-                <span style={{ marginLeft: 12 }}>
-                  HASH: {result.run_envelope.inputs_hash.slice(0, 8).toUpperCase()}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Hedge plan table */}
-          {buckets.length > 0 && (
-            <div style={{ margin: "12px 16px 0" }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 9, fontWeight: 600,
-                letterSpacing: "0.12em", color: S.tertiary,
-                textTransform: "uppercase" as const, marginBottom: 8,
-              }}>
-                Hedge Plan — Per-Bucket Actions
-              </div>
-
-              {/* Table header */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "100px 120px 100px 120px 110px 90px 90px 80px",
-                alignItems: "center", height: 32, padding: "0 8px",
-                background: S.bgSub, borderBottom: `1px solid ${S.rim}`,
-                fontFamily: S.fontMono, fontSize: 9, fontWeight: 600,
-                letterSpacing: "0.08em", color: S.tertiary,
+                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                letterSpacing: "0.12em", color: S.cyan, marginBottom: 10,
                 textTransform: "uppercase" as const,
               }}>
-                <span>Bucket</span>
-                <span style={{ textAlign: "right" }}>Exposure</span>
-                <span>Direction</span>
-                <span style={{ textAlign: "right" }}>Action</span>
-                <span style={{ textAlign: "right" }}>Action (USD)</span>
-                <span style={{ textAlign: "right" }}>Fwd Rate</span>
-                <span style={{ textAlign: "right" }}>Cost (USD)</span>
-                <span>Status</span>
+                ◆ Aggregate Summary — All Currencies
               </div>
-
-              {/* Table rows */}
-              {buckets.map((b) => {
-                const isSell = b.action_direction?.includes("SELL");
-                return (
-                  <div
-                    key={b.bucket}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "100px 120px 100px 120px 110px 90px 90px 80px",
-                      alignItems: "center", height: 32, padding: "0 8px",
-                      borderBottom: `1px solid ${S.soft}`,
-                      fontFamily: S.fontMono, fontSize: 11,
-                      opacity: b.suppressed ? 0.4 : 1,
-                      textDecoration: b.suppressed ? "line-through" : "none",
-                    }}
-                  >
-                    <span style={{ color: S.primary, fontWeight: 600 }}>{b.bucket}</span>
-                    <span style={{ textAlign: "right", color: S.secondary }}>
-                      {fmtNum.format(b.commercial_exposure_mxn)}
-                    </span>
-                    <span>
-                      {b.action_direction ? (
-                        <span style={{
-                          display: "inline-block", padding: "1px 6px", borderRadius: 3,
-                          fontSize: 8, fontWeight: 700, letterSpacing: "0.06em",
-                          background: isSell ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)",
-                          color: isSell ? S.fail : S.pass,
-                          border: `1px solid ${isSell ? S.fail : S.pass}`,
-                        }}>
-                          {b.action_direction.replace(/_/g, " ")}
-                        </span>
-                      ) : (
-                        <span style={{ color: S.tertiary }}>&mdash;</span>
-                      )}
-                    </span>
-                    <span style={{ textAlign: "right", color: S.primary }}>{fmtNum.format(b.action_mxn)}</span>
-                    <span style={{ textAlign: "right", color: S.secondary }}>{fmtUsd.format(b.action_usd)}</span>
-                    <span style={{ textAlign: "right", color: S.tertiary }}>{fmtDec.format(b.forward_rate)}</span>
-                    <span style={{ textAlign: "right", color: b.friction_usd > 0 ? S.amber : S.tertiary }}>
-                      {fmtUsd.format(b.friction_usd)}
-                    </span>
-                    <span style={{
-                      fontSize: 9, fontWeight: 600, letterSpacing: "0.06em",
-                      color: b.suppressed ? S.amber : S.pass,
-                    }}>
-                      {b.suppressed ? "SUPPRESSED" : "ACTIVE"}
-                    </span>
-                  </div>
-                );
-              })}
-
-              {/* Summary bar */}
-              {summary && (
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "100px 120px 100px 120px 110px 90px 90px 80px",
-                  alignItems: "center", height: 36, padding: "0 8px",
-                  background: S.bgSub, borderTop: `2px solid ${S.rim}`,
-                  fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
-                }}>
-                  <span style={{ letterSpacing: "0.08em", fontSize: 9, color: S.tertiary }}>TOTAL</span>
-                  <span style={{ textAlign: "right", color: S.primary }}>{fmtNum.format(summary.total_commercial_exposure_mxn)}</span>
-                  <span />
-                  <span style={{ textAlign: "right", color: S.primary }}>{fmtNum.format(summary.total_action_mxn)}</span>
-                  <span style={{ textAlign: "right", color: S.secondary }}>{fmtUsd.format(summary.total_action_usd)}</span>
-                  <span />
-                  <span style={{ textAlign: "right", color: S.amber }}>{fmtUsd.format(summary.total_friction_usd)}</span>
-                  <span />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Scenario Results */}
-          {scenarios.length > 0 && (
-            <div style={{ margin: "16px 16px 0" }}>
-              <div style={{
-                fontFamily: S.fontMono, fontSize: 9, fontWeight: 600,
-                letterSpacing: "0.12em", color: S.tertiary,
-                textTransform: "uppercase" as const, marginBottom: 8,
-              }}>
-                Scenario Analysis
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 0 }}>
-                {["Sigma", "Shocked Spot", "Unhedged (USD)", "Benefit (USD)"].map((h) => (
-                  <div key={h} style={{
-                    padding: "6px 8px", background: S.bgSub,
-                    borderBottom: `1px solid ${S.rim}`, fontFamily: S.fontMono,
-                    fontSize: 9, fontWeight: 600, letterSpacing: "0.06em",
-                    color: S.tertiary, textTransform: "uppercase" as const,
-                  }}>
-                    {h}
-                  </div>
-                ))}
-                {scenarios.map((sc) => (
-                  <div key={sc.sigma} style={{ display: "contents" }}>
-                    <div style={{
-                      padding: "6px 8px", fontFamily: S.fontMono, fontSize: 11, fontWeight: 600,
-                      color: sc.sigma < 0 ? S.fail : sc.sigma > 0 ? S.pass : S.primary,
-                      borderBottom: `1px solid ${S.soft}`,
-                    }}>
-                      {sc.sigma > 0 ? "+" : ""}{sc.sigma}σ
-                    </div>
-                    <div style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 11, color: S.secondary, borderBottom: `1px solid ${S.soft}` }}>
-                      {fmtDec.format(sc.shocked_spot)}
-                    </div>
-                    <div style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 11, color: S.secondary, borderBottom: `1px solid ${S.soft}` }}>
-                      {fmtUsd.format(sc.total_unhedged_usd)}
-                    </div>
-                    <div style={{
-                      padding: "6px 8px", fontFamily: S.fontMono, fontSize: 11, fontWeight: 600,
-                      color: sc.total_hedge_benefit_usd > 0 ? S.pass : sc.total_hedge_benefit_usd < 0 ? S.fail : S.tertiary,
-                      borderBottom: `1px solid ${S.soft}`,
-                    }}>
-                      {fmtUsd.format(sc.total_hedge_benefit_usd)}
-                    </div>
-                  </div>
-                ))}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                <SummaryKPI label="Total Exposure" value={fmtNum.format(mergedResult.hedge_plan.summary.total_commercial_exposure_mxn)} unit="local ccy" />
+                <SummaryKPI label="Total Action" value={fmtNum.format(mergedResult.hedge_plan.summary.total_action_mxn)} unit="local ccy" />
+                <SummaryKPI label="Action (USD eq.)" value={`$${fmtUsd.format(mergedResult.hedge_plan.summary.total_action_usd)}`} unit="" />
+                <SummaryKPI label="Total Friction" value={`$${fmtUsd.format(mergedResult.hedge_plan.summary.total_friction_usd)}`} unit="" />
               </div>
             </div>
           )}
-
-          <div style={{ height: 16 }} />
         </div>
       )}
 
@@ -539,27 +425,27 @@ export default function StepCalculate({
           height: 36, padding: "0 20px", background: "transparent",
           color: S.tertiary, border: `1px solid ${S.soft}`, borderRadius: 4,
           fontFamily: S.fontMono, fontSize: 11, fontWeight: 600,
-          letterSpacing: "0.08em", cursor: "pointer", transition: "all 0.15s",
+          letterSpacing: "0.08em", cursor: "pointer",
         }}>
           &#9666; BACK TO REVIEW
         </button>
         <button
-          disabled={!result || !validationPassed}
+          disabled={!allDone || !allValidationPassed || anyError}
           onClick={() => {
-            if (result) {
-              const runId = result.run_envelope?.run_id ?? result.run_id;
-              onApprove(result, runId);
+            if (mergedResult) {
+              // Combine run IDs with semicolons
+              const combinedRunId = mergedRunIds.join(";");
+              onApprove(mergedResult, combinedRunId);
             }
           }}
           style={{
             height: 36, padding: "0 24px",
-            background: result && validationPassed ? S.pass : S.bgSub,
-            color: result && validationPassed ? S.bgDeep : S.tertiary,
+            background: allDone && allValidationPassed ? S.pass : S.bgSub,
+            color: allDone && allValidationPassed ? S.bgDeep : S.tertiary,
             border: "none", borderRadius: 4, fontFamily: S.fontMono,
             fontSize: 11, fontWeight: 700, letterSpacing: "0.10em",
-            cursor: result && validationPassed ? "pointer" : "not-allowed",
-            opacity: result && validationPassed ? 1 : 0.5,
-            transition: "all 0.15s",
+            cursor: allDone && allValidationPassed ? "pointer" : "not-allowed",
+            opacity: allDone && allValidationPassed ? 1 : 0.5,
           }}
         >
           APPROVE HEDGE PLAN &#9656;
@@ -576,9 +462,248 @@ export default function StepCalculate({
   );
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Sub-components
+   ══════════════════════════════════════════════════════════════════════════ */
+
+function SummaryKPI({ label, value, unit }: { label: string; value: string; unit: string }) {
+  return (
+    <div>
+      <div style={{ fontFamily: "var(--font-terminal-mono)", fontSize: 8, color: "var(--text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 2 }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: "var(--font-terminal-mono)", fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
+        {value}
+      </div>
+      {unit && (
+        <div style={{ fontFamily: "var(--font-terminal-mono)", fontSize: 8, color: "var(--text-tertiary)" }}>
+          {unit}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
+  const isPrice = PRICE_CCY.has(cr.currency);
+  const pairLabel = isPrice ? `${cr.currency}/USD` : `USD/${cr.currency}`;
+  const totalNotional = cr.positions.reduce((s, p) => s + Math.abs(p.amount), 0);
+  const validationPassed = cr.result?.validation_report?.status === "PASS";
+  const buckets: BucketResult[] = cr.result?.hedge_plan?.buckets ?? [];
+  const summary = cr.result?.hedge_plan?.summary;
+  const scenarios = cr.result?.scenario_results?.totals ?? [];
+
+  return (
+    <div style={{
+      margin: "12px 16px 0", borderRadius: 6,
+      border: `1px solid ${cr.status === "error" ? S.fail : cr.status === "done" ? S.pass : S.soft}`,
+      overflow: "hidden",
+    }}>
+      {/* Card header */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "8px 14px", background: S.bgSub,
+        borderBottom: `1px solid ${S.soft}`,
+      }}>
+        <span style={{
+          fontFamily: S.fontMono, fontSize: 13, fontWeight: 700,
+          color: S.cyan, letterSpacing: "0.06em",
+        }}>
+          {cr.currency}
+        </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          {pairLabel}
+        </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+          {cr.positions.length} pos · {fmtNum.format(totalNotional)} {cr.currency}
+        </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          spot: {fmtDec.format(cr.market.spot_usdmxn)}
+        </span>
+        <div style={{ flex: 1 }} />
+
+        {/* Status badge */}
+        {cr.status === "pending" && (
+          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.08em" }}>PENDING</span>
+        )}
+        {cr.status === "running" && (
+          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.amber, letterSpacing: "0.08em" }}>⟳ COMPUTING...</span>
+        )}
+        {cr.status === "done" && validationPassed && (
+          <span style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, color: S.pass, letterSpacing: "0.08em" }}>✓ PASS</span>
+        )}
+        {cr.status === "done" && !validationPassed && (
+          <span style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, color: S.fail, letterSpacing: "0.08em" }}>✗ FAIL</span>
+        )}
+        {cr.status === "error" && (
+          <span style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, color: S.fail, letterSpacing: "0.08em" }}>✗ ERROR</span>
+        )}
+      </div>
+
+      {/* Error */}
+      {cr.error && (
+        <div style={{
+          padding: "8px 14px", background: "rgba(239,68,68,0.06)",
+          fontFamily: S.fontMono, fontSize: 10, color: S.fail, lineHeight: 1.5,
+        }}>
+          {cr.error}
+        </div>
+      )}
+
+      {/* Results */}
+      {cr.result && (
+        <div style={{ padding: "0 0 8px" }}>
+          {/* Run ID */}
+          {cr.result.run_id && (
+            <div style={{
+              padding: "6px 14px", fontFamily: S.fontMono, fontSize: 8,
+              color: S.tertiary, letterSpacing: "0.06em",
+            }}>
+              RUN: {cr.result.run_id.slice(0, 12).toUpperCase()}
+              {cr.result.run_envelope?.inputs_hash && (
+                <span style={{ marginLeft: 12 }}>
+                  HASH: {cr.result.run_envelope.inputs_hash.slice(0, 8).toUpperCase()}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Validation errors if any */}
+          {cr.result.validation_report?.errors?.length > 0 && !validationPassed && (
+            <div style={{
+              margin: "4px 14px", padding: "6px 10px", borderRadius: 3,
+              background: "rgba(239,68,68,0.06)", border: `1px solid ${S.fail}`,
+              fontFamily: S.fontMono, fontSize: 9, color: S.fail,
+            }}>
+              {cr.result.validation_report.errors.map((e, i) => (
+                <div key={i}>[{e.code}] {e.message}</div>
+              ))}
+            </div>
+          )}
+
+          {/* Hedge plan buckets */}
+          {buckets.length > 0 && (
+            <div style={{ padding: "8px 14px 0" }}>
+              {/* Table header */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "90px 110px 90px 110px 100px 80px 80px 70px",
+                alignItems: "center", height: 28, padding: "0 6px",
+                background: S.bgDeep, borderBottom: `1px solid ${S.rim}`,
+                fontFamily: S.fontMono, fontSize: 8, fontWeight: 600,
+                letterSpacing: "0.08em", color: S.tertiary,
+                textTransform: "uppercase" as const,
+              }}>
+                <span>Bucket</span>
+                <span style={{ textAlign: "right" }}>Exposure</span>
+                <span>Direction</span>
+                <span style={{ textAlign: "right" }}>Action</span>
+                <span style={{ textAlign: "right" }}>USD Equiv</span>
+                <span style={{ textAlign: "right" }}>Fwd Rate</span>
+                <span style={{ textAlign: "right" }}>Cost</span>
+                <span>Status</span>
+              </div>
+              {buckets.map((b) => {
+                const isSell = b.action_direction?.includes("SELL");
+                return (
+                  <div key={b.bucket} style={{
+                    display: "grid",
+                    gridTemplateColumns: "90px 110px 90px 110px 100px 80px 80px 70px",
+                    alignItems: "center", height: 30, padding: "0 6px",
+                    borderBottom: `1px solid ${S.soft}`, fontFamily: S.fontMono, fontSize: 10,
+                    opacity: b.suppressed ? 0.4 : 1,
+                  }}>
+                    <span style={{ color: S.primary, fontWeight: 600 }}>{b.bucket}</span>
+                    <span style={{ textAlign: "right", color: S.secondary }}>{fmtNum.format(b.commercial_exposure_mxn)}</span>
+                    <span>
+                      {b.action_direction ? (
+                        <span style={{
+                          display: "inline-block", padding: "1px 5px", borderRadius: 2,
+                          fontSize: 7, fontWeight: 700, letterSpacing: "0.06em",
+                          background: isSell ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)",
+                          color: isSell ? S.fail : S.pass,
+                          border: `1px solid ${isSell ? S.fail : S.pass}`,
+                        }}>
+                          {b.action_direction.replace(/_/g, " ")}
+                        </span>
+                      ) : "—"}
+                    </span>
+                    <span style={{ textAlign: "right", color: S.primary }}>{fmtNum.format(b.action_mxn)}</span>
+                    <span style={{ textAlign: "right", color: S.secondary }}>${fmtUsd.format(b.action_usd)}</span>
+                    <span style={{ textAlign: "right", color: S.tertiary }}>{fmtDec.format(b.forward_rate)}</span>
+                    <span style={{ textAlign: "right", color: b.friction_usd > 0 ? S.amber : S.tertiary }}>${fmtUsd.format(b.friction_usd)}</span>
+                    <span style={{ fontSize: 8, fontWeight: 600, color: b.suppressed ? S.amber : S.pass }}>
+                      {b.suppressed ? "SKIP" : "ACT"}
+                    </span>
+                  </div>
+                );
+              })}
+
+              {/* Summary row */}
+              {summary && (
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "90px 110px 90px 110px 100px 80px 80px 70px",
+                  alignItems: "center", height: 32, padding: "0 6px",
+                  background: S.bgSub, borderTop: `2px solid ${S.rim}`,
+                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                }}>
+                  <span style={{ fontSize: 8, letterSpacing: "0.08em", color: S.tertiary }}>TOTAL</span>
+                  <span style={{ textAlign: "right", color: S.primary }}>{fmtNum.format(summary.total_commercial_exposure_mxn)}</span>
+                  <span />
+                  <span style={{ textAlign: "right", color: S.primary }}>{fmtNum.format(summary.total_action_mxn)}</span>
+                  <span style={{ textAlign: "right", color: S.secondary }}>${fmtUsd.format(summary.total_action_usd)}</span>
+                  <span />
+                  <span style={{ textAlign: "right", color: S.amber }}>${fmtUsd.format(summary.total_friction_usd)}</span>
+                  <span />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Scenario results (compact) */}
+          {scenarios.length > 0 && (
+            <div style={{ padding: "10px 14px 0" }}>
+              <div style={{
+                fontFamily: S.fontMono, fontSize: 8, fontWeight: 600,
+                letterSpacing: "0.10em", color: S.tertiary, marginBottom: 4,
+                textTransform: "uppercase" as const,
+              }}>
+                Stress Scenarios
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {scenarios.map((sc) => (
+                  <span key={sc.sigma} style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    padding: "2px 6px", borderRadius: 3,
+                    background: S.bgDeep, border: `1px solid ${S.soft}`,
+                    fontFamily: S.fontMono, fontSize: 9,
+                  }}>
+                    <span style={{ color: sc.sigma < 0 ? S.fail : sc.sigma > 0 ? S.pass : S.primary, fontWeight: 600 }}>
+                      {sc.sigma > 0 ? "+" : ""}{sc.sigma}σ
+                    </span>
+                    <span style={{ color: S.tertiary }}>→</span>
+                    <span style={{ color: S.secondary }}>{fmtDec.format(sc.shocked_spot)}</span>
+                    <span style={{ color: S.tertiary }}>benefit:</span>
+                    <span style={{
+                      fontWeight: 600,
+                      color: sc.total_hedge_benefit_usd > 0 ? S.pass : sc.total_hedge_benefit_usd < 0 ? S.fail : S.tertiary,
+                    }}>
+                      ${fmtUsd.format(sc.total_hedge_benefit_usd)}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Fallback market data builder ─────────────────────────────────────── */
 function buildFallbackMarket(currency: string, valueDates: string[]): MarketSnapshot {
-  // Fallback spot rates (indicative)
   const FALLBACK_SPOTS: Record<string, number> = {
     MXN: 18.97, EUR: 0.9210, GBP: 0.7882, JPY: 149.80,
     CAD: 1.3950, AUD: 1.5290, CHF: 0.8830, BRL: 5.0800,
@@ -587,7 +712,6 @@ function buildFallbackMarket(currency: string, valueDates: string[]): MarketSnap
     HUF: 358.5, ZAR: 18.60, TRY: 30.50, RUB: 91.50,
   };
 
-  // Carry rate (bps/month) for forward point estimation
   const CARRY_BPS: Record<string, number> = {
     MXN: 48, EUR: -5, GBP: -2, JPY: -10,
     CAD: 2, AUD: 5, CHF: -8, BRL: 35,
@@ -596,36 +720,46 @@ function buildFallbackMarket(currency: string, valueDates: string[]): MarketSnap
 
   const spot = FALLBACK_SPOTS[currency] ?? 1.0;
   const carry = CARRY_BPS[currency] ?? 0;
-
-  // Generate forward points for all months covered by value dates + 3 months buffer
-  const fwdPoints: Record<string, number> = {};
   const now = new Date();
-  const allDates = [...valueDates, now.toISOString().slice(0, 10)];
+
+  // Generate forward points covering all value date months + buffer
+  const fwdPoints: Record<string, number> = {};
   const months = new Set<string>();
 
-  for (const d of allDates) {
+  for (const d of valueDates) {
     const dt = new Date(d);
-    // Add this month and surrounding months
     for (let m = -1; m <= 18; m++) {
       const target = new Date(dt);
       target.setMonth(target.getMonth() + m);
-      months.add(target.toISOString().slice(0, 7)); // YYYY-MM
+      months.add(target.toISOString().slice(0, 7));
     }
   }
 
-  // Also ensure we cover from now to the farthest value date
+  // Also add current month + 12 months ahead
+  for (let m = 0; m <= 12; m++) {
+    const target = new Date(now);
+    target.setMonth(target.getMonth() + m);
+    months.add(target.toISOString().slice(0, 7));
+  }
+
   const nowMonth = now.getFullYear() * 12 + now.getMonth();
   for (const bucket of Array.from(months).sort()) {
-    const [y, m] = bucket.split("-").map(Number);
-    const bucketMonth = y * 12 + (m - 1);
-    const monthsAhead = Math.max(0, bucketMonth - nowMonth);
+    const [y, mo] = bucket.split("-").map(Number);
+    const bucketMonth = y * 12 + (mo - 1);
+    const monthsAhead = Math.max(1, bucketMonth - nowMonth);
     fwdPoints[bucket] = Number((spot * (carry * monthsAhead) / 10000).toFixed(6));
   }
+
+  const isPrice = PRICE_CCY.has(currency);
 
   return {
     as_of: now.toISOString(),
     spot_usdmxn: spot,
     forward_points_by_month: fwdPoints,
-    provider_metadata: { source: "local_fallback", currency_pair: `USD/${currency}` },
+    provider_metadata: {
+      source: "local_fallback",
+      currency_pair: isPrice ? `${currency}/USD` : `USD/${currency}`,
+      primary_currency: currency,
+    },
   };
 }
