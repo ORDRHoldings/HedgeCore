@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" fill="none">
+  <!-- ORDR Knotwork / intertwined rings mark -->
+  <!-- Central knot structure based on the logo -->
+  <g transform="translate(100, 95)">
+    <!-- Outer left ring -->
+    <circle cx="-32" cy="0" r="34" stroke="#111111" strokeWidth="10" fill="none"/>
+    <!-- Outer right ring -->
+    <circle cx="32" cy="0" r="34" stroke="#111111" strokeWidth="10" fill="none"/>
+    <!-- Top arc -->
+    <circle cx="0" cy="-20" r="34" stroke="#111111" strokeWidth="10" fill="none"/>
+    <!-- Bottom arc -->
+    <circle cx="0" cy="20" r="34" stroke="#111111" strokeWidth="10" fill="none"/>
+    <!-- Arrow pointing top-right -->
+    <line x1="18" y1="-30" x2="46" y2="-52" stroke="#111111" strokeWidth="8" strokeLinecap="round"/>
+    <polyline points="28,-52 46,-52 46,-34" stroke="#111111" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  </g>
+  <!-- ORDR text -->
+  <text x="100" y="164" fontFamily="'Manrope','Arial Black',sans-serif" fontWeight="800" fontSize="28" letterSpacing="6" textAnchor="middle" fill="#111111">ORDR</text>
+  <!-- TERMINAL text in orange -->
+  <text x="100" y="194" fontFamily="'Manrope','Arial Black',sans-serif" fontWeight="800" fontSize="22" letterSpacing="5" textAnchor="middle" fill="#F58220">TERMINAL</text>
+</svg>
