@@ -34,6 +34,7 @@ from app.api.routes.v1_audit import router as v1_audit_router
 # Phase 1 ? Institutional governance
 from app.api.routes.v1_execution_proposals import router as v1_proposals_router
 from app.api.routes.v1_policy_revisions import router as v1_policy_revisions_router
+from app.api.routes.market import router as market_router
 
 router = APIRouter()
 
@@ -96,6 +97,9 @@ router.include_router(v1_positions_router)
 
 # V1 Policy DB (owns /v1/policies)
 router.include_router(v1_policies_router)
+
+# Market Data (owns /v1/market)
+router.include_router(market_router)
 
 # V1 Connector / Ingestion Desk (owns /v1/connectors)
 router.include_router(v1_connectors_router)
