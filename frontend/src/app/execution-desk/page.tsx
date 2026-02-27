@@ -392,6 +392,89 @@ export default function ExecutionDeskPage() {
     else setSelected(new Set(readyPositions.map((p) => p.id)));
   }, [allSelected, readyPositions]);
 
+  // Real-time risk analytics (updates as selection changes)
+  interface RealTimeRisk {
+    totalNotional: number;
+    positionCount: number;
+    currencyBreakdown: { currency: string; notional: number; percentage: number; count: number }[];
+    avgPositionSize: number;
+    maxPositionSize: number;
+    estimatedVaR95: number;  // Simplified VaR estimate (2% of notional as proxy)
+    tenorDistribution: { bucket: string; count: number; notional: number }[];
+  }
+  const [realTimeRisk, setRealTimeRisk] = useState<RealTimeRisk | null>(null);
+
+  // Calculate real-time risk whenever selection changes
+  useEffect(() => {
+    if (selected.size === 0) {
+      setRealTimeRisk(null);
+      return;
+    }
+
+    const selectedPositions = readyPositions.filter((p) => selected.has(p.id));
+    const totalNotional = selectedPositions.reduce((sum, p) => sum + Math.abs(p.amount), 0);
+
+    // Currency breakdown
+    const currencyMap = new Map<string, { notional: number; count: number }>();
+    selectedPositions.forEach((p) => {
+      const existing = currencyMap.get(p.currency) || { notional: 0, count: 0 };
+      currencyMap.set(p.currency, {
+        notional: existing.notional + Math.abs(p.amount),
+        count: existing.count + 1,
+      });
+    });
+    const currencyBreakdown = Array.from(currencyMap.entries())
+      .map(([currency, data]) => ({
+        currency,
+        notional: data.notional,
+        percentage: (data.notional / totalNotional) * 100,
+        count: data.count,
+      }))
+      .sort((a, b) => b.notional - a.notional);
+
+    // Tenor distribution (days to maturity buckets)
+    const today = new Date();
+    const tenorBuckets = new Map<string, { count: number; notional: number }>();
+    selectedPositions.forEach((p) => {
+      const valueDate = new Date(p.value_date);
+      const daysToMaturity = Math.ceil((valueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      let bucket = "0-30 days";
+      if (daysToMaturity > 180) bucket = "180+ days";
+      else if (daysToMaturity > 90) bucket = "90-180 days";
+      else if (daysToMaturity > 30) bucket = "30-90 days";
+
+      const existing = tenorBuckets.get(bucket) || { count: 0, notional: 0 };
+      tenorBuckets.set(bucket, {
+        count: existing.count + 1,
+        notional: existing.notional + Math.abs(p.amount),
+      });
+    });
+    const tenorDistribution = Array.from(tenorBuckets.entries())
+      .map(([bucket, data]) => ({ bucket, count: data.count, notional: data.notional }))
+      .sort((a, b) => {
+        const order = ["0-30 days", "30-90 days", "90-180 days", "180+ days"];
+        return order.indexOf(a.bucket) - order.indexOf(b.bucket);
+      });
+
+    // Position size stats
+    const positionSizes = selectedPositions.map((p) => Math.abs(p.amount));
+    const avgPositionSize = totalNotional / selectedPositions.length;
+    const maxPositionSize = Math.max(...positionSizes);
+
+    // Simplified VaR estimate: 2% of notional (rough proxy before Monte Carlo)
+    const estimatedVaR95 = totalNotional * 0.02;
+
+    setRealTimeRisk({
+      totalNotional,
+      positionCount: selectedPositions.length,
+      currencyBreakdown,
+      avgPositionSize,
+      maxPositionSize,
+      estimatedVaR95,
+      tenorDistribution,
+    });
+  }, [selected, readyPositions]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -2570,7 +2653,7 @@ export default function ExecutionDeskPage() {
                 </button>
               </div>
               <div style={{ padding: 16 }}>
-                {selected.size === 0 ? (
+                {!realTimeRisk ? (
                   <div style={{
                     fontFamily: S.fontMono,
                     fontSize: 10,
@@ -2599,14 +2682,14 @@ export default function ExecutionDeskPage() {
                         color: S.primary,
                         fontWeight: 700,
                       }}>
-                        {selected.size}
+                        {realTimeRisk.positionCount}
                       </div>
                       <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary }}>
-                        position{selected.size > 1 ? "s" : ""} selected
+                        position{realTimeRisk.positionCount > 1 ? "s" : ""} selected
                       </div>
                     </div>
 
-                    {/* Total Notional */}
+                    {/* Total Exposure */}
                     <div>
                       <div style={{
                         fontFamily: S.fontMono,
@@ -2615,7 +2698,7 @@ export default function ExecutionDeskPage() {
                         marginBottom: 8,
                         letterSpacing: "0.06em",
                       }}>
-                        TOTAL NOTIONAL
+                        TOTAL EXPOSURE
                       </div>
                       <div style={{
                         fontFamily: S.fontMono,
@@ -2623,15 +2706,42 @@ export default function ExecutionDeskPage() {
                         color: S.primary,
                         fontWeight: 700,
                       }}>
-                        ${fmtAmt(
-                          readyPositions
-                            .filter((p) => selected.has(p.id))
-                            .reduce((sum, p) => sum + Math.abs(p.amount), 0)
-                        )}
+                        ${fmtAmt(realTimeRisk.totalNotional)}
+                      </div>
+                      <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, marginTop: 4 }}>
+                        Aggregate notional value
                       </div>
                     </div>
 
-                    {/* Currency Breakdown */}
+                    {/* VaR Estimate (Real-time) */}
+                    <div style={{
+                      padding: 12,
+                      background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
+                      border: `1px solid ${S.fail}`,
+                    }}>
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 9,
+                        color: S.tertiary,
+                        marginBottom: 6,
+                        letterSpacing: "0.06em",
+                      }}>
+                        ESTIMATED VaR 95%
+                      </div>
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 16,
+                        color: S.fail,
+                        fontWeight: 700,
+                      }}>
+                        ${fmtAmt(realTimeRisk.estimatedVaR95)}
+                      </div>
+                      <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginTop: 4 }}>
+                        Simplified estimate • Run simulation for precise VaR
+                      </div>
+                    </div>
+
+                    {/* Position Size Stats */}
                     <div>
                       <div style={{
                         fontFamily: S.fontMono,
@@ -2640,104 +2750,239 @@ export default function ExecutionDeskPage() {
                         marginBottom: 8,
                         letterSpacing: "0.06em",
                       }}>
-                        CURRENCIES
+                        POSITION SIZING
                       </div>
-                      {(() => {
-                        const currMap = new Map<string, number>();
-                        readyPositions
-                          .filter((p) => selected.has(p.id))
-                          .forEach((p) => {
-                            const curr = currMap.get(p.currency) || 0;
-                            currMap.set(p.currency, curr + Math.abs(p.amount));
-                          });
-                        return Array.from(currMap.entries())
-                          .sort((a, b) => b[1] - a[1])
-                          .map(([curr, amt]) => (
-                            <div
-                              key={curr}
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                fontFamily: S.fontMono,
-                                fontSize: 10,
-                                marginBottom: 6,
-                              }}>
-                              <span style={{ color: S.primary, fontWeight: 700 }}>{curr}</span>
-                              <span style={{ color: S.secondary }}>${fmtAmt(amt)}</span>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary }}>Average:</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.primary, fontWeight: 700 }}>
+                          ${fmtAmt(realTimeRisk.avgPositionSize)}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary }}>Largest:</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.primary, fontWeight: 700 }}>
+                          ${fmtAmt(realTimeRisk.maxPositionSize)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Currency Concentration */}
+                    <div>
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 10,
+                        color: S.tertiary,
+                        marginBottom: 8,
+                        letterSpacing: "0.06em",
+                      }}>
+                        CURRENCY BREAKDOWN
+                      </div>
+                      {realTimeRisk.currencyBreakdown.slice(0, 5).map((c) => (
+                        <div
+                          key={c.currency}
+                          style={{
+                            marginBottom: 8,
+                          }}>
+                          <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            marginBottom: 4,
+                          }}>
+                            <span style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 10,
+                              color: S.primary,
+                              fontWeight: 700,
+                            }}>
+                              {c.currency}
+                            </span>
+                            <span style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 9,
+                              color: S.secondary,
+                            }}>
+                              {c.percentage.toFixed(1)}%
+                            </span>
+                          </div>
+                          <div style={{
+                            height: 4,
+                            background: S.bgSub,
+                            position: "relative" as const,
+                          }}>
+                            <div style={{
+                              position: "absolute",
+                              left: 0,
+                              top: 0,
+                              height: "100%",
+                              width: `${c.percentage}%`,
+                              background: S.cyan,
+                            }} />
+                          </div>
+                          <div style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 8,
+                            color: S.tertiary,
+                            marginTop: 2,
+                          }}>
+                            ${fmtAmt(c.notional)} • {c.count} position{c.count > 1 ? "s" : ""}
+                          </div>
+                        </div>
+                      ))}
+                      {realTimeRisk.currencyBreakdown.length > 5 && (
+                        <div style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 8,
+                          color: S.tertiary,
+                          marginTop: 4,
+                        }}>
+                          +{realTimeRisk.currencyBreakdown.length - 5} more currencies
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Tenor Distribution */}
+                    <div>
+                      <div style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 10,
+                        color: S.tertiary,
+                        marginBottom: 8,
+                        letterSpacing: "0.06em",
+                      }}>
+                        TENOR DISTRIBUTION
+                      </div>
+                      {realTimeRisk.tenorDistribution.map((t) => {
+                        const pct = (t.notional / realTimeRisk.totalNotional) * 100;
+                        return (
+                          <div
+                            key={t.bucket}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              marginBottom: 6,
+                            }}>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 9,
+                              color: S.secondary,
+                              width: 80,
+                              flexShrink: 0,
+                            }}>
+                              {t.bucket}
                             </div>
-                          ));
-                      })()}
+                            <div style={{
+                              flex: 1,
+                              height: 16,
+                              background: S.bgSub,
+                              position: "relative" as const,
+                            }}>
+                              <div style={{
+                                position: "absolute",
+                                left: 0,
+                                top: 0,
+                                height: "100%",
+                                width: `${pct}%`,
+                                background: S.amber,
+                              }} />
+                              <div style={{
+                                position: "absolute",
+                                right: 4,
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                fontFamily: S.fontMono,
+                                fontSize: 8,
+                                color: pct > 50 ? S.bgPanel : S.primary,
+                                fontWeight: 700,
+                              }}>
+                                {t.count}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {/* Portfolio Risk (if simulation run) */}
                     {portfolioRisk && (
                       <>
-                        <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 16 }}>
+                        <div style={{ borderTop: `2px solid ${S.cyan}`, paddingTop: 16 }}>
                           <div style={{
                             fontFamily: S.fontMono,
-                            fontSize: 10,
-                            color: S.tertiary,
-                            marginBottom: 8,
+                            fontSize: 9,
+                            color: S.cyan,
+                            marginBottom: 12,
                             letterSpacing: "0.06em",
                           }}>
-                            PORTFOLIO VaR 95%
+                            ⚡ MONTE CARLO RESULTS
                           </div>
-                          <div style={{
-                            fontFamily: S.fontMono,
-                            fontSize: 16,
-                            color: S.fail,
-                            fontWeight: 700,
-                          }}>
-                            ${fmtAmt(portfolioRisk.totalVar95)}
+                          <div style={{ marginBottom: 12 }}>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 10,
+                              color: S.tertiary,
+                              marginBottom: 6,
+                              letterSpacing: "0.06em",
+                            }}>
+                              VaR 95% (Simulated)
+                            </div>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 16,
+                              color: S.fail,
+                              fontWeight: 700,
+                            }}>
+                              ${fmtAmt(portfolioRisk.totalVar95)}
+                            </div>
+                            <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.secondary, marginTop: 4 }}>
+                              10,000 paths • 95% confidence
+                            </div>
                           </div>
-                          <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, marginTop: 4 }}>
-                            Max loss at 95% confidence
-                          </div>
-                        </div>
 
-                        <div>
-                          <div style={{
-                            fontFamily: S.fontMono,
-                            fontSize: 10,
-                            color: S.tertiary,
-                            marginBottom: 8,
-                            letterSpacing: "0.06em",
-                          }}>
-                            CONCENTRATION RISK
+                          <div style={{ marginBottom: 12 }}>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 10,
+                              color: S.tertiary,
+                              marginBottom: 6,
+                              letterSpacing: "0.06em",
+                            }}>
+                              CONCENTRATION RISK
+                            </div>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 14,
+                              color: portfolioRisk.concentrationRisk > 25 ? S.amber : S.pass,
+                              fontWeight: 700,
+                            }}>
+                              {portfolioRisk.concentrationRisk.toFixed(0)}
+                            </div>
+                            <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.secondary, marginTop: 4 }}>
+                              HHI • {portfolioRisk.concentrationRisk > 25 ? "Concentrated" : "Diversified"}
+                            </div>
                           </div>
-                          <div style={{
-                            fontFamily: S.fontMono,
-                            fontSize: 16,
-                            color: portfolioRisk.concentrationRisk > 25 ? S.amber : S.pass,
-                            fontWeight: 700,
-                          }}>
-                            {portfolioRisk.concentrationRisk.toFixed(0)}
-                          </div>
-                          <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, marginTop: 4 }}>
-                            Herfindahl-Hirschman Index
-                          </div>
-                        </div>
 
-                        <div>
-                          <div style={{
-                            fontFamily: S.fontMono,
-                            fontSize: 10,
-                            color: S.tertiary,
-                            marginBottom: 8,
-                            letterSpacing: "0.06em",
-                          }}>
-                            DIVERSIFICATION
-                          </div>
-                          <div style={{
-                            fontFamily: S.fontMono,
-                            fontSize: 16,
-                            color: S.pass,
-                            fontWeight: 700,
-                          }}>
-                            {portfolioRisk.diversificationBenefit.toFixed(1)}%
-                          </div>
-                          <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, marginTop: 4 }}>
-                            Risk reduction from portfolio effects
+                          <div>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 10,
+                              color: S.tertiary,
+                              marginBottom: 6,
+                              letterSpacing: "0.06em",
+                            }}>
+                              DIVERSIFICATION
+                            </div>
+                            <div style={{
+                              fontFamily: S.fontMono,
+                              fontSize: 14,
+                              color: S.pass,
+                              fontWeight: 700,
+                            }}>
+                              {portfolioRisk.diversificationBenefit.toFixed(1)}%
+                            </div>
+                            <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.secondary, marginTop: 4 }}>
+                              Portfolio risk reduction
+                            </div>
                           </div>
                         </div>
                       </>
