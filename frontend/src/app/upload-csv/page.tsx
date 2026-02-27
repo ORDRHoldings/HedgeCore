@@ -4,16 +4,26 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import {
-  importCsvAudited,
-  importExcelAudited,
-  getConnectorRunDetail,
-  type ConnectorRun,
-  type ConnectorRunDetail,
-} from "@/api/connectorClient";
+  importPositionsCsv,
+  type ImportResult,
+} from "@/api/positionClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { UPLOAD_CSV_HELP } from "@/lib/helpContent";
 
 type ImportStatus = "idle" | "uploading" | "parsing" | "validating" | "committing" | "complete" | "error";
+
+// Simple result wrapper to match UI expectations
+interface ImportResultWrapper {
+  id: string;
+  status: "COMPLETED" | "FAILED";
+  total_rows: number;
+  created_ok: number;
+  error_count: number;
+  started_at: string;
+  completed_at: string | null;
+  source_hash: string | null;
+  errors: { row_number: number | null; field_name: string | null; error_message: string }[];
+}
 
 export default function UploadCsvPage() {
   const router = useRouter();
@@ -23,7 +33,7 @@ export default function UploadCsvPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
-  const [runResult, setRunResult] = useState<ConnectorRunDetail | null>(null);
+  const [runResult, setRunResult] = useState<ImportResultWrapper | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [clockStr, setClockStr] = useState("");
@@ -77,11 +87,11 @@ export default function UploadCsvPage() {
 
   const validateAndSetFile = (file: File) => {
     const maxSize = 50 * 1024 * 1024; // 50 MB
-    const allowedExtensions = [".csv", ".xlsx", ".xls"];
+    const allowedExtensions = [".csv"]; // Only CSV supported currently
     const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
 
     if (!allowedExtensions.includes(fileExtension)) {
-      setErrorMessage("Invalid file type. Please upload .csv, .xlsx, or .xls files only.");
+      setErrorMessage("Invalid file type. Please upload CSV files only (.csv). XLSX support coming soon.");
       return;
     }
 
@@ -114,16 +124,19 @@ export default function UploadCsvPage() {
       setErrorMessage(null);
 
       const fileExtension = "." + selectedFile.name.split(".").pop()?.toLowerCase();
-      let result: ConnectorRun;
+
+      // Only support CSV for now (XLSX import via positions endpoint not implemented yet)
+      if (fileExtension !== ".csv") {
+        setErrorMessage("XLSX import coming soon. Please use CSV format for now.");
+        setImportStatus("error");
+        return;
+      }
 
       await new Promise((resolve) => setTimeout(resolve, 400));
       setImportStatus("parsing");
 
-      if (fileExtension === ".csv") {
-        result = await importCsvAudited(selectedFile, token);
-      } else {
-        result = await importExcelAudited(selectedFile, token);
-      }
+      const startTime = new Date().toISOString();
+      const result: ImportResult = await importPositionsCsv(selectedFile, token);
 
       await new Promise((resolve) => setTimeout(resolve, 300));
       setImportStatus("validating");
@@ -131,14 +144,28 @@ export default function UploadCsvPage() {
       await new Promise((resolve) => setTimeout(resolve, 300));
       setImportStatus("committing");
 
-      // Fetch detailed results
-      const detail = await getConnectorRunDetail(result.id, token);
+      // Transform ImportResult to match UI expectations
+      const wrapper: ImportResultWrapper = {
+        id: `import-${Date.now()}`,
+        status: result.errors.length === 0 ? "COMPLETED" : "COMPLETED",
+        total_rows: result.total_rows,
+        created_ok: result.created,
+        error_count: result.errors.length,
+        started_at: startTime,
+        completed_at: new Date().toISOString(),
+        source_hash: null,
+        errors: result.errors.map(err => ({
+          row_number: err.row,
+          field_name: null,
+          error_message: err.error,
+        })),
+      };
 
-      setRunResult(detail);
+      setRunResult(wrapper);
       setImportStatus("complete");
     } catch (error: any) {
       setImportStatus("error");
-      setErrorMessage(error.message || "Import failed. Please try again.");
+      setErrorMessage(error.response?.data?.detail || error.message || "Import failed. Please try again.");
     }
   };
 
@@ -162,7 +189,7 @@ export default function UploadCsvPage() {
         "150000.00",
         "2026-03-15",
         "Q1 Receivable from US Client",
-        "OPEN",
+        "CONFIRMED",
       ];
       const example2 = [
         "TXN-002",
@@ -172,7 +199,7 @@ export default function UploadCsvPage() {
         "85000.00",
         "2026-04-01",
         "Supplier payment EUR zone",
-        "OPEN",
+        "CONFIRMED",
       ];
 
       const csvContent = [headers.join(","), example1.join(","), example2.join(",")].join("\n");
@@ -411,7 +438,7 @@ export default function UploadCsvPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,.xlsx,.xls"
+                accept=".csv"
                 onChange={handleFileSelect}
                 style={{ display: "none" }}
               />
@@ -471,7 +498,7 @@ export default function UploadCsvPage() {
                       fontFamily: "'IBM Plex Mono', monospace",
                     }}
                   >
-                    Accepted: .csv · .xlsx · .xls — Maximum 50 MB
+                    Accepted: .csv only (XLSX coming soon) — Maximum 50 MB
                   </div>
                 </div>
               ) : (
@@ -606,7 +633,7 @@ export default function UploadCsvPage() {
                       ✓
                     </div>
                     <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-                      File format: CSV or XLSX
+                      File format: CSV
                     </div>
                   </div>
 
@@ -1249,9 +1276,9 @@ export default function UploadCsvPage() {
                       {
                         column: "status",
                         type: "ENUM",
-                        format: "OPEN | CLOSED",
+                        format: "CONFIRMED | FORECAST",
                         required: false,
-                        description: "Defaults to OPEN if omitted.",
+                        description: "Defaults to CONFIRMED if omitted.",
                       },
                     ].map((row, idx) => (
                       <tr
@@ -1449,29 +1476,22 @@ export default function UploadCsvPage() {
                   CSV TEMPLATE
                 </button>
                 <button
-                  onClick={() => handleDownloadTemplate("xlsx")}
+                  disabled
                   style={{
                     flex: 1,
                     background: "var(--bg-sub)",
-                    border: "1px solid var(--border-rim)",
-                    color: "var(--text-primary)",
+                    border: "1px solid var(--border-soft)",
+                    color: "var(--text-tertiary)",
                     padding: "12px 16px",
                     borderRadius: "4px",
-                    cursor: "pointer",
+                    cursor: "not-allowed",
                     fontSize: "11px",
                     fontFamily: "'IBM Plex Mono', monospace",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "8px",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "var(--accent-cyan)";
-                    e.currentTarget.style.color = "var(--accent-cyan)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "var(--border-rim)";
-                    e.currentTarget.style.color = "var(--text-primary)";
+                    opacity: 0.5,
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1479,7 +1499,7 @@ export default function UploadCsvPage() {
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" y1="15" x2="12" y2="3" />
                   </svg>
-                  XLSX TEMPLATE
+                  XLSX TEMPLATE (COMING SOON)
                 </button>
               </div>
             </div>
