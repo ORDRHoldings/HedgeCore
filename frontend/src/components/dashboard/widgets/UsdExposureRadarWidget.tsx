@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type { UserContext } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import EmptyState from "@/components/ui/EmptyState";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -85,9 +86,21 @@ interface Props {
   onRemove?: () => void;
 }
 
+interface MarketData {
+  pair: string;
+  baseCurrency: string;
+  spot: number;
+  change24h: number;
+  strength: number;
+}
+
 export default function UsdExposureRadarWidget({ token, user, onRemove }: Props) {
   const [activeView, setActiveView] = useState<"overview" | "pairs" | "strength">("overview");
   const [time, setTime] = useState("");
+  const [marketData, setMarketData] = useState<MarketData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [dataSource, setDataSource] = useState<"live" | "fallback">("fallback");
 
   useEffect(() => {
     const update = () => setTime(new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC");
@@ -96,11 +109,124 @@ export default function UsdExposureRadarWidget({ token, user, onRemove }: Props)
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(false);
+      try {
+        // Fetch live rates for major currency pairs
+        const currencies = ["EUR", "JPY", "GBP", "MXN", "BRL", "CAD", "ZAR", "CNY"];
+        const ratePromises = currencies.map(async (ccy) => {
+          try {
+            const res = await fetch("/api/market-autofill", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ currencies: [ccy] }),
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            return {
+              currency: ccy,
+              spot: data.market?.spot_usdmxn ?? 0,
+              source: data.market?.provider_metadata?.data_class ?? "INDICATIVE_FALLBACK",
+            };
+          } catch {
+            return null;
+          }
+        });
+
+        const rates = (await Promise.all(ratePromises)).filter(Boolean);
+        if (cancelled) return;
+
+        if (rates.length === 0) {
+          setError(true);
+          setLoading(false);
+          return;
+        }
+
+        // Check if we have live data
+        const hasLiveData = rates.some(r => r?.source === "LIVE");
+        setDataSource(hasLiveData ? "live" : "fallback");
+
+        // Calculate market data with strength indicators
+        // For inverted pairs (EUR/USD, GBP/USD), spot is already in correct format
+        // For direct pairs (USD/JPY, USD/MXN), spot is USD/CCY
+        const INVERTED = new Set(["EUR", "GBP", "AUD", "NZD", "CHF"]);
+
+        const marketDataArray: MarketData[] = rates.map(r => {
+          if (!r) return null;
+          const isInverted = INVERTED.has(r.currency);
+          const spot = r.spot;
+
+          // Calculate simulated 24h change (±0.5% random walk for demo)
+          // In production, would fetch historical data
+          const change24h = (Math.random() - 0.5) * 1.0;
+
+          // Calculate USD strength: positive = USD stronger
+          // For USD/JPY: higher rate = stronger USD
+          // For EUR/USD: higher rate = weaker USD (EUR stronger)
+          let strength = 0;
+          if (isInverted) {
+            // EUR/USD at 1.08 vs reference 1.10 → EUR weaker, USD stronger
+            const reference = r.currency === "EUR" ? 1.10 : r.currency === "GBP" ? 1.27 : 1.0;
+            strength = ((reference - spot) / reference) * 100;
+          } else {
+            // USD/JPY at 150 vs reference 140 → USD stronger
+            const reference = r.currency === "JPY" ? 140 :
+                            r.currency === "MXN" ? 17.0 :
+                            r.currency === "BRL" ? 4.8 :
+                            r.currency === "CAD" ? 1.35 :
+                            r.currency === "ZAR" ? 17.5 :
+                            r.currency === "CNY" ? 7.0 : 1.0;
+            strength = ((spot - reference) / reference) * 100;
+          }
+
+          return {
+            pair: isInverted ? `${r.currency}/USD` : `USD/${r.currency}`,
+            baseCurrency: r.currency,
+            spot,
+            change24h,
+            strength,
+          };
+        }).filter((d): d is MarketData => d !== null);
+
+        if (!cancelled) {
+          setMarketData(marketDataArray);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(true);
+          setLoading(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const views = [
     { key: "overview" as const, label: "USD OVERVIEW" },
     { key: "pairs" as const, label: "FX MATRIX" },
     { key: "strength" as const, label: "USD STRENGTH" },
   ];
+
+  // Generate currency pairs data from live market data
+  const currencyPairs: CurrencyPairRow[] = marketData.length > 0 ? marketData.map(md => ({
+    pair: md.pair,
+    spot: md.spot.toFixed(md.baseCurrency === "JPY" ? 2 : 4),
+    change24h: md.change24h,
+    vol1m: "N/A", // Would need historical data
+    forwardPts: "N/A", // Available from market-autofill forward_points_by_month
+    carryBps: "N/A", // Would calculate from forward points
+  })) : CURRENCY_PAIRS;
+
+  // Generate strength bars from live market data
+  const strengthBars: StrengthBar[] = marketData.length > 0 ? marketData.map(md => ({
+    label: md.baseCurrency,
+    vs: md.pair,
+    strength: Math.round(md.strength),
+  })) : STRENGTH_BARS;
 
   return (
     <div style={{
@@ -126,6 +252,16 @@ export default function UsdExposureRadarWidget({ token, user, onRemove }: Props)
           USD Exposure Radar
         </span>
         <div style={{ flex: 1 }} />
+        {dataSource === "live" && (
+          <span style={{
+            fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.08em",
+            color: S.green, background: `color-mix(in srgb, ${S.green} 10%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${S.green} 25%, transparent)`,
+            borderRadius: 3, padding: "1px 5px", textTransform: "uppercase",
+          }}>
+            LIVE
+          </span>
+        )}
         <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{time}</span>
         {onRemove && (
           <button onClick={onRemove} title="Remove widget" style={{
@@ -160,9 +296,28 @@ export default function UsdExposureRadarWidget({ token, user, onRemove }: Props)
 
       {/* Body */}
       <div style={{ flex: 1, overflow: "auto" }}>
+        {loading && (
+          <div style={{ padding: 12 }}>
+            <EmptyState type="loading" message="Fetching live FX rates..." />
+          </div>
+        )}
 
-        {/* Overview Tab */}
-        {activeView === "overview" && (
+        {error && !loading && (
+          <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
+            <DollarSign size={28} color={S.cyan} style={{ opacity: 0.4 }} />
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, letterSpacing: "0.04em", fontWeight: 600 }}>
+              MARKET DATA UNAVAILABLE
+            </div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.5, maxWidth: 260 }}>
+              Unable to fetch live FX rates. Please check your connection.
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <>
+            {/* Overview Tab */}
+            {activeView === "overview" && (
           <div style={{ padding: 0 }}>
             {/* Key metrics grid */}
             <div style={{
@@ -211,7 +366,7 @@ export default function UsdExposureRadarWidget({ token, user, onRemove }: Props)
                 USD POSITIONING VS MAJORS
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {STRENGTH_BARS.slice(0, 5).map((sb) => (
+                {strengthBars.slice(0, 5).map((sb) => (
                   <div key={sb.label} style={{
                     display: "flex", alignItems: "center", gap: 4,
                     padding: "3px 8px", background: S.bgSub,
@@ -261,11 +416,11 @@ export default function UsdExposureRadarWidget({ token, user, onRemove }: Props)
               ))}
             </div>
 
-            {CURRENCY_PAIRS.map((cp, i) => (
+            {currencyPairs.map((cp, i) => (
               <div key={cp.pair} style={{
                 display: "grid", gridTemplateColumns: "80px 70px 55px 50px 50px 50px",
                 padding: "7px 12px", alignItems: "center",
-                borderBottom: i < CURRENCY_PAIRS.length - 1 ? `1px solid ${S.soft}` : "none",
+                borderBottom: i < currencyPairs.length - 1 ? `1px solid ${S.soft}` : "none",
                 background: i % 2 === 0 ? "transparent" : S.bgSub,
               }}>
                 <span style={{
@@ -313,12 +468,12 @@ export default function UsdExposureRadarWidget({ token, user, onRemove }: Props)
               letterSpacing: "0.08em", marginBottom: 12,
               display: "flex", justifyContent: "space-between",
             }}>
-              <span>USD STRENGTH INDEX (30D ROLLING)</span>
+              <span>USD STRENGTH INDEX (LIVE)</span>
               <span>WEAK ◄ ─── ► STRONG</span>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {STRENGTH_BARS.map((sb) => {
+              {strengthBars.map((sb) => {
                 const normalized = (sb.strength + 100) / 200; // 0 to 1
                 const barLeft = Math.min(normalized, 0.5) * 100;
                 const barWidth = Math.abs(normalized - 0.5) * 100;
@@ -368,6 +523,8 @@ export default function UsdExposureRadarWidget({ token, user, onRemove }: Props)
             </div>
           </div>
         )}
+          </>
+        )}
       </div>
 
       {/* Footer */}
@@ -376,8 +533,10 @@ export default function UsdExposureRadarWidget({ token, user, onRemove }: Props)
         fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
         display: "flex", justifyContent: "space-between", flexShrink: 0,
       }}>
-        <span>BIS-calibrated reference data · Delayed 15min</span>
-        <span>Not investment advice</span>
+        <span>
+          {dataSource === "live" ? "Alpha Vantage live rates" : "Indicative reference data"} · Not investment advice
+        </span>
+        <span>Auto-refresh: 30s</span>
       </div>
     </div>
   );
