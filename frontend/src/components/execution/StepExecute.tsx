@@ -68,21 +68,25 @@ export default function StepExecute({
 
   /* ── Compute tickets on mount ──────────────────────────────────────── */
   const tickets: FuturesTicket[] = useMemo(() => {
-    // Extract forward rates from calcResult if available
-    let forwardRates: Record<string, number> | undefined;
+    // Extract forward rates from calcResult — map by currency code
+    // Merged buckets have keys like "EUR 2026-06", extract currency and use last rate per ccy
+    const forwardRates: Record<string, number> = {};
     if (calcResult) {
       const plan = calcResult.hedge_plan as { buckets?: Array<{ bucket: string; forward_rate: number }> } | undefined;
       if (plan?.buckets) {
-        forwardRates = {};
         for (const b of plan.buckets) {
-          if (b.forward_rate) {
-            // Map by currency from bucket name if possible
-            forwardRates[b.bucket] = b.forward_rate;
+          if (b.forward_rate && b.forward_rate !== 0) {
+            // Bucket format: "EUR 2026-06" or "2026-06"
+            const parts = b.bucket.split(" ");
+            const ccy = parts.length > 1 ? parts[0] : null;
+            if (ccy) {
+              forwardRates[ccy] = b.forward_rate;
+            }
           }
         }
       }
     }
-    return computeAllTickets(positions, forwardRates);
+    return computeAllTickets(positions, Object.keys(forwardRates).length > 0 ? forwardRates : undefined);
   }, [positions, calcResult]);
 
   /* ── Summary metrics ───────────────────────────────────────────────── */
@@ -175,9 +179,11 @@ export default function StepExecute({
         setExecProgress(i + 1);
 
         try {
+          // Use first run_id if multiple (per-currency calculations produce multiple)
+          const effectiveRunId = runId.includes(";") ? runId.split(";")[0] : runId;
           const result = await markReadyToExecute(
             pos.id,
-            runId,
+            effectiveRunId,
             ticket ? ticket.totalCovered : Math.abs(pos.amount),
             ticket ? ticket.estimatedRate : undefined,
             token,
