@@ -12,6 +12,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 
@@ -526,9 +527,19 @@ export default function AppTopBar() {
         {/* Brand mark */}
         <Link
           href="/dashboard"
-          style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none", flexShrink: 0 }}
+          style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}
         >
-          <span style={{ color: S.cyan, fontSize: 16, lineHeight: 1 }}>⬡</span>
+          {/* ORDR knotwork mark */}
+          <div style={{ width: 24, height: 24, position: "relative", flexShrink: 0, filter: "brightness(0) invert(1)" }}>
+            <Image
+              src="/ordr-mark.png"
+              alt="ORDR"
+              fill
+              sizes="24px"
+              style={{ objectFit: "contain" }}
+              priority
+            />
+          </div>
           <span style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, letterSpacing: "0.12em", color: S.primary, textTransform: "uppercase" }}>
             ORDR
           </span>
