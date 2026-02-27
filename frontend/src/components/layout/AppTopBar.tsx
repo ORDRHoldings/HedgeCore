@@ -222,7 +222,7 @@ const NAV: NavSection[] = [
     items: [
       { label: "Position Desk",        desc: "Lifecycle control tower — status, policy, execute, reject", href: "/position-desk",          icon: Ic.table,     badge: "DESK",  badgeColor: S.cyan  },
       { label: "Ingestion Desk",       desc: "Manual entry, CSV/XLSX import, connector hub",              href: "/input",                  icon: Ic.pen },
-      { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit",            href: "/input?tab=upload",       icon: Ic.upload,    badge: "BULK",  badgeColor: S.amber },
+      { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit",            href: "/upload-csv",             icon: Ic.upload,    badge: "BULK",  badgeColor: S.amber },
       { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",                        href: "/database-connection",    icon: Ic.db,        badge: "SQL",   badgeColor: S.cyan  },
       { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",             href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",   badgeColor: S.amber },
       { label: "Accounting Systems",   desc: "QuickBooks, Xero, Sage invoice import",                     href: "/accounting-connection",  icon: Ic.reports },
