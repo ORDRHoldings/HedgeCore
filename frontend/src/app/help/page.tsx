@@ -45,6 +45,69 @@ interface HealthStatus {
   service: string;
 }
 
+const FAQ_ITEMS = [
+  {
+    q: "What is the Tri-State Pipeline?",
+    a: "ORDR uses a SANDBOX → STAGING → LEDGER workflow. Sandbox is the mutable simulation environment (no DB writes). Staging is the 4-eyes approval queue. Ledger is the WORM-sealed permanent record of approved hedge plans.",
+  },
+  {
+    q: "Why does my hedge calculation show INDICATIVE data?",
+    a: "INDICATIVE means the FX module is using fallback/cached rates instead of live Alpha Vantage data. Set your ALPHA_VANTAGE_API_KEY in Settings → API & Keys. Free tier is limited to 25 calls/day; upgrade for production use.",
+  },
+  {
+    q: "What is the 4-Eyes Principle?",
+    a: "All execution proposals require two separate authorisations. The analyst who submits a proposal cannot also approve it (proposer_id ≠ approver_id, enforced at database level). This satisfies EMIR dual-authorisation requirements for material OTC derivative trades.",
+  },
+  {
+    q: "What does WORM mean?",
+    a: "Write Once, Read Many. Once an audit event or ledger entry is created, it can never be modified or deleted. This is enforced by database triggers. All records are hash-chained with SHA-256 for cryptographic tamper-evidence.",
+  },
+  {
+    q: "What is an NDF?",
+    a: "A Non-Deliverable Forward is a cash-settled FX forward contract. Used for currencies with exchange controls (MXN, BRL, INR, KRW, CNH). At maturity, only the net gain/loss is paid in USD — no physical delivery of the restricted currency. Standard instrument for EM FX hedging.",
+  },
+  {
+    q: "How is hedge effectiveness calculated?",
+    a: "ORDR uses the R² regression method per IFRS 9 §B6.4.17: the coefficient of determination from regressing hedging instrument fair value changes against hedged item changes. R² ≥ 0.80 indicates high effectiveness. The 80–125% dollar-offset bright-line from IAS 39 no longer applies under IFRS 9.",
+  },
+  {
+    q: "What is the difference between CONFIRMED and FORECAST positions?",
+    a: "CONFIRMED positions are contractually obligated cash flows (signed invoices, confirmed orders). FORECAST positions are projected but not yet contracted. Policy hedge ratios differ: typically 80% for confirmed, 50% for forecast, reflecting the higher probability of confirmed flows.",
+  },
+  {
+    q: "How do I reset the dashboard layout?",
+    a: "Click the gear icon in the dashboard toolbar and select 'Reset to Default Layout'. This clears your saved layout from localStorage and restores the role-based default for your user role. Your widget settings and data are not affected.",
+  },
+  {
+    q: "What is the hash chain and why does it matter?",
+    a: "Each audit event contains a SHA-256 hash of its own content plus the hash of the previous event, forming a chain. If any historical event is modified, its hash changes, breaking all subsequent chain links. The Audit Trail's 'Verify Chain Integrity' button replays and validates the full chain.",
+  },
+  {
+    q: "What hedge instruments does ORDR support?",
+    a: "ORDR v1 supports: NDF (Non-Deliverable Forward), FX Forward (physical delivery), and FX Futures Proxy (CME-listed contracts). Options and structured products are not supported in v1 per architecture freeze — they would introduce non-zero vega/gamma risk (R2/R3).",
+  },
+  {
+    q: "What is the R1–R8 taxonomy?",
+    a: "ORDR decomposes portfolio risk into 8 dimensions: R1 Delta, R2 Vega, R3 Gamma, R4 Theta/Carry, R5 Correlation, R6 Credit/CVA, R7 Liquidity, R8 Tail/Event. For v1 (NDF/Forward-only book): R2 and R3 are zero (no optionality). R1 and R8 typically dominate.",
+  },
+  {
+    q: "Can I use ORDR with my ERP system?",
+    a: "Yes. ORDR supports: CSV/Excel upload (manual mapping), SQL database connector (scheduled pull), and ERP connectors for SAP, Oracle, and NetSuite. Navigate to Position Desk → Import tab and select your ingestion channel. See the Data Ingestion guide for field mapping details.",
+  },
+  {
+    q: "What are the minimum permissions required to approve a proposal?",
+    a: "Proposal approval requires: (1) is_superuser=true OR role with 'approve_proposals' permission, (2) user must NOT be the original proposer (4-eyes), (3) user must be in the same company_id. Branch-level approval requires matching branch_id. Contact your admin to adjust your role.",
+  },
+  {
+    q: "How do I interpret the hedge efficiency percentage?",
+    a: "Hedge efficiency = actual hedge P&L offset / theoretical maximum offset × 100%. 100% = perfect hedge. Values below 80% indicate basis risk (imperfect correlation between hedge and hedged item), ratio shortfalls, or timing mismatches between hedge and exposure settlement dates.",
+  },
+  {
+    q: "What is covered interest parity (CIP)?",
+    a: "CIP states that the forward rate equals the spot rate adjusted for the interest rate differential: F = S × (1+r_domestic)/(1+r_foreign). If this relationship breaks down, arbitrage exists. In practice, CIP deviations widen during stress periods as balance sheet capacity for FX swap dealers is constrained (BIS 2016, 2019 research).",
+  },
+];
+
 const GUIDE_SECTIONS = [
   {
     title: "Getting Started",
@@ -223,6 +286,12 @@ const GUIDE_SECTIONS = [
       "GET /api/health — Check API health status",
     ],
   },
+  {
+    title: "FAQ — Frequently Asked Questions",
+    path: "/help",
+    description: "Answers to the most common questions about ORDR Terminal: the Tri-State Pipeline, hedge instruments, IFRS 9 effectiveness, 4-eyes approval, WORM audit trail, position lifecycle, and regulatory compliance. Click any question below to see the full answer.",
+    steps: FAQ_ITEMS.map(item => `Q: ${item.q}  →  ${item.a}`),
+  },
 ];
 
 const KB_LINKS = [
@@ -233,6 +302,34 @@ const KB_LINKS = [
   { label: "Delta-hedge ratio methodology", id: "delta-hedge" },
   { label: "Waterfall rule engine", id: "waterfall" },
 ];
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ border: `1px solid ${S.soft}`, background: S.bgPanel }}>
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        style={{
+          width: "100%", textAlign: "left" as const, padding: "10px 14px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          background: "transparent", border: "none", cursor: "pointer",
+          fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600,
+          color: open ? S.cyan : S.primary, lineHeight: 1.4,
+        }}
+      >
+        <span>{q}</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, flexShrink: 0, marginLeft: 8 }}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+      {open && (
+        <div style={{ padding: "0 14px 12px", fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, lineHeight: 1.6 }}>
+          {a}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function HelpPage() {
   const renderTs = useRenderTs();
@@ -413,6 +510,19 @@ export default function HelpPage() {
                   </ol>
                 </div>
 
+                {/* FAQ section — special rendering for FAQ guide */}
+                {activeSection === GUIDE_SECTIONS.length - 1 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 12 }}>
+                      Frequently Asked Questions
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                      {FAQ_ITEMS.map((item, idx) => (
+                        <FaqItem key={idx} q={item.q} a={item.a} />
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {/* Scenario Stress Tester callout for Simulation section */}
                 {activeSection === 1 && (
                   <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "14px 18px", borderRadius: 2 }}>
