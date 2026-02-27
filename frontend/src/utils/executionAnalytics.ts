@@ -501,6 +501,7 @@ export interface HedgePlan {
  * Simple hedge plan optimizer (constraint-based)
  * Real implementation would use linear programming
  */
+/** @deprecated Use calculate() API + contractSizing.ts instead */
 export function optimizeHedgePlan(
   position: PositionRow,
   hedgeRatioMin: number = 75,
@@ -527,5 +528,64 @@ export function optimizeHedgePlan(
     reasoning: useNDF
       ? `NDF recommended for ${position.currency} (non-deliverable currency)`
       : `FWD recommended for ${position.currency} (deliverable currency)`,
+  };
+}
+
+// ============================================================================
+// CONTRACT-BASED IBKR PAYLOAD (uses FuturesTicket from contractSizing)
+// ============================================================================
+
+import type { FuturesTicket } from "@/lib/execution/contractSizing";
+
+export interface IBKRTicketPayload {
+  orders: IBKROrder[];
+  metadata: {
+    generatedAt: string;
+    generatedBy: string;
+    totalOrders: number;
+    totalContracts: number;
+    runId: string;
+  };
+}
+
+/**
+ * Generate IBKR payload from FuturesTicket[] (contract-based quantities).
+ * Unlike generateIBKRPayload() which uses raw notional, this uses actual
+ * CME contract counts for futures-eligible currencies.
+ */
+export function generateIBKRPayloadFromTickets(
+  tickets: FuturesTicket[],
+  runId: string = "",
+  account: string = "DU1234567",
+  userName: string = "unknown",
+): IBKRTicketPayload {
+  const orders: IBKROrder[] = tickets
+    .filter((t) => t.instrumentType === "FUTURES" && t.contracts > 0)
+    .map((t) => ({
+      msgType: "D" as const,
+      clOrdID: `ORDR_${t.recordId}_${Date.now()}`,
+      symbol: t.symbol,                           // "6E" not "EUR.USD"
+      side: (t.side === "SELL" ? "2" : "1") as "1" | "2",
+      orderQty: t.contracts,                      // CONTRACT count
+      ordType: "2" as const,
+      price: t.estimatedRate,
+      timeInForce: "1" as const,
+      account,
+      currency: "USD",
+      transactTime: new Date().toISOString(),
+      text: `ORDR Terminal: ${t.side} ${t.contracts}×${t.symbol} ${t.currency} hedge, settle ${t.settlementMonth}`,
+    }));
+
+  const totalContracts = orders.reduce((sum, o) => sum + o.orderQty, 0);
+
+  return {
+    orders,
+    metadata: {
+      generatedAt: new Date().toISOString(),
+      generatedBy: userName,
+      totalOrders: orders.length,
+      totalContracts,
+      runId,
+    },
   };
 }

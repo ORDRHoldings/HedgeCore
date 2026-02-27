@@ -69,7 +69,7 @@ EXECUTION_TRANSITIONS: dict[str, set[str]] = {
 
     "NEW":               {"POLICY_ASSIGNED", "REJECTED"},
 
-    "POLICY_ASSIGNED":   {"READY_TO_EXECUTE", "REJECTED", "NEW"},  # allow re-assign
+    "POLICY_ASSIGNED":   {"READY_TO_EXECUTE", "REJECTED", "NEW", "POLICY_ASSIGNED"},  # allow re-assign
 
     "READY_TO_EXECUTE":  {"HEDGED", "REJECTED", "POLICY_ASSIGNED"},
 

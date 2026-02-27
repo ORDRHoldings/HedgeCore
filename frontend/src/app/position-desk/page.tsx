@@ -574,9 +574,9 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
                   <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
                 </>)}
                 {st === "POLICY_ASSIGNED" && (<>
-                  <ActionBtn label="MARK READY" color={S.amber} onClick={() => openModal("mark-ready", p)} loading={isLoading} />
                   <ActionBtn label="RE-ASSIGN" color={S.secondary} onClick={() => openModal("assign-policy", p)} loading={isLoading} />
                   <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
+                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.04em" }}>→ Execute on Execution Desk</span>
                 </>)}
                 {st === "READY_TO_EXECUTE" && (<>
                   <ActionBtn label="PROPOSE" color={S.pass} onClick={() => openModal("proposal-info", p)} loading={isLoading} />
@@ -588,24 +588,20 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
                     <ActionBtn label="REOPEN" color={S.secondary} onClick={() => handleReopen(p)} loading={isLoading} />
                   </Tooltip>
                 )}
-                {/* Sprint 1.4: Lineage link — always visible */}
+                {/* Audit trail link */}
                 <Link
                   href={`/lineage?position=${encodeURIComponent(p.id)}`}
+                  title="View audit trail"
                   style={{
                     fontFamily:    S.fontMono,
-                    fontSize:      8,
-                    fontWeight:    700,
-                    letterSpacing: "0.06em",
-                    color:         S.indigo,
-                    background:    `color-mix(in srgb, #818cf8 8%, transparent)`,
-                    border:        `1px solid color-mix(in srgb, #818cf8 20%, transparent)`,
-                    padding:       "1px 5px",
-                    borderRadius:  2,
+                    fontSize:      9,
+                    color:         S.tertiary,
                     textDecoration:"none",
-                    whiteSpace:    "nowrap" as const,
+                    padding:       "1px 3px",
+                    opacity:       0.6,
                   }}
                 >
-                  LINEAGE
+                  ⟁
                 </Link>
               </div>
             </div>
@@ -780,17 +776,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
         </ModalOverlay>
       )}
 
-      {modal.type === "mark-ready" && pos && (
-        <ModalOverlay onClose={closeModal}>
-          <ModalHeader title="Mark Ready to Execute" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
-          <ModalInput label="Calculation Run ID *" value={runId} onChange={setRunId} placeholder="run_id from POST /v1/calculate" />
-          <ModalInput label="Hedge Amount (optional)" value={hedgeAmount} onChange={setHedgeAmount} placeholder="Notional USD to hedge" type="number" />
-          <ModalInput label="Hedge Rate (optional)" value={hedgeRate} onChange={setHedgeRate} placeholder="Locked forward rate" type="number" />
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>Transition: POLICY_ASSIGNED → READY_TO_EXECUTE</div>
-          {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
-          <ModalActions onCancel={closeModal} onConfirm={handleMarkReady} confirmLabel="MARK READY" confirmColor={S.amber} disabled={!runId.trim() || isTransitioning} />
-        </ModalOverlay>
-      )}
+      {/* Mark Ready modal removed — handled automatically by Execution Desk pipeline */}
       {modal.type === "proposal-info" && pos && (
         <ModalOverlay onClose={closeModal}>
           <ModalHeader title="4-Eyes Execution Proposal" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
