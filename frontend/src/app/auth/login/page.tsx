@@ -299,8 +299,8 @@ export default function LoginPage() {
               height: 140,
               position: "relative",
               marginBottom: 20,
-              // Subtle orange glow halo behind logo
-              filter: "drop-shadow(0 0 28px rgba(245,130,32,0.20)) drop-shadow(0 0 8px rgba(245,130,32,0.12))",
+              // Orange glow halo — now that logo is white/transparent this pops beautifully
+              filter: "drop-shadow(0 0 32px rgba(245,130,32,0.35)) drop-shadow(0 0 12px rgba(245,130,32,0.20))",
             }}
           >
             <Image
