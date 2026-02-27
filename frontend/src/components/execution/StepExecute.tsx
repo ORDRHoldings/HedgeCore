@@ -104,11 +104,21 @@ export default function StepExecute({
     if (calcResult) {
       const plan = calcResult.hedge_plan as { buckets?: Array<{ bucket: string; forward_rate: number }> } | undefined;
       if (plan?.buckets) {
+        // Detect if buckets are prefixed with currency (multi-ccy) or plain (single-ccy)
+        const hasCcyPrefix = plan.buckets.some((b) => b.bucket.includes(" "));
+        // For single-currency runs, infer currency from positions
+        const singleCcy = !hasCcyPrefix && positions.length > 0 ? positions[0].currency : null;
+
         for (const b of plan.buckets) {
           if (b.forward_rate && b.forward_rate !== 0) {
-            const parts = b.bucket.split(" ");
-            const ccy = parts.length > 1 ? parts[0] : null;
-            if (ccy) forwardRates[ccy] = b.forward_rate;
+            if (hasCcyPrefix) {
+              // Multi-currency: bucket = "EUR 2026-06"
+              const ccy = b.bucket.split(" ")[0];
+              if (ccy) forwardRates[ccy] = b.forward_rate;
+            } else if (singleCcy) {
+              // Single-currency: bucket = "2026-06", use inferred currency
+              forwardRates[singleCcy] = b.forward_rate;
+            }
           }
         }
       }
