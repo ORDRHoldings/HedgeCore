@@ -2,11 +2,14 @@
 from __future__ import annotations
 
 import time
-from typing import Callable, Dict, Optional, Tuple
+import logging
+from typing import Callable, Dict, Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
+
+logger = logging.getLogger(__name__)
 
 
 class TokenBucket:
@@ -16,7 +19,7 @@ class TokenBucket:
     NOTE:
       - This is intentionally simple and deterministic.
       - Suitable for MVP / single-node deployments.
-      - For multi-node, replace storage with Redis using same semantics.
+      - For multi-node, use RateLimitMiddleware with REDIS_URL configured.
     """
 
     __slots__ = ("capacity", "tokens", "refill_rate_per_sec", "last_refill")
@@ -48,9 +51,74 @@ class TokenBucket:
         }
 
 
+class _RedisTokenBucket:
+    """
+    Redis-backed token bucket for multi-node deployments.
+    Uses a Lua script for atomic check-and-consume.
+    Falls back to allowing the request on Redis errors (fail-open for availability).
+    """
+
+    _LUA_CONSUME = """
+    local key = KEYS[1]
+    local capacity = tonumber(ARGV[1])
+    local refill_rate = tonumber(ARGV[2])
+    local now = tonumber(ARGV[3])
+    local amount = tonumber(ARGV[4])
+
+    local data = redis.call('HMGET', key, 'tokens', 'last_refill')
+    local tokens = tonumber(data[1]) or capacity
+    local last_refill = tonumber(data[2]) or now
+
+    local elapsed = now - last_refill
+    if elapsed > 0 then
+        tokens = math.min(capacity, tokens + elapsed * refill_rate)
+    end
+
+    local allowed = 0
+    if tokens >= amount then
+        tokens = tokens - amount
+        allowed = 1
+    end
+
+    redis.call('HMSET', key, 'tokens', tokens, 'last_refill', now)
+    redis.call('EXPIRE', key, 120)
+    return {allowed, math.floor(tokens)}
+    """
+
+    def __init__(self, redis_client, capacity: float, refill_rate: float) -> None:
+        self._redis = redis_client
+        self._capacity = capacity
+        self._refill_rate = refill_rate
+        try:
+            self._script = redis_client.register_script(self._LUA_CONSUME)
+        except Exception:
+            self._script = None
+
+    def consume(self, key: str, amount: float = 1.0):
+        """Returns (allowed: bool, remaining: int). Fail-open on Redis errors."""
+        if self._script is None:
+            return True, int(self._capacity)
+        try:
+            now = time.time()
+            result = self._script(
+                keys=[key],
+                args=[self._capacity, self._refill_rate, now, amount],
+            )
+            allowed = bool(result[0])
+            remaining = int(result[1])
+            return allowed, remaining
+        except Exception as exc:
+            logger.warning("Redis rate-limit error (fail-open): %s", exc)
+            return True, int(self._capacity)
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Institutional-grade API rate limiting (Token Bucket).
+
+    Supports two backends:
+      - In-memory (default): single-process, suitable for single-node/Render free tier
+      - Redis: multi-node safe, configured via redis_url parameter
 
     Characteristics:
       - Deterministic
@@ -58,7 +126,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
       - Explicit rejection (429)
       - Audit-visible headers
       - No background tasks
-      - No I/O
 
     Default Policy:
       - 60 requests / minute per key
@@ -78,6 +145,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         header_api_key: str = "X-API-Key",
         header_request_id: str = "X-Request-Id",
         include_headers: bool = True,
+        redis_url: Optional[str] = None,
     ) -> None:
         super().__init__(app)
         self.capacity = float(burst_capacity or requests_per_minute)
@@ -86,7 +154,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.header_request_id = header_request_id
         self.include_headers = bool(include_headers)
 
-        # In-memory buckets: key -> TokenBucket
+        # Attempt to connect to Redis if URL provided
+        self._redis_bucket: Optional[_RedisTokenBucket] = None
+        if redis_url:
+            try:
+                import redis as _redis
+                client = _redis.from_url(redis_url, socket_connect_timeout=2, socket_timeout=2)
+                client.ping()
+                self._redis_bucket = _RedisTokenBucket(client, self.capacity, self.refill_rate)
+                logger.info("RateLimitMiddleware: using Redis backend (%s)", redis_url.split("@")[-1])
+            except Exception as exc:
+                logger.warning(
+                    "RateLimitMiddleware: Redis unavailable (%s), falling back to in-memory", exc
+                )
+
+        # In-memory fallback buckets
         self._buckets: Dict[str, TokenBucket] = {}
 
     def _resolve_key(self, request: Request) -> str:
@@ -107,24 +189,25 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         key = self._resolve_key(request)
 
-        bucket = self._buckets.get(key)
-        if bucket is None:
-            bucket = TokenBucket(self.capacity, self.refill_rate)
-            self._buckets[key] = bucket
-
-        allowed = bucket.consume(1.0)
+        if self._redis_bucket is not None:
+            allowed, remaining_tokens = self._redis_bucket.consume(key)
+            snap = {"capacity": self.capacity, "tokens": float(remaining_tokens), "refill_rate_per_sec": self.refill_rate}
+        else:
+            bucket = self._buckets.get(key)
+            if bucket is None:
+                bucket = TokenBucket(self.capacity, self.refill_rate)
+                self._buckets[key] = bucket
+            allowed = bucket.consume(1.0)
+            snap = bucket.snapshot()
 
         if not allowed:
-            # Deterministic rejection
             headers = {}
             if self.include_headers:
-                snap = bucket.snapshot()
                 headers = {
                     "X-RateLimit-Limit": str(int(snap["capacity"])),
                     "X-RateLimit-Remaining": "0",
                     "X-RateLimit-Refill-Per-Sec": str(snap["refill_rate_per_sec"]),
                 }
-
             return JSONResponse(
                 status_code=429,
                 content={"error": "rate_limited", "detail": "Too many requests"},
@@ -134,7 +217,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         response: Response = await call_next(request)
 
         if self.include_headers:
-            snap = bucket.snapshot()
             response.headers["X-RateLimit-Limit"] = str(int(snap["capacity"]))
             response.headers["X-RateLimit-Remaining"] = str(int(snap["tokens"]))
             response.headers["X-RateLimit-Refill-Per-Sec"] = str(snap["refill_rate_per_sec"])

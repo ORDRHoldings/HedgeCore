@@ -418,8 +418,6 @@ async def propose_execution(
 
     """
 
-    import traceback as _tb
-
     try:
 
         await _check_permission(session, current_user, "trades.edit")
@@ -456,11 +454,9 @@ async def propose_execution(
 
     except Exception as e:
 
-        # BUG-4 DEBUG: surface unhandled exceptions as structured 422 detail
+        logger.error("propose_execution unhandled exception", exc_info=True)
 
-        logger.error("propose_execution unhandled exception: %s\n%s", e, _tb.format_exc())
-
-        raise HTTPException(status_code=422, detail=f"[DEBUG] {type(e).__name__}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 

@@ -15,28 +15,8 @@
  *   3. "/api"  (local dev — next.config.js rewrite handles proxying)
  */
 
-const _PROD_HOSTNAMES = ["hedgecore.vercel.app", "ordr-terminal.vercel.app"];
-
-const _getApiBase = (): string => {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  if (
-    typeof window !== "undefined" &&
-    _PROD_HOSTNAMES.includes(window.location.hostname)
-  ) {
-    return "https://hedgecore.onrender.com/api";
-  }
-  return "/api";
-};
-
-/**
- * Resolved once at module load time.
- * e.g. "https://hedgecore.onrender.com/api"  (production)
- *      "http://localhost:8000/api"             (local dev via NEXT_PUBLIC_API_URL)
- *      "/api"                                  (local dev fallback, proxied by next.config.js)
- */
-export const API_BASE = _getApiBase();
+import { API_BASE } from "@/lib/api/apiBase";
+export { API_BASE };
 
 /**
  * Authenticated fetch for dashboard endpoints.

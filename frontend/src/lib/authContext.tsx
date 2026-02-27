@@ -28,21 +28,27 @@ import {
 import Cookies from "js-cookie";
 import { store } from "./store";
 import { setAuthState } from "./store/slices/authSlice";
-
-// ── Config ────────────────────────────────────────────────────────────────────
-const _PROD_HOSTNAMES = ["hedgecore.vercel.app", "ordr-terminal.vercel.app"];
-const API_BASE = (() => {
-  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-  try {
-    if (typeof window !== "undefined" && _PROD_HOSTNAMES.includes(window.location.hostname)) {
-      return "https://hedgecore.onrender.com/api";
-    }
-  } catch { /* SSR: location not available */ }
-  return "/api";
-})();
+import { API_BASE } from "@/lib/api/apiBase";
 
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
+
+// ── Token expiry helpers ───────────────────────────────────────────────────────
+function _parseJwtExp(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return typeof payload.exp === "number" ? payload.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Returns true if the token is expired or will expire within the next 60 seconds. */
+function _isTokenExpired(token: string): boolean {
+  const exp = _parseJwtExp(token);
+  if (exp === null) return true;
+  return Date.now() / 1000 >= exp - 60;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface UserContext {
@@ -94,6 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Dedup: if a refresh is already in-flight, reuse the same promise
+  const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
 
   // ── Fetch /auth/me to hydrate user context ──
   const fetchMe = useCallback(async (accessToken: string): Promise<UserContext | null> => {
@@ -111,26 +119,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // ── Refresh token flow ──
+  // ── Refresh token flow (deduplicated) ──
   const refreshTokens = useCallback(async (): Promise<string | null> => {
+    // Return in-flight promise if one already exists (prevents race conditions)
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
+
     const refreshToken = Cookies.get(REFRESH_TOKEN_KEY);
     if (!refreshToken) return null;
 
-    try {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      });
-      if (!res.ok) return null;
+    const promise = (async (): Promise<string | null> => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (!res.ok) return null;
 
-      const data = await res.json();
-      Cookies.set(ACCESS_TOKEN_KEY, data.access_token, { sameSite: "Strict" });
-      Cookies.set(REFRESH_TOKEN_KEY, data.refresh_token, { sameSite: "Strict" });
-      return data.access_token;
-    } catch {
-      return null;
-    }
+        const data = await res.json();
+        Cookies.set(ACCESS_TOKEN_KEY, data.access_token, { sameSite: "Strict" });
+        Cookies.set(REFRESH_TOKEN_KEY, data.refresh_token, { sameSite: "Strict" });
+        return data.access_token as string;
+      } catch {
+        return null;
+      } finally {
+        refreshPromiseRef.current = null;
+      }
+    })();
+
+    refreshPromiseRef.current = promise;
+    return promise;
   }, []);
 
   // ── Schedule silent refresh (5 minutes before 30-min expiry) ──
@@ -153,9 +171,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Initialize session on mount ──
   useEffect(() => {
     const init = async () => {
-      // Try stored access token
+      // Try stored access token — check expiry locally before making a round-trip
       const storedToken = Cookies.get(ACCESS_TOKEN_KEY);
-      if (storedToken) {
+      if (storedToken && !_isTokenExpired(storedToken)) {
         const me = await fetchMe(storedToken);
         if (me) {
           setToken(storedToken);
@@ -165,8 +183,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsLoading(false);
           return;
         }
+      }
 
-        // Access token expired — try refresh
+      // Access token missing or expired — try refresh
+      if (storedToken || Cookies.get(REFRESH_TOKEN_KEY)) {
         const newToken = await refreshTokens();
         if (newToken) {
           const me2 = await fetchMe(newToken);
