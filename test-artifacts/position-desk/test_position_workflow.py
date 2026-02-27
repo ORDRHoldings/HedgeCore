@@ -49,10 +49,12 @@ DEFAULT_USER = {
 class Position:
     record_id: str
     entity: str
-    type: str  # AR or AP
+    flow_type: str  # AR or AP
     currency: str
     amount: float
     value_date: str
+    status: str = "CONFIRMED"
+    description: str = ""
     execution_status: str = "NEW"
     policy_id: Optional[str] = None
     calculation_run_id: Optional[str] = None
@@ -83,12 +85,14 @@ class HedgeCoreClient:
         self.base_url = base_url
         self.token: Optional[str] = None
         self.user_id: Optional[str] = None
+        self.api_key = "HC_DEV_KEY_001"  # Bootstrap API key
 
     def login(self, email: str, password: str) -> bool:
         """Authenticate and get JWT token"""
         response = requests.post(
-            f"{self.base_url}/api/v1/auth/login",
-            json={"email": email, "password": password},
+            f"{self.base_url}/api/auth/login",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={"username": email, "password": password},
         )
         if response.status_code == 200:
             data = response.json()
@@ -98,7 +102,10 @@ class HedgeCoreClient:
         return False
 
     def _headers(self) -> Dict[str, str]:
-        return {"Authorization": f"Bearer {self.token}"}
+        headers = {"X-API-Key": self.api_key}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+        return headers
 
     def create_position(self, position: Position) -> Optional[str]:
         """Create a single position"""
@@ -182,13 +189,14 @@ class HedgeCoreClient:
         """Upload CSV file"""
         files = {"file": ("positions.csv", csv_content, "text/csv")}
         response = requests.post(
-            f"{self.base_url}/api/v1/positions/import-csv",
+            f"{self.base_url}/api/v1/positions/import",
             headers=self._headers(),
             files=files,
         )
         if response.status_code == 200:
-            return response.json()
-        return {"success": False, "message": response.text}
+            data = response.json()
+            return {"success": data.get("created", 0) > 0, "imported": data.get("created", 0)}
+        return {"success": False, "imported": 0, "message": response.text}
 
 # =============================================================================
 # TEST SUITE
@@ -208,12 +216,12 @@ class PositionWorkflowTests:
         print("="*80 + "\n")
 
         # Authentication
-        print("→ Authenticating...")
+        print(">> Authenticating...")
         if not self.client.login(DEFAULT_USER["email"], DEFAULT_USER["password"]):
-            print("✗ Authentication failed. Cannot proceed.")
+            print("X Authentication failed. Cannot proceed.")
             return
 
-        print(f"✓ Authenticated as {DEFAULT_USER['email']}\n")
+        print(f"OK Authenticated as {DEFAULT_USER['email']}\n")
 
         # Run tests
         self.test_01_create_manual_position()
@@ -234,10 +242,14 @@ class PositionWorkflowTests:
         test_name = "Test 1: Manual Position Creation"
 
         try:
+            # Use timestamp to ensure unique record_id
+            timestamp_id = datetime.now().strftime("%Y%m%d%H%M%S")
+            record_id = f"TEST-{timestamp_id}"
+
             position = Position(
-                record_id="TEST-001",
+                record_id=record_id,
                 entity="Test Corporation",
-                type="AR",
+                flow_type="AR",
                 currency="USD",
                 amount=1000000.00,
                 value_date=(datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
@@ -247,7 +259,8 @@ class PositionWorkflowTests:
             duration = (time.time() - start) * 1000
 
             if position_id:
-                self.test_positions["TEST-001"] = position_id
+                self.test_positions[record_id] = position_id
+                self.test_positions["TEST-MANUAL"] = position_id  # Alias for other tests
 
                 # Verify audit trail
                 audit = self.client.get_audit_trail(position_id)
@@ -260,7 +273,7 @@ class PositionWorkflowTests:
                     details=f"Position created: {position_id}, Audit verified: {has_creation_event}",
                     audit_verified=has_creation_event,
                 ))
-                print(f"✓ {test_name} - PASSED ({duration:.0f}ms)")
+                print(f"OK {test_name} - PASSED ({duration:.0f}ms)")
             else:
                 self.results.append(TestResult(
                     test_name=test_name,
@@ -268,7 +281,7 @@ class PositionWorkflowTests:
                     duration_ms=duration,
                     details="Failed to create position",
                 ))
-                print(f"✗ {test_name} - FAILED")
+                print(f"X {test_name} - FAILED")
 
         except Exception as e:
             self.results.append(TestResult(
@@ -277,7 +290,7 @@ class PositionWorkflowTests:
                 duration_ms=(time.time() - start) * 1000,
                 details=f"Exception: {str(e)}",
             ))
-            print(f"✗ {test_name} - ERROR: {e}")
+            print(f"X {test_name} - ERROR: {e}")
 
     def test_02_csv_upload(self):
         """Test 2: CSV Bulk Upload"""
@@ -285,10 +298,12 @@ class PositionWorkflowTests:
         test_name = "Test 2: CSV Bulk Upload"
 
         try:
-            csv_content = """record_id,entity,type,currency,amount,value_date
-TEST-CSV-001,Test Corp A,AR,EUR,500000,2026-03-15
-TEST-CSV-002,Test Corp B,AP,GBP,750000,2026-03-20
-TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
+            # Use timestamp to ensure unique record_ids
+            timestamp_id = datetime.now().strftime("%Y%m%d%H%M%S")
+            csv_content = f"""record_id,entity,flow_type,currency,amount,value_date,status,description
+TEST-CSV-{timestamp_id}-1,Test Corp A,AR,EUR,500000,2026-03-15,CONFIRMED,CSV test position 1
+TEST-CSV-{timestamp_id}-2,Test Corp B,AP,GBP,750000,2026-03-20,CONFIRMED,CSV test position 2
+TEST-CSV-{timestamp_id}-3,Test Corp C,AR,JPY,90000000,2026-04-01,CONFIRMED,CSV test position 3"""
 
             result = self.client.upload_csv(csv_content)
             duration = (time.time() - start) * 1000
@@ -303,7 +318,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 details=f"Imported: {imported_count}/3 positions",
                 audit_verified=success,
             ))
-            print(f"{'✓' if success else '✗'} {test_name} - {imported_count}/3 positions ({duration:.0f}ms)")
+            print(f"{'OK' if success else 'X'} {test_name} - {imported_count}/3 positions ({duration:.0f}ms)")
 
         except Exception as e:
             self.results.append(TestResult(
@@ -312,16 +327,16 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 duration_ms=(time.time() - start) * 1000,
                 details=f"Exception: {str(e)}",
             ))
-            print(f"✗ {test_name} - ERROR: {e}")
+            print(f"X {test_name} - ERROR: {e}")
 
     def test_03_position_lifecycle(self):
-        """Test 3: Complete Lifecycle (NEW → HEDGED)"""
+        """Test 3: Complete Lifecycle (NEW -> HEDGED)"""
         start = time.time()
-        test_name = "Test 3: Position Lifecycle (NEW → POLICY_ASSIGNED → READY)"
+        test_name = "Test 3: Position Lifecycle (NEW -> POLICY_ASSIGNED -> READY)"
 
         try:
             # Get position from test 1
-            position_id = self.test_positions.get("TEST-001")
+            position_id = self.test_positions.get("TEST-MANUAL")
             if not position_id:
                 self.results.append(TestResult(
                     test_name=test_name,
@@ -329,7 +344,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                     duration_ms=0,
                     details="No test position available",
                 ))
-                print(f"⊘ {test_name} - SKIPPED")
+                print(f"SKIP {test_name} - SKIPPED")
                 return
 
             # Step 1: Assign policy
@@ -339,7 +354,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
 
             assigned = self.client.assign_policy(position_id, mock_policy_id)
             if not assigned:
-                print(f"  → Policy assignment skipped (policy_id not available)")
+                print(f"  -> Policy assignment skipped (policy_id not available)")
 
             # Step 2: Mark ready
             mock_run_id = "run_test_001"
@@ -366,7 +381,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 details=f"Events: {', '.join(event_types)}",
                 audit_verified=all_present,
             ))
-            print(f"✓ {test_name} - {len(event_types)} events ({duration:.0f}ms)")
+            print(f"OK {test_name} - {len(event_types)} events ({duration:.0f}ms)")
 
         except Exception as e:
             self.results.append(TestResult(
@@ -375,7 +390,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 duration_ms=(time.time() - start) * 1000,
                 details=f"Exception: {str(e)}",
             ))
-            print(f"✗ {test_name} - ERROR: {e}")
+            print(f"X {test_name} - ERROR: {e}")
 
     def test_04_rejection_workflow(self):
         """Test 4: Rejection & Reopen"""
@@ -383,7 +398,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
         test_name = "Test 4: Rejection & Reopen Workflow"
 
         try:
-            position_id = self.test_positions.get("TEST-001")
+            position_id = self.test_positions.get("TEST-MANUAL")
             if not position_id:
                 self.results.append(TestResult(
                     test_name=test_name,
@@ -391,7 +406,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                     duration_ms=0,
                     details="No test position available",
                 ))
-                print(f"⊘ {test_name} - SKIPPED")
+                print(f"SKIP {test_name} - SKIPPED")
                 return
 
             # Reject
@@ -416,7 +431,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 details=f"Rejected: {has_reject}, Reopened: {has_reopen}",
                 audit_verified=(has_reject and has_reopen),
             ))
-            print(f"{'✓' if (has_reject and has_reopen) else '~'} {test_name} ({duration:.0f}ms)")
+            print(f"{'OK' if (has_reject and has_reopen) else 'PARTIAL'} {test_name} ({duration:.0f}ms)")
 
         except Exception as e:
             self.results.append(TestResult(
@@ -425,7 +440,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 duration_ms=(time.time() - start) * 1000,
                 details=f"Exception: {str(e)}",
             ))
-            print(f"✗ {test_name} - ERROR: {e}")
+            print(f"X {test_name} - ERROR: {e}")
 
     def test_05_bulk_policy_assignment(self):
         """Test 5: Bulk Policy Assignment"""
@@ -440,7 +455,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
             duration_ms=0,
             details="Bulk assignment endpoint not available in test",
         ))
-        print(f"⊘ {test_name} - SKIPPED (requires bulk endpoint)")
+        print(f"SKIP {test_name} - SKIPPED (requires bulk endpoint)")
 
     def test_06_audit_trail_verification(self):
         """Test 6: Audit Trail Completeness"""
@@ -448,7 +463,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
         test_name = "Test 6: Audit Trail Completeness"
 
         try:
-            position_id = self.test_positions.get("TEST-001")
+            position_id = self.test_positions.get("TEST-MANUAL")
             if not position_id:
                 self.results.append(TestResult(
                     test_name=test_name,
@@ -456,7 +471,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                     duration_ms=0,
                     details="No test position available",
                 ))
-                print(f"⊘ {test_name} - SKIPPED")
+                print(f"SKIP {test_name} - SKIPPED")
                 return
 
             audit = self.client.get_audit_trail(position_id)
@@ -476,7 +491,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 details=f"{len(audit)} events, Actor: {all_have_actor}, Timestamp: {all_have_timestamp}, Hash: {all_have_hash}",
                 audit_verified=complete,
             ))
-            print(f"{'✓' if complete else '✗'} {test_name} - {len(audit)} events ({duration:.0f}ms)")
+            print(f"{'OK' if complete else 'X'} {test_name} - {len(audit)} events ({duration:.0f}ms)")
 
         except Exception as e:
             self.results.append(TestResult(
@@ -485,7 +500,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 duration_ms=(time.time() - start) * 1000,
                 details=f"Exception: {str(e)}",
             ))
-            print(f"✗ {test_name} - ERROR: {e}")
+            print(f"X {test_name} - ERROR: {e}")
 
     def test_07_hash_chain_integrity(self):
         """Test 7: Hash Chain Integrity (Tamper Detection)"""
@@ -506,7 +521,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 details=f"Valid: {valid}, Broken chains: {broken_count}",
                 audit_verified=valid,
             ))
-            print(f"{'✓' if valid else '✗'} {test_name} - {broken_count} broken chains ({duration:.0f}ms)")
+            print(f"{'OK' if valid else 'X'} {test_name} - {broken_count} broken chains ({duration:.0f}ms)")
 
         except Exception as e:
             self.results.append(TestResult(
@@ -515,7 +530,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 duration_ms=(time.time() - start) * 1000,
                 details=f"Hash chain verification endpoint not available: {str(e)}",
             ))
-            print(f"⊘ {test_name} - SKIPPED (endpoint not available)")
+            print(f"SKIP {test_name} - SKIPPED (endpoint not available)")
 
     def test_08_data_integrity_checks(self):
         """Test 8: Data Integrity Validation"""
@@ -542,7 +557,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 details=f"Violations: {violations} (No company: {no_company_id}, Zero amt: {zero_amounts}, Invalid curr: {invalid_currencies})",
                 audit_verified=clean,
             ))
-            print(f"{'✓' if clean else '✗'} {test_name} - {violations} violations ({duration:.0f}ms)")
+            print(f"{'OK' if clean else 'X'} {test_name} - {violations} violations ({duration:.0f}ms)")
 
         except Exception as e:
             self.results.append(TestResult(
@@ -551,7 +566,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 duration_ms=(time.time() - start) * 1000,
                 details=f"Exception: {str(e)}",
             ))
-            print(f"✗ {test_name} - ERROR: {e}")
+            print(f"X {test_name} - ERROR: {e}")
 
     def print_results(self):
         """Print test results summary"""
@@ -563,10 +578,10 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
         table_data = []
         for r in self.results:
             status_symbol = {
-                "PASS": "✓",
-                "FAIL": "✗",
-                "SKIP": "⊘",
-                "PARTIAL": "~",
+                "PASS": "OK",
+                "FAIL": "X",
+                "SKIP": "SKIP",
+                "PARTIAL": "PARTIAL",
             }.get(r.status, "?")
 
             table_data.append([
@@ -574,7 +589,7 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
                 r.test_name,
                 r.status,
                 f"{r.duration_ms:.0f}ms",
-                "✓" if r.audit_verified else "✗",
+                "OK" if r.audit_verified else "X",
                 r.details[:60] + "..." if len(r.details) > 60 else r.details,
             ])
 
@@ -599,11 +614,11 @@ TEST-CSV-003,Test Corp C,AR,JPY,90000000,2026-04-01"""
 
         # Overall status
         if failed == 0 and partial == 0:
-            print("✓ ALL TESTS PASSED")
+            print("OK ALL TESTS PASSED")
         elif failed > 0:
-            print(f"✗ {failed} TEST(S) FAILED")
+            print(f"X {failed} TEST(S) FAILED")
         else:
-            print(f"~ {partial} TEST(S) PARTIALLY PASSED")
+            print(f"PARTIAL {partial} TEST(S) PARTIALLY PASSED")
 
 # =============================================================================
 # MAIN

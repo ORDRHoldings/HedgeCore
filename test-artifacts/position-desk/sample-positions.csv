@@ -1,11 +1,11 @@
-record_id,entity,type,currency,amount,value_date
-POS-001,Synexiun LATAM,AR,MXN,5000000,2026-03-15
-POS-002,Synexiun Brasil,AP,BRL,2000000,2026-03-20
-POS-003,Synexiun Mexico,AR,MXN,3500000,2026-04-01
-POS-004,Synexiun Europe,AR,EUR,1500000,2026-03-25
-POS-005,Synexiun Asia,AP,CNY,8000000,2026-04-10
-POS-006,Synexiun USA,AR,USD,1000000,2026-03-30
-POS-007,Synexiun Canada,AP,CAD,750000,2026-04-05
-POS-008,Synexiun Japan,AR,JPY,120000000,2026-03-28
-POS-009,Synexiun UK,AR,GBP,900000,2026-04-12
-POS-010,Synexiun India,AP,INR,50000000,2026-04-08
+record_id,entity,flow_type,currency,amount,value_date,status,description
+POS-001,Synexiun LATAM,AR,MXN,5000000,2026-03-15,CONFIRMED,Test position 1
+POS-002,Synexiun Brasil,AP,BRL,2000000,2026-03-20,CONFIRMED,Test position 2
+POS-003,Synexiun Mexico,AR,MXN,3500000,2026-04-01,CONFIRMED,Test position 3
+POS-004,Synexiun Europe,AR,EUR,1500000,2026-03-25,CONFIRMED,Test position 4
+POS-005,Synexiun Asia,AP,CNY,8000000,2026-04-10,CONFIRMED,Test position 5
+POS-006,Synexiun USA,AR,USD,1000000,2026-03-30,CONFIRMED,Test position 6
+POS-007,Synexiun Canada,AP,CAD,750000,2026-04-05,CONFIRMED,Test position 7
+POS-008,Synexiun Japan,AR,JPY,120000000,2026-03-28,CONFIRMED,Test position 8
+POS-009,Synexiun UK,AR,GBP,900000,2026-04-12,CONFIRMED,Test position 9
+POS-010,Synexiun India,AP,INR,50000000,2026-04-08,CONFIRMED,Test position 10
