@@ -328,6 +328,9 @@ export function getDefaultLayoutForRole(role: string): RoleLayout {
   return ROLE_LAYOUTS[role] ?? DEFAULT_LAYOUT;
 }
 
+/** Union of all valid widget IDs — derived from WIDGET_REGISTRY so it's always in sync. */
+export type WidgetId = (typeof WIDGET_REGISTRY)[number]["id"];
+
 export function getWidgetDef(id: string): WidgetDef | undefined {
   return WIDGET_REGISTRY.find((w) => w.id === id);
 }

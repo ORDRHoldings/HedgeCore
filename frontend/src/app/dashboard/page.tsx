@@ -5,7 +5,8 @@ import { Responsive, WidthProvider } from "react-grid-layout";
 import type { Layout } from "react-grid-layout";
 import { Plus, RotateCcw, HelpCircle, Activity, Clock } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
-import { WIDGET_REGISTRY, getDefaultLayoutForRole, type GridItem } from "@/lib/widgets/widgetRegistry";
+import type { UserContext } from "@/lib/authContext";
+import { WIDGET_REGISTRY, getDefaultLayoutForRole, type GridItem, type WidgetId } from "@/lib/widgets/widgetRegistry";
 import WidgetCatalog from "@/components/dashboard/WidgetCatalog";
 import DashboardHelpPanel from "@/components/dashboard/DashboardHelpPanel";
 import KpiSummaryWidget from "@/components/dashboard/widgets/KpiSummaryWidget";
@@ -25,6 +26,7 @@ import CommandHubWidget from "@/components/dashboard/widgets/CommandHubWidget";
 import GeoPoliticalWidget from "@/components/dashboard/widgets/GeoPoliticalWidget";
 import UsdExposureRadarWidget from "@/components/dashboard/widgets/UsdExposureRadarWidget";
 import SystemPulseWidget from "@/components/dashboard/widgets/SystemPulseWidget";
+import WidgetErrorBoundary from "@/components/ui/WidgetErrorBoundary";
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const S = {
   fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -35,7 +37,8 @@ const S = {
   cyan: "var(--accent-cyan)", amber: "var(--accent-amber)", pass: "var(--status-pass)",
   fail: "var(--accent-red,#B91C1C)",
 } as const;
-const WIDGET_COMPONENTS: Record<string, React.ComponentType<{ token: string; user: any; onRemove?: () => void }>> = {
+type WidgetComponentProps = { token: string; user: UserContext; onRemove?: () => void };
+const WIDGET_COMPONENTS: Record<WidgetId, React.ComponentType<WidgetComponentProps>> = {
   kpi_summary: KpiSummaryWidget, recent_runs: RecentRunsWidget,
   pending_approvals: PendingApprovalsWidget, team_activity: TeamActivityWidget,
   branch_comparison: BranchComparisonWidget, polisophic_mini: PolisophicMiniWidget,
@@ -164,7 +167,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <ResponsiveGridLayout className="dashboard-grid" layouts={{ lg: rglLayout, md: rglLayout, sm: rglLayout }} breakpoints={{ lg: 1200, md: 996, sm: 768 }} cols={{ lg: 12, md: 10, sm: 6 }} rowHeight={62} onLayoutChange={handleLayoutChange} margin={[10, 10]} containerPadding={[0, 0]} draggableHandle=".widget-drag-handle" useCSSTransforms>
-              {gridItems.map(({ i }) => { const WidgetComponent = WIDGET_COMPONENTS[i]; if (!WidgetComponent) return null; return (<div key={i} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}><WidgetComponent token={token} user={user} onRemove={() => handleRemove(i)} /></div>); })}
+              {gridItems.map(({ i }) => { const WidgetComponent = WIDGET_COMPONENTS[i as WidgetId] ?? null; if (!WidgetComponent) return null; return (<div key={i} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}><WidgetErrorBoundary widgetId={i}><WidgetComponent token={token} user={user} onRemove={() => handleRemove(i)} /></WidgetErrorBoundary></div>); })}
             </ResponsiveGridLayout>
           )}
         </div>

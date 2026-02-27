@@ -1149,7 +1149,15 @@ app.add_middleware(GZipMiddleware, minimum_size=512)
 
 app.add_middleware(AuditHeadersMiddleware)
 
-app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+app.add_middleware(
+
+    RateLimitMiddleware,
+
+    requests_per_minute=60,
+
+    redis_url=settings.REDIS_URL,
+
+)
 
 app.add_middleware(APIKeyAuthMiddleware)
 
