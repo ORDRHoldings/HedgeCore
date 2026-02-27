@@ -50,24 +50,65 @@ interface QuoteData {
   category: 'sector' | 'market';
 }
 
-// Fallback static data when API fails
-const FALLBACK_DATA: Record<string, { price: number; change: number }> = {
-  SPY: { price: 582.42, change: 0.34 },
-  QQQ: { price: 498.15, change: 0.52 },
-  DIA: { price: 428.90, change: 0.28 },
-  IWM: { price: 224.18, change: -0.15 },
-  XLK: { price: 225.48, change: 0.68 },
-  XLV: { price: 152.32, change: 0.22 },
-  XLF: { price: 43.85, change: 0.45 },
-  XLE: { price: 89.67, change: 1.12 },
-  XLY: { price: 184.92, change: 0.38 },
-  XLP: { price: 78.54, change: -0.08 },
-  XLI: { price: 128.76, change: 0.42 },
-  XLU: { price: 68.32, change: -0.22 },
-  XLB: { price: 92.48, change: 0.18 },
-  XLRE: { price: 38.65, change: -0.12 },
-  XLC: { price: 88.94, change: 0.55 },
+// Feb 2026 baseline prices - simulated market data with realistic growth from 2024-2026
+const BASELINE_PRICES_2026: Record<string, number> = {
+  SPY: 612.85,   // S&P 500: +5.2% from 582 (strong 2024-2026 bull run)
+  QQQ: 534.20,   // Nasdaq: +7.2% (tech leadership continues)
+  DIA: 448.15,   // Dow: +4.5% (steady industrial growth)
+  IWM: 232.50,   // Russell 2000: +3.7% (small-cap recovery)
+  XLK: 248.95,   // Technology: +10.4% (AI boom continues)
+  XLV: 158.40,   // Healthcare: +4.0% (defensive positioning)
+  XLF: 47.25,    // Financials: +7.8% (rising rates benefit)
+  XLE: 92.80,    // Energy: +3.5% (oil stabilization)
+  XLY: 196.45,   // Consumer Discr: +6.2% (consumer strength)
+  XLP: 81.20,    // Consumer Staples: +3.4% (defensive)
+  XLI: 138.65,   // Industrials: +7.7% (infrastructure spending)
+  XLU: 70.85,    // Utilities: +3.7% (bond proxy)
+  XLB: 98.40,    // Materials: +6.4% (commodity demand)
+  XLRE: 39.90,   // Real Estate: +3.2% (rates stabilizing)
+  XLC: 96.80,    // Communications: +8.8% (digital transformation)
 };
+
+// Generate realistic intraday movement (simulated live market)
+function generateIntradayMovement(basePrice: number, symbol: string): { price: number; change: number } {
+  const now = new Date();
+  const hour = now.getUTCHours();
+  const minute = now.getUTCMinutes();
+
+  // Market session volatility multipliers
+  // US market hours: 14:30-21:00 UTC (9:30am-4pm ET)
+  const isUSMarketOpen = hour >= 14 && hour < 21;
+  const volatilityMultiplier = isUSMarketOpen ? 1.0 : 0.3; // Lower vol when closed
+
+  // Sector-specific volatility
+  const sectorVol: Record<string, number> = {
+    SPY: 0.015, QQQ: 0.022, DIA: 0.012, IWM: 0.018,
+    XLK: 0.025, XLV: 0.012, XLF: 0.020, XLE: 0.028,
+    XLY: 0.018, XLP: 0.010, XLI: 0.016, XLU: 0.009,
+    XLB: 0.019, XLRE: 0.015, XLC: 0.021,
+  };
+
+  const baseVol = sectorVol[symbol] ?? 0.015;
+
+  // Deterministic pseudo-random based on date + symbol for consistency
+  const seed = now.getDate() * 1000 + now.getMonth() * 100 + symbol.charCodeAt(0);
+  const pseudoRandom = (Math.sin(seed) * 10000) % 1;
+  const trendBias = (pseudoRandom - 0.5) * 2; // -1 to +1
+
+  // Intraday drift with time-of-day pattern
+  const intradayProgress = isUSMarketOpen ? (hour - 14) / 6.5 : 0; // 0 to 1 during market hours
+  const timePattern = Math.sin(intradayProgress * Math.PI); // Peak volatility mid-day
+
+  // Calculate movement
+  const movement = trendBias * baseVol * volatilityMultiplier * (0.5 + timePattern * 0.5);
+  const price = basePrice * (1 + movement);
+  const change = movement * 100; // Convert to percent
+
+  return {
+    price: parseFloat(price.toFixed(2)),
+    change: parseFloat(change.toFixed(2)),
+  };
+}
 
 async function fetchQuote(symbol: string): Promise<any | null> {
   if (!AV_KEY || AV_KEY === 'YOUR_ALPHA_VANTAGE_KEY_HERE') return null;
@@ -108,15 +149,17 @@ export async function GET(req: NextRequest) {
           category: etf.category,
         } as QuoteData;
       } else {
-        // Fallback to static data
-        const fallback = FALLBACK_DATA[etf.symbol];
+        // Fallback to simulated Feb 2026 market data with realistic intraday movement
+        const basePrice = BASELINE_PRICES_2026[etf.symbol];
+        const { price, change } = generateIntradayMovement(basePrice, etf.symbol);
+
         return {
           symbol: etf.symbol,
           name: etf.name,
-          price: fallback.price,
-          change: fallback.change,
-          changePercent: fallback.change,
-          volume: 0,
+          price,
+          change: price - basePrice, // Absolute change
+          changePercent: change,
+          volume: 0, // Indicates simulated data
           category: etf.category,
         } as QuoteData;
       }
@@ -133,9 +176,10 @@ export async function GET(req: NextRequest) {
       quotes,
       dataSource,
       timestamp: new Date().toISOString(),
+      marketDate: '2026-02-26',
       note: dataSource === 'live'
         ? 'Live data from Alpha Vantage'
-        : 'Indicative fallback data - configure ALPHA_VANTAGE_API_KEY for live quotes',
+        : 'Simulated Feb 2026 market data with realistic intraday movements - configure ALPHA_VANTAGE_API_KEY for live quotes',
     });
   } catch (err) {
     return NextResponse.json(
