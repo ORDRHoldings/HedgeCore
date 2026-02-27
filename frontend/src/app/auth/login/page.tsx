@@ -304,7 +304,7 @@ export default function LoginPage() {
             }}
           >
             <Image
-              src="/ordr-logo.svg"
+              src="/ordr-logo.png"
               alt="ORDR Terminal"
               fill
               sizes="140px"
