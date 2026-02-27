@@ -105,14 +105,14 @@ const S = {
 } as const;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const DB_ADAPTERS: Record<DbDriver, { port: number; icon: string; color: string }> = {
-  "PostgreSQL": { port: 5432, icon: "🐘", color: "#336791" },
-  "MySQL": { port: 3306, icon: "🐬", color: "#00758F" },
-  "Microsoft SQL Server": { port: 1433, icon: "⚡", color: "#CC2927" },
-  "Oracle": { port: 1521, icon: "⚫", color: "#F80000" },
-  "SAP HANA": { port: 30015, icon: "💎", color: "#0FAAFF" },
-  "Snowflake": { port: 443, icon: "❄️", color: "#29B5E8" },
-  "Redshift": { port: 5439, icon: "📊", color: "#FF9900" },
+const DB_ADAPTERS: Record<DbDriver, { port: number; abbr: string; color: string }> = {
+  "PostgreSQL": { port: 5432, abbr: "PSQL", color: "#336791" },
+  "MySQL": { port: 3306, abbr: "MSQL", color: "#00758F" },
+  "Microsoft SQL Server": { port: 1433, abbr: "MSSQL", color: "#CC2927" },
+  "Oracle": { port: 1521, abbr: "ORCL", color: "#F80000" },
+  "SAP HANA": { port: 30015, abbr: "HANA", color: "#0FAAFF" },
+  "Snowflake": { port: 443, abbr: "SNOW", color: "#29B5E8" },
+  "Redshift": { port: 5439, abbr: "RDSH", color: "#FF9900" },
 };
 
 const ORDR_FIELDS = [
@@ -829,7 +829,23 @@ function ConnectionTab(props: ConnectionTabProps) {
                 onMouseEnter={e => !isSelected && (e.currentTarget.style.borderColor = S.rim)}
                 onMouseLeave={e => !isSelected && (e.currentTarget.style.borderColor = S.soft)}
               >
-                <div style={{ fontSize: "32px" }}>{adapter.icon}</div>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  background: isSelected ? adapter.color : S.bgDeep,
+                  border: `2px solid ${adapter.color}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: S.fontMono,
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  color: isSelected ? "#fff" : adapter.color,
+                  letterSpacing: "-0.5px",
+                }}>
+                  {adapter.abbr}
+                </div>
                 <div style={{
                   fontFamily: S.fontMono,
                   fontSize: "11px",
@@ -964,7 +980,7 @@ function ConnectionTab(props: ConnectionTabProps) {
                 transition: "all 0.2s",
               }}
             >
-              {mode === "table" ? "📋 TABLE NAME" : "⚡ CUSTOM SQL"}
+              {mode === "table" ? "📋 TABLE NAME" : "CUSTOM SQL"}
             </button>
           ))}
         </div>
@@ -1011,9 +1027,15 @@ function ConnectionTab(props: ConnectionTabProps) {
               marginTop: 6,
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 8,
             }}>
-              ⚠️ Query will be executed as READ-ONLY. Ensure service account has SELECT permissions only.
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: S.amber,
+              }} />
+              Query will be executed as READ-ONLY. Ensure service account has SELECT permissions only.
             </div>
           </div>
         )}
@@ -1053,7 +1075,7 @@ function ConnectionTab(props: ConnectionTabProps) {
               TESTING CONNECTION…
             </>
           ) : props.connectionStatus === "connected" ? (
-            <>✓ CONNECTED - SCHEMA DISCOVERED</>
+            <>CONNECTED · SCHEMA DISCOVERED</>
           ) : (
             <>🔌 TEST CONNECTION & DISCOVER</>
           )}
@@ -1072,7 +1094,13 @@ function ConnectionTab(props: ConnectionTabProps) {
             alignItems: "center",
             gap: 8,
           }}>
-            ✓ Connection successful. Schema discovered. Proceed to Level 2: Mapping & Transformation →
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: S.pass,
+            }} />
+            Connection successful. Schema discovered. Proceed to Level 2: Mapping & Transformation
           </div>
         )}
       </div>
@@ -1472,7 +1500,7 @@ function MappingTab(props: MappingTabProps) {
             fontWeight: 600,
           }}
         >
-          + ADD MAPPING
+          ADD MAPPING
         </button>
       </Panel>
 
@@ -1569,7 +1597,7 @@ function MappingTab(props: MappingTabProps) {
               fontWeight: 600,
             }}
           >
-            ✓ APPLY & CLOSE
+            APPLY & CLOSE
           </button>
         </Panel>
       )}
@@ -1716,7 +1744,13 @@ function MappingTab(props: MappingTabProps) {
             alignItems: "center",
             gap: 8,
           }}>
-            ⚠️ Map all required fields before proceeding to Level 3: Validation
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: S.amber,
+            }} />
+            Map all required fields before proceeding to Level 3: Validation
           </div>
         )}
       </div>
@@ -2002,7 +2036,7 @@ function ValidationTab(props: ValidationTabProps) {
             fontWeight: 600,
           }}
         >
-          + ADD VALIDATION RULE
+          ADD VALIDATION RULE
         </button>
       </Panel>
 
@@ -2049,11 +2083,13 @@ function ValidationTab(props: ValidationTabProps) {
                     background: hasError ? "rgba(220, 38, 38, 0.05)" : "transparent",
                   }}>
                     <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                      <span style={{
-                        fontSize: "16px",
-                      }}>
-                        {hasError ? "❌" : "✅"}
-                      </span>
+                      <div style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: hasError ? S.fail : S.pass,
+                        margin: "0 auto",
+                      }} />
                     </td>
                     {Object.values(row).map((val, j) => (
                       <td key={j} style={{
@@ -2096,7 +2132,7 @@ function ValidationTab(props: ValidationTabProps) {
             transition: "all 0.2s",
           }}
         >
-          ⚡ PROCEED TO EXECUTION →
+          PROCEED TO EXECUTION
         </button>
 
         <div style={{
@@ -2111,7 +2147,13 @@ function ValidationTab(props: ValidationTabProps) {
           alignItems: "center",
           gap: 8,
         }}>
-          ✓ Validation complete. Ready for Level 4: Execution & Governance
+          <span style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: S.pass,
+          }} />
+          Validation complete. Ready for Level 4: Execution & Governance
         </div>
       </div>
     </div>
@@ -2379,7 +2421,7 @@ function ExecutionTab(props: ExecutionTabProps) {
           ) : props.importConfig.dryRun ? (
             <>🧪 RUN DRY RUN</>
           ) : (
-            <>⚡ EXECUTE IMPORT</>
+            <>EXECUTE IMPORT</>
           )}
         </button>
       </Panel>
@@ -2514,8 +2556,17 @@ function ExecutionTab(props: ExecutionTabProps) {
               fontFamily: S.fontMono,
               fontSize: "11px",
               color: S.pass,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
             }}>
-              ✓ Schedule configured. Imports will run automatically according to this schedule.
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: S.pass,
+              }} />
+              Schedule configured. Imports will run automatically according to this schedule.
             </div>
           </div>
         )}
