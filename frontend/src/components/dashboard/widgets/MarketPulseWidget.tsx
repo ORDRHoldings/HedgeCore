@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Radio, X, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { UserContext } from "@/lib/authContext";
+import EmptyState from "@/components/ui/EmptyState";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -21,27 +22,15 @@ const S = {
   red: "var(--accent-red,#B91C1C)",
 } as const;
 
-interface MarketIndex {
+interface QuoteData {
+  symbol: string;
   name: string;
-  ticker: string;
-  value: string;
-  change: number; // percent
-  category: "equity" | "commodity" | "bond" | "vol";
+  price: number;
+  change: number;
+  changePercent: number;
+  volume: number;
+  category: 'sector' | 'market';
 }
-
-/* Institutional market context - static reference data.
-   These provide the kind of "market tape" context that Bloomberg/BlackRock
-   terminals display to give traders market awareness. */
-const MARKET_INDICES: MarketIndex[] = [
-  { name: "S&P 500", ticker: "SPX", value: "5,842", change: 0.34, category: "equity" },
-  { name: "DXY Index", ticker: "DXY", value: "104.2", change: -0.12, category: "equity" },
-  { name: "VIX", ticker: "VIX", value: "14.8", change: -1.2, category: "vol" },
-  { name: "US 10Y", ticker: "UST10", value: "4.28%", change: 0.02, category: "bond" },
-  { name: "WTI Crude", ticker: "CL1", value: "$76.4", change: 0.85, category: "commodity" },
-  { name: "Gold", ticker: "XAU", value: "$2,680", change: 0.15, category: "commodity" },
-  { name: "EUR/USD", ticker: "EURUSD", value: "1.0842", change: 0.08, category: "equity" },
-  { name: "USD/JPY", ticker: "USDJPY", value: "149.8", change: -0.22, category: "equity" },
-];
 
 interface Props {
   token: string;
@@ -51,6 +40,11 @@ interface Props {
 
 export default function MarketPulseWidget({ token, user, onRemove }: Props) {
   const [time, setTime] = useState("");
+  const [quotes, setQuotes] = useState<QuoteData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [dataSource, setDataSource] = useState<"live" | "fallback">("fallback");
+  const [activeTab, setActiveTab] = useState<"market" | "sectors">("market");
 
   useEffect(() => {
     const update = () => {
@@ -62,9 +56,39 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(false);
+      try {
+        const res = await fetch("/api/market-sectors");
+        if (!res.ok) {
+          if (!cancelled) setError(true);
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          setQuotes(data.quotes ?? []);
+          setDataSource(data.dataSource ?? "fallback");
+        }
+      } catch (err) {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // Determine market session
   const hour = new Date().getUTCHours();
   const session = hour >= 13 && hour < 21 ? "US" : hour >= 7 && hour < 16 ? "EU" : hour >= 0 && hour < 7 ? "ASIA" : "US";
+
+  // Filter quotes by category
+  const marketQuotes = quotes.filter(q => q.category === 'market');
+  const sectorQuotes = quotes.filter(q => q.category === 'sector');
+  const displayQuotes = activeTab === 'market' ? marketQuotes : sectorQuotes;
 
   return (
     <div style={{
@@ -84,6 +108,28 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
           Market Pulse
         </span>
 
+        <span style={{
+          fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.08em",
+          color: S.cyan, background: `color-mix(in srgb, ${S.cyan} 10%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`,
+          borderRadius: 3, padding: "1px 5px", textTransform: "uppercase",
+        }}>
+          WALL STREET
+        </span>
+
+        <div style={{ flex: 1 }} />
+
+        {dataSource === "live" && (
+          <span style={{
+            fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.08em",
+            color: S.green, background: `color-mix(in srgb, ${S.green} 10%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${S.green} 25%, transparent)`,
+            borderRadius: 3, padding: "1px 5px", textTransform: "uppercase",
+          }}>
+            LIVE
+          </span>
+        )}
+
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{
             width: 5, height: 5, borderRadius: "50%", background: S.green,
@@ -96,8 +142,6 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
             {session}
           </span>
         </div>
-
-        <div style={{ flex: 1 }} />
 
         <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
           {time}
@@ -113,59 +157,114 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
         )}
       </div>
 
-      {/* Ticker tape - horizontal scroll */}
-      <div style={{ flex: 1, overflow: "auto" }}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 0,
-        }}>
-          {MARKET_INDICES.map((idx, i) => {
-            const isUp = idx.change > 0;
-            const isDown = idx.change < 0;
-            const changeColor = isUp ? S.green : isDown ? S.red : S.tertiary;
-            const TrendIcon = isUp ? TrendingUp : isDown ? TrendingDown : Minus;
-
-            return (
-              <div key={idx.ticker} style={{
-                padding: "10px 12px",
-                borderRight: (i + 1) % 4 !== 0 ? `1px solid ${S.soft}` : "none",
-                borderBottom: i < 4 ? `1px solid ${S.soft}` : "none",
-                display: "flex", flexDirection: "column", gap: 3,
+      {/* Tabs */}
+      <div style={{
+        display: "flex", gap: 0, borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
+      }}>
+        {[
+          { key: "market" as const, label: "MAJOR INDICES", count: marketQuotes.length },
+          { key: "sectors" as const, label: "SECTOR ETFS", count: sectorQuotes.length },
+        ].map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+              flex: 1, padding: "6px 10px", fontFamily: S.fontMono, fontSize: 9,
+              letterSpacing: "0.06em", fontWeight: 700, cursor: "pointer",
+              color: isActive ? S.cyan : S.tertiary,
+              background: isActive ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : "transparent",
+              borderBottom: isActive ? `2px solid ${S.cyan}` : "2px solid transparent",
+              border: "none", borderRight: `1px solid ${S.soft}`,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+            }}>
+              {tab.label}
+              <span style={{
+                fontSize: 8, color: isActive ? S.cyan : S.tertiary,
+                background: isActive
+                  ? `color-mix(in srgb, ${S.cyan} 15%, transparent)`
+                  : `color-mix(in srgb, ${S.tertiary} 10%, transparent)`,
+                padding: "0 4px", borderRadius: 3, fontWeight: 600,
               }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{
-                    fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
-                    letterSpacing: "0.08em",
-                  }}>
-                    {idx.ticker}
-                  </span>
-                  <TrendIcon size={9} color={changeColor} />
-                </div>
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
-                <div style={{
-                  fontFamily: S.fontMono, fontSize: 14, fontWeight: 700,
-                  color: S.primary, lineHeight: 1,
+      {/* Body */}
+      <div style={{ flex: 1, overflow: "auto" }}>
+        {loading && (
+          <div style={{ padding: 12 }}>
+            <EmptyState type="loading" message="Fetching market data..." />
+          </div>
+        )}
+
+        {error && !loading && (
+          <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
+            <Radio size={28} color={S.cyan} style={{ opacity: 0.4 }} />
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, letterSpacing: "0.04em", fontWeight: 600 }}>
+              MARKET DATA UNAVAILABLE
+            </div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.5, maxWidth: 260 }}>
+              Unable to fetch market quotes. Please check your connection.
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: activeTab === "market" ? "repeat(2, 1fr)" : "repeat(3, 1fr)",
+            gap: 0,
+          }}>
+            {displayQuotes.map((quote, i) => {
+              const isUp = quote.changePercent > 0;
+              const isDown = quote.changePercent < 0;
+              const changeColor = isUp ? S.green : isDown ? S.red : S.tertiary;
+              const TrendIcon = isUp ? TrendingUp : isDown ? TrendingDown : Minus;
+              const colCount = activeTab === "market" ? 2 : 3;
+
+              return (
+                <div key={quote.symbol} style={{
+                  padding: "10px 12px",
+                  borderRight: (i + 1) % colCount !== 0 ? `1px solid ${S.soft}` : "none",
+                  borderBottom: i < (activeTab === "market" ? 2 : 6) ? `1px solid ${S.soft}` : "none",
+                  display: "flex", flexDirection: "column", gap: 3,
                 }}>
-                  {idx.value}
-                </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{
+                      fontFamily: S.fontMono, fontSize: 9, color: S.cyan,
+                      letterSpacing: "0.08em", fontWeight: 700,
+                    }}>
+                      {quote.symbol}
+                    </span>
+                    <TrendIcon size={9} color={changeColor} />
+                  </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{
-                    fontFamily: S.fontMono, fontSize: 9, color: changeColor, fontWeight: 700,
+                  <div style={{
+                    fontFamily: S.fontMono, fontSize: 16, fontWeight: 700,
+                    color: S.primary, lineHeight: 1,
                   }}>
-                    {isUp ? "+" : ""}{idx.change.toFixed(2)}%
-                  </span>
-                  <span style={{
-                    fontFamily: S.fontUI, fontSize: 9, color: S.tertiary,
-                  }}>
-                    {idx.name}
-                  </span>
+                    ${quote.price.toFixed(2)}
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{
+                      fontFamily: S.fontMono, fontSize: 9, color: changeColor, fontWeight: 700,
+                    }}>
+                      {isUp ? "+" : ""}{quote.changePercent.toFixed(2)}%
+                    </span>
+                    <span style={{
+                      fontFamily: S.fontUI, fontSize: 9, color: S.tertiary,
+                    }}>
+                      {quote.name}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Footer */}
@@ -174,8 +273,10 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
         fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
         display: "flex", justifyContent: "space-between", flexShrink: 0,
       }}>
-        <span>Reference data · Delayed 15min · Not investment advice</span>
-        <span>Session: {session}</span>
+        <span>
+          {dataSource === "live" ? "Alpha Vantage live quotes" : "Indicative reference data"} · Not investment advice
+        </span>
+        <span>{time.slice(11, 16)} UTC · {session}</span>
       </div>
 
       <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
