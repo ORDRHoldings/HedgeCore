@@ -9,7 +9,9 @@ import { DATABASE_CONNECTION_HELP } from "@/lib/helpContent";
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DbDriver = "PostgreSQL" | "MySQL" | "Microsoft SQL Server" | "Oracle" | "SAP HANA" | "Snowflake" | "Redshift";
 type ConnectionStatus = "disconnected" | "testing" | "connected" | "failed";
-type TabView = "connection" | "mapping" | "preview" | "schedule";
+type TabView = "connection" | "mapping" | "validation" | "execution";
+type ImportMode = "full" | "incremental" | "upsert";
+type ConflictStrategy = "skip" | "overwrite" | "merge_latest" | "manual_review";
 
 interface DbColumn {
   name: string;
@@ -22,11 +24,66 @@ interface FieldMapping {
   sourceColumn: string;
   ordrField: string;
   transform: string;
+  transformType: "direct" | "sql" | "function";
   status: "mapped" | "pending" | "error";
+}
+
+interface ValidationRule {
+  field: string;
+  ruleType: "required" | "format" | "range" | "enum" | "custom";
+  config: {
+    pattern?: string;
+    min?: number;
+    max?: number;
+    values?: string[];
+    customSql?: string;
+  };
+  severity: "error" | "warning";
+  message: string;
+  enabled: boolean;
+}
+
+interface DataQualityMetrics {
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+  warningRows: number;
+  duplicates: number;
+  nullPercent: Record<string, number>;
+  qualityScore: number;
+}
+
+interface ImportConfig {
+  mode: ImportMode;
+  conflictStrategy: ConflictStrategy;
+  batchSize: number;
+  deltaField?: string;
+  lastImportTimestamp?: string;
+  dryRun: boolean;
+}
+
+interface MappingTemplate {
+  id: string;
+  name: string;
+  driver: DbDriver;
+  mappings: FieldMapping[];
+  validationRules: ValidationRule[];
+  createdAt: string;
 }
 
 interface PreviewRow {
   [key: string]: string | number;
+}
+
+interface ImportHistory {
+  id: string;
+  timestamp: string;
+  status: "success" | "partial" | "failed";
+  rowsProcessed: number;
+  rowsImported: number;
+  rowsRejected: number;
+  duration: number;
+  user: string;
 }
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -69,15 +126,28 @@ const ORDR_FIELDS = [
   { field: "status", type: "ENUM[CONFIRMED|FORECAST]", required: false, desc: "Defaults to CONFIRMED" },
 ];
 
+const TRANSFORM_FUNCTIONS = [
+  { id: "UPPER", label: "UPPER(value)", desc: "Convert to uppercase" },
+  { id: "LOWER", label: "LOWER(value)", desc: "Convert to lowercase" },
+  { id: "TRIM", label: "TRIM(value)", desc: "Remove leading/trailing spaces" },
+  { id: "SUBSTRING", label: "SUBSTRING(value, start, length)", desc: "Extract substring" },
+  { id: "CONCAT", label: "CONCAT(val1, val2, ...)", desc: "Concatenate values" },
+  { id: "COALESCE", label: "COALESCE(val1, val2, default)", desc: "First non-null value" },
+  { id: "CAST_DATE", label: "CAST(value AS DATE)", desc: "Convert to date" },
+  { id: "CAST_DECIMAL", label: "CAST(value AS DECIMAL)", desc: "Convert to decimal" },
+  { id: "CASE_WHEN", label: "CASE WHEN condition THEN result", desc: "Conditional logic" },
+  { id: "ABS", label: "ABS(value)", desc: "Absolute value" },
+];
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Main Component
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function DatabaseConnectionPage() {
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabView>("connection");
 
-  // Connection state
+  // LEVEL 1: Connection state
   const [driver, setDriver] = useState<DbDriver>("PostgreSQL");
   const [host, setHost] = useState("");
   const [port, setPort] = useState(5432);
@@ -88,26 +158,40 @@ export default function DatabaseConnectionPage() {
   const [useSSL, setUseSSL] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
   const [connectionError, setConnectionError] = useState("");
-
-  // Data source
   const [queryMode, setQueryMode] = useState<"table" | "query">("table");
   const [tableName, setTableName] = useState("");
   const [customQuery, setCustomQuery] = useState("");
-
-  // Discovered columns
   const [discoveredColumns, setDiscoveredColumns] = useState<DbColumn[]>([]);
 
-  // Field mappings
+  // LEVEL 2: Field mappings & transformations
   const [mappings, setMappings] = useState<FieldMapping[]>([]);
+  const [selectedMapping, setSelectedMapping] = useState<number | null>(null);
+  const [transformEditor, setTransformEditor] = useState("");
+  const [mappingTemplates, setMappingTemplates] = useState<MappingTemplate[]>([]);
+  const [showTemplateSave, setShowTemplateSave] = useState(false);
+  const [templateName, setTemplateName] = useState("");
 
-  // Preview data
+  // LEVEL 3: Validation & data quality
+  const [validationRules, setValidationRules] = useState<ValidationRule[]>([]);
   const [previewData, setPreviewData] = useState<PreviewRow[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [qualityMetrics, setQualityMetrics] = useState<DataQualityMetrics | null>(null);
+  const [showAddRule, setShowAddRule] = useState(false);
 
-  // Schedule
+  // LEVEL 4: Execution & governance
+  const [importConfig, setImportConfig] = useState<ImportConfig>({
+    mode: "full",
+    conflictStrategy: "skip",
+    batchSize: 1000,
+    dryRun: true,
+  });
+  const [importHistory, setImportHistory] = useState<ImportHistory[]>([]);
+  const [executing, setExecuting] = useState(false);
+  const [executionProgress, setExecutionProgress] = useState(0);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleInterval, setScheduleInterval] = useState("daily");
   const [scheduleTime, setScheduleTime] = useState("00:00");
+  const [scheduleCron, setScheduleCron] = useState("");
 
   // Update port when driver changes
   useEffect(() => {
@@ -121,15 +205,20 @@ export default function DatabaseConnectionPage() {
     }
   }, [isAuthenticated, router]);
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // Initialize default validation rules
+  useEffect(() => {
+    if (validationRules.length === 0 && mappings.length > 0) {
+      initializeValidationRules();
+    }
+  }, [mappings]);
+
+  // ── Level 1: Connection Handlers ──────────────────────────────────────────
   const handleTestConnection = async () => {
     setConnectionStatus("testing");
     setConnectionError("");
 
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Mock success and discover columns
     setConnectionStatus("connected");
 
     // Mock discovered columns
@@ -142,20 +231,16 @@ export default function DatabaseConnectionPage() {
       { name: "settlement_date", type: "DATE", nullable: false, sample: "2026-03-15" },
       { name: "notes", type: "TEXT", nullable: true, sample: "Q1 payment" },
       { name: "created_at", type: "TIMESTAMP", nullable: false, sample: "2026-02-26 10:30:00" },
+      { name: "updated_at", type: "TIMESTAMP", nullable: true, sample: "2026-02-26 11:15:00" },
     ];
     setDiscoveredColumns(mockColumns);
-
-    // Auto-generate smart mappings
     autoGenerateMappings(mockColumns);
-
-    // Enable next tab
     setActiveTab("mapping");
   };
 
+  // ── Level 2: Mapping Handlers ─────────────────────────────────────────────
   const autoGenerateMappings = (columns: DbColumn[]) => {
     const smartMappings: FieldMapping[] = [];
-
-    // Smart matching logic
     const columnMap: Record<string, string> = {
       "trade_id": "record_id",
       "transaction_id": "record_id",
@@ -185,16 +270,21 @@ export default function DatabaseConnectionPage() {
 
       if (ordrField) {
         let transform = "—";
+        let transformType: "direct" | "sql" | "function" = "direct";
 
-        // Add transforms for common conversions
         if (ordrField === "flow_type") {
           transform = "CASE WHEN UPPER({{col}}) IN ('RECEIVABLE','AR','INFLOW') THEN 'AR' WHEN UPPER({{col}}) IN ('PAYABLE','AP','OUTFLOW') THEN 'AP' ELSE {{col}} END";
+          transformType = "sql";
+        } else if (ordrField === "currency") {
+          transform = "UPPER(TRIM({{col}}))";
+          transformType = "function";
         }
 
         smartMappings.push({
           sourceColumn: col.name,
           ordrField: ordrField,
           transform: transform,
+          transformType,
           status: "mapped",
         });
       }
@@ -203,25 +293,171 @@ export default function DatabaseConnectionPage() {
     setMappings(smartMappings);
   };
 
+  const updateMapping = (index: number, field: keyof FieldMapping, value: any) => {
+    const newMappings = [...mappings];
+    newMappings[index] = { ...newMappings[index], [field]: value };
+    setMappings(newMappings);
+  };
+
+  const addMapping = () => {
+    const unmappedColumns = discoveredColumns.filter(
+      col => !mappings.some(m => m.sourceColumn === col.name)
+    );
+    if (unmappedColumns.length > 0) {
+      setMappings([...mappings, {
+        sourceColumn: unmappedColumns[0].name,
+        ordrField: ORDR_FIELDS[0].field,
+        transform: "—",
+        transformType: "direct",
+        status: "pending",
+      }]);
+    }
+  };
+
+  const removeMapping = (index: number) => {
+    setMappings(mappings.filter((_, i) => i !== index));
+  };
+
+  const saveTemplate = () => {
+    if (!templateName.trim()) return;
+    const newTemplate: MappingTemplate = {
+      id: Date.now().toString(),
+      name: templateName,
+      driver,
+      mappings: [...mappings],
+      validationRules: [...validationRules],
+      createdAt: new Date().toISOString(),
+    };
+    setMappingTemplates([...mappingTemplates, newTemplate]);
+    setTemplateName("");
+    setShowTemplateSave(false);
+  };
+
+  const loadTemplate = (template: MappingTemplate) => {
+    setMappings(template.mappings);
+    setValidationRules(template.validationRules);
+  };
+
+  // ── Level 3: Validation Handlers ──────────────────────────────────────────
+  const initializeValidationRules = () => {
+    const rules: ValidationRule[] = [
+      {
+        field: "record_id",
+        ruleType: "required",
+        config: {},
+        severity: "error",
+        message: "Record ID is required and must be unique",
+        enabled: true,
+      },
+      {
+        field: "currency",
+        ruleType: "format",
+        config: { pattern: "^[A-Z]{3}$" },
+        severity: "error",
+        message: "Currency must be 3-letter ISO code",
+        enabled: true,
+      },
+      {
+        field: "amount",
+        ruleType: "range",
+        config: { min: 0, max: 999999999 },
+        severity: "error",
+        message: "Amount must be positive and within range",
+        enabled: true,
+      },
+      {
+        field: "flow_type",
+        ruleType: "enum",
+        config: { values: ["AR", "AP"] },
+        severity: "error",
+        message: "Flow type must be AR or AP",
+        enabled: true,
+      },
+      {
+        field: "value_date",
+        ruleType: "custom",
+        config: { customSql: "value_date >= CURRENT_DATE - INTERVAL '2 years'" },
+        severity: "warning",
+        message: "Value date should not be older than 2 years",
+        enabled: true,
+      },
+    ];
+    setValidationRules(rules);
+  };
+
+  const addValidationRule = (rule: ValidationRule) => {
+    setValidationRules([...validationRules, rule]);
+    setShowAddRule(false);
+  };
+
+  const updateValidationRule = (index: number, field: keyof ValidationRule, value: any) => {
+    const newRules = [...validationRules];
+    newRules[index] = { ...newRules[index], [field]: value };
+    setValidationRules(newRules);
+  };
+
+  const removeValidationRule = (index: number) => {
+    setValidationRules(validationRules.filter((_, i) => i !== index));
+  };
+
   const handlePreviewData = async () => {
     setPreviewLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
     // Mock preview data
     const mockPreview: PreviewRow[] = [
       { trade_id: "TXN-001", company_name: "Acme Corp", transaction_type: "AR", ccy: "USD", notional: 1500000, settlement_date: "2026-03-15", notes: "Q1 revenue" },
       { trade_id: "TXN-002", company_name: "Beta LLC", transaction_type: "AP", ccy: "EUR", notional: 850000, settlement_date: "2026-03-20", notes: "Supplier payment" },
       { trade_id: "TXN-003", company_name: "Gamma Ltd", transaction_type: "AR", ccy: "GBP", notional: 650000, settlement_date: "2026-04-01", notes: "Q2 invoice" },
+      { trade_id: "TXN-004", company_name: "Delta Inc", transaction_type: "INVALID", ccy: "JPY", notional: 85000000, settlement_date: "2026-03-25", notes: "Test error" },
+      { trade_id: "TXN-005", company_name: "Epsilon AG", transaction_type: "AR", ccy: "CHF", notional: -50000, settlement_date: "2026-04-10", notes: "Test negative" },
     ];
     setPreviewData(mockPreview);
+
+    // Mock quality metrics
+    const metrics: DataQualityMetrics = {
+      totalRows: 5,
+      validRows: 3,
+      errorRows: 2,
+      warningRows: 0,
+      duplicates: 0,
+      nullPercent: {
+        notes: 0,
+        settlement_date: 0,
+      },
+      qualityScore: 60,
+    };
+    setQualityMetrics(metrics);
     setPreviewLoading(false);
-    setActiveTab("preview");
+    setActiveTab("validation");
   };
 
-  const updateMapping = (index: number, field: keyof FieldMapping, value: string) => {
-    const newMappings = [...mappings];
-    newMappings[index] = { ...newMappings[index], [field]: value };
-    setMappings(newMappings);
+  // ── Level 4: Execution Handlers ───────────────────────────────────────────
+  const handleExecuteImport = async () => {
+    setExecuting(true);
+    setExecutionProgress(0);
+
+    // Simulate import progress
+    for (let i = 0; i <= 100; i += 10) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setExecutionProgress(i);
+    }
+
+    // Mock import history entry
+    const newHistory: ImportHistory = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      status: "success",
+      rowsProcessed: 5,
+      rowsImported: 3,
+      rowsRejected: 2,
+      duration: 3.2,
+      user: user?.full_name || "demo",
+    };
+    setImportHistory([newHistory, ...importHistory]);
+    setExecuting(false);
+    setExecutionProgress(0);
+    setImportConfig({ ...importConfig, dryRun: false });
   };
 
   if (!isAuthenticated) return null;
@@ -240,11 +476,17 @@ export default function DatabaseConnectionPage() {
         <Header onBack={() => router.push("/input")} connectionStatus={connectionStatus} />
 
         {/* Tab Navigation */}
-        <TabNav activeTab={activeTab} setActiveTab={setActiveTab} connectionStatus={connectionStatus} />
+        <TabNav
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          connectionStatus={connectionStatus}
+          mappingsComplete={mappings.length >= 6}
+          validationComplete={qualityMetrics !== null}
+        />
 
         {/* Main Content */}
         <div style={{ flex: 1, padding: "32px", maxWidth: "1800px", margin: "0 auto", width: "100%" }}>
-          {/* Connection Tab */}
+          {/* LEVEL 1: Connection Tab */}
           {activeTab === "connection" && (
             <ConnectionTab
               driver={driver} setDriver={setDriver}
@@ -264,35 +506,63 @@ export default function DatabaseConnectionPage() {
             />
           )}
 
-          {/* Mapping Tab */}
+          {/* LEVEL 2: Mapping Tab */}
           {activeTab === "mapping" && (
             <MappingTab
               discoveredColumns={discoveredColumns}
               mappings={mappings}
               updateMapping={updateMapping}
+              addMapping={addMapping}
+              removeMapping={removeMapping}
+              selectedMapping={selectedMapping}
+              setSelectedMapping={setSelectedMapping}
+              transformEditor={transformEditor}
+              setTransformEditor={setTransformEditor}
               onPreview={handlePreviewData}
-              connectionStatus={connectionStatus}
+              mappingTemplates={mappingTemplates}
+              showTemplateSave={showTemplateSave}
+              setShowTemplateSave={setShowTemplateSave}
+              templateName={templateName}
+              setTemplateName={setTemplateName}
+              saveTemplate={saveTemplate}
+              loadTemplate={loadTemplate}
             />
           )}
 
-          {/* Preview Tab */}
-          {activeTab === "preview" && (
-            <PreviewTab
+          {/* LEVEL 3: Validation Tab */}
+          {activeTab === "validation" && (
+            <ValidationTab
               previewData={previewData}
               previewLoading={previewLoading}
-              mappings={mappings}
+              qualityMetrics={qualityMetrics}
+              validationRules={validationRules}
+              updateValidationRule={updateValidationRule}
+              removeValidationRule={removeValidationRule}
+              showAddRule={showAddRule}
+              setShowAddRule={setShowAddRule}
+              addValidationRule={addValidationRule}
+              onProceed={() => setActiveTab("execution")}
             />
           )}
 
-          {/* Schedule Tab */}
-          {activeTab === "schedule" && (
-            <ScheduleTab
+          {/* LEVEL 4: Execution Tab */}
+          {activeTab === "execution" && (
+            <ExecutionTab
+              importConfig={importConfig}
+              setImportConfig={setImportConfig}
+              importHistory={importHistory}
+              executing={executing}
+              executionProgress={executionProgress}
+              onExecute={handleExecuteImport}
               scheduleEnabled={scheduleEnabled}
               setScheduleEnabled={setScheduleEnabled}
               scheduleInterval={scheduleInterval}
               setScheduleInterval={setScheduleInterval}
               scheduleTime={scheduleTime}
               setScheduleTime={setScheduleTime}
+              scheduleCron={scheduleCron}
+              setScheduleCron={setScheduleCron}
+              qualityMetrics={qualityMetrics}
             />
           )}
         </div>
@@ -344,13 +614,13 @@ function Header({ onBack, connectionStatus }: { onBack: () => void; connectionSt
             fontSize: "10px", color: S.tertiary, fontFamily: S.fontMono,
             letterSpacing: "1px", marginBottom: "4px",
           }}>
-            POSITION DESK › CONNECTORS › SQL
+            POSITION DESK › CONNECTORS › SQL · 4-LEVEL ARCHITECTURE
           </div>
           <h1 style={{
             fontSize: "18px", fontWeight: 600, margin: 0,
             fontFamily: S.fontMono, letterSpacing: "0.5px",
           }}>
-            DATABASE CONNECTION
+            DATABASE CONNECTION & AUTO-IMPORT
           </h1>
         </div>
 
@@ -415,16 +685,20 @@ function TabNav({
   activeTab,
   setActiveTab,
   connectionStatus,
+  mappingsComplete,
+  validationComplete,
 }: {
   activeTab: TabView;
   setActiveTab: (tab: TabView) => void;
   connectionStatus: ConnectionStatus;
+  mappingsComplete: boolean;
+  validationComplete: boolean;
 }) {
-  const tabs: { key: TabView; label: string; badge?: string; disabled: boolean }[] = [
-    { key: "connection", label: "Connection", badge: "1", disabled: false },
-    { key: "mapping", label: "Field Mapping", badge: "2", disabled: connectionStatus !== "connected" },
-    { key: "preview", label: "Data Preview", badge: "3", disabled: connectionStatus !== "connected" },
-    { key: "schedule", label: "Schedule", badge: "4", disabled: false },
+  const tabs: { key: TabView; label: string; level: string; disabled: boolean }[] = [
+    { key: "connection", label: "Connection & Discovery", level: "L1", disabled: false },
+    { key: "mapping", label: "Mapping & Transformation", level: "L2", disabled: connectionStatus !== "connected" },
+    { key: "validation", label: "Validation & Quality", level: "L3", disabled: !mappingsComplete },
+    { key: "execution", label: "Execution & Governance", level: "L4", disabled: !validationComplete },
   ];
 
   return (
@@ -462,22 +736,16 @@ function TabNav({
               gap: 8,
             }}
           >
-            {tab.badge && (
-              <span style={{
-                background: activeTab === tab.key ? S.cyan : S.soft,
-                color: activeTab === tab.key ? S.bgDeep : S.tertiary,
-                width: 18,
-                height: 18,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "9px",
-                fontWeight: 700,
-              }}>
-                {tab.badge}
-              </span>
-            )}
+            <span style={{
+              background: activeTab === tab.key ? S.cyan : S.soft,
+              color: activeTab === tab.key ? S.bgDeep : S.tertiary,
+              padding: "2px 6px",
+              borderRadius: "3px",
+              fontSize: "9px",
+              fontWeight: 700,
+            }}>
+              {tab.level}
+            </span>
             {tab.label}
           </button>
         ))}
@@ -487,7 +755,7 @@ function TabNav({
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Connection Tab
+// LEVEL 1: Connection Tab
 // ═══════════════════════════════════════════════════════════════════════════════
 interface ConnectionTabProps {
   driver: DbDriver;
@@ -533,6 +801,9 @@ function ConnectionTab(props: ConnectionTabProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* Level indicator */}
+      <LevelBanner level={1} title="Connection & Discovery" desc="Establish database connection and discover schema" />
+
       {/* Database Adapters */}
       <Panel title="Database Adapter" step="1.1">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
@@ -782,9 +1053,9 @@ function ConnectionTab(props: ConnectionTabProps) {
               TESTING CONNECTION…
             </>
           ) : props.connectionStatus === "connected" ? (
-            <>✓ CONNECTED - DISCOVER SCHEMA</>
+            <>✓ CONNECTED - SCHEMA DISCOVERED</>
           ) : (
-            <>🔌 TEST CONNECTION</>
+            <>🔌 TEST CONNECTION & DISCOVER</>
           )}
         </button>
 
@@ -801,21 +1072,7 @@ function ConnectionTab(props: ConnectionTabProps) {
             alignItems: "center",
             gap: 8,
           }}>
-            ✓ Connection successful. Schema discovered. Proceed to Field Mapping →
-          </div>
-        )}
-
-        {props.connectionError && (
-          <div style={{
-            fontFamily: S.fontMono,
-            fontSize: "11px",
-            color: S.fail,
-            padding: "14px 20px",
-            background: "rgba(220, 38, 38, 0.1)",
-            border: `1px solid ${S.fail}`,
-            borderRadius: "4px",
-          }}>
-            {props.connectionError}
+            ✓ Connection successful. Schema discovered. Proceed to Level 2: Mapping & Transformation →
           </div>
         )}
       </div>
@@ -824,65 +1081,183 @@ function ConnectionTab(props: ConnectionTabProps) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Mapping Tab
+// LEVEL 2: Mapping Tab
 // ═══════════════════════════════════════════════════════════════════════════════
 interface MappingTabProps {
   discoveredColumns: DbColumn[];
   mappings: FieldMapping[];
-  updateMapping: (index: number, field: keyof FieldMapping, value: string) => void;
+  updateMapping: (index: number, field: keyof FieldMapping, value: any) => void;
+  addMapping: () => void;
+  removeMapping: (index: number) => void;
+  selectedMapping: number | null;
+  setSelectedMapping: (v: number | null) => void;
+  transformEditor: string;
+  setTransformEditor: (v: string) => void;
   onPreview: () => void;
-  connectionStatus: ConnectionStatus;
+  mappingTemplates: MappingTemplate[];
+  showTemplateSave: boolean;
+  setShowTemplateSave: (v: boolean) => void;
+  templateName: string;
+  setTemplateName: (v: string) => void;
+  saveTemplate: () => void;
+  loadTemplate: (template: MappingTemplate) => void;
 }
 
-function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, connectionStatus }: MappingTabProps) {
-  const mappedCount = mappings.filter(m => m.status === "mapped").length;
+function MappingTab(props: MappingTabProps) {
+  const mappedCount = props.mappings.filter(m => m.status === "mapped").length;
   const requiredFields = ORDR_FIELDS.filter(f => f.required).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <Panel title="Column Mapping: Database → ORDR Position Fields" step="2.1">
-        {/* Progress Bar */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 8,
+      <LevelBanner level={2} title="Mapping & Transformation" desc="Map database columns to ORDR fields with advanced transformations" />
+
+      {/* Progress Bar */}
+      <div style={{
+        background: S.bgPanel,
+        border: `1px solid ${S.rim}`,
+        borderRadius: 6,
+        padding: 20,
+      }}>
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 8,
+        }}>
+          <span style={{
+            fontFamily: S.fontMono,
+            fontSize: "11px",
+            color: S.secondary,
           }}>
-            <span style={{
+            Mapping Progress
+          </span>
+          <span style={{
+            fontFamily: S.fontMono,
+            fontSize: "11px",
+            fontWeight: 700,
+            color: mappedCount >= requiredFields ? S.pass : S.amber,
+          }}>
+            {mappedCount} / {requiredFields} required fields mapped
+          </span>
+        </div>
+        <div style={{
+          width: "100%",
+          height: 8,
+          background: S.bgSub,
+          borderRadius: 4,
+          overflow: "hidden",
+        }}>
+          <div style={{
+            width: `${(mappedCount / requiredFields) * 100}%`,
+            height: "100%",
+            background: mappedCount >= requiredFields ? S.pass : S.amber,
+            transition: "width 0.3s",
+          }} />
+        </div>
+      </div>
+
+      {/* Template Management */}
+      <Panel title="Mapping Templates" step="2.1">
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+          {props.mappingTemplates.map(template => (
+            <button
+              key={template.id}
+              onClick={() => props.loadTemplate(template)}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: "11px",
+                padding: "8px 14px",
+                background: S.bgSub,
+                border: `1px solid ${S.rim}`,
+                borderRadius: 4,
+                color: S.cyan,
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = S.cyan}
+              onMouseLeave={e => e.currentTarget.style.borderColor = S.rim}
+            >
+              📋 {template.name}
+            </button>
+          ))}
+          <button
+            onClick={() => props.setShowTemplateSave(true)}
+            style={{
               fontFamily: S.fontMono,
               fontSize: "11px",
-              color: S.secondary,
-            }}>
-              Mapping Progress
-            </span>
-            <span style={{
-              fontFamily: S.fontMono,
-              fontSize: "11px",
-              fontWeight: 700,
-              color: mappedCount >= requiredFields ? S.pass : S.amber,
-            }}>
-              {mappedCount} / {requiredFields} required fields mapped
-            </span>
-          </div>
-          <div style={{
-            width: "100%",
-            height: 8,
-            background: S.bgSub,
-            borderRadius: 4,
-            overflow: "hidden",
-          }}>
-            <div style={{
-              width: `${(mappedCount / requiredFields) * 100}%`,
-              height: "100%",
-              background: mappedCount >= requiredFields ? S.pass : S.amber,
-              transition: "width 0.3s",
-            }} />
-          </div>
+              padding: "8px 14px",
+              background: S.cyan,
+              border: "none",
+              borderRadius: 4,
+              color: S.bgDeep,
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            💾 SAVE AS TEMPLATE
+          </button>
         </div>
 
-        {/* Mapping Table */}
-        <div style={{ overflowX: "auto" }}>
+        {props.showTemplateSave && (
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              value={props.templateName}
+              onChange={e => props.setTemplateName(e.target.value)}
+              placeholder="Template name (e.g., SAP to ORDR)"
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: "12px",
+                padding: "8px 12px",
+                background: S.bgDeep,
+                border: `1px solid ${S.rim}`,
+                borderRadius: 4,
+                color: S.primary,
+                flex: 1,
+              }}
+            />
+            <button
+              onClick={props.saveTemplate}
+              disabled={!props.templateName.trim()}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: "11px",
+                padding: "8px 16px",
+                background: props.templateName.trim() ? S.pass : S.soft,
+                border: "none",
+                borderRadius: 4,
+                color: S.bgDeep,
+                cursor: props.templateName.trim() ? "pointer" : "not-allowed",
+                fontWeight: 600,
+              }}
+            >
+              SAVE
+            </button>
+            <button
+              onClick={() => {
+                props.setShowTemplateSave(false);
+                props.setTemplateName("");
+              }}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: "11px",
+                padding: "8px 16px",
+                background: S.bgSub,
+                border: `1px solid ${S.rim}`,
+                borderRadius: 4,
+                color: S.secondary,
+                cursor: "pointer",
+              }}
+            >
+              CANCEL
+            </button>
+          </div>
+        )}
+      </Panel>
+
+      {/* Column Mapping Table */}
+      <Panel title="Field Mappings" step="2.2">
+        <div style={{ overflowX: "auto", marginBottom: 16 }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
@@ -910,7 +1285,7 @@ function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, con
                   textAlign: "left",
                   background: S.bgSub,
                 }}>
-                  Data Type
+                  Type
                 </th>
                 <th style={{
                   fontFamily: S.fontMono,
@@ -923,7 +1298,7 @@ function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, con
                   textAlign: "left",
                   background: S.bgSub,
                 }}>
-                  Sample Value
+                  Sample
                 </th>
                 <th style={{
                   fontFamily: S.fontMono,
@@ -949,13 +1324,26 @@ function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, con
                   textAlign: "left",
                   background: S.bgSub,
                 }}>
-                  Transform
+                  Transform Type
+                </th>
+                <th style={{
+                  fontFamily: S.fontMono,
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: S.tertiary,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "12px",
+                  textAlign: "center",
+                  background: S.bgSub,
+                }}>
+                  Actions
                 </th>
               </tr>
             </thead>
             <tbody>
-              {mappings.map((mapping, index) => {
-                const sourceCol = discoveredColumns.find(c => c.name === mapping.sourceColumn);
+              {props.mappings.map((mapping, index) => {
+                const sourceCol = props.discoveredColumns.find(c => c.name === mapping.sourceColumn);
                 return (
                   <tr key={index} style={{ borderBottom: `1px solid ${S.soft}` }}>
                     <td style={{
@@ -986,7 +1374,7 @@ function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, con
                     <td style={{ padding: "12px" }}>
                       <select
                         value={mapping.ordrField}
-                        onChange={e => updateMapping(index, "ordrField", e.target.value)}
+                        onChange={e => props.updateMapping(index, "ordrField", e.target.value)}
                         style={{
                           fontFamily: S.fontMono,
                           fontSize: "11px",
@@ -1005,15 +1393,63 @@ function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, con
                         ))}
                       </select>
                     </td>
+                    <td style={{ padding: "12px" }}>
+                      <select
+                        value={mapping.transformType}
+                        onChange={e => props.updateMapping(index, "transformType", e.target.value)}
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: "10px",
+                          padding: "6px 10px",
+                          background: S.bgDeep,
+                          border: `1px solid ${S.rim}`,
+                          borderRadius: 3,
+                          color: mapping.transformType === "direct" ? S.tertiary : S.amber,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <option value="direct">Direct</option>
+                        <option value="function">Function</option>
+                        <option value="sql">SQL</option>
+                      </select>
+                    </td>
                     <td style={{
                       padding: "12px",
-                      fontFamily: S.fontMono,
-                      fontSize: "10px",
-                      color: mapping.transform === "—" ? S.tertiary : S.amber,
+                      textAlign: "center",
                     }}>
-                      {mapping.transform.length > 40
-                        ? mapping.transform.substring(0, 40) + "…"
-                        : mapping.transform}
+                      <button
+                        onClick={() => props.setSelectedMapping(index)}
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: "10px",
+                          padding: "4px 10px",
+                          background: S.cyan,
+                          border: "none",
+                          borderRadius: 3,
+                          color: S.bgDeep,
+                          cursor: "pointer",
+                          fontWeight: 600,
+                          marginRight: 4,
+                        }}
+                      >
+                        EDIT
+                      </button>
+                      <button
+                        onClick={() => props.removeMapping(index)}
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: "10px",
+                          padding: "4px 10px",
+                          background: S.fail,
+                          border: "none",
+                          borderRadius: 3,
+                          color: S.bgDeep,
+                          cursor: "pointer",
+                          fontWeight: 600,
+                        }}
+                      >
+                        ✕
+                      </button>
                     </td>
                   </tr>
                 );
@@ -1021,12 +1457,127 @@ function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, con
             </tbody>
           </table>
         </div>
+
+        <button
+          onClick={props.addMapping}
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: "11px",
+            padding: "8px 16px",
+            background: S.bgSub,
+            border: `1px solid ${S.rim}`,
+            borderRadius: 4,
+            color: S.cyan,
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          + ADD MAPPING
+        </button>
       </Panel>
 
+      {/* Transform Editor */}
+      {props.selectedMapping !== null && (
+        <Panel title={`Transform Editor: ${props.mappings[props.selectedMapping].sourceColumn} → ${props.mappings[props.selectedMapping].ordrField}`} step="2.3">
+          <div style={{ marginBottom: 16 }}>
+            <div style={{
+              fontFamily: S.fontUI,
+              fontSize: "11px",
+              fontWeight: 600,
+              color: S.secondary,
+              marginBottom: 8,
+              textTransform: "uppercase",
+            }}>
+              Transformation Expression
+            </div>
+            <textarea
+              value={props.mappings[props.selectedMapping!].transform}
+              onChange={e => props.updateMapping(props.selectedMapping!, "transform", e.target.value)}
+              rows={4}
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "12px",
+                padding: "12px",
+                background: S.bgDeep,
+                border: `1px solid ${S.rim}`,
+                borderRadius: 4,
+                color: S.primary,
+                width: "100%",
+                lineHeight: 1.6,
+              }}
+            />
+            <div style={{
+              fontFamily: S.fontMono,
+              fontSize: "10px",
+              color: S.tertiary,
+              marginTop: 6,
+            }}>
+              Use {`{{col}}`} for source column reference. Example: UPPER(TRIM({`{{col}}`}))
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <div style={{
+              fontFamily: S.fontUI,
+              fontSize: "11px",
+              fontWeight: 600,
+              color: S.secondary,
+              marginBottom: 8,
+              textTransform: "uppercase",
+            }}>
+              Function Library
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {TRANSFORM_FUNCTIONS.map(func => (
+                <button
+                  key={func.id}
+                  onClick={() => {
+                    const newTransform = props.mappings[props.selectedMapping!].transform === "—"
+                      ? func.label.replace("value", "{{col}}")
+                      : props.mappings[props.selectedMapping!].transform + " " + func.label.replace("value", "{{col}}");
+                    props.updateMapping(props.selectedMapping!, "transform", newTransform);
+                  }}
+                  style={{
+                    fontFamily: S.fontMono,
+                    fontSize: "10px",
+                    padding: "6px 10px",
+                    background: S.bgSub,
+                    border: `1px solid ${S.rim}`,
+                    borderRadius: 3,
+                    color: S.cyan,
+                    cursor: "pointer",
+                  }}
+                  title={func.desc}
+                >
+                  {func.id}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => props.setSelectedMapping(null)}
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: "11px",
+              padding: "8px 16px",
+              background: S.cyan,
+              border: "none",
+              borderRadius: 4,
+              color: S.bgDeep,
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            ✓ APPLY & CLOSE
+          </button>
+        </Panel>
+      )}
+
       {/* ORDR Field Reference */}
-      <Panel title="ORDR Position Field Reference" step="2.2">
+      <Panel title="ORDR Position Field Reference" step="2.4">
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
                 <th style={{
@@ -1132,7 +1683,7 @@ function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, con
         borderTop: `1px solid ${S.rim}`,
       }}>
         <button
-          onClick={onPreview}
+          onClick={props.onPreview}
           disabled={mappedCount < requiredFields}
           style={{
             fontFamily: S.fontMono,
@@ -1149,7 +1700,7 @@ function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, con
             transition: "all 0.2s",
           }}
         >
-          👁️ PREVIEW DATA
+          👁️ PREVIEW & VALIDATE DATA →
         </button>
 
         {mappedCount < requiredFields && (
@@ -1165,7 +1716,7 @@ function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, con
             alignItems: "center",
             gap: 8,
           }}>
-            ⚠️ Map all required fields to preview data
+            ⚠️ Map all required fields before proceeding to Level 3: Validation
           </div>
         )}
       </div>
@@ -1174,18 +1725,23 @@ function MappingTab({ discoveredColumns, mappings, updateMapping, onPreview, con
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Preview Tab
+// LEVEL 3: Validation Tab
 // ═══════════════════════════════════════════════════════════════════════════════
-function PreviewTab({
-  previewData,
-  previewLoading,
-  mappings,
-}: {
+interface ValidationTabProps {
   previewData: PreviewRow[];
   previewLoading: boolean;
-  mappings: FieldMapping[];
-}) {
-  if (previewLoading) {
+  qualityMetrics: DataQualityMetrics | null;
+  validationRules: ValidationRule[];
+  updateValidationRule: (index: number, field: keyof ValidationRule, value: any) => void;
+  removeValidationRule: (index: number) => void;
+  showAddRule: boolean;
+  setShowAddRule: (v: boolean) => void;
+  addValidationRule: (rule: ValidationRule) => void;
+  onProceed: () => void;
+}
+
+function ValidationTab(props: ValidationTabProps) {
+  if (props.previewLoading) {
     return (
       <div style={{
         display: "flex",
@@ -1201,7 +1757,7 @@ function PreviewTab({
           fontSize: "12px",
           color: S.secondary,
         }}>
-          Loading preview data...
+          Loading and validating preview data...
         </div>
       </div>
     );
@@ -1209,12 +1765,265 @@ function PreviewTab({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <Panel title="Data Preview (First 3 Rows)" step="3.1">
+      <LevelBanner level={3} title="Validation & Quality" desc="Validate data quality and enforce business rules" />
+
+      {/* Data Quality Metrics */}
+      {props.qualityMetrics && (
+        <Panel title="Data Quality Assessment" step="3.1">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20 }}>
+            <MetricCard
+              label="Total Rows"
+              value={props.qualityMetrics.totalRows}
+              color={S.cyan}
+            />
+            <MetricCard
+              label="Valid Rows"
+              value={props.qualityMetrics.validRows}
+              color={S.pass}
+            />
+            <MetricCard
+              label="Errors"
+              value={props.qualityMetrics.errorRows}
+              color={S.fail}
+            />
+            <MetricCard
+              label="Warnings"
+              value={props.qualityMetrics.warningRows}
+              color={S.amber}
+            />
+          </div>
+
+          <div style={{
+            background: S.bgDeep,
+            padding: 20,
+            borderRadius: 6,
+            border: `1px solid ${S.rim}`,
+          }}>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 12,
+            }}>
+              <span style={{
+                fontFamily: S.fontMono,
+                fontSize: "12px",
+                fontWeight: 600,
+                color: S.primary,
+              }}>
+                Quality Score
+              </span>
+              <span style={{
+                fontFamily: S.fontMono,
+                fontSize: "20px",
+                fontWeight: 700,
+                color: props.qualityMetrics.qualityScore >= 80 ? S.pass : props.qualityMetrics.qualityScore >= 60 ? S.amber : S.fail,
+              }}>
+                {props.qualityMetrics.qualityScore}%
+              </span>
+            </div>
+            <div style={{
+              width: "100%",
+              height: 12,
+              background: S.bgSub,
+              borderRadius: 6,
+              overflow: "hidden",
+            }}>
+              <div style={{
+                width: `${props.qualityMetrics.qualityScore}%`,
+                height: "100%",
+                background: props.qualityMetrics.qualityScore >= 80 ? S.pass : props.qualityMetrics.qualityScore >= 60 ? S.amber : S.fail,
+                transition: "width 0.5s",
+              }} />
+            </div>
+          </div>
+        </Panel>
+      )}
+
+      {/* Validation Rules */}
+      <Panel title="Validation Rules" step="3.2">
+        <div style={{ marginBottom: 16 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
+                <th style={{
+                  fontFamily: S.fontMono,
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: S.tertiary,
+                  padding: "10px 12px",
+                  textAlign: "left",
+                  background: S.bgSub,
+                  width: 40,
+                }}>
+                  ON
+                </th>
+                <th style={{
+                  fontFamily: S.fontMono,
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: S.tertiary,
+                  padding: "10px 12px",
+                  textAlign: "left",
+                  background: S.bgSub,
+                }}>
+                  Field
+                </th>
+                <th style={{
+                  fontFamily: S.fontMono,
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: S.tertiary,
+                  padding: "10px 12px",
+                  textAlign: "left",
+                  background: S.bgSub,
+                }}>
+                  Rule Type
+                </th>
+                <th style={{
+                  fontFamily: S.fontMono,
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: S.tertiary,
+                  padding: "10px 12px",
+                  textAlign: "left",
+                  background: S.bgSub,
+                }}>
+                  Severity
+                </th>
+                <th style={{
+                  fontFamily: S.fontMono,
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: S.tertiary,
+                  padding: "10px 12px",
+                  textAlign: "left",
+                  background: S.bgSub,
+                }}>
+                  Message
+                </th>
+                <th style={{
+                  fontFamily: S.fontMono,
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: S.tertiary,
+                  padding: "10px 12px",
+                  textAlign: "center",
+                  background: S.bgSub,
+                }}>
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {props.validationRules.map((rule, index) => (
+                <tr key={index} style={{ borderBottom: `1px solid ${S.soft}` }}>
+                  <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={rule.enabled}
+                      onChange={e => props.updateValidationRule(index, "enabled", e.target.checked)}
+                      style={{ width: 16, height: 16, cursor: "pointer" }}
+                    />
+                  </td>
+                  <td style={{
+                    padding: "10px 12px",
+                    fontFamily: S.fontMono,
+                    fontSize: "11px",
+                    color: S.cyan,
+                    fontWeight: 600,
+                  }}>
+                    {rule.field}
+                  </td>
+                  <td style={{
+                    padding: "10px 12px",
+                    fontFamily: S.fontMono,
+                    fontSize: "10px",
+                    color: S.secondary,
+                  }}>
+                    {rule.ruleType}
+                  </td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <span style={{
+                      fontFamily: S.fontMono,
+                      fontSize: "9px",
+                      fontWeight: 700,
+                      color: rule.severity === "error" ? S.fail : S.amber,
+                      border: `1px solid ${rule.severity === "error" ? S.fail : S.amber}`,
+                      padding: "2px 6px",
+                      borderRadius: 3,
+                    }}>
+                      {rule.severity.toUpperCase()}
+                    </span>
+                  </td>
+                  <td style={{
+                    padding: "10px 12px",
+                    fontFamily: S.fontMono,
+                    fontSize: "11px",
+                    color: S.secondary,
+                  }}>
+                    {rule.message}
+                  </td>
+                  <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                    <button
+                      onClick={() => props.removeValidationRule(index)}
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: "10px",
+                        padding: "4px 10px",
+                        background: S.fail,
+                        border: "none",
+                        borderRadius: 3,
+                        color: S.bgDeep,
+                        cursor: "pointer",
+                        fontWeight: 600,
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <button
+          onClick={() => props.setShowAddRule(true)}
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: "11px",
+            padding: "8px 16px",
+            background: S.bgSub,
+            border: `1px solid ${S.rim}`,
+            borderRadius: 4,
+            color: S.cyan,
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          + ADD VALIDATION RULE
+        </button>
+      </Panel>
+
+      {/* Data Preview */}
+      <Panel title="Data Preview with Validation Results" step="3.3">
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
-                {Object.keys(previewData[0] || {}).map(col => (
+                <th style={{
+                  fontFamily: S.fontMono,
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: S.tertiary,
+                  padding: "10px 12px",
+                  textAlign: "center",
+                  background: S.bgSub,
+                }}>
+                  Status
+                </th>
+                {Object.keys(props.previewData[0] || {}).map(col => (
                   <th key={col} style={{
                     fontFamily: S.fontMono,
                     fontSize: "10px",
@@ -1222,7 +2031,7 @@ function PreviewTab({
                     color: S.tertiary,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
-                    padding: "12px",
+                    padding: "10px 12px",
                     textAlign: "left",
                     background: S.bgSub,
                   }}>
@@ -1232,62 +2041,352 @@ function PreviewTab({
               </tr>
             </thead>
             <tbody>
-              {previewData.map((row, i) => (
-                <tr key={i} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                  {Object.values(row).map((val, j) => (
-                    <td key={j} style={{
-                      padding: "12px",
-                      fontFamily: S.fontMono,
-                      fontSize: "12px",
-                      color: S.primary,
-                    }}>
-                      {String(val)}
+              {props.previewData.map((row, i) => {
+                const hasError = i >= 3; // Mock: rows 3+ have errors
+                return (
+                  <tr key={i} style={{
+                    borderBottom: `1px solid ${S.soft}`,
+                    background: hasError ? "rgba(220, 38, 38, 0.05)" : "transparent",
+                  }}>
+                    <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                      <span style={{
+                        fontSize: "16px",
+                      }}>
+                        {hasError ? "❌" : "✅"}
+                      </span>
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    {Object.values(row).map((val, j) => (
+                      <td key={j} style={{
+                        padding: "10px 12px",
+                        fontFamily: S.fontMono,
+                        fontSize: "11px",
+                        color: hasError ? S.fail : S.primary,
+                      }}>
+                        {String(val)}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </Panel>
 
+      {/* Action Button */}
       <div style={{
-        background: "rgba(34, 197, 94, 0.1)",
-        border: `1px solid ${S.pass}`,
-        borderRadius: 6,
-        padding: 20,
-        fontFamily: S.fontMono,
-        fontSize: "11px",
-        color: S.pass,
+        display: "flex",
+        gap: 12,
+        paddingTop: 24,
+        borderTop: `1px solid ${S.rim}`,
       }}>
-        ✓ Preview successful. Ready to import {previewData.length} rows. Configure import schedule or run manual import.
+        <button
+          onClick={props.onProceed}
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: "12px",
+            fontWeight: 700,
+            letterSpacing: "0.5px",
+            padding: "14px 32px",
+            background: S.cyan,
+            border: "none",
+            borderRadius: "4px",
+            color: S.bgDeep,
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+        >
+          ⚡ PROCEED TO EXECUTION →
+        </button>
+
+        <div style={{
+          fontFamily: S.fontMono,
+          fontSize: "11px",
+          color: S.pass,
+          padding: "14px 20px",
+          background: "rgba(34, 197, 94, 0.1)",
+          border: `1px solid ${S.pass}`,
+          borderRadius: "4px",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}>
+          ✓ Validation complete. Ready for Level 4: Execution & Governance
+        </div>
       </div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Schedule Tab
+// LEVEL 4: Execution Tab
 // ═══════════════════════════════════════════════════════════════════════════════
-function ScheduleTab({
-  scheduleEnabled,
-  setScheduleEnabled,
-  scheduleInterval,
-  setScheduleInterval,
-  scheduleTime,
-  setScheduleTime,
-}: {
+interface ExecutionTabProps {
+  importConfig: ImportConfig;
+  setImportConfig: (v: ImportConfig) => void;
+  importHistory: ImportHistory[];
+  executing: boolean;
+  executionProgress: number;
+  onExecute: () => void;
   scheduleEnabled: boolean;
   setScheduleEnabled: (v: boolean) => void;
   scheduleInterval: string;
   setScheduleInterval: (v: string) => void;
   scheduleTime: string;
   setScheduleTime: (v: string) => void;
-}) {
+  scheduleCron: string;
+  setScheduleCron: (v: string) => void;
+  qualityMetrics: DataQualityMetrics | null;
+}
+
+function ExecutionTab(props: ExecutionTabProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <Panel title="Automated Import Schedule" step="4.1">
-        <div style={{ marginBottom: 24 }}>
+      <LevelBanner level={4} title="Execution & Governance" desc="Execute imports with audit trail and automated scheduling" />
+
+      {/* Import Configuration */}
+      <Panel title="Import Configuration" step="4.1">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+          <div>
+            <label style={{
+              fontFamily: S.fontUI,
+              fontSize: "11px",
+              fontWeight: 600,
+              color: S.secondary,
+              marginBottom: 8,
+              display: "block",
+              textTransform: "uppercase",
+            }}>
+              Import Mode
+            </label>
+            <select
+              value={props.importConfig.mode}
+              onChange={e => props.setImportConfig({ ...props.importConfig, mode: e.target.value as ImportMode })}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: "12px",
+                padding: "10px 14px",
+                background: S.bgDeep,
+                border: `1px solid ${S.rim}`,
+                borderRadius: 4,
+                color: S.primary,
+                cursor: "pointer",
+                width: "100%",
+              }}
+            >
+              <option value="full">Full Load (Replace All)</option>
+              <option value="incremental">Incremental (Delta Only)</option>
+              <option value="upsert">Upsert (Insert/Update)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{
+              fontFamily: S.fontUI,
+              fontSize: "11px",
+              fontWeight: 600,
+              color: S.secondary,
+              marginBottom: 8,
+              display: "block",
+              textTransform: "uppercase",
+            }}>
+              Conflict Strategy
+            </label>
+            <select
+              value={props.importConfig.conflictStrategy}
+              onChange={e => props.setImportConfig({ ...props.importConfig, conflictStrategy: e.target.value as ConflictStrategy })}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: "12px",
+                padding: "10px 14px",
+                background: S.bgDeep,
+                border: `1px solid ${S.rim}`,
+                borderRadius: 4,
+                color: S.primary,
+                cursor: "pointer",
+                width: "100%",
+              }}
+            >
+              <option value="skip">Skip Conflicts</option>
+              <option value="overwrite">Overwrite Existing</option>
+              <option value="merge_latest">Merge (Keep Latest)</option>
+              <option value="manual_review">Manual Review</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{
+              fontFamily: S.fontUI,
+              fontSize: "11px",
+              fontWeight: 600,
+              color: S.secondary,
+              marginBottom: 8,
+              display: "block",
+              textTransform: "uppercase",
+            }}>
+              Batch Size
+            </label>
+            <input
+              type="number"
+              value={props.importConfig.batchSize}
+              onChange={e => props.setImportConfig({ ...props.importConfig, batchSize: Number(e.target.value) })}
+              min={100}
+              max={10000}
+              step={100}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: "12px",
+                padding: "10px 14px",
+                background: S.bgDeep,
+                border: `1px solid ${S.rim}`,
+                borderRadius: 4,
+                color: S.primary,
+                width: "100%",
+              }}
+            />
+          </div>
+        </div>
+
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
+          <input
+            type="checkbox"
+            checked={props.importConfig.dryRun}
+            onChange={e => props.setImportConfig({ ...props.importConfig, dryRun: e.target.checked })}
+            id="dryrun-checkbox"
+            style={{ width: 16, height: 16, cursor: "pointer" }}
+          />
+          <label htmlFor="dryrun-checkbox" style={{
+            fontFamily: S.fontMono,
+            fontSize: "11px",
+            color: S.secondary,
+            cursor: "pointer",
+          }}>
+            Dry Run (Preview only, do not write to database)
+          </label>
+        </div>
+      </Panel>
+
+      {/* Execution */}
+      <Panel title="Execute Import" step="4.2">
+        {props.qualityMetrics && (
+          <div style={{
+            background: props.qualityMetrics.qualityScore >= 80 ? "rgba(34, 197, 94, 0.1)" : "rgba(251, 191, 36, 0.1)",
+            border: `1px solid ${props.qualityMetrics.qualityScore >= 80 ? S.pass : S.amber}`,
+            borderRadius: 6,
+            padding: 16,
+            marginBottom: 16,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
+            <div>
+              <div style={{
+                fontFamily: S.fontMono,
+                fontSize: "11px",
+                color: S.secondary,
+                marginBottom: 4,
+              }}>
+                Ready to import
+              </div>
+              <div style={{
+                fontFamily: S.fontMono,
+                fontSize: "16px",
+                fontWeight: 700,
+                color: props.qualityMetrics.qualityScore >= 80 ? S.pass : S.amber,
+              }}>
+                {props.qualityMetrics.validRows} valid rows ({props.qualityMetrics.qualityScore}% quality)
+              </div>
+            </div>
+            {props.qualityMetrics.errorRows > 0 && (
+              <div style={{
+                fontFamily: S.fontMono,
+                fontSize: "11px",
+                color: S.fail,
+              }}>
+                {props.qualityMetrics.errorRows} rows will be rejected
+              </div>
+            )}
+          </div>
+        )}
+
+        {props.executing && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 8,
+            }}>
+              <span style={{
+                fontFamily: S.fontMono,
+                fontSize: "11px",
+                color: S.secondary,
+              }}>
+                Import Progress
+              </span>
+              <span style={{
+                fontFamily: S.fontMono,
+                fontSize: "11px",
+                fontWeight: 700,
+                color: S.cyan,
+              }}>
+                {props.executionProgress}%
+              </span>
+            </div>
+            <div style={{
+              width: "100%",
+              height: 12,
+              background: S.bgSub,
+              borderRadius: 6,
+              overflow: "hidden",
+            }}>
+              <div style={{
+                width: `${props.executionProgress}%`,
+                height: "100%",
+                background: S.cyan,
+                transition: "width 0.3s",
+              }} />
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={props.onExecute}
+          disabled={props.executing}
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: "12px",
+            fontWeight: 700,
+            letterSpacing: "0.5px",
+            padding: "14px 32px",
+            background: props.executing ? S.soft : (props.importConfig.dryRun ? S.amber : S.pass),
+            border: "none",
+            borderRadius: "4px",
+            color: S.bgDeep,
+            cursor: props.executing ? "not-allowed" : "pointer",
+            opacity: props.executing ? 0.5 : 1,
+            transition: "all 0.2s",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          {props.executing ? (
+            <>
+              <Spinner />
+              EXECUTING IMPORT…
+            </>
+          ) : props.importConfig.dryRun ? (
+            <>🧪 RUN DRY RUN</>
+          ) : (
+            <>⚡ EXECUTE IMPORT</>
+          )}
+        </button>
+      </Panel>
+
+      {/* Automated Scheduling */}
+      <Panel title="Automated Scheduling" step="4.3">
+        <div style={{ marginBottom: 20 }}>
           <label style={{
             display: "flex",
             alignItems: "center",
@@ -1299,93 +2398,301 @@ function ScheduleTab({
           }}>
             <input
               type="checkbox"
-              checked={scheduleEnabled}
-              onChange={e => setScheduleEnabled(e.target.checked)}
+              checked={props.scheduleEnabled}
+              onChange={e => props.setScheduleEnabled(e.target.checked)}
               style={{ width: 20, height: 20, cursor: "pointer" }}
             />
             Enable Automated Imports
           </label>
         </div>
 
-        {scheduleEnabled && (
+        {props.scheduleEnabled && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div>
-              <label style={{
-                fontFamily: S.fontUI,
-                fontSize: "11px",
-                fontWeight: 600,
-                color: S.secondary,
-                marginBottom: 8,
-                display: "block",
-                textTransform: "uppercase",
-              }}>
-                Frequency
-              </label>
-              <select
-                value={scheduleInterval}
-                onChange={e => setScheduleInterval(e.target.value)}
-                style={{
-                  fontFamily: S.fontMono,
-                  fontSize: "13px",
-                  padding: "10px 14px",
-                  background: S.bgDeep,
-                  border: `1px solid ${S.rim}`,
-                  borderRadius: 4,
-                  color: S.primary,
-                  cursor: "pointer",
-                  width: 300,
-                }}
-              >
-                <option value="hourly">Every Hour</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div>
+                <label style={{
+                  fontFamily: S.fontUI,
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: S.secondary,
+                  marginBottom: 8,
+                  display: "block",
+                  textTransform: "uppercase",
+                }}>
+                  Frequency
+                </label>
+                <select
+                  value={props.scheduleInterval}
+                  onChange={e => props.setScheduleInterval(e.target.value)}
+                  style={{
+                    fontFamily: S.fontMono,
+                    fontSize: "13px",
+                    padding: "10px 14px",
+                    background: S.bgDeep,
+                    border: `1px solid ${S.rim}`,
+                    borderRadius: 4,
+                    color: S.primary,
+                    cursor: "pointer",
+                    width: "100%",
+                  }}
+                >
+                  <option value="hourly">Every Hour</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="custom">Custom (Cron)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{
+                  fontFamily: S.fontUI,
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: S.secondary,
+                  marginBottom: 8,
+                  display: "block",
+                  textTransform: "uppercase",
+                }}>
+                  Time (UTC)
+                </label>
+                <input
+                  type="time"
+                  value={props.scheduleTime}
+                  onChange={e => props.setScheduleTime(e.target.value)}
+                  style={{
+                    fontFamily: S.fontMono,
+                    fontSize: "13px",
+                    padding: "10px 14px",
+                    background: S.bgDeep,
+                    border: `1px solid ${S.rim}`,
+                    borderRadius: 4,
+                    color: S.primary,
+                    width: "100%",
+                  }}
+                />
+              </div>
             </div>
 
-            <div>
-              <label style={{
-                fontFamily: S.fontUI,
-                fontSize: "11px",
-                fontWeight: 600,
-                color: S.secondary,
-                marginBottom: 8,
-                display: "block",
-                textTransform: "uppercase",
-              }}>
-                Time (UTC)
-              </label>
-              <input
-                type="time"
-                value={scheduleTime}
-                onChange={e => setScheduleTime(e.target.value)}
-                style={{
-                  fontFamily: S.fontMono,
-                  fontSize: "13px",
-                  padding: "10px 14px",
-                  background: S.bgDeep,
-                  border: `1px solid ${S.rim}`,
-                  borderRadius: 4,
-                  color: S.primary,
-                  width: 200,
-                }}
-              />
+            {props.scheduleInterval === "custom" && (
+              <div>
+                <label style={{
+                  fontFamily: S.fontUI,
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: S.secondary,
+                  marginBottom: 8,
+                  display: "block",
+                  textTransform: "uppercase",
+                }}>
+                  Cron Expression
+                </label>
+                <input
+                  type="text"
+                  value={props.scheduleCron}
+                  onChange={e => props.setScheduleCron(e.target.value)}
+                  placeholder="0 0 * * * (every day at midnight)"
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: "12px",
+                    padding: "10px 14px",
+                    background: S.bgDeep,
+                    border: `1px solid ${S.rim}`,
+                    borderRadius: 4,
+                    color: S.primary,
+                    width: "100%",
+                  }}
+                />
+              </div>
+            )}
+
+            <div style={{
+              background: "rgba(34, 197, 94, 0.1)",
+              border: `1px solid ${S.pass}`,
+              borderRadius: 6,
+              padding: 16,
+              fontFamily: S.fontMono,
+              fontSize: "11px",
+              color: S.pass,
+            }}>
+              ✓ Schedule configured. Imports will run automatically according to this schedule.
             </div>
           </div>
         )}
       </Panel>
 
-      <div style={{
-        background: "rgba(251, 191, 36, 0.1)",
-        border: `1px solid ${S.amber}`,
-        borderRadius: 6,
-        padding: 20,
-        fontFamily: S.fontMono,
-        fontSize: "11px",
-        color: S.secondary,
-      }}>
-        <strong style={{ color: S.amber }}>COMING SOON:</strong> Automated scheduling will be available in next release. Manual import is currently available.
-      </div>
+      {/* Import History */}
+      <Panel title="Import History & Audit Trail" step="4.4">
+        {props.importHistory.length === 0 ? (
+          <div style={{
+            textAlign: "center",
+            padding: 40,
+            color: S.tertiary,
+            fontFamily: S.fontMono,
+            fontSize: "11px",
+          }}>
+            No import history yet. Execute your first import above.
+          </div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: `2px solid ${S.rim}` }}>
+                  <th style={{
+                    fontFamily: S.fontMono,
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    color: S.tertiary,
+                    padding: "10px 12px",
+                    textAlign: "left",
+                    background: S.bgSub,
+                  }}>
+                    Timestamp
+                  </th>
+                  <th style={{
+                    fontFamily: S.fontMono,
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    color: S.tertiary,
+                    padding: "10px 12px",
+                    textAlign: "center",
+                    background: S.bgSub,
+                  }}>
+                    Status
+                  </th>
+                  <th style={{
+                    fontFamily: S.fontMono,
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    color: S.tertiary,
+                    padding: "10px 12px",
+                    textAlign: "right",
+                    background: S.bgSub,
+                  }}>
+                    Processed
+                  </th>
+                  <th style={{
+                    fontFamily: S.fontMono,
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    color: S.tertiary,
+                    padding: "10px 12px",
+                    textAlign: "right",
+                    background: S.bgSub,
+                  }}>
+                    Imported
+                  </th>
+                  <th style={{
+                    fontFamily: S.fontMono,
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    color: S.tertiary,
+                    padding: "10px 12px",
+                    textAlign: "right",
+                    background: S.bgSub,
+                  }}>
+                    Rejected
+                  </th>
+                  <th style={{
+                    fontFamily: S.fontMono,
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    color: S.tertiary,
+                    padding: "10px 12px",
+                    textAlign: "right",
+                    background: S.bgSub,
+                  }}>
+                    Duration
+                  </th>
+                  <th style={{
+                    fontFamily: S.fontMono,
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    color: S.tertiary,
+                    padding: "10px 12px",
+                    textAlign: "left",
+                    background: S.bgSub,
+                  }}>
+                    User
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {props.importHistory.map((entry) => (
+                  <tr key={entry.id} style={{ borderBottom: `1px solid ${S.soft}` }}>
+                    <td style={{
+                      padding: "10px 12px",
+                      fontFamily: S.fontMono,
+                      fontSize: "11px",
+                      color: S.secondary,
+                    }}>
+                      {new Date(entry.timestamp).toLocaleString()}
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                      <span style={{
+                        fontFamily: S.fontMono,
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        color: entry.status === "success" ? S.pass : entry.status === "partial" ? S.amber : S.fail,
+                        border: `1px solid ${entry.status === "success" ? S.pass : entry.status === "partial" ? S.amber : S.fail}`,
+                        padding: "2px 6px",
+                        borderRadius: 3,
+                      }}>
+                        {entry.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td style={{
+                      padding: "10px 12px",
+                      fontFamily: S.fontMono,
+                      fontSize: "11px",
+                      color: S.primary,
+                      textAlign: "right",
+                    }}>
+                      {entry.rowsProcessed}
+                    </td>
+                    <td style={{
+                      padding: "10px 12px",
+                      fontFamily: S.fontMono,
+                      fontSize: "11px",
+                      color: S.pass,
+                      textAlign: "right",
+                      fontWeight: 600,
+                    }}>
+                      {entry.rowsImported}
+                    </td>
+                    <td style={{
+                      padding: "10px 12px",
+                      fontFamily: S.fontMono,
+                      fontSize: "11px",
+                      color: entry.rowsRejected > 0 ? S.fail : S.tertiary,
+                      textAlign: "right",
+                    }}>
+                      {entry.rowsRejected}
+                    </td>
+                    <td style={{
+                      padding: "10px 12px",
+                      fontFamily: S.fontMono,
+                      fontSize: "11px",
+                      color: S.tertiary,
+                      textAlign: "right",
+                    }}>
+                      {entry.duration.toFixed(1)}s
+                    </td>
+                    <td style={{
+                      padding: "10px 12px",
+                      fontFamily: S.fontMono,
+                      fontSize: "11px",
+                      color: S.secondary,
+                    }}>
+                      {entry.user}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
     </div>
   );
 }
@@ -1393,6 +2700,52 @@ function ScheduleTab({
 // ═══════════════════════════════════════════════════════════════════════════════
 // Shared Components
 // ═══════════════════════════════════════════════════════════════════════════════
+function LevelBanner({ level, title, desc }: { level: number; title: string; desc: string }) {
+  return (
+    <div style={{
+      background: `linear-gradient(90deg, ${S.bgSub} 0%, ${S.bgPanel} 100%)`,
+      border: `1px solid ${S.rim}`,
+      borderLeft: `4px solid ${S.cyan}`,
+      borderRadius: 6,
+      padding: "16px 20px",
+    }}>
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+      }}>
+        <div style={{
+          fontFamily: S.fontMono,
+          fontSize: "24px",
+          fontWeight: 700,
+          color: S.cyan,
+          lineHeight: 1,
+        }}>
+          L{level}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{
+            fontFamily: S.fontUI,
+            fontSize: "14px",
+            fontWeight: 600,
+            color: S.primary,
+            marginBottom: 4,
+          }}>
+            {title}
+          </div>
+          <div style={{
+            fontFamily: S.fontMono,
+            fontSize: "11px",
+            color: S.secondary,
+          }}>
+            {desc}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Panel({ title, step, children }: { title: string; step: string; children: React.ReactNode }) {
   return (
     <div style={{
@@ -1427,6 +2780,38 @@ function Panel({ title, step, children }: { title: string; step: string; childre
         </span>
       </div>
       {children}
+    </div>
+  );
+}
+
+function MetricCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div style={{
+      background: S.bgPanel,
+      border: `1px solid ${S.rim}`,
+      borderRadius: 6,
+      padding: 16,
+      textAlign: "center",
+    }}>
+      <div style={{
+        fontFamily: S.fontMono,
+        fontSize: "10px",
+        color: S.tertiary,
+        marginBottom: 8,
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+      }}>
+        {label}
+      </div>
+      <div style={{
+        fontFamily: S.fontMono,
+        fontSize: "28px",
+        fontWeight: 700,
+        color: color,
+        lineHeight: 1,
+      }}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -1477,7 +2862,7 @@ function Footer() {
         color: S.tertiary,
         letterSpacing: "0.06em",
       }}>
-        {clock} — ORDR Terminal · Database Connection Module
+        {clock} — ORDR Terminal · Database Connection Module · 4-Level Architecture
       </span>
     </footer>
   );
