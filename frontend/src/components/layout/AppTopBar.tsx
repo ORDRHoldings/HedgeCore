@@ -527,22 +527,17 @@ export default function AppTopBar() {
         {/* Brand mark */}
         <Link
           href="/dashboard"
-          style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", flexShrink: 0 }}
+          style={{ display: "flex", alignItems: "center", textDecoration: "none", flexShrink: 0 }}
         >
-          {/* ORDR knotwork mark */}
-          <div style={{ width: 24, height: 24, position: "relative", flexShrink: 0, filter: "brightness(0) invert(1)" }}>
-            <Image
-              src="/ordr-mark.png"
-              alt="ORDR"
-              fill
-              sizes="24px"
-              style={{ objectFit: "contain" }}
-              priority
-            />
-          </div>
-          <span style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, letterSpacing: "0.12em", color: S.primary, textTransform: "uppercase" }}>
-            ORDR
-          </span>
+          {/* ORDR Terminal horizontal logo */}
+          <Image
+            src="/ordr-logo-horizontal.png"
+            alt="ORDR Terminal"
+            width={120}
+            height={65}
+            style={{ objectFit: "contain", height: 28, width: "auto" }}
+            priority
+          />
         </Link>
 
         {/* Divider */}
