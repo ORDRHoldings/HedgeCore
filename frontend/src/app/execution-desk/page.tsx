@@ -89,11 +89,11 @@ export default function ExecutionDeskPage() {
     []
   );
 
-  // Step 4 complete: Refresh positions and reset
+  // Step 4 complete: Refresh positions and navigate to position desk
   const handleExecutionComplete = useCallback(() => {
     if (token) dispatch(listPositionsThunk({ token }));
-    // Stay on step 4 to show success state
-  }, [token, dispatch]);
+    router.push('/position-desk');
+  }, [token, dispatch, router]);
 
   // Navigate back between steps
   const goBack = useCallback(() => {
@@ -246,7 +246,7 @@ export default function ExecutionDeskPage() {
         {step === 4 && token && runId && (
           <StepExecute
             positions={selectedPositions}
-            calcResult={calcResult as Record<string, unknown> | null}
+            calcResult={calcResult}
             runId={runId}
             token={token}
             onBack={goBack}

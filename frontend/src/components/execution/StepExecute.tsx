@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import type { PositionRow } from "@/api/positionClient";
-import { markReadyToExecute } from "@/api/positionClient";
+import { markReadyToExecute, executePosition } from "@/api/positionClient";
 import { computeAllTickets, type FuturesTicket } from "@/lib/execution/contractSizing";
-import { CME_CONTRACTS } from "@/lib/constants/cmeContracts";
+import type { CalculateResponse, ScenarioTotalResult } from "@/api/types";
 
 /* ── Design tokens ─────────────────────────────────────────────────────── */
 const S = {
@@ -28,11 +29,13 @@ const S = {
 const fmtNum = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const fmtDec = new Intl.NumberFormat("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 const fmtUsd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+const fmtPct = new Intl.NumberFormat("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmtBps = new Intl.NumberFormat("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /* ── Props ─────────────────────────────────────────────────────────────── */
 interface Props {
   positions: PositionRow[];
-  calcResult: Record<string, unknown> | null;
+  calcResult: CalculateResponse | null;
   runId: string;
   token: string;
   onBack: () => void;
@@ -40,6 +43,7 @@ interface Props {
 }
 
 type ExecPhase = "idle" | "executing" | "done" | "error";
+type HedgedPhase = "idle" | "confirming" | "marking" | "done" | "error";
 
 /* ── Aggregate order for IBKR ─────────────────────────────────────────── */
 interface AggregatedOrder {
@@ -86,10 +90,78 @@ function aggregateTickets(tickets: FuturesTicket[]): AggregatedOrder[] {
   return Array.from(map.values()).sort((a, b) => b.contracts - a.contracts);
 }
 
+/* ── Hedge economics computation ──────────────────────────────────────── */
+interface HedgeEconomics {
+  coveragePct: number;
+  residualMxn: number;
+  totalFrictionUsd: number;
+  costBps: number;
+  carryBps: number;
+  worstCaseProtectionUsd: number;
+  scenarios: { sigma: number; shockedSpot: number; unhedgedUsd: number; hedgedUsd: number; benefitUsd: number }[];
+  totalExposureMxn: number;
+  totalHedgePositionMxn: number;
+  spot: number;
+}
+
+function computeEconomics(cr: CalculateResponse): HedgeEconomics {
+  const summary = cr.hedge_plan.summary;
+  const totals = cr.scenario_results.totals;
+  const buckets = cr.hedge_plan.buckets;
+
+  const coveragePct = summary.total_commercial_exposure_mxn !== 0
+    ? (summary.total_hedge_position_mxn / summary.total_commercial_exposure_mxn) * 100
+    : 0;
+
+  const costBps = summary.total_action_usd !== 0
+    ? (summary.total_friction_usd / summary.total_action_usd) * 10000
+    : 0;
+
+  // Spot from zero-sigma scenario
+  const spotScenario = totals.find((t: ScenarioTotalResult) => t.sigma === 0);
+  const spot = spotScenario?.shocked_spot ?? 0;
+
+  // Average forward rate across active buckets
+  const activeBuckets = buckets.filter((b) => !b.suppressed && b.forward_rate > 0);
+  const avgFwd = activeBuckets.length > 0
+    ? activeBuckets.reduce((s, b) => s + b.forward_rate, 0) / activeBuckets.length
+    : 0;
+  const carryBps = spot !== 0 ? ((avgFwd - spot) / spot) * 10000 : 0;
+
+  // Worst-case protection (max sigma)
+  const positiveSigmas = totals.filter((t: ScenarioTotalResult) => t.sigma > 0);
+  const maxSigma = positiveSigmas.reduce((best: ScenarioTotalResult | null, t: ScenarioTotalResult) =>
+    !best || t.sigma > best.sigma ? t : best, null);
+
+  const scenarios = positiveSigmas
+    .sort((a: ScenarioTotalResult, b: ScenarioTotalResult) => a.sigma - b.sigma)
+    .map((t: ScenarioTotalResult) => ({
+      sigma: t.sigma,
+      shockedSpot: t.shocked_spot,
+      unhedgedUsd: t.total_unhedged_usd,
+      hedgedUsd: t.total_hedged_usd,
+      benefitUsd: t.total_hedge_benefit_usd,
+    }));
+
+  return {
+    coveragePct,
+    residualMxn: summary.total_residual_mxn,
+    totalFrictionUsd: summary.total_friction_usd,
+    costBps,
+    carryBps,
+    worstCaseProtectionUsd: maxSigma?.total_hedge_benefit_usd ?? 0,
+    scenarios,
+    totalExposureMxn: summary.total_commercial_exposure_mxn,
+    totalHedgePositionMxn: summary.total_hedge_position_mxn,
+    spot,
+  };
+}
+
 /* ── Component ─────────────────────────────────────────────────────────── */
 export default function StepExecute({
   positions, calcResult, runId, token, onBack, onComplete,
 }: Props) {
+  const router = useRouter();
   const [skipApproval, setSkipApproval] = useState(true);
   const [execPhase, setExecPhase] = useState<ExecPhase>("idle");
   const [execProgress, setExecProgress] = useState(0);
@@ -98,25 +170,25 @@ export default function StepExecute({
   const [execError, setExecError] = useState<string | null>(null);
   const [updatedPositions, setUpdatedPositions] = useState<Map<string, PositionRow>>(new Map());
 
+  // HEDGED transition state
+  const [hedgedPhase, setHedgedPhase] = useState<HedgedPhase>("idle");
+  const [hedgedProgress, setHedgedProgress] = useState(0);
+  const [hedgedError, setHedgedError] = useState<string | null>(null);
+
   /* ── Compute tickets ──────────────────────────────────────────────── */
   const tickets: FuturesTicket[] = useMemo(() => {
     const forwardRates: Record<string, number> = {};
     if (calcResult) {
-      const plan = calcResult.hedge_plan as { buckets?: Array<{ bucket: string; forward_rate: number }> } | undefined;
-      if (plan?.buckets) {
-        // Detect if buckets are prefixed with currency (multi-ccy) or plain (single-ccy)
-        const hasCcyPrefix = plan.buckets.some((b) => b.bucket.includes(" "));
-        // For single-currency runs, infer currency from positions
+      const buckets = calcResult.hedge_plan?.buckets;
+      if (buckets) {
+        const hasCcyPrefix = buckets.some((b) => b.bucket.includes(" "));
         const singleCcy = !hasCcyPrefix && positions.length > 0 ? positions[0].currency : null;
-
-        for (const b of plan.buckets) {
+        for (const b of buckets) {
           if (b.forward_rate && b.forward_rate !== 0) {
             if (hasCcyPrefix) {
-              // Multi-currency: bucket = "EUR 2026-06"
               const ccy = b.bucket.split(" ")[0];
               if (ccy) forwardRates[ccy] = b.forward_rate;
             } else if (singleCcy) {
-              // Single-currency: bucket = "2026-06", use inferred currency
               forwardRates[singleCcy] = b.forward_rate;
             }
           }
@@ -135,9 +207,6 @@ export default function StepExecute({
   const totalResidual = useMemo(() => tickets.reduce((s, t) => s + t.residual, 0), [tickets]);
   const totalFriction = useMemo(() => tickets.reduce((s, t) => s + t.estimatedCostUsd, 0), [tickets]);
 
-  // USD equivalent of total notional (using avg forward rate)
-  // For "price currencies" (EUR, GBP, AUD, NZD, CHF) rate = CCY/USD → multiply
-  // For all others (MXN, JPY, etc.) rate = USD/CCY → divide
   const primaryCcy = tickets[0]?.currency ?? "MXN";
   const avgSpot = aggregatedOrders[0]?.avgRate ?? 1;
   const PRICE_CCY = new Set(["EUR", "GBP", "AUD", "NZD", "CHF"]);
@@ -145,9 +214,24 @@ export default function StepExecute({
     ? (PRICE_CCY.has(primaryCcy) ? totalNotionalCovered * avgSpot : totalNotionalCovered / avgSpot)
     : totalNotionalCovered;
 
+  /* ── Hedge economics ─────────────────────────────────────────────── */
+  const hedgeEcon = useMemo(() => calcResult ? computeEconomics(calcResult) : null, [calcResult]);
+
+  /* ── Policy / audit reference ────────────────────────────────────── */
+  const auditRef = useMemo(() => {
+    if (!calcResult) return null;
+    return {
+      runId: calcResult.run_id,
+      engineVersion: calcResult.run_envelope.engine_version,
+      bucketCount: calcResult.hedge_plan.buckets.length,
+      policyHash: calcResult.run_envelope.policy_hash,
+      inputsHash: calcResult.run_envelope.inputs_hash,
+      outputsHash: calcResult.run_envelope.outputs_hash,
+    };
+  }, [calcResult]);
+
   /* ── Build IBKR JSON ──────────────────────────────────────────────── */
   const buildIbkrPayload = useCallback(() => {
-    // Build aggregated orders (one per symbol/side/month — what a trader actually sends)
     const orders = aggregatedOrders.map((agg) => ({
       msgType: "D" as const,
       clOrdID: `ORDR_${agg.symbol}_${agg.side}_${Date.now()}`,
@@ -164,7 +248,6 @@ export default function StepExecute({
       transactTime: new Date().toISOString(),
       text: `ORDR Terminal: ${agg.side} ${agg.contracts}\u00D7${agg.symbol} ${agg.contractName}, settle ${agg.settlementMonth}`,
     }));
-
     return {
       orders,
       metadata: {
@@ -195,10 +278,8 @@ export default function StepExecute({
 
   /* ── Open IBKR TWS deep-link ───────────────────────────────────────── */
   const openIbkr = useCallback(() => {
-    // Use the primary aggregated order for the deep-link
     const primary = aggregatedOrders[0];
     if (!primary) return;
-    // IBKR FXTrader deep-link format
     const pair = `${primary.symbol}USD`;
     const side = primary.side === "SELL" ? "SELL" : "BUY";
     const url = `https://ndg.interactivebrokers.com/fxtrader?pair=${pair}&side=${side}&notional=${Math.round(totalNotionalUsd)}`;
@@ -213,14 +294,14 @@ export default function StepExecute({
       `ORDR Terminal: ${primary.side} ${totalContracts}\u00D7${primary.symbol} ${primary.contractName} — ${primary.settlementMonth}`
     );
     const bodyLines = aggregatedOrders.map(
-      (o) => `${o.side} ${o.contracts} x ${o.symbol} (${o.contractName}) @ ${fmtDec.format(o.avgRate)} — ${o.settlementMonth} — ${o.exchange}`
+      (o) => `${o.side} ${o.contracts} x ${o.symbol} (${o.contractName}) @ ${fmtDec.format(o.avgRate)} - ${o.settlementMonth} - ${o.exchange}`
     );
     bodyLines.push("", `Total Contracts: ${totalContracts}`, `Total Notional: ${fmtNum.format(totalNotionalCovered)} ${primaryCcy}`, `Run ID: ${runId}`);
     const body = encodeURIComponent(bodyLines.join("\n"));
     window.open(`mailto:fx-desk@company.com?subject=${subject}&body=${body}`, "_self");
   }, [aggregatedOrders, totalContracts, totalNotionalCovered, primaryCcy, runId]);
 
-  /* ── Execute ───────────────────────────────────────────────────────── */
+  /* ── Execute (mark READY_TO_EXECUTE) ─────────────────────────────── */
   const handleExecute = useCallback(async () => {
     setExecPhase("executing");
     setExecError(null);
@@ -257,18 +338,68 @@ export default function StepExecute({
     }
   }, [positions, tickets, runId, token, skipApproval]);
 
+  /* ── Mark as HEDGED ──────────────────────────────────────────────── */
+  const handleMarkHedged = useCallback(async () => {
+    setHedgedPhase("marking");
+    setHedgedError(null);
+    setHedgedProgress(0);
+
+    try {
+      const effectiveRunId = runId.includes(";") ? runId.split(";")[0] : runId;
+      for (let i = 0; i < positions.length; i++) {
+        const pos = positions[i];
+        const ticket = tickets[i];
+        setHedgedProgress(i + 1);
+        try {
+          const result = await executePosition(
+            pos.id,
+            `IBKR-${effectiveRunId.slice(0, 8)}`,
+            ticket ? ticket.totalCovered : Math.abs(pos.amount),
+            ticket ? ticket.estimatedRate : undefined,
+            token,
+          );
+          setUpdatedPositions((prev) => {
+            const next = new Map(prev);
+            next.set(pos.id, result);
+            return next;
+          });
+        } catch (err: unknown) {
+          // Skip if already hedged (409)
+          const msg = err instanceof Error ? err.message : "";
+          if (!msg.includes("409") && !msg.includes("ILLEGAL_TRANSITION")) throw err;
+        }
+      }
+      setHedgedPhase("done");
+    } catch (err: unknown) {
+      setHedgedError(err instanceof Error ? err.message : "Failed to mark as hedged");
+      setHedgedPhase("error");
+    }
+  }, [positions, tickets, runId, token]);
+
   /* ── Render ────────────────────────────────────────────────────────── */
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, fontFamily: S.fontUI, color: S.primary }}>
 
       {/* ═══ Success banner ═══ */}
-      {execPhase === "done" && (
+      {execPhase === "done" && hedgedPhase !== "done" && (
         <div style={{ padding: "16px 20px", background: "rgba(34,197,94,0.08)", borderBottom: `1px solid ${S.pass}`, flexShrink: 0 }}>
           <div style={{ fontFamily: S.fontMono, fontSize: 15, fontWeight: 700, letterSpacing: "0.08em", color: S.pass, marginBottom: 4 }}>
             &#10003; EXECUTION COMPLETE &mdash; {positions.length} position{positions.length !== 1 ? "s" : ""} marked READY
           </div>
           <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary }}>
-            Your hedge orders are ready to send to your broker. Use the IBKR panel below to place the trade.
+            Your hedge orders are ready to send to your broker. Use the IBKR panel below to place the trade, then mark positions as HEDGED.
+          </div>
+        </div>
+      )}
+
+      {/* ═══ HEDGED success banner ═══ */}
+      {hedgedPhase === "done" && (
+        <div style={{ padding: "16px 20px", background: "rgba(34,197,94,0.12)", borderBottom: `2px solid ${S.pass}`, flexShrink: 0 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 15, fontWeight: 700, letterSpacing: "0.08em", color: S.pass, marginBottom: 4 }}>
+            &#10003; ALL {positions.length} POSITIONS MARKED HEDGED
+          </div>
+          <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary }}>
+            Audit events recorded. Positions are now in terminal HEDGED state with immutable execution references.
           </div>
         </div>
       )}
@@ -283,6 +414,82 @@ export default function StepExecute({
       {/* ═══ Main content (scrollable) ═══ */}
       <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
 
+        {/* ─── Hedge Economics Panel (shown after execution) ─── */}
+        {execPhase === "done" && hedgeEcon && (
+          <div style={{ margin: "16px 16px 0", padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 12 }}>
+              HEDGE ECONOMICS
+            </div>
+
+            {/* Plain-English summary */}
+            <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, marginBottom: 14, lineHeight: 1.6, padding: "10px 14px", background: S.bgPanel, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
+              This hedge covers <strong style={{ color: S.primary }}>{fmtPct.format(hedgeEcon.coveragePct)}%</strong> of
+              your {primaryCcy} exposure at a cost of <strong style={{ color: S.amber }}>{fmtBps.format(hedgeEcon.costBps)} bps</strong> (~{fmtUsd.format(hedgeEcon.totalFrictionUsd)}).
+              {hedgeEcon.scenarios.length > 0 && (
+                <> At a {hedgeEcon.scenarios[hedgeEcon.scenarios.length - 1]?.sigma}&sigma; adverse move, the hedge saves approximately <strong style={{ color: S.pass }}>{fmtUsd.format(hedgeEcon.worstCaseProtectionUsd)}</strong>.</>
+              )}
+            </div>
+
+            {/* Metrics grid */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "baseline", marginBottom: 16 }}>
+              <SummaryCell label="Coverage Ratio" value={`${fmtPct.format(hedgeEcon.coveragePct)}%`} color={hedgeEcon.coveragePct >= 80 ? S.pass : S.amber} />
+              <SummaryCell label="Residual Exposure" value={`${fmtNum.format(hedgeEcon.residualMxn)} ${primaryCcy}`} color={hedgeEcon.residualMxn > 0 ? S.amber : S.pass} />
+              <SummaryCell label="Spread Cost" value={fmtUsd.format(hedgeEcon.totalFrictionUsd)} color={S.amber} />
+              <SummaryCell label="Cost (bps)" value={`${fmtBps.format(hedgeEcon.costBps)} bps`} />
+              <SummaryCell label="Carry Impact" value={`${hedgeEcon.carryBps >= 0 ? "+" : ""}${fmtBps.format(hedgeEcon.carryBps)} bps`} color={hedgeEcon.carryBps >= 0 ? S.pass : S.amber} />
+              <SummaryCell label="Worst-Case Protection" value={fmtUsd.format(hedgeEcon.worstCaseProtectionUsd)} color={S.pass} />
+            </div>
+
+            {/* Scenario table */}
+            {hedgeEcon.scenarios.length > 0 && (
+              <>
+                <div style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 6 }}>
+                  STRESS SCENARIO ANALYSIS
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 10 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${S.soft}` }}>
+                      {["Scenario", "Shocked Spot", "Unhedged P&L", "Hedged P&L", "Hedge Benefit"].map((h) => (
+                        <th key={h} style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, fontSize: 8, letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hedgeEcon.scenarios.map((sc) => (
+                      <tr key={sc.sigma} style={{ borderBottom: `1px solid ${S.soft}` }}>
+                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: S.primary }}>{sc.sigma}&sigma;</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: S.secondary }}>{fmtDec.format(sc.shockedSpot)}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: S.fail }}>{fmtUsd.format(sc.unhedgedUsd)}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: S.amber }}>{fmtUsd.format(sc.hedgedUsd)}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: S.pass }}>{fmtUsd.format(sc.benefitUsd)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ─── Audit Trail Reference (shown after execution) ─── */}
+        {execPhase === "done" && auditRef && (
+          <div style={{ margin: "12px 16px 0", padding: "10px 16px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
+              AUDIT TRAIL REFERENCE
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 20, fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+              <span>Run: <span style={{ color: S.primary }}>{auditRef.runId.slice(0, 12)}...</span></span>
+              <span>Engine: <span style={{ color: S.primary }}>{auditRef.engineVersion}</span></span>
+              <span>Buckets: <span style={{ color: S.primary }}>{auditRef.bucketCount}</span></span>
+              <span>Policy: <span style={{ color: S.cyan }}>{auditRef.policyHash.slice(0, 12)}...</span></span>
+              <span>Inputs: <span style={{ color: S.cyan }}>{auditRef.inputsHash.slice(0, 12)}...</span></span>
+              <span>Outputs: <span style={{ color: S.cyan }}>{auditRef.outputsHash.slice(0, 12)}...</span></span>
+            </div>
+          </div>
+        )}
+
         {/* ─── IBKR Order Panel (shown after execution) ─── */}
         {execPhase === "done" && aggregatedOrders.length > 0 && (
           <div style={{ margin: "16px 16px 0", padding: 0, background: S.bgPanel, border: `2px solid ${S.pass}`, borderRadius: 8, overflow: "hidden" }}>
@@ -291,7 +498,6 @@ export default function StepExecute({
               <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.pass, textTransform: "uppercase", marginBottom: 8 }}>
                 BROKER ORDER TICKET
               </div>
-              {/* Show each aggregated order */}
               {aggregatedOrders.map((agg, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: i < aggregatedOrders.length - 1 ? 8 : 0 }}>
                   <span style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: agg.side === "SELL" ? S.fail : S.pass }}>
@@ -308,7 +514,6 @@ export default function StepExecute({
                   </span>
                 </div>
               ))}
-              {/* Rate + settlement */}
               <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 8 }}>
                 {aggregatedOrders.map((agg, i) => (
                   <span key={i}>
@@ -317,7 +522,6 @@ export default function StepExecute({
                   </span>
                 ))}
               </div>
-              {/* Contract details */}
               <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 6 }}>
                 {aggregatedOrders.map((agg, i) => (
                   <div key={i}>
@@ -329,7 +533,6 @@ export default function StepExecute({
 
             {/* Action buttons */}
             <div style={{ padding: "16px 20px" }}>
-              {/* Primary: Open in IBKR */}
               <button
                 onClick={openIbkr}
                 style={{
@@ -353,7 +556,6 @@ export default function StepExecute({
                 Opens Interactive Brokers FXTrader with your order pre-filled. You must be logged in to IBKR.
               </div>
 
-              {/* Secondary row */}
               <div style={{ display: "flex", gap: 10 }}>
                 <button
                   onClick={downloadIbkr}
@@ -404,7 +606,6 @@ export default function StepExecute({
               const posUpdated = updatedPositions.get(ticket.positionId);
               return (
                 <div key={i} style={{ background: S.bgSub, border: `1px solid ${S.soft}`, borderLeft: `4px solid ${borderColor}`, borderRadius: 4, padding: "14px 16px", position: "relative" }}>
-                  {/* Top line */}
                   <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
                     <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: ticket.side === "SELL" ? S.fail : S.pass }}>
                       {ticket.side}
@@ -428,12 +629,10 @@ export default function StepExecute({
                       </span>
                     )}
                   </div>
-                  {/* Rate line */}
                   <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, marginBottom: 10 }}>
                     @ {fmtDec.format(ticket.estimatedRate)} &middot; {ticket.settlementMonth} &middot; {ticket.exchange}
                   </div>
                   <div style={{ height: 1, background: S.soft, marginBottom: 10 }} />
-                  {/* Detail line */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontFamily: S.fontMono, fontSize: 10, color: S.secondary, lineHeight: 1.6 }}>
                     {isFutures && <span>{fmtNum.format(ticket.contractSize)} {ticket.currency}/contract</span>}
                     {isFutures && (<><span style={{ color: S.soft }}>&middot;</span><span>Covers: <span style={{ color: S.primary, fontWeight: 600 }}>{fmtNum.format(ticket.totalCovered)} {ticket.currency}</span></span></>)}
@@ -446,7 +645,6 @@ export default function StepExecute({
                     <span>Position: <span style={{ color: S.primary }}>{ticket.recordId}</span></span>
                     {ticket.estimatedCostUsd > 0 && (<><span style={{ color: S.soft }}>&middot;</span><span>Est. Cost: <span style={{ color: S.amber }}>{fmtUsd.format(ticket.estimatedCostUsd)}</span></span></>)}
                   </div>
-                  {/* Status badge */}
                   {posUpdated && (
                     <div style={{ position: "absolute", top: 12, right: 16, padding: "3px 8px", borderRadius: 3, fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", background: "rgba(34,197,94,0.12)", color: S.pass, border: `1px solid ${S.pass}` }}>
                       {posUpdated.execution_status}
@@ -508,16 +706,111 @@ export default function StepExecute({
             </div>
           )}
 
-          {execPhase === "done" && (
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {execPhase === "done" && hedgedPhase === "idle" && (
+            <div>
+              <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginBottom: 12 }}>
+                Positions are READY_TO_EXECUTE. After sending the order to your broker, mark them as HEDGED to complete the lifecycle.
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button
+                  onClick={() => setHedgedPhase("confirming")}
+                  style={{
+                    height: 44, padding: "0 28px", background: S.pass, color: S.bgDeep, border: "none", borderRadius: 4,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", cursor: "pointer", transition: "all 0.15s",
+                  }}
+                >
+                  MARK AS HEDGED
+                </button>
+                <button
+                  onClick={onComplete}
+                  style={{
+                    height: 44, padding: "0 24px", background: "transparent", color: S.cyan, border: `1px solid ${S.cyan}`, borderRadius: 4,
+                    fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", cursor: "pointer", transition: "all 0.15s",
+                  }}
+                >
+                  VIEW POSITIONS &rarr;
+                </button>
+              </div>
+            </div>
+          )}
+
+          {execPhase === "done" && hedgedPhase === "confirming" && (
+            <div>
+              <div style={{ padding: "12px 14px", background: "rgba(251,191,36,0.08)", border: `1px solid ${S.amber}`, borderRadius: 4, marginBottom: 12 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.amber, letterSpacing: "0.06em", marginBottom: 4 }}>
+                  IRREVERSIBLE ACTION
+                </div>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
+                  This will permanently mark {positions.length} position{positions.length !== 1 ? "s" : ""} as <strong>HEDGED</strong>.
+                  This is a terminal state — positions cannot be modified after this. An audit event will be recorded for each position.
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button
+                  onClick={handleMarkHedged}
+                  style={{
+                    height: 44, padding: "0 28px", background: S.pass, color: S.bgDeep, border: "none", borderRadius: 4,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", cursor: "pointer", transition: "all 0.15s",
+                  }}
+                >
+                  CONFIRM HEDGED
+                </button>
+                <button
+                  onClick={() => setHedgedPhase("idle")}
+                  style={{
+                    height: 44, padding: "0 20px", background: "transparent", color: S.tertiary, border: "none",
+                    fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                  }}
+                >
+                  CANCEL
+                </button>
+              </div>
+            </div>
+          )}
+
+          {execPhase === "done" && hedgedPhase === "marking" && (
+            <div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, color: S.pass, letterSpacing: "0.06em", marginBottom: 8 }}>
+                Marking as HEDGED... ({hedgedProgress}/{positions.length})
+              </div>
+              <div style={{ height: 4, borderRadius: 2, background: S.bgDeep, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${(hedgedProgress / positions.length) * 100}%`, borderRadius: 2, background: S.pass, transition: "width 0.2s ease" }} />
+              </div>
+            </div>
+          )}
+
+          {execPhase === "done" && hedgedPhase === "done" && (
+            <div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.pass, letterSpacing: "0.06em", marginBottom: 14 }}>
+                &#10003; All {positions.length} positions marked HEDGED — audit events recorded
+              </div>
+
+              {/* Post-execution navigation */}
+              <div style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
+                NEXT STEPS
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                <NavButton label="VIEW POSITIONS" icon={gridIcon} onClick={() => router.push("/position-desk")} />
+                <NavButton label="AUDIT TRAIL" icon={shieldIcon} onClick={() => router.push("/audit-trail")} />
+                <NavButton label="REPORTS" icon={fileIcon} onClick={() => router.push("/reports")} />
+                <NavButton label="SANDBOX" icon={flaskIcon} onClick={() => router.push("/sandbox")} />
+              </div>
+            </div>
+          )}
+
+          {execPhase === "done" && hedgedPhase === "error" && (
+            <div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.fail, marginBottom: 8 }}>
+                ERROR: {hedgedError}
+              </div>
               <button
-                onClick={onComplete}
+                onClick={handleMarkHedged}
                 style={{
-                  height: 40, padding: "0 24px", background: S.cyan, color: S.bgDeep, border: "none", borderRadius: 4,
-                  fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", cursor: "pointer", transition: "all 0.15s",
+                  height: 40, padding: "0 24px", background: S.amber, color: S.bgDeep, border: "none", borderRadius: 4,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", cursor: "pointer",
                 }}
               >
-                VIEW POSITIONS &rarr;
+                RETRY
               </button>
             </div>
           )}
@@ -540,13 +833,13 @@ export default function StepExecute({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, padding: "0 16px", background: S.bgPanel, borderTop: `1px solid ${S.rim}`, flexShrink: 0, marginTop: "auto" }}>
         <button
           onClick={onBack}
-          disabled={execPhase === "executing"}
+          disabled={execPhase === "executing" || hedgedPhase === "marking"}
           style={{
             height: 36, padding: "0 20px", background: "transparent",
-            color: execPhase === "executing" ? S.soft : S.tertiary,
+            color: (execPhase === "executing" || hedgedPhase === "marking") ? S.soft : S.tertiary,
             border: `1px solid ${S.soft}`, borderRadius: 4,
             fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-            cursor: execPhase === "executing" ? "not-allowed" : "pointer", transition: "all 0.15s",
+            cursor: (execPhase === "executing" || hedgedPhase === "marking") ? "not-allowed" : "pointer", transition: "all 0.15s",
           }}
         >
           &#9666; BACK TO RISK CHECK
@@ -572,3 +865,31 @@ function SummaryCell({ label, value, color }: { label: string; value: string; co
     </div>
   );
 }
+
+/* ── Navigation button helper ────────────────────────────────────────── */
+function NavButton({ label, icon, onClick }: { label: string; icon: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
+        padding: "12px 8px", background: "transparent",
+        border: `1px solid var(--border-soft)`, borderRadius: 4,
+        fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 9, fontWeight: 600,
+        letterSpacing: "0.08em", color: "var(--text-secondary)",
+        cursor: "pointer", transition: "all 0.15s",
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--accent-cyan)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-soft)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; }}
+    >
+      <span dangerouslySetInnerHTML={{ __html: icon }} />
+      {label}
+    </button>
+  );
+}
+
+/* ── SVG icons for nav buttons ───────────────────────────────────────── */
+const gridIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`;
+const shieldIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+const fileIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+const flaskIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v7l5 8H4l5-8V3z"/><line x1="8" y1="3" x2="16" y2="3"/></svg>`;
