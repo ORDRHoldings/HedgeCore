@@ -135,10 +135,15 @@ export default function StepExecute({
   const totalResidual = useMemo(() => tickets.reduce((s, t) => s + t.residual, 0), [tickets]);
   const totalFriction = useMemo(() => tickets.reduce((s, t) => s + t.estimatedCostUsd, 0), [tickets]);
 
-  // USD equivalent of total notional (using avg forward rate of first aggregated order)
+  // USD equivalent of total notional (using avg forward rate)
+  // For "price currencies" (EUR, GBP, AUD, NZD, CHF) rate = CCY/USD → multiply
+  // For all others (MXN, JPY, etc.) rate = USD/CCY → divide
   const primaryCcy = tickets[0]?.currency ?? "MXN";
   const avgSpot = aggregatedOrders[0]?.avgRate ?? 1;
-  const totalNotionalUsd = avgSpot > 0 ? totalNotionalCovered * avgSpot : totalNotionalCovered;
+  const PRICE_CCY = new Set(["EUR", "GBP", "AUD", "NZD", "CHF"]);
+  const totalNotionalUsd = avgSpot > 0
+    ? (PRICE_CCY.has(primaryCcy) ? totalNotionalCovered * avgSpot : totalNotionalCovered / avgSpot)
+    : totalNotionalCovered;
 
   /* ── Build IBKR JSON ──────────────────────────────────────────────── */
   const buildIbkrPayload = useCallback(() => {
