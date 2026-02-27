@@ -52,6 +52,10 @@ import {
   type StressScenario,
   type PortfolioStressResult,
 } from "@/utils/executionAnalytics";
+import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
+import { calculate } from "@/api/client";
+import { useHedge } from "@/lib/hedgeContext";
+import type { TradeRow, MarketSnapshot, PolicyConfig, HedgeRow, FuturesCurrency } from "@/api/types";
 
 const S = {
   fontUI:      "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -260,6 +264,7 @@ export default function ExecutionDeskPage() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { user, token } = useAuth();
+  const { setCalculation } = useHedge();
   const searchRef = useRef<HTMLInputElement>(null);
 
   const { positions, loading } = useSelector((s: RootState) => s.positions);
@@ -297,6 +302,8 @@ export default function ExecutionDeskPage() {
   const [showComparison, setShowComparison] = useState(false);
   const [showRiskPanel, setShowRiskPanel] = useState(true);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isRunningEngine, setIsRunningEngine] = useState(false);
+  const [runEngineError, setRunEngineError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   // Execution history log (in-session tracking)
@@ -912,6 +919,49 @@ export default function ExecutionDeskPage() {
     setActionMode("IBKR_EXECUTE");
   }, [readyPositions, selected, user, addHistoryEntry]);
 
+  // Run the calculation engine against all ready (or selected) positions
+  const runCalculationEngine = useCallback(async () => {
+    const positionsToRun = selected.size > 0
+      ? readyPositions.filter(p => selected.has(p.id))
+      : readyPositions;
+    if (positionsToRun.length === 0) return;
+    setIsRunningEngine(true);
+    setRunEngineError(null);
+    try {
+      const trades: TradeRow[] = positionsToRun.map(p => ({
+        record_id: p.record_id,
+        entity: p.entity ?? "UNKNOWN",
+        type: (p.type ?? "AR") as "AR" | "AP",
+        currency: p.currency as FuturesCurrency,
+        amount: p.amount,
+        value_date: p.value_date,
+        status: ((p.status ?? "CONFIRMED") as "CONFIRMED" | "FORECAST"),
+        description: p.description ?? "",
+      }));
+      const market: MarketSnapshot = {
+        as_of: new Date().toISOString(),
+        spot_usdmxn: 17.5,
+        forward_points_by_month: {},
+        provider_metadata: {},
+      };
+      const hedges: HedgeRow[] = [];
+      const policy: PolicyConfig = {
+        bucket_mode: "CALENDAR_MONTH",
+        hedge_ratios: { confirmed: 1.0, forecast: 0.0 },
+        cost_assumptions: { spread_bps: 5 },
+        execution_product: "FWD",
+        min_trade_size_usd: 0,
+      };
+      const result = await calculate({ trades, hedges, market, policy });
+      setCalculation(result, { policy, trades, hedges, market, fixtureId: null });
+      router.push("/execution");
+    } catch (err) {
+      setRunEngineError(err instanceof Error ? err.message : "Calculation failed");
+    } finally {
+      setIsRunningEngine(false);
+    }
+  }, [readyPositions, selected, setCalculation, router]);
+
   if (!user) {
     return (
       <div style={{ padding: 40, fontFamily: S.fontMono, color: S.secondary, fontSize: 12 }}>
@@ -928,6 +978,8 @@ export default function ExecutionDeskPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: S.bgDeep, overflow: "hidden", flex: 1 }}>
+        {/* Workflow progress breadcrumb */}
+        <WorkflowBreadcrumb active="execution" />
         {/* Header */}
         <header style={{
           display: "flex",
@@ -1031,6 +1083,52 @@ export default function ExecutionDeskPage() {
             ← Policy Desk
           </button>
         </header>
+
+        {/* RUN ENGINE panel */}
+        {readyPositions.length > 0 && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            padding: "10px 20px",
+            background: "rgba(0,255,255,0.04)",
+            borderBottom: `1px solid rgba(0,255,255,0.15)`,
+            flexShrink: 0,
+          }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, letterSpacing: "0.08em" }}>
+              <span style={{ fontWeight: 700 }}>{selected.size > 0 ? selected.size : readyPositions.length}</span>
+              <span style={{ color: S.secondary }}> POSITION{(selected.size > 0 ? selected.size : readyPositions.length) !== 1 ? "S" : ""} READY FOR ENGINE</span>
+              {selected.size > 0 && (
+                <span style={{ color: S.tertiary, marginLeft: 8 }}>({readyPositions.length} total · {selected.size} selected)</span>
+              )}
+            </div>
+            <div style={{ flex: 1 }} />
+            {runEngineError && (
+              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail }}>
+                ✗ {runEngineError}
+              </span>
+            )}
+            <button
+              onClick={runCalculationEngine}
+              disabled={isRunningEngine}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.10em",
+                color: isRunningEngine ? S.tertiary : S.bgDeep,
+                background: isRunningEngine ? "rgba(0,255,255,0.15)" : S.cyan,
+                border: `1px solid ${isRunningEngine ? "rgba(0,255,255,0.3)" : S.cyan}`,
+                padding: "7px 20px",
+                cursor: isRunningEngine ? "not-allowed" : "pointer",
+                borderRadius: 2,
+                transition: "all 0.15s",
+              }}
+            >
+              {isRunningEngine ? "⟳ RUNNING..." : "▶  RUN CALCULATION ENGINE"}
+            </button>
+          </div>
+        )}
 
         {/* Main workspace: 3-column layout */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>

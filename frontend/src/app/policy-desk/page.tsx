@@ -25,6 +25,7 @@ import {
   clearLifecycleError,
 } from "../../lib/store/slices/positionSlice";
 import type { PositionRow, BulkAssignResult } from "../../api/positionClient";
+import WorkflowBreadcrumb from "../../components/layout/WorkflowBreadcrumb";
 import { bulkAssignPolicy } from "../../api/positionClient";
 import {
   listPolicyTemplates,
@@ -553,6 +554,8 @@ export default function PolicyDeskPage() {
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: S.bgDeep, overflow: "hidden", flex: 1 }}>
+        {/* Workflow progress breadcrumb */}
+        <WorkflowBreadcrumb active="policy" />
         {/* Header */}
         <header style={{
           display: "flex",

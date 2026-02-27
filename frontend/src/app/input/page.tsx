@@ -22,6 +22,7 @@ import { POLICY_PRESETS } from '../../constants/policyPresets';
 import type { PolicyPreset } from '../../constants/policyPresets';
 import { validateAll } from '../../utils/validator';
 import { fmtMXN } from '../../utils/formatters';
+import WorkflowBreadcrumb from '../../components/layout/WorkflowBreadcrumb';
 import { deriveCurrencyContext } from '../../utils/currencyContext';
 import type { AppDispatch, RootState } from '../../lib/store';
 import {
@@ -926,6 +927,8 @@ function InputPageInner() {
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
     <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+      {/* Workflow progress breadcrumb */}
+      <WorkflowBreadcrumb active="position" />
       {/* ── Governance strip ── */}
       <GovernanceStrip
         tradeCount={trades.length} hedgeCount={hedges.length} policyName={activePresetName}
@@ -1385,7 +1388,24 @@ function InputPageInner() {
           {validationGates.every(g => g.met) && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: S.green }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: S.green, display: 'inline-block' }} />
-              ALL GATES PASSED — CLICK GENERATE HEDGE PLAN IN THE RAIL ABOVE
+              ALL GATES PASSED —{' '}
+              <button
+                onClick={() => router.push('/execution-desk')}
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  color: S.green,
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  textDecoration: 'underline',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                PROCEED TO EXECUTION DESK →
+              </button>
             </span>
           )}
         </div>
