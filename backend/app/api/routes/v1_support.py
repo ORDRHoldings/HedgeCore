@@ -20,7 +20,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
@@ -89,10 +89,17 @@ async def _next_ticket_ref(session: AsyncSession, company_id: UUID) -> str:
     """
     Returns the next zero-padded ticket ref for the given company.
     Format: TKT-XXXX (4 digits, e.g. TKT-0001)
-    Uses a COUNT(*) query so it is safe under concurrent inserts --
-    collisions are prevented by the UNIQUE(company_id, ticket_ref) constraint;
-    callers should retry on IntegrityError if needed (rare under low concurrency).
+
+    Uses pg_advisory_xact_lock(hashtext(company_id)) to serialise concurrent
+    ticket creates for the same tenant within the same transaction, preventing
+    race conditions under high concurrency.  The UNIQUE(company_id, ticket_ref)
+    DB constraint is retained as the final safety net.
     """
+    # Advisory lock is scoped to the current transaction; released automatically on commit/rollback.
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:cid))"),
+        {"cid": str(company_id)},
+    )
     result = await session.execute(
         select(func.count()).where(SupportTicket.company_id == company_id)
     )
