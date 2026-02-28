@@ -37,16 +37,29 @@ interface MacroItem {
 }
 
 interface CentralBankEntry {
-  bank:          string;
-  rate:          number;
-  rateStr:       string;
-  direction:     "hawkish" | "dovish" | "neutral";
-  nextMeeting:   string;
-  flag:          string;
-  daysToMeeting: number;
+  bank:        string;
+  rate:        number;
+  rateStr:     string;
+  direction:   "hawkish" | "dovish" | "neutral";
+  nextMeeting: string;
+  flag:        string;
 }
 
-// ─── Static macro baseline (overridden by live Finnhub data) ─────────────────
+function daysUntilMeeting(meetingStr: string): number {
+  const MONTHS: Record<string, number> = {
+    Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5,
+    Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11,
+  };
+  const parts = meetingStr.split(" ");
+  const month = MONTHS[parts[0] ?? ""] ?? 0;
+  const day   = parseInt(parts[1] ?? "1", 10);
+  const now   = new Date();
+  let target  = new Date(now.getFullYear(), month, day);
+  if (target <= now) target = new Date(now.getFullYear() + 1, month, day);
+  return Math.ceil((target.getTime() - now.getTime()) / 86_400_000);
+}
+
+// ─── Static macro baseline (overridden by live data) ─────────────────────────
 const MACRO_BASELINE: MacroItem[] = [
   { label: "DXY INDEX", value: 99.11,  display: "99.11",   maxRef: 120,  trend: "down", context: "USD softening from recent highs",       unit: ""  },
   { label: "VIX",       value: 21.5,   display: "21.5",    maxRef: 45,   trend: "up",   context: "Elevated uncertainty regime",            unit: ""  },
@@ -58,12 +71,12 @@ const MACRO_BASELINE: MacroItem[] = [
 
 const MAX_RATE = 14;
 const CENTRAL_BANKS: CentralBankEntry[] = [
-  { bank: "Federal Reserve", rate: 4.50, rateStr: "4.50%", direction: "neutral", nextMeeting: "Mar 18", flag: "🇺🇸", daysToMeeting: 18 },
-  { bank: "ECB",             rate: 2.90, rateStr: "2.90%", direction: "dovish",  nextMeeting: "Apr 17", flag: "🇪🇺", daysToMeeting: 48 },
-  { bank: "Bank of Japan",   rate: 0.50, rateStr: "0.50%", direction: "hawkish", nextMeeting: "Mar 19", flag: "🇯🇵", daysToMeeting: 19 },
-  { bank: "Banxico",         rate: 9.50, rateStr: "9.50%", direction: "dovish",  nextMeeting: "Mar 27", flag: "🇲🇽", daysToMeeting: 27 },
-  { bank: "BCB (Brazil)",    rate:13.25, rateStr:"13.25%", direction: "hawkish", nextMeeting: "Mar 19", flag: "🇧🇷", daysToMeeting: 19 },
-  { bank: "Bank of England", rate: 4.50, rateStr: "4.50%", direction: "neutral", nextMeeting: "Mar 20", flag: "🇬🇧", daysToMeeting: 20 },
+  { bank: "Federal Reserve", rate: 4.50, rateStr: "4.50%", direction: "neutral", nextMeeting: "Mar 18", flag: "🇺🇸" },
+  { bank: "ECB",             rate: 2.90, rateStr: "2.90%", direction: "dovish",  nextMeeting: "Apr 17", flag: "🇪🇺" },
+  { bank: "Bank of Japan",   rate: 0.50, rateStr: "0.50%", direction: "hawkish", nextMeeting: "Mar 19", flag: "🇯🇵" },
+  { bank: "Banxico",         rate: 9.50, rateStr: "9.50%", direction: "dovish",  nextMeeting: "Mar 27", flag: "🇲🇽" },
+  { bank: "BCB (Brazil)",    rate:13.25, rateStr:"13.25%", direction: "hawkish", nextMeeting: "Mar 19", flag: "🇧🇷" },
+  { bank: "Bank of England", rate: 4.50, rateStr: "4.50%", direction: "neutral", nextMeeting: "Mar 20", flag: "🇬🇧" },
 ];
 
 function directionColor(dir: string): string {
@@ -114,7 +127,7 @@ function RateBarChart({ banks }: { banks: CentralBankEntry[] }) {
               </div>
               <div style={{ fontFamily: S.fontMono, fontSize: 7.5, color: S.tertiary, marginTop: 2, display: "flex", justifyContent: "space-between" }}>
                 <span>Next: {cb.nextMeeting}</span>
-                <span style={{ color: cb.daysToMeeting <= 15 ? S.amber : S.tertiary }}>{cb.daysToMeeting}d</span>
+                <span style={{ color: daysUntilMeeting(cb.nextMeeting) <= 15 ? S.amber : S.tertiary }}>{daysUntilMeeting(cb.nextMeeting)}d</span>
               </div>
             </div>
           );
@@ -155,7 +168,7 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
     setMacroLoading(true);
     (async () => {
       try {
-        const res = await fetch("/api/macro-data");
+        const res = await fetch("/api/market/macro");
         if (!res.ok) return;
         const json = await res.json() as {
           dataSource: string;
@@ -379,7 +392,7 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ padding: "6px 14px", borderBottom: `1px solid ${S.soft}`, background: S.bgSub, display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontFamily: S.fontMono, fontSize: 8, color: macroSrc === "live" ? S.green : S.tertiary, letterSpacing: "0.08em" }}>
-                {macroSrc === "live" ? "● FINNHUB LIVE" : "○ REFERENCE DATA"}
+                {macroSrc === "live" ? "● YAHOO FINANCE" : "○ REFERENCE DATA"}
               </span>
               {asOf && (
                 <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>· EOD {asOf}</span>
@@ -441,7 +454,7 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
       {/* ── Footer ── */}
       <div style={{ padding: "5px 12px", borderTop: `1px solid ${S.soft}`, background: S.bgSub, fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, display: "flex", justifyContent: "space-between", flexShrink: 0 }}>
         <span>
-          Geo: {newsLive ? "Yahoo Finance" : "Simulated"} · Macro: {macroSrc === "live" ? "Finnhub" : "Reference"}
+          Geo: {newsLive ? "Yahoo Finance" : "Simulated"} · Macro: {macroSrc === "live" ? "Yahoo Finance" : "Reference"}
         </span>
         <span>Informational only</span>
       </div>
