@@ -140,6 +140,9 @@ async def create_template(
     Requires policy.create_preset permission.
     """
     await _check_permission(session, current_user, "policy.create_preset")
+    # SEC-POLICY-1: elevating a template to ACTIVE/APPROVED requires the activate permission
+    if data.status in ("ACTIVE", "APPROVED"):
+        await _check_permission(session, current_user, "policy.activate")
     tmpl = await policy_service.create_template(
         session,
         current_user,
@@ -149,6 +152,7 @@ async def create_template(
         risk_posture=data.risk_posture,
         category=data.category,
         config=data.config.model_dump(),
+        status=data.status,
     )
     return tmpl
 

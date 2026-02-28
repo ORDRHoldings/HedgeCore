@@ -38,6 +38,7 @@ import type { PolicyTemplate, PolicyInstance, UpdateTemplatePayload, PolicyFavor
 import HelpPanel from "@/components/layout/HelpPanel";
 import { SAVED_POLICIES_HELP } from "@/lib/helpContent";
 import { POLICY_PRESETS } from "@/constants/policyPresets";
+import PolicyRevisionDrawer from "@/components/policy/PolicyRevisionDrawer";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -418,11 +419,22 @@ function EditPolicyModal({ policy, loading, onSave, onCancel }: EditModalProps) 
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <div>
-            <div style={{ fontFamily: S.fontUI, fontSize: "0.9375rem", fontWeight: 700, color: S.primary }}>
-              Edit Policy
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: S.fontUI, fontSize: "0.9375rem", fontWeight: 700, color: S.primary }}>
+                Edit Policy
+              </span>
+              {/* UX-POLICY-1: explicit scope label so analysts know config changes require re-activation */}
+              <span style={{
+                fontFamily: S.fontMono, fontSize: "0.4375rem", letterSpacing: "0.08em",
+                padding: "2px 6px",
+                border: `1px solid color-mix(in srgb, var(--accent-amber,#fbbf24) 35%, var(--border-rim))`,
+                color: "var(--accent-amber,#fbbf24)", background: "transparent",
+              }}>
+                METADATA ONLY
+              </span>
             </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, letterSpacing: "0.06em" }}>
-              {policy.code} · {policy.id.slice(0, 8).toUpperCase()}
+            <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, letterSpacing: "0.06em", marginTop: 2 }}>
+              {policy.code} · {policy.id.slice(0, 8).toUpperCase()} · Config changes require creating a new version
             </div>
           </div>
           <button onClick={onCancel} style={{
@@ -534,12 +546,13 @@ interface PolicyCardProps {
   isFavorited?: boolean;
   onToggleFavorite?: () => void;
   onExport?: () => void;
+  onHistory?: () => void;  // LOG-POLICY-1
 }
 
 function PolicyCard({
   policy, showMeta, actionLoading,
   onActivate, onDeactivate, onEdit, onDuplicate, onDelete,
-  isFavorited, onToggleFavorite, onExport,
+  isFavorited, onToggleFavorite, onExport, onHistory,
 }: PolicyCardProps) {
   const [hovered, setHovered] = useState(false);
   const rc = riskColor(policy.riskPosture);
@@ -701,6 +714,21 @@ function PolicyCard({
             <Download size={9} /> EXPORT
           </button>
         )}
+        {/* LOG-POLICY-1: Audit history */}
+        {onHistory && (
+          <button
+            type="button"
+            onClick={onHistory}
+            title="View audit history"
+            style={{
+              fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+              padding: "3px 8px", border: `1px solid ${S.rim}`,
+              color: S.tertiary, background: "transparent", cursor: "pointer",
+            }}
+          >
+            HISTORY
+          </button>
+        )}
       </div>
     </div>
   );
@@ -784,6 +812,8 @@ export default function SavedPoliciesPage() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [editModal, setEditModal] = useState<DemoPolicy | null>(null);
   const [editLoading, setEditLoading] = useState(false);
+  // LOG-POLICY-1: Revision history drawer
+  const [historyDrawer, setHistoryDrawer] = useState<{ id: string; name: string; code: string } | null>(null);
 
   // Auth guard
   if (!isAuthenticated) {
@@ -1226,6 +1256,7 @@ export default function SavedPoliciesPage() {
                     URL.revokeObjectURL(url);
                   } catch { addToast("error", 'Export failed'); }
                 } : undefined}
+                onHistory={() => setHistoryDrawer({ id: policy.id, name: policy.name, code: policy.code })}
               />
             ))}
           </div>
@@ -1293,6 +1324,17 @@ export default function SavedPoliciesPage() {
           loading={editLoading}
           onSave={handleEditSave}
           onCancel={() => { setEditModal(null); setEditLoading(false); }}
+        />
+      )}
+
+      {/* LOG-POLICY-1: Revision history drawer */}
+      {historyDrawer && (
+        <PolicyRevisionDrawer
+          templateId={historyDrawer.id}
+          templateName={historyDrawer.name}
+          templateCode={historyDrawer.code}
+          token={token ?? undefined}
+          onClose={() => setHistoryDrawer(null)}
         />
       )}
 
