@@ -150,40 +150,52 @@ Score calibration:
 6–8  = Large-scale military strikes, oil supply route threats, broad regional war
 8–10 = Catastrophic escalation: multi-nation war, nuclear threat, systemic crisis`;
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key":          ANT_KEY,
-        "anthropic-version":  "2023-06-01",
-        "content-type":       "application/json",
-      },
-      body: JSON.stringify({
-        model:      "claude-haiku-4-5-20251001",
-        max_tokens: 600,
-        messages:   [{ role: "user", content: prompt }],
-      }),
-      signal: AbortSignal.timeout(20_000),
-    });
+  // Try primary model, fall back to 3.5-haiku if unavailable
+  const MODELS = ["claude-haiku-4-5-20251001", "claude-3-5-haiku-20241022"];
 
-    if (!res.ok) {
-      console.error(`[geo-intel] Claude API ${res.status}`);
-      return null;
+  for (const model of MODELS) {
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key":         ANT_KEY,
+          "anthropic-version": "2023-06-01",
+          "content-type":      "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 600,
+          messages:   [{ role: "user", content: prompt }],
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => "");
+        console.error(`[geo-intel] Claude ${model} HTTP ${res.status}: ${errBody.slice(0, 200)}`);
+        // If model not found, try next; otherwise bail
+        if (res.status === 404 || res.status === 400) continue;
+        return null;
+      }
+
+      const data = await res.json() as { content?: Array<{ type: string; text: string }> };
+      const text = data.content?.find((c) => c.type === "text")?.text ?? "";
+
+      // Extract JSON block — Claude sometimes wraps in backticks
+      const match = text.match(/\{[\s\S]+\}/);
+      if (!match) {
+        console.error(`[geo-intel] Claude ${model} returned non-JSON: ${text.slice(0, 200)}`);
+        return null;
+      }
+
+      const parsed = JSON.parse(match[0]) as ClaudeGeoResponse;
+      console.log(`[geo-intel] Claude ${model} succeeded, geo_risk_score=${parsed.geo_risk_score}`);
+      return parsed;
+    } catch (err) {
+      console.error(`[geo-intel] Claude ${model} exception: ${String(err)}`);
     }
-
-    const data = await res.json() as { content?: Array<{ type: string; text: string }> };
-    const text = data.content?.find((c) => c.type === "text")?.text ?? "";
-
-    // Extract JSON block — Claude sometimes wraps in backticks
-    const match = text.match(/\{[\s\S]+\}/);
-    if (!match) return null;
-
-    const parsed = JSON.parse(match[0]) as ClaudeGeoResponse;
-    return parsed;
-  } catch (err) {
-    console.error("[geo-intel] Claude call failed:", String(err));
-    return null;
   }
+  return null;
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
