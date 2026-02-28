@@ -43,6 +43,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 
+from app.core.exceptions import ActivationConflictError
 from app.models.policy import PolicyInstance, PolicyTemplate
 
 from app.models.user import User
@@ -398,15 +399,15 @@ async def activate_policy(
     except IntegrityError as exc:
 
         # DB-POLICY-1: Unique partial index violation — a concurrent activate_policy()
-        # call won the race. Roll back and surface as a retryable conflict error.
+        # call won the race. Roll back and surface as a typed, retryable conflict error.
 
         await session.rollback()
 
-        raise ValueError(
+        raise ActivationConflictError(
 
-            "Concurrent activation conflict: another activation for this scope succeeded "
+            company_id=user.company_id,
 
-            "simultaneously. Please retry the activation."
+            branch_id=user.branch_id,
 
         ) from exc
 

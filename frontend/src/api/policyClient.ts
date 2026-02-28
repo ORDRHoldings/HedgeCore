@@ -9,24 +9,32 @@ import type { QuestionnaireAnswers, AIPolicyResult, AIPolicyRecommendation } fro
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 function getApiKey(): string {
+  // 1. Env var always takes priority in all environments.
   if (process.env.NEXT_PUBLIC_HEDGECALC_API_KEY) return process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
-  if (typeof window !== "undefined") {
+  // 2. DEV-KEY-1: localStorage override is ONLY allowed in development.
+  //    In production a stale localStorage key must never silently authenticate
+  //    without a corresponding env var — fail-closed, not fail-open.
+  if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
     const stored = localStorage.getItem("hc_api_key");
     if (stored) return stored;
   }
   if (process.env.NODE_ENV === "development") {
     // eslint-disable-next-line no-console
     console.warn(
-      "[policyClient] NEXT_PUBLIC_HEDGECALC_API_KEY is not set and no hc_api_key found in " +
-      "localStorage. All policy API calls will fail authentication. Set the env variable or " +
-      "store a key via localStorage.setItem('hc_api_key', '<key>')."
+      "[policyClient] No API key found. Set NEXT_PUBLIC_HEDGECALC_API_KEY (all envs) " +
+      "or localStorage.setItem('hc_api_key', '<key>') (dev only)."
     );
   }
   return "";
 }
 
 function authHeaders(token?: string): Record<string, string> {
-  const headers: Record<string, string> = { "X-API-Key": getApiKey() };
+  // DEV-KEY-1: Omit X-API-Key header entirely when key is empty — sending an
+  // empty header value is semantically wrong and may cause spurious 400s on some
+  // API gateways. Bearer-only auth is valid without the key header.
+  const headers: Record<string, string> = {};
+  const apiKey = getApiKey();
+  if (apiKey) headers["X-API-Key"] = apiKey;
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }

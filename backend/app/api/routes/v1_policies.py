@@ -47,6 +47,7 @@ from app.schemas_v1.policies import (
     PolicyTemplateResponse,
     UpdateTemplateRequest,
 )
+from app.core.exceptions import ActivationConflictError
 from app.services import policy_favorites_service, policy_service, rbac_service
 
 router = APIRouter(prefix="/v1/policies", tags=["v1-policies"])
@@ -380,12 +381,21 @@ async def activate_policy(
         instance = await policy_service.activate_policy(
             session, current_user, data.template_id
         )
+    except ActivationConflictError as e:
+        # DB-POLICY-1: typed exception → structured 409 with stable code field
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": e.code,
+                "detail": str(e),
+                "scope": {
+                    "company_id": str(e.company_id),
+                    "branch_id": str(e.branch_id) if e.branch_id else None,
+                },
+            },
+        )
     except ValueError as e:
-        detail = str(e)
-        # DB-POLICY-1: concurrent activation conflict maps to 409, not 404
-        if "concurrent activation conflict" in detail.lower():
-            raise HTTPException(status_code=409, detail=detail)
-        raise HTTPException(status_code=404, detail=detail)
+        raise HTTPException(status_code=404, detail=str(e))
 
     # Enrich response with template
     tmpl = await policy_service.get_template(
