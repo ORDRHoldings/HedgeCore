@@ -39,7 +39,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
-from app.core.security import get_current_user_optional
+from app.core.security import get_current_user, get_current_user_optional
+from app.services import rbac_service
 from app.engine_v1.audit import build_run_envelope, build_trace_lite
 from app.engine_v1.kernel import compute_hedge_plan
 from app.engine_v1.normalizer import normalize_hedges, normalize_trades
@@ -154,10 +155,16 @@ async def _persist_run(
 async def calculate(
     request: CalculateRequest,
     session: AsyncSession     = Depends(get_async_session),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User        = Depends(get_current_user),
 ):
     # Per-user rate limit: max 10 calculations per minute
-    if current_user and not _check_calc_rate(str(current_user.id)):
+    # RBAC: require calculate.run_production permission
+    if not current_user.is_superuser:
+        perms = await rbac_service.get_permissions_by_user(session, current_user.id)
+        if "calculate.run_production" not in perms:
+            raise HTTPException(status_code=403, detail="Missing permission: calculate.run_production")
+
+    if not _check_calc_rate(str(current_user.id)):
         raise HTTPException(
             status_code=429,
             detail="Rate limit exceeded: max 10 calculations per minute per user. Please wait before retrying.",
@@ -305,7 +312,7 @@ async def calculate(
 async def list_runs(
     limit:        int           = Query(default=50, le=200, ge=1),
     session:      AsyncSession  = Depends(get_async_session),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User          = Depends(get_current_user),
 ):
     """
     List calculation runs for the caller's company (or all runs for superusers).
@@ -337,7 +344,7 @@ async def list_runs(
 async def get_run_detail(
     run_id:       str,
     session:      AsyncSession  = Depends(get_async_session),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User          = Depends(get_current_user),
 ):
     """
     Fetch a single run by ID. Returns the full RunEnvelope + TraceLite JSONB.
