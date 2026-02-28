@@ -1094,7 +1094,7 @@ export default function PortfolioRisk() {
         fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
-        <span>HedgeCore · Portfolio Risk Analysis</span>
+        <span>ORDR Terminal · Portfolio Risk Analysis</span>
         <span style={{ color: S.rim }}>·</span>
         <span>R1–R8 · VaR 99% · {isLive ? "LIVE" : "DEMO"}</span>
         <span style={{ color: S.rim }}>·</span>

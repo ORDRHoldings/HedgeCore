@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Nav from "../../components/Nav";
+
 import HedgeForm from "../../components/HedgeForm";
 import HedgeTable from "../../components/HedgeTable";
 import Spinner from "../../components/ui/Spinner";
@@ -40,7 +40,6 @@ export default function HedgesPage() {
     <div style={{ display: 'flex', minHeight: '100vh' }}>
 
     <div className="min-h-screen bg-gray-50">
-      <Nav />
       <main className="mx-auto max-w-4xl px-4 py-8">
         <h1 className="mb-6 text-2xl font-bold text-gray-900">Hedge Calculator</h1>
 
