@@ -26,12 +26,13 @@ import json
 import uuid as _uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
 from app.core.security import get_current_user
+from app.core.dev_fault import raise_if_dev_fault
 from app.models.audit_event import AuditEvent
 from app.models.policy import PolicyTemplate
 from app.models.user import User
@@ -51,6 +52,7 @@ from app.core.exceptions import ActivationConflictError
 from app.services import policy_favorites_service, policy_service, rbac_service
 
 router = APIRouter(prefix="/v1/policies", tags=["v1-policies"])
+
 
 
 # ---------------------------------------------------------------------------
@@ -116,8 +118,10 @@ async def get_seed_status(
 # 2. GET /templates
 @router.get("/templates", response_model=list[PolicyTemplateResponse])
 async def list_templates(
+    request:      Request,
     session:      AsyncSession = Depends(get_async_session),
     current_user: User         = Depends(get_current_user),
+    __dev_fault:  int | None   = Query(None, include_in_schema=False),
 ):
     """
     List all policy templates accessible to the caller:
@@ -125,6 +129,7 @@ async def list_templates(
     - Company-specific templates for the caller's company
     Ordered: system templates first, then custom, alphabetically by name.
     """
+    raise_if_dev_fault(request, __dev_fault)
     templates = await policy_service.list_templates(session, current_user)
     return templates
 
@@ -382,7 +387,7 @@ async def activate_policy(
             session, current_user, data.template_id
         )
     except ActivationConflictError as e:
-        # DB-POLICY-1: typed exception → structured 409 with stable code field
+        # DB-POLICY-1: typed exception â†’ structured 409 with stable code field
         raise HTTPException(
             status_code=409,
             detail={
@@ -429,10 +434,13 @@ async def deactivate_policy(
 # 12. GET /favorites
 @router.get("/favorites", response_model=list[PolicyFavoriteResponse])
 async def list_favorites(
+    request:      Request,
     session:      AsyncSession = Depends(get_async_session),
     current_user: User         = Depends(get_current_user),
+    __dev_fault:  int | None   = Query(None, include_in_schema=False),
 ):
     """List all policy templates favorited by the current user."""
+    raise_if_dev_fault(request, __dev_fault)
     rows = await policy_favorites_service.list_favorites(session, current_user)
     result = []
     for fav, tmpl in rows:
