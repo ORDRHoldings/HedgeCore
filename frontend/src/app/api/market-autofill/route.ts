@@ -16,7 +16,7 @@ async function fetchSpot(from: string, to: string): Promise<number | null> {
   if (!AV_KEY || AV_KEY === 'YOUR_ALPHA_VANTAGE_KEY_HERE') return null;
   try {
     const url = `${AV_BASE}?function=CURRENCY_EXCHANGE_RATE&from_currency=${from}&to_currency=${to}&apikey=${AV_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 300 } }); // cache 5 min
+    const res = await fetch(url, { next: { revalidate: 86400 } }); // cache 24h (free-tier budget)
     if (!res.ok) return null;
     const json = await res.json();
     const rate = json?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate'];
