@@ -1,6 +1,12 @@
 /**
  * Pure risk scoring functions — deterministic, zero I/O.
  * Exported for use by the risk-pulse API route and unit tests.
+ *
+ * Weight philosophy:
+ *   geo_news (20%) + oil_shock (20%) = 40% together because geopolitical events
+ *   (Middle East conflict, sanctions, supply disruptions) transmit directly through
+ *   both channels simultaneously. A single event like airstrikes on an oil producer
+ *   will max out both factors at once, correctly producing a Crisis-level composite.
  */
 
 import type { RiskFactor, RiskPulseSnapshot, RiskRegime } from "./types";
@@ -12,8 +18,11 @@ export const FACTOR_BASELINES = {
   dxy:        { mean: 103,  std: 4.0  },
   brent:      { mean: 78,   std: 9.0  },
   gold:       { mean: 2250, std: 210  },
-  vix_vol:    { mean: 3.0,  std: 2.0  },  // realized stdev of VIX sample window
-  news_score: { mean: 10,   std: 6.0  },  // weighted news + event count
+  vix_vol:    { mean: 3.0,  std: 2.0  },
+  // news_score is now Claude's geo_risk_score on a 0–10 scale.
+  // Baseline mean=2: background world noise. std=2: meaningful deviation per unit.
+  // At score=8.5 (Iran strike): z=(8.5-2)/2=3.25 → clamped 3.0 → impact=1.0 (max)
+  news_score: { mean: 2.0,  std: 2.0  },
 } as const;
 
 // ── Statistics helpers ────────────────────────────────────────────────────────
@@ -32,7 +41,7 @@ export function rollingStats(
 ): { mean: number; std: number } {
   if (history.length < 3) return baseline;
   const m = rollingMean(history);
-  const s = Math.max(rollingStd(history, m), baseline.std * 0.15);  // floor at 15%
+  const s = Math.max(rollingStd(history, m), baseline.std * 0.15);
   return { mean: m, std: s };
 }
 
@@ -79,8 +88,8 @@ export interface RawMacroInputs {
   dxy:        number;
   brent:      number;
   gold:       number;
-  vix_vol:    number;  // realized vol-of-VIX (or vix/20 proxy)
-  news_score: number;  // newsCount24h×1 + highEvents×3 + medEvents×1.5
+  vix_vol:    number;
+  news_score: number;  // Claude geo_risk_score 0–10 (or heuristic)
 }
 
 export interface FactorHistorySeries {
@@ -92,6 +101,17 @@ export interface FactorHistorySeries {
 }
 
 // ── Factor definitions ────────────────────────────────────────────────────────
+//
+// WEIGHT RATIONALE (must sum to 1.00):
+//   geo_news (0.20): Geopolitical shock is the most sudden & non-linear risk.
+//                    Claude-powered scoring captures events markets haven't priced yet.
+//   oil_shock (0.20): Middle East conflicts transmit immediately through oil supply.
+//                    Brent |z-score| catches both supply spikes AND demand collapses.
+//   equity_stress (0.18): VIX is the canonical cross-asset fear gauge.
+//   rates_stress  (0.12): Yield spikes signal flight from duration / credit stress.
+//   vol_proxy     (0.12): Realized vol-of-vol detects regime instability.
+//   credit_risk   (0.10): Gold safe-haven demand is a leading credit stress signal.
+//   usd_strength  (0.08): DXY strength pressures EM FX but is secondary to above.
 
 interface FactorDef {
   id:          string;
@@ -107,29 +127,36 @@ interface FactorDef {
 
 const FACTOR_DEFS: FactorDef[] = [
   {
+    id: "geo_news", label: "GEO / NEWS", source: "INTEL",
+    weight: 0.20, impactType: "directional",
+    getValue:   (i) => i.news_score,
+    getDisplay: (v) => v.toFixed(1) + "/10",
+    histKey: null, baselineKey: "news_score",
+  },
+  {
+    id: "oil_shock", label: "OIL SHOCK", source: "BRENT",
+    weight: 0.20, impactType: "shock",
+    getValue:   (i) => i.brent,
+    getDisplay: (v) => "$" + v.toFixed(1),
+    histKey: "brent", baselineKey: "brent",
+  },
+  {
     id: "equity_stress", label: "EQUITY STRESS", source: "VIX",
-    weight: 0.25, impactType: "directional",
+    weight: 0.18, impactType: "directional",
     getValue:   (i) => i.vix,
     getDisplay: (v) => v.toFixed(1),
     histKey: "vix", baselineKey: "vix",
   },
   {
     id: "rates_stress", label: "RATES STRESS", source: "US 10Y",
-    weight: 0.20, impactType: "directional",
+    weight: 0.12, impactType: "directional",
     getValue:   (i) => i.us10y,
     getDisplay: (v) => v.toFixed(2) + "%",
     histKey: "us10y", baselineKey: "us10y",
   },
   {
-    id: "usd_strength", label: "USD STRENGTH", source: "DXY",
-    weight: 0.15, impactType: "directional",
-    getValue:   (i) => i.dxy,
-    getDisplay: (v) => v.toFixed(2),
-    histKey: "dxy", baselineKey: "dxy",
-  },
-  {
     id: "vol_proxy", label: "VOL PROXY", source: "VIX σ",
-    weight: 0.15, impactType: "directional",
+    weight: 0.12, impactType: "directional",
     getValue:   (i) => i.vix_vol,
     getDisplay: (v) => v.toFixed(2),
     histKey: null, baselineKey: "vix_vol",
@@ -142,18 +169,11 @@ const FACTOR_DEFS: FactorDef[] = [
     histKey: "gold", baselineKey: "gold",
   },
   {
-    id: "oil_shock", label: "OIL SHOCK", source: "BRENT",
-    weight: 0.10, impactType: "shock",
-    getValue:   (i) => i.brent,
-    getDisplay: (v) => "$" + v.toFixed(1),
-    histKey: "brent", baselineKey: "brent",
-  },
-  {
-    id: "geo_news", label: "GEO / NEWS", source: "PRESS",
-    weight: 0.05, impactType: "directional",
-    getValue:   (i) => i.news_score,
-    getDisplay: (v) => v.toFixed(0),
-    histKey: null, baselineKey: "news_score",
+    id: "usd_strength", label: "USD STRENGTH", source: "DXY",
+    weight: 0.08, impactType: "directional",
+    getValue:   (i) => i.dxy,
+    getDisplay: (v) => v.toFixed(2),
+    histKey: "dxy", baselineKey: "dxy",
   },
 ];
 

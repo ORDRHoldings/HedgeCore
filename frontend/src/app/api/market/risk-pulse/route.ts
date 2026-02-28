@@ -1,17 +1,23 @@
 /**
  * GET /api/market/risk-pulse
  *
- * Composite risk score (0.0–10.0) derived from 7 market factors:
- *   equity_stress (VIX), rates_stress (US10Y), usd_strength (DXY),
- *   vol_proxy (VIX σ), credit_risk (Gold), oil_shock (Brent|), geo_news (press)
+ * Composite risk score (0.0–10.0) from 7 factors. Key change from v1:
+ *   - geo_news (20%) + oil_shock (20%) = 40% combined weight.
+ *     A single geopolitical event (e.g. airstrikes on an oil producer) will
+ *     simultaneously spike both, correctly registering a High/Crisis regime.
+ *   - geo_news input is Claude's geo_risk_score 0–10 (not a news count).
+ *   - GeoIntelligence object is included in the response for the widget.
  *
- * Data sources: Yahoo Finance (macro), Finnhub (news + calendar)
- * Cache: 30s TTL — history ring buffer survives warm invocations
+ * Data: Yahoo Finance (VIX, US10Y, DXY, Brent, Gold) + Finnhub (general+forex
+ *       news) + Claude Haiku (geopolitical analysis).
+ *
+ * Cache: 30s snapshot TTL, 5 min geo intelligence TTL.
  */
 
 import { NextResponse } from "next/server";
 import {
   riskPulseCache,
+  geoIntelCache,
   factorHistory,
   scoreHistory,
   type FactorSample,
@@ -21,16 +27,17 @@ import {
   type RawMacroInputs,
   type FactorHistorySeries,
 } from "@/lib/market/riskScoring";
-import type { FinnhubNewsItem } from "@/lib/market/transforms";
-import { buildFxNewsArticles } from "@/lib/market/transforms";
-import type { FinnhubEconEvent } from "@/lib/market/transforms";
-import { buildEconEvents } from "@/lib/market/transforms";
+import { buildFxNewsArticles, buildEconEvents } from "@/lib/market/transforms";
+import type { FinnhubNewsItem, FinnhubEconEvent } from "@/lib/market/transforms";
+import { fetchGeoHeadlines, analyzeGeoIntelligence } from "@/lib/market/geoIntelligence";
 
-const CACHE_KEY = "risk_pulse";
-const TTL_MS    = 30_000;   // 30s
+const CACHE_KEY     = "risk_pulse";
+const GEO_CACHE_KEY = "geo_intel";
+const TTL_MS        = 30_000;    // 30s snapshot
+const GEO_TTL_MS    = 300_000;   // 5 min geo (Claude is cached longer to control cost)
 
-const FH_KEY    = process.env.FINNHUB_API_KEY ?? "";
-const FH_BASE   = "https://finnhub.io/api/v1";
+const FH_KEY  = process.env.FINNHUB_API_KEY ?? "";
+const FH_BASE = "https://finnhub.io/api/v1";
 
 // ── Yahoo Finance ─────────────────────────────────────────────────────────────
 
@@ -65,7 +72,7 @@ async function fetchYF(yfSymbol: string): Promise<{ price: number; prevClose: nu
 
 // ── Finnhub helpers ───────────────────────────────────────────────────────────
 
-async function fetchFinnhubNews(): Promise<FinnhubNewsItem[]> {
+async function fetchFinnhubForexNews(): Promise<FinnhubNewsItem[]> {
   if (!FH_KEY) return [];
   try {
     const res = await fetch(`${FH_BASE}/news?category=forex&token=${FH_KEY}`, {
@@ -98,37 +105,47 @@ async function fetchFinnhubCalendar(): Promise<FinnhubEconEvent[]> {
 export async function GET() {
   const ts = Date.now();
 
-  const cached = riskPulseCache.get(CACHE_KEY);
-  if (cached) {
+  // Return snapshot from cache (but always include fresh geo intel in response)
+  const cachedSnap = riskPulseCache.get(CACHE_KEY);
+  const cachedGeo  = geoIntelCache.get(GEO_CACHE_KEY);
+
+  if (cachedSnap && cachedGeo) {
     console.log(JSON.stringify({ ts, endpoint: "/api/market/risk-pulse", cached: true, status: 200 }));
-    return NextResponse.json({ snapshot: cached, cachedAt: ts });
+    return NextResponse.json({ snapshot: cachedSnap, geo: cachedGeo, cachedAt: ts });
   }
 
   const t0 = Date.now();
 
-  // Parallel fetch: 5 YF symbols + Finnhub news + Finnhub calendar
-  const [vixR, us10yR, dxyR, brentR, goldR, rawNews, rawCalendar] = await Promise.all([
-    fetchYF("%5EVIX"),
-    fetchYF("%5ETNX"),
-    fetchYF("DX-Y.NYB"),
-    fetchYF("BZ%3DF"),
-    fetchYF("GC%3DF"),
-    fetchFinnhubNews(),
-    fetchFinnhubCalendar(),
-  ]);
+  // ── Parallel fetch: market data + geo headlines ────────────────────────────
+  const [vixR, us10yR, dxyR, brentR, goldR, forexNews, calendarEvents, geoHeadlines] =
+    await Promise.all([
+      fetchYF("%5EVIX"),
+      fetchYF("%5ETNX"),
+      fetchYF("DX-Y.NYB"),
+      fetchYF("BZ%3DF"),
+      fetchYF("GC%3DF"),
+      fetchFinnhubForexNews(),
+      fetchFinnhubCalendar(),
+      fetchGeoHeadlines(),
+    ]);
 
-  // Determine data quality
+  // ── Geo intelligence (Claude or heuristic) ─────────────────────────────────
+  const geoIntel = cachedGeo ?? await (async () => {
+    const intel = await analyzeGeoIntelligence(geoHeadlines);
+    geoIntelCache.set(GEO_CACHE_KEY, intel, GEO_TTL_MS);
+    return intel;
+  })();
+
+  // ── Market data ────────────────────────────────────────────────────────────
   const liveCount = [vixR, us10yR, dxyR, brentR, goldR].filter(Boolean).length;
-  const quality = liveCount === 5 ? "LIVE" : liveCount >= 2 ? "PARTIAL" : "FALLBACK";
+  const quality   = liveCount === 5 ? "LIVE" : liveCount >= 2 ? "PARTIAL" : "FALLBACK";
 
-  // Calibrated fallbacks
   const vix   = vixR?.price   ?? 18.5;
   const us10y = us10yR?.price ?? 3.8;
   const dxy   = dxyR?.price   ?? 103;
   const brent = brentR?.price ?? 78;
   const gold  = goldR?.price  ?? 2250;
 
-  // Macro trends
   const trend = (r: { price: number; prevClose: number } | null): "up" | "down" | "flat" =>
     !r ? "flat" : r.price > r.prevClose * 1.0001 ? "up" : r.price < r.prevClose * 0.9999 ? "down" : "flat";
 
@@ -138,13 +155,13 @@ export async function GET() {
     "DXY":    trend(dxyR),
     "BRENT":  trend(brentR),
     "GOLD":   trend(goldR),
+    "INTEL":  geoIntel.geo_risk_score > 2 ? "up" : "flat",
   };
 
-  // Push new sample to history (for rolling z-score computation)
+  // ── History ring buffer ────────────────────────────────────────────────────
   const sample: FactorSample = { ts, vix, us10y, dxy, brent, gold };
   factorHistory.push(sample);
 
-  // Build factor history series from ring buffer
   const fhArr = factorHistory.toArray();
   const history: FactorHistorySeries = {
     vix:   fhArr.map((s) => s.vix),
@@ -154,28 +171,30 @@ export async function GET() {
     gold:  fhArr.map((s) => s.gold),
   };
 
-  // VIX vol proxy: stdev of last N VIX samples, or level-based proxy
-  const vixHistory = history.vix;
+  // VIX vol proxy
+  const vixHist = history.vix;
   let vix_vol: number;
-  if (vixHistory.length >= 3) {
-    const m = vixHistory.reduce((s, x) => s + x, 0) / vixHistory.length;
-    vix_vol = Math.sqrt(vixHistory.reduce((s, x) => s + (x - m) ** 2, 0) / vixHistory.length);
+  if (vixHist.length >= 3) {
+    const m = vixHist.reduce((s, x) => s + x, 0) / vixHist.length;
+    vix_vol = Math.sqrt(vixHist.reduce((s, x) => s + (x - m) ** 2, 0) / vixHist.length);
   } else {
-    vix_vol = vix / 20;  // crude proxy on cold start
+    vix_vol = vix / 20;
   }
 
-  // News / calendar processing
-  const articles     = buildFxNewsArticles(rawNews);
-  const events       = buildEconEvents(rawCalendar);
+  // ── Calendar / news metadata ───────────────────────────────────────────────
+  const articles     = buildFxNewsArticles(forexNews);
+  const events       = buildEconEvents(calendarEvents);
   const now24h       = ts - 24 * 3_600_000;
   const newsCount24h = articles.filter((a) => a.datetime * 1000 > now24h).length;
   const highImpact   = events.filter((e) => e.impact === "high").length;
   const medImpact    = events.filter((e) => e.impact === "medium").length;
-  const news_score   = newsCount24h * 1.0 + highImpact * 3.0 + medImpact * 1.5;
 
-  const inputs: RawMacroInputs = { vix, us10y, dxy, brent, gold, vix_vol, news_score };
+  // ── Scoring: news_score = Claude's geo_risk_score (0–10 scale) ────────────
+  const inputs: RawMacroInputs = {
+    vix, us10y, dxy, brent, gold, vix_vol,
+    news_score: geoIntel.geo_risk_score,
+  };
 
-  // Compute score
   const snapshot = computeRiskPulse(
     inputs,
     history,
@@ -191,9 +210,7 @@ export async function GET() {
     macroTrends,
   );
 
-  // Persist score for sparkline
   scoreHistory.push(snapshot.score);
-
   riskPulseCache.set(CACHE_KEY, snapshot, TTL_MS);
 
   const duration_ms = Date.now() - t0;
@@ -201,7 +218,8 @@ export async function GET() {
     ts, endpoint: "/api/market/risk-pulse",
     duration_ms, cached: false, status: 200,
     score: snapshot.score, regime: snapshot.regime, quality,
+    geo_score: geoIntel.geo_risk_score, geo_source: geoIntel.source,
   }));
 
-  return NextResponse.json({ snapshot, cachedAt: ts });
+  return NextResponse.json({ snapshot, geo: geoIntel, cachedAt: ts });
 }

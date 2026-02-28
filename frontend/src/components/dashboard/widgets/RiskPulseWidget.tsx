@@ -1,19 +1,31 @@
 "use client";
 
 /**
- * RiskPulseWidget — Institutional Risk Pulse (BlackRock/Bloomberg standard)
+ * RiskPulseWidget — Institutional Risk Pulse v2
  *
- * Data: /api/market/risk-pulse  (30s cache)
- *       /api/market/news/fx     (5m cache, categorized client-side)
- *       /api/market/risk-pulse/insight (5m cache, deterministic)
+ * v2 changes:
+ *   - GEO/NEWS weight raised 5%→20%, OIL SHOCK raised 10%→20% (40% combined).
+ *   - geo_news input = Claude Haiku geo_risk_score 0–10 (not a news count).
+ *   - Geo Intelligence panel: shows Claude's top events, market implications,
+ *     oil/USD impact signals. Full-width alert banner when geo score ≥ 6.
+ *   - Insight (summary/rationale/watchlist) now Claude-powered when API key set.
  *
- * Sections: Header · Score Hero · Gauge · Factor Table · News Tabs · Insight · Footer
+ * Data: /api/market/risk-pulse  (30s)  — snapshot + GeoIntelligence
+ *       /api/market/news/fx     (5m)   — article feed, categorised client-side
+ *       /api/market/risk-pulse/insight (5m) — Claude or template insight
  */
 
 import { useEffect, useState, useCallback } from "react";
-import { RefreshCw, X, AlertTriangle } from "lucide-react";
+import { RefreshCw, X, AlertTriangle, Zap } from "lucide-react";
 import type { UserContext } from "@/lib/authContext";
-import type { RiskPulseSnapshot, RiskInsight, PulseNewsItem, RiskFactor, RiskRegime } from "@/lib/market/types";
+import type {
+  RiskPulseSnapshot,
+  RiskInsight,
+  PulseNewsItem,
+  RiskFactor,
+  RiskRegime,
+  GeoIntelligence,
+} from "@/lib/market/types";
 import type { FxNewsArticle } from "@/lib/market/types";
 
 // ── Style constants ───────────────────────────────────────────────────────────
@@ -40,20 +52,17 @@ const REGIME_COLOR: Record<RiskRegime, string> = {
   Guarded:  S.cyan,
   Elevated: S.amber,
   High:     S.red,
-  Crisis:   "#ff2222",
+  Crisis:   "#ff2020",
 };
 
 const QUALITY_COLOR: Record<string, string> = {
-  LIVE:     S.green,
-  PARTIAL:  S.amber,
-  STALE:    S.amber,
-  FALLBACK: S.red,
+  LIVE: S.green, PARTIAL: S.amber, STALE: S.amber, FALLBACK: S.red,
 };
 
 // ── News categorisation ───────────────────────────────────────────────────────
 
-const GEO_KW = ["war","conflict","sanction","russia","ukraine","china","taiwan","iran","geopolit","military","nato","opec","strait","tensions"];
-const CB_KW  = ["fed","fomc","ecb","boe","boj","central bank","rate cut","rate hike","interest rate","hawkish","dovish","powell","lagarde","bailey","monetary policy","quantitative"];
+const GEO_KW = ["war","conflict","sanction","russia","ukraine","china","taiwan","iran","israel","hezbollah","hamas","houthi","geopolit","military","nato","opec","strait","airstrike","bomb","missile","attack"];
+const CB_KW  = ["fed","fomc","ecb","boe","boj","central bank","rate cut","rate hike","interest rate","hawkish","dovish","powell","lagarde","bailey","monetary policy","quantitative","inflation target"];
 
 function categorise(a: FxNewsArticle): "geo" | "macro" | "cb" {
   const t = (a.headline + " " + a.summary).toLowerCase();
@@ -64,9 +73,9 @@ function categorise(a: FxNewsArticle): "geo" | "macro" | "cb" {
 
 function relTime(unixSec: number): string {
   const s = Math.floor(Date.now() / 1000) - unixSec;
-  if (s < 120)    return "<2m ago";
-  if (s < 3600)   return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400)  return `${Math.floor(s / 3600)}h ago`;
+  if (s < 120)   return "<2m ago";
+  if (s < 3600)  return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
 }
 
@@ -99,17 +108,17 @@ function ImpactBar({ impact, color }: { impact: number; color: string }) {
 }
 
 function FactorRow({ f, regColor }: { f: RiskFactor; regColor: string }) {
-  const zColor = f.zscore > 1 ? S.red : f.zscore > 0 ? S.amber : S.green;
+  const zColor      = f.zscore > 1.5 ? S.red : f.zscore > 0.5 ? S.amber : f.zscore < -0.5 ? S.green : S.secondary;
   const trendSymbol = f.trend === "up" ? "▲" : f.trend === "down" ? "▼" : "─";
   const trendColor  = f.trend === "up" ? S.red : f.trend === "down" ? S.green : S.tertiary;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 64px 36px 52px 28px 36px", alignItems: "center", gap: 4, padding: "3px 0", borderBottom: `1px solid ${S.soft}` }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>{f.label}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.04em" }}>{f.label}</span>
         <span style={{ fontSize: 8, color: trendColor }}>{trendSymbol}</span>
       </div>
       <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.primary, textAlign: "right" }}>{f.display}</span>
-      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: zColor, textAlign: "right" }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: zColor, textAlign: "right", fontWeight: Math.abs(f.zscore) > 2 ? 700 : 400 }}>
         {f.zscore > 0 ? "+" : ""}{f.zscore.toFixed(1)}
       </span>
       <div style={{ display: "flex", justifyContent: "center" }}>
@@ -121,28 +130,77 @@ function FactorRow({ f, regColor }: { f: RiskFactor; regColor: string }) {
   );
 }
 
+function GeoAlertPanel({ geo }: { geo: GeoIntelligence }) {
+  const isAlert  = geo.geo_risk_score >= 6;
+  const color    = isAlert ? S.red : S.amber;
+  const bgColor  = `color-mix(in srgb, ${color} 8%, transparent)`;
+  const oilIcon  = geo.oil_impact === "bullish" ? "▲" : geo.oil_impact === "bearish" ? "▼" : "─";
+  const usdIcon  = geo.usd_impact === "strengthening" ? "▲" : geo.usd_impact === "weakening" ? "▼" : "─";
+
+  return (
+    <div style={{ background: bgColor, border: `1px solid ${color}`, borderRadius: 4, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 7 }}>
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        {isAlert && <Zap size={11} color={color} />}
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color, letterSpacing: "0.1em", flex: 1 }}>
+          {isAlert ? "GEO ALERT" : "GEO INTELLIGENCE"}
+        </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: color, border: `1px solid ${color}`, padding: "1px 5px", borderRadius: 2 }}>
+          {geo.source === "claude" ? "CLAUDE" : "RULE"}
+        </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color }}>
+          {geo.geo_risk_score.toFixed(1)}/10
+        </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+          {geo.regime.toUpperCase()}
+        </span>
+      </div>
+
+      {/* Top events */}
+      {geo.top_events.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {geo.top_events.map((ev, i) => (
+            <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 9, color, flexShrink: 0, marginTop: 1 }}>{"▸"}</span>
+              <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.primary, lineHeight: 1.4 }}>{ev}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Market implications */}
+      {geo.market_implications && (
+        <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: 0, lineHeight: 1.5 }}>
+          {geo.market_implications}
+        </p>
+      )}
+
+      {/* Oil / USD signals */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: geo.oil_impact === "bullish" ? S.red : S.tertiary }}>
+          OIL {oilIcon} {geo.oil_impact.toUpperCase()}
+        </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: geo.usd_impact === "strengthening" ? S.green : S.tertiary }}>
+          USD {usdIcon} {geo.usd_impact.toUpperCase()}
+        </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginLeft: "auto" }}>
+          conf: {geo.confidence}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function NewsTab({ items }: { items: PulseNewsItem[] }) {
   if (items.length === 0) {
-    return (
-      <div style={{ padding: "12px 0", textAlign: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>NO ITEMS</span>
-      </div>
-    );
+    return <div style={{ padding: "10px 0", textAlign: "center" }}><span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>NO ITEMS</span></div>;
   }
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
       {items.slice(0, 5).map((item) => (
-        <a
-          key={item.id}
-          href={item.url || "#"}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ textDecoration: "none", display: "block" }}
-        >
-          <div style={{ padding: "5px 0", borderBottom: `1px solid ${S.soft}` }}>
-            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.primary, lineHeight: 1.35, marginBottom: 2 }}>
-              {item.headline}
-            </div>
+        <a key={item.id} href={item.url || "#"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block" }}>
+          <div style={{ padding: "4px 0", borderBottom: `1px solid ${S.soft}` }}>
+            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.primary, lineHeight: 1.35, marginBottom: 2 }}>{item.headline}</div>
             <div style={{ display: "flex", gap: 8 }}>
               <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.cyan }}>{item.source}</span>
               <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{relTime(item.datetime)}</span>
@@ -165,10 +223,11 @@ interface Props {
 // ── Widget ────────────────────────────────────────────────────────────────────
 
 export default function RiskPulseWidget({ onRemove }: Props) {
-  const [snapshot, setSnapshot] = useState<RiskPulseSnapshot | null>(null);
-  const [insight,  setInsight]  = useState<RiskInsight | null>(null);
-  const [articles, setArticles] = useState<PulseNewsItem[]>([]);
-  const [activeTab, setActiveTab] = useState<"geo" | "macro" | "cb">("macro");
+  const [snapshot,  setSnapshot]  = useState<RiskPulseSnapshot | null>(null);
+  const [geo,       setGeo]       = useState<GeoIntelligence | null>(null);
+  const [insight,   setInsight]   = useState<RiskInsight | null>(null);
+  const [articles,  setArticles]  = useState<PulseNewsItem[]>([]);
+  const [activeTab, setActiveTab] = useState<"geo" | "macro" | "cb">("geo");
   const [fetching,  setFetching]  = useState(false);
   const [error,     setError]     = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<string | null>(null);
@@ -177,21 +236,31 @@ export default function RiskPulseWidget({ onRemove }: Props) {
     setFetching(true);
     setError(null);
     try {
-      const [snapRes, newsRes, insRes] = await Promise.all([
+      const [pulseRes, newsRes, insRes] = await Promise.all([
         fetch("/api/market/risk-pulse"),
         fetch("/api/market/news/fx"),
         fetch("/api/market/risk-pulse/insight"),
       ]);
 
-      const snapJson = await snapRes.json() as { snapshot?: RiskPulseSnapshot };
-      const newsJson = await newsRes.json() as { articles?: FxNewsArticle[] };
-      const insJson  = await insRes.json()  as { insight?: RiskInsight };
+      const pulseJson = await pulseRes.json() as { snapshot?: RiskPulseSnapshot; geo?: GeoIntelligence };
+      const newsJson  = await newsRes.json()  as { articles?: FxNewsArticle[] };
+      const insJson   = await insRes.json()   as { insight?: RiskInsight };
 
-      if (snapJson.snapshot) setSnapshot(snapJson.snapshot);
-      if (insJson.insight)   setInsight(insJson.insight);
+      if (pulseJson.snapshot) setSnapshot(pulseJson.snapshot);
+      if (pulseJson.geo)      setGeo(pulseJson.geo);
+      if (insJson.insight)    setInsight(insJson.insight);
 
       const raw = newsJson.articles ?? [];
-      setArticles(raw.map((a) => ({ ...a, tab: categorise(a) })));
+      const categorised = raw.map((a) => ({ ...a, tab: categorise(a) }));
+      setArticles(categorised);
+
+      // Auto-select tab with most content
+      const geoCnt   = categorised.filter((a) => a.tab === "geo").length;
+      const macroCnt = categorised.filter((a) => a.tab === "macro").length;
+      const cbCnt    = categorised.filter((a) => a.tab === "cb").length;
+      if (geoCnt >= macroCnt && geoCnt >= cbCnt) setActiveTab("geo");
+      else if (cbCnt > macroCnt) setActiveTab("cb");
+      else setActiveTab("macro");
 
       setLastFetch(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     } catch (err) {
@@ -207,38 +276,33 @@ export default function RiskPulseWidget({ onRemove }: Props) {
     return () => clearInterval(id);
   }, [fetchAll]);
 
-  // ── Derived ──────────────────────────────────────────────────────────────────
-
   const regime   = snapshot?.regime ?? "Guarded";
   const regColor = REGIME_COLOR[regime];
   const qualColor = snapshot ? (QUALITY_COLOR[snapshot.quality] ?? S.tertiary) : S.tertiary;
   const tabItems  = articles.filter((a) => a.tab === activeTab);
-
-  // ── Render ───────────────────────────────────────────────────────────────────
+  const showGeoAlert = geo && geo.geo_risk_score >= 3;
 
   return (
-    <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6, display: "flex", flexDirection: "column", overflow: "hidden", height: "100%", minHeight: 420 }}>
+    <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6, display: "flex", flexDirection: "column", overflow: "hidden", height: "100%", minHeight: 480 }}>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div
-        className="widget-drag-handle"
-        style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, cursor: "grab" }}
-      >
+      <div className="widget-drag-handle" style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, cursor: "grab" }}>
         <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, flexShrink: 0, userSelect: "none" }}>⠿</span>
         <AlertTriangle size={11} color={S.amber} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, flex: 1, textTransform: "uppercase" }}>
-          Risk Pulse
-        </span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, flex: 1, textTransform: "uppercase" }}>Risk Pulse</span>
         {snapshot && (
           <span style={{ fontFamily: S.fontMono, fontSize: 8, color: qualColor, border: `1px solid ${qualColor}`, padding: "1px 5px", borderRadius: 2 }}>
             {snapshot.quality}
           </span>
         )}
-        {lastFetch && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>{lastFetch}</span>
+        {geo && (
+          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: geo.source === "claude" ? S.cyan : S.tertiary, border: `1px solid currentColor`, padding: "1px 5px", borderRadius: 2 }}>
+            {geo.source === "claude" ? "CLAUDE" : "RULE"}
+          </span>
         )}
+        {lastFetch && <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>{lastFetch}</span>}
         <button onClick={fetchAll} disabled={fetching} title="Refresh" style={{ background: "transparent", border: "none", cursor: fetching ? "default" : "pointer", padding: 2, display: "flex", alignItems: "center", opacity: fetching ? 0.4 : 1 }}>
-          <RefreshCw size={10} color={S.tertiary} style={{ animation: fetching ? "spin 1s linear infinite" : "none" }} />
+          <RefreshCw size={10} color={S.tertiary} />
         </button>
         {onRemove && (
           <button onClick={onRemove} title="Remove" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center" }}>
@@ -248,7 +312,7 @@ export default function RiskPulseWidget({ onRemove }: Props) {
       </div>
 
       {/* ── Body ────────────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px 12px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
 
         {error ? (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -262,6 +326,9 @@ export default function RiskPulseWidget({ onRemove }: Props) {
           </div>
         ) : (
           <>
+            {/* ── Geo Intelligence panel (shown when geo risk ≥ 3) ──────── */}
+            {showGeoAlert && geo && <GeoAlertPanel geo={geo} />}
+
             {/* ── Score Hero ──────────────────────────────────────────────── */}
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12, paddingBottom: 10, borderBottom: `1px solid ${S.soft}` }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -271,13 +338,7 @@ export default function RiskPulseWidget({ onRemove }: Props) {
                   </span>
                   <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>/10</span>
                   {snapshot.deltaScore !== null && (
-                    <span style={{
-                      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
-                      color: snapshot.deltaScore > 0 ? S.red : snapshot.deltaScore < 0 ? S.green : S.tertiary,
-                      background: "color-mix(in srgb, currentColor 10%, transparent)",
-                      border: `1px solid currentColor`,
-                      padding: "1px 5px", borderRadius: 2,
-                    }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: snapshot.deltaScore > 0 ? S.red : snapshot.deltaScore < 0 ? S.green : S.tertiary, border: "1px solid currentColor", padding: "1px 5px", borderRadius: 2 }}>
                       {snapshot.deltaScore > 0 ? "+" : ""}{snapshot.deltaScore.toFixed(1)}
                     </span>
                   )}
@@ -295,23 +356,15 @@ export default function RiskPulseWidget({ onRemove }: Props) {
               </div>
             </div>
 
-            {/* ── Score Gauge ──────────────────────────────────────────────── */}
+            {/* ── Gauge ───────────────────────────────────────────────────── */}
             <div>
-              <div style={{ position: "relative", height: 8, borderRadius: 4, overflow: "hidden", background: `linear-gradient(to right, ${S.green} 0%, ${S.cyan} 20%, ${S.amber} 50%, ${S.red} 80%, #ff2222 100%)`, opacity: 0.35 }}>
-              </div>
+              <div style={{ position: "relative", height: 8, borderRadius: 4, overflow: "hidden", background: `linear-gradient(to right, ${S.green} 0%, ${S.cyan} 20%, ${S.amber} 50%, ${S.red} 80%, #ff2020 100%)`, opacity: 0.35 }} />
               <div style={{ position: "relative", marginTop: -8, height: 8 }}>
-                <div style={{
-                  position: "absolute", top: -1,
-                  left: `calc(${Math.min(snapshot.score / 10, 0.98) * 100}% - 3px)`,
-                  width: 6, height: 10, background: regColor, borderRadius: 2,
-                  transition: "left 600ms ease",
-                }} />
+                <div style={{ position: "absolute", top: -1, left: `calc(${Math.min(snapshot.score / 10, 0.98) * 100}% - 3px)`, width: 6, height: 10, background: regColor, borderRadius: 2, transition: "left 600ms ease" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
-                {["LOW","GUARDED","ELEVATED","HIGH","CRISIS"].map((lbl, i) => (
-                  <span key={lbl} style={{ fontFamily: S.fontMono, fontSize: 7, color: i === ["LOW","GUARDED","ELEVATED","HIGH","CRISIS"].indexOf(regime.toUpperCase()) ? regColor : S.tertiary, letterSpacing: "0.05em" }}>
-                    {lbl}
-                  </span>
+                {(["LOW","GUARDED","ELEVATED","HIGH","CRISIS"] as const).map((lbl) => (
+                  <span key={lbl} style={{ fontFamily: S.fontMono, fontSize: 7, color: lbl === regime.toUpperCase() ? regColor : S.tertiary, letterSpacing: "0.04em" }}>{lbl}</span>
                 ))}
               </div>
             </div>
@@ -323,12 +376,10 @@ export default function RiskPulseWidget({ onRemove }: Props) {
                   <span key={h} style={{ fontFamily: S.fontMono, fontSize: 7, color: S.tertiary, letterSpacing: "0.08em", textAlign: h === "FACTOR" ? "left" : "right" }}>{h}</span>
                 ))}
               </div>
-              {snapshot.factors.map((f) => (
-                <FactorRow key={f.id} f={f} regColor={regColor} />
-              ))}
+              {snapshot.factors.map((f) => <FactorRow key={f.id} f={f} regColor={regColor} />)}
               <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
                 <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
-                  news 24h: <span style={{ color: S.secondary }}>{snapshot.newsCount24h}</span>
+                  geo intel: <span style={{ color: geo ? REGIME_COLOR[geo.regime] : S.secondary }}>{geo?.geo_risk_score.toFixed(1) ?? "—"}/10</span>
                 </span>
                 <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
                   high-impact events: <span style={{ color: snapshot.highImpactEvents > 0 ? S.red : S.secondary }}>{snapshot.highImpactEvents}</span>
@@ -336,30 +387,17 @@ export default function RiskPulseWidget({ onRemove }: Props) {
               </div>
             </div>
 
-            {/* ── Global News Intelligence ──────────────────────────────────── */}
+            {/* ── Global News Feed ─────────────────────────────────────────── */}
             <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 10 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                  Global News Intelligence
-                </span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em" }}>GLOBAL NEWS</span>
                 <div style={{ display: "flex", gap: 2 }}>
                   {(["geo","macro","cb"] as const).map((tab) => {
                     const count = articles.filter((a) => a.tab === tab).length;
                     const isActive = activeTab === tab;
                     return (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        style={{
-                          fontFamily: S.fontMono, fontSize: 8, fontWeight: isActive ? 700 : 400,
-                          color: isActive ? S.primary : S.tertiary,
-                          background: isActive ? S.bgSub : "transparent",
-                          border: `1px solid ${isActive ? S.rim : "transparent"}`,
-                          padding: "2px 7px", borderRadius: 2, cursor: "pointer",
-                          textTransform: "uppercase", letterSpacing: "0.08em",
-                        }}
-                      >
-                        {tab.toUpperCase()} {count > 0 && <span style={{ color: isActive ? S.cyan : S.tertiary }}>({count})</span>}
+                      <button key={tab} onClick={() => setActiveTab(tab)} style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: isActive ? 700 : 400, color: isActive ? S.primary : S.tertiary, background: isActive ? S.bgSub : "transparent", border: `1px solid ${isActive ? S.rim : "transparent"}`, padding: "2px 7px", borderRadius: 2, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        {tab.toUpperCase()}{count > 0 && <span style={{ color: isActive ? S.cyan : S.tertiary }}> ({count})</span>}
                       </button>
                     );
                   })}
@@ -372,22 +410,22 @@ export default function RiskPulseWidget({ onRemove }: Props) {
             {insight && (
               <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em", textTransform: "uppercase" }}>AI Insight</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 7, color: S.tertiary, border: `1px solid ${S.soft}`, padding: "1px 4px", borderRadius: 2 }}>
-                    {insight.ai_assisted ? "AI" : "RULE"}
+                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em" }}>AI INSIGHT</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 7, color: insight.ai_assisted ? S.cyan : S.tertiary, border: `1px solid currentColor`, padding: "1px 4px", borderRadius: 2 }}>
+                    {insight.ai_assisted ? "CLAUDE" : "RULE"}
                   </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, background: S.bgDeep, border: `1px solid ${S.soft}`, borderRadius: 4, padding: "8px 10px" }}>
                   <div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.08em", textTransform: "uppercase" }}>What Changed</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.08em" }}>WHAT CHANGED</span>
                     <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "3px 0 0", lineHeight: 1.5 }}>{insight.summary}</p>
                   </div>
                   <div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.08em", textTransform: "uppercase" }}>Why It Matters</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.08em" }}>WHY IT MATTERS</span>
                     <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "3px 0 0", lineHeight: 1.5 }}>{insight.rationale}</p>
                   </div>
                   <div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.08em", textTransform: "uppercase" }}>Watchlist 24h</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.08em" }}>WATCHLIST 24H</span>
                     <ul style={{ margin: "3px 0 0", padding: "0 0 0 14px" }}>
                       {insight.watchlist.map((item, i) => (
                         <li key={i} style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.5 }}>{item}</li>
@@ -401,10 +439,8 @@ export default function RiskPulseWidget({ onRemove }: Props) {
             {/* ── Footer ───────────────────────────────────────────────────── */}
             <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 8 }}>
               <p style={{ fontFamily: S.fontMono, fontSize: 7, color: S.tertiary, margin: 0, lineHeight: 1.6 }}>
-                Score = Σ(weight × impact) × 10 · Factors: VIX, US10Y, DXY, VIX σ, Gold, Brent, Press ·
-                Z-scores vs {snapshot.factors[0]?.zscore !== undefined ? "rolling" : "calibrated"} baselines ·
-                Data: Yahoo Finance + Finnhub · 30s cache ·
-                Not investment advice
+                Score = Σ(weight×impact)×10 · GEO/NEWS 20% + OIL SHOCK 20% + EQUITY 18% + RATES 12% + VOL 12% + CREDIT 10% + USD 8% ·
+                Geo: Claude Haiku (Finnhub general+forex, 5m cache) · Market: Yahoo Finance + Finnhub · 30s snapshot · Not investment advice
               </p>
             </div>
           </>
