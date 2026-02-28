@@ -315,6 +315,7 @@ export default function PoliciesPage() {
 
   // Favorites state
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Compare mode state
   const [compareMode, setCompareMode]           = useState(false);
@@ -415,8 +416,14 @@ export default function PoliciesPage() {
         p.targetAudience.toLowerCase().includes(q),
       );
     }
+    if (showFavoritesOnly) {
+      list = list.filter(p => {
+        const dbTmpl = dbTemplates.find(t => t.short_name === p.shortName);
+        return dbTmpl ? favoriteIds.has(dbTmpl.id) : false;
+      });
+    }
     return list;
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, showFavoritesOnly, favoriteIds, dbTemplates]);
 
   // Saved (non-system) templates
   const savedTemplates = useMemo(() => dbTemplates.filter(t => !t.is_system), [dbTemplates]);
@@ -553,26 +560,18 @@ export default function PoliciesPage() {
           {favCount > 0 && (
             <button
               type="button"
-              onClick={() => {
-                // Filter to show only favorited presets by searching all short names
-                if (searchQuery === '__FAV__') {
-                  setSearchQuery('');
-                } else {
-                  setSearchQuery('');
-                  // Toggle shows all favored presets by triggering the favorites filter
-                }
-              }}
+              onClick={() => setShowFavoritesOnly(prev => !prev)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
                 padding: '4px 10px',
-                border: `1px solid color-mix(in srgb, ${S.amber} 40%, ${S.rim})`,
-                color: S.amber,
-                background: 'transparent',
-                cursor: 'pointer',
+                border: `1px solid ${showFavoritesOnly ? S.amber : `color-mix(in srgb, ${S.amber} 40%, ${S.rim})`}`,
+                color: showFavoritesOnly ? 'var(--bg-deep)' : S.amber,
+                background: showFavoritesOnly ? S.amber : 'transparent',
+                cursor: 'pointer', transition: 'all 0.1s',
               }}
             >
-              <Bookmark size={10} fill={S.amber} />
+              <Bookmark size={10} fill={showFavoritesOnly ? 'var(--bg-deep)' : S.amber} />
               FAVORITES ({favCount})
             </button>
           )}
