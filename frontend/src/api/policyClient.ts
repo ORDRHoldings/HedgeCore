@@ -39,6 +39,31 @@ function authHeaders(token?: string): Record<string, string> {
   return headers;
 }
 
+/**
+ * DEV-FAULT-1: Read dev fault injection flags from localStorage (dev-only).
+ *
+ * Supported flags (set via browser DevTools console, dev environment only):
+ *   localStorage.setItem("hc_dev_fault", "1")         → appends ?__dev_fault=500
+ *   localStorage.setItem("hc_dev_chain_fail", "1")    → appends ?__dev_chain_fail=1
+ *
+ * The backend only honours these params when ALLOW_DEV_FAULT_INJECTION=true.
+ * This function returns "" in production — the query params are never appended.
+ * Real HTTP requests → real HTTP status codes → real axios errors.
+ */
+export function devFaultParam(): string {
+  if (process.env.NODE_ENV !== "development") return "";
+  if (typeof window === "undefined") return "";
+  if (localStorage.getItem("hc_dev_fault") === "1") return "?__dev_fault=500";
+  return "";
+}
+
+export function devChainFailParam(): string {
+  if (process.env.NODE_ENV !== "development") return "";
+  if (typeof window === "undefined") return "";
+  if (localStorage.getItem("hc_dev_chain_fail") === "1") return "?__dev_chain_fail=1";
+  return "";
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -77,7 +102,7 @@ export interface PolicyInstance {
 export async function listPolicyTemplates(
   token?: string,
 ): Promise<PolicyTemplate[]> {
-  const { data } = await axios.get(`${BASE}/v1/policies/templates`, {
+  const { data } = await axios.get(`${BASE}/v1/policies/templates${devFaultParam()}`, {
     headers: authHeaders(token),
   });
   return data as PolicyTemplate[];
@@ -244,7 +269,7 @@ export interface PolicyFavorite {
 }
 
 export async function listFavorites(token?: string): Promise<PolicyFavorite[]> {
-  const { data } = await axios.get(`${BASE}/v1/policies/favorites`, {
+  const { data } = await axios.get(`${BASE}/v1/policies/favorites${devFaultParam()}`, {
     headers: authHeaders(token),
   });
   return data as PolicyFavorite[];
