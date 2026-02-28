@@ -35,23 +35,23 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 | X-03 | ~~**Fix BUG-008**: Remove Hedge Wiki duplicate from Dashboard menu~~ | IA | XS | ✅ DONE 2026-02-28 |
 | X-04 | ~~**Fix BUG-009**: Add hash/query-param differentiation to Help sub-menu items~~ | Navigation | S | ✅ DONE 2026-02-28 |
 | X-05 | ~~**Fix BUG-010**: Verify Settings hash anchors trigger correct tab activation~~ | Settings | S | ✅ DONE 2026-02-28 |
-| X-06 | **Fix BUG-013**: Wire "LIVE" indicator to `GET /health` polling (60s interval) | UX | S | ⬜ OPEN |
-| X-07 | **Fix BUG-016**: Rename "Results Viewer" to "Trade Desk" in Execution menu | Navigation | XS | ⬜ OPEN |
-| X-08 | Add bulk position select-all checkbox to Position Desk table header | UX | S | ⬜ OPEN |
-| X-09 | Add "SIMULATED DATA" badge to widgets/pages with mocked or fallback data | Trust/CRO | S | ⬜ OPEN |
-| X-10 | Add drag-handle indicator (⠿ icon) to all dashboard widget headers | UX | XS | ⬜ OPEN |
-| X-11 | Position Desk: add inline validation (field border highlight + label under field) | UX | M | ⬜ OPEN |
-| X-12 | Execution Desk Step 2: show input summary before Calculate button ("5 positions, MXN 1.25M") | UX | S | ⬜ OPEN |
-| X-13 | Policy Desk: show confirmation preview before bulk assign ("Assigning X to N positions") | UX | S | ⬜ OPEN |
-| X-14 | After execution completes, show summary modal before redirecting to Position Desk | UX | S | ⬜ OPEN |
-| X-15 | Add "Show/Hide Rejected" toggle with count badge to Position Desk | UX | S | ⬜ OPEN |
-| X-16 | Help menu: add keyboard shortcut manifest accessible via `?` key | UX | M | ⬜ OPEN |
-| X-17 | Add `aria-label` attributes to all icon-only buttons (WCAG AA) | Accessibility | M | ⬜ OPEN |
-| X-18 | Add report generation audit events (`POST /v1/audit` on every report generate/export) | Governance | M | ⬜ OPEN |
-| X-19 | Add per-user rate limiting to `POST /v1/calculate` (max 10/min) | Backend | S | ⬜ OPEN |
-| X-20 | Minimum 5-char validation on rejection reason (frontend + backend Pydantic schema) | Validation | S | ⬜ OPEN |
+| X-06 | ~~**Fix BUG-013**: Wire "LIVE" indicator to `GET /health` polling (60s interval)~~ | UX | S | ✅ DONE 2026-02-28 |
+| X-07 | ~~**Fix BUG-016**: Rename "Results Viewer" to "Trade Desk" in Execution menu~~ | Navigation | XS | ✅ DONE 2026-02-28 |
+| X-08 | ~~Add bulk position select-all checkbox to Position Desk table header~~ | UX | S | ✅ DONE 2026-02-28 (already existed) |
+| X-09 | ~~Add "SIMULATED DATA" badge to widgets/pages with mocked or fallback data~~ | Trust/CRO | S | ✅ DONE 2026-02-28 |
+| X-10 | ~~Add drag-handle indicator (⠿ icon) to all dashboard widget headers~~ | UX | XS | ✅ DONE 2026-02-28 |
+| X-11 | ~~Position Desk: add inline validation (field border highlight + label under field)~~ | UX | M | ✅ DONE 2026-02-28 |
+| X-12 | ~~Execution Desk Step 2: show input summary before Calculate button ("5 positions, MXN 1.25M")~~ | UX | S | ✅ DONE 2026-02-28 |
+| X-13 | ~~Policy Desk: show confirmation preview before bulk assign ("Assigning X to N positions")~~ | UX | S | ✅ DONE 2026-02-28 |
+| X-14 | ~~After execution completes, show summary modal before redirecting to Position Desk~~ | UX | S | ✅ DONE 2026-02-28 |
+| X-15 | ~~Add "Show/Hide Rejected" toggle with count badge to Position Desk~~ | UX | S | ✅ DONE 2026-02-28 |
+| X-16 | ~~Help menu: add keyboard shortcut manifest accessible via `?` key~~ | UX | M | ✅ DONE 2026-02-28 |
+| X-17 | ~~Add `aria-label` attributes to all icon-only buttons (WCAG AA)~~ | Accessibility | M | ✅ DONE 2026-02-28 |
+| X-18 | ~~Add report generation audit events (`POST /v1/audit` on every report generate/export)~~ | Governance | M | ✅ DONE 2026-02-28 |
+| X-19 | ~~Add per-user rate limiting to `POST /v1/calculate` (max 10/min)~~ | Backend | S | ✅ DONE 2026-02-28 |
+| X-20 | ~~Minimum 5-char validation on rejection reason (frontend + backend Pydantic schema)~~ | Validation | S | ✅ DONE 2026-02-28 |
 
-**NEXT progress: 5/20 complete (X-06 through X-20 remain)**
+**NEXT progress: 20/20 complete ✅ — Beta / Institutional Pilot criteria met**
 
 ---
 
@@ -94,7 +94,7 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 | Release | Definition | Blockers |
 |---------|-----------|---------|
 | **Alpha Demo** | Stakeholders can see the workflow | ✅ ALL NOW ITEMS COMPLETE |
-| **Beta / Institutional Pilot** | CRO/auditor can review governance | All remaining NEXT items (X-06 through X-20) |
+| **Beta / Institutional Pilot** | CRO/auditor can review governance | ✅ ALL NEXT ITEMS COMPLETE |
 | **v1.0 Production** | Full institutional readiness | All LATER HIGH priority items |
 
 ---
@@ -106,3 +106,5 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 | 2026-02-28 | N-01, N-03, N-04, N-06 (audit trail backend, breadcrumb fix, execution filter, chain verify) |
 | 2026-02-28 | X-01, X-02, X-03, X-04, X-05 (access control matrix, menu dedup ×2, help anchors, settings hash) |
 | 2026-02-28 | N-05, N-07, N-08, N-09, N-10 (Nav cleanup, execution empty state, run/lineage pickers, ORDR branding) |
+| 2026-02-28 | X-06, X-07 (LIVE health polling, Trade Desk rename) |
+| 2026-02-28 | X-08 through X-20 (select-all confirmed, SIM DATA badges, drag handles, inline validation, input summary, confirm previews, summary modal, show/hide rejected, keyboard shortcuts, aria-labels, audit events, rate limiting, 5-char rejection validation) |
