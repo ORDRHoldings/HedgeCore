@@ -196,13 +196,33 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     requiredPermission: null,
   },
   {
-    id: "system_pulse",
-    title: "System Pulse",
-    description: "Application KPIs with health scoring, pipeline funnel, and status indicators. Live system dashboard.",
-    defaultW: 6,
+    id: "risk_pulse",
+    title: "Risk Pulse",
+    description: "Live FX risk score derived from news volume and economic calendar impact. Updates every 60s.",
+    defaultW: 4,
     defaultH: 6,
+    minW: 3,
+    minH: 5,
+    requiredPermission: null,
+  },
+  {
+    id: "fx_news",
+    title: "FX News",
+    description: "Latest forex headlines from Finnhub. Scrollable feed with source, relative time, and direct links.",
+    defaultW: 4,
+    defaultH: 8,
+    minW: 3,
+    minH: 5,
+    requiredPermission: null,
+  },
+  {
+    id: "econ_calendar",
+    title: "Econ Calendar",
+    description: "7-day economic calendar with impact scoring. Grouped by day with actual vs estimate vs prior.",
+    defaultW: 6,
+    defaultH: 8,
     minW: 4,
-    minH: 4,
+    minH: 5,
     requiredPermission: null,
   },
 ];
@@ -213,9 +233,9 @@ type RoleLayout = { widgetIds: string[]; grid: GridItem[] };
 
 const ROLE_LAYOUTS: Record<string, RoleLayout> = {
   admin: {
-    widgetIds: ["system_pulse", "command_hub", "geopolitical", "usd_exposure_radar", "market_pulse", "currency_intel"],
+    widgetIds: ["risk_pulse", "command_hub", "geopolitical", "usd_exposure_radar", "market_pulse", "currency_intel"],
     grid: [
-      { i: "system_pulse",        x: 0, y: 0,  w: 6,  h: 6 },
+      { i: "risk_pulse",          x: 0, y: 0,  w: 6,  h: 6 },
       { i: "command_hub",         x: 6, y: 0,  w: 6,  h: 6 },
       { i: "geopolitical",        x: 0, y: 6,  w: 6,  h: 7 },
       { i: "usd_exposure_radar",  x: 6, y: 6,  w: 6,  h: 7 },
@@ -315,9 +335,9 @@ const ROLE_LAYOUTS: Record<string, RoleLayout> = {
 
 // Default fallback layout for unknown roles
 const DEFAULT_LAYOUT: RoleLayout = {
-  widgetIds: ["system_pulse", "command_hub", "geopolitical", "usd_exposure_radar"],
+  widgetIds: ["risk_pulse", "command_hub", "geopolitical", "usd_exposure_radar"],
   grid: [
-    { i: "system_pulse",       x: 0, y: 0, w: 6, h: 6 },
+    { i: "risk_pulse",         x: 0, y: 0, w: 6, h: 6 },
     { i: "command_hub",        x: 6, y: 0, w: 6, h: 6 },
     { i: "geopolitical",       x: 0, y: 6, w: 6, h: 7 },
     { i: "usd_exposure_radar", x: 6, y: 6, w: 6, h: 7 },

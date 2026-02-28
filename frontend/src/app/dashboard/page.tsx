@@ -25,7 +25,9 @@ import MarketPulseWidget from "@/components/dashboard/widgets/MarketPulseWidget"
 import CommandHubWidget from "@/components/dashboard/widgets/CommandHubWidget";
 import GeoPoliticalWidget from "@/components/dashboard/widgets/GeoPoliticalWidget";
 import UsdExposureRadarWidget from "@/components/dashboard/widgets/UsdExposureRadarWidget";
-import SystemPulseWidget from "@/components/dashboard/widgets/SystemPulseWidget";
+import RiskPulseWidget from "@/components/dashboard/widgets/RiskPulseWidget";
+import FxNewsWidget from "@/components/dashboard/widgets/FxNewsWidget";
+import EconCalendarWidget from "@/components/dashboard/widgets/EconCalendarWidget";
 import WidgetErrorBoundary from "@/components/ui/WidgetErrorBoundary";
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const S = {
@@ -46,7 +48,8 @@ const WIDGET_COMPONENTS: Record<WidgetId, React.ComponentType<WidgetComponentPro
   fx_rates: FxRatesWidget, currency_intel: CurrencyIntelWidget,
   hedge_health: HedgeHealthWidget, market_pulse: MarketPulseWidget,
   command_hub: CommandHubWidget, geopolitical: GeoPoliticalWidget,
-  usd_exposure_radar: UsdExposureRadarWidget, system_pulse: SystemPulseWidget,
+  usd_exposure_radar: UsdExposureRadarWidget,
+  risk_pulse: RiskPulseWidget, fx_news: FxNewsWidget, econ_calendar: EconCalendarWidget,
 };
 const layoutKey = (uid: string) => `dashboard_layout_${uid}`;
 const helpOpenKey = (uid: string) => `dashboard_help_open_${uid}`;
