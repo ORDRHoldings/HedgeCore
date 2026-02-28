@@ -2,11 +2,9 @@
 
 import { useState, useEffect } from "react";
 import {
-  Globe2, TrendingUp, TrendingDown, Minus, AlertTriangle, ArrowRight,
-  Landmark, X, Shield, Activity,
+  Globe2, TrendingUp, TrendingDown, Minus, X,
 } from "lucide-react";
 import type { UserContext } from "@/lib/authContext";
-import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -25,8 +23,6 @@ const S = {
   red: "var(--accent-red,#B91C1C)",
 } as const;
 
-/* ─── POLISOPHIC-ready intelligence database ────────────────────────────── */
-
 interface GeoEvent {
   severity: "critical" | "high" | "medium" | "low";
   region: string;
@@ -38,44 +34,87 @@ interface GeoEvent {
 interface MacroSnapshot {
   label: string;
   value: string;
+  rawValue: number;
+  maxValue: number;
   trend: "up" | "down" | "flat";
   context: string;
+  unit: string;
 }
 
 interface CentralBankEntry {
   bank: string;
-  rate: string;
+  rate: number;
+  rateStr: string;
   direction: "hawkish" | "dovish" | "neutral";
   nextMeeting: string;
   flag: string;
+  daysToMeeting: number;
 }
 
 const GEO_EVENTS: GeoEvent[] = [
-  { severity: "high", region: "LATAM", headline: "Mexico tariff escalation risk elevated after trade review", impact: "MXN -1.2%", timestamp: "2h ago" },
-  { severity: "critical", region: "ASIA", headline: "BoJ signals rate hike cycle acceleration amid sticky inflation", impact: "JPY +0.8%", timestamp: "4h ago" },
-  { severity: "medium", region: "EMEA", headline: "ECB dovish pivot strengthens as Eurozone PMI contracts", impact: "EUR -0.3%", timestamp: "6h ago" },
-  { severity: "low", region: "AMERICAS", headline: "BoC holds; Canadian housing stabilization supports neutral stance", impact: "CAD +0.1%", timestamp: "8h ago" },
-  { severity: "high", region: "EM", headline: "Brazil fiscal deficit widening pressures BCB tightening expectations", impact: "BRL -0.9%", timestamp: "10h ago" },
-  { severity: "medium", region: "AFRICA", headline: "SARB cautious as rand volatility persists; gold support intact", impact: "ZAR -0.4%", timestamp: "12h ago" },
+  {
+    severity: "high",
+    region: "LATAM",
+    headline: "Mexico tariff escalation risk elevated after trade review",
+    impact: "MXN -1.2%",
+    timestamp: "2h ago",
+  },
+  {
+    severity: "critical",
+    region: "ASIA",
+    headline: "BoJ signals rate hike cycle acceleration amid sticky inflation",
+    impact: "JPY +0.8%",
+    timestamp: "4h ago",
+  },
+  {
+    severity: "medium",
+    region: "EMEA",
+    headline: "ECB dovish pivot strengthens as Eurozone PMI contracts",
+    impact: "EUR -0.3%",
+    timestamp: "6h ago",
+  },
+  {
+    severity: "low",
+    region: "AMERICAS",
+    headline: "BoC holds; Canadian housing stabilization supports neutral stance",
+    impact: "CAD +0.1%",
+    timestamp: "8h ago",
+  },
+  {
+    severity: "high",
+    region: "EM",
+    headline: "Brazil fiscal deficit widening pressures BCB tightening expectations",
+    impact: "BRL -0.9%",
+    timestamp: "10h ago",
+  },
+  {
+    severity: "medium",
+    region: "AFRICA",
+    headline: "SARB cautious as rand volatility persists; gold support intact",
+    impact: "ZAR -0.4%",
+    timestamp: "12h ago",
+  },
 ];
 
 const MACRO_SNAPSHOT: MacroSnapshot[] = [
-  { label: "DXY INDEX", value: "104.2", trend: "down", context: "Softening on dovish repricing" },
-  { label: "VIX", value: "14.8", trend: "down", context: "Risk-on environment" },
-  { label: "US 10Y", value: "4.28%", trend: "up", context: "Term premium rebuilding" },
-  { label: "FED FUNDS", value: "4.50%", trend: "flat", context: "Data-dependent hold" },
-  { label: "BRENT", value: "$78.4", trend: "up", context: "OPEC+ cuts extended" },
-  { label: "GOLD", value: "$2,680", trend: "up", context: "Safe haven bid persists" },
+  { label: "DXY INDEX", value: "104.2", rawValue: 104.2, maxValue: 120, trend: "down", context: "Softening on dovish repricing", unit: "" },
+  { label: "VIX", value: "14.8", rawValue: 14.8, maxValue: 40, trend: "down", context: "Risk-on environment", unit: "" },
+  { label: "US 10Y", value: "4.28%", rawValue: 4.28, maxValue: 6, trend: "up", context: "Term premium rebuilding", unit: "%" },
+  { label: "FED FUNDS", value: "4.50%", rawValue: 4.5, maxValue: 6, trend: "flat", context: "Data-dependent hold", unit: "%" },
+  { label: "BRENT", value: "$78.4", rawValue: 78.4, maxValue: 120, trend: "up", context: "OPEC+ cuts extended", unit: "$" },
+  { label: "GOLD", value: "$2,680", rawValue: 2680, maxValue: 3000, trend: "up", context: "Safe haven bid persists", unit: "$" },
 ];
 
 const CENTRAL_BANKS: CentralBankEntry[] = [
-  { bank: "Federal Reserve", rate: "4.50%", direction: "neutral", nextMeeting: "Mar 18", flag: "🇺🇸" },
-  { bank: "ECB", rate: "3.15%", direction: "dovish", nextMeeting: "Apr 03", flag: "🇪🇺" },
-  { bank: "Bank of Japan", rate: "0.50%", direction: "hawkish", nextMeeting: "Mar 14", flag: "🇯🇵" },
-  { bank: "Banxico", rate: "9.50%", direction: "dovish", nextMeeting: "Mar 27", flag: "🇲🇽" },
-  { bank: "BCB (Brazil)", rate: "13.25%", direction: "hawkish", nextMeeting: "Mar 19", flag: "🇧🇷" },
-  { bank: "Bank of England", rate: "4.25%", direction: "neutral", nextMeeting: "Mar 20", flag: "🇬🇧" },
+  { bank: "Federal Reserve", rate: 4.5, rateStr: "4.50%", direction: "neutral", nextMeeting: "Mar 18", flag: "🇺🇸", daysToMeeting: 19 },
+  { bank: "ECB", rate: 3.15, rateStr: "3.15%", direction: "dovish", nextMeeting: "Apr 03", flag: "🇪🇺", daysToMeeting: 35 },
+  { bank: "Bank of Japan", rate: 0.5, rateStr: "0.50%", direction: "hawkish", nextMeeting: "Mar 14", flag: "🇯🇵", daysToMeeting: 15 },
+  { bank: "Banxico", rate: 9.5, rateStr: "9.50%", direction: "dovish", nextMeeting: "Mar 27", flag: "🇲🇽", daysToMeeting: 28 },
+  { bank: "BCB (Brazil)", rate: 13.25, rateStr: "13.25%", direction: "hawkish", nextMeeting: "Mar 19", flag: "🇧🇷", daysToMeeting: 20 },
+  { bank: "Bank of England", rate: 4.25, rateStr: "4.25%", direction: "neutral", nextMeeting: "Mar 20", flag: "🇬🇧", daysToMeeting: 21 },
 ];
+
+const MAX_RATE = 14;
 
 function severityColor(sev: string): string {
   switch (sev) {
@@ -89,7 +128,7 @@ function severityColor(sev: string): string {
 function directionColor(dir: string): string {
   if (dir === "hawkish") return S.red;
   if (dir === "dovish") return S.green;
-  return S.tertiary;
+  return S.amber;
 }
 
 interface Props {
@@ -98,12 +137,177 @@ interface Props {
   onRemove?: () => void;
 }
 
+/* ─── Mini sparkline for macro values ─────────────────────────────────── */
+function MiniBar({
+  value,
+  max,
+  color,
+  width = 80,
+  height = 6,
+}: {
+  value: number;
+  max: number;
+  color: string;
+  width?: number;
+  height?: number;
+}) {
+  const pct = Math.min((value / max) * 100, 100);
+  return (
+    <div
+      style={{
+        width,
+        height,
+        background: `color-mix(in srgb, ${color} 12%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
+        borderRadius: height / 2,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          height: "100%",
+          width: `${pct}%`,
+          background: `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 70%, transparent))`,
+          borderRadius: height / 2,
+          transition: "width 600ms ease",
+        }}
+      />
+    </div>
+  );
+}
+
+/* ─── Rate comparison chart ─────────────────────────────────────────────── */
+function RateBarChart({ banks }: { banks: CentralBankEntry[] }) {
+  const sorted = [...banks].sort((a, b) => b.rate - a.rate);
+  return (
+    <div style={{ padding: "12px 14px" }}>
+      <div
+        style={{
+          fontFamily: S.fontMono,
+          fontSize: 8,
+          color: S.tertiary,
+          letterSpacing: "0.1em",
+          marginBottom: 12,
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
+        <span>POLICY RATE COMPARISON</span>
+        <span>0% ───────── {MAX_RATE}%</span>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {sorted.map((cb) => {
+          const pct = (cb.rate / MAX_RATE) * 100;
+          const color = directionColor(cb.direction);
+          return (
+            <div key={cb.bank}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 4,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 11 }}>{cb.flag}</span>
+                  <span
+                    style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: S.primary,
+                    }}
+                  >
+                    {cb.bank.split(" ")[0]}
+                  </span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span
+                    style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 8,
+                      fontWeight: 700,
+                      color: color,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    {cb.direction === "hawkish" ? "▲" : cb.direction === "dovish" ? "▼" : "●"}{" "}
+                    {cb.direction}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: S.primary,
+                      minWidth: 40,
+                      textAlign: "right",
+                    }}
+                  >
+                    {cb.rateStr}
+                  </span>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  height: 8,
+                  background: S.bgDeep,
+                  border: `1px solid ${S.soft}`,
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  position: "relative",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${pct}%`,
+                    background: `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 60%, transparent))`,
+                    borderRadius: 4,
+                    transition: "width 700ms ease",
+                  }}
+                />
+              </div>
+
+              {/* Next meeting countdown */}
+              <div
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 7.5,
+                  color: S.tertiary,
+                  marginTop: 2,
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span>Next: {cb.nextMeeting}</span>
+                <span
+                  style={{
+                    color: cb.daysToMeeting <= 15 ? S.amber : S.tertiary,
+                  }}
+                >
+                  {cb.daysToMeeting}d
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function GeoPoliticalWidget({ token, user, onRemove }: Props) {
   const [activeTab, setActiveTab] = useState<"events" | "macro" | "banks">("events");
   const [time, setTime] = useState("");
 
   useEffect(() => {
-    const update = () => setTime(new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC");
+    const update = () =>
+      setTime(new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC");
     update();
     const id = setInterval(update, 30_000);
     return () => clearInterval(id);
@@ -115,67 +319,169 @@ export default function GeoPoliticalWidget({ token, user, onRemove }: Props) {
     { key: "banks" as const, label: "CENTRAL BANKS", count: CENTRAL_BANKS.length },
   ];
 
+  // Count severity levels for header badge
+  const criticalCount = GEO_EVENTS.filter((e) => e.severity === "critical").length;
+  const highCount = GEO_EVENTS.filter((e) => e.severity === "high").length;
+
   return (
-    <div style={{
-      background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6,
-      display: "flex", flexDirection: "column", overflow: "hidden", height: "100%",
-    }}>
+    <div
+      style={{
+        background: S.bgPanel,
+        border: `1px solid ${S.rim}`,
+        borderRadius: 6,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        height: "100%",
+      }}
+    >
       {/* Header */}
-      <div className="widget-drag-handle" style={{
-        display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
-        borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, cursor: "grab",
-      }}>
+      <div
+        className="widget-drag-handle"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 12px",
+          borderBottom: `1px solid ${S.rim}`,
+          background: S.bgDeep,
+          flexShrink: 0,
+          cursor: "grab",
+        }}
+      >
         <Globe2 size={13} color={S.cyan} style={{ flexShrink: 0 }} />
-        <span style={{
-          fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
-          letterSpacing: "0.08em", color: S.primary, textTransform: "uppercase",
-        }}>
-          Geopolitical & Macro
+        <span
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            color: S.primary,
+            textTransform: "uppercase",
+          }}
+        >
+          Geopolitical &amp; Macro
         </span>
-        <span style={{
-          fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.1em",
-          color: S.amber, background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
-          border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
-          borderRadius: 3, padding: "1px 5px", textTransform: "uppercase",
-        }}>
+        <span
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: 8,
+            letterSpacing: "0.1em",
+            color: S.amber,
+            background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
+            borderRadius: 3,
+            padding: "1px 5px",
+            textTransform: "uppercase",
+          }}
+        >
           POLISOPHIC
         </span>
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{time}</span>
+
+        {/* Alert badges */}
+        {criticalCount > 0 && (
+          <span
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 8,
+              color: S.red,
+              background: `color-mix(in srgb, ${S.red} 12%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${S.red} 25%, transparent)`,
+              borderRadius: 3,
+              padding: "1px 5px",
+            }}
+          >
+            ● {criticalCount} CRITICAL
+          </span>
+        )}
+        {highCount > 0 && (
+          <span
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 8,
+              color: S.amber,
+              background: `color-mix(in srgb, ${S.amber} 12%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`,
+              borderRadius: 3,
+              padding: "1px 5px",
+            }}
+          >
+            {highCount} HIGH
+          </span>
+        )}
+
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+          {time.slice(11, 16)} UTC
+        </span>
         {onRemove && (
-          <button onClick={onRemove} title="Remove widget" style={{
-            background: "none", border: "none", cursor: "pointer",
-            color: S.tertiary, display: "flex", alignItems: "center", padding: 2,
-          }}>
+          <button
+            onClick={onRemove}
+            title="Remove widget"
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: S.tertiary,
+              display: "flex",
+              alignItems: "center",
+              padding: 2,
+            }}
+          >
             <X size={12} />
           </button>
         )}
       </div>
 
       {/* Tabs */}
-      <div style={{
-        display: "flex", gap: 0, borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
-      }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 0,
+          borderBottom: `1px solid ${S.rim}`,
+          flexShrink: 0,
+        }}
+      >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
-              flex: 1, padding: "6px 10px", fontFamily: S.fontMono, fontSize: 9,
-              letterSpacing: "0.06em", fontWeight: 700, cursor: "pointer",
-              color: isActive ? S.cyan : S.tertiary,
-              background: isActive ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : "transparent",
-              borderBottom: isActive ? `2px solid ${S.cyan}` : "2px solid transparent",
-              border: "none", borderRight: `1px solid ${S.soft}`,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-            }}>
-              {tab.label}
-              <span style={{
-                fontSize: 8, color: isActive ? S.cyan : S.tertiary,
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                flex: 1,
+                padding: "6px 10px",
+                fontFamily: S.fontMono,
+                fontSize: 9,
+                letterSpacing: "0.06em",
+                fontWeight: 700,
+                cursor: "pointer",
+                color: isActive ? S.cyan : S.tertiary,
                 background: isActive
-                  ? `color-mix(in srgb, ${S.cyan} 15%, transparent)`
-                  : `color-mix(in srgb, ${S.tertiary} 10%, transparent)`,
-                padding: "0 4px", borderRadius: 3, fontWeight: 600,
-              }}>
+                  ? `color-mix(in srgb, ${S.cyan} 6%, transparent)`
+                  : "transparent",
+                borderBottom: isActive ? `2px solid ${S.cyan}` : "2px solid transparent",
+                border: "none",
+                borderRight: `1px solid ${S.soft}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 5,
+              }}
+            >
+              {tab.label}
+              <span
+                style={{
+                  fontSize: 8,
+                  color: isActive ? S.cyan : S.tertiary,
+                  background: isActive
+                    ? `color-mix(in srgb, ${S.cyan} 15%, transparent)`
+                    : `color-mix(in srgb, ${S.tertiary} 10%, transparent)`,
+                  padding: "0 4px",
+                  borderRadius: 3,
+                  fontWeight: 600,
+                }}
+              >
                 {tab.count}
               </span>
             </button>
@@ -185,67 +491,144 @@ export default function GeoPoliticalWidget({ token, user, onRemove }: Props) {
 
       {/* Body */}
       <div style={{ flex: 1, overflow: "auto" }}>
-
         {/* Events Tab */}
         {activeTab === "events" && (
           <div style={{ display: "flex", flexDirection: "column" }}>
             {GEO_EVENTS.map((evt, i) => (
-              <div key={i} style={{
-                padding: "10px 12px",
-                borderBottom: i < GEO_EVENTS.length - 1 ? `1px solid ${S.soft}` : "none",
-                display: "flex", gap: 10, alignItems: "flex-start",
-              }}>
-                {/* Severity indicator */}
-                <div style={{
-                  width: 3, minHeight: 36, borderRadius: 2, flexShrink: 0,
-                  background: severityColor(evt.severity),
-                  marginTop: 2,
-                }} />
+              <div
+                key={i}
+                style={{
+                  padding: "10px 12px",
+                  borderBottom:
+                    i < GEO_EVENTS.length - 1 ? `1px solid ${S.soft}` : "none",
+                  display: "flex",
+                  gap: 10,
+                  alignItems: "flex-start",
+                }}
+              >
+                {/* Severity bar */}
+                <div
+                  style={{
+                    width: 3,
+                    minHeight: 40,
+                    borderRadius: 2,
+                    flexShrink: 0,
+                    background: severityColor(evt.severity),
+                    boxShadow: `0 0 6px color-mix(in srgb, ${severityColor(evt.severity)} 40%, transparent)`,
+                    marginTop: 2,
+                  }}
+                />
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {/* Meta row */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                    <span style={{
-                      fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
-                      letterSpacing: "0.08em", color: severityColor(evt.severity),
-                      textTransform: "uppercase",
-                    }}>
-                      {evt.severity}
-                    </span>
-                    <span style={{
-                      fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.06em",
-                      color: S.cyan,
-                      background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
-                      padding: "0 4px", borderRadius: 2,
-                    }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {/* Severity dot + label */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 3,
+                        padding: "1px 5px",
+                        background: `color-mix(in srgb, ${severityColor(evt.severity)} 10%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${severityColor(evt.severity)} 20%, transparent)`,
+                        borderRadius: 3,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: "50%",
+                          background: severityColor(evt.severity),
+                          display: "inline-block",
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 7.5,
+                          fontWeight: 700,
+                          letterSpacing: "0.08em",
+                          color: severityColor(evt.severity),
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {evt.severity}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 8,
+                        letterSpacing: "0.06em",
+                        color: S.cyan,
+                        background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
+                        padding: "1px 5px",
+                        borderRadius: 2,
+                        border: `1px solid color-mix(in srgb, ${S.cyan} 15%, transparent)`,
+                      }}
+                    >
                       {evt.region}
                     </span>
                     <div style={{ flex: 1 }} />
-                    <span style={{
-                      fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
-                    }}>
+                    <span
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 8,
+                        color: S.tertiary,
+                      }}
+                    >
                       {evt.timestamp}
                     </span>
                   </div>
 
                   {/* Headline */}
-                  <div style={{
-                    fontFamily: S.fontUI, fontSize: 11, color: S.primary,
-                    lineHeight: 1.4, marginBottom: 3,
-                  }}>
+                  <div
+                    style={{
+                      fontFamily: S.fontUI,
+                      fontSize: 11,
+                      color: S.primary,
+                      lineHeight: 1.4,
+                      marginBottom: 5,
+                    }}
+                  >
                     {evt.headline}
                   </div>
 
-                  {/* Impact */}
-                  <div style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
-                    color: evt.impact.includes("-") ? S.red : S.green,
-                    display: "flex", alignItems: "center", gap: 4,
-                  }}>
-                    {evt.impact.includes("-")
-                      ? <TrendingDown size={9} />
-                      : <TrendingUp size={9} />}
-                    {evt.impact}
+                  {/* Impact badge */}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      padding: "2px 6px",
+                      background: `color-mix(in srgb, ${evt.impact.includes("-") ? S.red : S.green} 10%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${evt.impact.includes("-") ? S.red : S.green} 20%, transparent)`,
+                      borderRadius: 3,
+                    }}
+                  >
+                    {evt.impact.includes("-") ? (
+                      <TrendingDown size={9} color={S.red} />
+                    ) : (
+                      <TrendingUp size={9} color={S.green} />
+                    )}
+                    <span
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: evt.impact.includes("-") ? S.red : S.green,
+                      }}
+                    >
+                      {evt.impact}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -255,38 +638,120 @@ export default function GeoPoliticalWidget({ token, user, onRemove }: Props) {
 
         {/* Macro Tape Tab */}
         {activeTab === "macro" && (
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 0,
-          }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {MACRO_SNAPSHOT.map((m, i) => {
-              const TIcon = m.trend === "up" ? TrendingUp : m.trend === "down" ? TrendingDown : Minus;
-              const tColor = m.trend === "up" ? S.green : m.trend === "down" ? S.red : S.tertiary;
+              const TIcon =
+                m.trend === "up"
+                  ? TrendingUp
+                  : m.trend === "down"
+                  ? TrendingDown
+                  : Minus;
+              const tColor =
+                m.trend === "up"
+                  ? S.green
+                  : m.trend === "down"
+                  ? S.red
+                  : S.tertiary;
+              const barPct = (m.rawValue / m.maxValue) * 100;
+              const barColor =
+                m.label === "VIX"
+                  ? m.rawValue > 20 ? S.red : m.rawValue > 15 ? S.amber : S.green
+                  : tColor;
+
               return (
-                <div key={m.label} style={{
-                  padding: "12px 14px",
-                  borderRight: i % 2 === 0 ? `1px solid ${S.soft}` : "none",
-                  borderBottom: i < MACRO_SNAPSHOT.length - 2 ? `1px solid ${S.soft}` : "none",
-                  display: "flex", flexDirection: "column", gap: 4,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{
-                      fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
-                      letterSpacing: "0.08em",
-                    }}>
+                <div
+                  key={m.label}
+                  style={{
+                    padding: "10px 14px",
+                    borderBottom:
+                      i < MACRO_SNAPSHOT.length - 1 ? `1px solid ${S.soft}` : "none",
+                    display: "grid",
+                    gridTemplateColumns: "80px 1fr 60px",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
+                  {/* Label + value */}
+                  <div>
+                    <div
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 8,
+                        color: S.tertiary,
+                        letterSpacing: "0.08em",
+                        marginBottom: 3,
+                      }}
+                    >
                       {m.label}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 17,
+                        fontWeight: 700,
+                        color: S.primary,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {m.value}
+                    </div>
+                  </div>
+
+                  {/* Bar + context */}
+                  <div>
+                    <div
+                      style={{
+                        height: 7,
+                        background: S.bgDeep,
+                        border: `1px solid ${S.soft}`,
+                        borderRadius: 4,
+                        overflow: "hidden",
+                        marginBottom: 4,
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${barPct}%`,
+                          background: `linear-gradient(90deg, ${barColor}, color-mix(in srgb, ${barColor} 60%, transparent))`,
+                          borderRadius: 4,
+                          transition: "width 600ms ease",
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: S.fontUI,
+                        fontSize: 9,
+                        color: S.tertiary,
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {m.context}
+                    </div>
+                  </div>
+
+                  {/* Trend */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-end",
+                      gap: 3,
+                    }}
+                  >
+                    <TIcon size={14} color={tColor} />
+                    <span
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 7.5,
+                        color: tColor,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {m.trend}
                     </span>
-                    <TIcon size={9} color={tColor} />
-                  </div>
-                  <div style={{
-                    fontFamily: S.fontMono, fontSize: 18, fontWeight: 700,
-                    color: S.primary, lineHeight: 1,
-                  }}>
-                    {m.value}
-                  </div>
-                  <div style={{
-                    fontFamily: S.fontUI, fontSize: 9, color: S.tertiary, lineHeight: 1.3,
-                  }}>
-                    {m.context}
                   </div>
                 </div>
               );
@@ -295,68 +760,23 @@ export default function GeoPoliticalWidget({ token, user, onRemove }: Props) {
         )}
 
         {/* Central Banks Tab */}
-        {activeTab === "banks" && (
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {/* Table header */}
-            <div style={{
-              display: "grid", gridTemplateColumns: "1fr 60px 70px 60px",
-              padding: "6px 12px", background: S.bgSub,
-              borderBottom: `1px solid ${S.soft}`,
-            }}>
-              {["INSTITUTION", "RATE", "STANCE", "NEXT"].map((h) => (
-                <span key={h} style={{
-                  fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
-                  letterSpacing: "0.08em",
-                }}>
-                  {h}
-                </span>
-              ))}
-            </div>
-
-            {CENTRAL_BANKS.map((cb, i) => (
-              <div key={cb.bank} style={{
-                display: "grid", gridTemplateColumns: "1fr 60px 70px 60px",
-                padding: "8px 12px", alignItems: "center",
-                borderBottom: i < CENTRAL_BANKS.length - 1 ? `1px solid ${S.soft}` : "none",
-                background: i % 2 === 0 ? "transparent" : S.bgSub,
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 12 }}>{cb.flag}</span>
-                  <span style={{
-                    fontFamily: S.fontUI, fontSize: 10, color: S.primary, fontWeight: 600,
-                  }}>
-                    {cb.bank}
-                  </span>
-                </div>
-                <span style={{
-                  fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.primary,
-                }}>
-                  {cb.rate}
-                </span>
-                <span style={{
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
-                  color: directionColor(cb.direction),
-                  textTransform: "uppercase", letterSpacing: "0.04em",
-                }}>
-                  {cb.direction === "hawkish" ? "▲" : cb.direction === "dovish" ? "▼" : "●"} {cb.direction}
-                </span>
-                <span style={{
-                  fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
-                }}>
-                  {cb.nextMeeting}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        {activeTab === "banks" && <RateBarChart banks={CENTRAL_BANKS} />}
       </div>
 
       {/* Footer */}
-      <div style={{
-        padding: "5px 12px", borderTop: `1px solid ${S.soft}`, background: S.bgSub,
-        fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
-        display: "flex", justifyContent: "space-between", flexShrink: 0,
-      }}>
+      <div
+        style={{
+          padding: "5px 12px",
+          borderTop: `1px solid ${S.soft}`,
+          background: S.bgSub,
+          fontFamily: S.fontMono,
+          fontSize: 8,
+          color: S.tertiary,
+          display: "flex",
+          justifyContent: "space-between",
+          flexShrink: 0,
+        }}
+      >
         <span>Source: POLISOPHIC intelligence feed · Institutional macro data</span>
         <span>Informational only</span>
       </div>
