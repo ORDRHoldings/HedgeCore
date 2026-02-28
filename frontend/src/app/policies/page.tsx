@@ -7,7 +7,7 @@
  *       fixed activate flow, QuickAssign entry point.
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles, Check, Zap, Shield, BarChart2, Globe,
@@ -82,12 +82,15 @@ interface PresetCardProps {
   isCompared?:        boolean;
   onCompareToggle?:   () => void;
   canActivate:        boolean;   // true = dbTmpl found
+  dbVersion?:         number;    // UX-POLICY-4: version from DB template
+  dbUpdatedAt?:       string | null; // UX-POLICY-4: last updated timestamp
 }
 
 function PresetCard({
   preset, isActive, isActivating, onActivate, isFavorited, onToggleFavorite,
   effectivenessScore, effectivenessBadge, effectivenessColor,
   compareMode, isCompared, onCompareToggle, canActivate,
+  dbVersion, dbUpdatedAt,
 }: PresetCardProps) {
   const [hovered, setHovered] = useState(false);
   const rc = riskColor(preset.riskPosture);
@@ -170,9 +173,24 @@ function PresetCard({
         </div>
         <div style={{
           fontFamily: S.fontMono, fontSize: '0.625rem', color: S.tertiary,
-          letterSpacing: '0.06em',
+          letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6,
         }}>
           {preset.shortName}
+          {/* UX-POLICY-4: version + last-updated chip from DB */}
+          {dbVersion !== undefined && (
+            <span style={{
+              fontFamily: S.fontMono, fontSize: '0.4375rem', padding: '1px 4px',
+              border: `1px solid color-mix(in srgb, ${S.cyan} 22%, ${S.rim})`,
+              color: S.cyan, letterSpacing: '0.04em',
+            }}>
+              v{dbVersion}
+            </span>
+          )}
+          {dbUpdatedAt && (
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.tertiary, letterSpacing: '0.03em' }}>
+              {new Date(dbUpdatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
+            </span>
+          )}
         </div>
       </div>
 
@@ -306,12 +324,17 @@ export default function PoliciesPage() {
 
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('ALL');
   const [searchQuery, setSearchQuery]         = useState('');
+  // PERF-POLICY-2: debounced version of searchQuery (300ms)
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Active policy state
   const [activeInstance, setActiveInstance]   = useState<PolicyInstance | null>(null);
   const [activatingId, setActivatingId]       = useState<string | null>(null);
   const [dbTemplates, setDbTemplates]         = useState<PolicyTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
+  // RES-1: surface template load failures
+  const [templatesError, setTemplatesError]   = useState<string | null>(null);
 
   // Favorites state
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -334,9 +357,15 @@ export default function PoliciesPage() {
     if (!token) return;
     getActivePolicy(token).then(inst => setActiveInstance(inst)).catch(() => {});
     setTemplatesLoading(true);
+    setTemplatesError(null);
     listPolicyTemplates(token)
       .then(t => { setDbTemplates(t); setTemplatesLoading(false); })
-      .catch(() => setTemplatesLoading(false));
+      .catch((e: unknown) => {
+        setTemplatesLoading(false);
+        // RES-1: surface the error so operators know activation is unavailable
+        const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+        setTemplatesError(detail ?? (e instanceof Error ? e.message : 'Failed to load policy templates from server'));
+      });
     listFavorites(token)
       .then(favs => setFavoriteIds(new Set(favs.map(f => f.template_id))))
       .catch(() => {});
@@ -349,20 +378,34 @@ export default function PoliciesPage() {
     return POLICY_PRESETS.find(p => p.shortName === tmpl.short_name)?.id ?? null;
   }, [activeInstance]);
 
-  // Toggle favorite
+  // Toggle favorite — RES-2: optimistic update with rollback on error
   const handleToggleFavorite = useCallback(async (templateId: string) => {
     if (!token) return;
+    const wasInSet = favoriteIds.has(templateId);
+    // Optimistic update
+    setFavoriteIds(prev => {
+      const n = new Set(prev);
+      if (wasInSet) n.delete(templateId); else n.add(templateId);
+      return n;
+    });
     try {
-      if (favoriteIds.has(templateId)) {
+      if (wasInSet) {
         await removeFavorite(templateId, token);
-        setFavoriteIds(prev => { const n = new Set(prev); n.delete(templateId); return n; });
         showToast('Removed from favorites');
       } else {
         await addFavorite(templateId, undefined, token);
-        setFavoriteIds(prev => new Set(prev).add(templateId));
         showToast('Added to favorites');
       }
-    } catch { /* ignore */ }
+    } catch (e: unknown) {
+      // Rollback optimistic update
+      setFavoriteIds(prev => {
+        const n = new Set(prev);
+        if (wasInSet) n.add(templateId); else n.delete(templateId);
+        return n;
+      });
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      showToast(`Favorites update failed: ${detail ?? 'please try again'}`);
+    }
   }, [token, favoriteIds, showToast]);
 
   // Activate preset — looks up template, retries if not cached yet
@@ -403,12 +446,12 @@ export default function PoliciesPage() {
     }
   }, [token, dbTemplates, showToast]);
 
-  // Filter presets
+  // PERF-POLICY-2: drive filter from debounced value, not raw keystroke state
   const filteredPresets = useMemo(() => {
     let list = POLICY_PRESETS;
     if (activeCategory !== 'ALL') list = list.filter(p => p.category === activeCategory);
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase();
       list = list.filter(p =>
         p.name.toLowerCase().includes(q) ||
         p.shortName.toLowerCase().includes(q) ||
@@ -423,7 +466,7 @@ export default function PoliciesPage() {
       });
     }
     return list;
-  }, [activeCategory, searchQuery, showFavoritesOnly, favoriteIds, dbTemplates]);
+  }, [activeCategory, debouncedSearch, showFavoritesOnly, favoriteIds, dbTemplates]);
 
   // Saved (non-system) templates
   const savedTemplates = useMemo(() => dbTemplates.filter(t => !t.is_system), [dbTemplates]);
@@ -597,12 +640,18 @@ export default function PoliciesPage() {
             <input
               type="text"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => {
+                const val = e.target.value;
+                setSearchQuery(val);
+                // PERF-POLICY-2: 300ms debounce — only update filter state after user stops typing
+                if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                searchDebounceRef.current = setTimeout(() => setDebouncedSearch(val), 300);
+              }}
               placeholder="Search policies…"
               style={{ border: 'none', background: 'transparent', color: S.primary, fontFamily: S.fontUI, fontSize: '0.6875rem', outline: 'none', width: 150 }}
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.tertiary, padding: 0, display: 'flex', alignItems: 'center' }}>
+              <button onClick={() => { setSearchQuery(''); setDebouncedSearch(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.tertiary, padding: 0, display: 'flex', alignItems: 'center' }}>
                 <X size={10} />
               </button>
             )}
@@ -621,8 +670,62 @@ export default function PoliciesPage() {
           </div>
         )}
 
-        {/* ── No templates warning ── */}
-        {!templatesLoading && dbTemplates.length === 0 && (
+        {/* ── RES-1: Template load error banner ── */}
+        {templatesError && (
+          <div
+            role="alert"
+            aria-live="assertive"
+            style={{
+              padding: '8px 14px', marginBottom: 12,
+              border: `1px solid color-mix(in srgb, ${S.amber} 40%, ${S.rim})`,
+              background: `color-mix(in srgb, ${S.amber} 6%, ${S.bgPanel})`,
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}
+          >
+            <span style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.amber, letterSpacing: '0.08em', flex: 1 }}>
+              ⚠ POLICY TEMPLATE LOAD FAILED — activation is unavailable until resolved.{' '}
+              <span style={{ opacity: 0.8 }}>{templatesError}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (!token) return;
+                setTemplatesError(null);
+                setTemplatesLoading(true);
+                listPolicyTemplates(token)
+                  .then(t => { setDbTemplates(t); setTemplatesLoading(false); })
+                  .catch((e: unknown) => {
+                    setTemplatesLoading(false);
+                    const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+                    setTemplatesError(detail ?? (e instanceof Error ? e.message : 'Failed to load policy templates from server'));
+                  });
+              }}
+              style={{
+                fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                padding: '3px 10px',
+                border: `1px solid ${S.amber}`,
+                color: S.amber, background: 'transparent',
+                cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              RETRY
+            </button>
+            <button
+              type="button"
+              onClick={() => setTemplatesError(null)}
+              aria-label="Dismiss"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: S.amber, padding: 0, display: 'flex', alignItems: 'center', flexShrink: 0,
+              }}
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+
+        {/* ── No templates warning (only show when no error and not loading) ── */}
+        {!templatesLoading && !templatesError && dbTemplates.length === 0 && (
           <div style={{
             padding: '8px 14px', marginBottom: 12,
             border: `1px solid color-mix(in srgb, ${S.amber} 30%, ${S.rim})`,
@@ -668,6 +771,8 @@ export default function PoliciesPage() {
                   });
                 }}
                 canActivate={!!dbTmpl}
+                dbVersion={dbTmpl?.version}
+                dbUpdatedAt={dbTmpl?.updated_at ?? null}
               />
             );
           })}

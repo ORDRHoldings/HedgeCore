@@ -11,9 +11,18 @@ const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 function getApiKey(): string {
   if (process.env.NEXT_PUBLIC_HEDGECALC_API_KEY) return process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
   if (typeof window !== "undefined") {
-    return localStorage.getItem("hc_api_key") ?? "HC_DEV_KEY_001";
+    const stored = localStorage.getItem("hc_api_key");
+    if (stored) return stored;
   }
-  return "HC_DEV_KEY_001";
+  if (process.env.NODE_ENV === "development") {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[policyClient] NEXT_PUBLIC_HEDGECALC_API_KEY is not set and no hc_api_key found in " +
+      "localStorage. All policy API calls will fail authentication. Set the env variable or " +
+      "store a key via localStorage.setItem('hc_api_key', '<key>')."
+    );
+  }
+  return "";
 }
 
 function authHeaders(token?: string): Record<string, string> {
@@ -37,7 +46,9 @@ export interface PolicyTemplate {
   config: PolicyConfig;
   version: number;
   is_system: boolean;
+  status: string;
   created_at: string;
+  updated_at: string | null;
 }
 
 export interface PolicyInstance {

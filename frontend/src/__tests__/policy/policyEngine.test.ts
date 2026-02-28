@@ -300,11 +300,15 @@ describe("listPolicyTemplates", () => {
   });
 
   test("calls without Authorization header when no token provided", async () => {
+    // policyClient always injects X-API-Key (dev fallback: HC_DEV_KEY_001)
+    // but omits the Bearer token when none is supplied
     mockedAxios.get.mockResolvedValueOnce({ data: [] });
     await listPolicyTemplates();
     expect(mockedAxios.get).toHaveBeenCalledWith(
       expect.stringContaining("/v1/policies/templates"),
-      expect.objectContaining({ headers: {} }),
+      expect.objectContaining({
+        headers: expect.not.objectContaining({ Authorization: expect.anything() }),
+      }),
     );
   });
 
@@ -439,12 +443,15 @@ describe("activatePolicy", () => {
   });
 
   test("works without token (no auth header sent)", async () => {
+    // API key always present; only Bearer token is omitted when no token supplied
     mockedAxios.post.mockResolvedValueOnce({ data: ACTIVE_INSTANCE });
     await activatePolicy("tpl-id");
     expect(mockedAxios.post).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(Object),
-      expect.objectContaining({ headers: {} }),
+      expect.objectContaining({
+        headers: expect.not.objectContaining({ Authorization: expect.anything() }),
+      }),
     );
   });
 });
@@ -676,12 +683,15 @@ describe("deactivatePolicy", () => {
   });
 
   test("works without token parameter", async () => {
+    // API key always present in headers; Bearer token omitted when no token supplied
     mockedAxios.post.mockResolvedValueOnce({ data: null });
     await expect(deactivatePolicy()).resolves.toBeUndefined();
     expect(mockedAxios.post).toHaveBeenCalledWith(
       expect.any(String),
       {},
-      expect.objectContaining({ headers: {} }),
+      expect.objectContaining({
+        headers: expect.not.objectContaining({ Authorization: expect.anything() }),
+      }),
     );
   });
 });
