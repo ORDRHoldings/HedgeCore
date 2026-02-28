@@ -1,34 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Alpha Vantage Market Autofill API Route
+// FX Market Autofill — Finnhub forex/rates API
 // POST /api/market-autofill
-// Body: { currencies: string[] }   e.g. ["MXN", "EUR", "BRL"]
+// Body: { currencies: string[], trade_value_dates?: string[] }
 // Returns: MarketSnapshot-compatible market object
+//
+// Finnhub forex/rates: single call returns ALL USD pairs at once
+// vs Alpha Vantage: required one call per currency pair
+// Free tier: 60 req/min, no daily cap
 // ─────────────────────────────────────────────────────────────────────────────
 
-const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY ?? '';
-const AV_BASE = 'https://www.alphavantage.co/query';
-
-// For currencies not directly available vs USD, we fetch available pairs
-// Alpha Vantage FX endpoint: CURRENCY_EXCHANGE_RATE
-async function fetchSpot(from: string, to: string): Promise<number | null> {
-  if (!AV_KEY || AV_KEY === 'YOUR_ALPHA_VANTAGE_KEY_HERE') return null;
-  try {
-    const url = `${AV_BASE}?function=CURRENCY_EXCHANGE_RATE&from_currency=${from}&to_currency=${to}&apikey=${AV_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 86400 } }); // cache 24h (free-tier budget)
-    if (!res.ok) return null;
-    const json = await res.json();
-    const rate = json?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate'];
-    return rate ? parseFloat(rate) : null;
-  } catch {
-    return null;
-  }
-}
-
-// Approximate forward points from interest rate differential using covered interest parity
-// fwd = spot × (1 + r_quote × T) / (1 + r_base × T) − spot
-// We approximate using AV FX_DAILY as a proxy for carry; here we use demo fallbacks for now
+const FH_KEY  = process.env.FINNHUB_API_KEY ?? '';
+const FH_BASE = 'https://finnhub.io/api/v1';
 
 // Carry assumptions (bps/month) by currency — well-known EM/DM differentials
 const CARRY_BPS_MONTH: Record<string, number> = {
@@ -40,51 +24,62 @@ const CARRY_BPS_MONTH: Record<string, number> = {
   CNY: 5, HKD: 1, SGD: 3, RUB: 120,
 };
 
-function estimateForwardPoints(
-  spot: number,
-  currency: string,
-  requiredBuckets?: string[],
-): Record<string, number> {
+// Fallback demo spots (EOD 2026-02-27) — DXY/UUP confirmed ~99.11
+const DEMO_SPOTS: Record<string, number> = {
+  MXN: 20.35, BRL: 5.87, CLP: 972.0,  COP: 4278.0,
+  EUR: 0.9263, GBP: 0.7921, CHF: 0.8981, SEK: 10.24, NOK: 10.87, DKK: 6.93,
+  PLN: 4.08,  CZK: 23.10, HUF: 368.0,
+  JPY: 150.40, CNY: 7.26, HKD: 7.78, KRW: 1435.0, SGD: 1.341, TWD: 32.48, INR: 86.50,
+  AUD: 1.581, NZD: 1.728, CAD: 1.437,
+  ZAR: 18.91, TRY: 36.20, RUB: 90.10,
+};
+
+// Fetch ALL forex rates in a single Finnhub call (base=USD)
+async function fetchFinnhubForexRates(): Promise<Record<string, number> | null> {
+  if (!FH_KEY) return null;
+  try {
+    const url = `${FH_BASE}/forex/rates?base=USD&token=${FH_KEY}`;
+    const res = await fetch(url, { next: { revalidate: 86400 } });
+    if (!res.ok) return null;
+    const json = await res.json() as { base?: string; quote?: Record<string, number> };
+    if (!json.quote || typeof json.quote !== 'object') return null;
+    return json.quote;
+  } catch {
+    return null;
+  }
+}
+
+function estimateForwardPoints(spot: number, currency: string, requiredBuckets?: string[]): Record<string, number> {
   const now = new Date();
   const buckets: Record<string, number> = {};
   const bpsPerMonth = CARRY_BPS_MONTH[currency] ?? 20;
 
-  // Determine how many months to generate:
-  // At minimum 6, but extend to cover ALL required trade buckets
   let maxMonths = 6;
-
   if (requiredBuckets && requiredBuckets.length > 0) {
     const nowYear = now.getFullYear();
-    const nowMonth = now.getMonth(); // 0-indexed
-
+    const nowMonth = now.getMonth();
     for (const bucket of requiredBuckets) {
-      // Parse "YYYY-MM" format
       const parts = bucket.split('-');
       if (parts.length >= 2) {
         const bYear = parseInt(parts[0], 10);
-        const bMonth = parseInt(parts[1], 10) - 1; // 0-indexed
+        const bMonth = parseInt(parts[1], 10) - 1;
         if (!isNaN(bYear) && !isNaN(bMonth)) {
           const monthsOut = (bYear - nowYear) * 12 + (bMonth - nowMonth);
           if (monthsOut > maxMonths) maxMonths = monthsOut;
         }
       }
     }
-
-    // Add 1-month buffer beyond the farthest bucket
-    maxMonths = Math.min(maxMonths + 1, 36); // Cap at 36 months (3 years)
+    maxMonths = Math.min(maxMonths + 1, 36);
   }
 
   for (let m = 1; m <= maxMonths; m++) {
     const d = new Date(now);
     d.setMonth(d.getMonth() + m);
-    const bucket = d.toISOString().slice(0, 7); // YYYY-MM
-    // Simple linear approximation: points = spot × carry_bps/month × m / 10000
+    const bucket = d.toISOString().slice(0, 7);
     const pts = parseFloat((spot * (bpsPerMonth / 10000) * m).toFixed(4));
     buckets[bucket] = pts;
   }
 
-  // Also backfill any required buckets that are in the past (e.g. expired trades still in portfolio)
-  // Use carry approximation based on distance from now — past buckets get a small positive value
   if (requiredBuckets) {
     for (const bucket of requiredBuckets) {
       if (!(bucket in buckets)) {
@@ -96,7 +91,6 @@ function estimateForwardPoints(
             const nowYear = now.getFullYear();
             const nowMonth = now.getMonth();
             const monthsAgo = (nowYear - bYear) * 12 + (nowMonth - bMonth);
-            // Use a minimal 1-month carry equivalent for historical buckets
             const pts = parseFloat((spot * (bpsPerMonth / 10000) * Math.max(1, monthsAgo)).toFixed(4));
             buckets[bucket] = pts;
           }
@@ -114,47 +108,22 @@ export async function POST(req: NextRequest) {
     const currencies: string[] = body.currencies ?? ['MXN'];
     const tradeValueDates: string[] = body.trade_value_dates ?? [];
 
-    // Derive required buckets (YYYY-MM) from trade value dates
     const requiredBuckets = [...new Set(
-      tradeValueDates
-        .map(d => d.slice(0, 7))       // "2026-09-01" → "2026-09"
-        .filter(b => /^\d{4}-\d{2}$/.test(b)),
+      tradeValueDates.map(d => d.slice(0, 7)).filter(b => /^\d{4}-\d{2}$/.test(b)),
     )];
-
-    // Primary currency to price vs USD
-    // For MXN and most EM, we want USD/CCY (units of CCY per 1 USD)
-    // For EUR/GBP, Alpha Vantage returns base/quote = EUR/USD (units of USD per 1 EUR)
-    // We normalise everything to: how many local currency units per 1 USD
 
     const primaryCurrency = currencies[0] ?? 'MXN';
 
     let spot: number | null = null;
     let spotSource = 'indicative_fallback';
 
-    // Determine fetch direction
-    // For DM currencies that quote vs USD (EUR, GBP, AUD, NZD, CHF), we fetch CCY/USD then invert
-    const INVERTED = new Set(['EUR', 'GBP', 'AUD', 'NZD', 'CHF']);
-    const isInverted = INVERTED.has(primaryCurrency);
-
     if (primaryCurrency !== 'USD') {
-      if (isInverted) {
-        const rate = await fetchSpot(primaryCurrency, 'USD');
-        if (rate && rate > 0) { spot = parseFloat((1 / rate).toFixed(6)); spotSource = 'alpha_vantage_live'; }
-      } else {
-        const rate = await fetchSpot('USD', primaryCurrency);
-        if (rate && rate > 0) { spot = parseFloat(rate.toFixed(6)); spotSource = 'alpha_vantage_live'; }
+      const rates = await fetchFinnhubForexRates();
+      if (rates && rates[primaryCurrency] && rates[primaryCurrency] > 0) {
+        spot = parseFloat(rates[primaryCurrency].toFixed(6));
+        spotSource = 'finnhub_live';
       }
     }
-
-    // Fallback demo spots when API key not configured or rate limit hit
-    const DEMO_SPOTS: Record<string, number> = {
-      MXN: 18.97, BRL: 5.08, CLP: 945.50, COP: 4155.00,
-      EUR: 0.9210, GBP: 0.7882, CHF: 0.8820, SEK: 10.42, NOK: 10.68, DKK: 6.87,
-      PLN: 4.02, CZK: 22.80, HUF: 361.0,
-      JPY: 149.80, CNY: 7.24, HKD: 7.82, KRW: 1342.0, SGD: 1.338, TWD: 32.15, INR: 83.90,
-      AUD: 1.567, NZD: 1.703, CAD: 1.395,
-      ZAR: 18.55, TRY: 32.85, RUB: 88.50,
-    };
 
     if (spot === null) {
       spot = DEMO_SPOTS[primaryCurrency] ?? 1.0;
@@ -164,22 +133,22 @@ export async function POST(req: NextRequest) {
     const forwardPoints = estimateForwardPoints(spot, primaryCurrency, requiredBuckets);
     const asOf = new Date().toISOString().slice(0, 19) + 'Z';
 
-    // Build currency pair label
+    const INVERTED = new Set(['EUR', 'GBP', 'AUD', 'NZD', 'CHF']);
     const pairLabel = INVERTED.has(primaryCurrency) ? `${primaryCurrency}/USD` : `USD/${primaryCurrency}`;
 
     const market = {
       as_of: asOf,
-      spot_usdmxn: spot,   // field name is legacy — contains actual spot for primary currency
+      spot_usdmxn: spot,
       forward_points_by_month: forwardPoints,
       provider_metadata: {
         source: spotSource,
-        data_class: spotSource === 'alpha_vantage_live' ? 'LIVE' : 'INDICATIVE_FALLBACK',
+        data_class: spotSource === 'finnhub_live' ? 'LIVE' : 'INDICATIVE_FALLBACK',
         currency_pair: pairLabel,
         primary_currency: primaryCurrency,
         currencies_detected: currencies,
-        note: spotSource === 'alpha_vantage_live'
-          ? `Live spot from Alpha Vantage as of ${asOf}. Forward points estimated from carry differentials.`
-          : `Indicative fallback rates — configure ALPHA_VANTAGE_API_KEY in .env.local for live data.`,
+        note: spotSource === 'finnhub_live'
+          ? `Live spot from Finnhub as of ${asOf}. Forward points estimated from carry differentials.`
+          : `Indicative fallback rates — configure FINNHUB_API_KEY in .env.local for live data.`,
       },
     };
 
