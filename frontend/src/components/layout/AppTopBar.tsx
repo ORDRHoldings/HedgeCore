@@ -213,7 +213,6 @@ const NAV: NavSection[] = [
       { label: "Portfolio Risk",  desc: "Delta, vega, correlation across positions",  href: "/portfolio-risk", icon: Ic.bar_chart, badge: "RISK",  badgeColor: S.amber },
       { label: "Scenario Studio", desc: "Monte Carlo & stress-test simulations",      href: "/scenario-studio",icon: Ic.lightning, badge: "SIM",   badgeColor: S.cyan  },
       { label: "Polisophic",      desc: "Political & macro risk intelligence feed",   href: "/polisophic",     icon: Ic.governance, badge: "RISK", badgeColor: S.amber },
-      { label: "Hedge Wiki",     desc: "FX instruments, ISDA, IFRS 9 knowledge graph", href: "/hedgewiki",    icon: Ic.book },
     ],
   },
   {
@@ -268,15 +267,14 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Governance", href: "/hedgewiki", icon: Ic.governance,
+    label: "Governance", href: "/audit-trail", icon: Ic.governance,
     prefixes: ["/hedgewiki", "/hedges", "/audit-trail", "/access-control", "/run-viewer", "/lineage", "/committee-pack"],
     header: "Compliance & Audit",
     items: [
-      { label: "Hedge Wiki",        desc: "Instrument encyclopedia — products & regulations",                    href: "/hedgewiki",      icon: Ic.book },
-      { label: "Audit Trail",       desc: "Immutable decision log with hash-chain integrity",                    href: "/audit-trail",    icon: Ic.check,  badge: "AUDIT",   badgeColor: S.amber },
-      { label: "Run Viewer",        desc: "TraceLite pipeline narrative + SHA-256 RunEnvelope hash chain",       href: "/run-viewer",     icon: Ic.terminal, badge: "TRACE", badgeColor: "#a78bfa" },
-      { label: "Position Lineage",  desc: "5-level provenance graph: Position → Policy → Run → Ticket",         href: "/lineage",        icon: Ic.plug,    badge: "GRAPH",   badgeColor: "#818cf8" },
-      { label: "Committee Pack",    desc: "Print-ready IFRS 9 hedge effectiveness documentation pack",          href: "/committee-pack", icon: Ic.reports,  badge: "PACK",   badgeColor: S.amber },
+      { label: "Audit Trail",       desc: "Immutable decision log with hash-chain integrity",                    href: "/audit-trail",    icon: Ic.check,    badge: "AUDIT",   badgeColor: S.amber },
+      { label: "Run Viewer",        desc: "TraceLite pipeline narrative + SHA-256 RunEnvelope hash chain",       href: "/run-viewer",     icon: Ic.terminal, badge: "TRACE",   badgeColor: "#a78bfa" },
+      { label: "Position Lineage",  desc: "5-level provenance graph: Position → Policy → Run → Ticket",         href: "/lineage",        icon: Ic.plug,     badge: "GRAPH",   badgeColor: "#818cf8" },
+      { label: "Hedge Wiki",        desc: "FX instruments, ISDA, IFRS 9 knowledge graph",                       href: "/hedgewiki",      icon: Ic.book },
       { label: "Access Control",    desc: "Role permissions, branch hierarchy, MFA status",                     href: "/access-control", icon: Ic.key },
     ],
   },
