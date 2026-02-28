@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/authContext";
+import Image from "next/image";
 
 // ─── Brand tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -29,18 +30,6 @@ const C = {
   fontMono:    "'IBM Plex Mono','JetBrains Mono',monospace",
 } as const;
 
-// ─── Environment badge ────────────────────────────────────────────────────────
-const ENV_LABEL =
-  process.env.NEXT_PUBLIC_DEMO_MODE === "true" ? "DEMO"
-  : process.env.NODE_ENV === "development"     ? "DEV"
-  : "PROD";
-
-const ENV_STYLE: React.CSSProperties =
-  ENV_LABEL === "PROD"
-    ? { background: "rgba(21,128,61,0.09)",    color: "#15803D", border: "1px solid rgba(21,128,61,0.22)"    }
-    : ENV_LABEL === "DEV"
-    ? { background: "rgba(30,58,138,0.09)",    color: "#1E3A8A", border: "1px solid rgba(30,58,138,0.22)"    }
-    : { background: "rgba(245,130,32,0.10)",   color: "#B45309", border: "1px solid rgba(245,130,32,0.30)"   };
 
 // ─── Error classification ─────────────────────────────────────────────────────
 type ErrKind = "auth" | "warmup" | "rate" | "server";
@@ -65,31 +54,6 @@ const ERR_MAP: Record<ErrKind, { icon: string; label: string; body: (raw: string
   server: { icon: "⚠", label: "SERVER ERROR",           body: (raw) => raw,                                                        color: C.red,   bg: C.redBg,   border: C.redBorder   },
 };
 
-// ─── ORDR mark — inline SVG knotwork (no embedded text) ──────────────────────
-function ORDRMark({ size = 42 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={Math.round(size * 0.82)}
-      viewBox="26 32 148 120"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      style={{ flexShrink: 0 }}
-    >
-      <g transform="translate(100, 95)">
-        <circle cx="-32" cy="0"  r="34" stroke={C.ink}    strokeWidth="10" fill="none" />
-        <circle cx="32"  cy="0"  r="34" stroke={C.ink}    strokeWidth="10" fill="none" />
-        <circle cx="0" cy="-20"  r="34" stroke={C.ink}    strokeWidth="10" fill="none" />
-        <circle cx="0"  cy="20"  r="34" stroke={C.ink}    strokeWidth="10" fill="none" />
-        <line x1="18" y1="-30" x2="46" y2="-52"
-          stroke={C.orange} strokeWidth="8" strokeLinecap="round" />
-        <polyline points="28,-52 46,-52 46,-34"
-          stroke={C.orange} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      </g>
-    </svg>
-  );
-}
 
 // ─── Eye icons ────────────────────────────────────────────────────────────────
 function IconEyeOpen() {
@@ -453,54 +417,53 @@ export default function LoginPage() {
 
             {/* ── Logo lockup ── */}
             <div style={{
-              marginBottom: 40,
-              paddingBottom: 28,
+              marginBottom: 44,
+              paddingBottom: 32,
               borderBottom: `1px solid ${C.stoneDeep}`,
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
 
-                {/* Knotwork mark */}
-                <ORDRMark size={44} />
+                {/* Real knotwork mark — ordr-mark.png */}
+                <div style={{
+                  position: "relative", width: 56, height: 56, flexShrink: 0,
+                }}>
+                  <Image
+                    src="/ordr-mark.png"
+                    alt="ORDR Terminal"
+                    fill
+                    sizes="56px"
+                    style={{ objectFit: "contain" }}
+                    priority
+                  />
+                </div>
 
                 {/* Vertical rule */}
                 <div style={{
-                  width: 1, height: 38, background: C.stoneDeep, flexShrink: 0,
+                  width: 1, height: 44, background: C.stoneDeep, flexShrink: 0,
                 }} />
 
-                {/* Wordmark + descriptor + badge */}
+                {/* Wordmark + tagline */}
                 <div>
                   <div style={{
-                    display: "flex", alignItems: "center", gap: 8, marginBottom: 5,
+                    display: "flex", alignItems: "baseline", gap: 7, marginBottom: 7,
                   }}>
                     <span style={{
                       fontFamily: C.fontHead, fontWeight: 800,
-                      fontSize: "1.0625rem", letterSpacing: "0.07em",
+                      fontSize: "1.25rem", letterSpacing: "0.09em",
                       color: C.ink, lineHeight: 1,
                     }}>ORDR</span>
                     <span style={{
                       fontFamily: C.fontHead, fontWeight: 800,
-                      fontSize: "1.0625rem", letterSpacing: "0.07em",
+                      fontSize: "1.25rem", letterSpacing: "0.09em",
                       color: C.orange, lineHeight: 1,
                     }}>TERMINAL</span>
-                    <span style={{
-                      ...ENV_STYLE,
-                      fontFamily: C.fontMono,
-                      fontSize: "0.54rem",
-                      fontWeight: 600,
-                      letterSpacing: "0.13em",
-                      padding: "2px 6px",
-                      borderRadius: 2,
-                      lineHeight: 1.5,
-                    }}>
-                      {ENV_LABEL}
-                    </span>
                   </div>
                   <div style={{
                     fontFamily: C.fontMono, fontSize: "0.6rem",
-                    color: C.inkLight, letterSpacing: "0.11em",
-                    textTransform: "uppercase",
+                    color: C.inkLight, letterSpacing: "0.15em",
+                    textTransform: "uppercase", lineHeight: 1,
                   }}>
-                    Institutional FX Risk Infrastructure
+                    Financial Intelligence Infrastructure
                   </div>
                 </div>
               </div>
