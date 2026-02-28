@@ -381,7 +381,11 @@ async def activate_policy(
             session, current_user, data.template_id
         )
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        detail = str(e)
+        # DB-POLICY-1: concurrent activation conflict maps to 409, not 404
+        if "concurrent activation conflict" in detail.lower():
+            raise HTTPException(status_code=409, detail=detail)
+        raise HTTPException(status_code=404, detail=detail)
 
     # Enrich response with template
     tmpl = await policy_service.get_template(
