@@ -1742,13 +1742,8 @@ export default function AIPolicyWizardPage() {
         const qa = mapWizardStateToQA(state);
         const result = await suggestPolicyAI(qa);
         setAiResult(result);
-        if (result.recommendations[0]) {
-          // Auto-select first recommendation so save button is immediately enabled
-          const firstId = `${result.recommendations[0].preset.shortName}-0`;
-          setSelectedRecId(firstId);
-          setPolicyName(result.recommendations[0].preset.name);
-          setPolicyTag(result.recommendations[0].preset.shortName.toLowerCase());
-        }
+        // UX-POLICY-2: Do NOT auto-select — analyst must explicitly choose a recommendation
+        // before the save button becomes available, preventing accidental saves.
       } catch (e) {
         const errMsg = (e as {response?: {data?: {detail?: string}}})?.response?.data?.detail
           ?? (e instanceof Error ? e.message : String(e));
@@ -1789,7 +1784,12 @@ export default function AIPolicyWizardPage() {
     if (!token) { setSaveError('Not authenticated — please log in and try again.'); return; }
 
     const userId    = user?.id ?? 'system';
-    const companyId = user?.company?.id ?? 'unscoped';
+    // UX-POLICY-3: Block save if company context is missing — orphaned policy is unacceptable
+    const companyId = user?.company?.id;
+    if (!companyId) {
+      setSaveError('Company context is unavailable — cannot save policy without a valid company. Please log out and log back in.');
+      return;
+    }
 
     // Parse index from recId format "${shortName}-{i}"
     const idxFromId = parseInt(selectedRecId.split('-').pop() ?? '0', 10);
@@ -1800,11 +1800,13 @@ export default function AIPolicyWizardPage() {
     try {
       const canonical = buildCanonicalFromPageState(
         state, aiResult, selectedRec,
-        userId, companyId,
+        userId, companyId!,
         policyName.trim(), policyTag.trim(),
       );
       // Apply the status chosen by the user in the UI
-      canonical.status = status as "DRAFT" | "REVIEW" | "APPROVED" | "ACTIVE" | "ARCHIVED";
+      // SEC-POLICY-1: Wizard may only produce DRAFT or REVIEW — never elevated statuses
+      const safeStatus: "DRAFT" | "REVIEW" = (status === "REVIEW") ? "REVIEW" : "DRAFT";
+      canonical.status = safeStatus;
       const payload = toCreateTemplatePayload(canonical);
       await createPolicyTemplate(payload, token);
       setSaved(true);
