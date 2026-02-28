@@ -7,11 +7,12 @@
  * Users & Roles | Permission Matrix | Branch Hierarchy
  */
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { ACCESS_CONTROL_HELP } from "@/lib/helpContent";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -79,28 +80,15 @@ const TABS: { key: PageTab; label: string }[] = [
   { key: "hierarchy", label: "Branch Hierarchy" },
 ];
 
-// ── Permission matrix data ───────────────────────────────────────────────────
-const ROLES = ["Admin", "CFO", "Head of Risk", "Branch Manager", "Trader", "Analyst", "Auditor"] as const;
-
-interface PermissionRow {
-  permission: string;
-  grants: Record<string, boolean>;
+// ── API types ─────────────────────────────────────────────────────────────────
+interface ApiRole {
+  id: number;
+  name: string;
+  description: string | null;
+  hierarchy_level: number;
+  is_system: boolean;
+  permissions: string[]; // codenames e.g. "positions.view"
 }
-
-const PERMISSION_ROWS: PermissionRow[] = [
-  { permission: "View Positions",       grants: { Admin: true, CFO: true, "Head of Risk": true, "Branch Manager": true, Trader: true, Analyst: true, Auditor: true } },
-  { permission: "Create/Edit Positions", grants: { Admin: true, CFO: true, "Head of Risk": true, "Branch Manager": true, Trader: true, Analyst: false, Auditor: false } },
-  { permission: "Delete Positions",     grants: { Admin: true, CFO: true, "Head of Risk": false, "Branch Manager": false, Trader: false, Analyst: false, Auditor: false } },
-  { permission: "Run Sandbox",          grants: { Admin: true, CFO: true, "Head of Risk": true, "Branch Manager": true, Trader: true, Analyst: true, Auditor: false } },
-  { permission: "Create Proposals",     grants: { Admin: true, CFO: true, "Head of Risk": true, "Branch Manager": true, Trader: true, Analyst: false, Auditor: false } },
-  { permission: "Approve Staging",      grants: { Admin: true, CFO: true, "Head of Risk": true, "Branch Manager": true, Trader: false, Analyst: false, Auditor: false } },
-  { permission: "Execute Trades",       grants: { Admin: true, CFO: true, "Head of Risk": true, "Branch Manager": false, Trader: false, Analyst: false, Auditor: false } },
-  { permission: "Manage Policies",      grants: { Admin: true, CFO: true, "Head of Risk": true, "Branch Manager": false, Trader: false, Analyst: false, Auditor: false } },
-  { permission: "View Audit Trail",     grants: { Admin: true, CFO: true, "Head of Risk": true, "Branch Manager": true, Trader: true, Analyst: true, Auditor: true } },
-  { permission: "Export Data",          grants: { Admin: true, CFO: true, "Head of Risk": true, "Branch Manager": true, Trader: false, Analyst: false, Auditor: true } },
-  { permission: "Manage Users",         grants: { Admin: true, CFO: false, "Head of Risk": false, "Branch Manager": false, Trader: false, Analyst: false, Auditor: false } },
-  { permission: "System Configuration", grants: { Admin: true, CFO: false, "Head of Risk": false, "Branch Manager": false, Trader: false, Analyst: false, Auditor: false } },
-];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Page Component
@@ -212,7 +200,7 @@ export default function AccessControlPage() {
         padding: "24px 24px 16px",
       }}>
         {activeTab === "users" && <UsersRolesPanel users={currentUser} currentEmail={currentEmail} />}
-        {activeTab === "matrix" && <PermissionMatrixPanel />}
+        {activeTab === "matrix" && <PermissionMatrixPanel token={token ?? ""} />}
         {activeTab === "hierarchy" && <BranchHierarchyPanel />}
       </div>
 
@@ -431,9 +419,55 @@ function UsersRolesPanel({ users, currentEmail }: { users: DemoUser[]; currentEm
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Tab 2 — Permission Matrix
+// Tab 2 — Permission Matrix (live from GET /v1/admin/roles)
 // ═══════════════════════════════════════════════════════════════════════════════
-function PermissionMatrixPanel() {
+function PermissionMatrixPanel({ token }: { token: string }) {
+  const [roles, setRoles] = useState<ApiRole[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    dashboardFetch("/v1/admin/roles", token)
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<ApiRole[]>;
+      })
+      .then(data => setRoles(data))
+      .catch(e => setError(e instanceof Error ? e.message : "Failed to load roles"))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  // All unique permission codenames across all roles, sorted
+  const allPermissions = useMemo(() => {
+    if (!roles) return [];
+    const set = new Set<string>();
+    for (const role of roles) for (const p of role.permissions) set.add(p);
+    return [...set].sort();
+  }, [roles]);
+
+  // Group by module (first segment before ".")
+  const byModule = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const perm of allPermissions) {
+      const mod = perm.split(".")[0];
+      (map[mod] ??= []).push(perm);
+    }
+    return map;
+  }, [allPermissions]);
+
+  // Flatten to a single list of rows for the table body (avoids Fragment key issues)
+  const tableRows = useMemo(() => {
+    type ModuleRow = { kind: "module"; mod: string };
+    type PermRow   = { kind: "perm"; perm: string; stripe: boolean };
+    const rows: (ModuleRow | PermRow)[] = [];
+    for (const [mod, perms] of Object.entries(byModule)) {
+      rows.push({ kind: "module", mod });
+      perms.forEach((perm, i) => rows.push({ kind: "perm", perm, stripe: i % 2 !== 0 }));
+    }
+    return rows;
+  }, [byModule]);
+
   const thStyle: React.CSSProperties = {
     fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 600,
     color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase",
@@ -441,15 +475,15 @@ function PermissionMatrixPanel() {
     background: S.bgSub, whiteSpace: "nowrap",
   };
   const tdStyle: React.CSSProperties = {
-    fontFamily: S.fontMono, fontSize: "0.75rem",
-    padding: "7px 10px", borderBottom: `1px solid ${S.soft}`,
+    fontFamily: S.fontMono, fontSize: "0.6875rem",
+    padding: "6px 10px", borderBottom: `1px solid ${S.soft}`,
     textAlign: "center", whiteSpace: "nowrap",
   };
+  const roleLabel = (name: string) =>
+    name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
   return (
-    <div style={{
-      background: S.bgPanel, border: `1px solid ${S.rim}`, padding: 20,
-    }}>
+    <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: 20 }}>
       {/* Section header */}
       <div style={{
         display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16,
@@ -459,50 +493,93 @@ function PermissionMatrixPanel() {
         <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>
           Permission Matrix
         </span>
-        <span style={{
-          fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary,
-          marginLeft: "auto", letterSpacing: "0.06em",
-        }}>
-          {ROLES.length} ROLES {"\u00B7"} {PERMISSION_ROWS.length} PERMISSIONS
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, marginLeft: "auto", letterSpacing: "0.06em" }}>
+          {loading
+            ? "LOADING…"
+            : error
+              ? "ERROR"
+              : `${roles?.length ?? 0} ROLES \u00B7 ${allPermissions.length} PERMISSIONS \u00B7 BACKEND \u00B7 LIVE`
+          }
         </span>
       </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={{ ...thStyle, textAlign: "left", minWidth: 180 }}>Permission</th>
-              {ROLES.map(role => (
-                <th key={role} style={{ ...thStyle, minWidth: 90 }}>{role}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {PERMISSION_ROWS.map((row, i) => (
-              <tr key={row.permission} style={{
-                background: i % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.bgSub} 40%, transparent)`,
-              }}>
-                <td style={{
-                  ...tdStyle, textAlign: "left",
-                  fontFamily: S.fontUI, fontSize: "0.75rem",
-                  color: S.primary, fontWeight: 500,
-                }}>
-                  {row.permission}
-                </td>
-                {ROLES.map(role => (
-                  <td key={role} style={tdStyle}>
-                    {row.grants[role] ? (
-                      <span style={{ color: S.pass, fontWeight: 700 }}>{"\u2713"}</span>
-                    ) : (
-                      <span style={{ color: S.tertiary }}>{"\u2014"}</span>
-                    )}
-                  </td>
+      {loading && (
+        <div style={{ padding: "32px 0", textAlign: "center", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>
+          Loading roles from backend…
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          padding: "12px 16px",
+          background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`,
+          fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.fail,
+        }}>
+          Failed to load roles: {error}
+        </div>
+      )}
+
+      {!loading && !error && roles && (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, textAlign: "left", minWidth: 220 }}>Permission</th>
+                {roles.map(role => (
+                  <th key={role.id} style={{ ...thStyle, minWidth: 90 }}>
+                    {roleLabel(role.name)}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {tableRows.map(row => {
+                if (row.kind === "module") {
+                  return (
+                    <tr key={`mod-${row.mod}`}>
+                      <td
+                        colSpan={(roles?.length ?? 0) + 1}
+                        style={{
+                          fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 700,
+                          letterSpacing: "0.1em", textTransform: "uppercase",
+                          color: S.cyan, padding: "8px 10px 4px",
+                          background: `color-mix(in srgb, ${S.cyan} 5%, transparent)`,
+                          borderBottom: `1px solid color-mix(in srgb, ${S.cyan} 20%, transparent)`,
+                        }}
+                      >
+                        {row.mod}
+                      </td>
+                    </tr>
+                  );
+                }
+                const action = row.perm.split(".").slice(1).join(".");
+                return (
+                  <tr
+                    key={row.perm}
+                    style={{ background: row.stripe ? `color-mix(in srgb, ${S.bgSub} 40%, transparent)` : "transparent" }}
+                  >
+                    <td style={{ ...tdStyle, textAlign: "left", fontFamily: S.fontUI, fontSize: "0.75rem", color: S.primary, fontWeight: 500 }}>
+                      {action.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                      <span style={{ marginLeft: 8, fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary }}>
+                        {row.perm}
+                      </span>
+                    </td>
+                    {roles.map(role => (
+                      <td key={role.id} style={tdStyle}>
+                        {role.permissions.includes(row.perm)
+                          ? <span style={{ color: S.pass, fontWeight: 700 }}>{"\u2713"}</span>
+                          : <span style={{ color: S.tertiary }}>{"\u2014"}</span>
+                        }
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
