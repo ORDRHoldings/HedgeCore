@@ -30,6 +30,7 @@ import Toast from "@/components/shared/Toast";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { POLICIES_HELP } from "@/lib/help";
 import PolicyCompareModal from "@/components/policy/PolicyCompareModal";
+import PolicyRevisionDrawer from "@/components/policy/PolicyRevisionDrawer";
 import { computeEffectivenessScore, getEffectivenessColor } from "@/utils/policyEffectivenessScore";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -339,6 +340,9 @@ export default function PoliciesPage() {
   // Favorites state
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // LOG-POLICY-1: Policy audit history drawer
+  const [historyDrawer, setHistoryDrawer] = useState<{ id: string; name: string; code: string } | null>(null);
 
   // Compare mode state
   const [compareMode, setCompareMode]           = useState(false);
@@ -817,6 +821,21 @@ export default function PoliciesPage() {
                   <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.secondary }}>
                     Conf: {Math.round(tmpl.config.hedge_ratios.confirmed * 100)}% · Fcst: {Math.round(tmpl.config.hedge_ratios.forecast * 100)}%
                   </div>
+                  {/* LOG-POLICY-1: History button */}
+                  <button
+                    type="button"
+                    onClick={() => setHistoryDrawer({ id: tmpl.id, name: tmpl.name, code: tmpl.short_name })}
+                    title="View audit history"
+                    style={{
+                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                      padding: '3px 8px',
+                      border: `1px solid ${S.rim}`,
+                      color: S.tertiary, background: 'transparent',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    HISTORY
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -892,6 +911,17 @@ export default function PoliciesPage() {
         <PolicyCompareModal
           presets={POLICY_PRESETS.filter(p => compareIds.has(p.id))}
           onClose={() => setShowCompareModal(false)}
+        />
+      )}
+
+      {/* ── LOG-POLICY-1: Audit history drawer ── */}
+      {historyDrawer && (
+        <PolicyRevisionDrawer
+          templateId={historyDrawer.id}
+          templateName={historyDrawer.name}
+          templateCode={historyDrawer.code}
+          token={token ?? undefined}
+          onClose={() => setHistoryDrawer(null)}
         />
       )}
     </div>

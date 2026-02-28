@@ -37,6 +37,8 @@ from typing import Optional
 
 from sqlalchemy import and_, desc, select
 
+from sqlalchemy.exc import IntegrityError
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -145,11 +147,13 @@ async def create_template(
 
     config: dict,
 
+    status: Optional[str] = None,  # SEC-POLICY-1: explicit status; defaults to model default
+
 ) -> PolicyTemplate:
 
     """Create a company-specific policy template."""
 
-    tmpl = PolicyTemplate(
+    kwargs: dict = dict(
 
         company_id=user.company_id,
 
@@ -172,6 +176,12 @@ async def create_template(
         created_by=user.id,
 
     )
+
+    if status is not None:
+
+        kwargs["status"] = status
+
+    tmpl = PolicyTemplate(**kwargs)
 
     session.add(tmpl)
 
@@ -381,7 +391,24 @@ async def activate_policy(
     except Exception:
         logger.warning("Failed to build audit event for policy activation", exc_info=True)
 
-    await session.commit()
+    try:
+
+        await session.commit()
+
+    except IntegrityError as exc:
+
+        # DB-POLICY-1: Unique partial index violation — a concurrent activate_policy()
+        # call won the race. Roll back and surface as a retryable conflict error.
+
+        await session.rollback()
+
+        raise ValueError(
+
+            "Concurrent activation conflict: another activation for this scope succeeded "
+
+            "simultaneously. Please retry the activation."
+
+        ) from exc
 
     await session.refresh(instance)
 

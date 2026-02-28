@@ -123,6 +123,13 @@ class CreateTemplateRequest(BaseModel):
 
     config:      PolicyConfigSchema
 
+    # SEC-POLICY-1: status is optional; ACTIVE/APPROVED require policy.activate permission
+    status: Optional[str] = Field(
+        default=None,
+        pattern=r"^(DRAFT|REVIEW|APPROVED|ACTIVE|ARCHIVED)$",
+        description="Template lifecycle status. ACTIVE/APPROVED require policy.activate permission.",
+    )
+
 
 
 class UpdateTemplateRequest(BaseModel):
