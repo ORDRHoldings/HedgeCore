@@ -16,6 +16,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, Clock, ChevronRight, CheckCircle, Trash2, Settings, Zap, ShieldCheck, ShieldAlert, Shield } from "lucide-react";
 import axios from "axios";
+import { devChainFailParam } from "@/api/policyClient";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
@@ -89,7 +90,7 @@ async function fetchTemplateHistory(templateId: string, token?: string): Promise
 
 async function fetchChainVerify(token?: string): Promise<ChainIntegrityReport> {
   const { data } = await axios.get(
-    `${BASE}/v1/audit/chain/verify`,
+    `${BASE}/v1/audit/chain/verify${devChainFailParam()}`,
     { headers: authHeaders(token) },
   );
   return data as ChainIntegrityReport;
