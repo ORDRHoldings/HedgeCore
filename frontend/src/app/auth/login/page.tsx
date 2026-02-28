@@ -425,13 +425,13 @@ export default function LoginPage() {
 
                 {/* Real knotwork mark — ordr-mark.png */}
                 <div style={{
-                  position: "relative", width: 56, height: 56, flexShrink: 0,
+                  position: "relative", width: 76, height: 76, flexShrink: 0,
                 }}>
                   <Image
                     src="/ordr-mark.png"
                     alt="ORDR Terminal"
                     fill
-                    sizes="56px"
+                    sizes="76px"
                     style={{ objectFit: "contain" }}
                     priority
                   />
@@ -439,7 +439,7 @@ export default function LoginPage() {
 
                 {/* Vertical rule */}
                 <div style={{
-                  width: 1, height: 44, background: C.stoneDeep, flexShrink: 0,
+                  width: 1, height: 56, background: C.stoneDeep, flexShrink: 0,
                 }} />
 
                 {/* Wordmark + tagline */}
