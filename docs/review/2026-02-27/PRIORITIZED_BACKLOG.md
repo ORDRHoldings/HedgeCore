@@ -15,14 +15,14 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 | N-02 | ~~**Fix BUG-001**~~: `/execution-history` confirmed to exist — removed from backlog | — | — | ✅ FALSE POSITIVE |
 | N-03 | ~~**Fix BUG-003**: WorkflowBreadcrumb Step 01 → change href to `/position-desk`~~ | Navigation | XS | ✅ DONE 2026-02-28 |
 | N-04 | ~~**Fix BUG-005**: Execution Desk filter → include `READY_TO_EXECUTE` alongside `POLICY_ASSIGNED`~~ | Execution | XS | ✅ DONE 2026-02-28 |
-| N-05 | Verify `Nav.tsx` and `Header.tsx` are not imported by any active page; remove if orphaned | Cleanup | S | ⬜ OPEN |
+| N-05 | ~~Verify `Nav.tsx` and `Header.tsx` are not imported by any active page; remove if orphaned~~ | Cleanup | S | ✅ DONE 2026-02-28 |
 | N-06 | ~~Wire Audit Trail "Verify Chain" button to `GET /v1/audit/chain/verify`~~ | Governance | S | ✅ DONE 2026-02-28 |
-| N-07 | Add empty state to Execution Desk Step 1 when no POLICY_ASSIGNED positions exist | UX | S | ⬜ OPEN |
-| N-08 | Run Viewer: add "no run selected" state with recent runs list when no `?id=` param present | UX | S | ⬜ OPEN |
-| N-09 | Position Lineage: add "no position selected" state when no `?position=` param | UX | XS | ⬜ OPEN |
-| N-10 | Normalize product name to "ORDR Terminal" in all user-facing text | Branding | S | ⬜ OPEN |
+| N-07 | ~~Add empty state to Execution Desk Step 1 when no POLICY_ASSIGNED positions exist~~ | UX | S | ✅ DONE 2026-02-28 |
+| N-08 | ~~Run Viewer: add "no run selected" state with recent runs list when no `?id=` param present~~ | UX | S | ✅ DONE 2026-02-28 |
+| N-09 | ~~Position Lineage: add "no position selected" state when no `?position=` param~~ | UX | XS | ✅ DONE 2026-02-28 |
+| N-10 | ~~Normalize product name to "ORDR Terminal" in all user-facing text~~ | Branding | S | ✅ DONE 2026-02-28 |
 
-**NOW progress: 5/10 complete (N-05, N-07, N-08, N-09, N-10 remain)**
+**NOW progress: 10/10 complete ✅ — Alpha Demo criteria met**
 
 ---
 
@@ -93,7 +93,7 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 
 | Release | Definition | Blockers |
 |---------|-----------|---------|
-| **Alpha Demo** | Stakeholders can see the workflow | N-05, N-07, N-08, N-09, N-10 (5 remaining NOW items) |
+| **Alpha Demo** | Stakeholders can see the workflow | ✅ ALL NOW ITEMS COMPLETE |
 | **Beta / Institutional Pilot** | CRO/auditor can review governance | All remaining NEXT items (X-06 through X-20) |
 | **v1.0 Production** | Full institutional readiness | All LATER HIGH priority items |
 
@@ -105,3 +105,4 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 |------|----------------|
 | 2026-02-28 | N-01, N-03, N-04, N-06 (audit trail backend, breadcrumb fix, execution filter, chain verify) |
 | 2026-02-28 | X-01, X-02, X-03, X-04, X-05 (access control matrix, menu dedup ×2, help anchors, settings hash) |
+| 2026-02-28 | N-05, N-07, N-08, N-09, N-10 (Nav cleanup, execution empty state, run/lineage pickers, ORDR branding) |
