@@ -1,4 +1,4 @@
-import type { FxRateEntry, FxNewsArticle, EconEvent, RiskPulseSnapshot, RiskInsight } from "./types";
+import type { FxRateEntry, FxNewsArticle, EconEvent, RiskPulseSnapshot, RiskInsight, GeoIntelligence } from "./types";
 
 interface Entry<T> {
   data: T;
@@ -59,6 +59,7 @@ export const fxNewsCache      = new SimpleCache<FxNewsArticle[]>();
 export const econCalCache     = new SimpleCache<EconEvent[]>();
 export const riskPulseCache   = new SimpleCache<RiskPulseSnapshot>();
 export const riskInsightCache = new SimpleCache<RiskInsight>();
+export const geoIntelCache    = new SimpleCache<GeoIntelligence>();
 
 export const factorHistory = new RingBuffer<FactorSample>(30);
 export const scoreHistory  = new RingBuffer<number>(20);

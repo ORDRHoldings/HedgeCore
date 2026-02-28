@@ -80,3 +80,18 @@ export interface RiskInsight {
   ai_assisted: boolean;
   generatedAt: number;
 }
+
+// ── Geopolitical Intelligence (Claude-powered) ────────────────────────────────
+
+export interface GeoIntelligence {
+  geo_risk_score: number;          // 0.0–10.0 (Claude or heuristic)
+  regime: RiskRegime;              // Claude's regime assessment
+  top_events: string[];            // Up to 3 key events (max 100 chars each)
+  market_implications: string;     // 2-sentence FX/oil/rates impact
+  oil_impact: "bullish" | "bearish" | "neutral";
+  usd_impact: "strengthening" | "weakening" | "neutral";
+  confidence: "high" | "medium" | "low";
+  source: "claude" | "heuristic";  // whether Claude responded
+  computedAt: number;
+  headlineCount: number;
+}
