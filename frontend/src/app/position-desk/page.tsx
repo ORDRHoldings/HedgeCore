@@ -31,6 +31,7 @@ import {
   rejectPositionThunk,
   reopenPositionThunk,
   clearLifecycleError,
+  clearError as clearListError,
 } from "../../lib/store/slices/positionSlice";
 import type { PositionRow, BulkAssignResult } from "../../api/positionClient";
 import { bulkAssignPolicy, rejectPosition, deletePosition } from "../../api/positionClient";
@@ -272,6 +273,7 @@ export default function PositionDeskPage() {
   const { user, token } = useAuth();
   const positions        = useSelector((s: RootState) => s.positions.positions);
   const loading          = useSelector((s: RootState) => s.positions.loading);
+  const listError        = useSelector((s: RootState) => s.positions.error);
   const lifecycleLoading = useSelector((s: RootState) => s.positions.lifecycleLoading);
   const lifecycleError   = useSelector((s: RootState) => s.positions.lifecycleError);
 
@@ -314,6 +316,9 @@ export default function PositionDeskPage() {
   // Show/hide rejected toggle (X-15)
   const [hideRejected, setHideRejected]                 = useState(false);
 
+  // ERR-1: track whether the operator dismissed the list-error banner for the current error
+  const [errorDismissed, setErrorDismissed]             = useState(false);
+
   // Best-match policy recommendation for assign-policy modal
   const recommendation = useMemo(() => {
     if (modal.type !== 'assign-policy' || !modal.position) return null;
@@ -326,6 +331,8 @@ export default function PositionDeskPage() {
 
   useEffect(() => { if (token) dispatch(listPositionsThunk({ token })); }, [dispatch, token]);
   useEffect(() => { if (modal.type !== null) dispatch(clearLifecycleError()); }, [modal.type, dispatch]);
+  // ERR-1: un-dismiss the banner whenever a new error surfaces (new string reference = new error)
+  useEffect(() => { if (listError) setErrorDismissed(false); }, [listError]);
 
   // Load templates + favorites + active instance when assign-policy modal opens
   useEffect(() => {
@@ -566,6 +573,49 @@ export default function PositionDeskPage() {
         </div>
       )}
 
+      {/* ERR-1: list-load error banner — shown when positions could not be fetched */}
+      {listError && !errorDismissed && (
+        <div role="alert" aria-live="assertive" style={{
+          background: `color-mix(in srgb, ${S.amber} 7%, ${S.bgPanel})`,
+          border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
+          borderLeft: `3px solid ${S.amber}`,
+          padding: "10px 20px", flexShrink: 0,
+          display: "flex", alignItems: "flex-start", gap: 14,
+        }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 14, color: S.amber, lineHeight: 1, marginTop: 1 }}>⚠</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.amber, letterSpacing: "0.06em", marginBottom: 2 }}>
+              POSITIONS UNAVAILABLE
+            </div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginBottom: 4 }}>
+              We couldn&apos;t load positions from the server. Retry or check connectivity.
+            </div>
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.03em" }}>
+              Detail: {listError}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, paddingTop: 2 }}>
+            <button
+              onClick={() => { dispatch(clearListError()); if (token) dispatch(listPositionsThunk({ token })); }}
+              disabled={loading}
+              style={{
+                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                color: S.bgDeep, background: loading ? S.tertiary : S.amber,
+                border: "none", padding: "4px 12px", cursor: loading ? "not-allowed" : "pointer",
+                borderRadius: 2, opacity: loading ? 0.6 : 1,
+              }}>
+              {loading ? "Retrying…" : "↻ Retry"}
+            </button>
+            <button
+              onClick={() => setErrorDismissed(true)}
+              title="Dismiss"
+              style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, background: "none", border: "none", cursor: "pointer", padding: "2px 4px" }}>
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {copiedRun && (
         <div style={{ background: `color-mix(in srgb, ${S.purple} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.purple} 25%, transparent)`, padding: "5px 20px", flexShrink: 0, fontFamily: S.fontMono, fontSize: 10, color: S.purple }}>
           ✓ Run ID copied: {copiedRun}
@@ -625,7 +675,8 @@ export default function PositionDeskPage() {
       </div>
       <div style={{ flex: 1, overflowY: "auto" }}>
         {loading && <div style={{ padding: "40px 20px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textAlign: "center" }}>Loading positions…</div>}
-        {!loading && filteredPositions.length === 0 && (
+        {/* ERR-1: suppress "No positions found" when a load error is active — avoids misleading the operator */}
+        {!loading && !listError && filteredPositions.length === 0 && (
           <div style={{ padding: "48px 20px", textAlign: "center" }}>
             <div style={{ fontFamily: S.fontUI, fontSize: 14, color: S.secondary, marginBottom: 6 }}>No positions found</div>
             <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
