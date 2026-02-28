@@ -33,12 +33,20 @@ export interface NewsArticle {
   ago:         string; // human-readable relative time
 }
 
-// ─── Search queries ───────────────────────────────────────────────────────────
-// Wide enough to surface macro/geo risk news without being too narrow
+// ─── Symbol-based queries ─────────────────────────────────────────────────────
+// Using instrument symbols so Yahoo Finance returns market-relevant articles
+// rather than general keyword-matched noise.
+//   ^VIX       → volatility / risk sentiment
+//   EURUSD=X   → EUR/USD / dollar macro
+//   GC=F       → gold (safe-haven)
+//   CL=F       → crude oil (geopolitical proxy)
+//   ^TNX       → US 10-year Treasury / rates
 const QUERIES = [
-  "geopolitical risk currency forex dollar",
-  "central bank interest rate inflation Fed ECB",
-  "trade war tariff emerging markets FX",
+  "%5EVIX",          // ^VIX  — volatility & risk sentiment
+  "EURUSD%3DX",      // EURUSD=X — dollar macro & central banks
+  "GC%3DF",          // GC=F — gold / safe haven
+  "CL%3DF",          // CL=F — crude oil / geopolitical
+  "%5ETNX",          // ^TNX — US 10Y / rates
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -58,9 +66,10 @@ const YF_HEADERS: HeadersInit = {
 };
 
 async function searchYF(query: string): Promise<YFRawItem[]> {
+  // query is already URL-encoded (symbol like %5EVIX, EURUSD%3DX, etc.)
   const url =
     `https://query1.finance.yahoo.com/v1/finance/search` +
-    `?q=${encodeURIComponent(query)}` +
+    `?q=${query}` +
     `&newsCount=8&enableFuzzyQuery=false&lang=en-US&region=US`;
   try {
     const res = await fetch(url, {
