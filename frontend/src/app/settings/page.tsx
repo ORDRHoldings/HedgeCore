@@ -875,6 +875,18 @@ export default function SettingsPage() {
     if (!authLoading && !isAuthenticated) router.replace("/auth/login");
   }, [authLoading, isAuthenticated, router]);
 
+  // Activate tab from URL hash (#policy_limits, #execution, #api_keys, #notifications)
+  useEffect(() => {
+    const HASH_MAP: Record<string, SettingsTab> = {
+      policy_limits: "POLICY_LIMITS",
+      execution:     "EXECUTION",
+      api_keys:      "API_KEYS",
+      notifications: "NOTIFICATIONS",
+    };
+    const hash = window.location.hash.slice(1);
+    if (hash && HASH_MAP[hash]) setActiveTab(HASH_MAP[hash]);
+  }, []);
+
   // Load from localStorage on mount
   useEffect(() => {
     try {
