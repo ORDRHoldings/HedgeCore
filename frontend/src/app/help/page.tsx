@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { HELP_CENTER_HELP } from "@/lib/helpContent";
@@ -334,12 +334,27 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 export default function HelpPage() {
   const renderTs = useRenderTs();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { token } = useAuth();
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
   const [healthError, setHealthError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState(0);
   const [searchFilter, setSearchFilter] = useState("");
+  const contactRef = useRef<HTMLDivElement>(null);
+
+  // Jump to section on mount based on ?section= query param
+  useEffect(() => {
+    const section = searchParams.get("section");
+    if (section === "faq") {
+      // FAQ is the last GUIDE_SECTION
+      setActiveSection(GUIDE_SECTIONS.length - 1);
+    } else if (section === "contact") {
+      // Scroll the contact support block into view
+      setTimeout(() => contactRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredSections = GUIDE_SECTIONS.map((sec, i) => ({ ...sec, origIdx: i })).filter(sec =>
     !searchFilter || sec.title.toLowerCase().includes(searchFilter.toLowerCase()) || sec.description.toLowerCase().includes(searchFilter.toLowerCase())
@@ -624,7 +639,7 @@ export default function HelpPage() {
           <div style={{ height: 1, background: S.rim, marginBottom: 16 }} />
 
           {/* Contact Support */}
-          <div>
+          <div ref={contactRef}>
             <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
               Contact Support
             </div>
