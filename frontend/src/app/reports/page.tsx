@@ -22,6 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
 import { REPORT_PRESETS, REPORT_CATEGORIES } from "../../constants/reportPresets";
 import { useHedge } from "../../lib/hedgeContext";
+import { listRuns, type RunSummary } from "../../api/runsClient";
 import type {
   ReportTemplate, ReportDefinition, ReportSection, BuilderStep,
   AIReportGoal, ReportModule, ExportFormat, DataBindings,
@@ -292,10 +293,14 @@ type MainView = "HOME" | "LIBRARY" | "BUILDER" | "SAVED" | "SETTINGS";
 // ══════════════════════════════════════════════════════════════════════════════
 function HomePanel({
   onNewReport, onOpenLibrary, savedReports,
+  availableRuns, runsLoading, onBindRun,
 }: {
   onNewReport: () => void;
   onOpenLibrary: () => void;
   savedReports: ReportDefinition[];
+  availableRuns: RunSummary[];
+  runsLoading: boolean;
+  onBindRun: (runId: string) => void;
 }) {
   const { result } = useHedge();
 
@@ -310,25 +315,66 @@ function HomePanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/* Engine run status banner */}
-      <div style={{
-        background: result ? S.passBg : S.amberBg,
-        border:     `1px solid ${result ? "#BBF7D0" : "#FDE68A"}`,
-        borderLeft: `3px solid ${result ? S.pass : S.amber}`,
-        padding:    "10px 16px",
-        display:    "flex",
-        alignItems: "center",
-        gap:        10,
-        borderRadius: 2,
-      }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: result ? S.pass : S.amber }}>
-          {result ? "● ENGINE RUN AVAILABLE" : "⚠ NO ENGINE RUN"}
-        </span>
-        <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
-          {result
-            ? `Run ${result.run_id.slice(0, 8)}… · ${new Date(result.run_envelope.timestamp).toLocaleString()} · Reports will use this run as primary data binding.`
-            : "Generate a hedge plan from Position Desk to bind live run data to reports. You can still generate reports using policy and market snapshots only."}
-        </span>
+      {/* Engine run status + run history panel */}
+      <div style={{ border: `1px solid ${S.rim}`, borderRadius: 3, overflow: "hidden" }}>
+        {/* Status bar */}
+        <div style={{
+          background: result ? S.passBg : availableRuns.length > 0 ? "#FFFBEB" : S.amberBg,
+          padding: "10px 16px",
+          display: "flex", alignItems: "center", gap: 10,
+          borderBottom: (!result && availableRuns.length > 0) ? `1px solid #FDE68A` : "none",
+        }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
+            color: result ? S.pass : availableRuns.length > 0 ? "#B45309" : S.amber }}>
+            {result ? "● ENGINE RUN ACTIVE" : runsLoading ? "⟳ LOADING RUNS…"
+              : availableRuns.length > 0 ? `⚡ ${availableRuns.length} RUN${availableRuns.length !== 1 ? "S" : ""} AVAILABLE — select one to bind`
+              : "⚠ NO ENGINE RUN"}
+          </span>
+          <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, flex: 1 }}>
+            {result
+              ? `Run ${result.run_id.slice(0, 8).toUpperCase()}… · ${new Date(result.run_envelope.timestamp).toLocaleString()} · Active binding — all report sections will reference this run.`
+              : availableRuns.length > 0
+              ? "Click BIND + BUILD on a run below to open the Report Builder with live data attached."
+              : "Complete a hedge calculation on the Execution Desk, then return here to generate reports."}
+          </span>
+          {!result && !runsLoading && availableRuns.length === 0 && (
+            <a href="/execution-desk" style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+              color: S.cyan, textDecoration: "none", border: `1px solid ${S.cyan}`,
+              padding: "3px 10px", borderRadius: 2, whiteSpace: "nowrap" }}>
+              → Execution Desk
+            </a>
+          )}
+        </div>
+        {/* Run history table */}
+        {!result && availableRuns.length > 0 && (
+          <div style={{ background: S.bgPanel }}>
+            <div style={{ display: "grid", gridTemplateColumns: "150px 1fr 70px 70px 110px",
+              padding: "5px 14px", background: S.bgSub, borderBottom: `1px solid ${S.rim}` }}>
+              {["RUN ID", "CREATED", "TRADES", "HEDGES", ""].map(h => (
+                <span key={h} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  letterSpacing: "0.08em", color: S.muted }}>{h}</span>
+              ))}
+            </div>
+            {availableRuns.slice(0, 6).map((run, i) => (
+              <div key={run.run_id} style={{ display: "grid", gridTemplateColumns: "150px 1fr 70px 70px 110px",
+                padding: "8px 14px",
+                borderBottom: i < Math.min(availableRuns.length, 6) - 1 ? `1px solid ${S.soft}` : "none",
+                alignItems: "center" }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: "#7C3AED", fontWeight: 700,
+                  letterSpacing: "0.04em" }}>{run.run_id.slice(0, 8).toUpperCase()}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                  {new Date(run.created_at).toLocaleString()}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>{run.trade_count}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{run.hedge_count}</span>
+                <button onClick={() => onBindRun(run.run_id)} style={{
+                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em",
+                  color: "#FFFFFF", background: S.cyan, border: "none",
+                  padding: "4px 10px", borderRadius: 2, cursor: "pointer",
+                }}>BIND + BUILD →</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Quick-start grid */}
@@ -414,7 +460,7 @@ function HomePanel({
             { label: "PRESET TEMPLATES", value: `${REPORT_PRESETS.length}`, color: S.cyan },
             { label: "CATEGORIES",       value: `${REPORT_CATEGORIES.length}`, color: S.violet },
             { label: "SAVED REPORTS",    value: `${savedReports.length}`, color: S.pass },
-            { label: "ENGINE RUNS",      value: result ? "1 available" : "None", color: result ? S.pass : S.amber },
+            { label: "ENGINE RUNS",      value: runsLoading ? "…" : result ? `${availableRuns.length || 1} available` : availableRuns.length > 0 ? `${availableRuns.length} available` : "None", color: result || availableRuns.length > 0 ? S.pass : S.amber },
           ].map(s => (
             <div key={s.label} style={{
               background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 3,
@@ -1486,7 +1532,7 @@ const VIEW_TO_PARAM: Record<MainView, string> = {
 };
 
 function ReportStudioInner() {
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user, token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { result } = useHedge();
@@ -1497,6 +1543,11 @@ function ReportStudioInner() {
   const [selectedTemplate, setTemplate]       = useState<ReportTemplate | null>(null);
   const [savedReports, setSaved]              = useState<ReportDefinition[]>([]);
   const [renderTs, setRenderTs]               = useState("");
+
+  // Run binding state
+  const [availableRuns, setAvailableRuns]     = useState<RunSummary[]>([]);
+  const [runsLoading, setRunsLoading]         = useState(false);
+  const [selectedRunId, setSelectedRunId]     = useState<string | null>(null);
 
   // Sync view → URL param (shallow replace so back-button works naturally)
   const setView = useCallback((v: MainView) => {
@@ -1515,16 +1566,50 @@ function ReportStudioInner() {
   useEffect(() => { setRenderTs(new Date().toISOString().replace("T"," ").slice(0,19) + " UTC"); }, []);
   useEffect(() => { if (!authLoading && !isAuthenticated) router.replace("/auth/login"); }, [authLoading, isAuthenticated, router]);
 
+  // Load saved reports from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('ordr_saved_reports');
+      if (saved) setSaved(JSON.parse(saved) as ReportDefinition[]);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Fetch available runs from backend
+  useEffect(() => {
+    if (!token) return;
+    setRunsLoading(true);
+    listRuns(token, 20)
+      .then(({ items }) => {
+        setAvailableRuns(items);
+        // Auto-select latest run if nothing is already bound
+        if (!result && !selectedRunId && items.length > 0) {
+          setSelectedRunId(items[0].run_id);
+        }
+      })
+      .catch(() => { /* graceful degradation — still works without run binding */ })
+      .finally(() => setRunsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   const handleSelectPreset = (t: ReportTemplate) => {
     setTemplate(t);
     setView("BUILDER");
   };
 
+  const handleBindRun = useCallback((runId: string) => {
+    setSelectedRunId(runId);
+    setView("BUILDER");
+  }, [setView]);
+
   const handleSaveReport = (def: ReportDefinition) => {
     setSaved(prev => {
       const exists = prev.findIndex(r => r.report_id === def.report_id);
-      if (exists >= 0) { const next = [...prev]; next[exists] = def; return next; }
-      return [def, ...prev];
+      let next: ReportDefinition[];
+      if (exists >= 0) { next = [...prev]; next[exists] = def; }
+      else { next = [def, ...prev]; }
+      // Persist to localStorage
+      try { localStorage.setItem('ordr_saved_reports', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
     });
     setView("SAVED");
   };
@@ -1618,6 +1703,9 @@ function ReportStudioInner() {
             onNewReport={() => setView("BUILDER")}
             onOpenLibrary={() => setView("LIBRARY")}
             savedReports={savedReports}
+            availableRuns={availableRuns}
+            runsLoading={runsLoading}
+            onBindRun={handleBindRun}
           />
         )}
         {view === "LIBRARY" && (
@@ -1627,7 +1715,7 @@ function ReportStudioInner() {
           <BuilderShell
             template={selectedTemplate}
             onSave={handleSaveReport}
-            runEnvelopeId={result?.run_id}
+            runEnvelopeId={result?.run_id ?? selectedRunId ?? undefined}
             ownerEmail={user?.email}
           />
         )}
