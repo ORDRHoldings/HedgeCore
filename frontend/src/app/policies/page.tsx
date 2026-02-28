@@ -27,8 +27,8 @@ import {
   type PolicyInstance,
 } from "@/api/policyClient";
 import Toast from "@/components/shared/Toast";
-import HelpPanel from "@/components/layout/HelpPanel";
-import { POLICY_LIBRARY_HELP } from "@/lib/helpContent";
+import HelpPanelV2 from "@/components/help/HelpPanelV2";
+import { POLICIES_HELP } from "@/lib/help";
 import PolicyCompareModal from "@/components/policy/PolicyCompareModal";
 import { computeEffectivenessScore, getEffectivenessColor } from "@/utils/policyEffectivenessScore";
 
@@ -790,7 +790,7 @@ export default function PoliciesPage() {
         />
       )}
     </div>
-    <HelpPanel config={POLICY_LIBRARY_HELP} storageKey="policy-library" />
+    <HelpPanelV2 module={POLICIES_HELP} storageKey="policy-library" />
     </div>
   );
 }

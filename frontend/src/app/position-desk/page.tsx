@@ -41,8 +41,8 @@ import {
   type PolicyTemplate,
   type PolicyInstance,
 } from "../../api/policyClient";
-import HelpPanel from "@/components/layout/HelpPanel";
-import { POSITION_DESK_HELP } from "@/lib/helpContent";
+import HelpPanelV2 from "@/components/help/HelpPanelV2";
+import { POSITIONS_HELP } from "@/lib/help";
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -1123,7 +1123,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
         </ModalOverlay>
       )}
     </div>
-    <HelpPanel config={POSITION_DESK_HELP} storageKey="position-desk" />
+    <HelpPanelV2 module={POSITIONS_HELP} storageKey="position-desk" />
     </div>
   );
 }

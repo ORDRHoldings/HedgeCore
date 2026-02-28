@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import HelpPanel from "../../components/layout/HelpPanel";
-import { AUDIT_TRAIL_HELP } from "../../lib/helpContent";
+import HelpPanelV2 from "@/components/help/HelpPanelV2";
+import { AUDIT_HELP } from "@/lib/help";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -869,7 +869,7 @@ export default function AuditTrailPage() {
           </div>
         </div>
 
-        <HelpPanel config={AUDIT_TRAIL_HELP} storageKey="audit-trail" />
+        <HelpPanelV2 module={AUDIT_HELP} storageKey="audit-trail" />
       </div>
 
       {/* Footer (32px) */}

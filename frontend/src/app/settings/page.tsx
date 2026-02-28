@@ -19,8 +19,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
-import HelpPanel from "../../components/layout/HelpPanel";
-import { SETTINGS_HELP } from "../../lib/helpContent";
+import HelpPanelV2 from "@/components/help/HelpPanelV2";
+import { SETTINGS_HELP } from "@/lib/help";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -1124,7 +1124,7 @@ export default function SettingsPage() {
         </span>
       </div>
       </div>
-      <HelpPanel config={SETTINGS_HELP} storageKey="settings" />
+      <HelpPanelV2 module={SETTINGS_HELP} storageKey="settings" />
     </div>
   );
 }

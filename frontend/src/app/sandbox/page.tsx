@@ -24,8 +24,8 @@ const DEFAULT_POLICY: PolicyConfig = {
 // ─── Fallback spot rate (BIS-calibrated USD/MXN baseline) ─────────────────────
 const FALLBACK_SPOT_USDMXN = 18.97;
 
-import HelpPanel from "../../components/layout/HelpPanel";
-import { SANDBOX_HELP } from "../../lib/helpContent";
+import HelpPanelV2 from "@/components/help/HelpPanelV2";
+import { SANDBOX_HELP } from "@/lib/help";
 
 // UI primitives
 import KpiTile from "../../components/ui/KpiTile";
@@ -1200,7 +1200,7 @@ function SandboxPageInner() {
           </div>
         </aside>
 
-        <HelpPanel config={SANDBOX_HELP} storageKey="sandbox" />
+        <HelpPanelV2 module={SANDBOX_HELP} storageKey="sandbox" />
       </div>
 
       {/* X-Ray Drawer */}
