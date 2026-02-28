@@ -189,19 +189,22 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
               LOADING POSITIONS...
             </div>
           ) : sorted.length === 0 ? (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: 120,
-                fontFamily: S.fontMono,
-                fontSize: 12,
-                color: S.tertiary,
-                letterSpacing: "0.06em",
-              }}
-            >
-              NO POLICY_ASSIGNED POSITIONS
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: "48px 24px" }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.amber, textTransform: "uppercase" as const }}>
+                No Eligible Positions
+              </div>
+              <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, textAlign: "center" as const, lineHeight: 1.6, maxWidth: 380 }}>
+                No positions have status <span style={{ fontFamily: S.fontMono, color: S.cyan, fontSize: 11 }}>POLICY_ASSIGNED</span> or <span style={{ fontFamily: S.fontMono, color: S.cyan, fontSize: 11 }}>READY_TO_EXECUTE</span>.
+                Assign a hedge policy to positions before running the execution pipeline.
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                <a href="/policy-desk" style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", color: S.bgPanel, background: S.cyan, padding: "5px 14px", borderRadius: 2, textDecoration: "none" }}>
+                  Go to Policy Desk
+                </a>
+                <a href="/position-desk" style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", color: S.primary, background: "transparent", border: `1px solid ${S.rim}`, padding: "5px 14px", borderRadius: 2, textDecoration: "none" }}>
+                  View Positions
+                </a>
+              </div>
             </div>
           ) : (
             sorted.map((p) => {

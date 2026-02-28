@@ -1106,7 +1106,7 @@ export default function Polisophic() {
         fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
-        <span>HedgeCore · Polisophic</span>
+        <span>ORDR Terminal · Polisophic</span>
         <span style={{ color: S.rim }}>·</span>
         <span>Political & Macro Risk Intelligence Engine</span>
         <span style={{ color: S.rim }}>·</span>

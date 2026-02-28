@@ -660,7 +660,7 @@ export default function HelpPage() {
         fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
-        <span>HedgeCore · ORDR Terminal</span>
+        <span>ORDR Terminal</span>
         <span style={{ color: S.rim }}>·</span>
         <span>Platform Help &amp; Diagnostics</span>
         <span style={{ color: S.rim }}>·</span>

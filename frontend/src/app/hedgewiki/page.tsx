@@ -530,9 +530,9 @@ export default function HedgeWiki() {
         fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
-        <span>HedgeCore · HedgeWiki</span>
+        <span>ORDR Terminal · HedgeWiki</span>
         <span style={{ color: S.rim }}>·</span>
-        <span>Versioned Governance Knowledge Graph · Above HedgeCalc</span>
+        <span>Versioned Governance Knowledge Graph</span>
         <span style={{ color: S.rim }}>·</span>
         <span>{Object.keys(ENTRIES).length} articles · {Object.values(ENTRIES).reduce((s, e) => s + e.citations.length, 0)} citations</span>
       </footer>

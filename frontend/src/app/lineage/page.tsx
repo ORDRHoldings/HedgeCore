@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useAuth } from "../../lib/authContext";
 import { fetchPositionLineage } from "../../api/positionClient";
 import type { LineageNode, LineageEdge, LineageResponse } from "../../api/positionClient";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { LINEAGE_HELP } from "@/lib/helpContent";
 
@@ -332,6 +333,8 @@ function LineageContent() {
   const [error,       setError]      = useState<string | null>(null);
   const [selectedId,  setSelectedId] = useState<string | null>(null);
   const [renderTs,    setRenderTs]   = useState("");
+  const [positions,   setPositions]  = useState<{ id: string; record_id: string; currency: string; execution_status: string }[]>([]);
+  const [posLoading,  setPosLoading] = useState(false);
 
   // Hydration-safe timestamp
   useEffect(() => {
@@ -344,6 +347,17 @@ function LineageContent() {
       router.replace("/auth/login");
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // Fetch positions list when no position ID is provided
+  useEffect(() => {
+    if (positionId || authLoading || !isAuthenticated || !token) return;
+    setPosLoading(true);
+    dashboardFetch("/v1/positions?limit=50", token)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => setPositions(Array.isArray(data) ? data : (data.items ?? [])))
+      .catch(() => {/* ignore */})
+      .finally(() => setPosLoading(false));
+  }, [positionId, isAuthenticated, authLoading, token]);
 
   // Fetch lineage
   useEffect(() => {
@@ -453,32 +467,73 @@ function LineageContent() {
       <div style={{ flex: 1, overflow: "auto" }}>
         <div style={{ maxWidth: 1440, margin: "0 auto", padding: "24px", display: "flex", flexDirection: "column", gap: 20 }}>
 
-          {/* ── No position ID ── */}
+          {/* ── No position ID: show positions list ── */}
           {!positionId && (
-            <div style={{
-              background:   S.bgPanel,
-              border:       `1px solid ${S.rim}`,
-              borderLeft:   `3px solid ${S.amber}`,
-              borderRadius: 2,
-              padding:      "24px 28px",
-              maxWidth:     600,
-              margin:       "40px auto",
-              textAlign:    "center",
-            }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, marginBottom: 8 }}>
-                NO POSITION ID PROVIDED
-              </div>
-              <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.6 }}>
-                Navigate here from the Position Desk by clicking the LINEAGE icon on a row,
-                or append <code style={{ fontFamily: S.fontMono, color: S.cyan }}>?position=&lt;id&gt;</code> to the URL.
-              </div>
-              <Link href="/position-desk" style={{
-                display: "inline-block", marginTop: 16,
-                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
-                color: S.bgPanel, background: S.cyan, padding: "6px 16px", borderRadius: 2, textDecoration: "none",
+            <div style={{ maxWidth: 720, margin: "40px auto" }}>
+              {/* Instruction banner */}
+              <div style={{
+                background: S.bgPanel, border: `1px solid ${S.rim}`,
+                borderLeft: `3px solid ${S.amber}`, borderRadius: 2,
+                padding: "14px 18px", marginBottom: 20,
               }}>
-                GO TO POSITION DESK
-              </Link>
+                <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, marginBottom: 6 }}>
+                  SELECT A POSITION TO TRACE
+                </div>
+                <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.6 }}>
+                  Click a position below to view its full provenance graph, or navigate here from the Position Desk by clicking the LINEAGE icon on any row.
+                </div>
+              </div>
+
+              {/* Position list */}
+              <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 2 }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 16px", borderBottom: `1px solid ${S.rim}`,
+                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                  letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" as const,
+                }}>
+                  Positions
+                  <span style={{ color: S.soft }}>·</span>
+                  <span style={{ color: S.secondary }}>{posLoading ? "LOADING…" : `${positions.length} RECORDS`}</span>
+                </div>
+
+                {posLoading && (
+                  <div style={{ padding: "32px 16px", textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                    Loading positions…
+                  </div>
+                )}
+
+                {!posLoading && positions.length === 0 && (
+                  <div style={{ padding: "32px 16px", textAlign: "center", fontFamily: S.fontUI, fontSize: 13, color: S.tertiary }}>
+                    No positions found. Add positions on the Position Desk first.
+                  </div>
+                )}
+
+                {!posLoading && positions.map((p, i) => (
+                  <Link
+                    key={p.id}
+                    href={`/lineage?position=${encodeURIComponent(p.id)}`}
+                    style={{
+                      display: "grid", gridTemplateColumns: "1fr 70px 1fr",
+                      alignItems: "center", gap: 12, padding: "9px 16px",
+                      borderBottom: i < positions.length - 1 ? `1px solid ${S.soft}` : "none",
+                      textDecoration: "none", background: "transparent", transition: "background 0.1s",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, ${S.cyan} 5%, transparent)`)}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, letterSpacing: "0.06em" }}>
+                      {p.record_id}
+                    </span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber }}>
+                      {p.currency}
+                    </span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                      {p.execution_status}
+                    </span>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
 

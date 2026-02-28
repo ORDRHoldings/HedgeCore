@@ -920,7 +920,7 @@ export default function ScenarioStudio() {
         fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em", flexShrink: 0,
       }}>
-        <span>HedgeCore · Scenario Studio</span>
+        <span>ORDR Terminal · Scenario Studio</span>
         <span style={{ color: S.rim }}>·</span>
         <span>{TABS.find(t => t.key === activeTab)?.label}</span>
         {activeRunId && (

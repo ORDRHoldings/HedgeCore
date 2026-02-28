@@ -17,8 +17,8 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../lib/authContext";
-import { fetchRunDetail } from "../../api/runsClient";
-import type { RunDetailResponse } from "../../api/runsClient";
+import { fetchRunDetail, listRuns } from "../../api/runsClient";
+import type { RunDetailResponse, RunSummary } from "../../api/runsClient";
 import type { TraceEvent } from "../../api/types";
 import HelpPanel from "../../components/layout/HelpPanel";
 import { RUN_VIEWER_HELP } from "../../lib/helpContent";
@@ -269,10 +269,12 @@ function RunViewerContent() {
 
   const runId = params.get("id") ?? "";
 
-  const [run,     setRun]     = useState<RunDetailResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
-  const [renderTs, setRenderTs] = useState("");
+  const [run,         setRun]         = useState<RunDetailResponse | null>(null);
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState<string | null>(null);
+  const [renderTs,    setRenderTs]    = useState("");
+  const [recentRuns,  setRecentRuns]  = useState<RunSummary[]>([]);
+  const [runsLoading, setRunsLoading] = useState(false);
 
   // Hydration-safe timestamp
   useEffect(() => {
@@ -285,6 +287,16 @@ function RunViewerContent() {
       router.replace("/auth/login");
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // Fetch recent runs when no run ID is provided
+  useEffect(() => {
+    if (runId || authLoading || !isAuthenticated) return;
+    setRunsLoading(true);
+    listRuns(token ?? undefined, 10)
+      .then(data => setRecentRuns(data.items))
+      .catch(() => {/* ignore */})
+      .finally(() => setRunsLoading(false));
+  }, [runId, isAuthenticated, authLoading, token]);
 
   // Fetch run detail
   useEffect(() => {
@@ -369,42 +381,85 @@ function RunViewerContent() {
         </div>
       </div>
 
-      {/* ── No run ID ── */}
+      {/* ── No run ID: show recent runs ── */}
       {!runId && (
-        <div style={{ maxWidth: 700, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>
+        <div style={{ maxWidth: 780, margin: "48px auto", padding: "0 24px" }}>
+          {/* Instruction banner */}
           <div style={{
-            background: S.bgPanel,
-            border:     `1px solid ${S.rim}`,
-            borderLeft: `3px solid ${S.amber}`,
-            borderRadius: 2,
-            padding:    "24px 28px",
+            background: S.bgPanel, border: `1px solid ${S.rim}`,
+            borderLeft: `3px solid ${S.amber}`, borderRadius: 2, padding: "16px 20px",
+            marginBottom: 24,
           }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, marginBottom: 8 }}>
-              NO RUN ID PROVIDED
+            <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, marginBottom: 6 }}>
+              SELECT A RUN TO INSPECT
             </div>
             <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.6 }}>
-              Navigate here from the Position Desk by clicking a RUN ID chip, or append{" "}
+              Click a run below, or append{" "}
               <code style={{ fontFamily: S.fontMono, color: S.cyan, fontSize: 12 }}>?id=&lt;run_id&gt;</code>{" "}
-              to the URL.
+              to the URL. Navigate here from the Position Desk by clicking any RUN ID chip.
             </div>
-            <Link
-              href="/position-desk"
-              style={{
-                display:       "inline-block",
-                marginTop:     16,
-                fontFamily:    S.fontMono,
-                fontSize:      11,
-                fontWeight:    700,
-                letterSpacing: "0.07em",
-                color:         S.bgPanel,
-                background:    S.cyan,
-                padding:       "6px 16px",
-                borderRadius:  2,
-                textDecoration:"none",
-              }}
-            >
-              GO TO POSITION DESK
-            </Link>
+          </div>
+
+          {/* Recent runs list */}
+          <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 2 }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "10px 16px", borderBottom: `1px solid ${S.rim}`,
+              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" as const,
+            }}>
+              Recent Runs
+              <span style={{ color: S.soft }}>·</span>
+              <span style={{ color: S.secondary }}>{runsLoading ? "LOADING…" : `${recentRuns.length} RUNS`}</span>
+            </div>
+
+            {runsLoading && (
+              <div style={{ padding: "32px 16px", textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                Loading runs…
+              </div>
+            )}
+
+            {!runsLoading && recentRuns.length === 0 && (
+              <div style={{ padding: "32px 16px", textAlign: "center", fontFamily: S.fontUI, fontSize: 13, color: S.tertiary }}>
+                No calculation runs yet. Run the Execution Pipeline to generate your first run.
+              </div>
+            )}
+
+            {!runsLoading && recentRuns.map((r, i) => (
+              <Link
+                key={r.run_id}
+                href={`/run-viewer?id=${encodeURIComponent(r.run_id)}`}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 80px 80px 180px",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "10px 16px",
+                  borderBottom: i < recentRuns.length - 1 ? `1px solid ${S.soft}` : "none",
+                  textDecoration: "none",
+                  background: "transparent",
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, ${S.cyan} 5%, transparent)`)}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              >
+                <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.purple, letterSpacing: "0.06em" }}>
+                  {r.run_id.slice(0, 8).toUpperCase()}
+                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginLeft: 8 }}>
+                    {r.run_id.slice(8, 16).toUpperCase()}…
+                  </span>
+                </span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, textAlign: "right" as const }}>
+                  {r.trade_count} TRADES
+                </span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, textAlign: "right" as const }}>
+                  {r.hedge_count} BUCKETS
+                </span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                  {r.created_at ? new Date(r.created_at).toISOString().replace("T", " ").slice(0, 19) + " UTC" : "—"}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       )}
@@ -535,7 +590,7 @@ function RunViewerContent() {
                   color:        S.secondary,
                   lineHeight:   1.6,
                 }}>
-                  <strong style={{ color: S.primary }}>Audit Narrative:</strong> Each stage below records what the HedgeCalc engine performed in this run.
+                  <strong style={{ color: S.primary }}>Audit Narrative:</strong> Each stage below records what the ORDR engine performed in this run.
                   Together these stages constitute the complete deterministic audit trail for{" "}
                   <span style={{ fontFamily: S.fontMono, color: S.purple }}>{runId8}</span>.
                   {stagesWithData > 0 && (

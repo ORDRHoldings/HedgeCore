@@ -392,7 +392,7 @@ function CommitteePackInner() {
             letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase" as const,
             marginBottom: 6,
           }}>
-            SYNEXFUND HEDGECALC  ·  COMMITTEE PACK
+            ORDR TERMINAL  ·  COMMITTEE PACK
           </div>
           <div style={{
             fontFamily: S.fontUI, fontSize: 22, fontWeight: 700,
@@ -813,7 +813,7 @@ function CommitteePackInner() {
         }}>
           Scenario values represent the estimated P&amp;L benefit of the hedge programme
           under the stated FX rate shock (σ). Positive values indicate the hedge
-          offsets currency losses. Computed deterministically by the HedgeCalc engine;
+          offsets currency losses. Computed deterministically by the ORDR engine;
           no model risk or ML inference.
         </div>
       </div>
@@ -870,7 +870,7 @@ function CommitteePackInner() {
             fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
             letterSpacing: "0.06em",
           }}>
-            SYNEXFUND HEDGECALC  ·  ENGINE v{meta.engine_version}  ·  RUN {shortId(runId)}
+            ORDR TERMINAL  ·  ENGINE v{meta.engine_version}  ·  RUN {shortId(runId)}
           </span>
           <span style={{
             fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
