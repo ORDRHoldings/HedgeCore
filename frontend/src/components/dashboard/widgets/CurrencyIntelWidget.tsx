@@ -8,6 +8,7 @@ import {
   Minus,
   X,
   ArrowRight,
+  ExternalLink,
 } from "lucide-react";
 import type { UserContext } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -136,6 +137,46 @@ const INTEL_DB: Record<string, CurrencyIntel> = {
     ],
   },
 };
+
+// ─── Live news ────────────────────────────────────────────────────────────────
+interface FxNewsItem {
+  id: number;
+  headline: string;
+  source: string;
+  url: string;
+  datetime: number;
+}
+
+const CCY_KEYWORDS: Record<string, string[]> = {
+  USD: ["dollar", "federal reserve", "fed ", " fed,", "treasury", "fomc", "usd"],
+  MXN: ["peso", "mexico", "mxn", "banxico"],
+  EUR: ["euro", "ecb", "european central", "eurozone", "eur/", "/eur"],
+  GBP: ["pound", "sterling", "bank of england", "gbp", "boe"],
+  JPY: ["yen", "japan", "boj", "bank of japan", "jpy"],
+  BRL: ["real", "brazil", "bcb", "brl", "selic"],
+  CAD: ["canada", "loonie", "cad", "bank of canada"],
+  ZAR: ["rand", "south africa", "sarb", "zar"],
+};
+
+function getNewsForCurrency(ccy: string, news: FxNewsItem[]): FxNewsItem[] {
+  const keys = CCY_KEYWORDS[ccy] ?? [ccy.toLowerCase()];
+  return news
+    .filter((a) => {
+      const text = a.headline.toLowerCase();
+      return keys.some((k) => text.includes(k));
+    })
+    .slice(0, 3);
+}
+
+function relativeTime(datetime: number): string {
+  const diffMs   = Date.now() - datetime * 1_000;
+  const diffMins = Math.floor(diffMs / 60_000);
+  if (diffMins < 1)  return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const h = Math.floor(diffMins / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
 
 function riskLabel(score: number): { text: string; color: string } {
   if (score <= 20) return { text: "LOW", color: S.green };
@@ -313,6 +354,8 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
   const [selectedCcy, setSelectedCcy] = useState<string>("USD");
   const [loading, setLoading] = useState(true);
   const [showCompare, setShowCompare] = useState(false);
+  const [liveNews, setLiveNews]     = useState<FxNewsItem[]>([]);
+  const [newsLoaded, setNewsLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -340,6 +383,25 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
       cancelled = true;
     };
   }, [token]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchNews() {
+      try {
+        const res = await fetch("/api/market/news/fx");
+        if (!res.ok) return;
+        const data = await res.json() as { articles?: FxNewsItem[] };
+        if (cancelled) return;
+        setLiveNews(data.articles ?? []);
+        setNewsLoaded(true);
+      } catch {
+        // keep static headlines on error
+      }
+    }
+    fetchNews();
+    const id = setInterval(fetchNews, 300_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
 
   const tabs = exposureCurrencies.length > 0 ? exposureCurrencies : ["USD"];
   const intel = INTEL_DB[selectedCcy] ?? INTEL_DB.USD!;
@@ -413,32 +475,17 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
             fontFamily: S.fontMono,
             fontSize: 8,
             letterSpacing: "0.1em",
-            color: S.amber,
-            background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
-            border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
+            color: newsLoaded ? S.green : S.tertiary,
+            background: `color-mix(in srgb, ${newsLoaded ? S.green : S.tertiary} 10%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${newsLoaded ? S.green : S.tertiary} 30%, transparent)`,
             borderRadius: 3,
             padding: "1px 5px",
             textTransform: "uppercase",
           }}
         >
-          POLISOPHIC
+          {newsLoaded ? "● FINNHUB" : "○ REFERENCE"}
         </span>
 
-        <span style={{
-          fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-          fontSize: 8,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          color: "var(--accent-amber,#F59E0B)",
-          background: "color-mix(in srgb, var(--accent-amber,#F59E0B) 10%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--accent-amber,#F59E0B) 30%, transparent)",
-          padding: "1px 5px",
-          borderRadius: 2,
-          whiteSpace: "nowrap",
-          flexShrink: 0,
-        }}>
-          SIM DATA
-        </span>
 
         <div style={{ flex: 1 }} />
 
@@ -935,44 +982,72 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                   style={{
                     fontFamily: S.fontMono,
                     fontSize: 7,
-                    color: S.amber,
+                    color: newsLoaded ? S.green : S.amber,
                     letterSpacing: "0.08em",
                   }}
                 >
-                  POLISOPHIC FEED
+                  {newsLoaded ? "FINNHUB LIVE" : "REFERENCE DATA"}
                 </span>
               </div>
-              {intel.headlines.map((h, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: "5px 8px",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 6,
-                    borderBottom:
-                      i < intel.headlines.length - 1
-                        ? `1px solid ${S.soft}`
-                        : "none",
-                  }}
-                >
-                  <ArrowRight
-                    size={8}
-                    color={S.cyan}
-                    style={{ flexShrink: 0, marginTop: 2 }}
-                  />
-                  <span
-                    style={{
-                      fontFamily: S.fontUI,
-                      fontSize: 11,
-                      color: S.secondary,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {h}
-                  </span>
-                </div>
-              ))}
+              {(() => {
+                const articles = newsLoaded ? getNewsForCurrency(selectedCcy, liveNews) : [];
+                const headlines = articles.length > 0 ? null : intel.headlines;
+                return headlines
+                  ? headlines.map((h, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          padding: "5px 8px",
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 6,
+                          borderBottom: i < headlines.length - 1 ? `1px solid ${S.soft}` : "none",
+                        }}
+                      >
+                        <ArrowRight size={8} color={S.cyan} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.4 }}>
+                          {h}
+                        </span>
+                      </div>
+                    ))
+                  : articles.map((a, i) => (
+                      <a
+                        key={a.id}
+                        href={a.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                      >
+                        <div
+                          style={{
+                            padding: "5px 8px",
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 6,
+                            borderBottom: i < articles.length - 1 ? `1px solid ${S.soft}` : "none",
+                            transition: "background 120ms ease",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = `color-mix(in srgb, ${S.cyan} 4%, transparent)`; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                              <span style={{ fontFamily: S.fontMono, fontSize: 7.5, color: S.cyan, fontWeight: 700, letterSpacing: "0.05em" }}>
+                                {a.source}
+                              </span>
+                              <span style={{ fontFamily: S.fontMono, fontSize: 7.5, color: S.tertiary }}>
+                                · {relativeTime(a.datetime)}
+                              </span>
+                              <ExternalLink size={7} color={S.tertiary} style={{ marginLeft: "auto" }} />
+                            </div>
+                            <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.4 }}>
+                              {a.headline}
+                            </span>
+                          </div>
+                        </div>
+                      </a>
+                    ));
+              })()}
             </div>
           </div>
         )}
@@ -992,7 +1067,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
           flexShrink: 0,
         }}
       >
-        <span>Source: Institutional macro data · POLISOPHIC (pending integration)</span>
+        <span>Source: Institutional macro data · {newsLoaded ? "Finnhub live news" : "Reference headlines"}</span>
         <span>Informational only</span>
       </div>
     </div>

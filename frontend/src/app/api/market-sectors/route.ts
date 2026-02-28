@@ -4,28 +4,28 @@ import { NextResponse } from 'next/server';
 // Market Sectors & ETFs — Finnhub quote API
 // GET /api/market-sectors
 // Finnhub free tier: 60 req/min, no daily cap — all 15 fetched in parallel
-// CDN cache: s-maxage=86400 persists across Vercel deployments
+// Cache: 5-minute in-memory TTL
 // ─────────────────────────────────────────────────────────────────────────────
 
 const FH_KEY  = process.env.FINNHUB_API_KEY ?? '';
 const FH_BASE = 'https://finnhub.io/api/v1';
 
 const SYMBOLS = [
-  { symbol: 'SPY',  name: 'S&P 500',  category: 'market' as const },
-  { symbol: 'QQQ',  name: 'Nasdaq 100',  category: 'market' as const },
-  { symbol: 'DIA',  name: 'Dow Jones',  category: 'market' as const },
-  { symbol: 'IWM',  name: 'Russell 2000',  category: 'market' as const },
-  { symbol: 'XLK',  name: 'Technology',  category: 'sector' as const },
-  { symbol: 'XLF',  name: 'Financials',  category: 'sector' as const },
-  { symbol: 'XLE',  name: 'Energy',  category: 'sector' as const },
-  { symbol: 'XLV',  name: 'Healthcare',  category: 'sector' as const },
-  { symbol: 'XLY',  name: 'Consumer Discr.',  category: 'sector' as const },
-  { symbol: 'XLP',  name: 'Consumer Staples',  category: 'sector' as const },
-  { symbol: 'XLI',  name: 'Industrials',  category: 'sector' as const },
-  { symbol: 'XLU',  name: 'Utilities',  category: 'sector' as const },
-  { symbol: 'XLB',  name: 'Materials',  category: 'sector' as const },
-  { symbol: 'XLRE',  name: 'Real Estate',  category: 'sector' as const },
-  { symbol: 'XLC',  name: 'Communications',  category: 'sector' as const },
+  { symbol: 'SPY',  name: 'S&P 500',           category: 'market' as const },
+  { symbol: 'QQQ',  name: 'Nasdaq 100',         category: 'market' as const },
+  { symbol: 'DIA',  name: 'Dow Jones',          category: 'market' as const },
+  { symbol: 'IWM',  name: 'Russell 2000',       category: 'market' as const },
+  { symbol: 'XLK',  name: 'Technology',         category: 'sector' as const },
+  { symbol: 'XLF',  name: 'Financials',         category: 'sector' as const },
+  { symbol: 'XLE',  name: 'Energy',             category: 'sector' as const },
+  { symbol: 'XLV',  name: 'Healthcare',         category: 'sector' as const },
+  { symbol: 'XLY',  name: 'Consumer Discr.',    category: 'sector' as const },
+  { symbol: 'XLP',  name: 'Consumer Staples',   category: 'sector' as const },
+  { symbol: 'XLI',  name: 'Industrials',        category: 'sector' as const },
+  { symbol: 'XLU',  name: 'Utilities',          category: 'sector' as const },
+  { symbol: 'XLB',  name: 'Materials',          category: 'sector' as const },
+  { symbol: 'XLRE', name: 'Real Estate',        category: 'sector' as const },
+  { symbol: 'XLC',  name: 'Communications',     category: 'sector' as const },
 ];
 
 interface QuoteResult {
@@ -38,23 +38,33 @@ interface QuoteResult {
   category: 'market' | 'sector';
 }
 
+// In-memory cache — 5 min TTL (interface must be declared before use)
+const CACHE_TTL_MS = 300_000;
+let _cache: {
+  quotes: QuoteResult[];
+  dataSource: string;
+  asOf: string;
+  liveCount: number;
+  ts: number;
+} | null = null;
+
 // Fallback — EOD 2026-02-27 (SPY/QQQ confirmed live; others estimated)
 const FALLBACK_QUOTES: QuoteResult[] = [
-  { symbol: 'SPY',  name: 'S&P 500',  price: 685.99, change: -3.31,  changePercent: -0.48, latestTradingDay: '2026-02-27', category: 'market' },
-  { symbol: 'QQQ',  name: 'Nasdaq 100',  price: 607.29, change: -1.95,  changePercent: -0.32, latestTradingDay: '2026-02-27', category: 'market' },
-  { symbol: 'DIA',  name: 'Dow Jones',  price: 434.6, change: -1.87,  changePercent: -0.43, latestTradingDay: '2026-02-27', category: 'market' },
-  { symbol: 'IWM',  name: 'Russell 2000',  price: 217.2, change: -2.14,  changePercent: -0.98, latestTradingDay: '2026-02-27', category: 'market' },
-  { symbol: 'XLK',  name: 'Technology',  price: 224.5, change: -2.18,  changePercent: -0.96, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLF',  name: 'Financials',  price: 49.2, change: -0.44,  changePercent: -0.89, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLE',  name: 'Energy',  price: 87.5, change: -0.81,  changePercent: -0.92, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLV',  name: 'Healthcare',  price: 147.1, change: 0.43,  changePercent: 0.29, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLY',  name: 'Consumer Discr.',  price: 215.4, change: -3.12,  changePercent: -1.43, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLP',  name: 'Consumer Staples',  price: 79.8, change: 0.18,  changePercent: 0.23, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLI',  name: 'Industrials',  price: 135.2, change: -0.96,  changePercent: -0.71, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLU',  name: 'Utilities',  price: 78.4, change: 0.62,  changePercent: 0.8, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLB',  name: 'Materials',  price: 89.6, change: -0.74,  changePercent: -0.82, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLRE',  name: 'Real Estate',  price: 41.8, change: 0.31,  changePercent: 0.75, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLC',  name: 'Communications',  price: 106.5, change: -0.88,  changePercent: -0.82, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'SPY',  name: 'S&P 500',         price: 685.99, change: -3.31, changePercent: -0.48, latestTradingDay: '2026-02-27', category: 'market' },
+  { symbol: 'QQQ',  name: 'Nasdaq 100',       price: 607.29, change: -1.95, changePercent: -0.32, latestTradingDay: '2026-02-27', category: 'market' },
+  { symbol: 'DIA',  name: 'Dow Jones',        price: 434.6,  change: -1.87, changePercent: -0.43, latestTradingDay: '2026-02-27', category: 'market' },
+  { symbol: 'IWM',  name: 'Russell 2000',     price: 217.2,  change: -2.14, changePercent: -0.98, latestTradingDay: '2026-02-27', category: 'market' },
+  { symbol: 'XLK',  name: 'Technology',       price: 224.5,  change: -2.18, changePercent: -0.96, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'XLF',  name: 'Financials',       price: 49.2,   change: -0.44, changePercent: -0.89, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'XLE',  name: 'Energy',           price: 87.5,   change: -0.81, changePercent: -0.92, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'XLV',  name: 'Healthcare',       price: 147.1,  change:  0.43, changePercent:  0.29, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'XLY',  name: 'Consumer Discr.',  price: 215.4,  change: -3.12, changePercent: -1.43, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'XLP',  name: 'Consumer Staples', price: 79.8,   change:  0.18, changePercent:  0.23, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'XLI',  name: 'Industrials',      price: 135.2,  change: -0.96, changePercent: -0.71, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'XLU',  name: 'Utilities',        price: 78.4,   change:  0.62, changePercent:  0.80, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'XLB',  name: 'Materials',        price: 89.6,   change: -0.74, changePercent: -0.82, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'XLRE', name: 'Real Estate',      price: 41.8,   change:  0.31, changePercent:  0.75, latestTradingDay: '2026-02-27', category: 'sector' },
+  { symbol: 'XLC',  name: 'Communications',   price: 106.5,  change: -0.88, changePercent: -0.82, latestTradingDay: '2026-02-27', category: 'sector' },
 ];
 
 // Finnhub /quote: { c=current, d=change, dp=changePct, pc=prevClose, t=unixTs }
@@ -66,7 +76,7 @@ async function fetchFinnhubQuote(
   if (!FH_KEY) return null;
   try {
     const url = `${FH_BASE}/quote?symbol=${encodeURIComponent(symbol)}&token=${FH_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 86400 } });
+    const res = await fetch(url, { signal: AbortSignal.timeout(8_000) });
     if (!res.ok) return null;
     const q = await res.json() as Record<string, number>;
     if (!q.c || q.c === 0) return null;
@@ -75,8 +85,8 @@ async function fetchFinnhubQuote(
       : new Date().toISOString().slice(0, 10);
     return {
       symbol, name, category,
-      price: parseFloat(q.c.toFixed(2)),
-      change: parseFloat((q.d ?? 0).toFixed(2)),
+      price:         parseFloat(q.c.toFixed(2)),
+      change:        parseFloat((q.d ?? 0).toFixed(2)),
       changePercent: parseFloat((q.dp ?? 0).toFixed(2)),
       latestTradingDay,
     };
@@ -86,6 +96,21 @@ async function fetchFinnhubQuote(
 }
 
 export async function GET() {
+  const now = Date.now();
+
+  // Serve from cache if fresh
+  if (_cache && now - _cache.ts < CACHE_TTL_MS) {
+    return NextResponse.json({
+      quotes:     _cache.quotes,
+      dataSource: _cache.dataSource,
+      asOf:       _cache.asOf,
+      liveCount:  _cache.liveCount,
+      totalCount: _cache.quotes.length,
+      timestamp:  new Date(_cache.ts).toISOString(),
+      note:       `Cached as of ${_cache.asOf}.`,
+    });
+  }
+
   let liveCount = 0;
   let results: QuoteResult[] = [];
 
@@ -112,17 +137,26 @@ export async function GET() {
     ?? new Date().toISOString().slice(0, 10);
   const dataSource = liveCount > 0 ? 'live' : 'fallback';
 
+  if (liveCount > 0) {
+    _cache = { quotes: results, dataSource, asOf: latestDay, liveCount, ts: now };
+  }
+
   const response = NextResponse.json({
-    quotes: results,
+    quotes:     results,
     dataSource,
-    asOf: latestDay,
+    asOf:       latestDay,
     liveCount,
     totalCount: results.length,
-    timestamp: new Date().toISOString(),
+    timestamp:  new Date().toISOString(),
     note: dataSource === 'live'
-      ? `Finnhub EOD data as of ${latestDay}. ${liveCount}/${results.length} symbols live.`
+      ? `Finnhub data as of ${latestDay}. ${liveCount}/${results.length} symbols live.`
       : 'Using reference data — configure FINNHUB_API_KEY for live quotes.',
   });
-  response.headers.set('Cache-Control', 's-maxage=86400, stale-while-revalidate=3600');
+  response.headers.set(
+    'Cache-Control',
+    liveCount > 0
+      ? 's-maxage=300, stale-while-revalidate=60'
+      : 'no-store',
+  );
   return response;
 }
