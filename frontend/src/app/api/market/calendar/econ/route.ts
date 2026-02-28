@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { econCalCache } from "@/lib/market/cache";
-import { buildEconEvents } from "@/lib/market/transforms";
 import type { FinnhubEconEvent } from "@/lib/market/transforms";
+import * as T from "@/lib/market/transforms";
 
 const FH_KEY  = process.env.FINNHUB_API_KEY ?? "";
 const FH_BASE = "https://finnhub.io/api/v1";
@@ -46,7 +46,7 @@ export async function GET() {
     const raw = json.economicCalendar ?? [];
     if (!Array.isArray(raw)) throw new Error("Expected array in economicCalendar");
 
-    const events = buildEconEvents(raw);
+    const events = T.buildEconEvents(raw);
     econCalCache.set(CACHE_KEY, events, TTL_MS);
 
     const duration_ms = Date.now() - t0;
