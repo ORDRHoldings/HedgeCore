@@ -301,6 +301,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
         background: `linear-gradient(to right, ${S.bgDeep}, color-mix(in srgb, ${S.bgDeep} 95%, ${healthColor}))`,
         flexShrink: 0, cursor: "grab", position: "relative", zIndex: 1,
       }}>
+        <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <div style={{
           width: 32, height: 32, borderRadius: "50%",
           background: `linear-gradient(135deg, ${healthColor}, color-mix(in srgb, ${healthColor} 70%, transparent))`,

@@ -223,12 +223,28 @@ export default function GeoPoliticalWidget({ token, user, onRemove }: Props) {
     <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6, display: "flex", flexDirection: "column", overflow: "hidden", height: "100%" }}>
       {/* Header */}
       <div className="widget-drag-handle" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, cursor: "grab" }}>
+        <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <Globe2 size={13} color={S.cyan} style={{ flexShrink: 0 }} />
         <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, textTransform: "uppercase" }}>
           Geopolitical &amp; Macro
         </span>
         <span style={{ fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.1em", color: S.amber, background: `color-mix(in srgb, ${S.amber} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, borderRadius: 3, padding: "1px 5px" }}>
           POLISOPHIC
+        </span>
+        <span style={{
+          fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+          fontSize: 8,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          color: "var(--accent-amber,#F59E0B)",
+          background: "color-mix(in srgb, var(--accent-amber,#F59E0B) 10%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--accent-amber,#F59E0B) 30%, transparent)",
+          padding: "1px 5px",
+          borderRadius: 2,
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+        }}>
+          SIM DATA
         </span>
         <div style={{ flex: 1 }} />
 

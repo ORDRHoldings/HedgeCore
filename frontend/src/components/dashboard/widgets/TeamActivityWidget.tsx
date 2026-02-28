@@ -181,6 +181,7 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
           cursor: "grab",
         }}
       >
+        <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <Activity size={13} style={{ color: S.cyan, flexShrink: 0 }} />
         <span
           style={{

@@ -464,6 +464,7 @@ export default function UsdExposureRadarWidget({ token, user, onRemove }: Props)
           cursor: "grab",
         }}
       >
+        <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <div
           style={{
             width: 18,
@@ -488,6 +489,21 @@ export default function UsdExposureRadarWidget({ token, user, onRemove }: Props)
           }}
         >
           USD Exposure Radar
+        </span>
+        <span style={{
+          fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+          fontSize: 8,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          color: "var(--accent-amber,#F59E0B)",
+          background: "color-mix(in srgb, var(--accent-amber,#F59E0B) 10%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--accent-amber,#F59E0B) 30%, transparent)",
+          padding: "1px 5px",
+          borderRadius: 2,
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+        }}>
+          SIM DATA
         </span>
         <div style={{ flex: 1 }} />
 

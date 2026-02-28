@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Dashboard Cache</title>
+    <style>
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #e0e0e0;
+        }
+        button {
+            background: #22D3EE;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #06B6D4;
+        }
+        .success {
+            color: #15803D;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+        code {
+            background: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Clear HedgeCalc Dashboard Cache</h1>
+    <p>Click the button below to reset your dashboard layout and see SystemPulse widget:</p>
+
+    <button onclick="clearCache()">Clear Dashboard Layout</button>
+
+    <div id="result"></div>
+
+    <script>
+        function clearCache() {
+            // Clear all dashboard-related localStorage
+            const keys = Object.keys(localStorage);
+            let cleared = 0;
+
+            keys.forEach(key => {
+                if (key.startsWith('dashboard_layout_') ||
+                    key.startsWith('dashboard_help_')) {
+                    localStorage.removeItem(key);
+                    cleared++;
+                }
+            });
+
+            document.getElementById('result').innerHTML = `
+                <p class="success">✅ Cleared ${cleared} dashboard cache entries!</p>
+                <p>Now refresh your dashboard page (F5) to see SystemPulse and all updated widgets.</p>
+            `;
+        }
+    </script>
+</body>
+</html>

@@ -117,6 +117,7 @@ export default function KpiSummaryWidget({
           cursor:       "grab",
         }}
       >
+        <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text-tertiary,#9CA3AF)", cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <BarChart3 size={13} style={{ color: S.accentCyan, flexShrink: 0 }} />
         <span
           style={{
