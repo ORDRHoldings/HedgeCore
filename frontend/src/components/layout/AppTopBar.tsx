@@ -295,9 +295,9 @@ const NAV: NavSection[] = [
     prefixes: ["/help"],
     header: "Support",
     items: [
-      { label: "Documentation",    desc: "User guide, API reference, release notes",        href: "/help",        icon: Ic.book },
-      { label: "FAQ",              desc: "Frequently asked questions & troubleshooting",     href: "/help",        icon: Ic.question },
-      { label: "Contact Support",  desc: "Open a ticket or reach the ORDR team",            href: "/help",        icon: Ic.user },
+      { label: "Documentation",    desc: "User guide, API reference, release notes",        href: "/help",                   icon: Ic.book },
+      { label: "FAQ",              desc: "Frequently asked questions & troubleshooting",     href: "/help?section=faq",       icon: Ic.question },
+      { label: "Contact Support",  desc: "Open a ticket or reach the ORDR team",            href: "/help?section=contact",   icon: Ic.user },
     ],
   },
 ];
