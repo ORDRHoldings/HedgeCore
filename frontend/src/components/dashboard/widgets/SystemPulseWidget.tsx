@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity, X, Clock, AlertTriangle,
   FileText, Shield, Layers, ArrowRight, Zap,
-  Database, Target, RefreshCw, WifiOff, ServerCrash,
+  Database, Target, RefreshCw, WifiOff,
 } from "lucide-react";
 import type { UserContext } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -47,8 +47,7 @@ type LoadPhase =
   | "loading"      // First attempt, spinner
   | "retrying"     // Retrying after failure
   | "done"         // Data loaded successfully
-  | "error_conn"   // Network/connection refused (backend offline)
-  | "error_srv";   // Backend returned 4xx/5xx and retries exhausted
+  | "error_conn";  // All retries exhausted (cold start, 401 expiry, network error)
 
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [3000, 6000, 12000];
@@ -207,12 +206,14 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
         setPhase("done");
         setLastRefreshed(new Date());
         setIsRefreshing(false);
-      } else if (res.status >= 500 && attempt < MAX_RETRIES) {
+      } else if (attempt < MAX_RETRIES) {
+        // Retry on any non-ok (401 token expiry, 5xx backend errors, cold starts)
         setPhase("retrying");
         setRetryCount(attempt + 1);
         retryTimerRef.current = setTimeout(() => fetchWithRetry(attempt + 1), RETRY_DELAYS_MS[attempt]);
       } else {
-        setPhase(res.status >= 500 ? "error_conn" : "error_srv");
+        // All retries exhausted → offline state (not a "server error" alarm)
+        setPhase("error_conn");
         setIsRefreshing(false);
       }
     } catch {
@@ -461,48 +462,6 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
           </div>
         )}
 
-        {/* ── Server / Auth Error ────────────────────────────────────── */}
-        {phase === "error_srv" && (
-          <div style={{
-            padding: "24px 20px", display: "flex", flexDirection: "column",
-            alignItems: "center", gap: 12, textAlign: "center",
-          }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: "50%",
-              background: `color-mix(in srgb, ${S.red} 10%, transparent)`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              border: `1px solid color-mix(in srgb, ${S.red} 25%, transparent)`,
-            }}>
-              <ServerCrash size={22} color={S.red} />
-            </div>
-            <div style={{
-              fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
-              color: S.red, letterSpacing: "0.08em",
-            }}>
-              SERVER ERROR
-            </div>
-            <div style={{
-              fontFamily: S.fontUI, fontSize: 11, color: S.tertiary,
-              lineHeight: 1.6, maxWidth: 260,
-            }}>
-              The backend returned an unexpected error response.
-              Check authentication or server logs.
-            </div>
-            <button
-              onClick={handleRefresh}
-              style={{
-                fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.06em",
-                padding: "7px 18px", cursor: "pointer",
-                background: `color-mix(in srgb, ${S.cyan} 12%, transparent)`,
-                border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
-                borderRadius: 4, color: S.cyan, display: "flex", alignItems: "center", gap: 6,
-              }}
-            >
-              <RefreshCw size={11} />
-              RETRY
-            </button>
-          </div>
-        )}
 
         {/* ── Loaded Data ────────────────────────────────────────────── */}
         {phase === "done" && kpis && healthScore !== null && (
@@ -756,13 +715,12 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
             {phase === "done"
               ? lastRefreshed ? `Refreshed ${formatTime(lastRefreshed)}` : "Live KPIs"
               : phase === "retrying" ? `Retry ${retryCount}/${MAX_RETRIES}…`
-              : phase === "error_conn" ? "Backend unreachable"
-              : phase === "error_srv" ? "Server error"
+              : phase === "error_conn" ? "Backend unavailable · Retry to reconnect"
               : "Connecting…"}
           </span>
         </div>
-        <span style={{ color: phase === "done" ? S.green : phase.startsWith("error") ? S.red : S.amber }}>
-          {phase === "done" ? "● LIVE" : phase === "retrying" ? "◌ RETRYING" : phase.startsWith("error") ? "✕ OFFLINE" : "◌ INIT"}
+        <span style={{ color: phase === "done" ? S.green : phase === "error_conn" ? S.amber : S.amber }}>
+          {phase === "done" ? "● LIVE" : phase === "retrying" ? "◌ RETRYING" : phase === "error_conn" ? "◌ OFFLINE" : "◌ INIT"}
         </span>
       </div>
 
