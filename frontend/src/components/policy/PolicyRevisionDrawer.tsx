@@ -6,12 +6,15 @@
  * Slide-in drawer showing the full audit history for a policy template.
  * Wires to GET /v1/policies/templates/{id}/history
  *
+ * Integrity feature: "Verify Hash Chain" button calls GET /v1/audit/chain/verify
+ * and renders a PASS/FAIL badge so auditors can confirm the WORM chain is intact.
+ *
  * Usage:
  *   <PolicyRevisionDrawer templateId={id} templateName={name} token={token} onClose={() => setOpen(false)} />
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { X, Clock, ChevronRight, CheckCircle, Trash2, Settings, Zap } from "lucide-react";
+import { X, Clock, ChevronRight, CheckCircle, Trash2, Settings, Zap, ShieldCheck, ShieldAlert, Shield } from "lucide-react";
 import axios from "axios";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -43,11 +46,22 @@ export interface PolicyAuditEvent {
   created_at: string;
 }
 
+interface ChainIntegrityReport {
+  is_intact: boolean;
+  broken_at: string | null;
+  events_checked: number;
+  verified_at: string;
+  tenant_id: string | null;
+}
+
+type VerifyState = "idle" | "verifying" | "pass" | "fail" | "error";
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function getApiKey(): string {
   if (process.env.NEXT_PUBLIC_HEDGECALC_API_KEY) return process.env.NEXT_PUBLIC_HEDGECALC_API_KEY;
-  if (typeof window !== "undefined") {
+  // DEV-KEY-1: localStorage only in development
+  if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
     const stored = localStorage.getItem("hc_api_key");
     if (stored) return stored;
   }
@@ -55,7 +69,10 @@ function getApiKey(): string {
 }
 
 function authHeaders(token?: string): Record<string, string> {
-  const headers: Record<string, string> = { "X-API-Key": getApiKey() };
+  // DEV-KEY-1: Omit X-API-Key header when key is empty
+  const headers: Record<string, string> = {};
+  const apiKey = getApiKey();
+  if (apiKey) headers["X-API-Key"] = apiKey;
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return headers;
 }
@@ -68,6 +85,14 @@ async function fetchTemplateHistory(templateId: string, token?: string): Promise
     { headers: authHeaders(token) },
   );
   return data as PolicyAuditEvent[];
+}
+
+async function fetchChainVerify(token?: string): Promise<ChainIntegrityReport> {
+  const { data } = await axios.get(
+    `${BASE}/v1/audit/chain/verify`,
+    { headers: authHeaders(token) },
+  );
+  return data as ChainIntegrityReport;
 }
 
 // ── Event row ──────────────────────────────────────────────────────────────────
@@ -175,6 +200,59 @@ function EventRow({ event, isLast }: EventRowProps) {
   );
 }
 
+// ── Verify badge ────────────────────────────────────────────────────────────────
+
+interface VerifyBadgeProps {
+  state: VerifyState;
+  detail: { events_checked?: number; broken_at?: string | null; error?: string } | null;
+}
+
+function VerifyBadge({ state, detail }: VerifyBadgeProps) {
+  if (state === "idle") return null;
+  if (state === "verifying") return (
+    <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.cyan, letterSpacing: "0.06em" }}>
+      VERIFYING…
+    </span>
+  );
+  if (state === "pass") return (
+    <span
+      data-testid="chain-verify-pass"
+      style={{
+        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.green,
+        letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4,
+      }}
+    >
+      <ShieldCheck size={11} color={S.green} />
+      CHAIN INTACT — {detail?.events_checked ?? "?"} EVENTS VERIFIED
+    </span>
+  );
+  if (state === "fail") return (
+    <span
+      data-testid="chain-verify-fail"
+      style={{
+        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.red,
+        letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4,
+      }}
+    >
+      <ShieldAlert size={11} color={S.red} />
+      CHAIN BROKEN AT {detail?.broken_at ? detail.broken_at.slice(0, 8).toUpperCase() : "UNKNOWN"}
+    </span>
+  );
+  // error
+  return (
+    <span
+      data-testid="chain-verify-error"
+      style={{
+        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.amber,
+        letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4,
+      }}
+    >
+      <Shield size={11} color={S.amber} />
+      ⚠ {detail?.error ?? "VERIFICATION FAILED"}
+    </span>
+  );
+}
+
 // ── Main drawer ────────────────────────────────────────────────────────────────
 
 interface PolicyRevisionDrawerProps {
@@ -191,6 +269,10 @@ export default function PolicyRevisionDrawer({
   const [events, setEvents]     = useState<PolicyAuditEvent[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
+
+  // Verify hash chain state
+  const [verifyState, setVerifyState]   = useState<VerifyState>("idle");
+  const [verifyDetail, setVerifyDetail] = useState<{ events_checked?: number; broken_at?: string | null; error?: string } | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -212,6 +294,31 @@ export default function PolicyRevisionDrawer({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  const handleVerify = useCallback(() => {
+    setVerifyState("verifying");
+    setVerifyDetail(null);
+    fetchChainVerify(token)
+      .then(report => {
+        if (report.is_intact) {
+          setVerifyState("pass");
+          setVerifyDetail({ events_checked: report.events_checked });
+        } else {
+          setVerifyState("fail");
+          setVerifyDetail({ broken_at: report.broken_at });
+        }
+      })
+      .catch((e: unknown) => {
+        const status = (e as { response?: { status?: number } })?.response?.status;
+        const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+        const errMsg =
+          status === 401 ? "Authentication required to verify chain" :
+          status === 403 ? "Insufficient permissions to verify chain" :
+          detail ?? (e instanceof Error ? e.message : "Verification request failed");
+        setVerifyState("error");
+        setVerifyDetail({ error: errMsg });
+      });
+  }, [token]);
 
   return (
     <>
@@ -279,12 +386,16 @@ export default function PolicyRevisionDrawer({
           )}
 
           {error && (
-            <div style={{
-              padding: "8px 12px",
-              border: `1px solid color-mix(in srgb, ${S.amber} 40%, ${S.rim})`,
-              background: `color-mix(in srgb, ${S.amber} 6%, ${S.bgPanel})`,
-              display: "flex", alignItems: "center", gap: 8,
-            }}>
+            <div
+              role="alert"
+              aria-live="assertive"
+              style={{
+                padding: "8px 12px",
+                border: `1px solid color-mix(in srgb, ${S.amber} 40%, ${S.rim})`,
+                background: `color-mix(in srgb, ${S.amber} 6%, ${S.bgPanel})`,
+                display: "flex", alignItems: "center", gap: 8,
+              }}
+            >
               <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.amber, flex: 1 }}>
                 ⚠ {error}
               </span>
@@ -336,22 +447,53 @@ export default function PolicyRevisionDrawer({
         <div style={{
           padding: "8px 16px", borderTop: `1px solid ${S.rim}`,
           background: S.bgSub, flexShrink: 0,
-          display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em" }}>
-            WORM-PROTECTED · HASH-CHAINED · TAMPER-EVIDENT
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              fontFamily: S.fontMono, fontSize: "0.5rem", letterSpacing: "0.06em",
-              padding: "3px 12px", border: `1px solid ${S.rim}`,
-              color: S.tertiary, background: "transparent", cursor: "pointer",
-            }}
-          >
-            CLOSE
-          </button>
+          {/* Verify hash chain row */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            marginBottom: 8,
+            paddingBottom: 8,
+            borderBottom: `1px solid ${S.rim}`,
+          }}>
+            <button
+              type="button"
+              data-testid="verify-chain-btn"
+              onClick={handleVerify}
+              disabled={verifyState === "verifying"}
+              style={{
+                fontFamily: S.fontMono, fontSize: "0.5rem", letterSpacing: "0.06em",
+                padding: "3px 10px",
+                border: `1px solid ${verifyState === "pass" ? S.green : verifyState === "fail" ? S.red : S.rim}`,
+                color: verifyState === "pass" ? S.green : verifyState === "fail" ? S.red : S.secondary,
+                background: "transparent",
+                cursor: verifyState === "verifying" ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", gap: 5,
+                opacity: verifyState === "verifying" ? 0.6 : 1,
+              }}
+            >
+              <ShieldCheck size={10} />
+              VERIFY HASH CHAIN
+            </button>
+            <VerifyBadge state={verifyState} detail={verifyDetail} />
+          </div>
+
+          {/* Bottom row: worm label + close */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: "0.4375rem", color: S.tertiary, letterSpacing: "0.05em" }}>
+              WORM-PROTECTED · HASH-CHAINED · TAMPER-EVIDENT
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                fontFamily: S.fontMono, fontSize: "0.5rem", letterSpacing: "0.06em",
+                padding: "3px 12px", border: `1px solid ${S.rim}`,
+                color: S.tertiary, background: "transparent", cursor: "pointer",
+              }}
+            >
+              CLOSE
+            </button>
+          </div>
         </div>
       </div>
     </>
