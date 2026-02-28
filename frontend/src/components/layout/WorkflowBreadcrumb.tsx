@@ -20,7 +20,7 @@ interface Props {
 }
 
 const STEPS: { key: WorkflowStep; label: string; href: string; num: string }[] = [
-  { key: "position",  label: "POSITION DESK",  href: "/input",          num: "01" },
+  { key: "position",  label: "POSITION DESK",  href: "/position-desk",  num: "01" },
   { key: "policy",    label: "POLICY DESK",    href: "/policy-desk",    num: "02" },
   { key: "execution", label: "EXECUTION DESK", href: "/execution-desk", num: "03" },
 ];

@@ -62,9 +62,11 @@ export default function ExecutionDeskPage() {
     if (token) dispatch(listPositionsThunk({ token }));
   }, [token, dispatch]);
 
-  // Filter: Only POLICY_ASSIGNED positions
+  // Filter: POLICY_ASSIGNED and READY_TO_EXECUTE positions are both eligible for execution
   const readyPositions = useMemo(
-    () => positions.filter((p) => p.execution_status === "POLICY_ASSIGNED"),
+    () => positions.filter(
+      (p) => p.execution_status === "POLICY_ASSIGNED" || p.execution_status === "READY_TO_EXECUTE"
+    ),
     [positions]
   );
 
