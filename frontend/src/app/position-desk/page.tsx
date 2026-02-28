@@ -33,7 +33,7 @@ import {
   clearLifecycleError,
 } from "../../lib/store/slices/positionSlice";
 import type { PositionRow, BulkAssignResult } from "../../api/positionClient";
-import { bulkAssignPolicy } from "../../api/positionClient";
+import { bulkAssignPolicy, rejectPosition, deletePosition } from "../../api/positionClient";
 import {
   listPolicyTemplates,
   listFavorites,
@@ -82,6 +82,7 @@ const NEEDS_ACTION_STATUSES: ExecStatus[] = ["NEW", "POLICY_ASSIGNED", "READY_TO
 
 type ModalType = "assign-policy" | "mark-ready" | "reject" | "proposal-info" | null;
 interface ModalState { type: ModalType; position: PositionRow | null; }
+interface BulkRejectResult { rejected: number; skipped: number; failed: number; errors: string[]; }
 function fmtAmt(n: number | null | undefined): string {
   if (n == null) return "—";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
@@ -298,6 +299,17 @@ export default function PositionDeskPage() {
   const [bulkRunning, setBulkRunning]                   = useState(false);
   const [bulkResult, setBulkResult]                     = useState<BulkAssignResult | null>(null);
 
+  // Bulk reject state
+  const [bulkRejectOpen, setBulkRejectOpen]             = useState(false);
+  const [bulkRejectReason, setBulkRejectReason]         = useState('');
+  const [bulkRejecting, setBulkRejecting]               = useState(false);
+  const [bulkRejectProgress, setBulkRejectProgress]     = useState(0);
+  const [bulkRejectResult, setBulkRejectResult]         = useState<BulkRejectResult | null>(null);
+
+  // Delete confirmation state
+  const [deleteConfirmId, setDeleteConfirmId]           = useState<string | null>(null);
+  const [deleteRunning, setDeleteRunning]               = useState(false);
+
   // Best-match policy recommendation for assign-policy modal
   const recommendation = useMemo(() => {
     if (modal.type !== 'assign-policy' || !modal.position) return null;
@@ -457,6 +469,53 @@ export default function PositionDeskPage() {
     }
   }, [token, bulkPolicyId, selected, dispatch]);
 
+  const handleBulkReject = useCallback(async () => {
+    if (!token || !bulkRejectReason.trim() || selected.size === 0) return;
+    setBulkRejecting(true);
+    setBulkRejectProgress(0);
+    setBulkRejectResult(null);
+    const ids = Array.from(selected);
+    const posMap = new Map(positions.map((p) => [p.id, p]));
+    let rejected = 0, skipped = 0, failed = 0;
+    const errors: string[] = [];
+    for (let i = 0; i < ids.length; i++) {
+      const p = posMap.get(ids[i]);
+      if (!p || p.execution_status === 'HEDGED' || p.execution_status === 'REJECTED') {
+        skipped++;
+        setBulkRejectProgress(i + 1);
+        continue;
+      }
+      try {
+        await rejectPosition(p.id, bulkRejectReason.trim(), token);
+        rejected++;
+      } catch (e) {
+        failed++;
+        errors.push(`${p.record_id}: ${e instanceof Error ? e.message : 'Failed'}`);
+      }
+      setBulkRejectProgress(i + 1);
+    }
+    setBulkRejectResult({ rejected, skipped, failed, errors });
+    if (rejected > 0) {
+      dispatch(listPositionsThunk({ token }));
+      setSelected(new Set());
+    }
+    setBulkRejecting(false);
+  }, [token, bulkRejectReason, selected, positions, dispatch]);
+
+  const handleDeletePosition = useCallback(async () => {
+    if (!token || !deleteConfirmId) return;
+    setDeleteRunning(true);
+    try {
+      await deletePosition(deleteConfirmId, token);
+      dispatch(listPositionsThunk({ token }));
+      setDeleteConfirmId(null);
+    } catch (e) {
+      console.error('Delete failed:', e);
+    } finally {
+      setDeleteRunning(false);
+    }
+  }, [token, deleteConfirmId, dispatch]);
+
   const allVisibleSelected = filteredPositions.length > 0 && filteredPositions.every((p) => selected.has(p.id));
   const toggleSelectAll = useCallback(() => {
     if (allVisibleSelected) setSelected(new Set());
@@ -528,8 +587,13 @@ export default function PositionDeskPage() {
             style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: S.bgDeep, background: S.cyan, border: "none", padding: "3px 12px", cursor: "pointer", borderRadius: 2 }}>
             BULK ASSIGN POLICY
           </button>
+          <button
+            onClick={() => { setBulkRejectReason(''); setBulkRejectResult(null); setBulkRejectOpen(true); }}
+            style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#fff", background: S.fail, border: "none", padding: "3px 12px", cursor: "pointer", borderRadius: 2 }}>
+            BULK REJECT
+          </button>
           <button onClick={() => setSelected(new Set())} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer", borderRadius: 2 }}>CLEAR</button>
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>Assign one policy to all {selected.size} selected positions at once</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{selected.size} position{selected.size !== 1 ? 's' : ''} selected</span>
         </div>
       )}
 
@@ -583,11 +647,14 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
                   <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
                 </>)}
                 {st === "HEDGED" && <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>{p.execution_ref ? `REF: ${truncate(p.execution_ref, 14)}` : "TERMINAL"}</span>}
-                {st === "REJECTED" && (
+                {st === "REJECTED" && (<>
                   <Tooltip tip={p.rejection_reason ? `Reason: ${p.rejection_reason}` : "No reason recorded"}>
                     <ActionBtn label="REOPEN" color={S.secondary} onClick={() => handleReopen(p)} loading={isLoading} />
                   </Tooltip>
-                )}
+                  <Tooltip tip="Permanently remove from active view (soft-delete). Audit trail preserved.">
+                    <ActionBtn label="DELETE" color={S.fail} onClick={() => setDeleteConfirmId(p.id)} loading={false} />
+                  </Tooltip>
+                </>)}
                 {/* Audit trail link */}
                 <Link
                   href={`/lineage?position=${encodeURIComponent(p.id)}`}
@@ -810,6 +877,106 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
           <ModalActions onCancel={closeModal} onConfirm={handleReject} confirmLabel="REJECT POSITION" confirmColor={S.fail} disabled={!rejectReason.trim() || isTransitioning} />
         </ModalOverlay>
       )}
+
+      {/* ── Bulk Reject Modal ──────────────────────────────────────────────── */}
+      {bulkRejectOpen && (() => {
+        const posMap = new Map(positions.map((p) => [p.id, p]));
+        const rejectableIds = Array.from(selected).filter((id) => {
+          const p = posMap.get(id);
+          return p && p.execution_status !== 'HEDGED' && p.execution_status !== 'REJECTED';
+        });
+        const skippedCount = selected.size - rejectableIds.length;
+        return (
+          <ModalOverlay onClose={() => { if (!bulkRejecting) { setBulkRejectOpen(false); setBulkRejectResult(null); } }}>
+            <ModalHeader
+              title="Bulk Reject Positions"
+              subtitle={`${selected.size} selected · ${rejectableIds.length} rejectable · ${skippedCount} skipped (HEDGED/already REJECTED)`}
+            />
+            {!bulkRejectResult && (<>
+              <ModalInput
+                label="Rejection Reason * (mandatory for audit — applied to all positions)"
+                value={bulkRejectReason}
+                onChange={setBulkRejectReason}
+                placeholder="e.g. Outside hedge policy window — defer to next cycle"
+              />
+              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 12 }}>
+                Transition: NEW / POLICY_ASSIGNED / READY_TO_EXECUTE → REJECTED (can be reopened individually)
+              </div>
+              {bulkRejecting && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, marginBottom: 6, letterSpacing: '0.06em' }}>
+                    REJECTING… {bulkRejectProgress}/{rejectableIds.length}
+                  </div>
+                  <div style={{ height: 4, background: S.bgSub, borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${rejectableIds.length > 0 ? (bulkRejectProgress / rejectableIds.length) * 100 : 0}%`, background: S.fail, transition: 'width 0.2s' }} />
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+                <button
+                  onClick={() => { if (!bulkRejecting) { setBulkRejectOpen(false); setBulkRejectResult(null); } }}
+                  style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: bulkRejecting ? 'not-allowed' : 'pointer' }}>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkReject}
+                  disabled={!bulkRejectReason.trim() || bulkRejecting || rejectableIds.length === 0}
+                  style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: !bulkRejectReason.trim() || bulkRejecting || rejectableIds.length === 0 ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: !bulkRejectReason.trim() || bulkRejecting || rejectableIds.length === 0 ? 'not-allowed' : 'pointer' }}>
+                  {bulkRejecting ? `REJECTING ${bulkRejectProgress}/${rejectableIds.length}…` : `REJECT ${rejectableIds.length} POSITIONS`}
+                </button>
+              </div>
+            </>)}
+            {bulkRejectResult && (
+              <div>
+                <div style={{ padding: '10px 14px', border: `1px solid ${bulkRejectResult.failed > 0 ? S.fail : S.pass}`, background: `color-mix(in srgb, ${bulkRejectResult.failed > 0 ? S.fail : S.pass} 6%, transparent)`, marginBottom: 14 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: bulkRejectResult.failed > 0 ? S.fail : S.pass, letterSpacing: '0.06em', marginBottom: 4 }}>
+                    RESULT: {bulkRejectResult.rejected} REJECTED · {bulkRejectResult.skipped} SKIPPED · {bulkRejectResult.failed} FAILED
+                  </div>
+                  {bulkRejectResult.errors.length > 0 && (
+                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, maxHeight: 80, overflowY: 'auto' }}>
+                      {bulkRejectResult.errors.map((e, i) => <div key={i}>{e}</div>)}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={() => { setBulkRejectOpen(false); setBulkRejectResult(null); }}
+                    style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: S.pass, border: 'none', padding: '6px 18px', cursor: 'pointer', fontWeight: 700 }}>
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </ModalOverlay>
+        );
+      })()}
+
+      {/* ── Delete Confirmation Modal ───────────────────────────────────────── */}
+      {deleteConfirmId && (() => {
+        const p = positions.find((x) => x.id === deleteConfirmId);
+        if (!p) return null;
+        return (
+          <ModalOverlay onClose={() => { if (!deleteRunning) setDeleteConfirmId(null); }}>
+            <ModalHeader title="Remove Position" subtitle={`${p.record_id} · ${p.entity} (${p.currency})`} />
+            <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, lineHeight: 1.6, marginBottom: 16 }}>
+              This will <strong style={{ color: S.primary }}>permanently remove</strong> this position from the active view.<br />
+              The position will be soft-deleted ({'"'}is_active = false{'"'}) — it cannot be recovered from the UI but remains in the database for audit compliance.<br /><br />
+              <span style={{ color: S.tertiary }}>Rejection reason: {p.rejection_reason || '(none recorded)'}</span>
+            </div>
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, padding: '6px 10px', border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 16 }}>
+              ⚠ WORM audit trail preserved. This action is irreversible via UI.
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button onClick={() => setDeleteConfirmId(null)} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={handleDeletePosition} disabled={deleteRunning}
+                style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: deleteRunning ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: deleteRunning ? 'not-allowed' : 'pointer' }}>
+                {deleteRunning ? 'REMOVING…' : 'CONFIRM DELETE'}
+              </button>
+            </div>
+          </ModalOverlay>
+        );
+      })()}
 
       {/* ── Bulk Assign Policy Modal ────────────────────────────────────────── */}
       {bulkAssignOpen && (
