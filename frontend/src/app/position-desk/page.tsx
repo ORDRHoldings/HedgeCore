@@ -191,13 +191,14 @@ function ModalHeader({ title, subtitle }: { title: string; subtitle: string }) {
   );
 }
 
-function ModalInput({ label, value, onChange, placeholder, type = "text" }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
+function ModalInput({ label, value, onChange, placeholder, type = "text", error }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; error?: string;
 }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <label style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: "100%", padding: "7px 10px", boxSizing: "border-box", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, fontFamily: S.fontMono, fontSize: 12, outline: "none" }} />
+      <label style={{ fontFamily: S.fontMono, fontSize: 10, color: error ? S.fail : S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</label>
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: "100%", padding: "7px 10px", boxSizing: "border-box", background: S.bgSub, border: `1px solid ${error ? S.fail : S.rim}`, color: S.primary, fontFamily: S.fontMono, fontSize: 12, outline: "none" }} />
+      {error && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginTop: 3 }}>{error}</div>}
     </div>
   );
 }
@@ -310,6 +311,9 @@ export default function PositionDeskPage() {
   const [deleteConfirmId, setDeleteConfirmId]           = useState<string | null>(null);
   const [deleteRunning, setDeleteRunning]               = useState(false);
 
+  // Show/hide rejected toggle (X-15)
+  const [hideRejected, setHideRejected]                 = useState(false);
+
   // Best-match policy recommendation for assign-policy modal
   const recommendation = useMemo(() => {
     if (modal.type !== 'assign-policy' || !modal.position) return null;
@@ -383,6 +387,8 @@ export default function PositionDeskPage() {
     let rows = positions;
     if (preset === "NEEDS_ACTION") rows = rows.filter((p) => NEEDS_ACTION_STATUSES.includes(p.execution_status as ExecStatus));
     else if (preset !== "ALL") rows = rows.filter((p) => p.execution_status === preset);
+    // X-15: hide rejected when toggle is on and viewing ALL
+    if (preset === "ALL" && hideRejected) rows = rows.filter((p) => p.execution_status !== "REJECTED");
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       rows = rows.filter((p) =>
@@ -392,7 +398,7 @@ export default function PositionDeskPage() {
       );
     }
     return rows;
-  }, [positions, preset, search]);
+  }, [positions, preset, search, hideRejected]);
 
   const statusCounts = useMemo(() => {
     const c: Record<string, number> = { ALL: positions.length };
@@ -577,6 +583,20 @@ export default function PositionDeskPage() {
           );
         })}
         <div style={{ flex: 1 }} />
+        {/* X-15: Show/Hide Rejected toggle */}
+        {preset === "ALL" && (statusCounts.REJECTED ?? 0) > 0 && (
+          <button
+            onClick={() => setHideRejected(h => !h)}
+            style={{
+              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+              color: hideRejected ? S.fail : S.tertiary,
+              background: hideRejected ? `color-mix(in srgb, ${S.fail} 8%, transparent)` : "transparent",
+              border: `1px solid ${hideRejected ? `color-mix(in srgb, ${S.fail} 30%, transparent)` : S.rim}`,
+              padding: "3px 9px", cursor: "pointer", borderRadius: 2, marginRight: 4,
+            }}>
+            {hideRejected ? `SHOW REJECTED (${statusCounts.REJECTED ?? 0})` : `HIDE REJECTED (${statusCounts.REJECTED ?? 0})`}
+          </button>
+        )}
         <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search… (/ to focus · Esc to clear)" style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 10px", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, outline: "none", width: 280 }} />
       </div>
       {selected.size > 0 && (
@@ -871,10 +891,16 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
       {modal.type === "reject" && pos && (
         <ModalOverlay onClose={closeModal}>
           <ModalHeader title="Reject Position" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
-          <ModalInput label="Rejection Reason * (mandatory for audit)" value={rejectReason} onChange={setRejectReason} placeholder="e.g. Counterparty credit limit exceeded" />
+          <ModalInput
+            label="Rejection Reason * (mandatory for audit)"
+            value={rejectReason}
+            onChange={setRejectReason}
+            placeholder="e.g. Counterparty credit limit exceeded"
+            error={rejectReason.length > 0 && rejectReason.trim().length < 5 ? "Minimum 5 characters required" : undefined}
+          />
           <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>Transition: {pos.execution_status} → REJECTED (can be reopened)</div>
           {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
-          <ModalActions onCancel={closeModal} onConfirm={handleReject} confirmLabel="REJECT POSITION" confirmColor={S.fail} disabled={!rejectReason.trim() || isTransitioning} />
+          <ModalActions onCancel={closeModal} onConfirm={handleReject} confirmLabel="REJECT POSITION" confirmColor={S.fail} disabled={rejectReason.trim().length < 5 || isTransitioning} />
         </ModalOverlay>
       )}
 
@@ -898,6 +924,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
                 value={bulkRejectReason}
                 onChange={setBulkRejectReason}
                 placeholder="e.g. Outside hedge policy window — defer to next cycle"
+                error={bulkRejectReason.length > 0 && bulkRejectReason.trim().length < 5 ? "Minimum 5 characters required" : undefined}
               />
               <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 12 }}>
                 Transition: NEW / POLICY_ASSIGNED / READY_TO_EXECUTE → REJECTED (can be reopened individually)
@@ -920,8 +947,8 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
                 </button>
                 <button
                   onClick={handleBulkReject}
-                  disabled={!bulkRejectReason.trim() || bulkRejecting || rejectableIds.length === 0}
-                  style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: !bulkRejectReason.trim() || bulkRejecting || rejectableIds.length === 0 ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: !bulkRejectReason.trim() || bulkRejecting || rejectableIds.length === 0 ? 'not-allowed' : 'pointer' }}>
+                  disabled={bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0}
+                  style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0 ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0 ? 'not-allowed' : 'pointer' }}>
                   {bulkRejecting ? `REJECTING ${bulkRejectProgress}/${rejectableIds.length}…` : `REJECT ${rejectableIds.length} POSITIONS`}
                 </button>
               </div>

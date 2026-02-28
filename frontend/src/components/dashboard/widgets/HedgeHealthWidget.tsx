@@ -129,6 +129,7 @@ export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
         display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
         borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, cursor: "grab",
       }}>
+        <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <Shield size={13} color={S.cyan} style={{ flexShrink: 0 }} />
         <span style={{
           fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,

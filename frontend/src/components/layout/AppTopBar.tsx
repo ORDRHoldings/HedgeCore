@@ -10,11 +10,13 @@
  * Pure inline SVG icons — no external icon library required.
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
@@ -247,7 +249,7 @@ const NAV: NavSection[] = [
     header: "Trade Execution",
     items: [
       { label: "Execution Desk",      desc: "Run calculation engine — simulation, stress test, hedge plan",  href: "/execution-desk",    icon: Ic.terminal,  badge: "RUN",  badgeColor: S.cyan  },
-      { label: "Results Viewer",      desc: "Pre-flight auth checklist, DV01, ticket desk, IBKR handoff",  href: "/execution",         icon: Ic.lightning },
+      { label: "Trade Desk",           desc: "Pre-flight auth checklist, DV01, ticket desk, IBKR handoff",  href: "/execution",         icon: Ic.lightning },
       { label: "Sandbox",             desc: "What-if calculator & backtest engine",                         href: "/sandbox",           icon: Ic.terminal,  badge: "DEV",  badgeColor: S.amber },
       { label: "FX Rates",            desc: "Live spot rates, forward curves, vol surface — position-aware",href: "/currency-fx",       icon: Ic.bar_chart },
       { label: "Data Pipeline Log",   desc: "Connector import runs — CSV, ERP, SQL ingestion audit log",    href: "/execution-history", icon: Ic.clock,     badge: "LOG",  badgeColor: S.cyan  },
@@ -479,10 +481,39 @@ export default function AppTopBar() {
   const router   = useRouter();
   const pathname = usePathname() ?? "";
 
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [openMenu,     setOpenMenu]     = useState<string | null>(null);
+  const [liveStatus,   setLiveStatus]   = useState<"checking" | "online" | "offline">("checking");
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const handleOpen  = useCallback((label: string) => setOpenMenu(label), []);
   const handleClose = useCallback(() => setOpenMenu(null), []);
+
+  // X-16: `?` key opens keyboard shortcut manifest
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setShowShortcuts(s => !s);
+      }
+      if (e.key === "Escape") setShowShortcuts(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  // Poll GET /health every 60s for the LIVE indicator
+  useEffect(() => {
+    const check = () => {
+      fetch(`${API_BASE}/health`, { method: "GET", signal: AbortSignal.timeout(5000) })
+        .then(r => setLiveStatus(r.ok ? "online" : "offline"))
+        .catch(() => setLiveStatus("offline"));
+    };
+    check();
+    const id = setInterval(check, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -593,9 +624,24 @@ export default function AppTopBar() {
           {/* Divider */}
           <span style={{ color: S.soft, fontSize: 18, userSelect: "none" }}>│</span>
 
+          {/* Keyboard shortcuts trigger */}
+          <button
+            onClick={() => setShowShortcuts(s => !s)}
+            aria-label="Keyboard shortcuts (?)"
+            title="Keyboard shortcuts (?)"
+            style={{
+              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+              color: S.tertiary, background: "none", border: `1px solid ${S.soft}`,
+              cursor: "pointer", padding: "3px 8px", borderRadius: 2, lineHeight: 1,
+            }}
+          >
+            ?
+          </button>
+
           {/* Sign Out */}
           <button
             onClick={handleLogout}
+            aria-label="Sign out"
             style={{
               fontFamily:    S.fontMono, fontSize: 11, fontWeight: 500, letterSpacing: "0.04em",
               color:         S.tertiary,
@@ -663,13 +709,68 @@ export default function AppTopBar() {
             ORDR TERMINAL
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--status-pass,#4ade80)", display: "inline-block" }} />
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.06em", color: "var(--status-pass,#4ade80)" }}>
-              LIVE
+            <span style={{
+              width: 6, height: 6, borderRadius: "50%", display: "inline-block",
+              background: liveStatus === "online" ? "var(--status-pass,#4ade80)" : liveStatus === "offline" ? "var(--accent-red,#f87171)" : "var(--accent-amber,#f59e0b)",
+            }} />
+            <span style={{
+              fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.06em",
+              color: liveStatus === "online" ? "var(--status-pass,#4ade80)" : liveStatus === "offline" ? "var(--accent-red,#f87171)" : "var(--accent-amber,#f59e0b)",
+            }}>
+              {liveStatus === "online" ? "LIVE" : liveStatus === "offline" ? "OFFLINE" : "…"}
             </span>
           </span>
         </div>
       </div>
+
+      {/* X-16: Keyboard Shortcut Manifest Modal */}
+      {showShortcuts && (
+        <div
+          onClick={() => setShowShortcuts(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "28px 32px", minWidth: 480, maxWidth: 600, maxHeight: "80vh", overflowY: "auto", boxShadow: "0 16px 64px rgba(0,0,0,0.6)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.cyan, letterSpacing: "0.12em" }}>KEYBOARD SHORTCUTS</div>
+              <button onClick={() => setShowShortcuts(false)} aria-label="Close shortcuts" style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>✕</button>
+            </div>
+            {[
+              { section: "GLOBAL", shortcuts: [
+                { key: "?", desc: "Toggle this shortcut manifest" },
+                { key: "Esc", desc: "Close any open modal or panel" },
+              ]},
+              { section: "POSITION DESK", shortcuts: [
+                { key: "/", desc: "Focus position search" },
+                { key: "R", desc: "Refresh positions from backend" },
+                { key: "F", desc: "Cycle through filter presets" },
+                { key: "Esc", desc: "Clear search / close modal" },
+              ]},
+              { section: "POLICY DESK", shortcuts: [
+                { key: "/", desc: "Focus position search" },
+                { key: "Esc", desc: "Clear search" },
+              ]},
+              { section: "HELP", shortcuts: [
+                { key: "?", desc: "Open this manifest from any page" },
+              ]},
+            ].map(({ section, shortcuts }) => (
+              <div key={section} style={{ marginBottom: 20 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 8, paddingBottom: 4, borderBottom: `1px solid ${S.soft}` }}>{section}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {shortcuts.map(({ key, desc }) => (
+                    <div key={key + desc} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <kbd style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary, background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 3, padding: "2px 7px", minWidth: 36, textAlign: "center", boxShadow: "0 1px 0 rgba(0,0,0,0.15)", display: "inline-block" }}>{key}</kbd>
+                      <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, paddingTop: 12, borderTop: `1px solid ${S.soft}` }}>
+              Press <kbd style={{ fontFamily: S.fontMono, fontSize: 9, padding: "1px 5px", border: `1px solid ${S.soft}`, borderRadius: 2, background: S.bgSub }}>?</kbd> anywhere (outside inputs) to toggle · <kbd style={{ fontFamily: S.fontMono, fontSize: 9, padding: "1px 5px", border: `1px solid ${S.soft}`, borderRadius: 2, background: S.bgSub }}>Esc</kbd> to close
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

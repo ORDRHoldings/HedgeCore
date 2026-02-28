@@ -225,9 +225,9 @@ class RejectPositionRequest(BaseModel):
 
     reason: str = Field(
 
-        ..., min_length=1, max_length=512,
+        ..., min_length=5, max_length=512,
 
-        description="Mandatory rejection reason for audit trail"
+        description="Mandatory rejection reason for audit trail (minimum 5 characters)"
 
     )
 

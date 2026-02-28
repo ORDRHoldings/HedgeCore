@@ -44,6 +44,7 @@ interface Props {
 
 type ExecPhase = "idle" | "executing" | "done" | "error";
 type HedgedPhase = "idle" | "confirming" | "marking" | "done" | "error";
+type SummaryModalState = "hidden" | "open";
 
 /* ── Aggregate order for IBKR ─────────────────────────────────────────── */
 interface AggregatedOrder {
@@ -174,6 +175,9 @@ export default function StepExecute({
   const [hedgedPhase, setHedgedPhase] = useState<HedgedPhase>("idle");
   const [hedgedProgress, setHedgedProgress] = useState(0);
   const [hedgedError, setHedgedError] = useState<string | null>(null);
+
+  // Completion summary modal
+  const [summaryModal, setSummaryModal] = useState<SummaryModalState>("hidden");
 
   /* ── Compute tickets ──────────────────────────────────────────────── */
   const tickets: FuturesTicket[] = useMemo(() => {
@@ -722,7 +726,7 @@ export default function StepExecute({
                   MARK AS HEDGED
                 </button>
                 <button
-                  onClick={onComplete}
+                  onClick={() => setSummaryModal("open")}
                   style={{
                     height: 44, padding: "0 24px", background: "transparent", color: S.cyan, border: `1px solid ${S.cyan}`, borderRadius: 4,
                     fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", cursor: "pointer", transition: "all 0.15s",
@@ -828,6 +832,57 @@ export default function StepExecute({
           )}
         </div>
       </div>
+
+      {/* ═══ Execution Summary Modal ═══ */}
+      {summaryModal === "open" && (
+        <div
+          onClick={() => setSummaryModal("hidden")}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "28px 32px", minWidth: 440, maxWidth: 560, boxShadow: "0 12px 48px rgba(0,0,0,0.5)" }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.cyan, letterSpacing: "0.12em", marginBottom: 16 }}>EXECUTION SUMMARY</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>POSITIONS PROCESSED</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 20, fontWeight: 700, color: S.primary }}>{positions.length}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>STATUS</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: S.amber }}>READY_TO_EXECUTE</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>RUN ID</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>{runId.slice(0, 16)}…</div>
+              </div>
+              {calcResult?.hedge_plan?.summary && (
+                <div>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>HEDGE ACTION (USD)</div>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: S.pass }}>
+                    ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(calcResult.hedge_plan.summary.total_action_usd)}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 20, padding: "8px 10px", background: S.bgSub, border: `1px solid ${S.soft}`, lineHeight: 1.6 }}>
+              Positions are READY_TO_EXECUTE. Send orders to your broker, then return to mark as HEDGED to complete the lifecycle.
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => setSummaryModal("hidden")}
+                style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "7px 16px", cursor: "pointer" }}
+              >
+                Stay Here
+              </button>
+              <button
+                onClick={() => { setSummaryModal("hidden"); onComplete(); }}
+                style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em", color: S.bgDeep, background: S.cyan, border: "none", padding: "7px 20px", cursor: "pointer" }}
+              >
+                Go to Position Desk →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══ Footer ═══ */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, padding: "0 16px", background: S.bgPanel, borderTop: `1px solid ${S.rim}`, flexShrink: 0, marginTop: "auto" }}>

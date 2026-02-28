@@ -628,11 +628,13 @@ function BuilderShell({
   onSave,
   runEnvelopeId,
   ownerEmail,
+  token,
 }: {
   template: ReportTemplate | null;
   onSave: (def: ReportDefinition) => void;
   runEnvelopeId?: string;
   ownerEmail?: string;
+  token?: string | null;
 }) {
   const [step, setStep]               = useState<BuilderStep>(template ? "CONFIGURE" : "PRESET");
   const [name, setName]               = useState(template?.name ?? "");
@@ -805,12 +807,26 @@ function BuilderShell({
       }
       setExportStatus(prev => ({ ...prev, [fmt]: "done" }));
       setTimeout(() => setExportStatus(prev => ({ ...prev, [fmt]: "idle" })), 3_000);
+      // X-18: Audit event on export
+      if (token) {
+        const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+        fetch(`${API_BASE}/v1/audit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({
+            event_type: "REPORT_EXPORTED",
+            description: `Report exported: "${name}" as ${fmt}`,
+            entity_type: "report",
+            payload: { format: fmt, template_id: template?.template_id ?? "CUSTOM", sections: sections.filter(s => s.status === "INCLUDED").length },
+          }),
+        }).catch(() => {/* non-fatal */});
+      }
     } catch (e) {
       console.error("Export failed:", e);
       setExportStatus(prev => ({ ...prev, [fmt]: "error" }));
       setTimeout(() => setExportStatus(prev => ({ ...prev, [fmt]: "idle" })), 5_000);
     }
-  }, [name, desc, bindings, sections, exportFormats, template, ownerEmail, aiPlan]);
+  }, [name, desc, bindings, sections, exportFormats, template, ownerEmail, aiPlan, token]);
 
   // Handle save
   const handleSave = () => {
@@ -1717,6 +1733,7 @@ function ReportStudioInner() {
             onSave={handleSaveReport}
             runEnvelopeId={result?.run_id ?? selectedRunId ?? undefined}
             ownerEmail={user?.email}
+            token={token}
           />
         )}
         {view === "SAVED" && (

@@ -136,6 +136,7 @@ export default function CommandHubWidget({ token, user, onRemove }: Props) {
         display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
         borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, cursor: "grab",
       }}>
+        <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <div style={{
           width: 18, height: 18, borderRadius: 4,
           background: `linear-gradient(135deg, ${S.cyan}, #8B5CF6)`,

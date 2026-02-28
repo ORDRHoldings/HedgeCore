@@ -13,10 +13,25 @@ the exact policy governing the calculation is provable for audit/replay.
 
 import logging
 import uuid
+from collections import defaultdict
+from time import time as _time
 
 _log = logging.getLogger(__name__)
 from datetime import datetime, timezone
 from typing import Optional
+
+# Per-user rate limiter for POST /v1/calculate (10 req/min)
+_CALC_RATE_LIMIT = 10
+_CALC_RATE_WINDOW = 60.0
+_calc_timestamps: dict = defaultdict(list)
+
+def _check_calc_rate(user_id: str) -> bool:
+    now = _time()
+    _calc_timestamps[user_id] = [t for t in _calc_timestamps[user_id] if now - t < _CALC_RATE_WINDOW]
+    if len(_calc_timestamps[user_id]) >= _CALC_RATE_LIMIT:
+        return False
+    _calc_timestamps[user_id].append(now)
+    return True
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ValidationError
@@ -141,6 +156,13 @@ async def calculate(
     session: AsyncSession     = Depends(get_async_session),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
+    # Per-user rate limit: max 10 calculations per minute
+    if current_user and not _check_calc_rate(str(current_user.id)):
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded: max 10 calculations per minute per user. Please wait before retrying.",
+        )
+
     run_id = str(uuid.uuid4())
     trace_events: list[TraceEvent] = []
 

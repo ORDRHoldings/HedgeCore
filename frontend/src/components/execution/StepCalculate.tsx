@@ -349,6 +349,24 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
           </>
         )}
 
+        {/* Input summary */}
+        {!marketLoading && currencyGroups.length > 0 && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+            padding: "7px 12px", marginBottom: 12,
+            background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4,
+          }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>QUEUED INPUT</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.primary, fontWeight: 600 }}>{positions.length} position{positions.length !== 1 ? "s" : ""}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.soft }}>·</span>
+            {currencyGroups.map(([ccy, grp]) => (
+              <span key={ccy} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, fontWeight: 600 }}>
+                {ccy} {fmtNum.format(grp.reduce((s, p) => s + p.amount, 0))}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Run button */}
         <button
           onClick={runEngine}

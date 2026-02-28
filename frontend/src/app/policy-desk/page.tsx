@@ -258,6 +258,9 @@ export default function PolicyDeskPage() {
   const [bulkRunning, setBulkRunning] = useState(false);
   const [bulkResult, setBulkResult] = useState<BulkAssignResult | null>(null);
 
+  // Confirmation preview before active-policy bulk assign
+  const [confirmAssignOpen, setConfirmAssignOpen] = useState(false);
+
   // Advanced features state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [currencyFilter, setCurrencyFilter] = useState("");
@@ -869,7 +872,7 @@ export default function PolicyDeskPage() {
 
             {activePolicy && (
               <button
-                onClick={handleAssignActive}
+                onClick={() => setConfirmAssignOpen(true)}
                 disabled={bulkRunning}
                 style={{
                   fontFamily: S.fontMono,
@@ -1436,6 +1439,38 @@ export default function PolicyDeskPage() {
               Close
             </button>
           </div>
+        </ModalOverlay>
+      )}
+
+      {/* Confirm Bulk Assign Modal (X-13) */}
+      {confirmAssignOpen && activePolicy && (
+        <ModalOverlay onClose={() => setConfirmAssignOpen(false)}>
+          <ModalHeader
+            title="Confirm Policy Assignment"
+            subtitle={`Assigning to ${selected.size} selected position${selected.size !== 1 ? "s" : ""}`}
+          />
+          <div style={{ padding: "12px 14px", background: `color-mix(in srgb, ${S.cyan} 6%, transparent)`, border: `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`, marginBottom: 16 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.cyan, letterSpacing: "0.08em", marginBottom: 6 }}>POLICY TO ASSIGN</div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary }}>
+              {activePolicy.template?.name ?? `Instance ${activePolicy.id.slice(0, 8)}`}
+            </div>
+            {activePolicy.template?.risk_posture && (
+              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, marginTop: 4 }}>
+                Risk posture: {activePolicy.template.risk_posture}
+              </div>
+            )}
+          </div>
+          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, marginBottom: 20, lineHeight: 1.7 }}>
+            This will transition <strong style={{ color: S.primary }}>{selected.size} position{selected.size !== 1 ? "s" : ""}</strong> to <strong style={{ color: S.cyan }}>POLICY_ASSIGNED</strong>.<br />
+            Positions already in a later lifecycle state will be skipped.
+          </div>
+          <ModalActions
+            onCancel={() => setConfirmAssignOpen(false)}
+            onConfirm={() => { setConfirmAssignOpen(false); handleAssignActive(); }}
+            confirmLabel={`ASSIGN TO ${selected.size} POSITIONS`}
+            confirmColor={S.cyan}
+            disabled={bulkRunning}
+          />
         </ModalOverlay>
       )}
 

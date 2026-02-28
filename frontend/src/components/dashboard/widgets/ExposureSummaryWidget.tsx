@@ -87,6 +87,7 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
           cursor:       "grab",
         }}
       >
+        <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <TrendingUp size={12} color={S.cyan} />
         <span
           style={{

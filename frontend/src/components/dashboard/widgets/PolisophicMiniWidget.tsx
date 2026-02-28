@@ -88,6 +88,7 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
           cursor:       "grab",
         }}
       >
+        <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <Radar size={13} color={S.cyan} style={{ flexShrink: 0 }} />
         <span
           style={{

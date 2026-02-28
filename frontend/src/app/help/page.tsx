@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
 import HelpPanel from "@/components/layout/HelpPanel";
@@ -331,7 +331,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-export default function HelpPage() {
+function HelpPageContent() {
   const renderTs = useRenderTs();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -667,5 +667,18 @@ export default function HelpPage() {
         <span>{renderTs}</span>
       </footer>
     </div>
+  );
+}
+
+// Suspense boundary required by Next.js App Router for useSearchParams()
+export default function HelpPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ background: "var(--bg-deep)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: 11, color: "var(--text-tertiary)", letterSpacing: "0.1em" }}>LOADING…</span>
+      </div>
+    }>
+      <HelpPageContent />
+    </Suspense>
   );
 }
