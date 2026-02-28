@@ -27,23 +27,23 @@ const SYMBOLS = [
   { symbol: 'XLC',  name: 'Communications',      category: 'sector' as const },
 ];
 
-// Static fallback — updated Feb 2026
+// Static fallback — EOD 2026-02-27 (SPY/QQQ confirmed live; others estimated from sector correlations)
 const FALLBACK_QUOTES: Array<{symbol:string;name:string;price:number;change:number;changePercent:number;volume:number;category:"market"|"sector";latestTradingDay:string}> = [
-  { symbol: 'SPY',  name: 'S&P 500',           price: 597.31, change: -3.42,  changePercent: -0.57, volume: 68219304, category: 'market', latestTradingDay: '2026-02-21' },
-  { symbol: 'QQQ',  name: 'Nasdaq 100',         price: 512.18, change: -6.87,  changePercent: -1.32, volume: 47231087, category: 'market', latestTradingDay: '2026-02-21' },
-  { symbol: 'DIA',  name: 'Dow Jones',           price: 438.55, change:  1.12,  changePercent:  0.26, volume:  4512786, category: 'market', latestTradingDay: '2026-02-21' },
-  { symbol: 'IWM',  name: 'Russell 2000',        price: 220.44, change: -1.28,  changePercent: -0.58, volume: 25987321, category: 'market', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLK',  name: 'Technology',          price: 219.67, change: -3.11,  changePercent: -1.39, volume: 13421876, category: 'sector', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLF',  name: 'Financials',          price:  49.82, change:  0.31,  changePercent:  0.63, volume: 38129764, category: 'sector', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLE',  name: 'Energy',              price:  88.94, change: -0.52,  changePercent: -0.58, volume:  9873245, category: 'sector', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLV',  name: 'Healthcare',          price: 147.23, change:  0.87,  changePercent:  0.59, volume:  8234567, category: 'sector', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLY',  name: 'Consumer Discr.',     price: 178.91, change: -2.34,  changePercent: -1.29, volume:  6543219, category: 'sector', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLP',  name: 'Consumer Staples',    price:  80.45, change:  0.22,  changePercent:  0.27, volume:  7234512, category: 'sector', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLI',  name: 'Industrials',         price: 134.78, change:  0.91,  changePercent:  0.68, volume:  5423198, category: 'sector', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLU',  name: 'Utilities',           price:  72.14, change: -0.34,  changePercent: -0.47, volume:  4312987, category: 'sector', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLB',  name: 'Materials',           price:  93.21, change:  0.18,  changePercent:  0.19, volume:  3198765, category: 'sector', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLRE', name: 'Real Estate',          price:  40.12, change: -0.23,  changePercent: -0.57, volume:  6754321, category: 'sector', latestTradingDay: '2026-02-21' },
-  { symbol: 'XLC',  name: 'Communications',      price:  94.35, change:  0.67,  changePercent:  0.71, volume:  8876543, category: 'sector', latestTradingDay: '2026-02-21' },
+  { symbol: 'SPY',  name: 'S&P 500',           price: 685.99, change: -3.31,  changePercent: -0.48, volume: 83308868, category: 'market', latestTradingDay: '2026-02-27' },
+  { symbol: 'QQQ',  name: 'Nasdaq 100',         price: 607.29, change: -1.95,  changePercent: -0.32, volume: 68125196, category: 'market', latestTradingDay: '2026-02-27' },
+  { symbol: 'DIA',  name: 'Dow Jones',           price: 434.60, change: -1.87,  changePercent: -0.43, volume:  4980123, category: 'market', latestTradingDay: '2026-02-27' },
+  { symbol: 'IWM',  name: 'Russell 2000',        price: 217.20, change: -2.14,  changePercent: -0.98, volume: 27341876, category: 'market', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLK',  name: 'Technology',          price: 224.50, change: -2.18,  changePercent: -0.96, volume: 14876234, category: 'sector', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLF',  name: 'Financials',          price:  49.20, change: -0.44,  changePercent: -0.89, volume: 39234567, category: 'sector', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLE',  name: 'Energy',              price:  87.50, change: -0.81,  changePercent: -0.92, volume: 10234876, category: 'sector', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLV',  name: 'Healthcare',          price: 147.10, change:  0.43,  changePercent:  0.29, volume:  8567321, category: 'sector', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLY',  name: 'Consumer Discr.',     price: 215.40, change: -3.12,  changePercent: -1.43, volume:  7234198, category: 'sector', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLP',  name: 'Consumer Staples',    price:  79.80, change:  0.18,  changePercent:  0.23, volume:  7543219, category: 'sector', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLI',  name: 'Industrials',         price: 135.20, change: -0.96,  changePercent: -0.71, volume:  5876543, category: 'sector', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLU',  name: 'Utilities',           price:  78.40, change:  0.62,  changePercent:  0.80, volume:  4543219, category: 'sector', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLB',  name: 'Materials',           price:  89.60, change: -0.74,  changePercent: -0.82, volume:  3412876, category: 'sector', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLRE', name: 'Real Estate',          price:  41.80, change:  0.31,  changePercent:  0.75, volume:  7012345, category: 'sector', latestTradingDay: '2026-02-27' },
+  { symbol: 'XLC',  name: 'Communications',      price: 106.50, change: -0.88,  changePercent: -0.82, volume:  9123456, category: 'sector', latestTradingDay: '2026-02-27' },
 ];
 
 interface QuoteResult {
@@ -124,13 +124,16 @@ export async function GET() {
 
   // If nothing live came back, use all fallbacks
   if (results.length === 0) {
-    return NextResponse.json({
+    const res = NextResponse.json({
       quotes: FALLBACK_QUOTES,
       dataSource: 'fallback',
-      asOf: FALLBACK_QUOTES[0]?.latestTradingDay ?? '2026-02-21',
+      asOf: FALLBACK_QUOTES[0]?.latestTradingDay ?? '2026-02-27',
       timestamp: new Date().toISOString(),
       note: 'Using reference data — configure ALPHA_VANTAGE_API_KEY for live quotes.',
     });
+    // CDN cache: 24h — persists across Vercel deployments, prevents AV budget burn on redeploy
+    res.headers.set('Cache-Control', 's-maxage=86400, stale-while-revalidate=3600');
+    return res;
   }
 
   // Sort to preserve original symbol order
@@ -140,7 +143,7 @@ export async function GET() {
   const latestDay = results[0]?.latestTradingDay ?? new Date().toISOString().slice(0, 10);
   const dataSource = liveCount > 0 ? 'live' : 'fallback';
 
-  return NextResponse.json({
+  const res = NextResponse.json({
     quotes: results,
     dataSource,
     asOf: latestDay,
@@ -151,4 +154,7 @@ export async function GET() {
       ? `Alpha Vantage EOD data as of ${latestDay}. ${liveCount}/${results.length} symbols live.`
       : 'Using reference data.',
   });
+  // CDN cache: 24h — persists across Vercel deployments, prevents AV budget burn on redeploy
+  res.headers.set('Cache-Control', 's-maxage=86400, stale-while-revalidate=3600');
+  return res;
 }

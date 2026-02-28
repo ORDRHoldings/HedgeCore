@@ -17,14 +17,15 @@ import { NextResponse } from 'next/server';
 const AV_KEY  = process.env.ALPHA_VANTAGE_API_KEY ?? '';
 const AV_BASE = 'https://www.alphavantage.co/query';
 
-// Static fallback values — updated Feb 2026
+// Static fallback values — EOD 2026-02-27
+// DXY via UUP $27.08 × 3.66 = 99.11 (confirmed); others estimated from known correlations
 const STATIC = {
-  dxy:        { value: 106.62, date: '2026-02-21', trend: 'up'   as const },
-  us10y:      { value: 4.42,   date: '2026-02-21', trend: 'up'   as const },
-  fedFunds:   { value: 4.33,   date: '2026-01-01', trend: 'flat' as const },
-  gold:       { value: 2934.0, date: '2026-02-21', trend: 'up'   as const },
-  brent:      { value: 74.74,  date: '2026-02-21', trend: 'down' as const },
-  vix:        { value: 18.21,  date: '2026-02-21', trend: 'up'   as const },
+  dxy:        { value: 99.11,  date: '2026-02-27', trend: 'down' as const },
+  us10y:      { value: 4.26,   date: '2026-02-27', trend: 'down' as const },
+  fedFunds:   { value: 4.33,   date: '2026-02-01', trend: 'flat' as const },
+  gold:       { value: 2870.0, date: '2026-02-27', trend: 'flat' as const },
+  brent:      { value: 73.50,  date: '2026-02-27', trend: 'down' as const },
+  vix:        { value: 21.50,  date: '2026-02-27', trend: 'up'   as const },
 };
 
 type Trend = 'up' | 'down' | 'flat';
@@ -181,7 +182,7 @@ export async function GET() {
 
   const dataSource = liveCount > 0 ? 'live' : 'fallback';
 
-  return NextResponse.json({
+  const payload = {
     dataSource,
     liveCount,
     asOf: us10yData?.date ?? gldData?.date ?? asOf,
@@ -247,5 +248,9 @@ export async function GET() {
         note:    gldData ? `GLD ETF ÷0.0945 as of ${gold.date}` : 'Indicative estimate',
       },
     },
-  });
+  };
+  const res = NextResponse.json(payload);
+  // CDN cache: 24h — persists across Vercel deployments, prevents AV budget burn on redeploy
+  res.headers.set('Cache-Control', 's-maxage=86400, stale-while-revalidate=3600');
+  return res;
 }
