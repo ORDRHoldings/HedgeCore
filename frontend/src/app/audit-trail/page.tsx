@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 import HelpPanel from "../../components/layout/HelpPanel";
 import { AUDIT_TRAIL_HELP } from "../../lib/helpContent";
 
@@ -17,41 +18,115 @@ function useRenderTs(): string {
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
-  fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-  bgDeep:   "var(--bg-deep)",
-  bgPanel:  "var(--bg-panel)",
-  bgSub:    "var(--bg-sub)",
-  rim:      "var(--border-rim)",
-  soft:     "var(--border-soft)",
-  primary:  "var(--text-primary)",
-  secondary:"var(--text-secondary)",
-  tertiary: "var(--text-tertiary)",
-  cyan:     "var(--accent-cyan)",
-  amber:    "var(--accent-amber)",
-  pass:     "var(--status-pass)",
-  fail:     "var(--accent-red,#B91C1C)",
+  fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
+  fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  bgDeep:    "var(--bg-deep)",
+  bgPanel:   "var(--bg-panel)",
+  bgSub:     "var(--bg-sub)",
+  rim:       "var(--border-rim)",
+  soft:      "var(--border-soft)",
+  primary:   "var(--text-primary)",
+  secondary: "var(--text-secondary)",
+  tertiary:  "var(--text-tertiary)",
+  cyan:      "var(--accent-cyan)",
+  amber:     "var(--accent-amber)",
+  pass:      "var(--status-pass)",
+  fail:      "var(--accent-red,#B91C1C)",
 } as const;
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── UI Types ──────────────────────────────────────────────────────────────────
 type EventType = "PROPOSAL" | "APPROVAL" | "EXECUTION" | "POLICY" | "IMPORT" | "SYSTEM";
-type TabKey = "all" | "proposals" | "approvals" | "executions" | "policy" | "imports";
+type TabKey    = "all" | "proposals" | "approvals" | "executions" | "policy" | "imports";
 
 interface AuditEvent {
-  id: string;
-  timestamp: string;
-  type: EventType;
-  actor: string;
-  role: string;
+  id:         string;
+  timestamp:  string;
+  type:       EventType;
+  actor:      string;
+  role:       string;
   description: string;
-  hash: string;
-  fullHash: string;
-  prevHash: string;
+  hash:       string;   // 8-char display snippet
+  fullHash:   string;   // full SHA-256
+  prevHash:   string;
   relatedIds: Record<string, string>;
-  ip: string;
-  userAgent: string;
-  payload: Record<string, unknown>;
-  failed?: boolean;
+  ip:         string;
+  userAgent:  string;
+  payload:    Record<string, unknown>;
+  failed?:    boolean;
+}
+
+// ── Backend response types ────────────────────────────────────────────────────
+interface AuditEventResponse {
+  id:              string;
+  company_id:      string | null;
+  actor_id:        string | null;
+  actor_email:     string | null;
+  actor_role:      string | null;
+  event_type:      string;
+  description:     string;
+  entity_type:     string | null;
+  entity_id:       string | null;
+  payload:         Record<string, unknown>;
+  event_hash:      string;
+  prev_event_hash: string;
+  ip_address:      string | null;
+  created_at:      string;
+}
+
+interface AuditListResponse {
+  items: AuditEventResponse[];
+  total: number;
+}
+
+interface ChainIntegrityReport {
+  tenant_id:      string | null;
+  events_checked: number;
+  broken_at:      string | null;
+  is_intact:      boolean;
+  verified_at:    string;
+}
+
+// ── Map backend event_type → UI EventType ─────────────────────────────────────
+function inferEventType(event_type: string): EventType {
+  const t = event_type.toLowerCase();
+  if (t.includes("approved") || t.includes("approval"))                    return "APPROVAL";
+  if (t.includes("executed") || t.includes("hedged") || t.includes("execution")) return "EXECUTION";
+  if (t.startsWith("proposal.") || t.startsWith("position.") ||
+      t.startsWith("calculation.") || t.startsWith("run."))                return "PROPOSAL";
+  if (t.startsWith("policy."))                                             return "POLICY";
+  if (t.startsWith("import.") || t.startsWith("connector."))              return "IMPORT";
+  return "SYSTEM";
+}
+
+// ── Build related-ID display map from a backend event ────────────────────────
+function buildRelatedIds(e: AuditEventResponse): Record<string, string> {
+  const ids: Record<string, string> = {};
+  if (e.entity_type && e.entity_id) ids[e.entity_type] = e.entity_id.slice(0, 12);
+  const p = e.payload;
+  if (p.run_id)       ids.run_id       = String(p.run_id).slice(0, 12);
+  if (p.position_id)  ids.position_id  = String(p.position_id).slice(0, 12);
+  if (p.policy_id)    ids.policy_id    = String(p.policy_id).slice(0, 12);
+  if (p.proposal_id)  ids.proposal_id  = String(p.proposal_id).slice(0, 12);
+  return ids;
+}
+
+// ── Map a backend AuditEventResponse → UI AuditEvent ─────────────────────────
+function mapBackendEvent(e: AuditEventResponse): AuditEvent {
+  return {
+    id:          e.id,
+    timestamp:   e.created_at.replace("T", " ").slice(0, 19) + " UTC",
+    type:        inferEventType(e.event_type),
+    actor:       e.actor_email ?? e.actor_id ?? "system",
+    role:        e.actor_role  ?? "—",
+    description: e.description,
+    hash:        e.event_hash.slice(0, 8).toUpperCase(),
+    fullHash:    e.event_hash,
+    prevHash:    e.prev_event_hash,
+    relatedIds:  buildRelatedIds(e),
+    ip:          e.ip_address ?? "—",
+    userAgent:   "ORDR Terminal",
+    payload:     { ...e.payload, event_type: e.event_type },
+  };
 }
 
 // ── Color map for event types ─────────────────────────────────────────────────
@@ -66,12 +141,12 @@ const TYPE_COLORS: Record<EventType, string> = {
 
 // ── Tab definitions ───────────────────────────────────────────────────────────
 const TABS: { key: TabKey; label: string }[] = [
-  { key: "all",        label: "All Events" },
-  { key: "proposals",  label: "Proposals" },
-  { key: "approvals",  label: "Approvals" },
-  { key: "executions", label: "Executions" },
-  { key: "policy",     label: "Policy Changes" },
-  { key: "imports",    label: "Data Imports" },
+  { key: "all",        label: "All Events"    },
+  { key: "proposals",  label: "Proposals"     },
+  { key: "approvals",  label: "Approvals"     },
+  { key: "executions", label: "Executions"    },
+  { key: "policy",     label: "Policy Changes"},
+  { key: "imports",    label: "Data Imports"  },
 ];
 
 const TAB_TYPE_MAP: Record<TabKey, EventType | null> = {
@@ -87,25 +162,28 @@ const TAB_TYPE_MAP: Record<TabKey, EventType | null> = {
 function Badge({ label, color }: { label: string; color: string }) {
   return (
     <span style={{
-      fontFamily: S.fontMono,
-      fontSize: 9,
-      fontWeight: 700,
+      fontFamily:    S.fontMono,
+      fontSize:      9,
+      fontWeight:    700,
       letterSpacing: "0.08em",
       color,
-      background: `color-mix(in srgb, ${color} 12%, transparent)`,
-      border: `1px solid color-mix(in srgb, ${color} 25%, transparent)`,
-      padding: "1px 5px",
-      borderRadius: 2,
+      background:    `color-mix(in srgb, ${color} 12%, transparent)`,
+      border:        `1px solid color-mix(in srgb, ${color} 25%, transparent)`,
+      padding:       "1px 5px",
+      borderRadius:  2,
     }}>
       {label}
     </span>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TopBar
-// ═══════════════════════════════════════════════════════════════════════════════
-function TopBar({ renderTs, onBack }: { renderTs: string; onBack: () => void }) {
+// ── TopBar ────────────────────────────────────────────────────────────────────
+function TopBar({ renderTs, onBack, onRefresh, loading }: {
+  renderTs:  string;
+  onBack:    () => void;
+  onRefresh: () => void;
+  loading:   boolean;
+}) {
   return (
     <header style={{
       display: "flex", alignItems: "center", gap: 12, height: 44,
@@ -116,7 +194,7 @@ function TopBar({ renderTs, onBack }: { renderTs: string; onBack: () => void }) 
         fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
         background: "transparent", border: `1px solid ${S.rim}`,
         padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
-      }}>{"\u2190"} Home</button>
+      }}>← Home</button>
       <span style={{ color: S.rim, userSelect: "none" }}>|</span>
       <span style={{
         fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700,
@@ -127,8 +205,27 @@ function TopBar({ renderTs, onBack }: { renderTs: string; onBack: () => void }) 
       <span style={{
         fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em",
         color: S.secondary, padding: "1px 5px", border: `1px solid ${S.rim}`,
-      }}>GOVERNANCE {"\u00B7"} IMMUTABLE</span>
+      }}>GOVERNANCE · IMMUTABLE</span>
+      <span style={{
+        fontFamily: S.fontMono, fontSize: "0.625rem", letterSpacing: "0.06em",
+        color: S.pass, padding: "1px 5px",
+        border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
+        background: `color-mix(in srgb, ${S.pass} 8%, transparent)`,
+      }}>BACKEND · LIVE</span>
       <div style={{ flex: 1 }} />
+      <button
+        onClick={onRefresh}
+        disabled={loading}
+        title="Reload events from server"
+        style={{
+          fontFamily: S.fontMono, fontSize: 10, color: loading ? S.tertiary : S.primary,
+          background: "transparent", border: `1px solid ${S.rim}`,
+          padding: "3px 10px", cursor: loading ? "wait" : "pointer",
+          letterSpacing: "0.04em",
+        }}
+      >
+        {loading ? "Loading…" : "↻ Refresh"}
+      </button>
       <span style={{
         fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
         letterSpacing: "0.04em",
@@ -139,9 +236,7 @@ function TopBar({ renderTs, onBack }: { renderTs: string; onBack: () => void }) 
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Footer
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── Footer ────────────────────────────────────────────────────────────────────
 function Footer({ renderTs }: { renderTs: string }) {
   return (
     <footer style={{
@@ -152,30 +247,23 @@ function Footer({ renderTs }: { renderTs: string }) {
         fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary,
         letterSpacing: "0.06em",
       }}>
-        {renderTs} {"\u2014"} ORDR {"\u00B7"} Audit Trail
+        {renderTs} — ORDR · Audit Trail · Hash-Chained · PostgreSQL
       </span>
     </footer>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// KPI Card
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── KPI Card ──────────────────────────────────────────────────────────────────
 function KpiCard({ label, value, badge, badgeColor }: {
-  label: string;
-  value: string;
-  badge: string;
+  label:      string;
+  value:      string;
+  badge:      string;
   badgeColor: string;
 }) {
   return (
     <div style={{
-      flex: 1,
-      background: S.bgPanel,
-      border: `1px solid ${S.rim}`,
-      padding: "14px 16px",
-      display: "flex",
-      flexDirection: "column",
-      gap: 6,
+      flex: 1, background: S.bgPanel, border: `1px solid ${S.rim}`,
+      padding: "14px 16px", display: "flex", flexDirection: "column", gap: 6,
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{
@@ -196,11 +284,9 @@ function KpiCard({ label, value, badge, badgeColor }: {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Event Row
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── Event Row ─────────────────────────────────────────────────────────────────
 function EventRow({ event, expanded, onToggle }: {
-  event: AuditEvent;
+  event:    AuditEvent;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -209,19 +295,19 @@ function EventRow({ event, expanded, onToggle }: {
   return (
     <div style={{
       borderBottom: `1px solid ${S.soft}`,
-      background: expanded ? S.bgSub : "transparent",
-      transition: "background 0.15s",
+      background:   expanded ? S.bgSub : "transparent",
+      transition:   "background 0.15s",
     }}>
       {/* Main row */}
       <div
         onClick={onToggle}
         style={{
-          display: "grid",
-          gridTemplateColumns: "140px 90px 170px 1fr 100px",
-          alignItems: "center",
-          padding: "10px 16px",
-          cursor: "pointer",
-          gap: 12,
+          display:               "grid",
+          gridTemplateColumns:   "140px 90px 170px 1fr 100px",
+          alignItems:            "center",
+          padding:               "10px 16px",
+          cursor:                "pointer",
+          gap:                   12,
         }}
         onMouseEnter={(e) => {
           if (!expanded) (e.currentTarget as HTMLDivElement).style.background = S.bgSub;
@@ -230,18 +316,13 @@ function EventRow({ event, expanded, onToggle }: {
           if (!expanded) (e.currentTarget as HTMLDivElement).style.background = "transparent";
         }}
       >
-        {/* Timestamp */}
         <span style={{
           fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
           letterSpacing: "0.02em", whiteSpace: "nowrap",
         }}>
           {event.timestamp}
         </span>
-
-        {/* Type badge */}
         <Badge label={event.type} color={typeColor} />
-
-        {/* Actor */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
           <span style={{
             fontFamily: S.fontUI, fontSize: "0.75rem", fontWeight: 500,
@@ -252,18 +333,14 @@ function EventRow({ event, expanded, onToggle }: {
           </span>
           <Badge label={event.role} color={S.tertiary} />
         </div>
-
-        {/* Description */}
         <span style={{
           fontFamily: S.fontUI, fontSize: "0.75rem",
-          color: event.failed ? S.fail : S.secondary,
+          color:      event.failed ? S.fail : S.secondary,
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
           fontWeight: event.failed ? 600 : 400,
         }}>
           {event.description}
         </span>
-
-        {/* Hash */}
         <span style={{
           fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary,
           letterSpacing: "0.03em", textAlign: "right",
@@ -274,34 +351,22 @@ function EventRow({ event, expanded, onToggle }: {
 
       {/* Expandable detail panel */}
       {expanded && (
-        <div style={{
-          padding: "0 16px 16px 16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-        }}>
+        <div style={{ padding: "0 16px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
           {/* Metadata grid */}
           <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 8,
-            padding: "12px 14px",
-            background: S.bgPanel,
-            border: `1px solid ${S.rim}`,
+            display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8,
+            padding: "12px 14px", background: S.bgPanel, border: `1px solid ${S.rim}`,
           }}>
-            {/* Full hash */}
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{
                 fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
                 color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
-              }}>Full Hash</span>
+              }}>Full Hash (SHA-256)</span>
               <span style={{
                 fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.cyan,
                 wordBreak: "break-all",
               }}>{event.fullHash}</span>
             </div>
-
-            {/* Previous hash */}
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{
                 fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
@@ -312,8 +377,6 @@ function EventRow({ event, expanded, onToggle }: {
                 wordBreak: "break-all",
               }}>{event.prevHash}</span>
             </div>
-
-            {/* Related IDs */}
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{
                 fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
@@ -331,8 +394,6 @@ function EventRow({ event, expanded, onToggle }: {
                 ))}
               </div>
             </div>
-
-            {/* IP + User Agent */}
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{
                 fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
@@ -379,201 +440,98 @@ export default function AuditTrailPage() {
 
   // Auth guard
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth/login");
-    }
+    if (!isAuthenticated) router.push("/auth/login");
   }, [isAuthenticated, router]);
 
-  // State
-  const [events, setEvents] = useState<AuditEvent[]>([]);
-  const [activeTab, setActiveTab] = useState<TabKey>("all");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [actorFilter, setActorFilter] = useState("All Actors");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [verifying, setVerifying] = useState(false);
-  const [verified, setVerified] = useState(false);
+  // Data state
+  const [events,    setEvents]    = useState<AuditEvent[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // ── Populate events from localStorage + session activity ─────────────────
+  // Filter state
+  const [activeTab,    setActiveTab]    = useState<TabKey>("all");
+  const [expandedId,   setExpandedId]   = useState<string | null>(null);
+  const [actorFilter,  setActorFilter]  = useState("All Actors");
+  const [dateFrom,     setDateFrom]     = useState("");
+  const [dateTo,       setDateTo]       = useState("");
+  const [search,       setSearch]       = useState("");
+
+  // Chain integrity state
+  const [verifying,        setVerifying]        = useState(false);
+  const [integrityReport,  setIntegrityReport]  = useState<ChainIntegrityReport | null>(null);
+
+  // ── Fetch events from backend ──────────────────────────────────────────────
+  const fetchEvents = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const params = new URLSearchParams({ limit: "200" });
+      if (dateFrom) params.set("from_ts", dateFrom + "T00:00:00");
+      if (dateTo)   params.set("to_ts",   dateTo   + "T23:59:59");
+
+      const res = await dashboardFetch(`/v1/audit?${params.toString()}`, token);
+      if (!res.ok) {
+        const msg = await res.text().catch(() => `HTTP ${res.status}`);
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      const data: AuditListResponse = await res.json();
+      setEvents(data.items.map(mapBackendEvent));
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : "Failed to load audit events");
+    } finally {
+      setLoading(false);
+    }
+  }, [token, dateFrom, dateTo]);
+
   useEffect(() => {
-    const collected: AuditEvent[] = [];
-    let seq = 1;
+    fetchEvents();
+  }, [fetchEvents]);
 
-    function shortHash(s: string): string {
-      let h = 0;
-      for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-      return Math.abs(h).toString(16).padStart(8, "0").slice(0, 8).toUpperCase();
+  // ── Chain integrity verification (backend) ────────────────────────────────
+  const handleVerify = async () => {
+    if (!token || verifying) return;
+    setVerifying(true);
+    setIntegrityReport(null);
+    try {
+      const res = await dashboardFetch("/v1/audit/chain/verify", token);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const report: ChainIntegrityReport = await res.json();
+      setIntegrityReport(report);
+    } catch {
+      // Leave report null — UI shows failure state
+    } finally {
+      setVerifying(false);
     }
+  };
 
-    function makeHash(id: string, ts: string): { hash: string; fullHash: string; prevHash: string } {
-      const full = shortHash(id + ts) + shortHash(ts + id) + shortHash(id + seq);
-      const prev = seq > 1 ? shortHash(String(seq - 1)) + shortHash(id) : "0000000000000000";
-      return { hash: full.slice(0, 8), fullHash: full, prevHash: prev };
-    }
-
-    // ── 1. Hedge engine runs ──────────────────────────────────────────────
-    try {
-      const meta = localStorage.getItem("ordr_last_run_meta");
-      if (meta) {
-        const m = JSON.parse(meta) as { runId: string; ts: string; user: string; baseCcy?: string };
-        const id = `EVT-${seq++}`;
-        const { hash, fullHash, prevHash } = makeHash(id, m.ts);
-        collected.push({
-          id, timestamp: m.ts, type: "PROPOSAL", actor: m.user || "system", role: "TRADER",
-          description: `Hedge plan generated — Run ${m.runId?.slice(0, 8).toUpperCase() ?? "—"}`,
-          hash, fullHash, prevHash,
-          relatedIds: { run_id: m.runId ?? "—", ccy: m.baseCcy ?? "MXN" },
-          ip: "127.0.0.1", userAgent: "ORDR Web Client",
-          payload: { run_id: m.runId, triggered_by: m.user, base_ccy: m.baseCcy },
-        });
-      }
-    } catch {/* ignore */}
-
-    // ── 2. Connector runs from session storage ────────────────────────────
-    try {
-      const connRaw = localStorage.getItem("ordr_connector_runs");
-      if (connRaw) {
-        const runs = JSON.parse(connRaw) as Array<{ id: string; ts: string; connector: string; status: string; rows?: number }>;
-        runs.slice(0, 10).forEach((r) => {
-          const id = `EVT-${seq++}`;
-          const { hash, fullHash, prevHash } = makeHash(id, r.ts);
-          collected.push({
-            id, timestamp: r.ts, type: "IMPORT", actor: "connector", role: "SYSTEM",
-            description: `${r.connector} import — ${r.status === "COMPLETED" ? `${r.rows ?? 0} rows` : r.status}`,
-            hash, fullHash, prevHash,
-            relatedIds: { run_id: r.id, connector: r.connector },
-            ip: "127.0.0.1", userAgent: "ORDR Connector Daemon",
-            payload: { connector: r.connector, status: r.status, rows: r.rows },
-          });
-        });
-      }
-    } catch {/* ignore */}
-
-    // ── 3. Policy changes ────────────────────────────────────────────────
-    try {
-      const polRaw = localStorage.getItem("ordr_policy_history");
-      if (polRaw) {
-        const changes = JSON.parse(polRaw) as Array<{ ts: string; actor: string; action: string; policy_id: string }>;
-        changes.slice(0, 10).forEach((c) => {
-          const id = `EVT-${seq++}`;
-          const { hash, fullHash, prevHash } = makeHash(id, c.ts);
-          collected.push({
-            id, timestamp: c.ts, type: "POLICY", actor: c.actor || "admin", role: "ADMIN",
-            description: `Policy ${c.action} — ${c.policy_id}`,
-            hash, fullHash, prevHash,
-            relatedIds: { policy_id: c.policy_id },
-            ip: "127.0.0.1", userAgent: "ORDR Web Client",
-            payload: { action: c.action, policy_id: c.policy_id },
-          });
-        });
-      }
-    } catch {/* ignore */}
-
-    // ── 4. Settings saves ─────────────────────────────────────────────────
-    try {
-      const settRaw = localStorage.getItem("ordr_settings_changelog");
-      if (settRaw) {
-        const changes = JSON.parse(settRaw) as Array<{ ts: string; actor: string; tab: string }>;
-        changes.slice(0, 5).forEach((c) => {
-          const id = `EVT-${seq++}`;
-          const { hash, fullHash, prevHash } = makeHash(id, c.ts);
-          collected.push({
-            id, timestamp: c.ts, type: "SYSTEM", actor: c.actor || user?.email || "user", role: "ADMIN",
-            description: `Settings updated — ${c.tab} tab`,
-            hash, fullHash, prevHash,
-            relatedIds: { tab: c.tab },
-            ip: "127.0.0.1", userAgent: "ORDR Web Client",
-            payload: { tab: c.tab },
-          });
-        });
-      }
-    } catch {/* ignore */}
-
-    // ── 5. Order submitter state ──────────────────────────────────────────
-    try {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith("ordr_orders_"));
-      keys.forEach((k) => {
-        const raw = localStorage.getItem(k);
-        if (!raw) return;
-        const orders = JSON.parse(raw) as Array<{ bucket: string; status: string; submittedAt?: string; filledAt?: string; fillPrice?: number }>;
-        orders.filter(o => o.submittedAt).forEach((o) => {
-          const id = `EVT-${seq++}`;
-          const ts = o.submittedAt!;
-          const { hash, fullHash, prevHash } = makeHash(id, ts);
-          collected.push({
-            id, timestamp: ts, type: "EXECUTION", actor: user?.email || "trader", role: "TRADER",
-            description: `Order submitted — Bucket ${o.bucket} · ${o.status}`,
-            hash, fullHash, prevHash,
-            relatedIds: { bucket: o.bucket, status: o.status },
-            ip: "127.0.0.1", userAgent: "ORDR Web Client",
-            payload: { bucket: o.bucket, status: o.status, fill_price: o.fillPrice },
-          });
-        });
-      });
-    } catch {/* ignore */}
-
-    // ── 6. Session start (always present) ────────────────────────────────
-    {
-      const sessionTs = new Date(Date.now() - 60_000).toISOString().replace("T", " ").slice(0, 19) + " UTC";
-      const id = `EVT-${seq++}`;
-      const { hash, fullHash, prevHash } = makeHash(id, sessionTs);
-      collected.push({
-        id, timestamp: sessionTs, type: "SYSTEM", actor: user?.email || "anonymous", role: "USER",
-        description: "Session authenticated — Audit Trail opened",
-        hash, fullHash, prevHash,
-        relatedIds: { tenant: "default" },
-        ip: "127.0.0.1", userAgent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 60) : "ORDR Web",
-        payload: { session_start: sessionTs },
-      });
-    }
-
-    // Sort newest-first
-    collected.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-    setEvents(collected);
-  }, [user?.email]);
-
-  // Filter events
+  // ── Client-side filtering ─────────────────────────────────────────────────
   const filteredEvents = events.filter((evt) => {
     const typeFilter = TAB_TYPE_MAP[activeTab];
     if (typeFilter && evt.type !== typeFilter) return false;
     if (actorFilter !== "All Actors" && evt.actor !== actorFilter) return false;
-    if (dateFrom) {
-      const evtDate = evt.timestamp.slice(0, 10);
-      if (evtDate < dateFrom) return false;
-    }
-    if (dateTo) {
-      const evtDate = evt.timestamp.slice(0, 10);
-      if (evtDate > dateTo) return false;
+    if (dateFrom && evt.timestamp.slice(0, 10) < dateFrom) return false;
+    if (dateTo   && evt.timestamp.slice(0, 10) > dateTo)   return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const matchDesc = evt.description.toLowerCase().includes(q);
+      const matchId   = Object.values(evt.relatedIds).some(v => v.toLowerCase().includes(q));
+      const matchActor = evt.actor.toLowerCase().includes(q);
+      if (!matchDesc && !matchId && !matchActor) return false;
     }
     return true;
   });
 
-  // Toggle expand
-  const handleToggle = (id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  };
-
-  // Verify chain integrity
-  const handleVerify = () => {
-    if (events.length === 0) return;
-    setVerifying(true);
-    setVerified(false);
-    // Simulate hash chain verification
-    setTimeout(() => {
-      setVerifying(false);
-      setVerified(true);
-    }, 1200);
-  };
-
+  // ── CSV export ────────────────────────────────────────────────────────────
   const handleExportAuditLog = () => {
-    const rows = ["timestamp,type,actor,role,description,hash"];
+    const rows = ["timestamp,type,actor,role,description,hash,prev_hash"];
     events.forEach(e => rows.push(
-      [e.timestamp, e.type, e.actor, e.role, `"${e.description}"`, e.hash].join(",")
+      [e.timestamp, e.type, e.actor, e.role, `"${e.description.replace(/"/g, '""')}"`, e.fullHash, e.prevHash].join(",")
     ));
     const blob = new Blob([rows.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
     a.download = `ordr_audit_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
@@ -581,14 +539,38 @@ export default function AuditTrailPage() {
 
   if (!isAuthenticated) return null;
 
-  // ── Main render ─────────────────────────────────────────────────────────────
+  // ── KPI values ───────────────────────────────────────────────────────────
+  const weekAgo    = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const thisWeek   = events.filter(e => e.timestamp.slice(0, 10) >= weekAgo).length;
+  const execCount  = events.filter(e => e.type === "EXECUTION").length;
+
+  let integrityValue = "—";
+  let integrityColor: string = S.tertiary;
+  if (integrityReport) {
+    if (integrityReport.is_intact) {
+      integrityValue = `✓ ${integrityReport.events_checked} verified`;
+      integrityColor = S.pass;
+    } else {
+      integrityValue = "✗ BROKEN";
+      integrityColor = S.fail;
+    }
+  }
+
+  // Unique actors for the actor filter dropdown
+  const actors = ["All Actors", ...Array.from(new Set(events.map(e => e.actor))).sort()];
+
   return (
     <div style={{
       background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI,
       display: "flex", flexDirection: "column",
     }}>
       {/* TopBar (44px) */}
-      <TopBar renderTs={renderTs} onBack={() => router.push("/")} />
+      <TopBar
+        renderTs={renderTs}
+        onBack={() => router.push("/")}
+        onRefresh={fetchEvents}
+        loading={loading}
+      />
 
       {/* Tab bar (36px) */}
       <div style={{
@@ -603,14 +585,18 @@ export default function AuditTrailPage() {
               key={tab.key}
               onClick={() => { setActiveTab(tab.key); setExpandedId(null); }}
               style={{
-                fontFamily: S.fontUI, fontSize: "0.6875rem",
-                fontWeight: active ? 600 : 400,
-                padding: "0 16px", border: "none",
+                fontFamily:   S.fontUI,
+                fontSize:     "0.6875rem",
+                fontWeight:   active ? 600 : 400,
+                padding:      "0 16px",
+                border:       "none",
                 borderBottom: active ? `2px solid ${S.cyan}` : "2px solid transparent",
-                color: active ? S.cyan : S.tertiary,
-                background: "transparent", cursor: "pointer",
-                display: "flex", alignItems: "center",
-                transition: "color 0.15s, border-color 0.15s",
+                color:        active ? S.cyan : S.tertiary,
+                background:   "transparent",
+                cursor:       "pointer",
+                display:      "flex",
+                alignItems:   "center",
+                transition:   "color 0.15s, border-color 0.15s",
                 letterSpacing: "0.04em",
               }}
             >
@@ -623,188 +609,265 @@ export default function AuditTrailPage() {
           fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary,
           display: "flex", alignItems: "center", letterSpacing: "0.06em",
         }}>
-          {filteredEvents.length} EVENTS
+          {loading ? "…" : filteredEvents.length} EVENTS
         </span>
       </div>
 
       {/* Content area + Help Panel */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-      <div style={{
-        flex: 1, overflowY: "auto",
-        padding: "20px 24px 16px",
-        display: "flex", flexDirection: "column", gap: 16,
-      }}>
-
-        {/* KPI Summary Row */}
-        {(() => {
-          const now = Date.now();
-          const weekAgo = new Date(now - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-          const thisWeek = events.filter(e => e.timestamp.slice(0, 10) >= weekAgo).length;
-          const execCount = events.filter(e => e.type === "EXECUTION").length;
-          return (
-            <div style={{ display: "flex", gap: 12 }}>
-              <KpiCard label="Total Events"    value={String(events.length)}   badge="ALL TIME" badgeColor={S.tertiary} />
-              <KpiCard label="This Week"       value={String(thisWeek)}        badge="7 DAYS"   badgeColor={thisWeek > 0 ? S.cyan : S.tertiary} />
-              <KpiCard label="Executions"      value={String(execCount)}       badge="ORDERS"   badgeColor={execCount > 0 ? S.amber : S.tertiary} />
-              <KpiCard label="Integrity Score" value={verified ? "✓ PASS" : "—"} badge="VERIFIED" badgeColor={verified ? S.pass : S.tertiary} />
-            </div>
-          );
-        })()}
-
-        {/* Filter Controls */}
         <div style={{
-          display: "flex", alignItems: "center", gap: 10,
-          padding: "10px 14px",
-          background: S.bgPanel, border: `1px solid ${S.rim}`,
-          flexWrap: "wrap",
+          flex: 1, overflowY: "auto",
+          padding: "20px 24px 16px",
+          display: "flex", flexDirection: "column", gap: 16,
         }}>
-          {/* Date range */}
-          <span style={{
-            fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
-            color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
-          }}>From</span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            style={{
-              fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
-              background: S.bgDeep, border: `1px solid ${S.rim}`,
-              padding: "4px 8px", outline: "none",
-            }}
-          />
-          <span style={{
-            fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
-            color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
-          }}>To</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            style={{
-              fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
-              background: S.bgDeep, border: `1px solid ${S.rim}`,
-              padding: "4px 8px", outline: "none",
-            }}
-          />
 
-          {/* Actor filter */}
-          <select
-            value={actorFilter}
-            onChange={(e) => setActorFilter(e.target.value)}
-            style={{
-              fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
-              background: S.bgDeep, border: `1px solid ${S.rim}`,
-              padding: "4px 8px", outline: "none", cursor: "pointer",
-              appearance: "none" as const,
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.2'/%3E%3C/svg%3E")`,
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 8px center",
-              paddingRight: 24,
-            }}
-          >
-            {(["All Actors", ...Array.from(new Set(events.map(e => e.actor))).sort()] as string[]).map((a) => (
-              <option key={a} value={a}>{a}</option>
+          {/* KPI Summary Row */}
+          <div style={{ display: "flex", gap: 12 }}>
+            <KpiCard
+              label="Total Events"
+              value={loading ? "…" : String(events.length)}
+              badge="ALL TIME"
+              badgeColor={S.tertiary}
+            />
+            <KpiCard
+              label="This Week"
+              value={loading ? "…" : String(thisWeek)}
+              badge="7 DAYS"
+              badgeColor={thisWeek > 0 ? S.cyan : S.tertiary}
+            />
+            <KpiCard
+              label="Executions"
+              value={loading ? "…" : String(execCount)}
+              badge="ORDERS"
+              badgeColor={execCount > 0 ? S.amber : S.tertiary}
+            />
+            <KpiCard
+              label="Chain Integrity"
+              value={loading ? "…" : integrityValue}
+              badge="SHA-256"
+              badgeColor={integrityColor}
+            />
+          </div>
+
+          {/* Filter Controls */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "10px 14px",
+            background: S.bgPanel, border: `1px solid ${S.rim}`,
+            flexWrap: "wrap",
+          }}>
+            {/* Search */}
+            <input
+              type="text"
+              placeholder="Search description, ID, actor…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
+                background: S.bgDeep, border: `1px solid ${S.rim}`,
+                padding: "4px 10px", outline: "none", width: 220,
+              }}
+            />
+
+            {/* Date range */}
+            <span style={{
+              fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
+              color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
+            }}>From</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              style={{
+                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
+                background: S.bgDeep, border: `1px solid ${S.rim}`,
+                padding: "4px 8px", outline: "none",
+              }}
+            />
+            <span style={{
+              fontFamily: S.fontUI, fontSize: "0.625rem", fontWeight: 600,
+              color: S.tertiary, letterSpacing: "0.06em", textTransform: "uppercase",
+            }}>To</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              style={{
+                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
+                background: S.bgDeep, border: `1px solid ${S.rim}`,
+                padding: "4px 8px", outline: "none",
+              }}
+            />
+
+            {/* Actor filter */}
+            <select
+              value={actorFilter}
+              onChange={(e) => setActorFilter(e.target.value)}
+              style={{
+                fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.primary,
+                background: S.bgDeep, border: `1px solid ${S.rim}`,
+                padding: "4px 8px", outline: "none", cursor: "pointer",
+                appearance: "none" as const,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.2'/%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 8px center",
+                paddingRight: 24,
+              }}
+            >
+              {actors.map((a) => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+
+            <div style={{ flex: 1 }} />
+
+            {/* Verify Chain Integrity (real backend call) */}
+            <button
+              onClick={handleVerify}
+              disabled={verifying || loading}
+              style={{
+                fontFamily:   S.fontMono,
+                fontSize:     "0.6875rem",
+                fontWeight:   700,
+                letterSpacing: "0.06em",
+                color:        integrityReport?.is_intact
+                                ? S.pass
+                                : integrityReport && !integrityReport.is_intact
+                                  ? S.fail
+                                  : S.cyan,
+                background:   integrityReport?.is_intact
+                                ? `color-mix(in srgb, ${S.pass} 10%, transparent)`
+                                : `color-mix(in srgb, ${S.cyan} 10%, transparent)`,
+                border:       `1px solid ${integrityReport?.is_intact ? S.pass : integrityReport && !integrityReport.is_intact ? S.fail : S.cyan}`,
+                padding:      "5px 14px",
+                cursor:       verifying || loading ? "wait" : "pointer",
+                display:      "flex",
+                alignItems:   "center",
+                gap:          6,
+                transition:   "all 0.25s",
+              }}
+            >
+              {verifying && (
+                <span style={{
+                  display: "inline-block", width: 10, height: 10,
+                  border: `2px solid ${S.cyan}`, borderTopColor: "transparent",
+                  borderRadius: "50%",
+                  animation: "audit-spin 0.6s linear infinite",
+                }} />
+              )}
+              {integrityReport?.is_intact
+                ? `✓ ${integrityReport.events_checked} events verified`
+                : integrityReport && !integrityReport.is_intact
+                  ? `✗ Chain broken at ${integrityReport.broken_at?.slice(0, 8)}`
+                  : verifying
+                    ? "Verifying…"
+                    : "VERIFY CHAIN INTEGRITY"}
+            </button>
+
+            {/* Export */}
+            <button
+              onClick={handleExportAuditLog}
+              disabled={events.length === 0}
+              style={{
+                fontFamily:   S.fontMono,
+                fontSize:     "0.6875rem",
+                fontWeight:   600,
+                letterSpacing: "0.06em",
+                color:        events.length > 0 ? S.secondary : S.tertiary,
+                background:   "transparent",
+                border:       `1px solid ${S.rim}`,
+                padding:      "5px 14px",
+                cursor:       events.length > 0 ? "pointer" : "default",
+              }}
+            >
+              Export CSV ↓
+            </button>
+          </div>
+
+          {/* Timeline header */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "140px 90px 170px 1fr 100px",
+            padding: "6px 16px", gap: 12,
+            borderBottom: `1px solid ${S.rim}`,
+          }}>
+            {["TIMESTAMP", "TYPE", "ACTOR", "DESCRIPTION", "HASH"].map((h) => (
+              <span key={h} style={{
+                fontFamily:    S.fontMono,
+                fontSize:      "0.625rem",
+                fontWeight:    700,
+                letterSpacing: "0.08em",
+                color:         S.tertiary,
+                textAlign:     h === "HASH" ? "right" : "left",
+              }}>
+                {h}
+              </span>
             ))}
-          </select>
+          </div>
 
-          <div style={{ flex: 1 }} />
-
-          {/* Verify Chain Integrity */}
-          <button
-            onClick={handleVerify}
-            disabled={verifying}
-            style={{
-              fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 700,
-              letterSpacing: "0.06em",
-              color: verified ? S.pass : S.cyan,
-              background: verified
-                ? `color-mix(in srgb, ${S.pass} 10%, transparent)`
-                : `color-mix(in srgb, ${S.cyan} 10%, transparent)`,
-              border: `1px solid ${verified ? S.pass : S.cyan}`,
-              padding: "5px 14px", cursor: verifying ? "wait" : "pointer",
-              display: "flex", alignItems: "center", gap: 6,
-              transition: "all 0.25s",
-            }}
-          >
-            {verifying && (
-              <span style={{
-                display: "inline-block", width: 10, height: 10,
-                border: `2px solid ${S.cyan}`, borderTopColor: "transparent",
-                borderRadius: "50%",
-                animation: "audit-spin 0.6s linear infinite",
-              }} />
+          {/* Event list */}
+          <div style={{
+            background: S.bgPanel, border: `1px solid ${S.rim}`,
+            flex: 1, overflow: "auto",
+          }}>
+            {/* Loading */}
+            {loading && (
+              <div style={{ padding: "40px 24px", textAlign: "center" }}>
+                <div style={{
+                  fontFamily: S.fontMono, fontSize: 11, color: S.tertiary,
+                  letterSpacing: "0.06em",
+                }}>
+                  LOADING AUDIT EVENTS…
+                </div>
+              </div>
             )}
-            {verified ? `\u2713 All ${events.length} events verified` : verifying ? "Verifying\u2026" : "VERIFY CHAIN INTEGRITY"}
-          </button>
 
-          {/* Export */}
-          <button
-            onClick={handleExportAuditLog}
-            disabled={events.length === 0}
-            style={{
-              fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 600,
-              letterSpacing: "0.06em",
-              color: events.length > 0 ? S.secondary : S.tertiary,
-              background: "transparent",
-              border: `1px solid ${S.rim}`,
-              padding: "5px 14px", cursor: events.length > 0 ? "pointer" : "default",
-            }}>
-            Export CSV ↓
-          </button>
-        </div>
+            {/* Error */}
+            {!loading && fetchError && (
+              <div style={{ padding: "32px 24px", textAlign: "center" }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.fail, letterSpacing: "0.06em" }}>
+                  FAILED TO LOAD — {fetchError}
+                </div>
+                <button
+                  onClick={fetchEvents}
+                  style={{
+                    marginTop: 12, fontFamily: S.fontMono, fontSize: 10,
+                    fontWeight: 600, letterSpacing: "0.06em",
+                    color: S.cyan, background: "transparent",
+                    border: `1px solid ${S.cyan}`,
+                    padding: "5px 14px", cursor: "pointer",
+                  }}
+                >
+                  RETRY
+                </button>
+              </div>
+            )}
 
-        {/* Timeline header */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "140px 90px 170px 1fr 100px",
-          padding: "6px 16px",
-          gap: 12,
-          borderBottom: `1px solid ${S.rim}`,
-        }}>
-          {["TIMESTAMP", "TYPE", "ACTOR", "DESCRIPTION", "HASH"].map((h) => (
-            <span key={h} style={{
-              fontFamily: S.fontMono, fontSize: "0.625rem", fontWeight: 700,
-              letterSpacing: "0.08em", color: S.tertiary,
-              textAlign: h === "HASH" ? "right" : "left",
-            }}>
-              {h}
-            </span>
-          ))}
-        </div>
+            {/* Empty */}
+            {!loading && !fetchError && filteredEvents.length === 0 && (
+              <div style={{ padding: "40px 24px", textAlign: "center" }}>
+                <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.6 }}>
+                  {events.length === 0
+                    ? "No audit events recorded yet. Events are written automatically as your team takes actions."
+                    : "No events match the current filters."}
+                </div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 6, letterSpacing: "0.06em" }}>
+                  {events.length === 0 ? "EMPTY AUDIT LOG" : "0 MATCHING EVENTS"}
+                </div>
+              </div>
+            )}
 
-        {/* Event list */}
-        <div style={{
-          background: S.bgPanel, border: `1px solid ${S.rim}`,
-          flex: 1, overflow: "auto",
-        }}>
-          {filteredEvents.length === 0 ? (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <tbody>
-                <tr>
-                  <td colSpan={6} style={{ padding: "40px 24px", textAlign: "center" }}>
-                    <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.6 }}>
-                      Audit events are written automatically as your team takes actions.
-                    </div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 6, letterSpacing: "0.06em" }}>
-                      NO EVENTS RECORDED YET
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          ) : (
-            filteredEvents.map((evt) => (
+            {/* Events */}
+            {!loading && !fetchError && filteredEvents.map((evt) => (
               <EventRow
                 key={evt.id}
                 event={evt}
                 expanded={expandedId === evt.id}
-                onToggle={() => handleToggle(evt.id)}
+                onToggle={() => setExpandedId((prev) => (prev === evt.id ? null : evt.id))}
               />
-            ))
-          )}
+            ))}
+          </div>
         </div>
-      </div>
 
         <HelpPanel config={AUDIT_TRAIL_HELP} storageKey="audit-trail" />
       </div>
