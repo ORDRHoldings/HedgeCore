@@ -8,7 +8,8 @@ import { useAuth } from "@/lib/authContext";
 import type { UserContext } from "@/lib/authContext";
 import { WIDGET_REGISTRY, getDefaultLayoutForRole, type GridItem, type WidgetId } from "@/lib/widgets/widgetRegistry";
 import WidgetCatalog from "@/components/dashboard/WidgetCatalog";
-import DashboardHelpPanel from "@/components/dashboard/DashboardHelpPanel";
+import HelpPanelV2 from "@/components/help/HelpPanelV2";
+import { DASHBOARD_HELP } from "@/lib/help";
 import KpiSummaryWidget from "@/components/dashboard/widgets/KpiSummaryWidget";
 import RecentRunsWidget from "@/components/dashboard/widgets/RecentRunsWidget";
 import PendingApprovalsWidget from "@/components/dashboard/widgets/PendingApprovalsWidget";
@@ -174,7 +175,7 @@ export default function DashboardPage() {
             </ResponsiveGridLayout>
           )}
         </div>
-        {helpOpen && (<div style={{ width: 300, flexShrink: 0, borderLeft: `1px solid ${S.rim}`, background: S.bgPanel, overflow: "auto", position: "sticky", top: 0, alignSelf: "flex-start", maxHeight: "calc(100vh - 76px)" }}><DashboardHelpPanel onClose={toggleHelp} role={role} /></div>)}
+        <HelpPanelV2 module={DASHBOARD_HELP} storageKey="dashboard" />
       </div>
       <footer style={{ height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px", background: S.bgPanel, borderTop: `1px solid ${S.rim}`, fontFamily: S.fontMono, fontSize: "0.6rem", color: S.tertiary, letterSpacing: "0.04em", flexShrink: 0 }}>
         <span style={{ color: S.cyan }}>ORDR</span><span style={{ color: S.rim }}>·</span><span>{user.company?.name ?? "ORDR Terminal"}</span><span style={{ color: S.rim }}>·</span><span>Institutional Risk Infrastructure</span><div style={{ flex: 1 }} /><span>Drag handle to reposition · Resize from corner · Layout auto-saved</span>
