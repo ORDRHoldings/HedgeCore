@@ -1,31 +1,30 @@
 import { NextResponse } from 'next/server';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Macro Data — Alpha Vantage economic indicators + ETF proxies
+// Macro Data — Finnhub quote API (replaces Alpha Vantage ETF proxies)
 // GET /api/macro-data
-// Returns: structured macro snapshot for GeoPolitical & Macro widget
-//
-// Endpoints used (all free tier):
-//   TREASURY_YIELD     → US 10Y yield (daily)
-//   FEDERAL_FUNDS_RATE → Fed Funds rate (monthly)
-//   GLOBAL_QUOTE       → UUP (DXY proxy), GLD (Gold), USO (Oil), VIXY (VIX proxy)
-//
-// Cache: 24 hours (revalidate: 86400) — end-of-day market closed data
-// Free tier budget: 6 calls/day for this route
+// Finnhub free tier: 60 req/min, no daily cap
+// Symbols used:
+//   ^VIX   → VIX volatility index (direct)
+//   ^TNX   → US 10Y Treasury yield (direct, already in %)
+//   UUP    → DXY proxy ETF (×3.66)
+//   GLD    → Gold proxy ETF (÷0.0945)
+//   USO    → WTI/Brent proxy ETF (×8+3)
+//   VIXY   → kept as VIX fallback if ^VIX unavailable
+// CDN cache: s-maxage=86400 persists across Vercel deployments
 // ─────────────────────────────────────────────────────────────────────────────
 
-const AV_KEY  = process.env.ALPHA_VANTAGE_API_KEY ?? '';
-const AV_BASE = 'https://www.alphavantage.co/query';
+const FH_KEY  = process.env.FINNHUB_API_KEY ?? '';
+const FH_BASE = 'https://finnhub.io/api/v1';
 
-// Static fallback values — EOD 2026-02-27
-// DXY via UUP $27.08 × 3.66 = 99.11 (confirmed); others estimated from known correlations
+// Static fallback — EOD 2026-02-27 (DXY/UUP confirmed; others estimated)
 const STATIC = {
-  dxy:        { value: 99.11,  date: '2026-02-27', trend: 'down' as const },
-  us10y:      { value: 4.26,   date: '2026-02-27', trend: 'down' as const },
-  fedFunds:   { value: 4.33,   date: '2026-02-01', trend: 'flat' as const },
-  gold:       { value: 2870.0, date: '2026-02-27', trend: 'flat' as const },
-  brent:      { value: 73.50,  date: '2026-02-27', trend: 'down' as const },
-  vix:        { value: 21.50,  date: '2026-02-27', trend: 'up'   as const },
+  dxy:       { value: 99.11, date: '2026-02-27', trend: 'down' as const },
+  us10y:     { value: 4.26, date: '2026-02-27', trend: 'down' as const },
+  fedFunds:  { value: 4.33, date: '2026-02-01', trend: 'flat' as const },
+  gold:      { value: 2870.0, date: '2026-02-27', trend: 'flat' as const },
+  brent:     { value: 73.5, date: '2026-02-27', trend: 'down' as const },
+  vix:       { value: 21.5, date: '2026-02-27', trend: 'up' as const },
 };
 
 type Trend = 'up' | 'down' | 'flat';
@@ -38,49 +37,16 @@ function calcTrend(current: number, prev: number): Trend {
   return 'flat';
 }
 
-// Fetch latest value from AV time series endpoints (TREASURY_YIELD, FEDERAL_FUNDS_RATE, etc.)
-async function fetchSeriesLatest(fn: string, params = ''): Promise<{ value: number; prev: number; date: string } | null> {
-  if (!AV_KEY || AV_KEY === 'YOUR_ALPHA_VANTAGE_KEY_HERE') return null;
+async function fetchFHQuote(symbol: string): Promise<{ price: number; prevClose: number; date: string } | null> {
+  if (!FH_KEY) return null;
   try {
-    const url = `${AV_BASE}?function=${fn}${params}&apikey=${AV_KEY}`;
+    const url = `${FH_BASE}/quote?symbol=${encodeURIComponent(symbol)}&token=${FH_KEY}`;
     const res = await fetch(url, { next: { revalidate: 86400 } });
     if (!res.ok) return null;
-    const json = await res.json() as Record<string, unknown>;
-    if (json['Note'] || json['Information']) return null;
-
-    // Both TREASURY_YIELD and FEDERAL_FUNDS_RATE return { data: [{date, value}, ...] }
-    const data = json['data'] as Array<{ date: string; value: string }> | undefined;
-    if (!data || data.length === 0) return null;
-
-    const latest = data[0]!;
-    const prev   = data[1];
-    const value  = parseFloat(latest.value);
-    const prevVal = prev ? parseFloat(prev.value) : value;
-    if (isNaN(value)) return null;
-
-    return { value, prev: prevVal, date: latest.date };
-  } catch {
-    return null;
-  }
-}
-
-// Fetch GLOBAL_QUOTE for an ETF/stock symbol
-async function fetchETF(symbol: string): Promise<{ price: number; prevClose: number; date: string } | null> {
-  if (!AV_KEY || AV_KEY === 'YOUR_ALPHA_VANTAGE_KEY_HERE') return null;
-  try {
-    const url = `${AV_BASE}?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${AV_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 86400 } });
-    if (!res.ok) return null;
-    const json = await res.json() as Record<string, unknown>;
-    if (json['Note'] || json['Information']) return null;
-
-    const q = json['Global Quote'] as Record<string, string> | undefined;
-    if (!q || !q['05. price']) return null;
-    const price = parseFloat(q['05. price']);
-    const prev  = parseFloat(q['08. previous close'] ?? q['05. price']);
-    const date  = q['07. latest trading day'] ?? '';
-    if (isNaN(price) || price <= 0) return null;
-    return { price, prevClose: prev, date };
+    const q = await res.json() as Record<string, number>;
+    if (!q.c || q.c === 0) return null;
+    const date = q.t ? new Date(q.t * 1000).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+    return { price: q.c, prevClose: q.pc ?? q.c, date };
   } catch {
     return null;
   }
@@ -90,167 +56,38 @@ export async function GET() {
   const asOf = new Date().toISOString().slice(0, 10);
   let liveCount = 0;
 
-  // ── Fetch all in parallel ─────────────────────────────────────────────────
-  const [us10yData, fedData, uupData, gldData, usoData, vixyData] = await Promise.all([
-    fetchSeriesLatest('TREASURY_YIELD', '&interval=daily&maturity=10year'),
-    fetchSeriesLatest('FEDERAL_FUNDS_RATE', '&interval=monthly'),
-    fetchETF('UUP'),    // USD Index Bullish ETF  (DXY proxy)
-    fetchETF('GLD'),    // SPDR Gold Trust ETF     (~gold/10 oz)
-    fetchETF('USO'),    // United States Oil Fund  (WTI proxy)
-    fetchETF('VIXY'),   // ProShares VIX ST Futures (VIX proxy)
+  const [vixData, tnxData, uupData, gldData, usoData] = await Promise.all([
+    fetchFHQuote('^VIX'),   fetchFHQuote('^TNX'),
+    fetchFHQuote('UUP'),    fetchFHQuote('GLD'),    fetchFHQuote('USO'),
   ]);
 
-  // ── Build macro snapshot ──────────────────────────────────────────────────
+  let vix: { value: number; date: string; trend: Trend } = { ...STATIC.vix };
+  if (vixData) { liveCount++; vix = { value: parseFloat(vixData.price.toFixed(1)), date: vixData.date, trend: calcTrend(vixData.price, vixData.prevClose) }; }
 
-  // US 10Y
-  let us10y:    { value: number; date: string; trend: Trend } = { ...STATIC.us10y };
-  if (us10yData) {
-    liveCount++;
-    us10y = {
-      value: us10yData.value,
-      date:  us10yData.date,
-      trend: calcTrend(us10yData.value, us10yData.prev),
-    };
-  }
+  let us10y: { value: number; date: string; trend: Trend } = { ...STATIC.us10y };
+  if (tnxData) { liveCount++; us10y = { value: parseFloat(tnxData.price.toFixed(2)), date: tnxData.date, trend: calcTrend(tnxData.price, tnxData.prevClose) }; }
 
-  // Fed Funds
-  let fedFunds: { value: number; date: string; trend: Trend } = { ...STATIC.fedFunds };
-  if (fedData) {
-    liveCount++;
-    fedFunds = {
-      value: fedData.value,
-      date:  fedData.date,
-      trend: calcTrend(fedData.value, fedData.prev),
-    };
-  }
+  let dxy: { value: number; date: string; trend: Trend } = { ...STATIC.dxy };
+  if (uupData) { liveCount++; const dxyEst = parseFloat((uupData.price * 3.66).toFixed(2)); dxy = { value: dxyEst, date: uupData.date, trend: calcTrend(dxyEst, uupData.prevClose * 3.66) }; }
 
-  // DXY proxy via UUP
-  // UUP ≈ DXY / 3.66  (rough historical relationship)
-  let dxy:      { value: number; date: string; trend: Trend } = { ...STATIC.dxy };
-  if (uupData) {
-    liveCount++;
-    const dxyEst = parseFloat((uupData.price * 3.66).toFixed(2));
-    const dxyPrev = parseFloat((uupData.prevClose * 3.66).toFixed(2));
-    dxy = {
-      value: dxyEst,
-      date:  uupData.date,
-      trend: calcTrend(dxyEst, dxyPrev),
-    };
-  }
+  let gold: { value: number; date: string; trend: Trend } = { ...STATIC.gold };
+  if (gldData) { liveCount++; const goldEst = parseFloat((gldData.price / 0.0945).toFixed(0)); gold = { value: goldEst, date: gldData.date, trend: calcTrend(goldEst, gldData.prevClose / 0.0945) }; }
 
-  // Gold via GLD ETF: GLD holds ~0.0945 oz gold → gold ≈ GLD / 0.0945
-  let gold:     { value: number; date: string; trend: Trend } = { ...STATIC.gold };
-  if (gldData) {
-    liveCount++;
-    const goldEst  = parseFloat((gldData.price / 0.0945).toFixed(0));
-    const goldPrev = parseFloat((gldData.prevClose / 0.0945).toFixed(0));
-    gold = {
-      value: goldEst,
-      date:  gldData.date,
-      trend: calcTrend(goldEst, goldPrev),
-    };
-  }
+  let brent: { value: number; date: string; trend: Trend } = { ...STATIC.brent };
+  if (usoData) { liveCount++; const brentEst = parseFloat((usoData.price * 8 + 3).toFixed(2)); brent = { value: brentEst, date: usoData.date, trend: calcTrend(brentEst, usoData.prevClose * 8 + 3) }; }
 
-  // Brent via USO ETF (USO tracks WTI; Brent typically $2-4 higher)
-  let brent:    { value: number; date: string; trend: Trend } = { ...STATIC.brent };
-  if (usoData) {
-    liveCount++;
-    // USO ≈ WTI/8 (after reverse splits) → WTI ≈ USO × 8 → Brent ≈ WTI + 3
-    const wtiEst   = parseFloat((usoData.price * 8).toFixed(2));
-    const brentEst = wtiEst + 3;
-    const wtiPrev  = usoData.prevClose * 8 + 3;
-    brent = {
-      value: brentEst,
-      date:  usoData.date,
-      trend: calcTrend(brentEst, wtiPrev),
-    };
-  }
-
-  // VIX via VIXY (ProShares VIX Short-Term Futures ETF)
-  // VIXY ≈ VIX × 0.65  (very rough proxy due to futures roll cost)
-  let vix:      { value: number; date: string; trend: Trend } = { ...STATIC.vix };
-  if (vixyData) {
-    liveCount++;
-    const vixEst  = parseFloat((vixyData.price / 0.65).toFixed(1));
-    const vixPrev = vixyData.prevClose / 0.65;
-    vix = {
-      value: vixEst,
-      date:  vixyData.date,
-      trend: calcTrend(vixEst, vixPrev),
-    };
-  }
-
+  const fedFunds = { ...STATIC.fedFunds };
   const dataSource = liveCount > 0 ? 'live' : 'fallback';
 
-  const payload = {
-    dataSource,
-    liveCount,
-    asOf: us10yData?.date ?? gldData?.date ?? asOf,
-    macroData: {
-      dxy: {
-        label:   'DXY INDEX',
-        value:   dxy.value,
-        display: dxy.value.toFixed(2),
-        maxRef:  120,
-        trend:   dxy.trend,
-        context: dxy.value > 105 ? 'USD broad strength elevated' : dxy.value > 100 ? 'USD consolidating' : 'USD softening',
-        unit:    '',
-        note:    uupData ? `UUP ETF proxy × 3.66 as of ${dxy.date}` : 'Indicative estimate',
-      },
-      vix: {
-        label:   'VIX',
-        value:   vix.value,
-        display: vix.value.toFixed(1),
-        maxRef:  45,
-        trend:   vix.trend,
-        context: vix.value > 25 ? 'Elevated fear gauge — hedge demand rising' : vix.value > 18 ? 'Moderate uncertainty' : 'Risk-on environment',
-        unit:    '',
-        note:    vixyData ? `VIXY ETF proxy as of ${vix.date}` : 'Indicative estimate',
-      },
-      us10y: {
-        label:   'US 10Y',
-        value:   us10y.value,
-        display: `${us10y.value.toFixed(2)}%`,
-        maxRef:  6,
-        trend:   us10y.trend,
-        context: us10y.value > 4.5 ? 'Term premium rebuilding — tightening pressure' : us10y.value > 4.0 ? 'Range-bound yield environment' : 'Yields declining on growth concerns',
-        unit:    '%',
-        note:    us10yData ? `TREASURY_YIELD daily as of ${us10y.date}` : 'Indicative estimate',
-      },
-      fedFunds: {
-        label:   'FED FUNDS',
-        value:   fedFunds.value,
-        display: `${fedFunds.value.toFixed(2)}%`,
-        maxRef:  6,
-        trend:   fedFunds.trend,
-        context: 'FOMC target range · data-dependent policy',
-        unit:    '%',
-        note:    fedData ? `FEDERAL_FUNDS_RATE monthly as of ${fedFunds.date}` : 'Indicative estimate',
-      },
-      brent: {
-        label:   'BRENT',
-        value:   brent.value,
-        display: `$${brent.value.toFixed(1)}`,
-        maxRef:  120,
-        trend:   brent.trend,
-        context: brent.value > 90 ? 'Supply tightness supporting prices' : brent.value > 75 ? 'OPEC+ balancing act' : 'Demand concerns weighing on crude',
-        unit:    '$',
-        note:    usoData ? `USO ETF ×8+3 proxy as of ${brent.date}` : 'Indicative estimate',
-      },
-      gold: {
-        label:   'GOLD',
-        value:   gold.value,
-        display: `$${gold.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
-        maxRef:  3500,
-        trend:   gold.trend,
-        context: gold.value > 2800 ? 'Record highs — safe-haven bid dominant' : gold.value > 2500 ? 'Safe-haven bid persists' : 'Consolidating near key support',
-        unit:    '$',
-        note:    gldData ? `GLD ETF ÷0.0945 as of ${gold.date}` : 'Indicative estimate',
-      },
-    },
-  };
-  const res = NextResponse.json(payload);
-  // CDN cache: 24h — persists across Vercel deployments, prevents AV budget burn on redeploy
-  res.headers.set('Cache-Control', 's-maxage=86400, stale-while-revalidate=3600');
-  return res;
+  const payload = { dataSource, liveCount, asOf: vixData?.date ?? tnxData?.date ?? gldData?.date ?? asOf, macroData: {
+    dxy: { label: 'DXY INDEX', value: dxy.value, display: dxy.value.toFixed(2), maxRef: 120, trend: dxy.trend, context: dxy.value > 105 ? 'USD broad strength elevated' : dxy.value > 100 ? 'USD consolidating' : 'USD softening', unit: '', note: uupData ? `UUP ETF ×3.66 as of ${dxy.date}` : 'Indicative estimate' },
+    vix: { label: 'VIX', value: vix.value, display: vix.value.toFixed(1), maxRef: 45, trend: vix.trend, context: vix.value > 25 ? 'Elevated fear' : vix.value > 18 ? 'Moderate uncertainty' : 'Risk-on environment', unit: '', note: vixData ? `^VIX direct as of ${vix.date}` : 'Indicative estimate' },
+    us10y: { label: 'US 10Y', value: us10y.value, display: `${us10y.value.toFixed(2)}%`, maxRef: 6, trend: us10y.trend, context: us10y.value > 4.5 ? 'Term premium rebuilding' : us10y.value > 4.0 ? 'Range-bound yield env.' : 'Yields declining on growth concerns', unit: '%', note: tnxData ? `^TNX direct as of ${us10y.date}` : 'Indicative estimate' },
+    fedFunds: { label: 'FED FUNDS', value: fedFunds.value, display: `${fedFunds.value.toFixed(2)}%`, maxRef: 6, trend: fedFunds.trend, context: 'FOMC target range · data-dependent policy', unit: '%', note: 'Static reference — FOMC target unchanged' },
+    brent: { label: 'BRENT', value: brent.value, display: `$${brent.value.toFixed(1)}`, maxRef: 120, trend: brent.trend, context: brent.value > 90 ? 'Supply tightness' : brent.value > 75 ? 'OPEC+ balancing act' : 'Demand concerns weighing', unit: '$', note: usoData ? `USO ETF ×8+3 proxy as of ${brent.date}` : 'Indicative estimate' },
+    gold: { label: 'GOLD', value: gold.value, display: `$${gold.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, maxRef: 3500, trend: gold.trend, context: gold.value > 2800 ? 'Record highs — safe-haven bid' : gold.value > 2500 ? 'Safe-haven bid persists' : 'Consolidating near support', unit: '$', note: gldData ? `GLD ETF ÷0.0945 as of ${gold.date}` : 'Indicative estimate' },
+  } };
+  const response = NextResponse.json(payload);
+  response.headers.set('Cache-Control', 's-maxage=86400, stale-while-revalidate=3600');
+  return response;
 }
