@@ -159,6 +159,18 @@ const Ic: Record<string, React.ReactNode> = {
       <circle cx="12" cy="7" r="4"/>
     </svg>
   ),
+  ticket: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/>
+    </svg>
+  ),
+  support: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+      <circle cx="12" cy="17" r="0.5" fill="currentColor"/>
+    </svg>
+  ),
   chevron_down: (
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="6 9 12 15 18 9"/>
@@ -297,9 +309,10 @@ const NAV: NavSection[] = [
     prefixes: ["/help"],
     header: "Support",
     items: [
-      { label: "Documentation",    desc: "User guide, API reference, release notes",        href: "/help",                   icon: Ic.book },
-      { label: "FAQ",              desc: "Frequently asked questions & troubleshooting",     href: "/help?section=faq",       icon: Ic.question },
-      { label: "Contact Support",  desc: "Open a ticket or reach the ORDR team",            href: "/help?section=contact",   icon: Ic.user },
+      { label: "Documentation",    desc: "14-guide knowledge base — L1 to L5 depth",        href: "/help",              icon: Ic.book },
+      { label: "FAQ",              desc: "Frequently asked questions and troubleshooting",   href: "/help/faq",          icon: Ic.question },
+      { label: "Support Center",   desc: "Diagnostics, knowledge base, ticket history",      href: "/help/support",      icon: Ic.support,  badge: "NEW", badgeColor: S.cyan },
+      { label: "Contact Support",  desc: "Open a ticket with diagnostics bundle",            href: "/help/contact",      icon: Ic.ticket },
     ],
   },
 ];

@@ -957,6 +957,44 @@ async def _ensure_tables():
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()",
 
+        # ?? Support Ticketing (tenant-scoped, WORM events) ??
+        """CREATE TABLE IF NOT EXISTS support_tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL,
+    branch_id UUID,
+    submitted_by UUID NOT NULL,
+    submitted_by_email VARCHAR(255),
+    ticket_ref VARCHAR(16) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    severity VARCHAR(4) NOT NULL DEFAULT 'S3',
+    category VARCHAR(32) NOT NULL DEFAULT 'other',
+    status VARCHAR(16) NOT NULL DEFAULT 'OPEN',
+    resolution_notes TEXT,
+    diagnostics_bundle JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ,
+    CONSTRAINT ck_ticket_severity CHECK (severity IN ('S0','S1','S2','S3','S4')),
+    CONSTRAINT ck_ticket_status CHECK (status IN ('OPEN','IN_PROGRESS','RESOLVED','CLOSED')),
+    UNIQUE(company_id, ticket_ref))""",
+        "CREATE INDEX IF NOT EXISTS ix_tickets_tenant ON support_tickets(company_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_tickets_status ON support_tickets(company_id, status)",
+        "CREATE INDEX IF NOT EXISTS ix_tickets_user ON support_tickets(submitted_by, created_at)",
+
+        """CREATE TABLE IF NOT EXISTS ticket_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_id UUID NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL,
+    actor_id UUID,
+    actor_email VARCHAR(255),
+    event_type VARCHAR(32) NOT NULL,
+    old_status VARCHAR(16),
+    new_status VARCHAR(16),
+    comment TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_ticket_events_ticket ON ticket_events(ticket_id, created_at)",
+
     ]
 
     for stmt in raw_ddl:
