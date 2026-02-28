@@ -236,19 +236,18 @@ export default function RiskPulseWidget({ onRemove }: Props) {
     setFetching(true);
     setError(null);
     try {
-      const [pulseRes, newsRes, insRes] = await Promise.all([
+      // Both requests in parallel — insight is now part of the pulse response
+      const [pulseRes, newsRes] = await Promise.all([
         fetch("/api/market/risk-pulse"),
         fetch("/api/market/news/fx"),
-        fetch("/api/market/risk-pulse/insight"),
       ]);
 
-      const pulseJson = await pulseRes.json() as { snapshot?: RiskPulseSnapshot; geo?: GeoIntelligence };
+      const pulseJson = await pulseRes.json() as { snapshot?: RiskPulseSnapshot; geo?: GeoIntelligence; insight?: RiskInsight };
       const newsJson  = await newsRes.json()  as { articles?: FxNewsArticle[] };
-      const insJson   = await insRes.json()   as { insight?: RiskInsight };
 
       if (pulseJson.snapshot) setSnapshot(pulseJson.snapshot);
       if (pulseJson.geo)      setGeo(pulseJson.geo);
-      if (insJson.insight)    setInsight(insJson.insight);
+      if (pulseJson.insight)  setInsight(pulseJson.insight);
 
       const raw = newsJson.articles ?? [];
       const categorised = raw.map((a) => ({ ...a, tab: categorise(a) }));
