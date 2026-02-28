@@ -50,11 +50,11 @@ function statusColor(status: string): string {
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface SupportTicket {
   id: string;
-  ref: string;
+  ticket_ref: string;
   subject: string;
   severity: string;
   status: string;
-  submitted_at: string;
+  created_at: string;
   updated_at: string;
   description?: string;
   events?: Array<{ ts: string; actor: string; event: string; note?: string }>;
@@ -239,7 +239,7 @@ function TicketRow({ ticket }: { ticket: SupportTicket }) {
         style={{ cursor: "pointer", borderBottom: `1px solid ${S.soft}` }}
       >
         <td style={{ padding: "10px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.cyan, letterSpacing: "0.04em" }}>
-          {ticket.ref}
+          {ticket.ticket_ref}
         </td>
         <td style={{ padding: "10px 12px", fontFamily: S.fontUI, fontSize: 13, color: S.primary, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {ticket.subject}
@@ -275,7 +275,7 @@ function TicketRow({ ticket }: { ticket: SupportTicket }) {
           </span>
         </td>
         <td style={{ padding: "10px 12px", fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
-          {dateStr(ticket.submitted_at)}
+          {dateStr(ticket.created_at)}
         </td>
         <td style={{ padding: "10px 12px", fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
           {dateStr(ticket.updated_at)}

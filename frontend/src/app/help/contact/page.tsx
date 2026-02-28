@@ -153,7 +153,7 @@ function ContactPageInner() {
         throw new Error((data as Record<string, string>).detail ?? `HTTP ${res.status}`);
       }
       const data = await res.json();
-      setTicketRef((data as Record<string, string>).ref ?? (data as Record<string, string>).id ?? "TKT-0000");
+      setTicketRef((data as Record<string, string>).ticket_ref ?? (data as Record<string, string>).ref ?? (data as Record<string, string>).id ?? "TKT-0000");
       setSubmitStatus("success");
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Submission failed. Check your connection and try again.");

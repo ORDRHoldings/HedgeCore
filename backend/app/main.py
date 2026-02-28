@@ -995,6 +995,25 @@ async def _ensure_tables():
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
         "CREATE INDEX IF NOT EXISTS ix_ticket_events_ticket ON ticket_events(ticket_id, created_at)",
 
+        # ?? WORM enforcement: DB-level triggers prevent UPDATE/DELETE on ticket_events ??
+        # These triggers make the "append-only" property a database guarantee, not just convention.
+        """CREATE OR REPLACE FUNCTION ticket_events_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'ticket_events is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_ticket_events_no_update
+    BEFORE UPDATE ON ticket_events
+    FOR EACH ROW EXECUTE FUNCTION ticket_events_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_ticket_events_no_delete
+    BEFORE DELETE ON ticket_events
+    FOR EACH ROW EXECUTE FUNCTION ticket_events_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
     ]
 
     for stmt in raw_ddl:
