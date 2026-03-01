@@ -788,7 +788,7 @@ function RunViewerContent() {
               {/* Links */}
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <Link
-                  href="/execution"
+                  href="/execution-desk"
                   style={{
                     display:       "block",
                     fontFamily:    S.fontMono,
