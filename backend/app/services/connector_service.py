@@ -22,9 +22,37 @@ from app.schemas_v1.positions import PositionCreate
 from app.services import position_service
 
 
+class DuplicateImportError(Exception):
+    """Raised when an identical file (same SHA-256 hash) has already been imported."""
+    def __init__(self, file_hash: str, existing_run_id: _uuid.UUID):
+        self.file_hash = file_hash
+        self.existing_run_id = existing_run_id
+        super().__init__(f"Duplicate import: file hash {file_hash[:16]}... already imported in run {existing_run_id}")
+
+
+
 # ---------------------------------------------------------------------------
 # Core audit helpers
 # ---------------------------------------------------------------------------
+
+async def _check_duplicate_hash(
+    session: AsyncSession,
+    user: User,
+    file_hash: str,
+) -> None:
+    """Raise DuplicateImportError if this exact file was already imported by this company."""
+    if not file_hash:
+        return
+    q = select(ConnectorRun).where(
+        ConnectorRun.company_id == user.company_id,
+        ConnectorRun.source_hash == file_hash,
+        ConnectorRun.status.in_(["COMPLETED", "RUNNING"]),
+    ).limit(1)
+    result = await session.execute(q)
+    existing = result.scalars().first()
+    if existing:
+        raise DuplicateImportError(file_hash, existing.id)
+
 
 async def create_run(
     session: AsyncSession,
@@ -137,6 +165,7 @@ async def import_csv_audited(
     Every call produces a ConnectorRun audit record regardless of outcome.
     """
     file_hash = hashlib.sha256(content).hexdigest()
+    await _check_duplicate_hash(session, user, file_hash)
     run = await create_run(
         session, user, "UPLOAD_CSV", filename, file_hash
     )
@@ -195,6 +224,7 @@ async def import_excel_audited(
     Assumes first row is the header row.
     """
     file_hash = hashlib.sha256(content).hexdigest()
+    await _check_duplicate_hash(session, user, file_hash)
     run = await create_run(
         session, user, "UPLOAD_EXCEL", filename, file_hash
     )

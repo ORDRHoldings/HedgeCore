@@ -53,9 +53,11 @@ async def _check_permission(
 @router.post("/sandbox/calculate")
 async def sandbox_calculate(
     request: SandboxCalculateRequest,
+    session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):
     """Run engine + waterfall in sandbox mode (SIMULATION)."""
+    await _check_permission(session, current_user, "calculate.run_sandbox")
     try:
         result = pipeline_service.sandbox_calculate(
             str(current_user.id), request

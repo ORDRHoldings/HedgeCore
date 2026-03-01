@@ -39,7 +39,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
-from app.core.security import get_current_user, get_current_user_optional
+from app.core.security import get_current_user
 from app.services import rbac_service
 from app.engine_v1.audit import build_run_envelope, build_trace_lite
 from app.engine_v1.kernel import compute_hedge_plan
