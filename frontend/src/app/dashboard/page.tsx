@@ -65,8 +65,10 @@ function loadLayout(uid: string): { widgetIds: string[]; grid: GridItem[] } | nu
     const r = localStorage.getItem(layoutKey(uid));
     if (!r) return null;
     const parsed = JSON.parse(r);
-    // Discard layouts saved before this version so users get the updated default
     if ((parsed.v ?? 0) < LAYOUT_VERSION) return null;
+    // Reject corrupt/empty layouts — fall back to role default
+    if (!Array.isArray(parsed.widgetIds) || parsed.widgetIds.length === 0) return null;
+    if (!Array.isArray(parsed.grid)      || parsed.grid.length      === 0) return null;
     return parsed;
   } catch { return null; }
 }
@@ -132,7 +134,9 @@ export default function DashboardPage() {
   }, []);
 
   const handleLayoutChange = useCallback((currentLayout: Layout[]) => {
-    if (!user) return;
+    // Guard: don't persist if widgets haven't loaded yet (stale closure with empty widgetIds
+    // would overwrite localStorage and cause a blank dashboard on next load)
+    if (!user || widgetIds.length === 0) return;
     const updated: GridItem[] = currentLayout.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h }));
     setGridItems(updated); saveLayout(user.id, widgetIds, updated);
   }, [user, widgetIds]);
