@@ -51,6 +51,34 @@ function ExecutionHubContent() {
     if (tab === 'sim') router.push('/sandbox');
   };
 
+  // ── Deprecation banner ───────────────────────────────────────────────────────
+  const deprecationBanner = (
+    <div style={{
+      padding: "8px 20px",
+      background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+      border: "none",
+      borderBottom: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
+      display: "flex", alignItems: "center", gap: 10,
+      fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+      fontSize: 10, color: "var(--accent-amber)", letterSpacing: "0.06em",
+    }}>
+      <span>⚠</span>
+      <span>LEGACY INTERFACE — This page is superseded by the</span>
+      <button
+        onClick={() => router.push("/execution-desk")}
+        style={{
+          fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+          fontSize: 10, fontWeight: 700, color: "var(--accent-cyan)",
+          background: "transparent", border: "none", cursor: "pointer",
+          padding: 0, letterSpacing: "0.06em", textDecoration: "underline",
+        }}
+      >
+        EXECUTION DESK →
+      </button>
+      <span style={{ marginLeft: "auto", color: "var(--text-tertiary)" }}>Maintained for simulation use only.</span>
+    </div>
+  );
+
   // ── Shared header strip ──────────────────────────────────────────────────────
   const header = (
     <div style={{
@@ -175,6 +203,7 @@ function ExecutionHubContent() {
         flex: 1,
       }}>
         {header}
+        {deprecationBanner}
 
         {/* Two-column empty state */}
         <div style={{ maxWidth: '72rem', margin: '60px auto', padding: '0 20px', width: '100%' }}>
@@ -276,6 +305,7 @@ function ExecutionHubContent() {
       flex: 1,
     }}>
       {header}
+      {deprecationBanner}
 
       {bucketParam && (
         <div style={{

@@ -261,6 +261,17 @@ export default function PolicyDeskPage() {
   // Confirmation preview before active-policy bulk assign
   const [confirmAssignOpen, setConfirmAssignOpen] = useState(false);
 
+  // SHA-256 activation confirmation modal
+  const [activationModal, setActivationModal] = useState<{
+    templateId: string;
+    templateName: string;
+    templateCode: string;
+    version: number;
+    configHash: string;
+    copied: boolean;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+
   // Advanced features state
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [currencyFilter, setCurrencyFilter] = useState("");
@@ -540,6 +551,43 @@ export default function PolicyDeskPage() {
       return [...prev, policyId];
     });
   }, []);
+
+  // SHA-256 hash of template config (browser-side, canonical JSON)
+  async function computePolicyHash(config: Record<string, unknown>): Promise<string> {
+    try {
+      const canonical = JSON.stringify(config, Object.keys(config).sort());
+      const encoder = new TextEncoder();
+      const data = encoder.encode(canonical);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    } catch {
+      return "unavailable";
+    }
+  }
+
+  // Intercept template assignment — show SHA-256 confirmation first
+  const handleAssignTemplateWithHash = useCallback(async () => {
+    const tmpl = templates.find((t) => t.id === selectedTemplate);
+    if (!tmpl || !selectedTemplate || selected.size === 0) return;
+
+    let configHash = "unavailable";
+    try {
+      configHash = await computePolicyHash(tmpl.config as unknown as Record<string, unknown>);
+    } catch {
+      configHash = "unavailable";
+    }
+
+    setActivationModal({
+      templateId: tmpl.id,
+      templateName: tmpl.name,
+      templateCode: tmpl.short_name,
+      version: tmpl.version ?? 1,
+      configHash,
+      copied: false,
+      onConfirm: handleAssignTemplate,
+    });
+  }, [templates, selectedTemplate, selected, handleAssignTemplate]);
 
   if (!user) {
     return (
@@ -1174,7 +1222,7 @@ export default function PolicyDeskPage() {
           </div>
           <ModalActions
             onCancel={() => setAssignMode(null)}
-            onConfirm={handleAssignTemplate}
+            onConfirm={handleAssignTemplateWithHash}
             confirmLabel="ASSIGN TO SELECTED"
             confirmColor={S.primary}
             disabled={!selectedTemplate || bulkRunning}
@@ -1232,7 +1280,7 @@ export default function PolicyDeskPage() {
           </div>
           <ModalActions
             onCancel={() => setAssignMode(null)}
-            onConfirm={handleAssignTemplate}
+            onConfirm={handleAssignTemplateWithHash}
             confirmLabel="ASSIGN TO SELECTED"
             confirmColor={S.amber}
             disabled={!selectedTemplate || bulkRunning}
@@ -1472,6 +1520,172 @@ export default function PolicyDeskPage() {
             disabled={bulkRunning}
           />
         </ModalOverlay>
+      )}
+
+      {/* SHA-256 Policy Activation Confirmation Modal */}
+      {activationModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            backdropFilter: "blur(2px)",
+          }}
+          onClick={() => setActivationModal(null)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "var(--bg-panel)",
+              border: `1px solid var(--border-rim)`,
+              borderLeft: `3px solid var(--accent-amber)`,
+              maxWidth: 520,
+              width: "100%",
+              padding: "28px 32px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+            }}>
+            {/* Modal title */}
+            <div style={{
+              fontFamily: S.fontMono,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.10em",
+              color: S.amber,
+              marginBottom: 18,
+              textTransform: "uppercase",
+            }}>
+              Policy Activation Confirmation
+            </div>
+
+            {/* Template info */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 4 }}>
+                TEMPLATE
+              </div>
+              <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary }}>
+                {activationModal.templateName}{" "}
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, fontWeight: 400 }}>
+                  ({activationModal.templateCode}) v{activationModal.version}
+                </span>
+              </div>
+            </div>
+
+            {/* Hash display */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 6 }}>
+                CONFIG HASH
+              </div>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: S.bgDeep,
+                border: `1px solid ${S.darkBorder}`,
+                padding: "8px 10px",
+              }}>
+                <span style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 11,
+                  color: S.cyan,
+                  letterSpacing: "0.04em",
+                  flex: 1,
+                  wordBreak: "break-all",
+                }}>
+                  {activationModal.configHash === "unavailable"
+                    ? "unavailable"
+                    : activationModal.configHash}
+                </span>
+                {activationModal.configHash !== "unavailable" && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(activationModal.configHash).catch(() => {});
+                      setActivationModal((prev) => prev ? { ...prev, copied: true } : prev);
+                      setTimeout(() => {
+                        setActivationModal((prev) => prev ? { ...prev, copied: false } : prev);
+                      }, 2000);
+                    }}
+                    style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 9,
+                      color: activationModal.copied ? S.pass : S.secondary,
+                      background: "transparent",
+                      border: `1px solid ${activationModal.copied ? S.pass : S.darkBorder}`,
+                      padding: "2px 7px",
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      letterSpacing: "0.04em",
+                      transition: "all 0.15s",
+                    }}>
+                    {activationModal.copied ? "COPIED ✓" : "COPY"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div style={{
+              background: `color-mix(in srgb, ${S.amber} 6%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
+              padding: "10px 12px",
+              marginBottom: 24,
+            }}>
+              {activationModal.configHash === "unavailable" ? (
+                <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, lineHeight: 1.6 }}>
+                  Config hash unavailable — proceeding without client-side verification.
+                </div>
+              ) : (
+                <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, lineHeight: 1.7 }}>
+                  <span style={{ color: S.amber, fontWeight: 700 }}>⚠</span>{"  "}
+                  Verify this hash matches your approved policy document before activating.
+                  This action assigns the template to{" "}
+                  <span style={{ color: S.primary, fontWeight: 700 }}>{selected.size} position{selected.size !== 1 ? "s" : ""}</span>{" "}
+                  and is tamper-evidently logged.
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => setActivationModal(null)}
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 11,
+                  color: S.tertiary,
+                  background: "transparent",
+                  border: `1px solid ${S.rim}`,
+                  padding: "9px 18px",
+                  cursor: "pointer",
+                  letterSpacing: "0.04em",
+                }}>
+                CANCEL
+              </button>
+              <button
+                onClick={async () => {
+                  const confirmFn = activationModal.onConfirm;
+                  setActivationModal(null);
+                  await confirmFn();
+                }}
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                  color: S.bgDeep,
+                  background: S.cyan,
+                  border: "none",
+                  padding: "9px 18px",
+                  height: 40,
+                  cursor: "pointer",
+                }}>
+                CONFIRM ACTIVATION
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <HelpPanel config={POLICY_DESK_HELP} storageKey="policy-desk" />

@@ -459,10 +459,12 @@ export default function ProposalDetailPage() {
   const [showRejectForm, setShowRejectForm]= useState(false);
   const [rejectReason,   setRejectReason]  = useState("");
   const [approvalNotes,  setApprovalNotes] = useState("");
-  const [showFillForm,   setShowFillForm]  = useState(false);
-  const [fillPrice,      setFillPrice]     = useState("");
-  const [fillNotional,   setFillNotional]  = useState("");
-  const [fillRef,        setFillRef]       = useState("");
+  const [showFillForm,         setShowFillForm]        = useState(false);
+  const [fillPrice,            setFillPrice]            = useState("");
+  const [fillNotional,         setFillNotional]         = useState("");
+  const [fillRef,              setFillRef]              = useState("");
+  const [secondApprovalNotes,  setSecondApprovalNotes]  = useState("");
+  const [showSecondApproveForm,setShowSecondApproveForm]= useState(false);
 
   // Auth guard
   useEffect(() => {
@@ -556,6 +558,26 @@ export default function ProposalDetailPage() {
       setActionSuccess("Proposal executed. Position is now HEDGED.");
     } catch (e: unknown) {
       setActionError(e instanceof Error ? e.message : "Execute failed");
+    } finally { setActionLoading(false); }
+  }
+
+  async function handleSecondApprove() {
+    if (!token || !proposalId) return;
+    setActionLoading(true); setActionError(null); setActionSuccess(null);
+    try {
+      const res = await dashboardFetch(`/v1/proposals/${proposalId}/second-approve`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ notes: secondApprovalNotes || null }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { detail?: string };
+        throw new Error(body?.detail ?? `HTTP ${res.status}`);
+      }
+      const updated = await res.json() as Proposal;
+      setProposal(updated); setShowSecondApproveForm(false); setSecondApprovalNotes("");
+      setActionSuccess("Second approval recorded. Execution is now authorized.");
+    } catch (e: unknown) {
+      setActionError(e instanceof Error ? e.message : "Second approval failed");
     } finally { setActionLoading(false); }
   }
 
@@ -870,6 +892,66 @@ export default function ProposalDetailPage() {
                         <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
                         <span>
                           SECOND APPROVAL REQUIRED BEFORE EXECUTION
+                        </span>
+                      </div>
+                    )}
+
+                    {awaitingSecond && !showSecondApproveForm && (
+                      <ActionButton
+                        label="SECOND APPROVE"
+                        variant="secondary"
+                        height={36}
+                        onClick={() => setShowSecondApproveForm(true)}
+                        disabled={actionLoading}
+                        icon={<ShieldCheck size={13} />}
+                      />
+                    )}
+
+                    {awaitingSecond && showSecondApproveForm && (
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                        <TextareaField
+                          label="SECOND APPROVAL NOTES"
+                          value={secondApprovalNotes}
+                          onChange={setSecondApprovalNotes}
+                          placeholder="Add notes (optional)…"
+                        />
+                        <ActionButton
+                          label="CONFIRM SECOND APPROVAL"
+                          variant="secondary"
+                          height={36}
+                          onClick={() => void handleSecondApprove()}
+                          disabled={actionLoading}
+                          loading={actionLoading}
+                          icon={<ShieldCheck size={13} />}
+                        />
+                        <button
+                          onClick={() => { setShowSecondApproveForm(false); setSecondApprovalNotes(""); }}
+                          style={{
+                            fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+                            background: "transparent", border: `1px solid ${S.rim}`,
+                            padding: "6px 12px", cursor: "pointer", borderRadius: 2,
+                          }}
+                        >
+                          CANCEL
+                        </button>
+                      </div>
+                    )}
+
+                    {!awaitingSecond && proposal.second_approver_required && (
+                      <div style={{
+                        padding: "10px 12px",
+                        background: `color-mix(in srgb, ${S.pass} 6%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
+                        borderLeft: `3px solid ${S.pass}`,
+                        display: "flex", alignItems: "center", gap: 8,
+                        fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.pass,
+                      }}>
+                        <CheckCircle size={12} style={{ flexShrink: 0 }} />
+                        <span>
+                          Second approval by{" "}
+                          <span style={{ fontWeight: 700 }}>
+                            {proposal.second_approver_email ?? "unknown"}
+                          </span>
                         </span>
                       </div>
                     )}
