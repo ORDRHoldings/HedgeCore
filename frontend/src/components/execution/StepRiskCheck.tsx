@@ -53,6 +53,7 @@ interface Props {
     stressResults: PortfolioStressResult | null,
     portfolioRisk: PortfolioRisk | null,
     riskDecisionHash: string | null,
+    riskVerdict: string | null,
   ) => void;
   onBack: () => void;
 }
@@ -206,8 +207,8 @@ export default function StepRiskCheck({
 
   /* ── Handle proceed ───────────────────────────────────────────────── */
   const handleProceed = useCallback(() => {
-    onPass(complianceChecks, stressResults, portfolioRisk, riskDecisionHash);
-  }, [onPass, complianceChecks, stressResults, portfolioRisk, riskDecisionHash]);
+    onPass(complianceChecks, stressResults, portfolioRisk, riskDecisionHash, backendVerdict);
+  }, [onPass, complianceChecks, stressResults, portfolioRisk, riskDecisionHash, backendVerdict]);
 
   /* ── Status icon helper ───────────────────────────────────────────── */
   function statusIcon(status: ComplianceCheck["status"]): string {

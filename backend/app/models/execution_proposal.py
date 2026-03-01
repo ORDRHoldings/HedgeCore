@@ -262,6 +262,16 @@ class ExecutionProposal(Base):
     # Risk check decision hash (links proposal to the risk gate verdict)
     risk_decision_hash = Column(String(64), nullable=True)
 
+    # Risk verdict from /v1/risk-check (APPROVE | APPROVE_WITH_CONDITIONS | REJECT)
+    risk_verdict = Column(String(32), nullable=True)
+
+    # Fill execution data (recorded after actual trade execution)
+    actual_fill_rate     = Column(__import__('sqlalchemy').Float, nullable=True)
+    actual_fill_notional = Column(__import__('sqlalchemy').Float, nullable=True)
+    slippage_bps         = Column(__import__('sqlalchemy').Float, nullable=True)
+    fill_timestamp       = Column(__import__('sqlalchemy').String(64), nullable=True)
+    fill_hash            = Column(__import__('sqlalchemy').String(64), nullable=True)
+
 
 
     # WORM timestamp

@@ -57,6 +57,7 @@ export default function ExecutionDeskPage() {
   const [calcResult, setCalcResult] = useState<CalculateResponse | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
   const [riskDecisionHash, setRiskDecisionHash] = useState<string | null>(null);
+  const [riskVerdict, setRiskVerdict] = useState<string | null>(null);
 
   // Load positions on mount
   useEffect(() => {
@@ -86,8 +87,9 @@ export default function ExecutionDeskPage() {
 
   // Step 3 → 4: Risk checks passed
   const handleRiskPass = useCallback(
-    (_checks: ComplianceCheck[], _stress: PortfolioStressResult | null, _risk: PortfolioRisk | null, decisionHash: string | null) => {
+    (_checks: ComplianceCheck[], _stress: PortfolioStressResult | null, _risk: PortfolioRisk | null, decisionHash: string | null, verdict: string | null) => {
       setRiskDecisionHash(decisionHash);
+      setRiskVerdict(verdict);
       setStep(4);
     },
     []
@@ -256,6 +258,7 @@ export default function ExecutionDeskPage() {
             runId={runId}
             token={token}
             riskDecisionHash={riskDecisionHash}
+            riskVerdict={riskVerdict}
             onBack={goBack}
             onComplete={handleExecutionComplete}
           />
