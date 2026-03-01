@@ -214,6 +214,7 @@ interface NavSection {
   prefixes: string[];
   header:   string;   // dropdown header label
   items:    NavItem[];
+  teamOnly?: boolean; // hide in solo governance mode
 }
 
 // ── Navigation config ──────────────────────────────────────────────────────────
@@ -253,16 +254,14 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Execution", href: "/execution-desk", icon: Ic.execution,
-    prefixes: ["/execution", "/execution-desk", "/sandbox", "/currency-fx", "/execution-history", "/trade-history"],
-    header: "Trade Execution",
+    label: "Hedge Execution", href: "/hedge-desk", icon: Ic.execution,
+    prefixes: ["/hedge-desk", "/fx-market", "/methodology", "/trade-history"],
+    header: "Hedge Execution",
     items: [
-      { label: "Execution Desk",      desc: "Run calculation engine — simulation, stress test, hedge plan",  href: "/execution-desk",    icon: Ic.terminal,  badge: "RUN",  badgeColor: S.cyan  },
-      { label: "Trade Desk",           desc: "Pre-flight auth checklist, DV01, ticket desk, IBKR handoff",  href: "/execution",         icon: Ic.lightning },
-      { label: "Trade History",       desc: "Proposal & fill execution audit log",                          href: "/trade-history",     icon: Ic.clock,     badge: "LOG",  badgeColor: S.cyan  },
-      { label: "Sandbox",             desc: "What-if calculator & backtest engine",                         href: "/sandbox",           icon: Ic.terminal,  badge: "DEV",  badgeColor: S.amber },
-      { label: "FX Rates",            desc: "Live spot rates, forward curves, vol surface — position-aware",href: "/currency-fx",       icon: Ic.bar_chart },
-      { label: "Import History",        desc: "Connector import runs — CSV, ERP, SQL ingestion audit log",    href: "/execution-history", icon: Ic.clock,     badge: "LOG",  badgeColor: S.cyan  },
+      { label: "Hedge Desk",    desc: "Calculate, review, approve and execute hedge positions end-to-end", href: "/hedge-desk",    icon: Ic.terminal,  badge: "DESK",  badgeColor: S.cyan  },
+      { label: "Trade History", desc: "Proposal & fill execution audit log",                               href: "/trade-history", icon: Ic.clock,     badge: "LOG",   badgeColor: S.cyan  },
+      { label: "FX Market",     desc: "Live spot rates, forward curves, vol surface — position-aware",     href: "/fx-market",     icon: Ic.bar_chart },
+      { label: "Methodology",   desc: "Calculation methodology, hedge formulas and instrument reference",  href: "/methodology",   icon: Ic.book,      badge: "REF",   badgeColor: S.amber },
     ],
   },
   {
@@ -290,6 +289,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Governance", href: "/audit-trail", icon: Ic.governance,
+    teamOnly: true,
     prefixes: ["/hedgewiki", "/hedges", "/audit-trail", "/access-control", "/run-viewer", "/lineage", "/committee-pack", "/staging"],
     header: "Compliance & Audit",
     items: [
@@ -503,6 +503,10 @@ export default function AppTopBar() {
   const router   = useRouter();
   const pathname = usePathname() ?? "";
 
+  // Governance mode: "solo" = self-approve allowed, "team" = 4-eyes required.
+  // TODO(L-backend): fetch from GET /v1/company/settings once governance_mode is stored server-side.
+  const governanceMode = "solo" as "solo" | "team";
+
   const [openMenu,     setOpenMenu]     = useState<string | null>(null);
   const [liveStatus,   setLiveStatus]   = useState<"checking" | "online" | "offline">("checking");
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -550,6 +554,8 @@ export default function AppTopBar() {
   const branch  = user.branch?.code ?? user.branch?.name ?? "—";
   const name    = user.full_name ?? user.email;
   const section = resolveSection(pathname);
+
+  const visibleNav = NAV.filter(sec => !sec.teamOnly || governanceMode === "team");
 
   return (
     <div
@@ -702,7 +708,7 @@ export default function AppTopBar() {
       >
         {/* Nav items */}
         <div style={{ display: "flex", alignItems: "stretch", flex: 1 }}>
-          {NAV.map((sec) => {
+          {visibleNav.map((sec) => {
             const isActive = sec.prefixes.some(
               (p) => pathname === p || pathname.startsWith(p + "/")
             );

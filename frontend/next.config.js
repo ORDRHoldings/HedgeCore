@@ -9,6 +9,16 @@ const nextConfig = {
     // Type checking already done via tsc --noEmit in CI
     ignoreBuildErrors: false,
   },
+  async redirects() {
+    return [
+      { source: "/execution-desk", destination: "/hedge-desk", permanent: false },
+      { source: "/execution", destination: "/hedge-desk", permanent: false },
+      { source: "/sandbox", destination: "/methodology", permanent: false },
+      { source: "/sandbox/:path*", destination: "/methodology/:path*", permanent: false },
+      { source: "/currency-fx", destination: "/fx-market", permanent: false },
+      { source: "/hedges", destination: "/position-desk", permanent: false },
+    ];
+  },
   async rewrites() {
     // DEV ONLY: proxy /api/v1/* to local backend.
     // In production the frontend API client calls Render directly (see api/client.ts).
