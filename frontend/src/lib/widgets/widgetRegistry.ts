@@ -159,9 +159,9 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     id: "market_pulse",
     title: "Market Pulse",
     description: "Real-time market context: key indices, FX pairs, commodities, and bond yields in a Bloomberg-style ticker grid.",
-    defaultW: 8,
+    defaultW: 4,
     defaultH: 4,
-    minW: 6,
+    minW: 4,
     minH: 3,
     requiredPermission: null,
   },
@@ -179,20 +179,20 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     id: "geopolitical",
     title: "Geopolitical & Macro",
     description: "POLISOPHIC-powered political risk events, macro tape, and central bank tracker. Tabbed 3-panel intelligence view.",
-    defaultW: 6,
-    defaultH: 7,
-    minW: 5,
-    minH: 5,
+    defaultW: 4,
+    defaultH: 4,
+    minW: 4,
+    minH: 4,
     requiredPermission: null,
   },
   {
     id: "usd_exposure_radar",
     title: "USD Exposure Radar",
     description: "Deep-dive into USD dynamics: DXY, real yields, Fed positioning, FX matrix with vol/carry, and USD strength chart.",
-    defaultW: 6,
-    defaultH: 7,
-    minW: 5,
-    minH: 5,
+    defaultW: 4,
+    defaultH: 4,
+    minW: 4,
+    minH: 4,
     requiredPermission: null,
   },
   {
@@ -233,19 +233,20 @@ type RoleLayout = { widgetIds: string[]; grid: GridItem[] };
 
 const ROLE_LAYOUTS: Record<string, RoleLayout> = {
   admin: {
-    // ── BlackRock-style 4-tier layout ─────────────────────────────────────
-    // T1: Market Pulse — full-width live ticker strip (context before action)
-    // T2: Risk Pulse scorecard (4) + Command Hub navigation grid (8)
-    // T3: Geopolitical & Macro intelligence (7) + USD Exposure Radar (5)
-    // T4: Currency Intelligence — full-width deep-dive table
-    widgetIds: ["market_pulse", "risk_pulse", "command_hub", "geopolitical", "usd_exposure_radar", "currency_intel"],
+    // ── Single-page 3-band layout (rowHeight=44, margin=6 → ~844px total) ──
+    //
+    //  Band A  h=8  │ Risk Pulse (4) │ Command Hub (8)           │
+    //  Band B  h=4  │ Mkt Pulse (4)  │ Geo & Macro (4) │ USD (4) │
+    //  Band C  h=5  │ Currency Intelligence (12)                  │
+    //
+    widgetIds: ["risk_pulse", "command_hub", "market_pulse", "geopolitical", "usd_exposure_radar", "currency_intel"],
     grid: [
-      { i: "market_pulse",        x: 0, y: 0,  w: 12, h: 3  },  // T1 — ticker strip
-      { i: "risk_pulse",          x: 0, y: 3,  w: 4,  h: 8  },  // T2 left — score oracle
-      { i: "command_hub",         x: 4, y: 3,  w: 8,  h: 8  },  // T2 right — nav grid
-      { i: "geopolitical",        x: 0, y: 11, w: 7,  h: 9  },  // T3 left — intel feed
-      { i: "usd_exposure_radar",  x: 7, y: 11, w: 5,  h: 9  },  // T3 right — USD radar
-      { i: "currency_intel",      x: 0, y: 20, w: 12, h: 8  },  // T4 — deep-dive table
+      { i: "risk_pulse",          x: 0, y: 0,  w: 4,  h: 8 },  // A-left  — score oracle
+      { i: "command_hub",         x: 4, y: 0,  w: 8,  h: 8 },  // A-right — nav grid
+      { i: "market_pulse",        x: 0, y: 8,  w: 4,  h: 4 },  // B-left  — live tickers
+      { i: "geopolitical",        x: 4, y: 8,  w: 4,  h: 4 },  // B-center — geo intel
+      { i: "usd_exposure_radar",  x: 8, y: 8,  w: 4,  h: 4 },  // B-right — USD radar
+      { i: "currency_intel",      x: 0, y: 12, w: 12, h: 5 },  // C       — full-width table
     ],
   },
   ceo: {
@@ -338,16 +339,16 @@ const ROLE_LAYOUTS: Record<string, RoleLayout> = {
   },
 };
 
-// Default fallback layout for unknown roles — same 4-tier structure as admin
+// Default fallback — same single-page 3-band layout as admin
 const DEFAULT_LAYOUT: RoleLayout = {
-  widgetIds: ["market_pulse", "risk_pulse", "command_hub", "geopolitical", "usd_exposure_radar", "currency_intel"],
+  widgetIds: ["risk_pulse", "command_hub", "market_pulse", "geopolitical", "usd_exposure_radar", "currency_intel"],
   grid: [
-    { i: "market_pulse",        x: 0, y: 0,  w: 12, h: 3 },
-    { i: "risk_pulse",          x: 0, y: 3,  w: 4,  h: 8 },
-    { i: "command_hub",         x: 4, y: 3,  w: 8,  h: 8 },
-    { i: "geopolitical",        x: 0, y: 11, w: 7,  h: 9 },
-    { i: "usd_exposure_radar",  x: 7, y: 11, w: 5,  h: 9 },
-    { i: "currency_intel",      x: 0, y: 20, w: 12, h: 8 },
+    { i: "risk_pulse",          x: 0, y: 0,  w: 4,  h: 8 },
+    { i: "command_hub",         x: 4, y: 0,  w: 8,  h: 8 },
+    { i: "market_pulse",        x: 0, y: 8,  w: 4,  h: 4 },
+    { i: "geopolitical",        x: 4, y: 8,  w: 4,  h: 4 },
+    { i: "usd_exposure_radar",  x: 8, y: 8,  w: 4,  h: 4 },
+    { i: "currency_intel",      x: 0, y: 12, w: 12, h: 5 },
   ],
 };
 

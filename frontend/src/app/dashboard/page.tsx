@@ -54,7 +54,7 @@ const WIDGET_COMPONENTS: Record<WidgetId, React.ComponentType<WidgetComponentPro
   risk_pulse: RiskPulseWidget, fx_news: FxNewsWidget, econ_calendar: EconCalendarWidget,
 };
 // Bump this whenever the default layout changes — forces all users to get the new default
-const LAYOUT_VERSION = 4;
+const LAYOUT_VERSION = 5;
 const layoutKey = (uid: string) => `dashboard_layout_${uid}`;
 const helpOpenKey = (uid: string) => `dashboard_help_open_${uid}`;
 function saveLayout(uid: string, widgetIds: string[], grid: GridItem[]) {
@@ -226,7 +226,7 @@ export default function DashboardPage() {
               <button onClick={() => setCatalogOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}`, padding: "6px 14px", cursor: "pointer" }}><Plus size={13} strokeWidth={2} /> Add Your First Widget</button>
             </div>
           ) : (
-            <ResponsiveGridLayout className="dashboard-grid" layouts={{ lg: rglLayout, md: rglLayout, sm: rglLayout }} breakpoints={{ lg: 1200, md: 996, sm: 768 }} cols={{ lg: 12, md: 10, sm: 6 }} rowHeight={62} onLayoutChange={handleLayoutChange} margin={[10, 10]} containerPadding={[0, 0]} draggableHandle=".widget-drag-handle" useCSSTransforms>
+            <ResponsiveGridLayout className="dashboard-grid" layouts={{ lg: rglLayout, md: rglLayout, sm: rglLayout }} breakpoints={{ lg: 1200, md: 996, sm: 768 }} cols={{ lg: 12, md: 10, sm: 6 }} rowHeight={44} onLayoutChange={handleLayoutChange} margin={[6, 6]} containerPadding={[0, 0]} draggableHandle=".widget-drag-handle" useCSSTransforms>
               {/* RGL requires child key === layout i. refreshKey forces inner remount without breaking RGL matching. */}
               {gridItems.map(({ i }) => { const WidgetComponent = WIDGET_COMPONENTS[i as WidgetId] ?? null; if (!WidgetComponent) return null; return (<div key={i} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}><WidgetErrorBoundary widgetId={i}><div key={refreshKey} style={{ display: "contents" }}><WidgetComponent token={token} user={user} onRemove={() => handleRemove(i)} /></div></WidgetErrorBoundary></div>); })}
             </ResponsiveGridLayout>
