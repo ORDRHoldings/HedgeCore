@@ -60,14 +60,14 @@ const NAV_ITEMS: NavItem[] = [
     description: "60 institutional presets", permission: "policy.view",
   },
   {
-    id: "execution", label: "Execution", shortcut: "E", route: "/execution",
+    id: "execution", label: "Hedge Desk", shortcut: "E", route: "/hedge-desk",
     Icon: Rocket, color: "#F59E0B", glow: "rgba(245,158,11,0.15)",
-    description: "Pre-flight & trade desk", permission: "calculate.run_sandbox",
+    description: "Calculate → Risk → Approve", permission: "calculate.run_sandbox",
   },
   {
-    id: "sandbox", label: "Sandbox", shortcut: "S", route: "/sandbox",
+    id: "sandbox", label: "Sim Lab", shortcut: "S", route: "/sandbox",
     Icon: FlaskConical, color: "#8B5CF6", glow: "rgba(139,92,246,0.15)",
-    description: "What-if & backtest", permission: "calculate.run_sandbox",
+    description: "What-if & stress tests", permission: "calculate.run_sandbox",
   },
   {
     id: "reports", label: "Reports", shortcut: "R", route: "/reports",
@@ -75,7 +75,7 @@ const NAV_ITEMS: NavItem[] = [
     description: "30 presets + AI composer", permission: "reports.view_own_branch",
   },
   {
-    id: "fxrates", label: "FX Rates", shortcut: "F", route: "/currency-fx",
+    id: "fxrates", label: "FX Rates", shortcut: "F", route: "/fx-market",
     Icon: Globe, color: "#EC4899", glow: "rgba(236,72,153,0.15)",
     description: "Spot, forwards, vol", permission: null,
   },
