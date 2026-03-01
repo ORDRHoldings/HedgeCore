@@ -8,18 +8,18 @@ const fontMono = "'IBM Plex Mono', 'Courier New', monospace";
 const fontUI   = "'IBM Plex Sans', system-ui, sans-serif";
 
 const TOKEN = {
-  bg:      "#0a0f1a",
-  bgPanel: "#0d1626",
-  bgSub:   "#111827",
-  rim:     "#1e293b",
-  soft:    "#1e2d45",
-  primary: "#e2e8f0",
-  sec:     "#94a3b8",
-  tert:    "#4b5563",
-  cyan:    "#22d3ee",
-  green:   "#34d399",
-  amber:   "#fbbf24",
-  red:     "#f87171",
+  bg:      "var(--bg-deep,#0a0c10)",
+  bgPanel: "var(--bg-panel,#0f1117)",
+  bgSub:   "var(--bg-sub,#141720)",
+  rim:     "var(--border-rim,#1e2330)",
+  soft:    "var(--border-soft,#2a3147)",
+  primary: "var(--text-primary,#e2e8f0)",
+  sec:     "var(--text-secondary,#94a3b8)",
+  tert:    "var(--text-tertiary,#475569)",
+  cyan:    "var(--accent-cyan,#22d3ee)",
+  green:   "var(--status-pass,#34d399)",
+  amber:   "var(--accent-amber,#fbbf24)",
+  red:     "var(--accent-red,#f87171)",
   violet:  "#a78bfa",
 } as const;
 
