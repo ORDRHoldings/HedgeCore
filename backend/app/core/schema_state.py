@@ -5,7 +5,8 @@ Schema readiness state — shared across the application process.
 Responsibilities:
   1. Hold the global _schema_ready flag (set once by lifespan).
   2. Expose run_readiness_checks() — queries the live DB for critical objects.
-  3. Expose require_schema_ready() — FastAPI dependency for fail-closed gating.
+  3. Expose run_readiness_checks_cached() — TTL-cached wrapper (10 s default).
+  4. Expose require_schema_ready() — FastAPI dependency for fail-closed gating.
 
 Governance contract:
   - PostgreSQL: checks information_schema + pg_catalog for market_snapshots
@@ -18,12 +19,21 @@ Governance contract:
 Fail-closed behaviour:
   - If _schema_ready is False at request time, require_schema_ready() raises
     HTTP 503 with code=SCHEMA_NOT_READY so the caller can retry.
+
+Attack-surface hardening:
+  - run_readiness_checks_cached() enforces a 10-second in-process TTL so that
+    unauthenticated callers polling /system/schema-health cannot trigger
+    unbounded pg_catalog queries.
+  - /system/schema-health returns a REDACTED (booleans-only) response to
+    unauthenticated callers; full diagnostics require a valid X-API-Key.
+    The permission system.schema.read is the gate for the full response.
 """
 
 from __future__ import annotations
 
+import time as _time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import HTTPException
 from sqlalchemy import text
@@ -53,6 +63,44 @@ def set_schema_ready(v: bool) -> None:
 def is_schema_ready() -> bool:
     """Return current schema readiness state."""
     return _schema_ready
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TTL cache — prevents pg_catalog hammering from pollers
+# ─────────────────────────────────────────────────────────────────────────────
+
+READINESS_CACHE_TTL_SECONDS: float = 10.0  # exported so tests can verify the constant
+
+_readiness_cache: dict[str, Any] = {}  # {"result": dict, "ts": float}
+
+
+async def run_readiness_checks_cached(engine: AsyncEngine) -> dict[str, Any]:
+    """TTL-cached wrapper around run_readiness_checks().
+
+    Returns a cached result if it is less than READINESS_CACHE_TTL_SECONDS old.
+    On cache miss (first call or TTL expired) the live DB check runs and the
+    result is stored with a monotonic timestamp.
+
+    Thread-safety: asyncio is single-threaded within a process; no lock needed.
+    The worst case for concurrent requests is two simultaneous DB checks on the
+    first call — both results are equivalent and the second write wins harmlessly.
+    """
+    now = _time.monotonic()
+    entry = _readiness_cache.get("result")
+    if entry is not None and (now - entry["ts"]) < READINESS_CACHE_TTL_SECONDS:
+        return entry["data"]
+
+    result = await run_readiness_checks(engine)
+    _readiness_cache["result"] = {"data": result, "ts": now}
+    return result
+
+
+def invalidate_readiness_cache() -> None:
+    """Force the next call to run_readiness_checks_cached() to hit the DB.
+
+    Used in tests and after schema mutations.
+    """
+    _readiness_cache.clear()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

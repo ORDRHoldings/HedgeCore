@@ -368,6 +368,12 @@ SEED_PERMISSIONS: list[tuple[str, str, str, str]] = [
 
     ("overrides.impersonate", "overrides", "impersonate", "View-as another user (read-only, fully logged)"),
 
+
+
+    # System diagnostics (schema governance)
+
+    ("system.schema.read", "system", "schema.read", "Read full schema readiness diagnostics via /system/schema-health"),
+
 ]
 
 
@@ -407,6 +413,8 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
 
         "overrides.override_subordinate",
 
+        "system.schema.read",
+
     ],
 
 
@@ -429,6 +437,8 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "reports.view_own_branch", "reports.export_pdf",
 
         "audit.view_own", "audit.view_branch",
+
+        "system.schema.read",
 
     ],
 

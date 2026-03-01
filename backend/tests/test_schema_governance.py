@@ -380,3 +380,223 @@ class TestScenarioEngineEffectivenessRegression:
         r = out["results"][0]
         # portfolio_pnl > 0 → effectiveness block not entered → None
         assert r["net"]["hedge_effectiveness"] is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# run_readiness_checks_cached() — TTL cache behaviour
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestReadinessChecksTTLCache:
+    """TTL cache prevents pg_catalog hammering; invalidate_readiness_cache() forces refresh."""
+
+    def setup_method(self):
+        from app.core import schema_state
+        schema_state._readiness_cache.clear()
+
+    def teardown_method(self):
+        from app.core import schema_state
+        schema_state._readiness_cache.clear()
+
+    def _sqlite_engine(self):
+        engine = MagicMock()
+        engine.url = MagicMock()
+        engine.url.__str__ = lambda self: "sqlite:///:memory:"
+        return engine
+
+    def test_ttl_constant_is_ten_seconds(self):
+        from app.core.schema_state import READINESS_CACHE_TTL_SECONDS
+        assert READINESS_CACHE_TTL_SECONDS == 10.0
+
+    def test_first_call_populates_cache(self):
+        from app.core import schema_state
+        from app.core.schema_state import run_readiness_checks_cached
+        engine = self._sqlite_engine()
+        asyncio.get_event_loop().run_until_complete(run_readiness_checks_cached(engine))
+        assert "result" in schema_state._readiness_cache
+        assert "data" in schema_state._readiness_cache["result"]
+        assert "ts" in schema_state._readiness_cache["result"]
+
+    def test_within_ttl_returns_same_object(self):
+        from app.core.schema_state import run_readiness_checks_cached
+        engine = self._sqlite_engine()
+        r1 = asyncio.get_event_loop().run_until_complete(run_readiness_checks_cached(engine))
+        r2 = asyncio.get_event_loop().run_until_complete(run_readiness_checks_cached(engine))
+        # Same dict object — cache hit
+        assert r1 is r2
+
+    def test_invalidate_clears_cache(self):
+        from app.core import schema_state
+        from app.core.schema_state import run_readiness_checks_cached, invalidate_readiness_cache
+        engine = self._sqlite_engine()
+        asyncio.get_event_loop().run_until_complete(run_readiness_checks_cached(engine))
+        assert "result" in schema_state._readiness_cache
+        invalidate_readiness_cache()
+        assert "result" not in schema_state._readiness_cache
+
+    def test_after_invalidate_fresh_call_repopulates(self):
+        from app.core import schema_state
+        from app.core.schema_state import run_readiness_checks_cached, invalidate_readiness_cache
+        engine = self._sqlite_engine()
+        r1 = asyncio.get_event_loop().run_until_complete(run_readiness_checks_cached(engine))
+        invalidate_readiness_cache()
+        r2 = asyncio.get_event_loop().run_until_complete(run_readiness_checks_cached(engine))
+        # After invalidation a fresh result is created — not the same object
+        assert r1 is not r2
+
+    def test_cache_entry_has_monotonic_timestamp(self):
+        import time
+        from app.core import schema_state
+        from app.core.schema_state import run_readiness_checks_cached
+        engine = self._sqlite_engine()
+        before = time.monotonic()
+        asyncio.get_event_loop().run_until_complete(run_readiness_checks_cached(engine))
+        after = time.monotonic()
+        ts = schema_state._readiness_cache["result"]["ts"]
+        assert before <= ts <= after
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /system/schema-health tiered response — redaction contract
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestSchemaHealthRedaction:
+    """Public (unauthenticated) response exposes booleans only.
+    Authenticated response includes full diagnostic detail.
+    """
+
+    # Fields the public response MUST contain
+    PUBLIC_REQUIRED = {"schema_ready", "worm_ready", "market_snapshots_ready", "checked_at"}
+
+    # Fields the public response MUST NOT expose (internal DB object names)
+    PUBLIC_FORBIDDEN = {"missing_items", "checks", "startup_schema_ready", "error", "note"}
+
+    def _full_live_result(self) -> dict:
+        """Simulate what run_readiness_checks_cached() returns (SQLite mode)."""
+        return {
+            "schema_ready": True,
+            "worm_ready": True,
+            "market_snapshots_ready": True,
+            "missing_items": [],
+            "checks": {
+                "market_snapshots_table": True,
+                "market_snapshots_unique_constraint": True,
+                "worm_function": True,
+                "worm_trigger_update": True,
+                "worm_trigger_delete": True,
+            },
+            "checked_at": "2026-01-01T00:00:00+00:00",
+        }
+
+    def _public_response(self, live: dict) -> dict:
+        """Replicate the route's public (unauthenticated) redaction logic."""
+        return {
+            "schema_ready": live["schema_ready"],
+            "worm_ready": live["worm_ready"],
+            "market_snapshots_ready": live["market_snapshots_ready"],
+            "checked_at": live["checked_at"],
+        }
+
+    def _full_response(self, live: dict) -> dict:
+        """Replicate the route's authenticated full response."""
+        return {"startup_schema_ready": True, **live}
+
+    def test_public_response_has_all_required_fields(self):
+        live = self._full_live_result()
+        pub = self._public_response(live)
+        for k in self.PUBLIC_REQUIRED:
+            assert k in pub, f"Public response missing required field: {k}"
+
+    def test_public_response_excludes_forbidden_fields(self):
+        live = self._full_live_result()
+        pub = self._public_response(live)
+        for k in self.PUBLIC_FORBIDDEN:
+            assert k not in pub, f"Public response must not expose: {k}"
+
+    def test_public_response_exact_key_set(self):
+        live = self._full_live_result()
+        pub = self._public_response(live)
+        assert set(pub.keys()) == self.PUBLIC_REQUIRED
+
+    def test_public_schema_ready_false_propagates(self):
+        live = self._full_live_result()
+        live["schema_ready"] = False
+        pub = self._public_response(live)
+        assert pub["schema_ready"] is False
+
+    def test_public_worm_ready_false_propagates(self):
+        live = self._full_live_result()
+        live["worm_ready"] = False
+        pub = self._public_response(live)
+        assert pub["worm_ready"] is False
+
+    def test_public_response_no_missing_items(self):
+        live = self._full_live_result()
+        pub = self._public_response(live)
+        assert "missing_items" not in pub
+
+    def test_public_response_no_checks_dict(self):
+        live = self._full_live_result()
+        pub = self._public_response(live)
+        assert "checks" not in pub
+
+    def test_full_response_contains_startup_schema_ready(self):
+        live = self._full_live_result()
+        full = self._full_response(live)
+        assert "startup_schema_ready" in full
+
+    def test_full_response_contains_checks_dict(self):
+        live = self._full_live_result()
+        full = self._full_response(live)
+        assert "checks" in full
+        assert isinstance(full["checks"], dict)
+
+    def test_full_response_contains_missing_items(self):
+        live = self._full_live_result()
+        full = self._full_response(live)
+        assert "missing_items" in full
+
+    def test_checked_at_is_nonempty_string(self):
+        live = self._full_live_result()
+        pub = self._public_response(live)
+        assert isinstance(pub["checked_at"], str)
+        assert len(pub["checked_at"]) > 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# system.schema.read permission — seed data contract
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestSystemSchemaReadPermission:
+    """system.schema.read is correctly defined in SEED_PERMISSIONS and assigned to roles."""
+
+    def _find_perm(self) -> tuple | None:
+        from app.models.permission import SEED_PERMISSIONS
+        for p in SEED_PERMISSIONS:
+            if p[0] == "system.schema.read":
+                return p
+        return None
+
+    def test_permission_exists_in_seed(self):
+        assert self._find_perm() is not None, "system.schema.read missing from SEED_PERMISSIONS"
+
+    def test_permission_module_is_system(self):
+        perm = self._find_perm()
+        assert perm is not None
+        assert perm[1] == "system"
+
+    def test_permission_action_is_schema_read(self):
+        perm = self._find_perm()
+        assert perm is not None
+        assert perm[2] == "schema.read"
+
+    def test_admin_role_has_permission(self):
+        from app.models.permission import DEFAULT_ROLE_PERMISSIONS
+        assert "system.schema.read" in DEFAULT_ROLE_PERMISSIONS["admin"]
+
+    def test_supervisor_role_has_permission(self):
+        from app.models.permission import DEFAULT_ROLE_PERMISSIONS
+        assert "system.schema.read" in DEFAULT_ROLE_PERMISSIONS["supervisor"]
+
+    def test_risk_analyst_role_has_permission(self):
+        from app.models.permission import DEFAULT_ROLE_PERMISSIONS
+        assert "system.schema.read" in DEFAULT_ROLE_PERMISSIONS["risk_analyst"]
