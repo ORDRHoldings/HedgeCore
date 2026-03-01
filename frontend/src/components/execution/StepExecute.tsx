@@ -39,6 +39,7 @@ interface Props {
   runId: string;
   token: string;
   riskDecisionHash?: string | null;
+  riskVerdict?: string | null;
   onBack: () => void;
   onComplete: () => void;
 }
@@ -159,7 +160,7 @@ function computeEconomics(cr: CalculateResponse): HedgeEconomics {
 
 /* ── Component ─────────────────────────────────────────────────────────── */
 export default function StepExecute({
-  positions, calcResult, runId, token, riskDecisionHash, onBack, onComplete,
+  positions, calcResult, runId, token, riskDecisionHash, riskVerdict, onBack, onComplete,
 }: Props) {
   const router = useRouter();
   const [submitPhase, setSubmitPhase] = useState<SubmitPhase>("idle");
@@ -168,6 +169,18 @@ export default function StepExecute({
   const [submitMessage, setSubmitMessage] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdProposalIds, setCreatedProposalIds] = useState<string[]>([]);
+  const [showTraceLite, setShowTraceLite] = useState(false);
+
+  /* ── IBKR account validation ──────────────────────────────────────── */
+  const ibkrAccountId = (() => {
+    try {
+      const s = localStorage.getItem("ordr_settings");
+      if (!s) return null;
+      const parsed = JSON.parse(s) as { execution?: { ibkr_account_id?: string } };
+      return parsed?.execution?.ibkr_account_id ?? null;
+    } catch { return null; }
+  })();
+  const isDefaultIbkrAccount = !ibkrAccountId || ibkrAccountId === "DU1234567";
 
   /* ── Compute tickets ──────────────────────────────────────────────── */
   const tickets: FuturesTicket[] = useMemo(() => {
@@ -295,56 +308,65 @@ export default function StepExecute({
     window.open(`mailto:fx-desk@company.com?subject=${subject}&body=${body}`, "_self");
   }, [aggregatedOrders, totalContracts, totalNotionalCovered, primaryCcy, runId]);
 
-  /* ── Submit proposals (4-eyes) ────────────────────────────────────── */
+  /* ── Submit proposals via batch endpoint (atomic) ─────────────────── */
   const handleSubmitForApproval = useCallback(async () => {
     setSubmitPhase("submitting");
     setSubmitError(null);
     setSubmitTotal(positions.length);
-    setSubmitProgress(0);
+    setSubmitProgress(positions.length);
+    setSubmitMessage(`Submitting ${positions.length} proposal${positions.length !== 1 ? "s" : ""} atomically...`);
 
     const effectiveRunId = runId.includes(";") ? runId.split(";")[0] : runId;
-    const ids: string[] = [];
+    const buckets = calcResult?.hedge_plan?.buckets;
+    const firstBucket = buckets?.[0];
 
     try {
-      for (let i = 0; i < positions.length; i++) {
-        const position = positions[i];
-        setSubmitMessage(`Submitting proposal ${i + 1} of ${positions.length}...`);
-        setSubmitProgress(i + 1);
+      const batchPayload = {
+        proposals: positions.map((position) => ({
+          position_id:        position.id,
+          execution_ref:      `EXEC-${effectiveRunId.slice(0, 8).toUpperCase()}-${position.id.slice(0, 4).toUpperCase()}`,
+          hedge_amount:       firstBucket?.action_usd ?? null,
+          hedge_rate:         firstBucket?.forward_rate ?? null,
+          run_id:             effectiveRunId,
+          risk_decision_hash: riskDecisionHash ?? null,
+          risk_verdict:       riskVerdict ?? null,
+          notes:              "Submitted via Execution Desk",
+        })),
+      };
 
-        const buckets = calcResult?.hedge_plan?.buckets;
-        const firstBucket = buckets?.[0];
+      console.info("[StepExecute] POST /v1/proposals/batch", { runId: effectiveRunId, positionCount: positions.length });
+      const start = Date.now();
 
-        const res = await dashboardFetch("/v1/proposals", token, {
-          method: "POST",
-          body: JSON.stringify({
-            position_id: position.id,
-            execution_ref: `EXEC-${effectiveRunId.slice(0, 8).toUpperCase()}-${position.id.slice(0, 4).toUpperCase()}`,
-            hedge_amount: firstBucket?.action_usd ?? null,
-            hedge_rate: firstBucket?.forward_rate ?? null,
-            run_id: effectiveRunId,
-            risk_decision_hash: riskDecisionHash ?? null,
-            notes: "Submitted via Execution Desk",
-          }),
-        });
+      const res = await dashboardFetch("/v1/proposals/batch", token, {
+        method: "POST",
+        body: JSON.stringify(batchPayload),
+      });
 
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          throw new Error(`HTTP ${res.status} for position ${position.id.slice(0, 8)}: ${text}`);
-        }
+      console.info("[StepExecute] POST /v1/proposals/batch completed", { durationMs: Date.now() - start, status: res.status });
 
-        const data = await res.json();
-        if (data?.id) ids.push(data.id as string);
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status}: ${text}`);
       }
 
+      const data = await res.json() as { created: { id: string }[]; failed: { position_id: string; error: string }[] };
+
+      if (data.failed && data.failed.length > 0) {
+        const failMsgs = data.failed.map((f) => `${f.position_id.slice(0, 8)}: ${f.error}`).join("; ");
+        throw new Error(`${data.failed.length} proposal(s) failed: ${failMsgs}`);
+      }
+
+      const ids = (data.created ?? []).map((p) => p.id);
       setCreatedProposalIds(ids);
       setSubmitMessage("Done");
       setSubmitPhase("submitted");
       onComplete();
     } catch (err: unknown) {
+      console.error("[StepExecute] Batch submission failed", { error: err });
       setSubmitError(err instanceof Error ? err.message : "Submission failed");
       setSubmitPhase("error");
     }
-  }, [positions, calcResult, runId, token, riskDecisionHash, onComplete]);
+  }, [positions, calcResult, runId, token, riskDecisionHash, riskVerdict, onComplete]);
 
   /* ── Render ────────────────────────────────────────────────────────── */
   return (
@@ -414,6 +436,12 @@ export default function StepExecute({
               <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
                 BROKER ORDER PREVIEW (PRE-APPROVAL)
               </div>
+              {isDefaultIbkrAccount && (
+                <div style={{ margin: "12px 0", padding: "10px 14px", background: "rgba(231,76,60,0.08)", border: "1px solid #E74C3C", borderRadius: 4, fontFamily: S.fontMono, fontSize: 10, color: "#E74C3C", display: "flex", alignItems: "center", gap: 6 }}>
+                  &#9888; IBKR account not configured — JSON/FIX export disabled. Configure in Settings → Execution.
+                  <a href="/settings" style={{ color: "#1C62F2", marginLeft: "auto", textDecoration: "none", fontSize: 10 }}>Open Settings →</a>
+                </div>
+              )}
               {aggregatedOrders.map((agg, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: i < aggregatedOrders.length - 1 ? 8 : 0 }}>
                   <span style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: agg.side === "SELL" ? S.fail : S.pass }}>
@@ -575,6 +603,30 @@ export default function StepExecute({
             </div>
           </div>
         )}
+
+        {/* ─── TraceLite Viewer ─── */}
+              {calcResult && (calcResult as unknown as { trace_lite?: { stages?: unknown[] } }).trace_lite?.stages && (
+                <div style={{ marginTop: 16, border: `1px solid ${S.soft}`, borderRadius: 4, overflow: "hidden" }}>
+                  <button
+                    onClick={() => setShowTraceLite((v) => !v)}
+                    style={{ width: "100%", padding: "10px 14px", background: S.bgSub, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em" }}
+                  >
+                    <span>EXECUTION TRACE (STAGE-BY-STAGE)</span>
+                    <span>{showTraceLite ? "▲" : "▼"}</span>
+                  </button>
+                  {showTraceLite && (
+                    <div style={{ padding: "8px 0" }}>
+                      {((calcResult as unknown as { trace_lite: { stages: { name: string; duration_ms: number; status: string }[] } }).trace_lite.stages).map((stage, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 14px", borderBottom: `1px solid ${S.soft}` }}>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>{stage.name}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{stage.duration_ms}ms</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: stage.status === "OK" ? S.pass : S.fail }}>{stage.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
         {/* ─── Section 1: Contract Tickets (individual positions) ─── */}
         <div style={{ padding: "12px 16px 0" }}>

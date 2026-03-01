@@ -124,6 +124,8 @@ class ProposeExecutionRequest(BaseModel):
 
     risk_decision_hash: Optional[str]   = Field(default=None, max_length=64)
 
+    risk_verdict:       Optional[str]   = Field(default=None, max_length=32)
+
 
 
 
@@ -210,6 +212,20 @@ class ProposalResponse(BaseModel):
 
     second_approval_hash:     Optional[str]    = None
 
+    risk_decision_hash:       Optional[str]    = None
+
+    risk_verdict:             Optional[str]    = None
+
+    actual_fill_rate:         Optional[float]  = None
+
+    actual_fill_notional:     Optional[float]  = None
+
+    slippage_bps:             Optional[float]  = None
+
+    fill_timestamp:           Optional[str]    = None
+
+    fill_hash:                Optional[str]    = None
+
 
 
     model_config = ConfigDict(from_attributes=True)
@@ -272,6 +288,20 @@ class ProposalResponse(BaseModel):
             second_approval_notes    = getattr(p, "second_approval_notes", None),
 
             second_approval_hash     = getattr(p, "second_approval_hash", None),
+
+            risk_decision_hash       = getattr(p, "risk_decision_hash", None),
+
+            risk_verdict             = getattr(p, "risk_verdict", None),
+
+            actual_fill_rate         = getattr(p, "actual_fill_rate", None),
+
+            actual_fill_notional     = getattr(p, "actual_fill_notional", None),
+
+            slippage_bps             = getattr(p, "slippage_bps", None),
+
+            fill_timestamp           = getattr(p, "fill_timestamp", None),
+
+            fill_hash                = getattr(p, "fill_hash", None),
 
         )
 
@@ -532,6 +562,10 @@ async def propose_execution(
 
             notes              = data.notes,
 
+            risk_decision_hash = data.risk_decision_hash,
+
+            risk_verdict       = data.risk_verdict,
+
         )
 
     except HTTPException:
@@ -547,14 +581,6 @@ async def propose_execution(
         logger.error("propose_execution unhandled exception", exc_info=True)
 
         raise HTTPException(status_code=500, detail="Internal server error")
-
-    # Store risk_decision_hash if provided (links proposal to risk gate verdict)
-    if data.risk_decision_hash:
-        try:
-            proposal.risk_decision_hash = data.risk_decision_hash
-            await session.commit()
-        except Exception:
-            logger.debug("Failed to store risk_decision_hash (non-fatal)", exc_info=True)
 
     # L-12: check dual-key threshold against active policy (non-fatal)
     try:
@@ -1319,15 +1345,11 @@ async def batch_propose_execution(
 
                 notes              = item.notes,
 
+                risk_decision_hash = item.risk_decision_hash,
+
+                risk_verdict       = item.risk_verdict,
+
             )
-
-            # Store risk_decision_hash if provided
-
-            if item.risk_decision_hash:
-
-                proposal.risk_decision_hash = item.risk_decision_hash
-
-                await session.commit()
 
             created.append(ProposalResponse.from_orm_safe(proposal))
 
@@ -1366,3 +1388,186 @@ async def batch_propose_execution(
             failed.append({"position_id": str(item.position_id), "error": str(e)})
 
     return BatchProposeResponse(created=created, failed=failed)
+
+
+# ---------------------------------------------------------------------------
+
+# PATCH /v1/proposals/{id}/fill — record actual fill data
+
+# ---------------------------------------------------------------------------
+
+
+
+class FillReportRequest(BaseModel):
+
+    fill_price:       float = Field(..., gt=0)
+
+    fill_notional:    float = Field(..., gt=0)
+
+    fill_currency:    str   = Field(..., max_length=8)
+
+    fill_timestamp:   str   = Field(..., description="ISO 8601 datetime")
+
+    slippage_bps:     Optional[float] = None
+
+    submission_mode:  str   = Field(default="MANUAL", max_length=32)
+
+    counterparty:     Optional[str] = Field(default=None, max_length=128)
+
+    confirmation_ref: Optional[str] = Field(default=None, max_length=128)
+
+
+
+@router.patch("/{proposal_id}/fill", response_model=ProposalResponse)
+
+async def report_fill(
+
+    proposal_id:  UUID,
+
+    data:         FillReportRequest,
+
+    request:      Request,
+
+    session:      AsyncSession = Depends(get_async_session),
+
+    current_user: User         = Depends(get_current_user),
+
+):
+
+    """
+
+    Records actual fill data against an APPROVED or EXECUTED proposal.
+
+    Enriches the proposal with execution quality data (fill rate, slippage).
+
+    Emits a FILL audit event into the hash chain.
+
+    Requires: trades.execute
+
+    """
+
+    await _check_permission(session, current_user, "trades.execute")
+
+
+
+    result = await session.execute(
+
+        sa_select(ExecutionProposal).where(
+
+            ExecutionProposal.id == proposal_id,
+
+            ExecutionProposal.company_id == current_user.company_id,
+
+        )
+
+    )
+
+    proposal = result.scalars().first()
+
+    if not proposal:
+
+        raise HTTPException(status_code=404, detail="Proposal not found")
+
+    if proposal.status not in ("APPROVED", "EXECUTED"):
+
+        raise HTTPException(
+
+            status_code=422,
+
+            detail=f"Fill can only be reported on APPROVED or EXECUTED proposals (current: {proposal.status})",
+
+        )
+
+
+
+    import hashlib, json as _json
+
+    def _canon(obj: dict) -> str:
+
+        return _json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str)
+
+
+
+    # Compute slippage if not provided
+
+    proposed_rate = None
+
+    if proposal.proposal_payload:
+
+        proposed_rate = proposal.proposal_payload.get("hedge_rate")
+
+    if data.slippage_bps is None and proposed_rate and proposed_rate > 0:
+
+        slippage_bps = abs(data.fill_price - proposed_rate) / proposed_rate * 10000
+
+    else:
+
+        slippage_bps = data.slippage_bps
+
+
+
+    fill_payload = {
+
+        "fill_price":       data.fill_price,
+
+        "fill_notional":    data.fill_notional,
+
+        "fill_currency":    data.fill_currency,
+
+        "fill_timestamp":   data.fill_timestamp,
+
+        "slippage_bps":     slippage_bps,
+
+        "submission_mode":  data.submission_mode,
+
+        "counterparty":     data.counterparty,
+
+        "confirmation_ref": data.confirmation_ref,
+
+        "reported_by":      str(current_user.id),
+
+        "proposal_hash":    proposal.proposal_hash,
+
+    }
+
+    fill_hash = hashlib.sha256(_canon(fill_payload).encode()).hexdigest()
+
+
+
+    # Store fill data
+
+    proposal.actual_fill_rate     = data.fill_price
+
+    proposal.actual_fill_notional = data.fill_notional
+
+    proposal.slippage_bps         = slippage_bps
+
+    proposal.fill_timestamp       = data.fill_timestamp
+
+    proposal.fill_hash            = fill_hash
+
+    await session.commit()
+
+    await session.refresh(proposal)
+
+
+
+    await _emit_proposal_audit(
+
+        session, current_user,
+
+        event_type  = "LIFECYCLE",
+
+        description = f"Fill reported: {data.fill_currency} {data.fill_price:.6f} (slippage {slippage_bps:.1f} bps)",
+
+        proposal_id = str(proposal.id),
+
+        payload     = fill_payload,
+
+        request     = request,
+
+    )
+
+
+
+    return ProposalResponse.from_orm_safe(proposal)

@@ -163,6 +163,8 @@ async def propose_execution(
     run_id: Optional[str],
     policy_revision_id: Optional[str],
     notes: Optional[str],
+    risk_decision_hash: Optional[str] = None,
+    risk_verdict: Optional[str] = None,
 ) -> ExecutionProposal:
     """
     Maker creates an execution proposal for a position.
@@ -196,19 +198,23 @@ async def propose_execution(
         "notes":              notes,
         "proposed_by":        str(user.id),
         "proposed_at":        datetime.now(timezone.utc).isoformat(),
+        "risk_decision_hash": risk_decision_hash,
+        "risk_verdict":       risk_verdict,
     }
     proposal = ExecutionProposal(
-        id                = _uuid.uuid4(),
-        position_id       = position_id,
-        company_id        = user.company_id,
-        branch_id         = user.branch_id,
-        status            = "PROPOSED",
-        proposed_by       = user.id,
-        proposed_by_email = user.email,
-        proposed_at       = datetime.now(timezone.utc),
-        proposal_payload  = payload,
-        proposal_hash     = compute_proposal_hash(payload),
-        execution_ref     = execution_ref,
+        id                 = _uuid.uuid4(),
+        position_id        = position_id,
+        company_id         = user.company_id,
+        branch_id          = user.branch_id,
+        status             = "PROPOSED",
+        proposed_by        = user.id,
+        proposed_by_email  = user.email,
+        proposed_at        = datetime.now(timezone.utc),
+        proposal_payload   = payload,
+        proposal_hash      = compute_proposal_hash(payload),
+        execution_ref      = execution_ref,
+        risk_decision_hash = risk_decision_hash,
+        risk_verdict       = risk_verdict,
     )
     session.add(proposal)
     await session.commit()

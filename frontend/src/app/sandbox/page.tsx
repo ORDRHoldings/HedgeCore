@@ -833,6 +833,17 @@ function SandboxPageInner() {
                         padding: "7px 20px", border: `1px solid ${S.cyan}`,
                         color: S.cyan, background: "transparent", cursor: "pointer", borderRadius: 2,
                       }}>→ Open Execution Bridge</button>
+                      <button onClick={() => router.push("/execution-desk")} style={{
+                        fontFamily: "'IBM Plex Mono', monospace",
+                        fontSize: 11, fontWeight: 700,
+                        padding: "8px 20px",
+                        background: "#1C62F2",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 3,
+                        cursor: "pointer",
+                        letterSpacing: "0.06em",
+                      }}>RUN AS PRODUCTION CALCULATION →</button>
                     </div>
                   </div>
                 )}
@@ -865,11 +876,31 @@ function SandboxPageInner() {
 
             {/* ══════════ TAB: WHAT-IF BUILDER ══════════ */}
             {activeTab === "whatif" && (
-              <WhatIfBuilder
-                sandboxResult={sandboxResult}
-                defaultPolicy={DEFAULT_POLICY}
-                defaultSpot={spot}
-              />
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                <WhatIfBuilder
+                  sandboxResult={sandboxResult}
+                  defaultPolicy={DEFAULT_POLICY}
+                  defaultSpot={spot}
+                />
+                <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border-soft)", display: "flex", justifyContent: "flex-end" }}>
+                  <button
+                    onClick={() => router.push("/execution-desk")}
+                    style={{
+                      fontFamily: "'IBM Plex Mono', monospace",
+                      fontSize: 11, fontWeight: 700,
+                      padding: "8px 20px",
+                      background: "#1C62F2",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 3,
+                      cursor: "pointer",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    RUN AS PRODUCTION CALCULATION →
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* ══════════ TAB: REGULATORY CAPITAL ══════════ */}
