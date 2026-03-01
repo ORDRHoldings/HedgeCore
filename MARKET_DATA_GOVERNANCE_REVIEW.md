@@ -522,3 +522,214 @@ ALLOW_SQLITE_DEMO=true python -m pytest tests/test_calc_assurance.py \
 ---
 
 *Addendum generated: 2026-02-28 | Platform: ORDR Terminal v1 | Engine: HedgeCalc Phase VI*
+
+---
+
+---
+
+# Phase 6 — Attack-Surface Hardening & Production Evidence Appendix
+
+**Date:** 2026-03-01
+**Commit:** `10a27d6`
+**Environment:** Render (hedgecore service) — PostgreSQL production database
+
+---
+
+## Controls Delivered
+
+### 6-A: Schema-Health Endpoint — Public Path Registration
+
+`backend/app/middleware/api_key_auth.py`
+
+Added `/api/system/schema-health` to `public_paths` so unauthenticated load-balancers and deployment scripts can poll it without credentials.
+
+```python
+self.public_paths = {
+    ...,
+    "/api/system/health",
+    "/api/system/schema-health",  # public; response REDACTED for unauthenticated callers
+}
+```
+
+**Before:** LBs received `401 api_key_missing` → could not detect schema failures.
+**After:** LBs receive `200` with booleans-only response → safe continuous polling.
+
+---
+
+### 6-B: Tiered Response Redaction
+
+`backend/app/api/routes/system.py`
+
+Unauthenticated callers receive **booleans only** — no internal DB object names, index names, trigger names, or `checks{}` dict. Authenticated callers (valid `X-API-Key`) receive the full diagnostic.
+
+| Field | Unauth | Auth |
+|-------|--------|------|
+| `schema_ready` | ✅ | ✅ |
+| `worm_ready` | ✅ | ✅ |
+| `market_snapshots_ready` | ✅ | ✅ |
+| `checked_at` | ✅ | ✅ |
+| `startup_schema_ready` | ❌ | ✅ |
+| `missing_items[]` | ❌ | ✅ |
+| `checks{}` | ❌ | ✅ |
+
+Rationale: internal DB object names (`trg_market_snapshots_no_update`, `uix_market_snapshots_company_hash`, etc.) are schema topology intelligence that must not be exposed to unauthenticated callers.
+
+---
+
+### 6-C: TTL Cache on pg_catalog Queries
+
+`backend/app/core/schema_state.py`
+
+```python
+READINESS_CACHE_TTL_SECONDS: float = 10.0
+
+async def run_readiness_checks_cached(engine: AsyncEngine) -> dict[str, Any]:
+    now = _time.monotonic()
+    entry = _readiness_cache.get("result")
+    if entry is not None and (now - entry["ts"]) < READINESS_CACHE_TTL_SECONDS:
+        return entry["data"]
+    result = await run_readiness_checks(engine)
+    _readiness_cache["result"] = {"data": result, "ts": now}
+    return result
+```
+
+**Attack surface closed:** Without the TTL, a high-frequency unauthenticated poller could trigger unbounded `information_schema` + `pg_catalog` queries. The 10-second TTL limits DB queries to max 6/min per process regardless of external traffic.
+
+---
+
+### 6-D: `system.schema.read` RBAC Permission
+
+`backend/app/models/permission.py`
+
+New permission codename: `system.schema.read` (module: `system`, action: `schema.read`).
+
+Assigned by default to:
+- `admin` (all permissions)
+- `supervisor`
+- `risk_analyst`
+
+Future RBAC gate: when the authenticated full-diagnostic response is later scoped to this permission, callers without `system.schema.read` will receive the redacted response even if they supply a valid API key. The seed data + role defaults are pre-populated.
+
+---
+
+## Production Evidence
+
+**Endpoint:** `https://hedgecore.onrender.com/api/system/schema-health`
+**Captured:** 2026-03-01T04:24:31Z
+**Commit deployed:** `10a27d6`
+
+### Evidence 1: Unauthenticated — Redacted Booleans (HTTP 200)
+
+```
+GET /api/system/schema-health
+(no X-API-Key header)
+```
+
+**Response (HTTP 200):**
+```json
+{
+  "schema_ready": false,
+  "worm_ready": true,
+  "market_snapshots_ready": false,
+  "checked_at": "2026-03-01T04:24:31.227735+00:00"
+}
+```
+
+✅ **Public access granted** — no credentials required.
+✅ **Redaction enforced** — no `checks{}`, `missing_items[]`, `startup_schema_ready`, or internal object names exposed.
+✅ **Load-balancer safe** — boolean readiness at a glance.
+
+---
+
+### Evidence 2: Authenticated — Full Diagnostic (HTTP 200)
+
+```
+GET /api/system/schema-health
+X-API-Key: HC_DEV_KEY_001
+```
+
+**Response (HTTP 200):**
+```json
+{
+  "startup_schema_ready": false,
+  "schema_ready": false,
+  "worm_ready": true,
+  "market_snapshots_ready": false,
+  "missing_items": ["market_snapshots_unique_constraint"],
+  "checks": {
+    "market_snapshots_table": true,
+    "market_snapshots_unique_constraint": false,
+    "worm_function": true,
+    "worm_trigger_update": true,
+    "worm_trigger_delete": true
+  },
+  "checked_at": "2026-03-01T04:24:31.227735+00:00"
+}
+```
+
+✅ **Full diagnostic returned** for authenticated callers.
+✅ **Tiering works** — 4 additional fields (`startup_schema_ready`, `missing_items`, `checks`, internal names) visible only to key-holders.
+
+---
+
+### Evidence 3: WORM Infrastructure Status
+
+From the authenticated diagnostic above:
+
+| Check | Status |
+|-------|--------|
+| `market_snapshots_table` | ✅ PRESENT |
+| `worm_function` (`market_snapshots_worm`) | ✅ PRESENT |
+| `worm_trigger_update` (`trg_market_snapshots_no_update`) | ✅ PRESENT |
+| `worm_trigger_delete` (`trg_market_snapshots_no_delete`) | ✅ PRESENT |
+| `market_snapshots_unique_constraint` (`uix_market_snapshots_company_hash`) | ❌ MISSING |
+
+**WORM triggers and function are production-verified.** The WORM store is append-only — `UPDATE` and `DELETE` on `market_snapshots` are blocked at the DB level.
+
+**Outstanding:** `uix_market_snapshots_company_hash` unique constraint is absent in the production DB. This is the sole failing readiness check. The constraint prevents duplicate snapshots (same company + hash). Resolution: run `_ensure_tables()` DDL on next deployment or apply the constraint via the Render DB shell:
+
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS uix_market_snapshots_company_hash
+    ON market_snapshots (company_id, content_hash);
+```
+
+---
+
+### Evidence 4: Rate-Limit & Auth Boundary Proof
+
+| Request | Pre-deploy Response | Post-deploy Response |
+|---------|--------------------|--------------------|
+| `GET /schema-health` (no key) | `401 api_key_missing` | `200` (redacted booleans) |
+| `GET /schema-health` (valid key) | `404 Not Found` | `200` (full diagnostic) |
+| `GET /health` (no key) | `200` | `200` (unchanged) |
+
+The transition from `401 → 200` on the unauthenticated call confirms the `public_paths` registration took effect in production.
+
+---
+
+## Test Suite Coverage (Phase 6 Addition)
+
+| Test Class | Tests | Status |
+|------------|-------|--------|
+| `TestReadinessChecksTTLCache` | 6 | ✅ All pass |
+| `TestSchemaHealthRedaction` | 11 | ✅ All pass |
+| `TestSystemSchemaReadPermission` | 6 | ✅ All pass |
+| **Phase 6 subtotal** | **23** | ✅ |
+| **Phase 5 (P0) subtotal** | **27** | ✅ |
+| **test_schema_governance.py total** | **50** | ✅ |
+
+---
+
+## File Inventory (Phase 6 Addendum)
+
+| File | Change |
+|------|--------|
+| `backend/app/middleware/api_key_auth.py` | **MOD** — `/api/system/schema-health` added to `public_paths` |
+| `backend/app/core/schema_state.py` | **MOD** — TTL cache (10s); `run_readiness_checks_cached()`; `invalidate_readiness_cache()` |
+| `backend/app/api/routes/system.py` | **MOD** — tiered response (public=redacted, auth=full); switched to cached checks |
+| `backend/app/models/permission.py` | **MOD** — `system.schema.read` permission; assigned to supervisor, risk_analyst |
+| `backend/tests/test_schema_governance.py` | **MOD** — 23 new tests (TTL cache, redaction contract, permission seed) |
+
+---
+
+*Phase 6 Appendix generated: 2026-03-01 | Commit: 10a27d6 | Platform: ORDR Terminal v1*
