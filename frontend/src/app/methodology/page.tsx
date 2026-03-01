@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * methodology/page.tsx — Calculation Methodology Reference (canonical route)
+ * methodology/page.tsx — Calculation Methodology Whitepaper
  *
- * Formerly at /sandbox (now redirects here via next.config.js).
- * Full content re-exported from sandbox page; Step 17+ will refactor.
+ * Full whitepaper: hedge formulas, instrument reference, engine architecture,
+ * GARCH vol modelling, stress testing, audit & governance engine.
  */
 
-export { default } from "@/app/sandbox/page";
+export { default } from "@/app/sandbox/whitepaper/page";
