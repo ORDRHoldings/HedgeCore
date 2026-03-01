@@ -298,22 +298,6 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
           WALL STREET
         </span>
 
-        <span style={{
-          fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-          fontSize: 8,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          color: "var(--accent-amber,#F59E0B)",
-          background: "color-mix(in srgb, var(--accent-amber,#F59E0B) 10%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--accent-amber,#F59E0B) 30%, transparent)",
-          padding: "1px 5px",
-          borderRadius: 2,
-          whiteSpace: "nowrap",
-          flexShrink: 0,
-        }}>
-          SIM DATA
-        </span>
-
         <div style={{ flex: 1 }} />
 
         {/* Sentiment badge */}
@@ -335,21 +319,16 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
           </span>
         )}
 
-        {dataSource === "live" && (
-          <span
-            style={{
-              fontFamily: S.fontMono,
-              fontSize: 8,
-              letterSpacing: "0.08em",
-              color: S.green,
-              background: `color-mix(in srgb, ${S.green} 10%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${S.green} 25%, transparent)`,
-              borderRadius: 3,
-              padding: "1px 5px",
-              textTransform: "uppercase",
-            }}
-          >
-            LIVE
+        {/* Data source badge — only shown when data is loaded */}
+        {!loading && (
+          <span style={{
+            fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.08em",
+            color: dataSource === "live" ? S.green : S.amber,
+            background: `color-mix(in srgb, ${dataSource === "live" ? S.green : S.amber} 10%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${dataSource === "live" ? S.green : S.amber} 25%, transparent)`,
+            borderRadius: 3, padding: "1px 5px", textTransform: "uppercase",
+          }}>
+            {dataSource === "live" ? "LIVE" : "DELAYED"}
           </span>
         )}
 
