@@ -96,8 +96,24 @@ export default function TradeHistoryPage() {
 
   if (!user) return null;
 
-  const STATUSES = ["ALL", "PROPOSED", "APPROVED", "EXECUTED", "REJECTED", "WITHDRAWN"];
-  const filtered = statusFilter === "ALL" ? proposals : proposals.filter((p) => p.status === statusFilter);
+  const STATUSES = ["ALL", "PENDING APPROVAL", "PROPOSED", "APPROVED", "EXECUTED", "REJECTED", "WITHDRAWN"];
+
+  // "PENDING APPROVAL" tab calls the dedicated checker endpoint
+  useEffect(() => {
+    if (statusFilter !== "PENDING APPROVAL") return;
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    dashboardFetch("/v1/proposals/pending", token)
+      .then(r => r.ok ? r.json() as Promise<Proposal[]> : Promise.reject(`HTTP ${r.status}`))
+      .then(data => setProposals(data))
+      .catch(e => setError(String(e)))
+      .finally(() => setLoading(false));
+  }, [statusFilter, token]);
+
+  const filtered = statusFilter === "ALL" || statusFilter === "PENDING APPROVAL"
+    ? proposals
+    : proposals.filter((p) => p.status === statusFilter);
 
   return (
     <div style={{ minHeight: "100vh", background: S.bgDeep, color: S.primary, fontFamily: S.fontUI }}>
@@ -161,7 +177,13 @@ export default function TradeHistoryPage() {
             </div>
             {/* Table rows */}
             {filtered.map((p) => (
-              <div key={p.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 140px 140px 100px 110px", gap: 0, padding: "10px 14px", borderBottom: `1px solid ${S.soft}`, alignItems: "center" }}>
+              <div
+                key={p.id}
+                onClick={() => router.push(`/staging/${p.id}`)}
+                style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 140px 140px 100px 110px", gap: 0, padding: "10px 14px", borderBottom: `1px solid ${S.soft}`, alignItems: "center", cursor: "pointer" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "color-mix(in srgb, var(--accent-cyan) 4%, transparent)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              >
                 <div>
                   <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>{p.id.slice(0, 8).toUpperCase()}</div>
                   <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{hashLabel(p.proposal_hash)}</div>

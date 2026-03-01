@@ -327,7 +327,7 @@ export default function StagingListPage() {
                   return (
                     <tr
                       key={artifact.staging_id}
-                      onClick={() => router.push(`/staging/${artifact.staging_id}`)}
+                      onClick={() => router.push(`/staging/${artifact.proposal_id}`)}
                       style={{
                         borderBottom: i < sorted.length - 1 ? `1px solid ${S.soft}` : "none",
                         background: isPending
@@ -389,7 +389,7 @@ export default function StagingListPage() {
                       </td>
                       <td style={{ padding: "10px 12px", textAlign: "right" }}>
                         <button
-                          onClick={e => { e.stopPropagation(); router.push(`/staging/${artifact.staging_id}`); }}
+                          onClick={e => { e.stopPropagation(); router.push(`/staging/${artifact.proposal_id}`); }}
                           style={{
                             fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", fontWeight: 700,
                             padding: "3px 10px",

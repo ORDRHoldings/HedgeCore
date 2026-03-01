@@ -187,6 +187,12 @@ export default function ProposalDetailPage() {
   // Approve notes state
   const [approvalNotes, setApprovalNotes] = useState("");
 
+  // Fill recording state
+  const [showFillForm,    setShowFillForm]    = useState(false);
+  const [fillPrice,       setFillPrice]       = useState("");
+  const [fillNotional,    setFillNotional]    = useState("");
+  const [fillRef,         setFillRef]         = useState("");
+
   // Auth guard
   useEffect(() => {
     if (!token && typeof window !== "undefined") {
@@ -287,6 +293,35 @@ export default function ProposalDetailPage() {
       setActionSuccess("Proposal executed. Position is now HEDGED.");
     } catch (e: unknown) {
       setActionError(e instanceof Error ? e.message : "Execute failed");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleFillRecord() {
+    if (!token || !proposalId || !fillPrice) return;
+    setActionLoading(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      const body: Record<string, unknown> = { fill_price: parseFloat(fillPrice) };
+      if (fillNotional) body.fill_notional = parseFloat(fillNotional);
+      if (fillRef)      body.fill_ref      = fillRef.trim();
+      const res = await dashboardFetch(`/v1/proposals/${proposalId}/fill`, token, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b?.detail ?? `HTTP ${res.status}`);
+      }
+      const updated: Proposal = await res.json();
+      setProposal(updated);
+      setActionSuccess("Fill recorded. Hash chain updated.");
+      setShowFillForm(false);
+      setFillPrice(""); setFillNotional(""); setFillRef("");
+    } catch (e: unknown) {
+      setActionError(e instanceof Error ? e.message : "Fill record failed");
     } finally {
       setActionLoading(false);
     }
@@ -609,7 +644,7 @@ export default function ProposalDetailPage() {
               )}
 
               {/* Terminal states */}
-              {(proposal.status === "EXECUTED" || proposal.status === "REJECTED" || proposal.status === "WITHDRAWN") && (
+              {(proposal.status === "REJECTED" || proposal.status === "WITHDRAWN") && (
                 <div style={{
                   padding: "10px 12px",
                   background: S.bgSub, border: `1px solid ${S.rim}`,
@@ -617,6 +652,86 @@ export default function ProposalDetailPage() {
                   lineHeight: 1.6,
                 }}>
                   This proposal is in a terminal state ({proposal.status}) and requires no further action.
+                </div>
+              )}
+
+              {/* EXECUTED + no fill → offer fill recording */}
+              {proposal.status === "EXECUTED" && !proposal.fill_hash && (
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                  <div style={{
+                    padding: "8px 10px",
+                    background: `color-mix(in srgb, ${S.cyan} 5%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`,
+                    fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.cyan, lineHeight: 1.5,
+                  }}>
+                    Position hedged. Record the actual fill from your execution venue to close the audit chain.
+                  </div>
+                  {!showFillForm ? (
+                    <ActionBtn
+                      label="Record Fill"
+                      color={S.cyan}
+                      bg={`color-mix(in srgb, ${S.cyan} 10%, transparent)`}
+                      border={S.cyan}
+                      onClick={() => setShowFillForm(true)}
+                      disabled={actionLoading}
+                      icon={<CheckCircle size={13} />}
+                    />
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                      {[
+                        { label: "Fill Price *", val: fillPrice, set: setFillPrice, placeholder: "e.g. 20.1850", type: "number" },
+                        { label: "Fill Notional (optional)", val: fillNotional, set: setFillNotional, placeholder: "e.g. 5000000", type: "number" },
+                        { label: "Fill Ref / Ticket ID (optional)", val: fillRef, set: setFillRef, placeholder: "e.g. IBK-92841", type: "text" },
+                      ].map(({ label, val, set, placeholder, type }) => (
+                        <div key={label} style={{ display: "flex", flexDirection: "column" as const, gap: 3 }}>
+                          <label style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
+                            {label}
+                          </label>
+                          <input
+                            type={type}
+                            value={val}
+                            onChange={e => set(e.target.value)}
+                            placeholder={placeholder}
+                            style={{
+                              fontFamily: S.fontMono, fontSize: "0.6875rem",
+                              background: S.bgSub, border: `1px solid ${S.rim}`,
+                              color: S.primary, padding: "5px 8px", outline: "none",
+                            }}
+                          />
+                        </div>
+                      ))}
+                      <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                        <ActionBtn
+                          label="Confirm Fill"
+                          color={S.cyan}
+                          bg={`color-mix(in srgb, ${S.cyan} 12%, transparent)`}
+                          border={S.cyan}
+                          onClick={handleFillRecord}
+                          disabled={actionLoading || !fillPrice}
+                          icon={<CheckCircle size={13} />}
+                        />
+                        <button
+                          onClick={() => { setShowFillForm(false); setFillPrice(""); setFillNotional(""); setFillRef(""); }}
+                          style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 12px", cursor: "pointer" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* EXECUTED + fill recorded */}
+              {proposal.status === "EXECUTED" && proposal.fill_hash && (
+                <div style={{
+                  padding: "10px 12px",
+                  background: `color-mix(in srgb, ${S.pass} 6%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
+                  fontFamily: S.fontMono, fontSize: "0.625rem", color: S.pass, lineHeight: 1.6,
+                }}>
+                  <CheckCircle size={11} style={{ display: "inline", marginRight: 6 }} />
+                  Fill recorded. Audit chain complete.
                 </div>
               )}
 
