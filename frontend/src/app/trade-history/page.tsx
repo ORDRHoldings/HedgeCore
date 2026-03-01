@@ -1,27 +1,28 @@
 "use client";
-
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
+// ─── Design tokens ───────────────────────────────────────────────────────────
 const S = {
-  fontUI:   "Inter, 'IBM Plex Sans', sans-serif",
-  fontMono: "'IBM Plex Mono', monospace",
-  bgDeep:   "var(--bg-deep)",
-  bgPanel:  "var(--bg-panel)",
-  bgSub:    "var(--bg-sub)",
-  rim:      "var(--border-rim)",
-  soft:     "var(--border-soft)",
-  primary:  "var(--text-primary)",
-  secondary:"var(--text-secondary)",
-  tertiary: "var(--text-tertiary)",
-  blue:     "#1C62F2",
-  green:    "#2ECC71",
-  red:      "#E74C3C",
-  amber:    "var(--accent-amber)",
+  fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
+  bgDeep:    "var(--bg-deep)",
+  bgPanel:   "var(--bg-panel)",
+  bgSub:     "var(--bg-sub)",
+  rim:       "var(--border-rim)",
+  soft:      "var(--border-soft)",
+  primary:   "var(--text-primary)",
+  secondary: "var(--text-secondary)",
+  tertiary:  "var(--text-tertiary)",
+  cyan:      "var(--accent-cyan)",
+  amber:     "var(--accent-amber)",
+  red:       "var(--accent-red)",
+  green:     "var(--status-pass)",
 } as const;
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Proposal {
   id: string;
   position_id: string;
@@ -40,187 +41,764 @@ interface Proposal {
   risk_verdict: string | null;
 }
 
+type SortKey = "newest" | "oldest" | "status" | "fill_rate" | "slippage";
+
+const STATUS_TABS = [
+  "ALL",
+  "PENDING APPROVAL",
+  "PROPOSED",
+  "APPROVED",
+  "EXECUTED",
+  "REJECTED",
+  "WITHDRAWN",
+] as const;
+
+type StatusTab = (typeof STATUS_TABS)[number];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function statusColor(s: string): string {
   switch (s) {
-    case "EXECUTED": return "#2ECC71";
-    case "APPROVED": return "#1C62F2";
-    case "PROPOSED": return "var(--accent-amber)";
-    case "REJECTED": return "#E74C3C";
-    case "WITHDRAWN": return "var(--text-tertiary)";
-    default: return "var(--text-secondary)";
+    case "EXECUTED":  return S.green;
+    case "APPROVED":  return S.cyan;
+    case "PROPOSED":  return S.amber;
+    case "REJECTED":  return S.red;
+    case "WITHDRAWN": return S.tertiary;
+    default:          return S.secondary;
   }
 }
 
-function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  try { return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
-  catch { return iso; }
+function riskDisplay(verdict: string | null): { label: string; color: string } {
+  if (!verdict) return { label: "—", color: S.tertiary };
+  const v = verdict.toUpperCase();
+  if (v === "PASS" || v === "APPROVE" || v === "APPROVED")
+    return { label: "✓ PASS", color: S.green };
+  if (v === "FAIL" || v === "REJECT" || v === "REJECTED")
+    return { label: "✗ FAIL", color: S.red };
+  return { label: "⚠ COND", color: S.amber };
 }
 
-function hashLabel(h: string | null): string {
-  if (!h) return "—";
-  return `${h.slice(0, 8)}…${h.slice(-4)}`;
+function slippageColor(bps: number | null): string {
+  if (bps === null) return S.tertiary;
+  if (bps > 10) return S.red;
+  if (bps >= 1) return S.amber;
+  return S.green;
 }
 
+function fmtAge(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const totalMins = Math.floor(diffMs / 60_000);
+  if (totalMins < 60) return `${totalMins}m`;
+  const h = Math.floor(totalMins / 60);
+  const d = Math.floor(h / 24);
+  const rh = h % 24;
+  if (d > 0) return `${d}d ${rh}h`;
+  return `${h}h`;
+}
+
+function fmtDateTime(iso: string | null): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function extractCcy(ref: string | null): string {
+  if (!ref) return "";
+  // execution_ref often contains a currency pair, e.g. "EURUSD-..." or "EUR/USD-..."
+  const m = ref.match(/^([A-Z]{3})[^A-Z]?([A-Z]{3})?/);
+  if (m) return m[1] ?? "";
+  return "";
+}
+
+function localPart(email: string | null): string {
+  if (!email) return "—";
+  return email.split("@")[0] ?? email;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function TradeHistoryPage() {
   const router = useRouter();
   const { user, token } = useAuth();
+
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<StatusTab>("ALL");
+  const [sortKey, setSortKey]     = useState<SortKey>("newest");
 
-  const load = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    setError(null);
-    try {
-      console.info("[TradeHistory] GET /v1/proposals");
-      const res = await dashboardFetch("/v1/proposals", token);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as Proposal[];
-      setProposals(data);
-    } catch (e) {
-      console.error("[TradeHistory] fetch failed", e);
-      setError(e instanceof Error ? e.message : "Failed to load proposals");
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => { load(); }, [load]);
-
+  // Auth guard
   useEffect(() => {
     if (!user) router.push("/auth/login");
   }, [user, router]);
 
+  // Single load function — receives endpoint as parameter
+  const load = useCallback(
+    async (endpoint: string) => {
+      if (!token) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await dashboardFetch(endpoint, token);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as Proposal[];
+        setProposals(data);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load proposals");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token]
+  );
+
+  // One effect — routes to correct endpoint based on tab
+  useEffect(() => {
+    const endpoint =
+      statusFilter === "PENDING APPROVAL"
+        ? "/v1/proposals/pending"
+        : "/v1/proposals";
+    load(endpoint);
+  }, [statusFilter, load]);
+
+  // Derived: filter (client-side for non-pending tabs, server already filters pending)
+  const filtered = useMemo(() => {
+    const base =
+      statusFilter === "ALL" || statusFilter === "PENDING APPROVAL"
+        ? proposals
+        : proposals.filter((p) => p.status === statusFilter);
+
+    const sorted = [...base];
+    switch (sortKey) {
+      case "newest":
+        sorted.sort(
+          (a, b) =>
+            new Date(b.proposed_at).getTime() -
+            new Date(a.proposed_at).getTime()
+        );
+        break;
+      case "oldest":
+        sorted.sort(
+          (a, b) =>
+            new Date(a.proposed_at).getTime() -
+            new Date(b.proposed_at).getTime()
+        );
+        break;
+      case "status":
+        sorted.sort((a, b) => a.status.localeCompare(b.status));
+        break;
+      case "fill_rate":
+        sorted.sort(
+          (a, b) => (b.actual_fill_rate ?? -Infinity) - (a.actual_fill_rate ?? -Infinity)
+        );
+        break;
+      case "slippage":
+        sorted.sort(
+          (a, b) => (b.slippage_bps ?? -Infinity) - (a.slippage_bps ?? -Infinity)
+        );
+        break;
+    }
+    return sorted;
+  }, [proposals, statusFilter, sortKey]);
+
+  const pendingCount = useMemo(
+    () => proposals.filter((p) => p.status === "PROPOSED" || p.status === "APPROVED").length,
+    [proposals]
+  );
+
   if (!user) return null;
 
-  const STATUSES = ["ALL", "PENDING APPROVAL", "PROPOSED", "APPROVED", "EXECUTED", "REJECTED", "WITHDRAWN"];
+  // ─── Styles (inline, no className ─────────────────────────────────────────
+  const headerBar: React.CSSProperties = {
+    height: 44,
+    background: S.bgPanel,
+    borderBottom: `1px solid ${S.rim}`,
+    display: "flex",
+    alignItems: "center",
+    padding: "0 20px",
+    gap: 12,
+    flexShrink: 0,
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+  };
 
-  // "PENDING APPROVAL" tab calls the dedicated checker endpoint
-  useEffect(() => {
-    if (statusFilter !== "PENDING APPROVAL") return;
-    if (!token) return;
-    setLoading(true);
-    setError(null);
-    dashboardFetch("/v1/proposals/pending", token)
-      .then(r => r.ok ? r.json() as Promise<Proposal[]> : Promise.reject(`HTTP ${r.status}`))
-      .then(data => setProposals(data))
-      .catch(e => setError(String(e)))
-      .finally(() => setLoading(false));
-  }, [statusFilter, token]);
+  const commandStrip: React.CSSProperties = {
+    height: 40,
+    background: S.bgSub,
+    borderBottom: `1px solid ${S.rim}`,
+    display: "flex",
+    alignItems: "center",
+    padding: "0 20px",
+    gap: 0,
+  };
 
-  const filtered = statusFilter === "ALL" || statusFilter === "PENDING APPROVAL"
-    ? proposals
-    : proposals.filter((p) => p.status === statusFilter);
+  const thCell: React.CSSProperties = {
+    fontFamily: S.fontMono,
+    fontSize: 9,
+    color: S.tertiary,
+    textTransform: "uppercase",
+    letterSpacing: "0.1em",
+    padding: "0 12px",
+    whiteSpace: "nowrap" as const,
+    userSelect: "none" as const,
+  };
 
   return (
-    <div style={{ minHeight: "100vh", background: S.bgDeep, color: S.primary, fontFamily: S.fontUI }}>
-      {/* Header */}
-      <div style={{ height: 44, background: "var(--bg-panel)", borderBottom: `1px solid ${S.rim}`, display: "flex", alignItems: "center", padding: "0 20px", gap: 12, flexShrink: 0 }}>
-        <button onClick={() => router.push("/dashboard")} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>← Dashboard</button>
-        <span style={{ color: S.rim }}>|</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.primary }}>TRADE HISTORY</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.blue, border: `1px solid ${S.blue}40`, background: `${S.blue}10`, padding: "1px 6px" }}>PROPOSALS</span>
-        <div style={{ flex: 1 }} />
-        <button onClick={load} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.primary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer" }}>↻ Refresh</button>
-      </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: S.bgDeep,
+        color: S.primary,
+        fontFamily: S.fontUI,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* ── 1. HEADER BAR (44px) ─────────────────────────────────────────── */}
+      <div style={headerBar}>
+        {/* Back */}
+        <button
+          onClick={() => router.push("/dashboard")}
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: 10,
+            color: S.tertiary,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            letterSpacing: "0.04em",
+          }}
+        >
+          ← Dashboard
+        </button>
 
-      {/* Status filters */}
-      <div style={{ padding: "12px 20px", display: "flex", gap: 8, flexWrap: "wrap", background: "var(--bg-sub)", borderBottom: `1px solid ${S.rim}` }}>
-        {STATUSES.map((s) => (
-          <button key={s} onClick={() => setStatusFilter(s)} style={{
-            fontFamily: S.fontMono, fontSize: 10, padding: "4px 10px",
-            background: statusFilter === s ? S.blue : "transparent",
-            color: statusFilter === s ? "#fff" : S.tertiary,
-            border: `1px solid ${statusFilter === s ? S.blue : S.soft}`,
-            borderRadius: 2, cursor: "pointer",
-          }}>{s}</button>
-        ))}
-        <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, alignSelf: "center" }}>
-          {filtered.length} record{filtered.length !== 1 ? "s" : ""}
+        <span style={{ color: S.rim, fontSize: 14, lineHeight: 1 }}>|</span>
+
+        {/* Title */}
+        <span
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            color: S.primary,
+            textTransform: "uppercase",
+          }}
+        >
+          Trade History
         </span>
+
+        {/* Pill */}
+        <span
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: 9,
+            letterSpacing: "0.08em",
+            color: S.cyan,
+            border: `1px solid color-mix(in srgb, ${S.cyan} 40%, transparent)`,
+            background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
+            padding: "2px 7px",
+            textTransform: "uppercase",
+          }}
+        >
+          Execution Proposals
+        </span>
+
+        <div style={{ flex: 1 }} />
+
+        {/* Pending badge */}
+        {pendingCount > 0 && (
+          <span
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 9,
+              letterSpacing: "0.08em",
+              color: S.amber,
+              border: `1px solid color-mix(in srgb, ${S.amber} 50%, transparent)`,
+              background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
+              padding: "2px 8px",
+              textTransform: "uppercase",
+            }}
+          >
+            {pendingCount} Pending Approval
+          </span>
+        )}
+
+        {/* Refresh */}
+        <button
+          onClick={() => {
+            const endpoint =
+              statusFilter === "PENDING APPROVAL"
+                ? "/v1/proposals/pending"
+                : "/v1/proposals";
+            load(endpoint);
+          }}
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: 11,
+            color: S.secondary,
+            background: "transparent",
+            border: `1px solid ${S.rim}`,
+            padding: "2px 10px",
+            cursor: "pointer",
+            borderRadius: 2,
+            letterSpacing: "0.04em",
+          }}
+        >
+          ↻
+        </button>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: 20, maxWidth: 1400, margin: "0 auto" }}>
+      {/* ── 2. COMMAND STRIP (40px) ──────────────────────────────────────── */}
+      <div style={commandStrip}>
+        {/* Status tabs */}
+        <div style={{ display: "flex", gap: 0, flex: 1 }}>
+          {STATUS_TABS.map((tab) => {
+            const active = statusFilter === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setStatusFilter(tab)}
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 9,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: active ? S.cyan : S.tertiary,
+                  background: active
+                    ? `color-mix(in srgb, ${S.cyan} 8%, transparent)`
+                    : "transparent",
+                  border: "none",
+                  borderBottom: active
+                    ? `2px solid ${S.cyan}`
+                    : "2px solid transparent",
+                  padding: "0 14px",
+                  height: 40,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {tab}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Record count */}
+        <span
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: 10,
+            color: S.tertiary,
+            marginRight: 16,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {filtered.length} of {proposals.length} records
+        </span>
+
+        {/* Sort selector */}
+        <select
+          value={sortKey}
+          onChange={(e) => setSortKey(e.target.value as SortKey)}
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: 10,
+            color: S.secondary,
+            background: S.bgPanel,
+            border: `1px solid ${S.rim}`,
+            padding: "2px 6px",
+            cursor: "pointer",
+            outline: "none",
+            height: 24,
+          }}
+        >
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="status">Status</option>
+          <option value="fill_rate">Fill Rate</option>
+          <option value="slippage">Slippage</option>
+        </select>
+      </div>
+
+      {/* ── 3. DATA TABLE ────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, overflowX: "auto" }}>
+        {/* Loading */}
         {loading && (
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, textAlign: "center", padding: 60 }}>Loading proposals…</div>
-        )}
-        {error && (
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.red, padding: "12px 16px", background: `${S.red}10`, border: `1px solid ${S.red}`, borderRadius: 4, marginBottom: 16 }}>
-            ERROR: {error}
+          <div
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 11,
+              color: S.tertiary,
+              textAlign: "center",
+              padding: 60,
+              letterSpacing: "0.06em",
+            }}
+          >
+            LOADING…
           </div>
         )}
+
+        {/* Error */}
+        {!loading && error && (
+          <div
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 11,
+              color: S.red,
+              padding: "12px 20px",
+              background: `color-mix(in srgb, ${S.red} 8%, transparent)`,
+              borderBottom: `1px solid color-mix(in srgb, ${S.red} 40%, transparent)`,
+            }}
+          >
+            ERROR — {error}
+          </div>
+        )}
+
+        {/* Empty state */}
         {!loading && !error && filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: 60 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 12 }}>NO PROPOSALS FOUND</div>
-            <p style={{ fontSize: 13, color: S.secondary, marginBottom: 20 }}>Run the Execution Desk pipeline to generate proposals for approval.</p>
-            <button onClick={() => router.push("/execution-desk")} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "8px 20px", background: S.blue, color: "#fff", border: "none", borderRadius: 3, cursor: "pointer" }}>
-              OPEN EXECUTION DESK →
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "80px 20px",
+              gap: 12,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: 12,
+                letterSpacing: "0.12em",
+                color: S.tertiary,
+                textTransform: "uppercase",
+              }}
+            >
+              No Proposals Found
+            </div>
+            <p
+              style={{
+                fontFamily: S.fontUI,
+                fontSize: 13,
+                color: S.secondary,
+                margin: 0,
+                textAlign: "center",
+                maxWidth: 340,
+              }}
+            >
+              Run the Execution Desk pipeline to generate proposals for approval.
+            </p>
+            <button
+              onClick={() => router.push("/execution-desk")}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                padding: "7px 18px",
+                background: S.cyan,
+                color: "#fff",
+                border: "none",
+                borderRadius: 2,
+                cursor: "pointer",
+                textTransform: "uppercase",
+                marginTop: 8,
+              }}
+            >
+              Open Execution Desk →
             </button>
           </div>
         )}
-        {!loading && filtered.length > 0 && (
-          <div style={{ border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden" }}>
-            {/* Table header */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 140px 140px 100px 110px", gap: 0, padding: "8px 14px", background: "var(--bg-sub)", borderBottom: `1px solid ${S.rim}`, fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              <span>Proposal ID</span>
-              <span>Position</span>
-              <span>Status</span>
-              <span>Risk Gate</span>
-              <span>Maker</span>
-              <span>Checker</span>
-              <span>Fill Rate</span>
-              <span>Slippage</span>
-            </div>
-            {/* Table rows */}
-            {filtered.map((p) => (
-              <div
-                key={p.id}
-                onClick={() => router.push(`/staging/${p.id}`)}
-                style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 140px 140px 100px 110px", gap: 0, padding: "10px 14px", borderBottom: `1px solid ${S.soft}`, alignItems: "center", cursor: "pointer" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "color-mix(in srgb, var(--accent-cyan) 4%, transparent)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+
+        {/* Table */}
+        {!loading && !error && filtered.length > 0 && (
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              tableLayout: "fixed",
+              minWidth: 1100,
+            }}
+          >
+            <colgroup>
+              <col style={{ width: 140 }} /> {/* ID */}
+              <col style={{ width: 130 }} /> {/* POSITION */}
+              <col style={{ width: 64 }}  /> {/* CCY */}
+              <col style={{ width: 110 }} /> {/* STATUS */}
+              <col style={{ width: 84 }}  /> {/* RISK */}
+              <col style={{ width: 160 }} /> {/* MAKER */}
+              <col style={{ width: 160 }} /> {/* CHECKER */}
+              <col style={{ width: 96 }}  /> {/* FILL RATE */}
+              <col style={{ width: 100 }} /> {/* SLIPPAGE */}
+              <col style={{ width: 72 }}  /> {/* AGE */}
+            </colgroup>
+
+            <thead>
+              <tr
+                style={{
+                  background: S.bgSub,
+                  borderBottom: `1px solid ${S.rim}`,
+                  height: 30,
+                }}
               >
-                <div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>{p.id.slice(0, 8).toUpperCase()}</div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{hashLabel(p.proposal_hash)}</div>
-                </div>
-                <div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>{p.position_id.slice(0, 8).toUpperCase()}</div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{p.execution_ref ?? "—"}</div>
-                </div>
-                <div>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: statusColor(p.status), padding: "2px 6px", border: `1px solid ${statusColor(p.status)}40`, borderRadius: 2, background: `${statusColor(p.status)}10` }}>
-                    {p.status}
-                  </span>
-                </div>
-                <div>
-                  {p.risk_verdict ? (
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: p.risk_verdict === "APPROVE" ? "#2ECC71" : p.risk_verdict === "REJECT" ? "#E74C3C" : "var(--accent-amber)" }}>
-                      {p.risk_verdict === "APPROVE" ? "✓ APPROVED" : p.risk_verdict === "REJECT" ? "✗ REJECTED" : "⚠ WITH CONDITIONS"}
-                    </span>
-                  ) : <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>—</span>}
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, color: S.secondary }}>{p.proposed_by_email ?? "—"}</div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{fmtDate(p.proposed_at)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, color: S.secondary }}>{p.approved_by_email ?? "—"}</div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{fmtDate(p.approved_at)}</div>
-                </div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: p.actual_fill_rate ? S.primary : S.tertiary }}>
-                  {p.actual_fill_rate ? p.actual_fill_rate.toFixed(4) : "—"}
-                </div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: p.slippage_bps && p.slippage_bps > 5 ? S.red : p.slippage_bps ? S.green : S.tertiary }}>
-                  {p.slippage_bps ? `${p.slippage_bps.toFixed(1)} bps` : "—"}
-                </div>
-              </div>
-            ))}
-          </div>
+                {(
+                  [
+                    "ID",
+                    "Position",
+                    "CCY",
+                    "Status",
+                    "Risk",
+                    "Maker",
+                    "Checker",
+                    "Fill Rate",
+                    "Slippage",
+                    "Age",
+                  ] as const
+                ).map((h) => (
+                  <th key={h} style={{ ...thCell, textAlign: "left", fontWeight: 500 }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody>
+              {filtered.map((p, idx) => {
+                const sc = statusColor(p.status);
+                const risk = riskDisplay(p.risk_verdict);
+                const ccy = extractCcy(p.execution_ref);
+                const slipColor = slippageColor(p.slippage_bps);
+                const rowBg =
+                  idx % 2 === 0
+                    ? "transparent"
+                    : "color-mix(in srgb, var(--border-rim) 5%, transparent)";
+
+                return (
+                  <tr
+                    key={p.id}
+                    onClick={() => router.push(`/staging/${p.id}`)}
+                    style={{
+                      height: 34,
+                      borderBottom: `1px solid ${S.soft}`,
+                      cursor: "pointer",
+                      background: rowBg,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background =
+                        "color-mix(in srgb, var(--accent-cyan) 4%, transparent)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = rowBg;
+                    }}
+                  >
+                    {/* ID */}
+                    <td style={{ padding: "8px 12px" }}>
+                      <div
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 11,
+                          color: S.cyan,
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        {p.id.slice(0, 8).toUpperCase()}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 9,
+                          color: S.tertiary,
+                          marginTop: 1,
+                        }}
+                      >
+                        {p.proposal_hash ? p.proposal_hash.slice(0, 6) : "—"}
+                      </div>
+                    </td>
+
+                    {/* POSITION */}
+                    <td style={{ padding: "8px 12px" }}>
+                      <div
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 11,
+                          color: S.secondary,
+                        }}
+                      >
+                        {p.position_id.slice(0, 8).toUpperCase()}
+                      </div>
+                      {p.execution_ref && (
+                        <div
+                          style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 9,
+                            color: S.tertiary,
+                            marginTop: 1,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {p.execution_ref}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* CCY */}
+                    <td style={{ padding: "8px 12px" }}>
+                      <span
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 11,
+                          color: ccy ? S.primary : S.tertiary,
+                          letterSpacing: "0.06em",
+                        }}
+                      >
+                        {ccy || "—"}
+                      </span>
+                    </td>
+
+                    {/* STATUS */}
+                    <td style={{ padding: "8px 12px" }}>
+                      <span
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 9,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          color: sc,
+                          borderLeft: `3px solid ${sc}`,
+                          paddingLeft: 6,
+                        }}
+                      >
+                        {p.status}
+                      </span>
+                    </td>
+
+                    {/* RISK */}
+                    <td style={{ padding: "8px 12px" }}>
+                      <span
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 9,
+                          letterSpacing: "0.06em",
+                          color: risk.color,
+                        }}
+                      >
+                        {risk.label}
+                      </span>
+                    </td>
+
+                    {/* MAKER */}
+                    <td style={{ padding: "8px 12px" }}>
+                      <div
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 11,
+                          color: S.secondary,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {localPart(p.proposed_by_email)}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 9,
+                          color: S.tertiary,
+                          marginTop: 1,
+                        }}
+                      >
+                        {fmtDateTime(p.proposed_at)}
+                      </div>
+                    </td>
+
+                    {/* CHECKER */}
+                    <td style={{ padding: "8px 12px" }}>
+                      <div
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 11,
+                          color: S.secondary,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {localPart(p.approved_by_email)}
+                      </div>
+                      {p.approved_at && (
+                        <div
+                          style={{
+                            fontFamily: S.fontMono,
+                            fontSize: 9,
+                            color: S.tertiary,
+                            marginTop: 1,
+                          }}
+                        >
+                          {fmtDateTime(p.approved_at)}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* FILL RATE */}
+                    <td style={{ padding: "8px 12px" }}>
+                      <span
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 11,
+                          color:
+                            p.actual_fill_rate !== null ? S.primary : S.tertiary,
+                        }}
+                      >
+                        {p.actual_fill_rate !== null
+                          ? p.actual_fill_rate.toFixed(4)
+                          : "—"}
+                      </span>
+                    </td>
+
+                    {/* SLIPPAGE */}
+                    <td style={{ padding: "8px 12px" }}>
+                      <span
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 11,
+                          color: slipColor,
+                        }}
+                      >
+                        {p.slippage_bps !== null
+                          ? `${p.slippage_bps.toFixed(1)} bps`
+                          : "—"}
+                      </span>
+                    </td>
+
+                    {/* AGE */}
+                    <td style={{ padding: "8px 12px" }}>
+                      <span
+                        style={{
+                          fontFamily: S.fontMono,
+                          fontSize: 10,
+                          color: S.tertiary,
+                        }}
+                      >
+                        {fmtAge(p.proposed_at)}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

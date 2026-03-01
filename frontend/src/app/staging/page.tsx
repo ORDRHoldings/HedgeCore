@@ -28,6 +28,28 @@ const S = {
   fail:     "var(--accent-red,#B91C1C)",
 } as const;
 
+// ── Relative time helper ──────────────────────────────────────────────────────
+function relativeTime(iso: string): string {
+  const now = Date.now();
+  const then = new Date(iso).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr  = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) {
+    const remMin = diffMin % 60;
+    return remMin > 0 ? `${diffHr}h ${remMin}m ago` : `${diffHr}h ago`;
+  }
+  if (diffDay < 7) {
+    const remHr = diffHr % 24;
+    return remHr > 0 ? `${diffDay}d ${remHr}h ago` : `${diffDay}d ago`;
+  }
+  return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 // ── Status chip ───────────────────────────────────────────────────────────────
 const STATUS_COLORS: Record<string, string> = {
   PENDING:    S.amber,
@@ -62,7 +84,10 @@ function IntegrityBar({ score }: { score: number }) {
       <div style={{ width: 48, height: 4, background: S.soft, position: "relative" as const, flexShrink: 0 }}>
         <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${score}%`, background: color }} />
       </div>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color, fontWeight: 600 }}>{score}</span>
+      <span style={{
+        fontFamily: S.fontMono, fontSize: "0.6875rem", color, fontWeight: 600,
+        width: 28, textAlign: "right" as const, flexShrink: 0,
+      }}>{score}</span>
     </div>
   );
 }
@@ -97,6 +122,14 @@ function useRenderTs(): string {
 // ── Sort state ────────────────────────────────────────────────────────────────
 type SortField = "submitted_at" | "integrity_score" | "status" | "approvals";
 type SortDir = "asc" | "desc";
+
+// ── Blinking dot keyframes injected once ─────────────────────────────────────
+const BLINK_STYLE = `
+@keyframes stagingPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+`;
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function StagingListPage() {
@@ -156,7 +189,9 @@ export default function StagingListPage() {
         onClick={() => toggleSort(field)}
         style={{
           padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.5625rem",
-          letterSpacing: "0.07em", textTransform: "uppercase", color: isActive ? S.cyan : S.tertiary,
+          letterSpacing: "0.07em", textTransform: "uppercase",
+          color: isActive ? S.cyan : S.tertiary,
+          textDecoration: isActive ? "underline" : "none",
           textAlign: "left", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap" as const,
           cursor: "pointer", userSelect: "none", background: S.bgSub,
         }}
@@ -168,6 +203,9 @@ export default function StagingListPage() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
+    {/* Inject blink keyframes */}
+    <style>{BLINK_STYLE}</style>
+
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary, flex: 1 }}>
 
       {/* ── Page header ── */}
@@ -176,16 +214,16 @@ export default function StagingListPage() {
         padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
       }}>
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/dashboard")}
           style={{
             fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
             background: "transparent", border: `1px solid ${S.rim}`,
             padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
           }}
-        >← Home</button>
+        >← DASHBOARD</button>
         <span style={{ color: S.rim }}>|</span>
         <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary }}>
-          Staging Queue
+          STAGING QUEUE
         </span>
         <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em", color: S.secondary, padding: "1px 5px", border: `1px solid ${S.rim}` }}>
           GOVERNANCE PIPELINE
@@ -195,8 +233,10 @@ export default function StagingListPage() {
             fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px",
             border: `1px solid ${S.amber}`, color: S.amber,
             background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
+            display: "flex", alignItems: "center", gap: 5,
           }}>
-            ● {pendingCount} PENDING APPROVAL{pendingCount !== 1 ? "S" : ""}
+            <span style={{ animation: "stagingPulse 1.2s ease-in-out infinite", display: "inline-block", lineHeight: 1 }}>●</span>
+            {pendingCount} PENDING APPROVAL{pendingCount !== 1 ? "S" : ""}
           </span>
         )}
         <div style={{ flex: 1 }} />
@@ -207,7 +247,7 @@ export default function StagingListPage() {
       {!stagingLoading && stagingArtifacts.length > 0 && (
         <div style={{
           display: "flex", gap: 0, background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
-          padding: "0 20px", height: 52, flexShrink: 0,
+          padding: "0 20px", height: 44, flexShrink: 0,
         }}>
           {[
             { label: "TOTAL STAGED",    value: String(stagingArtifacts.length), color: S.primary },
@@ -221,7 +261,7 @@ export default function StagingListPage() {
               borderRight: i < arr.length - 1 ? `1px solid ${S.rim}` : "none",
             }}>
               <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.09em" }}>{label}</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: "1rem", fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.875rem", fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
             </div>
           ))}
         </div>
@@ -287,8 +327,9 @@ export default function StagingListPage() {
               onClick={() => router.push("/execution-desk")}
               style={{
                 fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", fontWeight: 700,
-                padding: "7px 20px", border: `1px solid ${S.cyan}`,
-                color: S.bgDeep, background: S.cyan, cursor: "pointer", borderRadius: 2,
+                padding: "7px 20px", border: "none",
+                color: "var(--bg-deep)", background: "var(--accent-cyan)", cursor: "pointer",
+                borderRadius: 0,
               }}
             >
               OPEN EXECUTION DESK →
@@ -315,7 +356,7 @@ export default function StagingListPage() {
                   <th style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
                     SUBMITTER
                   </th>
-                  <SortHeader field="submitted_at" label="Submitted" />
+                  <SortHeader field="submitted_at" label="Age" />
                   <th style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary, textAlign: "right", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
                     ACTION
                   </th>
@@ -339,13 +380,13 @@ export default function StagingListPage() {
                       onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, ${S.cyan} 5%, transparent)`)}
                       onMouseLeave={e => (e.currentTarget.style.background = isPending ? `color-mix(in srgb, ${S.amber} 3%, transparent)` : i % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.rim} 8%, transparent)`)}
                     >
-                      <td style={{ padding: "10px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.cyan }}>
+                      <td style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.cyan }}>
                         {artifact.staging_id.slice(0, 12)}…
                       </td>
-                      <td style={{ padding: "10px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>
+                      <td style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary }}>
                         {artifact.proposal_id.slice(0, 12)}…
                       </td>
-                      <td style={{ padding: "10px 12px" }}>
+                      <td style={{ padding: "7px 12px" }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
                           <StatusChip status={artifact.authorization_status} />
                           {(artifact as StagedArtifact & { second_approver_required?: boolean; second_approver_id?: string | null }).second_approver_required && (
@@ -375,19 +416,19 @@ export default function StagingListPage() {
                           )}
                         </div>
                       </td>
-                      <td style={{ padding: "10px 12px" }}>
+                      <td style={{ padding: "7px 12px" }}>
                         <IntegrityBar score={artifact.integrity_score} />
                       </td>
-                      <td style={{ padding: "10px 12px" }}>
+                      <td style={{ padding: "7px 12px" }}>
                         <ApprovalDots current={artifact.approvals.length} required={artifact.required_approvals} />
                       </td>
-                      <td style={{ padding: "10px 12px", fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>
+                      <td style={{ padding: "7px 12px", fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>
                         {artifact.submitted_by}
                       </td>
-                      <td style={{ padding: "10px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, whiteSpace: "nowrap" as const }}>
-                        {new Date(artifact.submitted_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                      <td style={{ padding: "7px 12px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, whiteSpace: "nowrap" as const }}>
+                        {relativeTime(artifact.submitted_at)}
                       </td>
-                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                      <td style={{ padding: "7px 12px", textAlign: "right" }}>
                         <button
                           onClick={e => { e.stopPropagation(); router.push(`/staging/${artifact.proposal_id}`); }}
                           style={{
