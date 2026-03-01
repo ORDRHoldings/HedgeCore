@@ -180,11 +180,16 @@ async def run_readiness_checks(engine: AsyncEngine) -> dict[str, Any]:
             ))
             checks["market_snapshots_table"] = (r.scalar() or 0) > 0
 
-            # 2. Unique constraint
+            # 2. Unique constraint — accept any unique constraint covering company_id
+            # on market_snapshots (named or auto-named by PG inline UNIQUE())
             r = await conn.execute(text(
-                "SELECT COUNT(*) FROM information_schema.table_constraints "
-                "WHERE constraint_name = 'uix_market_snapshots_company_hash' "
-                "AND table_name = 'market_snapshots'"
+                "SELECT COUNT(*) FROM information_schema.table_constraints tc "
+                "JOIN information_schema.key_column_usage kcu "
+                "  ON tc.constraint_name = kcu.constraint_name "
+                "  AND tc.table_name = kcu.table_name "
+                "WHERE tc.table_name = 'market_snapshots' "
+                "  AND tc.constraint_type = 'UNIQUE' "
+                "  AND kcu.column_name = 'company_id'"
             ))
             checks["market_snapshots_unique_constraint"] = (r.scalar() or 0) > 0
 
