@@ -8,7 +8,7 @@
  * and hash-integrity verification.
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import { listConnectorRuns } from "../../api/connectorClient";
@@ -410,23 +410,23 @@ export default function ExecutionHistoryPage() {
   }, [isAuthenticated, router]);
 
   // -- Fetch runs -----------------------------------------------------------------
-  useEffect(() => {
+  const loadRuns = useCallback(async () => {
     if (!isAuthenticated || !token) return;
-    let cancelled = false;
     setLoading(true);
     setApiError(null);
-    listConnectorRuns(token, 100)
-      .then(res => {
-        if (!cancelled) setRuns(res.items ?? []);
-      })
-      .catch(err => {
-        if (!cancelled) setApiError(err instanceof Error ? err.message : "Failed to load execution history");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
+    try {
+      const res = await listConnectorRuns(token, 100);
+      setRuns(res.items ?? []);
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : "Failed to load execution history");
+    } finally {
+      setLoading(false);
+    }
   }, [isAuthenticated, token]);
+
+  useEffect(() => {
+    loadRuns();
+  }, [loadRuns]);
 
   // -- Map runs to rows -----------------------------------------------------------
   const allRows = useMemo(() => runs.map(runToRow), [runs]);
@@ -751,7 +751,7 @@ export default function ExecutionHistoryPage() {
                           FAILED TO LOAD — {apiError}
                         </span>
                         <button
-                          onClick={() => { setApiError(null); setLoading(true); }}
+                          onClick={() => loadRuns()}
                           style={{
                             fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
                             color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}`,

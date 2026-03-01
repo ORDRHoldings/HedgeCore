@@ -244,7 +244,7 @@ export default function ExecutionDeskPage() {
         {step === 3 && token && (
           <StepRiskCheck
             positions={selectedPositions}
-            calcResult={calcResult}
+            calcResult={calcResult as Record<string, unknown> | null}
             token={token}
             runId={runId}
             onPass={handleRiskPass}

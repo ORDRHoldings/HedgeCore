@@ -8,7 +8,7 @@ import { dashboardFetch } from "@/lib/api/dashboardClient";
 const S = {
   fontUI:   "Inter, 'IBM Plex Sans', sans-serif",
   fontMono: "'IBM Plex Mono', monospace",
-  bgDeep:   "#0A1F44",
+  bgDeep:   "var(--bg-deep)",
   bgPanel:  "var(--bg-panel)",
   bgSub:    "var(--bg-sub)",
   rim:      "var(--border-rim)",
@@ -90,10 +90,11 @@ export default function TradeHistoryPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (!user) {
-    router.push("/auth/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!user) router.push("/auth/login");
+  }, [user, router]);
+
+  if (!user) return null;
 
   const STATUSES = ["ALL", "PROPOSED", "APPROVED", "EXECUTED", "REJECTED", "WITHDRAWN"];
   const filtered = statusFilter === "ALL" ? proposals : proposals.filter((p) => p.status === statusFilter);
