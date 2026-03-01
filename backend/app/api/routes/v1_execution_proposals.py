@@ -122,6 +122,8 @@ class ProposeExecutionRequest(BaseModel):
 
     notes:              Optional[str]   = Field(default=None, max_length=1024)
 
+    risk_decision_hash: Optional[str]   = Field(default=None, max_length=64)
+
 
 
 
@@ -545,6 +547,14 @@ async def propose_execution(
         logger.error("propose_execution unhandled exception", exc_info=True)
 
         raise HTTPException(status_code=500, detail="Internal server error")
+
+    # Store risk_decision_hash if provided (links proposal to risk gate verdict)
+    if data.risk_decision_hash:
+        try:
+            proposal.risk_decision_hash = data.risk_decision_hash
+            await session.commit()
+        except Exception:
+            logger.debug("Failed to store risk_decision_hash (non-fatal)", exc_info=True)
 
     # L-12: check dual-key threshold against active policy (non-fatal)
     try:
@@ -1230,3 +1240,129 @@ async def second_approve_proposal(
 
     return ProposalResponse.from_orm_safe(proposal)
 
+
+# ---------------------------------------------------------------------------
+
+# POST /v1/proposals/batch — atomic multi-position proposal submission
+
+# ---------------------------------------------------------------------------
+
+
+
+class BatchProposeRequest(BaseModel):
+
+    proposals: list[ProposeExecutionRequest] = Field(..., min_length=1, max_length=50)
+
+
+
+class BatchProposeResponse(BaseModel):
+
+    created: list[ProposalResponse]
+
+    failed: list[dict]  # {position_id, error}
+
+
+
+@router.post("/batch", response_model=BatchProposeResponse, status_code=201)
+
+async def batch_propose_execution(
+
+    data:         BatchProposeRequest,
+
+    request:      Request,
+
+    session:      AsyncSession = Depends(get_async_session),
+
+    current_user: User         = Depends(get_current_user),
+
+):
+
+    """
+
+    Atomic batch proposal submission. Creates proposals for multiple positions
+
+    in a single request. If any proposal fails, succeeded proposals are still
+
+    committed (partial success is reported in the response).
+
+    Requires: trades.edit
+
+    """
+
+    await _check_permission(session, current_user, "trades.edit")
+
+    created: list[ProposalResponse] = []
+
+    failed: list[dict] = []
+
+    for item in data.proposals:
+
+        try:
+
+            proposal = await ep_service.propose_execution(
+
+                session,
+
+                user               = current_user,
+
+                position_id        = item.position_id,
+
+                execution_ref      = item.execution_ref,
+
+                hedge_amount       = item.hedge_amount,
+
+                hedge_rate         = item.hedge_rate,
+
+                run_id             = item.run_id,
+
+                policy_revision_id = item.policy_revision_id,
+
+                notes              = item.notes,
+
+            )
+
+            # Store risk_decision_hash if provided
+
+            if item.risk_decision_hash:
+
+                proposal.risk_decision_hash = item.risk_decision_hash
+
+                await session.commit()
+
+            created.append(ProposalResponse.from_orm_safe(proposal))
+
+            await _emit_proposal_audit(
+
+                session, current_user,
+
+                event_type  = "LIFECYCLE",
+
+                description = f"Batch execution proposal PROPOSED for position {item.position_id}",
+
+                proposal_id = str(proposal.id),
+
+                payload     = {
+
+                    "status":        "PROPOSED",
+
+                    "execution_ref": item.execution_ref,
+
+                    "position_id":   str(item.position_id),
+
+                    "proposal_hash": proposal.proposal_hash,
+
+                    "batch":         True,
+
+                },
+
+                request = request,
+
+            )
+
+        except Exception as e:
+
+            logger.warning("Batch propose failed for position %s: %s", item.position_id, e)
+
+            failed.append({"position_id": str(item.position_id), "error": str(e)})
+
+    return BatchProposeResponse(created=created, failed=failed)

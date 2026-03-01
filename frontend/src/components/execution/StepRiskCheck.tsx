@@ -46,10 +46,13 @@ const fmtPct = new Intl.NumberFormat("en-US", {
 interface Props {
   positions: PositionRow[];
   calcResult: unknown;
+  token: string;
+  runId: string | null;
   onPass: (
     checks: ComplianceCheck[],
     stressResults: PortfolioStressResult | null,
     portfolioRisk: PortfolioRisk | null,
+    riskDecisionHash: string | null,
   ) => void;
   onBack: () => void;
 }
@@ -70,6 +73,8 @@ const PHASE_LABELS: Record<Phase, string> = {
 export default function StepRiskCheck({
   positions,
   calcResult: _calcResult,
+  token,
+  runId,
   onPass,
   onBack,
 }: Props) {
@@ -80,6 +85,9 @@ export default function StepRiskCheck({
   const [mcResults, setMcResults] = useState<Map<string, MonteCarloResult>>(new Map());
   const [portfolioRisk, setPortfolioRisk] = useState<PortfolioRisk | null>(null);
   const [stressResults, setStressResults] = useState<PortfolioStressResult | null>(null);
+  const [backendVerdict, setBackendVerdict] = useState<"APPROVE" | "APPROVE_WITH_CONDITIONS" | "REJECT" | null>(null);
+  const [riskDecisionHash, setRiskDecisionHash] = useState<string | null>(null);
+  const [backendCheckError, setBackendCheckError] = useState<string | null>(null);
 
   /* ── Run all checks sequentially on mount ─────────────────────────── */
   useEffect(() => {
@@ -132,6 +140,44 @@ export default function StepRiskCheck({
       });
       setStressResults(stress);
 
+      // Step 5: Backend risk-check gate (governance enforcement)
+      if (token) {
+        try {
+          // Build a minimal market_snapshot from positions
+          const marketSnapshot: Record<string, number> = {};
+          for (const p of positions) {
+            if (p.currency && !marketSnapshot[`${p.currency}USD`]) {
+              marketSnapshot[`${p.currency}USD`] = 1; // placeholder — backend uses its own rates
+            }
+          }
+          const body: Record<string, unknown> = {
+            position_ids: positions.map((p) => p.id),
+            market_snapshot: marketSnapshot,
+          };
+          // Include policy_instance_id if available from first position
+          const policyId = (positions[0] as { policy_id?: string | null })?.policy_id;
+          if (policyId) body.policy_instance_id = policyId;
+          // Include hedge plan if run_id available
+          if (runId) body.run_id = runId;
+
+          const { dashboardFetch } = await import("@/lib/api/dashboardClient");
+          const res = await dashboardFetch("/v1/risk-check", token, {
+            method: "POST",
+            body: JSON.stringify(body),
+          });
+          if (res.ok) {
+            const data = await res.json() as { verdict: string; decision_hash: string };
+            setBackendVerdict(data.verdict as "APPROVE" | "APPROVE_WITH_CONDITIONS" | "REJECT");
+            setRiskDecisionHash(data.decision_hash ?? null);
+          } else {
+            // Non-fatal: log but don't block (graceful degradation)
+            setBackendCheckError(`Backend risk-check returned ${res.status}`);
+          }
+        } catch (e) {
+          setBackendCheckError(e instanceof Error ? e.message : "Backend risk-check unavailable");
+        }
+      }
+
       // Done
       setPhase("done");
     }
@@ -144,8 +190,9 @@ export default function StepRiskCheck({
   const criticalFails = complianceChecks.filter(
     (c) => c.status === "FAIL" && c.critical,
   );
-  const allPassed = phase === "done" && criticalFails.length === 0;
-  const hasFails = phase === "done" && criticalFails.length > 0;
+  const backendRejected = backendVerdict === "REJECT";
+  const allPassed = phase === "done" && criticalFails.length === 0 && !backendRejected;
+  const hasFails = phase === "done" && (criticalFails.length > 0 || backendRejected);
 
   /* ── Worst position by VaR ────────────────────────────────────────── */
   const worstByVaR = (() => {
@@ -159,8 +206,8 @@ export default function StepRiskCheck({
 
   /* ── Handle proceed ───────────────────────────────────────────────── */
   const handleProceed = useCallback(() => {
-    onPass(complianceChecks, stressResults, portfolioRisk);
-  }, [onPass, complianceChecks, stressResults, portfolioRisk]);
+    onPass(complianceChecks, stressResults, portfolioRisk, riskDecisionHash);
+  }, [onPass, complianceChecks, stressResults, portfolioRisk, riskDecisionHash]);
 
   /* ── Status icon helper ───────────────────────────────────────────── */
   function statusIcon(status: ComplianceCheck["status"]): string {
@@ -865,6 +912,18 @@ export default function StepRiskCheck({
         >
           &#9666; BACK TO CALCULATION
         </button>
+        {/* Backend risk verdict */}
+        {phase === "done" && (
+          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: backendVerdict === "REJECT" ? S.fail : backendVerdict === "APPROVE" ? S.pass : S.amber, marginRight: "auto", display: "flex", alignItems: "center", gap: 4 }}>
+            {backendCheckError ? (
+              <span style={{ color: S.amber }}>&#9888; GATE: OFFLINE (client-only)</span>
+            ) : backendVerdict ? (
+              <span>GATE: {backendVerdict === "APPROVE" ? "✓ APPROVED" : backendVerdict === "APPROVE_WITH_CONDITIONS" ? "⚠ APPROVED WITH CONDITIONS" : "✗ REJECTED"}</span>
+            ) : (
+              <span style={{ color: S.tertiary }}>GATE: CHECKING...</span>
+            )}
+          </div>
+        )}
         <button
           disabled={phase !== "done" || hasFails}
           onClick={handleProceed}
