@@ -580,6 +580,18 @@ async def _ensure_tables():
 
 
 
+        # ?? L-11: MFA — TOTP secret store (append-only per user) ??
+        """CREATE TABLE IF NOT EXISTS user_mfa (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    totp_secret VARCHAR(64) NOT NULL,
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    enrolled_at TIMESTAMPTZ,
+    last_verified_at TIMESTAMPTZ,
+    backup_codes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_user_mfa_user ON user_mfa(user_id)",
+
         # ?? ALTER TABLE for existing tables that may need new columns ??
 
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL",
@@ -956,6 +968,14 @@ async def _ensure_tables():
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS executed_at TIMESTAMPTZ",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+
+        # ?? L-12: Dual-key approval columns for execution_proposals ??
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approver_required BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approver_id UUID",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approver_email VARCHAR(128)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approved_at TIMESTAMPTZ",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approval_notes VARCHAR(1024)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approval_hash VARCHAR(64)",
 
         # ?? Support Ticketing (tenant-scoped, WORM events) ??
         """CREATE TABLE IF NOT EXISTS support_tickets (
