@@ -105,102 +105,19 @@ function copyToClipboard(text: string) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Top Bar
+// Top Bar — matches Position Desk header pattern exactly
 // ═══════════════════════════════════════════════════════════════════════════════
-function TopBar({ clock, onBack }: { clock: string; onBack: () => void }) {
+function TopBar({ totalRuns, loading, onBack, onRefresh }: { totalRuns: number; loading: boolean; onBack: () => void; onRefresh: () => void }) {
   return (
-    <header
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        height: 50,
-        padding: "0 20px",
-        background: S.bgPanel,
-        borderBottom: `1px solid ${S.rim}`,
-        flexShrink: 0,
-      }}
-    >
-      <button
-        onClick={onBack}
-        style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.75rem",
-          color: S.tertiary,
-          background: "transparent",
-          border: `1px solid ${S.rim}`,
-          padding: "4px 10px",
-          cursor: "pointer",
-          letterSpacing: "0.04em",
-        }}
-      >
-        {"\u2190"} BACK
-      </button>
-      <span style={{ color: S.rim, userSelect: "none" }}>|</span>
-      <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-        <span
-          style={{
-            fontFamily: S.fontUI,
-            fontSize: "0.875rem",
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color: S.primary,
-          }}
-        >
-          IMPORT HISTORY
-        </span>
-        <span
-          style={{
-            fontFamily: S.fontMono,
-            fontSize: "0.625rem",
-            color: S.secondary,
-            letterSpacing: "0.04em",
-          }}
-        >
-          POSITION DESK › IMPORT HISTORY
-        </span>
-      </div>
+    <header style={{ display: "flex", alignItems: "center", gap: 10, height: 44, flexShrink: 0, padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}` }}>
+      <button onClick={onBack} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer" }}>← Position Desk</button>
+      <span style={{ color: S.rim }}>|</span>
+      <span style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary }}>Import History</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, border: `1px solid ${S.rim}`, padding: "1px 5px" }}>INGESTION AUDIT</span>
       <div style={{ flex: 1 }} />
-      <span
-        suppressHydrationWarning
-        style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.75rem",
-          color: S.cyan,
-          letterSpacing: "0.04em",
-          fontWeight: 600,
-        }}
-      >
-        {clock}
-      </span>
-      <span style={{ color: S.rim, userSelect: "none" }}>|</span>
-      <span
-        style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.6875rem",
-          color: S.tertiary,
-          letterSpacing: "0.04em",
-        }}
-      >
-        ORDR TERMINAL · INGESTION AUDIT
-      </span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{totalRuns} runs</span>
+      <button onClick={onRefresh} disabled={loading} title="Refresh" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, background: "transparent", border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`, padding: "2px 8px", cursor: loading ? "not-allowed" : "pointer" }}>↻ Refresh</button>
     </header>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Accent Divider
-// ═══════════════════════════════════════════════════════════════════════════════
-function AccentDivider() {
-  return (
-    <div
-      style={{
-        height: 2,
-        background: `linear-gradient(90deg, ${S.cyan} 0%, transparent 100%)`,
-        flexShrink: 0,
-      }}
-    />
   );
 }
 
@@ -292,135 +209,27 @@ function FilterBar({
   onExport,
 }: FilterBarProps) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "12px 20px",
-        background: S.bgSub,
-        borderBottom: `1px solid ${S.rim}`,
-        flexShrink: 0,
-      }}
-    >
-      <input
-        type="date"
-        value={dateFrom}
-        onChange={(e) => onDateFromChange(e.target.value)}
-        style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.75rem",
-          padding: "5px 8px",
-          background: S.bgPanel,
-          color: S.primary,
-          border: `1px solid ${S.rim}`,
-          outline: "none",
-        }}
-      />
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>
-        —
-      </span>
-      <input
-        type="date"
-        value={dateTo}
-        onChange={(e) => onDateToChange(e.target.value)}
-        style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.75rem",
-          padding: "5px 8px",
-          background: S.bgPanel,
-          color: S.primary,
-          border: `1px solid ${S.rim}`,
-          outline: "none",
-        }}
-      />
-      <select
-        value={status}
-        onChange={(e) => onStatusChange(e.target.value)}
-        style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.75rem",
-          padding: "5px 8px",
-          background: S.bgPanel,
-          color: S.primary,
-          border: `1px solid ${S.rim}`,
-          outline: "none",
-        }}
-      >
-        <option value="ALL">ALL</option>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 20px", background: S.bgPanel, borderBottom: `1px solid ${S.soft}`, flexShrink: 0, flexWrap: "wrap" }}>
+      <input type="date" value={dateFrom} onChange={(e) => onDateFromChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }} />
+      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>—</span>
+      <input type="date" value={dateTo} onChange={(e) => onDateToChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }} />
+      <select value={status} onChange={(e) => onStatusChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }}>
+        <option value="ALL">ALL STATUS</option>
         <option value="COMPLETED">COMPLETED</option>
         <option value="FAILED">FAILED</option>
         <option value="RUNNING">RUNNING</option>
       </select>
-      <select
-        value={connectorType}
-        onChange={(e) => onConnectorTypeChange(e.target.value)}
-        style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.75rem",
-          padding: "5px 8px",
-          background: S.bgPanel,
-          color: S.primary,
-          border: `1px solid ${S.rim}`,
-          outline: "none",
-        }}
-      >
+      <select value={connectorType} onChange={(e) => onConnectorTypeChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }}>
         <option value="ALL">ALL TYPES</option>
-        <option value="UPLOAD_CSV">UPLOAD_CSV</option>
-        <option value="UPLOAD_EXCEL">UPLOAD_EXCEL</option>
+        <option value="UPLOAD_CSV">CSV</option>
+        <option value="UPLOAD_EXCEL">EXCEL</option>
         <option value="DATABASE">DATABASE</option>
         <option value="ERP">ERP</option>
         <option value="ACCOUNTING">ACCOUNTING</option>
       </select>
-      <input
-        type="text"
-        placeholder="Search filename or run ID..."
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-        style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.75rem",
-          padding: "5px 8px",
-          background: S.bgPanel,
-          color: S.primary,
-          border: `1px solid ${S.rim}`,
-          outline: "none",
-          flex: 1,
-        }}
-      />
-      <button
-        onClick={onRefresh}
-        disabled={isLoading}
-        style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.75rem",
-          padding: "5px 12px",
-          background: S.bgPanel,
-          color: S.cyan,
-          border: `1px solid ${S.cyan}`,
-          cursor: isLoading ? "not-allowed" : "pointer",
-          letterSpacing: "0.04em",
-          fontWeight: 600,
-        }}
-      >
-        {isLoading ? "⟳ REFRESHING..." : "REFRESH"}
-      </button>
-      <button
-        onClick={onExport}
-        style={{
-          fontFamily: S.fontMono,
-          fontSize: "0.75rem",
-          padding: "5px 12px",
-          background: S.bgPanel,
-          color: S.amber,
-          border: `1px solid ${S.amber}`,
-          cursor: "pointer",
-          letterSpacing: "0.04em",
-          fontWeight: 600,
-        }}
-      >
-        EXPORT CSV
-      </button>
+      <div style={{ flex: 1 }} />
+      <input type="text" placeholder="Search filename or run ID…" value={search} onChange={(e) => onSearchChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 10px", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, outline: "none", width: 240 }} />
+      <button onClick={onExport} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: S.amber, background: "transparent", border: `1px solid color-mix(in srgb, ${S.amber} 35%, transparent)`, padding: "3px 10px", cursor: "pointer" }}>↓ CSV</button>
     </div>
   );
 }
@@ -1074,7 +883,6 @@ function SkeletonTable() {
 export default function ImportHistoryPage() {
   const router = useRouter();
   const { token, isAuthenticated, isLoading: authLoading } = useAuth();
-  const clock = useUtcClock();
 
   const [runs, setRuns] = useState<ConnectorRun[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1297,16 +1105,17 @@ export default function ImportHistoryPage() {
         style={{
           display: "flex",
           flexDirection: "column",
-          minHeight: "100vh",
+          height: "100vh",
+          overflow: "hidden",
           background: S.bgDeep,
           color: S.primary,
+          flex: 1,
         }}
       >
-        <TopBar clock={clock} onBack={() => router.push("/input")} />
-        <AccentDivider />
+        <TopBar totalRuns={totalRuns} loading={loading} onBack={() => router.push("/position-desk")} onRefresh={fetchRuns} />
 
         {/* KPI Summary Row */}
-        <div style={{ display: "flex", gap: 12, padding: "16px 20px", flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: 10, padding: "8px 20px", borderBottom: `1px solid ${S.soft}`, background: S.bgPanel, flexShrink: 0 }}>
           <KpiCard label="Total Runs" value={totalRuns.toString()} color={S.cyan} />
           <KpiCard
             label="Rows Imported"
@@ -1333,6 +1142,12 @@ export default function ImportHistoryPage() {
           onRefresh={fetchRuns}
           onExport={exportCsv}
         />
+        {/* Table column header — matches position-desk header row pattern */}
+        <div style={{ display: "grid", gridTemplateColumns: "32px 90px 1fr 100px 80px 52px 52px 52px 80px 90px 70px", padding: "5px 20px", background: S.bgSub, borderBottom: `1px solid ${S.soft}`, flexShrink: 0 }}>
+          {["", "RUN ID", "FILE / SOURCE", "TYPE", "STATUS", "ROWS", "OK", "ERR", "RATE", "STARTED", "DURATION"].map((col) => (
+            <span key={col} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700 }}>{col}</span>
+          ))}
+        </div>
 
         {/* Auto-refresh badge */}
         {autoRefreshActive && (
@@ -1366,173 +1181,7 @@ export default function ImportHistoryPage() {
           ) : error || filteredRuns.length === 0 ? (
             <EmptyStateView onUploadClick={() => router.push("/input")} />
           ) : (
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                background: S.bgPanel,
-              }}
-            >
-              <thead style={{ position: "sticky", top: 0, background: S.bgSub, zIndex: 1 }}>
-                <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "center",
-                    }}
-                  >
-                    ▶
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "left",
-                    }}
-                  >
-                    RUN ID
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "left",
-                    }}
-                  >
-                    FILE / SOURCE
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "left",
-                    }}
-                  >
-                    TYPE
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "left",
-                    }}
-                  >
-                    STATUS
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "right",
-                    }}
-                  >
-                    TOTAL
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "right",
-                    }}
-                  >
-                    OK
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "right",
-                    }}
-                  >
-                    ERRORS
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "right",
-                    }}
-                  >
-                    SUCCESS %
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "left",
-                    }}
-                  >
-                    TRIGGERED BY
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "left",
-                    }}
-                  >
-                    STARTED
-                  </th>
-                  <th
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: "0.625rem",
-                      fontWeight: 700,
-                      color: S.tertiary,
-                      letterSpacing: "0.06em",
-                      padding: "8px 12px",
-                      textAlign: "right",
-                    }}
-                  >
-                    DURATION
-                  </th>
-                </tr>
-              </thead>
+            <table style={{ width: "100%", borderCollapse: "collapse", background: S.bgPanel }}>
               <tbody>
                 {paginatedRuns.map((run) => (
                   <RunRow
@@ -1551,69 +1200,14 @@ export default function ImportHistoryPage() {
 
         {/* Pagination Footer */}
         {!loading && filteredRuns.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "12px 20px",
-              background: S.bgPanel,
-              borderTop: `1px solid ${S.rim}`,
-              flexShrink: 0,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: S.fontMono,
-                fontSize: "0.75rem",
-                color: S.tertiary,
-              }}
-            >
-              Showing {(page - 1) * PAGE_SIZE + 1}-
-              {Math.min(page * PAGE_SIZE, filteredRuns.length)} of{" "}
-              {filteredRuns.length.toLocaleString()} records
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 20px", background: S.bgPanel, borderTop: `1px solid ${S.soft}`, flexShrink: 0 }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+              {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredRuns.length)} of {filteredRuns.length.toLocaleString()}
             </span>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                style={{
-                  fontFamily: S.fontMono,
-                  fontSize: "0.75rem",
-                  padding: "4px 10px",
-                  background: S.bgSub,
-                  color: page === 1 ? S.tertiary : S.primary,
-                  border: `1px solid ${S.rim}`,
-                  cursor: page === 1 ? "not-allowed" : "pointer",
-                }}
-              >
-                ← PREV
-              </button>
-              <span
-                style={{
-                  fontFamily: S.fontMono,
-                  fontSize: "0.75rem",
-                  color: S.secondary,
-                  padding: "4px 10px",
-                }}
-              >
-                Page {page} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                style={{
-                  fontFamily: S.fontMono,
-                  fontSize: "0.75rem",
-                  padding: "4px 10px",
-                  background: S.bgSub,
-                  color: page === totalPages ? S.tertiary : S.primary,
-                  border: `1px solid ${S.rim}`,
-                  cursor: page === totalPages ? "not-allowed" : "pointer",
-                }}
-              >
-                NEXT →
-              </button>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={{ fontFamily: S.fontMono, fontSize: 9, padding: "2px 8px", background: "transparent", color: page === 1 ? S.tertiary : S.secondary, border: `1px solid ${S.rim}`, cursor: page === 1 ? "not-allowed" : "pointer" }}>← PREV</button>
+              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, padding: "2px 6px" }}>pg {page}/{totalPages}</span>
+              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ fontFamily: S.fontMono, fontSize: 9, padding: "2px 8px", background: "transparent", color: page === totalPages ? S.tertiary : S.secondary, border: `1px solid ${S.rim}`, cursor: page === totalPages ? "not-allowed" : "pointer" }}>NEXT →</button>
             </div>
           </div>
         )}
