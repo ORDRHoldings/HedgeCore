@@ -10,6 +10,7 @@ instead of the legacy MXN-only [10, 30] band.
 from __future__ import annotations
 
 import re
+from datetime import datetime, timedelta, timezone
 
 from app.schemas_v1.errors import Severity, ValidationErrorDetail
 from app.schemas_v1.hedges import HedgeRow
@@ -343,6 +344,47 @@ def _validate_market(
                         severity=Severity.CRITICAL,
                     )
                 )
+
+    # V-022: market data quality gate — warn if rates are indicative/fallback.
+    # The engine accepts INDICATIVE_FALLBACK for sandbox/demo workflows but flags
+    # it so production governance pipelines can block or escalate.
+    data_class: str | None = (market.provider_metadata or {}).get("data_class")
+    if data_class == "INDICATIVE_FALLBACK":
+        errors.append(
+            ValidationErrorDetail(
+                code="V-022",
+                field="market.provider_metadata.data_class",
+                message=(
+                    "Market data is INDICATIVE_FALLBACK (no live feed configured). "
+                    "Results are for indicative purposes only. "
+                    "Configure a live market data source before production execution."
+                ),
+                severity=Severity.WARNING,
+            )
+        )
+
+    # V-023: snapshot staleness guard — warn if as_of is > 24h behind wall-clock.
+    # Stale snapshots can embed outdated spot/forward points and produce
+    # systematically biased hedge plans without any other validation signal.
+    _MAX_SNAPSHOT_AGE_HOURS = 24
+    as_of_aware = market.as_of
+    if as_of_aware.tzinfo is None:
+        as_of_aware = as_of_aware.replace(tzinfo=timezone.utc)
+    snapshot_age = datetime.now(timezone.utc) - as_of_aware
+    if snapshot_age > timedelta(hours=_MAX_SNAPSHOT_AGE_HOURS):
+        hours_old = snapshot_age.total_seconds() / 3600.0
+        errors.append(
+            ValidationErrorDetail(
+                code="V-023",
+                field="market.as_of",
+                message=(
+                    f"Market snapshot is {hours_old:.1f}h old "
+                    f"(as_of={market.as_of.isoformat()}, threshold={_MAX_SNAPSHOT_AGE_HOURS}h). "
+                    "Refresh market data before submitting for production execution."
+                ),
+                severity=Severity.WARNING,
+            )
+        )
 
     return errors
 

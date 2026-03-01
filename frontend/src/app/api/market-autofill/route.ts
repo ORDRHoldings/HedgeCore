@@ -39,7 +39,7 @@ async function fetchFinnhubForexRates(): Promise<Record<string, number> | null> 
   if (!FH_KEY) return null;
   try {
     const url = `${FH_BASE}/forex/rates?base=USD&token=${FH_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 86400 } });
+    const res = await fetch(url, { next: { revalidate: 300 } }); // 5-min ISR cache
     if (!res.ok) return null;
     const json = await res.json() as { base?: string; quote?: Record<string, number> };
     if (!json.quote || typeof json.quote !== 'object') return null;
