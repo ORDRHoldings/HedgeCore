@@ -50,13 +50,13 @@ export const EXECUTION_BRIDGE: GuideDoc = {
       verified: false,
       callout: {
         type: "info",
-        text: "The Execution Bridge (/execution) is a demonstration and pre-trade analysis interface. The Execution Pipeline (/execution-desk) is the governed workflow that produces immutable staging artifacts and ledger commits.",
+        text: "The Execution Bridge (/execution) is a demonstration and pre-trade analysis interface. The Execution Pipeline (/hedge-desk) is the governed workflow that produces immutable staging artifacts and ledger commits.",
       },
       blocks: [
         {
           type: "table",
           table: {
-            headers: ["Dimension", "Execution Bridge (/execution)", "Execution Pipeline (/execution-desk)"],
+            headers: ["Dimension", "Execution Bridge (/execution)", "Execution Pipeline (/hedge-desk)"],
             rows: [
               ["Purpose", "Pre-trade simulation and broker comparison", "Governed staging, 4-eyes approval, ledger commit"],
               ["Run Type", "SANDBOX only", "SANDBOX → STAGING → LEDGER"],
@@ -104,7 +104,7 @@ export const EXECUTION_BRIDGE: GuideDoc = {
             {
               n: 5,
               label: "Output logged as SANDBOX simulation",
-              detail: "The bridge simulation is recorded as a SANDBOX-type event in the audit trail. No ledger entry is created. To proceed to a binding execution, promote the sandbox run to the Execution Pipeline (/execution-desk).",
+              detail: "The bridge simulation is recorded as a SANDBOX-type event in the audit trail. No ledger entry is created. To proceed to a binding execution, promote the sandbox run to the Execution Pipeline (/hedge-desk).",
             },
           ],
         },

@@ -1390,7 +1390,7 @@ function InputPageInner() {
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: S.green, display: 'inline-block' }} />
               ALL GATES PASSED —{' '}
               <button
-                onClick={() => router.push('/execution-desk')}
+                onClick={() => router.push('/hedge-desk')}
                 style={{
                   fontFamily: S.fontMono,
                   fontSize: '0.75rem',

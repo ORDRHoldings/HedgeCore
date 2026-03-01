@@ -224,7 +224,7 @@ export const PORTFOLIO_RISK_HELP: HelpPanelConfig = {
         label:    "Step 5 of 7 — Risk Management",
         description:
           "Portfolio risk analysis sits after the hedge plan has been computed. It takes the hedge plan outputs (gross exposure, hedge notional, friction) and scenario stress grid to decompose risk across 8 institutional dimensions. This is the risk committee reporting layer.",
-        prev: { label: "Execution", href: "/execution" },
+        prev: { label: "Execution", href: "/hedge-desk" },
         next: { label: "Committee Pack", href: "/committee-pack" },
       },
     },
@@ -1046,7 +1046,7 @@ export const SCENARIO_STUDIO_HELP: HelpPanelConfig = {
         description:
           "The Scenario Studio sits between market data and execution. It runs stress tests and Monte Carlo simulations to quantify hedge effectiveness under various market shocks, informing the hedge ratio and tenor decisions before execution.",
         prev: { label: "FX Market Data", href: "/currency-fx" },
-        next: { label: "Execution Hub", href: "/execution" },
+        next: { label: "Execution Hub", href: "/hedge-desk" },
       },
     },
     {
@@ -1220,7 +1220,7 @@ export const SANDBOX_HELP: HelpPanelConfig = {
         description:
           "The Sandbox is the advanced simulation environment. It mirrors the live execution workflow but runs in a non-committing mode, allowing full analysis without creating audit events or modifying positions.",
         prev: { label: "FX Rates", href: "/currency-fx" },
-        next: { label: "Execution Hub", href: "/execution" },
+        next: { label: "Execution Hub", href: "/hedge-desk" },
       },
     },
     {
@@ -1243,7 +1243,7 @@ export const SANDBOX_HELP: HelpPanelConfig = {
         { step: 4, label: "Apply historical stress scenarios", description: "Switch to Stress Testing tab. Apply named crisis scenarios from the Crisis Library. Each scenario uses empirically calibrated FX shocks. Compare unhedged P&L vs hedged P&L to quantify hedge benefit and efficiency percentage." },
         { step: 5, label: "Build the optimal hedge plan", description: "Click BUILD HEDGE PLAN. The constraint solver minimises total hedge cost (sum of spread_bps × notional per bucket) while satisfying all policy constraints: monthly hedge ratios, tenor limits, instrument mix, and minimum trade size. Output: hedge notional per bucket, instrument type, all-in forward rate." },
         { step: 6, label: "Review IFRS 9 effectiveness", description: "Open the Effectiveness sub-tab. The engine regresses hedging instrument fair value changes against hedged item changes (30-day rolling window). R² ≥ 0.80 indicates highly effective hedge per IFRS 9 §B6.4.17. Document this score for audit evidence." },
-        { step: 7, label: "Generate execution payload", description: "Click GENERATE IBKR PAYLOAD when satisfied with the hedge plan. Downloads a JSON/FIX protocol file ready for Interactive Brokers TWS API. Review all order parameters (notional, tenor, rate, account) before live submission.", link: "/execution" },
+        { step: 7, label: "Generate execution payload", description: "Click GENERATE IBKR PAYLOAD when satisfied with the hedge plan. Downloads a JSON/FIX protocol file ready for Interactive Brokers TWS API. Review all order parameters (notional, tenor, rate, account) before live submission.", link: "/hedge-desk" },
       ],
     },
     {
@@ -2641,7 +2641,7 @@ export const LEDGER_HELP: HelpPanelConfig = {
         label:       "Step 6 of 7 — Ledger",
         description: "The Ledger is the terminal state of the tri-state pipeline. Approved artifacts land here permanently. WORM semantics prevent any modification. This is the official record of executed hedge plans.",
         prev: { label: "Staging",   href: "/staging" },
-        next: { label: "Execution", href: "/execution" },
+        next: { label: "Execution", href: "/hedge-desk" },
       },
     },
     {
@@ -3328,7 +3328,7 @@ export const HELP_CENTER_HELP: HelpPanelConfig = {
         { step: 4, label: "Sandbox",          description: "Stress-test your hedge plan against historical FX scenarios. Review scenario P&L and adjust if needed.", link: "/sandbox" },
         { step: 5, label: "Stage & Approve",  description: "Submit calculation run for 4-eyes supervisor approval. Track through PENDING → APPROVED.", link: "/staging" },
         { step: 6, label: "Ledger",           description: "Approved plans are sealed into the immutable Ledger. WORM-protected, hash-chained audit record.", link: "/ledger" },
-        { step: 7, label: "Execute",          description: "Generate trade tickets and send execution proposals to your prime broker.", link: "/execution" },
+        { step: 7, label: "Execute",          description: "Generate trade tickets and send execution proposals to your prime broker.", link: "/hedge-desk" },
       ],
     },
     {
@@ -3386,7 +3386,7 @@ export const EXECUTION_DESK_HELP: HelpPanelConfig = {
         { step: 3, label: "STRESS",    description: "Apply market shock scenarios (2008 crisis, COVID, EM crisis). Test resilience against tail events." },
         { step: 4, label: "OPTIMIZE",  description: "Build optimal hedge plan using constraint solver. Minimize cost while meeting policy risk constraints." },
         { step: 5, label: "GENERATE",  description: "Create IBKR execution payload (JSON/FIX format). Includes order validation and compliance pre-checks." },
-        { step: 6, label: "EXECUTE",   description: "Export payload and send to IBKR via TWS API or manual order entry.", link: "/execution" },
+        { step: 6, label: "EXECUTE",   description: "Export payload and send to IBKR via TWS API or manual order entry.", link: "/hedge-desk" },
       ],
     },
     {

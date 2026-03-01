@@ -65,7 +65,7 @@ function ExecutionHubContent() {
       <span>⚠</span>
       <span>LEGACY INTERFACE — This page is superseded by the</span>
       <button
-        onClick={() => router.push("/execution-desk")}
+        onClick={() => router.push("/hedge-desk")}
         style={{
           fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
           fontSize: 10, fontWeight: 700, color: "var(--accent-cyan)",

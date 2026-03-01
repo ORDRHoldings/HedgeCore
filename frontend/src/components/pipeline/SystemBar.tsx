@@ -44,7 +44,7 @@ export default function SystemBar() {
 
       {/* Execution Desk navigation shortcut */}
       <button
-        onClick={() => router.push("/execution-desk")}
+        onClick={() => router.push("/hedge-desk")}
         className="px-2 py-0.5 rounded text-xs font-mono font-semibold transition-colors border"
         style={{
           letterSpacing: "0.08em",

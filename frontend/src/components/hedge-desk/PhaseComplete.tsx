@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { PositionRow } from "@/api/positionClient";
 import DisclosurePanel from "./DisclosurePanel";
-import { CheckCircleIcon, RefreshCwIcon, ClipboardIcon } from "lucide-react";
+import { CheckCircleIcon, RefreshCwIcon, ClipboardIcon, BarChart2Icon, HistoryIcon } from "lucide-react";
 import Link from "next/link";
 
 const HD = {
@@ -57,6 +57,35 @@ export default function PhaseComplete({
   }, {});
 
   const handleDownload = () => {
+    const confirmation = {
+      confirmation_type: "HEDGE_EXECUTION",
+      generated_at: new Date().toISOString(),
+      run_id: runId,
+      governance_mode: governanceMode,
+      fill_price: fillData?.fillPrice ?? null,
+      proposal_ids: fillData?.proposalIds ?? [],
+      positions_hedged: positions.length,
+      total_notional: totalNotional,
+      currency_breakdown: currencyBreakdown,
+      positions: positions.map(p => ({
+        id: p.id,
+        entity: p.entity ?? null,
+        currency: p.currency,
+        amount: p.amount,
+        value_date: p.value_date ?? null,
+        status: p.status,
+        execution_status: p.execution_status,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(confirmation, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hedge-confirmation-${runId.slice(0, 8)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 2500);
   };
@@ -75,7 +104,7 @@ export default function PhaseComplete({
           fontFamily: HD.fontMono, fontSize: 11, color: HD.emerald, letterSpacing: "0.06em",
           boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
         }}>
-          CONFIRMATION EXPORT — COMING IN NEXT RELEASE
+          CONFIRMATION DOWNLOADED
         </div>
       )}
 
@@ -224,6 +253,36 @@ export default function PhaseComplete({
           }}
         >
           VIEW POSITIONS →
+        </Link>
+
+        <Link
+          href="/trade-history"
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+            color: HD.secondary,
+            background: HD.bgSub,
+            border: `1px solid ${HD.soft}`,
+            padding: "10px 20px", borderRadius: 3, textDecoration: "none",
+          }}
+        >
+          <HistoryIcon size={14} color={HD.secondary} />
+          TRADE HISTORY →
+        </Link>
+
+        <Link
+          href="/hedge-monitor"
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+            color: HD.secondary,
+            background: HD.bgSub,
+            border: `1px solid ${HD.soft}`,
+            padding: "10px 20px", borderRadius: 3, textDecoration: "none",
+          }}
+        >
+          <BarChart2Icon size={14} color={HD.secondary} />
+          HEDGE MONITOR →
         </Link>
 
         <button

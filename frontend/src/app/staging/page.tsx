@@ -324,7 +324,7 @@ export default function StagingListPage() {
               Submit proposals from the Execution Desk to create staged artifacts for governance review.
             </div>
             <button
-              onClick={() => router.push("/execution-desk")}
+              onClick={() => router.push("/hedge-desk")}
               style={{
                 fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", fontWeight: 700,
                 padding: "7px 20px", border: "none",

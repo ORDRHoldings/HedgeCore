@@ -22,7 +22,7 @@ const STEPS = [
     num: "03",
     title: "Run a Hedge Calculation",
     desc: "Calculate your optimal hedge plan — deterministic, audit-trail backed.",
-    href: "/execution-desk",
+    href: "/hedge-desk",
     action: "Open Execution Desk",
   },
   {

@@ -14,7 +14,7 @@ export const EXECUTION_HELP: ModuleHelp = {
       type: "text",
       verified: true,
       codeRefs: [
-        { file: "frontend/src/app/execution-desk/page.tsx" },
+        { file: "frontend/src/app/hedge-desk/page.tsx" },
         { file: "backend/app/models/execution_proposal.py" },
       ],
       content:
@@ -28,14 +28,14 @@ export const EXECUTION_HELP: ModuleHelp = {
       level: 2,
       type: "workflow",
       verified: true,
-      codeRefs: [{ file: "frontend/src/app/execution-desk/page.tsx" }],
+      codeRefs: [{ file: "frontend/src/app/hedge-desk/page.tsx" }],
       steps: [
         {
           step: 1,
           label: "Review Proposal",
           description:
             "The Checker selects an execution proposal from the STAGING queue. The detail panel displays the full proposal: engine version (ENGINE_VERSION 1.0.3), calculation run ID (UUID, references the WORM calculation_runs table), instrument specification, notional USD, strike rate, premium, effective date, maturity date, and counterparty. The Checker reviews all fields against the underlying position and policy instance.",
-          link: "/execution-desk",
+          link: "/hedge-desk",
         },
         {
           step: 2,

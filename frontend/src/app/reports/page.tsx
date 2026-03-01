@@ -378,7 +378,7 @@ function HomePanel({
               : "Complete a hedge calculation on the Execution Desk, then return here to generate reports."}
           </span>
           {!result && !runsLoading && availableRuns.length === 0 && (
-            <a href="/execution-desk" style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+            <a href="/hedge-desk" style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
               color: S.cyan, textDecoration: "none", border: `1px solid ${S.cyan}`,
               padding: "3px 10px", borderRadius: 2, whiteSpace: "nowrap" }}>
               → Execution Desk

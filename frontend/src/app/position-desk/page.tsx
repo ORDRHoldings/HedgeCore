@@ -564,7 +564,7 @@ export default function PositionDeskPage() {
         <div style={{ flex: 1 }} />
         <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{positions.length} positions</span>
         <button onClick={() => token && dispatch(listPositionsThunk({ token }))} title="Refresh (R)" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, background: "transparent", border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>↻ Refresh</button>
-        <button onClick={() => router.push("/execution-desk")} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.pass, background: `color-mix(in srgb, ${S.pass} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.pass} 25%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>→ Execution</button>
+        <button onClick={() => router.push("/hedge-desk")} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.pass, background: `color-mix(in srgb, ${S.pass} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.pass} 25%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>→ Execution</button>
       </header>
       <WorkflowBreadcrumb active="position" />
       {lifecycleError && (
@@ -937,7 +937,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <button onClick={closeModal} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Close</button>
-            <button onClick={() => { closeModal(); router.push("/execution-desk"); }} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: S.pass, border: "none", padding: "6px 14px", cursor: "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>→ Execution Desk</button>
+            <button onClick={() => { closeModal(); router.push("/hedge-desk"); }} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: S.pass, border: "none", padding: "6px 14px", cursor: "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>→ Execution Desk</button>
           </div>
         </ModalOverlay>
       )}
