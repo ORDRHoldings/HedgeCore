@@ -24,7 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
-from app.core.security import get_current_user_optional
+from app.core.security import get_current_user, get_current_user_optional
 from app.exports_v1.excel_builder import render_bank_pack_xlsx
 from app.exports_v1.pdf_builder import render_bank_pack_pdf
 from app.exports_v1.zip_builder import build_audit_zip
@@ -37,9 +37,33 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1", tags=["v1-export"])
 
+async def _assert_run_accessible(
+    session: AsyncSession,
+    run_id: str,
+    current_user: User,
+) -> None:
+    """Verify run_id exists in DB and belongs to caller's company (P0 tenant isolation).
+
+    Superusers bypass the company check. Non-superusers whose company_id does not
+    match the run row receive a 404 so as not to reveal cross-tenant run existence.
+    """
+    if current_user.is_superuser:
+        return
+    row = await session.get(CalculationRun, run_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
+    if row.company_id and row.company_id != current_user.company_id:
+        raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
+
+
 
 @router.get("/export/pdf/{run_id}")
-def export_pdf(run_id: str):
+async def export_pdf(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    await _assert_run_accessible(session, run_id, current_user)
     result = get_run(run_id)
     if not result:
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found.")
@@ -52,7 +76,12 @@ def export_pdf(run_id: str):
 
 
 @router.get("/export/excel/{run_id}")
-def export_excel(run_id: str):
+async def export_excel(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    await _assert_run_accessible(session, run_id, current_user)
     result = get_run(run_id)
     if not result:
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found.")
@@ -65,7 +94,12 @@ def export_excel(run_id: str):
 
 
 @router.get("/export/zip/{run_id}")
-def export_zip(run_id: str):
+async def export_zip(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    await _assert_run_accessible(session, run_id, current_user)
     result = get_run(run_id)
     if not result:
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found.")
@@ -83,7 +117,7 @@ def export_zip(run_id: str):
 async def get_committee_pack(
     run_id: str,
     session: AsyncSession = Depends(get_async_session),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """
     GET /v1/export/committee-pack/{run_id}
@@ -107,6 +141,9 @@ async def get_committee_pack(
     to support unauthenticated committee distribution, but respects RBAC context
     when a token is provided.
     """
+    # P0: Tenant isolation -- verify caller can access this run before any data fetch
+    await _assert_run_accessible(session, run_id, current_user)
+
     # ?? 1. Fetch CalculationRun from DB ????????????????????????????????????????
     try:
         result = await session.execute(
