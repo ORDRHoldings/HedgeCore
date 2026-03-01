@@ -10,6 +10,7 @@ from sqlalchemy import text
 
 from app.api.deps import require_api_key
 from app.core.db import async_engine
+from app.core.schema_state import is_schema_ready, run_readiness_checks
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -34,6 +35,28 @@ async def whoami_api_key(api_key=Depends(require_api_key)):
         "key_id": api_key.key_id,
         "status": api_key.status,
         "expires_at": api_key.expires_at,
+    }
+
+
+@router.get("/schema-health", include_in_schema=True)
+async def schema_health_endpoint():
+    """Schema readiness check — verifies WORM store, critical indexes, and triggers.
+
+    Returns the live DB-verified state of schema objects critical to Execution:
+      - market_snapshots table presence
+      - UNIQUE(company_id, market_snapshot_hash) constraint
+      - WORM function market_snapshots_worm
+      - WORM triggers (no-update, no-delete)
+
+    This endpoint is PUBLIC (no auth) so load-balancers and deployment scripts
+    can poll it without credentials.  It reflects both the startup-cached state
+    and a fresh live check.
+    """
+    # Run live DB check
+    live = await run_readiness_checks(async_engine)
+    return {
+        "startup_schema_ready": is_schema_ready(),
+        **live,
     }
 
 
