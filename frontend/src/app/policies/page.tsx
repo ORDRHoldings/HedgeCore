@@ -356,6 +356,13 @@ export default function PoliciesPage() {
     setToastMsg(msg); setToastVisible(true);
   }, []);
 
+  // L-04: Activation confirmation modal state
+  const [activationModal, setActivationModal] = useState<{
+    template: { id: string; name: string; short_name?: string; config: unknown } | null;
+    hash: string;
+  }>({ template: null, hash: '' });
+  const [modalHashCopied, setModalHashCopied] = useState(false);
+
   // Load active policy + templates on mount
   useEffect(() => {
     if (!token) return;
@@ -412,6 +419,37 @@ export default function PoliciesPage() {
     }
   }, [token, favoriteIds, showToast]);
 
+  // L-04: Compute SHA-256 of policy config using Web Crypto API
+  async function computePolicyHash(config: unknown): Promise<string> {
+    const canonical = JSON.stringify(config, Object.keys(config as object).sort());
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // L-04: Execute the actual activation after modal confirmation
+  const doActivateConfirmed = useCallback(async () => {
+    const { template } = activationModal;
+    if (!template || !token) return;
+    setActivationModal({ template: null, hash: '' });
+    setActivatingId(template.id);
+    try {
+      const inst = await activatePolicy(template.id, token);
+      setActiveInstance(inst);
+      showToast(`✓ Policy activated: [${template.short_name ?? template.id}] ${template.name}`);
+    } catch (e: unknown) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      showToast(`Activation failed: ${detail ?? String(e)}`);
+    } finally {
+      setActivatingId(null);
+    }
+  }, [activationModal, token, showToast]);
+
+  // L-04: Open modal with computed hash instead of activating immediately
+  const openActivationModal = useCallback(async (id: string, name: string, short_name: string | undefined, config: unknown) => {
+    const hash = await computePolicyHash(config);
+    setActivationModal({ template: { id, name, short_name, config }, hash });
+  }, []);
+
   // Activate preset — looks up template, retries if not cached yet
   const handleActivate = useCallback(async (preset: PolicyPreset) => {
     if (!token) return;
@@ -422,17 +460,8 @@ export default function PoliciesPage() {
         showToast(`Template "${preset.shortName}" not found. Run policy seed or contact admin.`);
         return;
       }
-      setActivatingId(preset.id);
-      try {
-        const inst = await activatePolicy(dbTmpl.id, token);
-        setActiveInstance(inst);
-        showToast(`✓ Policy activated: [${preset.shortName}] ${preset.name}`);
-      } catch (e: unknown) {
-        const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-        showToast(`Activation failed: ${detail ?? String(e)}`);
-      } finally {
-        setActivatingId(null);
-      }
+      // L-04: Show confirmation modal with hash instead of activating immediately
+      await openActivationModal(dbTmpl.id, preset.name, preset.shortName, dbTmpl.config);
     };
 
     // Try cached templates first, refresh if missing
@@ -448,7 +477,7 @@ export default function PoliciesPage() {
     } else {
       await doActivate(dbTemplates);
     }
-  }, [token, dbTemplates, showToast]);
+  }, [token, dbTemplates, showToast, openActivationModal]);
 
   // PERF-POLICY-2: drive filter from debounced value, not raw keystroke state
   const filteredPresets = useMemo(() => {
@@ -838,15 +867,7 @@ export default function PoliciesPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setActivatingId(tmpl.id);
-                      activatePolicy(tmpl.id, token!).then(inst => {
-                        setActiveInstance(inst);
-                        showToast(`✓ Custom policy activated: ${tmpl.short_name}`);
-                      }).catch(e => {
-                        showToast(`Error: ${(e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? String(e)}`);
-                      }).finally(() => setActivatingId(null));
-                    }}
+                    onClick={() => openActivationModal(tmpl.id, tmpl.name, tmpl.short_name, tmpl.config)}
                     disabled={activatingId === tmpl.id}
                     style={{
                       fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
@@ -923,6 +944,150 @@ export default function PoliciesPage() {
           token={token ?? undefined}
           onClose={() => setHistoryDrawer(null)}
         />
+      )}
+
+      {/* ── L-04: Policy Activation Confirmation Modal ── */}
+      {activationModal.template && (
+        <div
+          onClick={() => setActivationModal({ template: null, hash: '' })}
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: S.bgPanel,
+              border: `1px solid ${S.rim}`,
+              borderTop: `2px solid ${S.amber}`,
+              padding: '24px 28px',
+              minWidth: 460,
+              maxWidth: 540,
+              boxShadow: '0 16px 64px rgba(0,0,0,0.6)',
+            }}
+          >
+            {/* Modal title */}
+            <div style={{
+              fontFamily: S.fontMono, fontSize: '0.6875rem', fontWeight: 700,
+              letterSpacing: '0.12em', color: S.amber, marginBottom: 18,
+            }}>
+              POLICY ACTIVATION CONFIRMATION
+            </div>
+
+            {/* Template identity */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{
+                fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.08em',
+                color: S.tertiary, marginBottom: 4,
+              }}>
+                TEMPLATE NAME
+              </div>
+              <div style={{
+                fontFamily: S.fontUI, fontSize: '0.875rem', fontWeight: 600, color: S.primary,
+              }}>
+                {activationModal.template.name}
+              </div>
+              {activationModal.template.short_name && (
+                <div style={{
+                  fontFamily: S.fontMono, fontSize: '0.625rem', color: S.tertiary,
+                  letterSpacing: '0.06em', marginTop: 2,
+                }}>
+                  {activationModal.template.short_name}
+                </div>
+              )}
+            </div>
+
+            {/* Hash display */}
+            <div style={{
+              background: S.bgDeep,
+              border: `1px solid ${S.rim}`,
+              borderLeft: `3px solid ${S.cyan}`,
+              padding: '10px 12px',
+              marginBottom: 14,
+            }}>
+              <div style={{
+                fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.08em',
+                color: S.tertiary, marginBottom: 6,
+              }}>
+                CONFIG HASH
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.cyan,
+                  letterSpacing: '0.04em', wordBreak: 'break-all' as const, flex: 1,
+                }}>
+                  {activationModal.hash.slice(0, 16)}…{activationModal.hash.slice(-8)}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Copy config hash"
+                  onClick={() => {
+                    navigator.clipboard.writeText(activationModal.hash).catch(() => null);
+                    setModalHashCopied(true);
+                    setTimeout(() => setModalHashCopied(false), 1500);
+                  }}
+                  style={{
+                    fontFamily: S.fontMono, fontSize: '0.5rem', letterSpacing: '0.06em',
+                    padding: '2px 6px',
+                    border: `1px solid ${S.rim}`,
+                    color: modalHashCopied ? S.green : S.tertiary,
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    transition: 'color 0.2s',
+                  }}
+                >
+                  {modalHashCopied ? 'COPIED ✓' : 'COPY'}
+                </button>
+              </div>
+            </div>
+
+            {/* Warning text */}
+            <div style={{
+              fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.secondary,
+              lineHeight: 1.55, marginBottom: 22,
+              padding: '8px 10px',
+              background: `color-mix(in srgb, ${S.amber} 5%, ${S.bgSub})`,
+              border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
+            }}>
+              ⚑ Verify this hash matches your approved policy document before proceeding.
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setActivationModal({ template: null, hash: '' })}
+                style={{
+                  fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
+                  padding: '6px 16px',
+                  border: `1px solid ${S.rim}`,
+                  color: S.tertiary, background: 'transparent',
+                  cursor: 'pointer',
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={doActivateConfirmed}
+                style={{
+                  fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.08em',
+                  fontWeight: 700,
+                  padding: '6px 18px',
+                  border: `1px solid ${S.cyan}`,
+                  color: S.bgDeep, background: S.cyan,
+                  cursor: 'pointer',
+                }}
+              >
+                CONFIRM ACTIVATION
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
     <HelpPanelV2 module={POLICIES_HELP} storageKey="policy-library" />

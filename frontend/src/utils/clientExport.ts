@@ -6,6 +6,7 @@
  *   – jsPDF + jspdf-autotable  → PDF
  *   – papaparse                → CSV / Excel-compatible CSV
  *   – JSON.stringify + Blob    → Audit JSON bundle
+ *   – xlsx (SheetJS)           → XLSX workbook files
  *
  * All functions are synchronous and trigger an immediate browser download.
  */
@@ -879,6 +880,53 @@ export async function exportExecutiveBriefPdf(
 // ═════════════════════════════════════════════════════════════════════════════
 // 8. PER-REPORT CSV helpers (called from ReportsContainer section buttons)
 // ═════════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════════════
+// 9. XLSX EXPORTS (SheetJS)
+// ═════════════════════════════════════════════════════════════════════════════
+
+const POSITION_COLUMNS: { key: string; header: string }[] = [
+  { key: "record_id",        header: "Record ID" },
+  { key: "entity",           header: "Entity" },
+  { key: "flow_type",        header: "Flow Type" },
+  { key: "currency",         header: "Currency" },
+  { key: "amount",           header: "Amount" },
+  { key: "value_date",       header: "Value Date" },
+  { key: "status",           header: "Status" },
+  { key: "execution_status", header: "Execution Status" },
+  { key: "hedge_amount",     header: "Hedge Amount" },
+  { key: "hedge_rate",       header: "Hedge Rate" },
+];
+
+export function exportPositionsXlsx(
+  rows: Record<string, unknown>[],
+  filename = "positions-export.xlsx",
+): void {
+  const XLSX = require("xlsx");
+  const data = [
+    POSITION_COLUMNS.map((c) => c.header),
+    ...rows.map((r) => POSITION_COLUMNS.map((c) => r[c.key] ?? "")),
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Positions");
+  XLSX.writeFile(wb, filename);
+}
+
+export function exportDataXlsx(
+  headers: string[],
+  rows: unknown[][],
+  filename: string,
+): void {
+  const XLSX = require("xlsx");
+  const data = [headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  const sheetName = filename.replace(/\.xlsx$/i, "").slice(0, 31);
+  XLSX.utils.book_append_sheet(wb, ws, sheetName || "Sheet1");
+  XLSX.writeFile(wb, filename);
+}
+
+
 
 export function exportReportCsv(
   reportKey: string,

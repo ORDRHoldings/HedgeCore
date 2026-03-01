@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Printer } from "lucide-react";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { HEDGEWIKI_HELP } from "@/lib/helpContent";
 
@@ -338,7 +339,7 @@ export default function HedgeWiki() {
       <div style={{ display: "grid", gridTemplateColumns: "164px 220px 1fr", flex: 1, minHeight: 0, overflow: "hidden" }}>
 
         {/* PANE 1: Category rail */}
-        <nav style={{
+        <nav data-wiki-sidebar style={{
           borderRight: `1px solid ${S.rim}`, background: S.bgSub,
           display: "flex", flexDirection: "column", overflow: "auto",
         }}>
@@ -387,7 +388,7 @@ export default function HedgeWiki() {
         </nav>
 
         {/* PANE 2: Entry list */}
-        <div style={{ borderRight: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", overflow: "auto" }}>
+        <div data-wiki-sidebar style={{ borderRight: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", overflow: "auto" }}>
           <div style={{ padding: "14px 14px 8px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>
             {activeCategory} · {filteredEntries.length} ENTRIES
           </div>
@@ -419,7 +420,15 @@ export default function HedgeWiki() {
         </div>
 
         {/* PANE 3: Entry detail */}
-        <div style={{ padding: "20px 28px", overflow: "auto" }}>
+        <div data-wiki-content style={{ padding: "20px 28px", overflow: "auto" }}>
+          {/* Print CSS for wiki */}
+          <style>{`
+            @media print {
+              [data-wiki-sidebar], .no-print { display: none !important; }
+              [data-wiki-content] { width: 100% !important; max-width: 100% !important; }
+              body { background: white !important; color: black !important; }
+            }
+          `}</style>
           {/* Title row */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 6 }}>
             <div style={{ flex: 1 }}>
@@ -431,7 +440,29 @@ export default function HedgeWiki() {
               </h1>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
-              <StatusChip status={entry.status} />
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {/* L-10: Print button */}
+                <button
+                  onClick={() => window.print()}
+                  aria-label="Print article to PDF"
+                  style={{
+                    background: "none",
+                    border: `1px solid ${S.rim}`,
+                    color: S.secondary,
+                    fontFamily: S.fontMono,
+                    fontSize: 11,
+                    padding: "3px 8px",
+                    cursor: "pointer",
+                    borderRadius: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <Printer size={11} /> PRINT
+                </button>
+                <StatusChip status={entry.status} />
+              </div>
               <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{entry.version} · {entry.updated}</span>
             </div>
           </div>

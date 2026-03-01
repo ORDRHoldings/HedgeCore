@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import type { Layout } from "react-grid-layout";
-import { Plus, RotateCcw, HelpCircle, Activity, Clock } from "lucide-react";
+import { Plus, RotateCcw, HelpCircle, Activity, Clock, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import type { UserContext } from "@/lib/authContext";
 import { WIDGET_REGISTRY, getDefaultLayoutForRole, type GridItem, type WidgetId } from "@/lib/widgets/widgetRegistry";
@@ -30,6 +30,7 @@ import RiskPulseWidget from "@/components/dashboard/widgets/RiskPulseWidget";
 import FxNewsWidget from "@/components/dashboard/widgets/FxNewsWidget";
 import EconCalendarWidget from "@/components/dashboard/widgets/EconCalendarWidget";
 import WidgetErrorBoundary from "@/components/ui/WidgetErrorBoundary";
+import OnboardingModal from "@/components/onboarding/OnboardingModal";
 const ResponsiveGridLayout = WidthProvider(Responsive);
 const S = {
   fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -66,6 +67,15 @@ function toRGLLayout(items: GridItem[]): Layout[] {
     minH: WIDGET_REGISTRY.find((w) => w.id === item.i)?.minH ?? 2, }));
 }
 function nowTs() { return new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC"; }
+
+// L-09: Format "X ago" for last-refresh display
+function formatAgo(ms: number): string {
+  const diff = Math.floor((Date.now() - ms) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  return `${Math.floor(diff / 3600)}h ago`;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, user, token } = useAuth();
@@ -75,6 +85,12 @@ export default function DashboardPage() {
   const [widgetIds, setWidgetIds] = useState<string[]>([]);
   const [gridItems, setGridItems] = useState<GridItem[]>([]);
   const [ts, setTs] = useState("");
+  // L-09: Last-refresh tracking
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
+  const [refreshKey, setRefreshKey] = useState<number>(0);
+  const [agoLabel, setAgoLabel] = useState<string>("just now");
+  const agoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => { setReady(true); }, []);
   useEffect(() => {
     if (ready && !isLoading && !isAuthenticated) router.replace("/auth/login");
@@ -91,6 +107,21 @@ export default function DashboardPage() {
     const id = setInterval(() => setTs(nowTs()), 30_000);
     return () => clearInterval(id);
   }, []);
+
+  // L-09: Update "X ago" label every 10 seconds
+  useEffect(() => {
+    setAgoLabel(formatAgo(lastRefresh));
+    if (agoIntervalRef.current) clearInterval(agoIntervalRef.current);
+    agoIntervalRef.current = setInterval(() => setAgoLabel(formatAgo(lastRefresh)), 10_000);
+    return () => { if (agoIntervalRef.current) clearInterval(agoIntervalRef.current); };
+  }, [lastRefresh]);
+
+  // L-09: Refresh all widgets handler
+  const handleRefreshAll = useCallback(() => {
+    setLastRefresh(Date.now());
+    setRefreshKey(k => k + 1);
+  }, []);
+
   const handleLayoutChange = useCallback((currentLayout: Layout[]) => {
     if (!user) return;
     const updated: GridItem[] = currentLayout.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h }));
@@ -137,6 +168,7 @@ export default function DashboardPage() {
   const role = user.roles?.[0] ?? "risk_analyst";
   return (
     <div style={{ minHeight: "100vh", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary, display: "flex", flexDirection: "column" }}>
+      <OnboardingModal userId={user.id} />
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, flexShrink: 0, height: 44 }}>
         <button onClick={() => setCatalogOpen(true)} style={btnStyle(S.cyan)}><Plus size={11} strokeWidth={2.2} /><span>Add Widget</span></button>
         <button onClick={handleReset} style={btnStyle(S.tertiary, true)}><RotateCcw size={11} strokeWidth={1.8} /><span>Reset</span></button>
@@ -153,9 +185,20 @@ export default function DashboardPage() {
           <span>{widgetIds.length} WIDGETS</span>
         </div>
         <div style={{ flex: 1 }} />
+        {/* L-09: Last refreshed display + Refresh All button */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <Clock size={10} style={{ color: S.tertiary }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.6rem", color: S.tertiary, letterSpacing: "0.04em" }}>{ts}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.6rem", color: S.tertiary, letterSpacing: "0.04em" }}>
+            Last refreshed: {agoLabel}
+          </span>
+          <button
+            onClick={handleRefreshAll}
+            title="Refresh all widgets"
+            style={{ display: "flex", alignItems: "center", gap: 4, fontFamily: S.fontMono, fontSize: "0.6rem", letterSpacing: "0.05em", color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer" }}
+          >
+            <RefreshCw size={9} strokeWidth={1.8} />
+            <span>↻ Refresh All</span>
+          </button>
         </div>
         <div style={{ width: 1, height: 18, background: S.rim, margin: "0 4px" }} />
         <button onClick={toggleHelp} title={helpOpen ? "Hide help" : "Show contextual help"} style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: S.fontMono, fontSize: "0.6rem", letterSpacing: "0.06em", color: helpOpen ? S.cyan : S.tertiary, background: helpOpen ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : "transparent", border: `1px solid ${helpOpen ? S.cyan : S.rim}`, padding: "3px 10px", cursor: "pointer", transition: "all 150ms" }}>
@@ -171,7 +214,8 @@ export default function DashboardPage() {
             </div>
           ) : (
             <ResponsiveGridLayout className="dashboard-grid" layouts={{ lg: rglLayout, md: rglLayout, sm: rglLayout }} breakpoints={{ lg: 1200, md: 996, sm: 768 }} cols={{ lg: 12, md: 10, sm: 6 }} rowHeight={62} onLayoutChange={handleLayoutChange} margin={[10, 10]} containerPadding={[0, 0]} draggableHandle=".widget-drag-handle" useCSSTransforms>
-              {gridItems.map(({ i }) => { const WidgetComponent = WIDGET_COMPONENTS[i as WidgetId] ?? null; if (!WidgetComponent) return null; return (<div key={i} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}><WidgetErrorBoundary widgetId={i}><WidgetComponent token={token} user={user} onRemove={() => handleRemove(i)} /></WidgetErrorBoundary></div>); })}
+              {/* L-09: key includes refreshKey to force remount on Refresh All */}
+              {gridItems.map(({ i }) => { const WidgetComponent = WIDGET_COMPONENTS[i as WidgetId] ?? null; if (!WidgetComponent) return null; return (<div key={`${i}-${refreshKey}`} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}><WidgetErrorBoundary widgetId={i}><WidgetComponent token={token} user={user} onRemove={() => handleRemove(i)} /></WidgetErrorBoundary></div>); })}
             </ResponsiveGridLayout>
           )}
         </div>

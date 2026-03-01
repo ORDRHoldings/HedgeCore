@@ -282,9 +282,10 @@ const NAV: NavSection[] = [
   },
   {
     label: "Governance", href: "/audit-trail", icon: Ic.governance,
-    prefixes: ["/hedgewiki", "/hedges", "/audit-trail", "/access-control", "/run-viewer", "/lineage", "/committee-pack"],
+    prefixes: ["/hedgewiki", "/hedges", "/audit-trail", "/access-control", "/run-viewer", "/lineage", "/committee-pack", "/staging"],
     header: "Compliance & Audit",
     items: [
+      { label: "Staging Queue",     desc: "4-eyes approval queue — maker/checker review of staged artifacts",   href: "/staging",        icon: Ic.db,       badge: "QUEUE",   badgeColor: S.cyan  },
       { label: "Audit Trail",       desc: "Immutable decision log with hash-chain integrity",                    href: "/audit-trail",    icon: Ic.check,    badge: "AUDIT",   badgeColor: S.amber },
       { label: "Run Viewer",        desc: "TraceLite pipeline narrative + SHA-256 RunEnvelope hash chain",       href: "/run-viewer",     icon: Ic.terminal, badge: "TRACE",   badgeColor: "#a78bfa" },
       { label: "Position Lineage",  desc: "5-level provenance graph: Position → Policy → Run → Ticket",         href: "/lineage",        icon: Ic.plug,     badge: "GRAPH",   badgeColor: "#818cf8" },

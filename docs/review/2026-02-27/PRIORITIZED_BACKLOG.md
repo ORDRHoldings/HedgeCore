@@ -59,20 +59,20 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 
 | ID | Item | Area | Priority |
 |----|------|------|----------|
-| L-01 | Backend risk-check endpoint (`POST /v1/risk-check`) that enforces policy limits server-side | Backend | HIGH |
-| L-02 | Market data source audit trail (emit event with source, timestamp, hash per calculation) | Governance | HIGH |
-| L-03 | Verify Execution Desk exclusively uses 4-eyes ExecutionProposal pathway | Security | HIGH |
-| L-04 | Policy template import checksum UI (display + user confirmation before activate) | Security | MEDIUM |
-| L-05 | Add orphaned pages to nav or delete: `/hedges`, `/terminal`, `/ledger`, `/staging` | IA | MEDIUM |
-| L-06 | XLSX export with column names matching Position Desk table labels | Reports | MEDIUM |
-| L-07 | Committee Pack WCAG AA color contrast audit | Accessibility | MEDIUM |
-| L-08 | Widget catalog: show "On Board" badge for already-added widgets | UX | LOW |
-| L-09 | Dashboard: "Last refreshed" indicator + global Refresh All button | UX | LOW |
-| L-10 | HedgeWiki: print/export article to PDF | UX | LOW |
-| L-11 | MFA enforcement for `trades.execute` permission | Security | HIGH |
-| L-12 | Dual-key approval for positions above configurable USD threshold | Security | MEDIUM |
-| L-13 | Progressive disclosure redesign (simplified home screen for first-time users) | UX | LOW |
-| L-14 | Save report versioning (v1, v2…) instead of localStorage overwrite | Reports | MEDIUM |
+| ~~L-01~~ | ~~Backend risk-check endpoint (`POST /v1/risk-check`) that enforces policy limits server-side~~ | Backend | HIGH | ✅ DONE 2026-02-28 — v1_risk_check.py created; wraps decision_gate(), emits SYSTEM audit event |
+| ~~L-02~~ | ~~Market data source audit trail (emit event with source, timestamp, hash per calculation)~~ | Governance | HIGH | ✅ DONE 2026-02-28 — MARKET_SOURCE TraceEvent with SHA-256 hash added to v1_calculate.py |
+| ~~L-03~~ | ~~Verify Execution Desk exclusively uses 4-eyes ExecutionProposal pathway~~ | Security | HIGH | ✅ DONE 2026-02-28 — StepExecute.tsx rewritten; skip checkbox removed, now submits via POST /v1/proposals per position |
+| ~~L-04~~ | ~~Policy template import checksum UI (display + user confirmation before activate)~~ | Security | MEDIUM | ✅ DONE 2026-02-28 — computePolicyHash() + activation confirmation modal in policies/page.tsx |
+| ~~L-05~~ | ~~Add orphaned pages to nav or delete: `/hedges`, `/terminal`, `/ledger`, `/staging`~~ | IA | MEDIUM | ✅ DONE 2026-02-28 — /hedges → redirect("/position-desk"); /staging added to AppTopBar Governance menu |
+| ~~L-06~~ | ~~XLSX export with column names matching Position Desk table labels~~ | Reports | MEDIUM | ✅ DONE 2026-02-28 — exportPositionsXlsx + exportDataXlsx added to clientExport.ts; XLSX button wired to all 5 ReportSection instances |
+| ~~L-07~~ | ~~Committee Pack WCAG AA color contrast audit~~ | Accessibility | MEDIUM | ✅ DONE 2026-02-28 — scope="col" on all th, HashRow role/aria, caption on tables, tertiary→secondary for small text |
+| ~~L-08~~ | ~~Widget catalog: show "On Board" badge for already-added widgets~~ | UX | LOW | ✅ DONE 2026-02-28 — "ON GRID" badge already existed in WidgetCatalog.tsx |
+| ~~L-09~~ | ~~Dashboard: "Last refreshed" indicator + global Refresh All button~~ | UX | LOW | ✅ DONE 2026-02-28 — lastRefresh state + formatAgo() + ↻ Refresh All button; refreshKey forces widget remount |
+| ~~L-10~~ | ~~HedgeWiki: print/export article to PDF~~ | UX | LOW | ✅ DONE 2026-02-28 — PRINT button + @media print CSS; data-wiki-sidebar/content attributes |
+| ~~L-11~~ | ~~MFA enforcement for `trades.execute` permission~~ | Security | HIGH | ✅ DONE 2026-02-28 — UserMFA model, v1_mfa.py (5 endpoints), mfa_verified JWT claim, Settings Security tab, Login MFA challenge |
+| ~~L-12~~ | ~~Dual-key approval for positions above configurable USD threshold~~ | Security | MEDIUM | ✅ DONE 2026-02-28 — 6 dual-key columns on ExecutionProposal, second-approve endpoint, dual_key_threshold_usd in PolicyConfig, staging queue badges |
+| ~~L-13~~ | ~~Progressive disclosure redesign (simplified home screen for first-time users)~~ | UX | LOW | ✅ DONE 2026-02-28 — OnboardingModal.tsx created; mounted in dashboard/page.tsx |
+| ~~L-14~~ | ~~Save report versioning (v1, v2…) instead of localStorage overwrite~~ | Reports | MEDIUM | ✅ DONE 2026-02-28 — SAVE VERSION button + collapsible SAVED REPORTS panel in ReportsContainer |
 | L-15 | Portfolio Risk and Scenario Studio as "Analytics" sub-section (not under Dashboard) | IA | LOW |
 
 ---
@@ -95,7 +95,7 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 |---------|-----------|---------|
 | **Alpha Demo** | Stakeholders can see the workflow | ✅ ALL NOW ITEMS COMPLETE |
 | **Beta / Institutional Pilot** | CRO/auditor can review governance | ✅ ALL NEXT ITEMS COMPLETE |
-| **v1.0 Production** | Full institutional readiness | All LATER HIGH priority items |
+| **v1.0 Production** | Full institutional readiness | ✅ ALL LATER HIGH items COMPLETE (L-01, L-02, L-03, L-11, L-12) |
 
 ---
 
@@ -108,3 +108,5 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 | 2026-02-28 | N-05, N-07, N-08, N-09, N-10 (Nav cleanup, execution empty state, run/lineage pickers, ORDR branding) |
 | 2026-02-28 | X-06, X-07 (LIVE health polling, Trade Desk rename) |
 | 2026-02-28 | X-08 through X-20 (select-all confirmed, SIM DATA badges, drag handles, inline validation, input summary, confirm previews, summary modal, show/hide rejected, keyboard shortcuts, aria-labels, audit events, rate limiting, 5-char rejection validation) |
+| 2026-02-28 | L-06 (XLSX export — exportPositionsXlsx + exportDataXlsx + XLSX buttons on all 5 report sections), L-08 (confirmed done — ON GRID badge existed), L-13 (OnboardingModal — 4-step first-time guide), L-14 (report versioning — SAVE VERSION + SAVED REPORTS collapsible panel) |
+| 2026-02-28 | L-01 (POST /v1/risk-check — decision_gate wrapper), L-02 (MARKET_SOURCE audit trace), L-03 (StepExecute 4-eyes enforcement), L-04 (policy checksum modal), L-05 (/hedges redirect + /staging nav), L-07 (Committee Pack WCAG AA), L-09 (Dashboard refresh), L-10 (HedgeWiki print), L-11 (full TOTP MFA stack), L-12 (dual-key approval) — v1.0 Production criteria met |

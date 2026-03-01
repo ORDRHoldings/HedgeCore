@@ -127,14 +127,18 @@ function HashRow({
     setTimeout(() => setCopied(false), 1500);
   };
   return (
-    <div style={{
-      display: "grid", gridTemplateColumns: "140px 1fr 24px",
-      alignItems: "center", gap: 8, padding: "5px 0",
-      borderBottom: `1px solid ${S.rim}`,
-    }}>
+    <div
+      role="row"
+      aria-label={`${label}: ${value ?? "not available"}`}
+      style={{
+        display: "grid", gridTemplateColumns: "140px 1fr 24px",
+        alignItems: "center", gap: 8, padding: "5px 0",
+        borderBottom: `1px solid ${S.rim}`,
+      }}
+    >
       <span style={{
         fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
-        letterSpacing: "0.06em", color: S.tertiary, textTransform: "uppercase" as const,
+        letterSpacing: "0.06em", color: S.secondary, textTransform: "uppercase" as const,
       }}>
         {label}
       </span>
@@ -150,12 +154,21 @@ function HashRow({
       >
         {value ?? "—"}
       </span>
-      <span style={{
-        fontFamily: S.fontMono, fontSize: 8, color: copied ? S.pass : "transparent",
-        transition: "color 0.2s",
-      }}>
-        ✓
-      </span>
+      <button
+        type="button"
+        aria-label={`Copy ${label} hash to clipboard`}
+        onClick={copy}
+        disabled={!value}
+        style={{
+          fontFamily: S.fontMono, fontSize: 8,
+          color: copied ? S.pass : S.tertiary,
+          transition: "color 0.2s",
+          background: "none", border: "none", cursor: value ? "pointer" : "default",
+          padding: 0, lineHeight: 1,
+        }}
+      >
+        {copied ? "✓" : "⎘"}
+      </button>
     </div>
   );
 }
@@ -358,6 +371,7 @@ function CommitteePackInner() {
           </span>
           <button
             onClick={() => window.print()}
+            aria-label="Print committee pack to PDF"
             style={{
               fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
               letterSpacing: "0.06em",
@@ -506,7 +520,7 @@ function CommitteePackInner() {
 
         <div style={{
           marginTop: 12,
-          fontFamily: S.fontUI, fontSize: 10, color: S.tertiary, lineHeight: 1.5,
+          fontFamily: S.fontUI, fontSize: 10, color: S.secondary, lineHeight: 1.5,
         }}>
           {regulatory.worm_note}
         </div>
@@ -655,6 +669,13 @@ function CommitteePackInner() {
 
             {/* Canonical policy config table */}
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <caption style={{
+                fontFamily: S.fontMono, fontSize: 8, color: S.secondary,
+                letterSpacing: "0.06em", textAlign: "left" as const,
+                padding: "0 0 6px", captionSide: "top" as const,
+              }}>
+                Pinned policy revision — canonical configuration parameters
+              </caption>
               <tbody>
                 {typeof cp === "object" && cp !== null &&
                   Object.entries(cp as Record<string, unknown>).map(([k, v]) => {
@@ -693,12 +714,19 @@ function CommitteePackInner() {
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <caption style={{
+                fontFamily: S.fontMono, fontSize: 8, color: S.secondary,
+                letterSpacing: "0.06em", textAlign: "left" as const,
+                padding: "6px 12px 4px", captionSide: "top" as const,
+              }}>
+                Hedge execution buckets — notional amounts, coverage ratios, and assigned instruments
+              </caption>
               <thead>
                 <tr style={{ background: S.bgSub }}>
                   {["BUCKET", "DIRECTION", "NOTIONAL (USD)", "COVERAGE", "INSTRUMENT"].map(h => (
-                    <th key={h} style={{
+                    <th key={h} scope="col" style={{
                       padding: "8px 12px", fontFamily: S.fontMono, fontSize: 8,
-                      fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary,
+                      fontWeight: 700, letterSpacing: "0.08em", color: S.secondary,
                       textAlign: "left" as const, borderBottom: `1px solid ${S.rim}`,
                       whiteSpace: "nowrap" as const,
                     }}>
@@ -809,7 +837,7 @@ function CommitteePackInner() {
         )}
         <div style={{
           marginTop: 12, fontFamily: S.fontUI, fontSize: 10,
-          color: S.tertiary, lineHeight: 1.5,
+          color: S.secondary, lineHeight: 1.5,
         }}>
           Scenario values represent the estimated P&amp;L benefit of the hedge programme
           under the stated FX rate shock (σ). Positive values indicate the hedge
@@ -827,6 +855,13 @@ function CommitteePackInner() {
         background: S.bgPanel, padding: "18px 20px",
       }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <caption style={{
+            fontFamily: S.fontMono, fontSize: 8, color: S.secondary,
+            letterSpacing: "0.06em", textAlign: "left" as const,
+            padding: "0 0 6px", captionSide: "top" as const,
+          }}>
+            Regulatory framework references — IFRS 9, EMIR, Dodd-Frank
+          </caption>
           <tbody>
             <PolicyRow label="Framework"    value={regulatory.framework}    />
             <PolicyRow label="Standard Ref" value={regulatory.standard_ref} />
@@ -854,7 +889,7 @@ function CommitteePackInner() {
         </div>
         <div style={{
           marginTop: 10,
-          fontFamily: S.fontUI, fontSize: 10, color: S.tertiary,
+          fontFamily: S.fontUI, fontSize: 10, color: S.secondary,
           fontStyle: "italic",
         }}>
           {regulatory.worm_note}
