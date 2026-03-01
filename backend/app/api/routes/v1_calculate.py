@@ -774,12 +774,15 @@ async def get_run_detail(
 
     """
 
-    # Fast path: in-memory cache
-
+    # Fast path: in-memory cache (with tenant isolation)
     cached = _run_store.get(run_id)
-
     if cached:
-
+        # Even on cache hit, verify tenant via DB (P0: prevents cross-tenant leaks).
+        # Superusers bypass; non-superusers whose run row is in DB must match company_id.
+        if not current_user.is_superuser:
+            row = await session.get(CalculationRun, run_id)
+            if row is not None and row.company_id and row.company_id != current_user.company_id:
+                raise HTTPException(status_code=404, detail=f"Run {run_id!r} not found")
         return cached
 
 

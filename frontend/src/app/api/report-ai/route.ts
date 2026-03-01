@@ -175,6 +175,18 @@ function buildFallbackPlan(req: AIReportRequest): AIReportPlan {
 
 export async function POST(req: NextRequest) {
   try {
+    // P1: Require authentication — prevent unauthenticated/anonymous AI calls.
+    // The Authorization header must carry the caller's JWT (Bearer scheme).
+    // We only check presence here; the backend enforces JWT validity on all
+    // data-bound API calls made downstream.
+    const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "authentication_required", detail: "Authorization: Bearer <token> header required" },
+        { status: 401 }
+      );
+    }
+
     const body: AIReportRequest = await req.json();
 
     if (!body.goal || !body.selected_modules || body.selected_modules.length === 0) {
