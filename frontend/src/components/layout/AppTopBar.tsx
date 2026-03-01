@@ -15,6 +15,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
@@ -32,6 +33,7 @@ const S = {
   cyan:     "var(--accent-cyan)",
   amber:    "var(--accent-amber)",
   red:      "var(--accent-red,#f87171)",
+  green:    "var(--status-pass,#22c55e)",
 } as const;
 
 // ── SVG icon library (24×24 viewBox) ──────────────────────────────────────────
@@ -255,13 +257,20 @@ const NAV: NavSection[] = [
   },
   {
     label: "Hedge Execution", href: "/hedge-desk", icon: Ic.execution,
-    prefixes: ["/hedge-desk", "/fx-market", "/methodology", "/trade-history"],
+    prefixes: ["/hedge-desk", "/trade-history", "/hedge-monitor"],
     header: "Hedge Execution",
     items: [
-      { label: "Hedge Desk",    desc: "Calculate, review, approve and execute hedge positions end-to-end", href: "/hedge-desk",    icon: Ic.terminal,  badge: "DESK",  badgeColor: S.cyan  },
-      { label: "Trade History", desc: "Proposal & fill execution audit log",                               href: "/trade-history", icon: Ic.clock,     badge: "LOG",   badgeColor: S.cyan  },
-      { label: "FX Market",     desc: "Live spot rates, forward curves, vol surface — position-aware",     href: "/fx-market",     icon: Ic.bar_chart },
-      { label: "Methodology",   desc: "Calculation methodology, hedge formulas and instrument reference",  href: "/methodology",   icon: Ic.book,      badge: "REF",   badgeColor: S.amber },
+      { label: "Hedge Desk",    desc: "SELECT → CALCULATE → RISK → APPROVE → EXECUTE",              href: "/hedge-desk",    icon: Ic.terminal,  badge: "DESK",  badgeColor: S.cyan  },
+      { label: "Trade History", desc: "Proposals, fills, slippage, tamper-evident audit trail",      href: "/trade-history", icon: Ic.clock,     badge: "LOG",   badgeColor: S.cyan  },
+      { label: "Hedge Monitor", desc: "Live MTM P&L, hedge effectiveness, roll schedule, reg capital", href: "/hedge-monitor", icon: Ic.bar_chart, badge: "LIVE",  badgeColor: S.green },
+    ],
+  },
+  {
+    label: "Markets", href: "/fx-market", icon: Ic.bar_chart,
+    prefixes: ["/fx-market"],
+    header: "Market Data",
+    items: [
+      { label: "FX Rates", desc: "Live spot, forwards, vol surface, carry analysis — position-aware", href: "/fx-market", icon: Ic.bar_chart },
     ],
   },
   {
@@ -278,13 +287,14 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Analytics", href: "/portfolio-risk", icon: Ic.bar_chart,
-    prefixes: ["/portfolio-risk", "/scenario-studio", "/polisophic"],
-    header: "Risk & Analytics",
+    label: "Research", href: "/sandbox", icon: Ic.lightning,
+    prefixes: ["/sandbox", "/scenario-studio", "/methodology", "/portfolio-risk", "/polisophic"],
+    header: "Research & Simulation",
     items: [
-      { label: "Portfolio Risk",  desc: "Delta, vega, correlation across positions — R1–R8 taxonomy", href: "/portfolio-risk",  icon: Ic.bar_chart,  badge: "RISK", badgeColor: S.amber },
-      { label: "Scenario Studio", desc: "Monte Carlo & stress-test simulations",                       href: "/scenario-studio", icon: Ic.lightning,  badge: "SIM",  badgeColor: S.cyan  },
-      { label: "Polisophic",      desc: "Political & macro risk intelligence feed",                    href: "/polisophic",      icon: Ic.governance, badge: "RISK", badgeColor: S.amber },
+      { label: "Simulation Lab",  desc: "Stress testing, crisis library, what-if, regulatory capital — 7-tab quant engine", href: "/sandbox",          icon: Ic.terminal,   badge: "LAB",  badgeColor: S.amber },
+      { label: "Scenario Studio", desc: "Monte Carlo & custom stress-test simulations",                                      href: "/scenario-studio",  icon: Ic.lightning,  badge: "SIM",  badgeColor: S.cyan  },
+      { label: "Portfolio Risk",  desc: "Delta, vega, correlation across positions — R1–R8 taxonomy",                        href: "/portfolio-risk",   icon: Ic.bar_chart,  badge: "RISK", badgeColor: S.amber },
+      { label: "Polisophic",      desc: "Political & macro risk intelligence feed",                                          href: "/polisophic",       icon: Ic.governance, badge: "INTEL",badgeColor: S.amber },
     ],
   },
   {
@@ -499,13 +509,19 @@ function MenuBarItem({ sec, isActive, isOpen, onOpen, onClose }: MenuBarItemProp
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function AppTopBar() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, token, logout, isAuthenticated } = useAuth();
   const router   = useRouter();
   const pathname = usePathname() ?? "";
 
-  // Governance mode: "solo" = self-approve allowed, "team" = 4-eyes required.
-  // TODO(L-backend): fetch from GET /v1/company/settings once governance_mode is stored server-side.
-  const governanceMode = "solo" as "solo" | "team";
+  // Governance mode: fetched from company settings. "solo" = self-approve; "team" = 4-eyes.
+  const [governanceMode, setGovernanceMode] = useState<"solo" | "team">("solo");
+  useEffect(() => {
+    if (!token) return;
+    dashboardFetch("/v1/company/settings", token)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.governance_mode) setGovernanceMode(data.governance_mode as "solo" | "team"); })
+      .catch(() => {}); // Default to "solo" on failure
+  }, [token]);
 
   const [openMenu,     setOpenMenu]     = useState<string | null>(null);
   const [liveStatus,   setLiveStatus]   = useState<"checking" | "online" | "offline">("checking");

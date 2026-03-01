@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import type { PositionRow } from "@/api/positionClient";
 import DisclosurePanel from "./DisclosurePanel";
+import PreTradeCostPanel from "@/components/execution/PreTradeCostPanel";
+import CrisisImpactPanel from "@/components/execution/CrisisImpactPanel";
 import React from "react";
 import {
   LoaderIcon, CheckCircleIcon, XCircleIcon, AlertTriangleIcon, ChevronLeftIcon
@@ -233,6 +235,20 @@ export default function PhaseRisk({
             {riskData.decision_hash}
           </code>
         </DisclosurePanel>
+      )}
+
+      {/* Embedded quant panels — competitive differentiator */}
+      {!loading && (
+        <>
+          <PreTradeCostPanel positions={positions} calcResult={calcResult} />
+          <CrisisImpactPanel
+            positions={positions}
+            hedgeCoveragePercent={
+              ((calcResult?.hedge_plan as Record<string, unknown>)?.summary as Record<string, number>)?.coverage_pct
+              ?? 0.85
+            }
+          />
+        </>
       )}
 
       {/* Proceed / retry */}

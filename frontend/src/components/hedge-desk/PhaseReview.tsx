@@ -8,6 +8,7 @@ import {
   CheckCircleIcon, AlertTriangleIcon, LoaderIcon, ChevronLeftIcon, ExternalLinkIcon
 } from "lucide-react";
 import Link from "next/link";
+import AIHedgeIntelligence from "@/components/execution/AIHedgeIntelligence";
 
 const HD = {
   navy:    "#0A1F44",
@@ -153,6 +154,13 @@ export default function PhaseReview({
           {verdictLabel}
         </span>
       </div>
+
+      {/* AI Hedge Intelligence — the differentiator */}
+      <AIHedgeIntelligence
+        positions={positions}
+        calcResult={calcResult}
+        riskVerdict={riskVerdict}
+      />
 
       {/* Positions table */}
       <div style={{ background: HD.bgPanel, border: `1px solid ${HD.rim}`, borderRadius: 4, overflow: "hidden" }}>
