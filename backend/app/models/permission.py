@@ -322,9 +322,11 @@ SEED_PERMISSIONS: list[tuple[str, str, str, str]] = [
 
     ("reports.view_all_branches", "reports", "view_all_branches", "View reports across all branches"),
 
-    ("reports.export_pdf", "reports", "export_pdf", "Export reports as PDF"),
+    ("reports.export_pdf",   "reports", "export_pdf",   "Export reports as PDF"),
 
     ("reports.export_excel", "reports", "export_excel", "Export reports as Excel"),
+
+    ("reports.export",       "reports", "export",       "Export reports in any format (PDF, Excel, ZIP, Committee Pack)"),
 
 
 
@@ -405,7 +407,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
 
         "reports.view_own_branch", "reports.view_all_branches",
 
-        "reports.export_pdf", "reports.export_excel",
+        "reports.export_pdf", "reports.export_excel", "reports.export",
 
         "users.view",
 
@@ -434,7 +436,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "market.view", "market.autofill",
         "market.snapshot.create", "market.snapshot.read",
 
-        "reports.view_own_branch", "reports.export_pdf",
+        "reports.view_own_branch", "reports.export_pdf", "reports.export",
 
         "audit.view_own", "audit.view_branch",
 

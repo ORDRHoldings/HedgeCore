@@ -144,14 +144,18 @@ function safeStem(name: string): string {
 async function computeReportHash(
   bindings: DataBindings,
   sections: ReportSection[],
+  presetId?: string | null,
+  version: number = 1,
 ): Promise<string> {
-  // Deterministic fingerprint: SHA-256 of sorted binding keys + section identifiers
+  // Deterministic fingerprint: SHA-256 of sorted binding keys + section identifiers + preset + schema version
   const canonical = JSON.stringify({
+    version,
     run_envelope_id: bindings.run_envelope_id ?? null,
     policy_id: bindings.policy_id ?? null,
     market_snapshot_id: bindings.market_snapshot_id ?? null,
     as_of_date: bindings.as_of_date ?? null,
     reporting_currency: bindings.reporting_currency ?? "USD",
+    preset_id: presetId ?? null,
     sections: sections
       .filter(s => s.status === "INCLUDED")
       .sort((a, b) => a.order - b.order)
@@ -699,8 +703,8 @@ function BuilderShell({
     if (sections.length === 0) issues.push({ code: "NO_SECTIONS", severity: "ERROR", message: "At least one section is required." });
     const hasDisc = sections.some(s => s.type === "DISCLOSURES");
     if (!hasDisc) issues.push({ code: "NO_DISCLOSURES", severity: "WARNING", message: "Disclosures section is recommended for institutional reports." });
-    if (!bindings.run_envelope_id && !bindings.market_snapshot_id) {
-      issues.push({ code: "NO_BINDING", severity: "WARNING", message: "No data binding set. Report will render without live data." });
+    if (!bindings.run_envelope_id) {
+      issues.push({ code: "NO_BINDING", severity: "ERROR", message: "A run envelope (Engine Run ID) must be bound before exporting. Select an engine run in the Data Bindings panel." });
     }
     return issues;
   }, [name, sections, bindings]);
@@ -764,12 +768,12 @@ function BuilderShell({
     setExportStatus(prev => ({ ...prev, [fmt]: "running" }));
     try {
       if (fmt === "HTML") {
-        const reportHash = await computeReportHash(bindings, sections);
+        const reportHash = await computeReportHash(bindings, sections, template?.template_id ?? null);
         const html = buildReportHTML(name, desc, bindings, sections, reportHash);
         triggerDownload(new Blob([html], { type: "text/html;charset=utf-8" }), `${stem}.html`);
       } else if (fmt === "PDF") {
         // Build HTML → inject into hidden iframe → print dialog
-        const reportHash = await computeReportHash(bindings, sections);
+        const reportHash = await computeReportHash(bindings, sections, template?.template_id ?? null);
         const html = buildReportHTML(name, desc, bindings, sections, reportHash);
         const iframe = document.createElement("iframe");
         iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:800px;height:1100px;border:none";
@@ -827,7 +831,7 @@ function BuilderShell({
         triggerDownload(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${stem}_PPT_Outline.csv`);
       } else if (fmt === "ZIP_COMMITTEE") {
         // Sequential download of HTML + CSV + JSON
-        const reportHash = await computeReportHash(bindings, sections);
+        const reportHash = await computeReportHash(bindings, sections, template?.template_id ?? null);
         const html = buildReportHTML(name, desc, bindings, sections, reportHash);
         triggerDownload(new Blob([html], { type: "text/html;charset=utf-8" }), `${stem}.html`);
         await new Promise<void>(res => setTimeout(res, 200));
