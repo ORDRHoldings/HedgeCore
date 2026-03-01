@@ -257,13 +257,12 @@ const NAV: NavSection[] = [
   },
   {
     label: "Hedge Execution", href: "/hedge-desk", icon: Ic.execution,
-    prefixes: ["/hedge-desk", "/execution-desk", "/trade-history", "/hedge-monitor"],
+    prefixes: ["/hedge-desk", "/trade-history", "/hedge-monitor"],
     header: "Hedge Execution",
     items: [
-      { label: "Hedge Desk",         desc: "Plan: SELECT → CALCULATE → RISK → APPROVE — submits proposals for approval",          href: "/hedge-desk",      icon: Ic.terminal,  badge: "DESK",  badgeColor: S.cyan  },
-      { label: "Execution Pipeline", desc: "Execute: Review → Calculate → Risk Gate → Execute — governed, produces ledger entries", href: "/execution-desk",  icon: Ic.execution, badge: "EXEC",  badgeColor: S.amber },
-      { label: "Trade History",      desc: "Proposals, fills, slippage, tamper-evident audit trail",                                href: "/trade-history",   icon: Ic.clock,     badge: "LOG",   badgeColor: S.cyan  },
-      { label: "Hedge Monitor",      desc: "Live MTM P&L, hedge effectiveness, roll schedule, reg capital",                         href: "/hedge-monitor",   icon: Ic.bar_chart, badge: "LIVE",  badgeColor: S.green },
+      { label: "Hedge Desk",    desc: "SELECT → CALCULATE → RISK → APPROVE → EXECUTE — full hedge pipeline",        href: "/hedge-desk",    icon: Ic.terminal,  badge: "DESK",  badgeColor: S.cyan  },
+      { label: "Trade History", desc: "Proposals, fills, slippage, tamper-evident audit trail",                      href: "/trade-history", icon: Ic.clock,     badge: "LOG",   badgeColor: S.cyan  },
+      { label: "Hedge Monitor", desc: "Live MTM P&L, hedge effectiveness, roll schedule, reg capital",               href: "/hedge-monitor", icon: Ic.bar_chart, badge: "LIVE",  badgeColor: S.green },
     ],
   },
   {

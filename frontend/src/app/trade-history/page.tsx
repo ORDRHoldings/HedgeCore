@@ -571,7 +571,7 @@ export default function TradeHistoryPage() {
               Run the Execution Desk pipeline to generate proposals for approval.
             </p>
             <button
-              onClick={() => router.push("/execution-desk")}
+              onClick={() => router.push("/hedge-desk")}
               style={{
                 fontFamily: S.fontMono,
                 fontSize: 10,

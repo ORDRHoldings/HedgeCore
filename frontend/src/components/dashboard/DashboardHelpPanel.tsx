@@ -25,7 +25,7 @@ const PIPELINE_STEPS = [
   { n: 4, label: "Results Analysis",      sub: "R² · MTM · DVO1",  path: "/results",     color: S.amber },
   { n: 5, label: "Staging & Approval",    sub: "4-eyes governance",   path: "/staging",     color: S.pass  },
   { n: 6, label: "Ledger Commit",         sub: "WORM audit chain",    path: "/ledger",      color: S.pass  },
-  { n: 7, label: "Execution & Reporting", sub: "MiFID II / IFRS 9",  path: "/execution-desk",   color: S.pass  },
+  { n: 7, label: "Execution & Reporting", sub: "MiFID II / IFRS 9",  path: "/hedge-desk",   color: S.pass  },
 ];
 
 const FORMULAS = [
@@ -79,7 +79,7 @@ const CATEGORY_META: Record<string, { label: string; color: string }> = {
 const QUICK_LINKS = [
   { label: "Position Desk",  path: "/position-desk", Icon: FileInput     },
   { label: "Policy Engine",  path: "/policies",      Icon: Shield        },
-  { label: "Execution",      path: "/execution-desk",     Icon: Rocket        },
+  { label: "Execution",      path: "/hedge-desk",     Icon: Rocket        },
   { label: "Sandbox",        path: "/sandbox",       Icon: FlaskConical  },
   { label: "Reports",        path: "/reports",       Icon: FileBarChart  },
   { label: "FX Rates",       path: "/currency-fx",   Icon: Globe2        },

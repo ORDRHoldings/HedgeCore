@@ -5,7 +5,7 @@ export const EXECUTION_PIPELINE: GuideDoc = {
   title: "Execution Pipeline",
   summary:
     "The tri-state governance pipeline from Sandbox to Ledger: execution workflow, hedge sizer formula, decision gate thresholds, four-eyes segregation of duties, failure modes, and ledger immutability.",
-  path: "/execution-desk",
+  path: "/hedge-desk",
   icon: "Workflow",
   lastReviewed: "2026-02-28",
   relatedIds: ["sandbox-simulation", "policy-engine", "position-desk", "getting-started"],
@@ -68,7 +68,7 @@ export const EXECUTION_PIPELINE: GuideDoc = {
             {
               n: 2,
               label: "Review execution proposal",
-              detail: "Navigate to /execution-desk. The proposal appears in the STAGING queue. The maker reviews all fields: instrument_type, notional_usd, strike_rate, premium_usd, effective_date, maturity_date, counterparty.",
+              detail: "Navigate to /hedge-desk. The proposal appears in the STAGING queue. The maker reviews all fields: instrument_type, notional_usd, strike_rate, premium_usd, effective_date, maturity_date, counterparty.",
             },
             {
               n: 3,
