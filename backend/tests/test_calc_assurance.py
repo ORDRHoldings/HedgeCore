@@ -63,12 +63,14 @@ def _policy(
     spread_bps: float = 10.0,
     min_trade: float = 0.0,
     execution_product: str = "NDF",
+    allow_indicative_proxy: bool = False,
 ) -> PolicyConfig:
     return PolicyConfig(
         hedge_ratios={"confirmed": confirmed, "forecast": forecast},
         cost_assumptions={"spread_bps": spread_bps},
         execution_product=execution_product,
         min_trade_size_usd=min_trade,
+        allow_indicative_proxy=allow_indicative_proxy,
     )
 
 
@@ -144,7 +146,7 @@ class TestFinnhubDataPath:
         trades = [_ar_trade()]
         hedges: list[HedgeRow] = []
         market = _market(data_class="INDICATIVE_FALLBACK")
-        policy = _policy()
+        policy = _policy(allow_indicative_proxy=True)  # sandbox: allow indicative proxy
         report = validate_all(trades, hedges, market, policy)
         # Must PASS (no critical errors)
         assert report.status == "PASS", f"Unexpected FAIL: {report.errors}"
@@ -613,7 +615,7 @@ class TestValidatorNewCodes:
     def test_v022_fires_warning_for_indicative_fallback(self) -> None:
         trades = [_ar_trade()]
         market = _market(data_class="INDICATIVE_FALLBACK")
-        policy = _policy()
+        policy = _policy(allow_indicative_proxy=True)  # sandbox: gate open, expect only WARNING
         report = validate_all(trades, [], market, policy)
         assert report.status == "PASS"
         assert any("V-022" in w for w in report.warnings)
@@ -621,7 +623,7 @@ class TestValidatorNewCodes:
     def test_v022_message_contains_indicative_fallback_text(self) -> None:
         trades = [_ar_trade()]
         market = _market(data_class="INDICATIVE_FALLBACK")
-        policy = _policy()
+        policy = _policy(allow_indicative_proxy=True)  # sandbox: gate open, inspect warning text
         report = validate_all(trades, [], market, policy)
         v022_warns = [w for w in report.warnings if "V-022" in w]
         assert v022_warns, "V-022 warning not found"
@@ -712,7 +714,7 @@ class TestValidatorNewCodes:
             provider_metadata={"data_class": "INDICATIVE_FALLBACK", "primary_currency": "MXN"},
         )
         trades = [_ar_trade()]
-        report = validate_all(trades, [], market, _policy())
+        report = validate_all(trades, [], market, _policy(allow_indicative_proxy=True))  # sandbox: gate open
         assert report.status == "PASS"
         assert any("V-022" in w for w in report.warnings)
         assert any("V-023" in w for w in report.warnings)

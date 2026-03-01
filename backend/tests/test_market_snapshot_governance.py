@@ -486,7 +486,7 @@ class TestRegressionGuards:
         assert not any(e.code == "V-022" for e in report.errors)
 
     def test_v023_fires_for_stale_market(self) -> None:
-        """V-023 must fire for market as_of older than 24h."""
+        """V-023 must fire for market as_of older than 24h (goes to report.warnings)."""
         old_as_of = "2020-01-01T00:00:00Z"
         payload = _live_market_payload(as_of=old_as_of)
         market = _market_snapshot(payload)
@@ -494,7 +494,8 @@ class TestRegressionGuards:
         trades = _minimal_trades()
 
         report = validate_all(trades, [], market, policy)
-        assert any(e.code == "V-023" for e in report.errors)
+        # V-023 is WARNING → goes to report.warnings as "V-023: ..." string
+        assert any("V-023" in w for w in report.warnings),             f"Expected V-023 in warnings, got: {report.warnings}"
 
     def test_v022_v023_are_warnings_not_criticals(self) -> None:
         """V-022 and V-023 are WARNINGs — they appear in report.warnings, not report.errors."""
