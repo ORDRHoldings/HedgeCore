@@ -18,7 +18,7 @@ import type {
   CalculateResponse,
   BucketResult,
 } from "@/api/types";
-import { calculate } from "@/api/client";
+import { calculate, persistMarketSnapshot } from "@/api/client";
 
 /* ── Design tokens ─────────────────────────────────────────────────────── */
 const S = {
@@ -51,6 +51,7 @@ interface CurrencyCalcResult {
   currency: string;
   positions: PositionRow[];
   market: MarketSnapshot;
+  snapshotId: string | null;
   result: CalculateResponse | null;
   error: string | null;
   status: "pending" | "running" | "done" | "error";
@@ -120,10 +121,20 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
           market = buildFallbackMarket(currency, valueDates);
         }
 
+        // Persist market snapshot to backend WORM store (non-fatal)
+        let snapshotId: string | null = null;
+        try {
+          const snap = await persistMarketSnapshot(market);
+          snapshotId = snap.snapshot_id;
+        } catch {
+          // Snapshot persistence is best-effort; calculation still proceeds
+        }
+
         results.push({
           currency,
           positions: posGroup,
           market,
+          snapshotId,
           result: null,
           error: null,
           status: "pending",
@@ -174,7 +185,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
       }));
 
       try {
-        const res = await calculate({ trades, hedges: [], market: cr.market, policy });
+        const res = await calculate({ trades, hedges: [], market: cr.market, policy, ...(cr.snapshotId ? { market_snapshot_id: cr.snapshotId } : {}) });
         updated[i] = { ...cr, result: res, status: "done" };
       } catch (err: unknown) {
         let msg = "Calculation error";

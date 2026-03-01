@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { CalculateRequest, CalculateResponse } from './types';
+import type { CalculateRequest, CalculateResponse, MarketSnapshot } from './types';
 
 // ── Base URL resolution ─────────────────────────────────────────────────────
 // Priority: NEXT_PUBLIC_API_URL env var > detect production hostname > local proxy
@@ -27,6 +27,31 @@ api.interceptors.request.use((config) => {
 
 export async function calculate(req: CalculateRequest): Promise<CalculateResponse> {
   const { data } = await api.post<CalculateResponse>('/calculate', req);
+  return data;
+}
+
+export interface MarketSnapshotResponse {
+  snapshot_id: string;
+  market_snapshot_hash: string;
+  provider: string;
+  data_class: string;
+  as_of: string;
+  fetched_at: string;
+  primary_currency: string;
+  spot_rate: number;
+  is_synthetic_forward: boolean;
+  payload: MarketSnapshot;
+}
+
+/**
+ * Persist a MarketSnapshot payload to the backend WORM store.
+ * Returns the snapshot_id (UUID) which can be passed to calculate().
+ * Idempotent: same payload → same snapshot_id returned.
+ */
+export async function persistMarketSnapshot(
+  payload: MarketSnapshot,
+): Promise<MarketSnapshotResponse> {
+  const { data } = await api.post<MarketSnapshotResponse>('/market-snapshots', { payload });
   return data;
 }
 
