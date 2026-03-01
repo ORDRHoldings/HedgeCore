@@ -12,9 +12,6 @@ const nextConfig = {
   async redirects() {
     return [
       { source: "/execution-desk", destination: "/hedge-desk", permanent: false },
-      { source: "/execution", destination: "/hedge-desk", permanent: false },
-      { source: "/sandbox", destination: "/methodology", permanent: false },
-      { source: "/sandbox/:path*", destination: "/methodology/:path*", permanent: false },
       { source: "/currency-fx", destination: "/fx-market", permanent: false },
       { source: "/hedges", destination: "/position-desk", permanent: false },
     ];
