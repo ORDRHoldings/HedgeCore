@@ -41,16 +41,18 @@ interface Props {
 export default function OnboardingModal({ userId }: Props) {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
+  const [neverShow, setNeverShow] = useState(false);
 
   useEffect(() => {
-    const key = `onboarded_${userId}`;
-    if (!localStorage.getItem(key)) {
-      setVisible(true);
-    }
+    // Only suppress if user explicitly opted out — show by default every login
+    const suppressed = localStorage.getItem(`onboarding_suppressed_${userId}`);
+    if (!suppressed) setVisible(true);
   }, [userId]);
 
   function dismiss() {
-    localStorage.setItem(`onboarded_${userId}`, "1");
+    if (neverShow) {
+      localStorage.setItem(`onboarding_suppressed_${userId}`, "1");
+    }
     setVisible(false);
   }
 
@@ -149,19 +151,29 @@ export default function OnboardingModal({ userId }: Props) {
         </div>
 
         {/* Footer */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+          {/* Never show again checkbox */}
+          <label style={{
+            display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
             fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-            fontSize: 12, color: "var(--text-tertiary)",
+            fontSize: 12, color: "var(--text-secondary)", userSelect: "none",
           }}>
-            This guide won&apos;t appear again after dismissal.
-          </div>
+            <input
+              type="checkbox"
+              checked={neverShow}
+              onChange={(e) => setNeverShow(e.target.checked)}
+              style={{ accentColor: "var(--accent-cyan)", width: 13, height: 13, cursor: "pointer" }}
+            />
+            Don&apos;t show this again
+          </label>
+
           <button
             onClick={dismiss}
             style={{
               background: "var(--accent-cyan)", border: "none", color: "var(--bg-deep)",
               fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 11,
               padding: "8px 20px", cursor: "pointer", borderRadius: 2, fontWeight: 600,
+              flexShrink: 0,
             }}
           >
             GOT IT, DISMISS
