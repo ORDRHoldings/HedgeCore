@@ -220,13 +220,10 @@ interface NavSection {
 const NAV: NavSection[] = [
   {
     label: "Dashboard", href: "/dashboard", icon: Ic.dashboard,
-    prefixes: ["/dashboard", "/portfolio-risk", "/scenario-studio", "/polisophic"],
+    prefixes: ["/dashboard"],
     header: "Overview",
     items: [
-      { label: "Summary",         desc: "KPIs, P&L snapshot, FX exposure heat-map", href: "/dashboard",       icon: Ic.dashboard },
-      { label: "Portfolio Risk",  desc: "Delta, vega, correlation across positions",  href: "/portfolio-risk", icon: Ic.bar_chart, badge: "RISK",  badgeColor: S.amber },
-      { label: "Scenario Studio", desc: "Monte Carlo & stress-test simulations",      href: "/scenario-studio",icon: Ic.lightning, badge: "SIM",   badgeColor: S.cyan  },
-      { label: "Polisophic",      desc: "Political & macro risk intelligence feed",   href: "/polisophic",     icon: Ic.governance, badge: "RISK", badgeColor: S.amber },
+      { label: "Summary", desc: "KPIs, P&L snapshot, FX exposure heat-map", href: "/dashboard", icon: Ic.dashboard },
     ],
   },
   {
@@ -278,6 +275,16 @@ const NAV: NavSection[] = [
       { label: "Saved Reports",        desc: "Your saved, versioned, and scheduled reports",                    href: "/reports?view=saved",     icon: Ic.shield,     badge: "SAVED",   badgeColor: S.cyan  },
       { label: "Hedge Plan Report",    desc: "Full hedge schedule with rationale — results view",               href: "/results",                icon: Ic.bar_chart },
       { label: "Committee Pack",       desc: "Print-ready IFRS 9 §B6.4 hedge effectiveness pack — PDF export", href: "/committee-pack",         icon: Ic.download,   badge: "PDF",     badgeColor: S.amber },
+    ],
+  },
+  {
+    label: "Analytics", href: "/portfolio-risk", icon: Ic.bar_chart,
+    prefixes: ["/portfolio-risk", "/scenario-studio", "/polisophic"],
+    header: "Risk & Analytics",
+    items: [
+      { label: "Portfolio Risk",  desc: "Delta, vega, correlation across positions — R1–R8 taxonomy", href: "/portfolio-risk",  icon: Ic.bar_chart,  badge: "RISK", badgeColor: S.amber },
+      { label: "Scenario Studio", desc: "Monte Carlo & stress-test simulations",                       href: "/scenario-studio", icon: Ic.lightning,  badge: "SIM",  badgeColor: S.cyan  },
+      { label: "Polisophic",      desc: "Political & macro risk intelligence feed",                    href: "/polisophic",      icon: Ic.governance, badge: "RISK", badgeColor: S.amber },
     ],
   },
   {

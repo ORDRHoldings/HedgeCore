@@ -73,7 +73,7 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 | ~~L-12~~ | ~~Dual-key approval for positions above configurable USD threshold~~ | Security | MEDIUM | ✅ DONE 2026-02-28 — 6 dual-key columns on ExecutionProposal, second-approve endpoint, dual_key_threshold_usd in PolicyConfig, staging queue badges |
 | ~~L-13~~ | ~~Progressive disclosure redesign (simplified home screen for first-time users)~~ | UX | LOW | ✅ DONE 2026-02-28 — OnboardingModal.tsx created; mounted in dashboard/page.tsx |
 | ~~L-14~~ | ~~Save report versioning (v1, v2…) instead of localStorage overwrite~~ | Reports | MEDIUM | ✅ DONE 2026-02-28 — SAVE VERSION button + collapsible SAVED REPORTS panel in ReportsContainer |
-| L-15 | Portfolio Risk and Scenario Studio as "Analytics" sub-section (not under Dashboard) | IA | LOW |
+| ~~L-15~~ | ~~Portfolio Risk and Scenario Studio as "Analytics" sub-section (not under Dashboard)~~ | IA | LOW | ✅ DONE 2026-02-28 — new Analytics nav section (Portfolio Risk, Scenario Studio, Polisophic); Dashboard reduced to Summary only |
 
 ---
 
@@ -110,3 +110,4 @@ These are blocking issues. Complete before any stakeholder or investor demo.
 | 2026-02-28 | X-08 through X-20 (select-all confirmed, SIM DATA badges, drag handles, inline validation, input summary, confirm previews, summary modal, show/hide rejected, keyboard shortcuts, aria-labels, audit events, rate limiting, 5-char rejection validation) |
 | 2026-02-28 | L-06 (XLSX export — exportPositionsXlsx + exportDataXlsx + XLSX buttons on all 5 report sections), L-08 (confirmed done — ON GRID badge existed), L-13 (OnboardingModal — 4-step first-time guide), L-14 (report versioning — SAVE VERSION + SAVED REPORTS collapsible panel) |
 | 2026-02-28 | L-01 (POST /v1/risk-check — decision_gate wrapper), L-02 (MARKET_SOURCE audit trace), L-03 (StepExecute 4-eyes enforcement), L-04 (policy checksum modal), L-05 (/hedges redirect + /staging nav), L-07 (Committee Pack WCAG AA), L-09 (Dashboard refresh), L-10 (HedgeWiki print), L-11 (full TOTP MFA stack), L-12 (dual-key approval) — v1.0 Production criteria met |
+| 2026-02-28 | L-15 (Analytics nav section — Portfolio Risk, Scenario Studio, Polisophic promoted; Dashboard → Summary only) — BACKLOG COMPLETE 15/15 |
