@@ -1014,6 +1014,46 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
     FOR EACH ROW EXECUTE FUNCTION ticket_events_worm();
 EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
 
+        # ── MarketSnapshot WORM store (backend-authoritative market data) ────────
+        # Each row is a timestamped, hashed, tenant-scoped market data capture.
+        # UNIQUE(company_id, market_snapshot_hash) prevents duplicate ingestion.
+        """CREATE TABLE IF NOT EXISTS market_snapshots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    market_snapshot_hash VARCHAR(64) NOT NULL,
+    provider VARCHAR(64) NOT NULL DEFAULT 'unknown',
+    data_class VARCHAR(32) NOT NULL DEFAULT 'INDICATIVE_FALLBACK',
+    as_of TIMESTAMPTZ NOT NULL,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    primary_currency VARCHAR(8) NOT NULL DEFAULT 'MXN',
+    spot_rate DOUBLE PRECISION NOT NULL,
+    payload JSONB NOT NULL,
+    canonical_payload_json TEXT NOT NULL,
+    raw_payload_hash VARCHAR(64),
+    is_synthetic_forward BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(company_id, market_snapshot_hash))""",
+        "CREATE INDEX IF NOT EXISTS ix_market_snapshots_company_as_of ON market_snapshots(company_id, as_of)",
+        "CREATE INDEX IF NOT EXISTS ix_market_snapshots_company_currency ON market_snapshots(company_id, primary_currency)",
+
+        # WORM: DB-level triggers prevent UPDATE/DELETE on market_snapshots
+        """CREATE OR REPLACE FUNCTION market_snapshots_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'market_snapshots is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_market_snapshots_no_update
+    BEFORE UPDATE ON market_snapshots
+    FOR EACH ROW EXECUTE FUNCTION market_snapshots_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_market_snapshots_no_delete
+    BEFORE DELETE ON market_snapshots
+    FOR EACH ROW EXECUTE FUNCTION market_snapshots_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
     ]
 
     for stmt in raw_ddl:

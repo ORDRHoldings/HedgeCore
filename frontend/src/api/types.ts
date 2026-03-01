@@ -77,6 +77,8 @@ export interface CalculateRequest {
   hedges: HedgeRow[];
   market: MarketSnapshot;
   policy: PolicyConfig;
+  /** Optional: ID of a previously-persisted WORM market snapshot. */
+  market_snapshot_id?: string;
 }
 
 export interface ValidationErrorDetail {
@@ -158,6 +160,14 @@ export interface RunEnvelope {
   hedges_hash: string;
   market_hash: string;
   policy_hash: string;
+  // Market snapshot provenance (populated when backend WORM snapshot used)
+  market_snapshot_id?: string | null;
+  market_snapshot_hash?: string | null;
+  market_provider?: string | null;
+  market_fetched_at?: string | null;
+  market_as_of?: string | null;
+  market_data_class?: string | null;
+  market_is_synthetic_forward?: boolean | null;
 }
 
 export interface TraceEvent {

@@ -1,4 +1,4 @@
-"""Fail-closed validator with 21 rejection codes.
+"""Fail-closed validator with 24 rejection codes.
 
 Any CRITICAL error halts the pipeline. Warnings are logged but non-blocking.
 
@@ -471,5 +471,26 @@ def _cross_validate(
                     severity=Severity.WARNING,
                 )
             )
+
+    # V-024: synthetic/indicative proxy production gate.
+    # When market data_class is INDICATIVE_FALLBACK and the policy does NOT
+    # explicitly allow indicative proxy (allow_indicative_proxy=False, the
+    # default), reject with CRITICAL to prevent production runs on stale/fake
+    # rates. This is a hard, fail-closed gate.
+    _data_class: str | None = (market.provider_metadata or {}).get("data_class")
+    if _data_class == "INDICATIVE_FALLBACK" and not getattr(policy, "allow_indicative_proxy", False):
+        errors.append(
+            ValidationErrorDetail(
+                code="V-024",
+                field="market.provider_metadata.data_class",
+                message=(
+                    "Production execution rejected: market data is INDICATIVE_FALLBACK "
+                    "and policy.allow_indicative_proxy=False (default). "
+                    "Either configure a live market data source (FINNHUB_API_KEY) "
+                    "or set policy.allow_indicative_proxy=True for sandbox/demo workflows."
+                ),
+                severity=Severity.CRITICAL,
+            )
+        )
 
     return errors

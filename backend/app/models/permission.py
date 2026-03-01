@@ -310,6 +310,10 @@ SEED_PERMISSIONS: list[tuple[str, str, str, str]] = [
 
     ("market.autofill", "market", "autofill", "Trigger market data autofill"),
 
+    ("market.snapshot.create", "market", "snapshot.create", "Persist market snapshots to WORM store"),
+
+    ("market.snapshot.read", "market", "snapshot.read", "Read market snapshots from WORM store"),
+
 
 
     # Reports
@@ -391,6 +395,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "policy.view", "policy.edit", "policy.activate",
 
         "market.view", "market.edit", "market.autofill",
+        "market.snapshot.create", "market.snapshot.read",
 
         "reports.view_own_branch", "reports.view_all_branches",
 
@@ -419,6 +424,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "policy.view", "policy.edit", "policy.activate", "policy.create_preset",
 
         "market.view", "market.autofill",
+        "market.snapshot.create", "market.snapshot.read",
 
         "reports.view_own_branch", "reports.export_pdf",
 

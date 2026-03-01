@@ -80,6 +80,14 @@ class RunEnvelope(BaseModel):
     hedges_hash: str
     market_hash: str
     policy_hash: str
+    # Market snapshot provenance (populated when backend-authoritative snapshot is used)
+    market_snapshot_id: str | None = None
+    market_snapshot_hash: str | None = None
+    market_provider: str | None = None
+    market_fetched_at: str | None = None
+    market_as_of: str | None = None
+    market_data_class: str | None = None
+    market_is_synthetic_forward: bool | None = None
 
 
 class TraceEvent(BaseModel):
@@ -99,6 +107,10 @@ class CalculateRequest(BaseModel):
     hedges: list  # Will accept HedgeRow dicts
     market: dict
     policy: dict
+    # Optional: pass a previously-persisted market snapshot ID instead of
+    # embedding raw market data. When provided, the backend loads the snapshot
+    # from the WORM store and uses it as the authoritative market input.
+    market_snapshot_id: str | None = None
 
 
 class CalculateResponse(BaseModel):

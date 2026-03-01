@@ -15,7 +15,19 @@ def build_run_envelope(
     market_raw: dict,
     policy_raw: dict,
     outputs_raw: dict,
+    snapshot_meta: dict | None = None,
 ) -> RunEnvelope:
+    """Build a RunEnvelope with SHA-256 hashes for all inputs and outputs.
+
+    snapshot_meta (optional): dict containing market snapshot provenance fields.
+    When provided, these fields are embedded in the RunEnvelope so the exact
+    market data source can be verified for audit/replay without re-fetching.
+
+    Expected keys in snapshot_meta (all optional):
+        market_snapshot_id, market_snapshot_hash, market_provider,
+        market_fetched_at, market_as_of, market_data_class,
+        market_is_synthetic_forward
+    """
     trades_hash = sha256_of_list(trades_raw)
     hedges_hash = sha256_of_list(hedges_raw)
     market_hash = sha256_of_dict(market_raw)
@@ -32,6 +44,7 @@ def build_run_envelope(
 
     run_hash = sha256_of_dict({"inputs_hash": inputs_hash, "outputs_hash": outputs_hash})
 
+    meta = snapshot_meta or {}
     return RunEnvelope(
         run_id=run_id,
         timestamp=datetime.now(timezone.utc),
@@ -43,6 +56,13 @@ def build_run_envelope(
         hedges_hash=hedges_hash,
         market_hash=market_hash,
         policy_hash=policy_hash,
+        market_snapshot_id=meta.get("market_snapshot_id"),
+        market_snapshot_hash=meta.get("market_snapshot_hash"),
+        market_provider=meta.get("market_provider"),
+        market_fetched_at=meta.get("market_fetched_at"),
+        market_as_of=meta.get("market_as_of"),
+        market_data_class=meta.get("market_data_class"),
+        market_is_synthetic_forward=meta.get("market_is_synthetic_forward"),
     )
 
 
