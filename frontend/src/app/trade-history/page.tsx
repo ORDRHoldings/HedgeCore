@@ -132,6 +132,7 @@ export default function TradeHistoryPage() {
   const [error, setError]         = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusTab>("ALL");
   const [sortKey, setSortKey]     = useState<SortKey>("newest");
+  const [integrityStatus, setIntegrityStatus] = useState<"idle" | "checking" | "valid" | "broken">("idle");
 
   // Auth guard
   useEffect(() => {
@@ -211,6 +212,37 @@ export default function TradeHistoryPage() {
     () => proposals.filter((p) => p.status === "PROPOSED" || p.status === "APPROVED").length,
     [proposals]
   );
+
+  // Aggregate analytics
+  const avgSlippage = useMemo(() => {
+    const withSlippage = proposals.filter(p => p.slippage_bps != null);
+    if (withSlippage.length === 0) return 0;
+    return withSlippage.reduce((s, p) => s + (p.slippage_bps ?? 0), 0) / withSlippage.length;
+  }, [proposals]);
+
+  const complianceRate = useMemo(() => {
+    if (proposals.length === 0) return 100;
+    return (proposals.filter(p => {
+      const v = (p.risk_verdict ?? "").toUpperCase();
+      return v === "APPROVE" || v === "PASS" || v === "APPROVED";
+    }).length / proposals.length) * 100;
+  }, [proposals]);
+
+  const handleVerifyIntegrity = useCallback(async () => {
+    if (!token) return;
+    setIntegrityStatus("checking");
+    try {
+      const res = await dashboardFetch("/v1/audit/chain/verify", token);
+      if (res.ok) {
+        const data = await res.json() as Record<string, unknown>;
+        setIntegrityStatus(data.valid ? "valid" : "broken");
+      } else {
+        setIntegrityStatus("broken");
+      }
+    } catch {
+      setIntegrityStatus("broken");
+    }
+  }, [token]);
 
   if (!user) return null;
 
@@ -429,6 +461,46 @@ export default function TradeHistoryPage() {
         </select>
       </div>
 
+      {/* ── 2.5. AGGREGATE ANALYTICS + INTEGRITY ─────────────────────── */}
+      <div style={{ padding: "12px 20px", background: S.bgDeep, borderBottom: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* Stats bar */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+          {[
+            { label: "TOTAL EXECUTED",   value: String(proposals.filter(p => p.status === "EXECUTED").length),      color: S.cyan },
+            { label: "AVG SLIPPAGE",     value: avgSlippage === 0 ? "—" : `${avgSlippage.toFixed(1)} bps`,          color: Math.abs(avgSlippage) < 3 ? S.green : S.amber },
+            { label: "PENDING APPROVAL", value: String(pendingCount),                                                color: pendingCount > 0 ? S.amber : S.green },
+            { label: "FIRST-PASS RATE",  value: `${complianceRate.toFixed(0)}%`,                                    color: complianceRate > 90 ? S.green : S.amber },
+          ].map(stat => (
+            <div key={stat.label} style={{ padding: "10px 14px", background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 4 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase" }}>
+                {stat.label}
+              </div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 18, fontWeight: 700, color: stat.color, marginTop: 4 }}>
+                {stat.value}
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Integrity button */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={handleVerifyIntegrity}
+            disabled={integrityStatus === "checking"}
+            style={{
+              fontFamily: S.fontMono, fontSize: 10, fontWeight: 600,
+              color: S.cyan, background: "transparent",
+              border: `1px solid rgba(0,255,255,0.3)`, padding: "5px 12px",
+              cursor: integrityStatus === "checking" ? "wait" : "pointer", letterSpacing: "0.06em",
+            }}
+          >
+            🔗 VERIFY HASH CHAIN INTEGRITY
+          </button>
+          {integrityStatus === "checking" && <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>Verifying hash chain...</span>}
+          {integrityStatus === "valid"    && <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.green }}>✓ Hash chain integrity verified — all records authentic</span>}
+          {integrityStatus === "broken"   && <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.red }}>✕ Hash chain integrity violation detected</span>}
+        </div>
+      </div>
+
       {/* ── 3. DATA TABLE ────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflowX: "auto" }}>
         {/* Loading */}
@@ -620,7 +692,11 @@ export default function TradeHistoryPage() {
                           marginTop: 1,
                         }}
                       >
-                        {p.proposal_hash ? p.proposal_hash.slice(0, 6) : "—"}
+                        {[
+                          p.proposal_hash ? `prop: ${p.proposal_hash.slice(0, 8)}…` : null,
+                          p.approval_hash ? `appr: ${p.approval_hash.slice(0, 8)}…` : null,
+                          p.fill_hash     ? `fill: ${p.fill_hash.slice(0, 8)}…`     : null,
+                        ].filter(Boolean).join(" → ") || "—"}
                       </div>
                     </td>
 

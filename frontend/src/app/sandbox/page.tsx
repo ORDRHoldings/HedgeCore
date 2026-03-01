@@ -595,7 +595,7 @@ function SandboxPageInner() {
           {!sandboxResult && (
             <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
-                SANDBOX STATUS
+                SIMULATION LAB STATUS
               </div>
               <div style={{
                 padding: "8px 12px", border: `1px solid ${S.soft}`, borderRadius: 3,
