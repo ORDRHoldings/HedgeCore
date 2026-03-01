@@ -29,6 +29,7 @@ import UsdExposureRadarWidget from "@/components/dashboard/widgets/UsdExposureRa
 import RiskPulseWidget from "@/components/dashboard/widgets/RiskPulseWidget";
 import FxNewsWidget from "@/components/dashboard/widgets/FxNewsWidget";
 import EconCalendarWidget from "@/components/dashboard/widgets/EconCalendarWidget";
+import HedgeMonitorWidget from "@/components/dashboard/widgets/HedgeMonitorWidget";
 import WidgetErrorBoundary from "@/components/ui/WidgetErrorBoundary";
 import OnboardingModal from "@/components/onboarding/OnboardingModal";
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -52,6 +53,7 @@ const WIDGET_COMPONENTS: Record<WidgetId, React.ComponentType<WidgetComponentPro
   command_hub: CommandHubWidget, geopolitical: GeoPoliticalWidget,
   usd_exposure_radar: UsdExposureRadarWidget,
   risk_pulse: RiskPulseWidget, fx_news: FxNewsWidget, econ_calendar: EconCalendarWidget,
+  hedge_monitor: HedgeMonitorWidget,
 };
 // Bump this whenever the default layout changes — forces all users to get the new default
 const LAYOUT_VERSION = 7;
