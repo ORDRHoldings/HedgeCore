@@ -64,6 +64,10 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             "/api/openapi.json",
             "/api/health",
             "/api/system/health",
+            # Schema-health: public so unauthenticated load-balancers / deployment
+            # scripts can poll it without credentials.  Response is REDACTED for
+            # unauthenticated callers (booleans only — no object names).
+            "/api/system/schema-health",
         }
 
         # Public prefixes (for swagger assets + oauth redirect + auth)

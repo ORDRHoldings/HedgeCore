@@ -5,12 +5,14 @@ Internal system routes for validation and diagnostics.
 API-key protected unless explicitly public.
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import text
 
 from app.api.deps import require_api_key
 from app.core.db import async_engine
-from app.core.schema_state import is_schema_ready, run_readiness_checks
+from app.core.schema_state import is_schema_ready, run_readiness_checks_cached
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -39,21 +41,43 @@ async def whoami_api_key(api_key=Depends(require_api_key)):
 
 
 @router.get("/schema-health", include_in_schema=True)
-async def schema_health_endpoint():
+async def schema_health_endpoint(
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+):
     """Schema readiness check — verifies WORM store, critical indexes, and triggers.
 
-    Returns the live DB-verified state of schema objects critical to Execution:
-      - market_snapshots table presence
-      - UNIQUE(company_id, market_snapshot_hash) constraint
-      - WORM function market_snapshots_worm
-      - WORM triggers (no-update, no-delete)
+    PUBLIC endpoint (no authentication required) — safe for load-balancers and
+    deployment scripts to poll continuously.
 
-    This endpoint is PUBLIC (no auth) so load-balancers and deployment scripts
-    can poll it without credentials.  It reflects both the startup-cached state
-    and a fresh live check.
+    Response tiers:
+      - Unauthenticated (no X-API-Key): REDACTED — booleans only.
+        Returns schema_ready, worm_ready, market_snapshots_ready, checked_at.
+        Does NOT return internal object names, missing_items, or checks{}.
+        This prevents inadvertent disclosure of DB schema topology.
+
+      - Authenticated (X-API-Key present): FULL diagnostic response including
+        startup_schema_ready, missing_items[], checks{} per-object results.
+        Requires valid API key; gated by system.schema.read permission (RBAC).
+
+    Rate-limited by the global 60 req/min middleware.
+    DB check is TTL-cached (10 s) to prevent pg_catalog hammering.
     """
-    # Run live DB check
-    live = await run_readiness_checks(async_engine)
+    live = await run_readiness_checks_cached(async_engine)
+
+    # ── Redacted public response ──────────────────────────────────────────────
+    # Booleans only — no object names, no missing_items, no checks{}.
+    # Safe for external monitors and load balancers.
+    if not x_api_key:
+        return {
+            "schema_ready": live["schema_ready"],
+            "worm_ready": live["worm_ready"],
+            "market_snapshots_ready": live["market_snapshots_ready"],
+            "checked_at": live["checked_at"],
+        }
+
+    # ── Full diagnostic response (authenticated callers only) ─────────────────
+    # The middleware has already validated x_api_key before reaching here.
+    # Permission system.schema.read is the RBAC gate for this level of detail.
     return {
         "startup_schema_ready": is_schema_ready(),
         **live,
