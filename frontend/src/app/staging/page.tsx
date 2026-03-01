@@ -281,17 +281,17 @@ export default function StagingListPage() {
               No staged artifacts
             </div>
             <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, marginBottom: 20 }}>
-              Submit a proposal from the Sandbox to create a staged artifact for governance review.
+              Submit proposals from the Execution Desk to create staged artifacts for governance review.
             </div>
             <button
-              onClick={() => router.push("/sandbox")}
+              onClick={() => router.push("/execution-desk")}
               style={{
                 fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.07em", fontWeight: 700,
                 padding: "7px 20px", border: `1px solid ${S.cyan}`,
                 color: S.bgDeep, background: S.cyan, cursor: "pointer", borderRadius: 2,
               }}
             >
-              OPEN SANDBOX →
+              OPEN EXECUTION DESK →
             </button>
           </div>
         ) : sorted.length === 0 ? (

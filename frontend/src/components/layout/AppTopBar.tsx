@@ -261,7 +261,7 @@ const NAV: NavSection[] = [
       { label: "Trade Desk",           desc: "Pre-flight auth checklist, DV01, ticket desk, IBKR handoff",  href: "/execution",         icon: Ic.lightning },
       { label: "Sandbox",             desc: "What-if calculator & backtest engine",                         href: "/sandbox",           icon: Ic.terminal,  badge: "DEV",  badgeColor: S.amber },
       { label: "FX Rates",            desc: "Live spot rates, forward curves, vol surface — position-aware",href: "/currency-fx",       icon: Ic.bar_chart },
-      { label: "Data Pipeline Log",   desc: "Connector import runs — CSV, ERP, SQL ingestion audit log",    href: "/execution-history", icon: Ic.clock,     badge: "LOG",  badgeColor: S.cyan  },
+      { label: "Import History",        desc: "Connector import runs — CSV, ERP, SQL ingestion audit log",    href: "/execution-history", icon: Ic.clock,     badge: "LOG",  badgeColor: S.cyan  },
     ],
   },
   {

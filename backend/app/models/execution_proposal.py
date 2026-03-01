@@ -259,6 +259,8 @@ class ExecutionProposal(Base):
     second_approval_notes = Column(String(1024), nullable=True)
     # SHA-256 that chains second approval to the primary approval_hash
     second_approval_hash  = Column(String(64), nullable=True)
+    # Risk check decision hash (links proposal to the risk gate verdict)
+    risk_decision_hash = Column(String(64), nullable=True)
 
 
 

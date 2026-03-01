@@ -976,6 +976,7 @@ async def _ensure_tables():
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approved_at TIMESTAMPTZ",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approval_notes VARCHAR(1024)",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approval_hash VARCHAR(64)",
+        "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS risk_decision_hash VARCHAR(64)",
 
         # ?? Support Ticketing (tenant-scoped, WORM events) ??
         """CREATE TABLE IF NOT EXISTS support_tickets (

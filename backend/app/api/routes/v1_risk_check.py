@@ -39,7 +39,7 @@ router = APIRouter(prefix="/v1", tags=["v1-risk-check"])
 
 
 class RiskCheckRequest(BaseModel):
-    policy_instance_id: UUID
+    policy_instance_id: Optional[UUID] = None
     position_ids: list[UUID] = Field(..., min_length=1, max_length=50)
     market_snapshot: dict
     hedge_plan: Optional[dict] = None
@@ -146,21 +146,36 @@ async def risk_check(
                 detail="Missing permission: calculate.recommend",
             )
 
-    # --- Resolve active policy revision for the given policy_instance_id ---
+    # --- Resolve active policy revision ---
     from app.services.policy_revision_service import get_latest_revision
+    from app.services import policy_service as _pol_svc
 
     pinned_revision_id: Optional[str] = None
     pinned_policy_hash: Optional[str] = None
 
-    latest_rev = await get_latest_revision(session, request.policy_instance_id)
-    if not latest_rev:
-        raise HTTPException(
-            status_code=404,
-            detail="No active policy revision for given policy_instance_id",
+    # If policy_instance_id not provided, derive from positions or active policy
+    resolved_policy_id = request.policy_instance_id
+    if resolved_policy_id is None:
+        # Try to derive from positions' policy_id field
+        q_pos = select(Position).where(
+            Position.id.in_(request.position_ids),
+            Position.company_id == current_user.company_id,
         )
+        pos_rows = list((await session.execute(q_pos)).scalars().all())
+        derived_ids = [p.policy_id for p in pos_rows if p.policy_id is not None]
+        if derived_ids:
+            resolved_policy_id = derived_ids[0]
+        else:
+            # Fallback: use active policy instance
+            active_inst = await _pol_svc.get_active_instance(session, current_user)
+            if active_inst:
+                resolved_policy_id = active_inst.id
 
-    pinned_revision_id = str(latest_rev.id)
-    pinned_policy_hash = latest_rev.policy_hash
+    if resolved_policy_id is not None:
+        latest_rev = await get_latest_revision(session, resolved_policy_id)
+        if latest_rev:
+            pinned_revision_id = str(latest_rev.id)
+            pinned_policy_hash = latest_rev.policy_hash
 
     # --- Fetch positions (tenant-scoped) ---
     q = select(Position).where(
@@ -196,7 +211,7 @@ async def risk_check(
     await _emit_risk_check_audit(
         session=session,
         user=current_user,
-        policy_instance_id=str(request.policy_instance_id),
+        policy_instance_id=str(resolved_policy_id) if resolved_policy_id else "unknown",
         verdict=result["verdict"],
         reason_count=len(result.get("reasons", [])),
         has_hedge_plan=request.hedge_plan is not None,

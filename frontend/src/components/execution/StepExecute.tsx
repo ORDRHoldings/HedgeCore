@@ -38,6 +38,7 @@ interface Props {
   calcResult: CalculateResponse | null;
   runId: string;
   token: string;
+  riskDecisionHash?: string | null;
   onBack: () => void;
   onComplete: () => void;
 }
@@ -158,7 +159,7 @@ function computeEconomics(cr: CalculateResponse): HedgeEconomics {
 
 /* ── Component ─────────────────────────────────────────────────────────── */
 export default function StepExecute({
-  positions, calcResult, runId, token, onBack, onComplete,
+  positions, calcResult, runId, token, riskDecisionHash, onBack, onComplete,
 }: Props) {
   const router = useRouter();
   const [submitPhase, setSubmitPhase] = useState<SubmitPhase>("idle");
@@ -321,6 +322,7 @@ export default function StepExecute({
             hedge_amount: firstBucket?.action_usd ?? null,
             hedge_rate: firstBucket?.forward_rate ?? null,
             run_id: effectiveRunId,
+            risk_decision_hash: riskDecisionHash ?? null,
             notes: "Submitted via Execution Desk",
           }),
         });
@@ -342,7 +344,7 @@ export default function StepExecute({
       setSubmitError(err instanceof Error ? err.message : "Submission failed");
       setSubmitPhase("error");
     }
-  }, [positions, calcResult, runId, token, onComplete]);
+  }, [positions, calcResult, runId, token, riskDecisionHash, onComplete]);
 
   /* ── Render ────────────────────────────────────────────────────────── */
   return (

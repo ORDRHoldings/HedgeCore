@@ -71,6 +71,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
   const [running, setRunning] = useState(false);
   const [marketLoading, setMarketLoading] = useState(true);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [marketDataFallback, setMarketDataFallback] = useState(false);
   const fetchedRef = useRef(false);
 
   /* ── Group positions by currency ────────────────────────────────────── */
@@ -142,6 +143,12 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
       }
 
       setCurrencyResults(results);
+      // Detect if any currency used a fallback (non-live) market data source
+      const anyFallback = results.some((r) => {
+        const src = String(r.market.provider_metadata?.source ?? "fallback");
+        return !src.includes("live");
+      });
+      setMarketDataFallback(anyFallback);
       setMarketLoading(false);
     }
 
@@ -357,6 +364,22 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
                 );
               })}
             </div>
+
+            {/* Fallback market data warning banner */}
+            {marketDataFallback && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                marginBottom: 10,
+                background: "rgba(251,191,36,0.08)",
+                border: "1px solid var(--accent-amber)",
+                color: "var(--accent-amber)",
+                fontFamily: S.fontMono,
+                fontSize: 11,
+                padding: "8px 16px",
+              }}>
+                ⚠ MARKET DATA: FALLBACK — Live rates unavailable, using last-known prices. Review spot rates before approving.
+              </div>
+            )}
           </>
         )}
 
