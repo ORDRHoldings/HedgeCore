@@ -24,6 +24,28 @@ const DEFAULT_POLICY: PolicyConfig = {
 // ─── Fallback spot rate (BIS-calibrated USD/MXN baseline) ─────────────────────
 const FALLBACK_SPOT_USDMXN = 18.97;
 
+// ─── Demo simulation payload (runs without prior position data) ────────────────
+const today = new Date();
+const m1 = new Date(today.getFullYear(), today.getMonth() + 1, 28).toISOString().slice(0, 10);
+const m2 = new Date(today.getFullYear(), today.getMonth() + 2, 28).toISOString().slice(0, 10);
+const m3 = new Date(today.getFullYear(), today.getMonth() + 3, 28).toISOString().slice(0, 10);
+const DEMO_REQUEST: CalculateRequest = {
+  trades: [
+    { record_id: "DEMO-001", entity: "DemoCompany", type: "AR",  currency: "MXN", amount: 5_000_000, value_date: m1, status: "CONFIRMED", description: "Demo Q+1 export receivable" },
+    { record_id: "DEMO-002", entity: "DemoCompany", type: "AP",  currency: "MXN", amount: 2_500_000, value_date: m2, status: "FORECAST",  description: "Demo supplier payment" },
+    { record_id: "DEMO-003", entity: "DemoCompany", type: "AR",  currency: "MXN", amount: 3_200_000, value_date: m3, status: "CONFIRMED", description: "Demo Q+3 export receivable" },
+    { record_id: "DEMO-004", entity: "DemoBranch",  type: "AP",  currency: "MXN", amount: 1_800_000, value_date: m2, status: "FORECAST",  description: "Demo branch import" },
+  ],
+  hedges: [],
+  market: {
+    as_of: today.toISOString().slice(0, 10),
+    spot_usdmxn: FALLBACK_SPOT_USDMXN,
+    forward_points_by_month: { [m1.slice(0, 7)]: 0.0220, [m2.slice(0, 7)]: 0.0440, [m3.slice(0, 7)]: 0.0660 },
+    provider_metadata: { source: "DEMO", primary_currency: "MXN" },
+  },
+  policy: DEFAULT_POLICY,
+};
+
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { SANDBOX_HELP } from "@/lib/help";
 
@@ -601,8 +623,22 @@ function SandboxPageInner() {
                 padding: "8px 12px", border: `1px solid ${S.soft}`, borderRadius: 3,
                 fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5,
               }}>
-                Load positions from the Position Desk to run the simulation engine. Live spot data is fetched automatically.
+                Load positions from the Position Desk, or run the built-in demo scenario below.
               </div>
+              <button
+                onClick={() => { if (token) dispatch(sandboxCalculateThunk({ request: DEMO_REQUEST, token })); }}
+                disabled={sandboxLoading || !token}
+                style={{
+                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                  padding: "7px 14px", border: `1px solid ${S.cyan}`,
+                  color: S.cyan, background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
+                  cursor: sandboxLoading || !token ? "not-allowed" : "pointer",
+                  opacity: sandboxLoading || !token ? 0.5 : 1,
+                  borderRadius: 2, transition: "all 0.12s",
+                }}
+              >
+                {sandboxLoading ? "RUNNING…" : "▶ RUN DEMO SIMULATION"}
+              </button>
               <DataSourceBadge status={liveStatus} fetchedAt={fetchedAt} />
               {liveSpot && (
                 <div style={{

@@ -223,10 +223,12 @@ interface NavSection {
 const NAV: NavSection[] = [
   {
     label: "Dashboard", href: "/dashboard", icon: Ic.dashboard,
-    prefixes: ["/dashboard"],
+    prefixes: ["/dashboard", "/portfolio-risk", "/polisophic"],
     header: "Overview",
     items: [
-      { label: "Summary", desc: "KPIs, P&L snapshot, FX exposure heat-map", href: "/dashboard", icon: Ic.dashboard },
+      { label: "Summary",        desc: "KPIs, P&L snapshot, FX exposure heat-map",                          href: "/dashboard",      icon: Ic.dashboard               },
+      { label: "Portfolio Risk", desc: "Delta, vega, correlation across positions — R1–R8 taxonomy",         href: "/portfolio-risk", icon: Ic.bar_chart, badge: "RISK",  badgeColor: S.amber },
+      { label: "Polisophic",     desc: "Political & macro risk intelligence feed",                            href: "/polisophic",     icon: Ic.governance, badge: "INTEL", badgeColor: S.amber },
     ],
   },
   {
@@ -288,14 +290,12 @@ const NAV: NavSection[] = [
   },
   {
     label: "Research", href: "/sandbox", icon: Ic.lightning,
-    prefixes: ["/sandbox", "/scenario-studio", "/methodology", "/portfolio-risk", "/polisophic"],
+    prefixes: ["/sandbox", "/scenario-studio", "/methodology"],
     header: "Research & Simulation",
     items: [
-      { label: "Simulation Lab",  desc: "Stress testing, crisis library, what-if, regulatory capital — 7-tab quant engine", href: "/sandbox",          icon: Ic.terminal,   badge: "LAB",  badgeColor: S.amber },
-      { label: "Scenario Studio", desc: "Monte Carlo & custom stress-test simulations",                                      href: "/scenario-studio",  icon: Ic.lightning,  badge: "SIM",  badgeColor: S.cyan  },
-      { label: "Portfolio Risk",  desc: "Delta, vega, correlation across positions — R1–R8 taxonomy",                        href: "/portfolio-risk",   icon: Ic.bar_chart,  badge: "RISK", badgeColor: S.amber },
-      { label: "Polisophic",      desc: "Political & macro risk intelligence feed",                                          href: "/polisophic",       icon: Ic.governance, badge: "INTEL",badgeColor: S.amber },
-      { label: "Methodology",     desc: "Calculation whitepaper — hedge formulas, instrument reference, engine architecture", href: "/methodology",      icon: Ic.book,       badge: "REF",  badgeColor: S.cyan  },
+      { label: "Simulation Lab",  desc: "Stress testing, crisis library, what-if, regulatory capital — 7-tab quant engine", href: "/sandbox",         icon: Ic.terminal,  badge: "LAB", badgeColor: S.amber },
+      { label: "Scenario Studio", desc: "Monte Carlo & custom stress-test simulations",                                      href: "/scenario-studio", icon: Ic.lightning, badge: "SIM", badgeColor: S.cyan  },
+      { label: "Methodology",     desc: "Calculation whitepaper — hedge formulas, instrument reference, engine architecture", href: "/methodology",     icon: Ic.book,      badge: "REF", badgeColor: S.cyan  },
     ],
   },
   {
