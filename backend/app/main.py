@@ -1062,6 +1062,24 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
     UNIQUE(company_id, market_snapshot_hash))""",
         "CREATE INDEX IF NOT EXISTS ix_market_snapshots_company_as_of ON market_snapshots(company_id, as_of)",
         "CREATE INDEX IF NOT EXISTS ix_market_snapshots_company_currency ON market_snapshots(company_id, primary_currency)",
+        # Named unique constraint required by schema readiness check (idempotent)
+        """DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'uix_market_snapshots_company_hash'
+      AND table_name = 'market_snapshots'
+  ) THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_indexes WHERE indexname = 'uix_market_snapshots_company_hash'
+    ) THEN
+      CREATE UNIQUE INDEX uix_market_snapshots_company_hash
+        ON market_snapshots(company_id, market_snapshot_hash);
+    END IF;
+    ALTER TABLE market_snapshots
+      ADD CONSTRAINT uix_market_snapshots_company_hash
+      UNIQUE USING INDEX uix_market_snapshots_company_hash;
+  END IF;
+END $$""",
 
         # WORM: DB-level triggers prevent UPDATE/DELETE on market_snapshots
         """CREATE OR REPLACE FUNCTION market_snapshots_worm()
