@@ -53,13 +53,22 @@ const WIDGET_COMPONENTS: Record<WidgetId, React.ComponentType<WidgetComponentPro
   usd_exposure_radar: UsdExposureRadarWidget,
   risk_pulse: RiskPulseWidget, fx_news: FxNewsWidget, econ_calendar: EconCalendarWidget,
 };
+// Bump this whenever the default layout changes — forces all users to get the new default
+const LAYOUT_VERSION = 3;
 const layoutKey = (uid: string) => `dashboard_layout_${uid}`;
 const helpOpenKey = (uid: string) => `dashboard_help_open_${uid}`;
 function saveLayout(uid: string, widgetIds: string[], grid: GridItem[]) {
-  try { localStorage.setItem(layoutKey(uid), JSON.stringify({ widgetIds, grid })); } catch {}
+  try { localStorage.setItem(layoutKey(uid), JSON.stringify({ widgetIds, grid, v: LAYOUT_VERSION })); } catch {}
 }
 function loadLayout(uid: string): { widgetIds: string[]; grid: GridItem[] } | null {
-  try { const r = localStorage.getItem(layoutKey(uid)); return r ? JSON.parse(r) : null; } catch { return null; }
+  try {
+    const r = localStorage.getItem(layoutKey(uid));
+    if (!r) return null;
+    const parsed = JSON.parse(r);
+    // Discard layouts saved before this version so users get the updated default
+    if ((parsed.v ?? 0) < LAYOUT_VERSION) return null;
+    return parsed;
+  } catch { return null; }
 }
 function toRGLLayout(items: GridItem[]): Layout[] {
   return items.map((item) => ({ i: item.i, x: item.x, y: item.y, w: item.w, h: item.h,
