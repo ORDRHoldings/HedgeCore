@@ -45,7 +45,7 @@ const fmtPct = new Intl.NumberFormat("en-US", {
 /* ── Props ─────────────────────────────────────────────────────────────── */
 interface Props {
   positions: PositionRow[];
-  calcResult: unknown;
+  calcResult: Record<string, unknown> | null;
   token: string;
   runId: string | null;
   onPass: (
@@ -73,7 +73,7 @@ const PHASE_LABELS: Record<Phase, string> = {
 /* ── Component ─────────────────────────────────────────────────────────── */
 export default function StepRiskCheck({
   positions,
-  calcResult: _calcResult,
+  calcResult,
   token,
   runId,
   onPass,
@@ -144,22 +144,41 @@ export default function StepRiskCheck({
       // Step 5: Backend risk-check gate (governance enforcement)
       if (token) {
         try {
-          // Build a minimal market_snapshot from positions
+          // Extract actual spot rates from calcResult if available
           const marketSnapshot: Record<string, number> = {};
-          for (const p of positions) {
-            if (p.currency && !marketSnapshot[`${p.currency}USD`]) {
-              marketSnapshot[`${p.currency}USD`] = 1; // placeholder — backend uses its own rates
+          if (calcResult?.market_snapshot && typeof calcResult.market_snapshot === 'object') {
+            const ms = calcResult.market_snapshot as Record<string, unknown>;
+            const spot = ms.spot_usdmxn;
+            if (typeof spot === 'number' && spot > 0) {
+              const pCcy = (ms.provider_metadata as Record<string, unknown>)?.primary_currency;
+              const ccy = typeof pCcy === 'string' ? pCcy : positions[0]?.currency ?? 'MXN';
+              marketSnapshot[`${ccy}USD`] = spot;
             }
           }
+          // Fallback: use position currencies with placeholder if no real data
+          if (Object.keys(marketSnapshot).length === 0) {
+            for (const p of positions) {
+              if (p.currency && !marketSnapshot[`${p.currency}USD`]) {
+                marketSnapshot[`${p.currency}USD`] = 1;
+              }
+            }
+          }
+
           const body: Record<string, unknown> = {
             position_ids: positions.map((p) => p.id),
             market_snapshot: marketSnapshot,
           };
-          // Include policy_instance_id if available from first position
+
+          // Pass actual hedge plan from Step 2
+          if (calcResult?.hedge_plan && typeof calcResult.hedge_plan === 'object') {
+            body.hedge_plan = calcResult.hedge_plan;
+          }
+
+          // Include policy_instance_id if available
           const policyId = (positions[0] as { policy_id?: string | null })?.policy_id;
           if (policyId) body.policy_instance_id = policyId;
-          // Include hedge plan if run_id available
-          if (runId) body.run_id = runId;
+          // Use only the primary run_id (strip semicolons for multi-currency)
+          if (runId) body.run_id = runId.includes(';') ? runId.split(';')[0] : runId;
 
           const { dashboardFetch } = await import("@/lib/api/dashboardClient");
           const res = await dashboardFetch("/v1/risk-check", token, {
@@ -185,7 +204,7 @@ export default function StepRiskCheck({
 
     runAll();
     return () => { cancelled = true; };
-  }, [positions]);
+  }, [positions, token, runId, calcResult]);
 
   /* ── Derived gate status ──────────────────────────────────────────── */
   const criticalFails = complianceChecks.filter(

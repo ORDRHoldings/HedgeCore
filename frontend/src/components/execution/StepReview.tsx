@@ -569,7 +569,10 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
         </div>
 
         {/* Section: Estimated VaR */}
-        <div style={{ padding: "14px 16px" }}>
+        <div
+          style={{ padding: "14px 16px" }}
+          title="Quick estimate: 2% of notional. Actual Monte Carlo VaR computed in Step 3."
+        >
           <div
             style={{
               fontFamily: S.fontMono,
@@ -581,7 +584,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
               marginBottom: 6,
             }}
           >
-            Estimated VaR 95%
+            VaR 95% (2% proxy)
           </div>
           <div
             style={{

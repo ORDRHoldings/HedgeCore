@@ -250,7 +250,7 @@ export default function StepExecute({
       ordType: "2" as const,
       price: parseFloat(agg.avgRate.toFixed(5)),
       timeInForce: "1" as const,
-      account: "DU1234567",
+      account: ibkrAccountId ?? "DU1234567",
       currency: "USD",
       transactTime: new Date().toISOString(),
       text: `ORDR Terminal: ${agg.side} ${agg.contracts}\u00D7${agg.symbol} ${agg.contractName}, settle ${agg.settlementMonth}`,
@@ -305,7 +305,14 @@ export default function StepExecute({
     );
     bodyLines.push("", `Total Contracts: ${totalContracts}`, `Total Notional: ${fmtNum.format(totalNotionalCovered)} ${primaryCcy}`, `Run ID: ${runId}`);
     const body = encodeURIComponent(bodyLines.join("\n"));
-    window.open(`mailto:fx-desk@company.com?subject=${subject}&body=${body}`, "_self");
+    const emailDest = (() => {
+      try {
+        const s = localStorage.getItem("ordr_settings");
+        const p = s ? JSON.parse(s) as { execution?: { fx_desk_email?: string } } : null;
+        return p?.execution?.fx_desk_email || "fx-desk@company.com";
+      } catch { return "fx-desk@company.com"; }
+    })();
+    window.open(`mailto:${emailDest}?subject=${subject}&body=${body}`, "_self");
   }, [aggregatedOrders, totalContracts, totalNotionalCovered, primaryCcy, runId]);
 
   /* ── Submit proposals via batch endpoint (atomic) ─────────────────── */
@@ -317,21 +324,26 @@ export default function StepExecute({
     setSubmitMessage(`Submitting ${positions.length} proposal${positions.length !== 1 ? "s" : ""} atomically...`);
 
     const effectiveRunId = runId.includes(";") ? runId.split(";")[0] : runId;
-    const buckets = calcResult?.hedge_plan?.buckets;
-    const firstBucket = buckets?.[0];
 
     try {
       const batchPayload = {
-        proposals: positions.map((position) => ({
-          position_id:        position.id,
-          execution_ref:      `EXEC-${effectiveRunId.slice(0, 8).toUpperCase()}-${position.id.slice(0, 4).toUpperCase()}`,
-          hedge_amount:       firstBucket?.action_usd ?? null,
-          hedge_rate:         firstBucket?.forward_rate ?? null,
-          run_id:             effectiveRunId,
-          risk_decision_hash: riskDecisionHash ?? null,
-          risk_verdict:       riskVerdict ?? null,
-          notes:              "Submitted via Execution Desk",
-        })),
+        proposals: positions.map((position) => {
+          // Find the bucket matching this position's currency
+          const buckets = calcResult?.hedge_plan?.buckets;
+          const matchingBucket = buckets?.find((b: { bucket: string }) =>
+            b.bucket.startsWith(position.currency) || b.bucket === position.currency
+          ) ?? buckets?.[0];
+          return {
+            position_id:        position.id,
+            execution_ref:      `EXEC-${effectiveRunId.slice(0, 8).toUpperCase()}-${position.id.slice(0, 4).toUpperCase()}`,
+            hedge_amount:       (matchingBucket as { action_usd?: number } | undefined)?.action_usd ?? null,
+            hedge_rate:         (matchingBucket as { forward_rate?: number } | undefined)?.forward_rate ?? null,
+            run_id:             effectiveRunId,
+            risk_decision_hash: riskDecisionHash ?? null,
+            risk_verdict:       riskVerdict ?? null,
+            notes:              "Submitted via Execution Desk",
+          };
+        }),
       };
 
       console.info("[StepExecute] POST /v1/proposals/batch", { runId: effectiveRunId, positionCount: positions.length });
@@ -360,13 +372,12 @@ export default function StepExecute({
       setCreatedProposalIds(ids);
       setSubmitMessage("Done");
       setSubmitPhase("submitted");
-      onComplete();
     } catch (err: unknown) {
       console.error("[StepExecute] Batch submission failed", { error: err });
       setSubmitError(err instanceof Error ? err.message : "Submission failed");
       setSubmitPhase("error");
     }
-  }, [positions, calcResult, runId, token, riskDecisionHash, riskVerdict, onComplete]);
+  }, [positions, calcResult, runId, token, riskDecisionHash, riskVerdict]);
 
   /* ── Render ────────────────────────────────────────────────────────── */
   return (
@@ -424,6 +435,18 @@ export default function StepExecute({
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
             >
               VIEW STAGING QUEUE &rarr;
+            </button>
+            <button
+              onClick={onComplete}
+              style={{
+                height: 36, padding: "0 20px", marginTop: 8,
+                background: "transparent", color: S.secondary,
+                border: `1px solid ${S.soft}`, borderRadius: 4,
+                fontFamily: S.fontMono, fontSize: 10,
+                cursor: "pointer",
+              }}
+            >
+              RETURN TO POSITION DESK &rarr;
             </button>
           </div>
         )}
