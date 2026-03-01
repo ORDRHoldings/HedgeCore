@@ -225,6 +225,16 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minH: 5,
     requiredPermission: null,
   },
+  {
+    id: "hedge_monitor",
+    title: "Hedge Monitor",
+    description: "Live MTM P&L, hedge effectiveness score, next roll date, and coverage — links to full Hedge Monitor page.",
+    defaultW: 6,
+    defaultH: 5,
+    minW: 4,
+    minH: 4,
+    requiredPermission: "trades.view",
+  },
 ];
 
 // ─── Default Layouts per Role ─────────────────────────────────────────────────

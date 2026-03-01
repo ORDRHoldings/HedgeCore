@@ -295,6 +295,7 @@ const NAV: NavSection[] = [
       { label: "Scenario Studio", desc: "Monte Carlo & custom stress-test simulations",                                      href: "/scenario-studio",  icon: Ic.lightning,  badge: "SIM",  badgeColor: S.cyan  },
       { label: "Portfolio Risk",  desc: "Delta, vega, correlation across positions — R1–R8 taxonomy",                        href: "/portfolio-risk",   icon: Ic.bar_chart,  badge: "RISK", badgeColor: S.amber },
       { label: "Polisophic",      desc: "Political & macro risk intelligence feed",                                          href: "/polisophic",       icon: Ic.governance, badge: "INTEL",badgeColor: S.amber },
+      { label: "Methodology",     desc: "Calculation whitepaper — hedge formulas, instrument reference, engine architecture", href: "/methodology",      icon: Ic.book,       badge: "REF",  badgeColor: S.cyan  },
     ],
   },
   {
