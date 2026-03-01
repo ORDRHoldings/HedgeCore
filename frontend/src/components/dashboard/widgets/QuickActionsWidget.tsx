@@ -40,7 +40,7 @@ interface Action {
 const ACTIONS: Action[] = [
   { label: "Position Desk",      permission: "trades.create",                Icon: FileText,     route: "/input"       },
   { label: "Policy Engine",      permission: "policy.view",                   Icon: CheckSquare,  route: "/policies"    },
-  { label: "Run Execution",      permission: "calculate.run_sandbox",         Icon: Zap,          route: "/execution"   },
+  { label: "Run Execution",      permission: "calculate.run_sandbox",         Icon: Zap,          route: "/execution-desk"   },
   { label: "Analysis",           permission: "hedges.view",                   Icon: BarChart2,    route: "/currency-fx" },
   { label: "View Reports",       permission: "reports.view_own_branch",       Icon: CheckSquare,  route: "/reports"     },
   { label: "Governance Wiki",    permission: "policy.view",                   Icon: Search,       route: "/hedgewiki"   },

@@ -44,6 +44,7 @@ import {
 } from "../../api/policyClient";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { POSITIONS_HELP } from "@/lib/help";
+import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -563,8 +564,9 @@ export default function PositionDeskPage() {
         <div style={{ flex: 1 }} />
         <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{positions.length} positions</span>
         <button onClick={() => token && dispatch(listPositionsThunk({ token }))} title="Refresh (R)" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, background: "transparent", border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>↻ Refresh</button>
-        <button onClick={() => router.push("/execution")} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.pass, background: `color-mix(in srgb, ${S.pass} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.pass} 25%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>→ Execution</button>
+        <button onClick={() => router.push("/execution-desk")} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.pass, background: `color-mix(in srgb, ${S.pass} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.pass} 25%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>→ Execution</button>
       </header>
+      <WorkflowBreadcrumb active="position" />
       {lifecycleError && (
         <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`, borderLeft: `3px solid ${S.fail}`, padding: "7px 20px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.fail, letterSpacing: "0.06em" }}>TRANSITION ERROR</span>
@@ -935,7 +937,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <button onClick={closeModal} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Close</button>
-            <button onClick={() => { closeModal(); router.push("/execution"); }} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: S.pass, border: "none", padding: "6px 14px", cursor: "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>→ Execution Desk</button>
+            <button onClick={() => { closeModal(); router.push("/execution-desk"); }} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: S.pass, border: "none", padding: "6px 14px", cursor: "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>→ Execution Desk</button>
           </div>
         </ModalOverlay>
       )}
