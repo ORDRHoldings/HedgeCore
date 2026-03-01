@@ -24,7 +24,6 @@ import type { CalculateResponse } from "@/api/types";
 import type { ComplianceCheck, PortfolioRisk, PortfolioStressResult } from "@/utils/executionAnalytics";
 
 import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
-import PipelineProgress from "@/components/execution/PipelineProgress";
 import StepReview from "@/components/execution/StepReview";
 import StepCalculate from "@/components/execution/StepCalculate";
 import StepRiskCheck from "@/components/execution/StepRiskCheck";
@@ -42,8 +41,131 @@ const S = {
   secondary: "var(--text-secondary)",
   tertiary:  "var(--text-tertiary)",
   cyan:      "var(--accent-cyan)",
+  pass:      "var(--status-pass,#22c55e)",
 } as const;
 
+// ── Inline step bar (replaces PipelineProgress import) ────────────────────────
+const STEP_DEFS: { num: PipelineStep; label: string }[] = [
+  { num: 1, label: "POSITION REVIEW" },
+  { num: 2, label: "CALCULATE" },
+  { num: 3, label: "RISK GATE" },
+  { num: 4, label: "EXECUTE" },
+];
+
+interface StepBarProps {
+  step: PipelineStep;
+  onStepClick?: (s: PipelineStep) => void;
+}
+
+function StepBar({ step, onStepClick }: StepBarProps) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center",
+      height: 32, padding: "0 20px", gap: 0,
+      background: "var(--bg-panel)", borderBottom: `1px solid ${S.rim}`,
+      flexShrink: 0,
+    }}>
+      {STEP_DEFS.map((s, i) => {
+        const isActive = s.num === step;
+        const isDone   = s.num < step;
+        const canClick = isDone && !!onStepClick;
+
+        const color = isActive ? S.cyan : isDone ? S.pass : S.tertiary;
+        const bg    = isActive ? "var(--bg-panel)" : "transparent";
+        const borderLeft = isActive ? `2px solid ${S.cyan}` : "2px solid transparent";
+
+        return (
+          <div key={s.num} style={{ display: "flex", alignItems: "center", height: "100%" }}>
+            <button
+              onClick={() => canClick && onStepClick(s.num)}
+              disabled={!canClick}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                height: 32, padding: "0 14px",
+                background: bg,
+                border: "none",
+                borderLeft,
+                cursor: canClick ? "pointer" : "default",
+                fontFamily: S.fontMono,
+                fontSize: 9,
+                fontWeight: isActive ? 700 : 500,
+                letterSpacing: "0.09em",
+                color,
+                textTransform: "uppercase",
+                whiteSpace: "nowrap",
+                transition: "all 0.12s",
+              }}
+            >
+              {isDone ? (
+                <span style={{ color: S.pass, fontSize: 9 }}>✓</span>
+              ) : (
+                <span style={{ fontSize: 9, fontWeight: 700, color }}>{s.num}</span>
+              )}
+              {s.label}
+            </button>
+
+            {/* Connector line between steps */}
+            {i < STEP_DEFS.length - 1 && (
+              <div style={{
+                width: 20, height: 1,
+                background: isDone ? S.pass : S.rim,
+                flexShrink: 0,
+              }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Exposure sub-strip ─────────────────────────────────────────────────────────
+interface ExposureStripProps {
+  selectedPositions: PositionRow[];
+  runId: string | null;
+}
+
+function ExposureStrip({ selectedPositions, runId }: ExposureStripProps) {
+  if (selectedPositions.length === 0) return null;
+
+  const totalNotional = selectedPositions.reduce((sum, p) => sum + Math.abs(p.amount ?? 0), 0);
+  const currencies = [...new Set(selectedPositions.map(p => p.currency).filter(Boolean))];
+
+  const fmt = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+    return String(n);
+  };
+
+  const parts: string[] = [
+    `${selectedPositions.length} POSITION${selectedPositions.length !== 1 ? "S" : ""} SELECTED`,
+    `EXPOSURE: ${fmt(totalNotional)}`,
+  ];
+  if (currencies.length > 0) parts.push(`CURRENCIES: ${currencies.join(", ")}`);
+  if (runId) parts.push(`RUN: ${runId.slice(0, 8)}`);
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10,
+      height: 32, padding: "0 20px",
+      background: "var(--bg-sub)", borderBottom: `1px solid ${S.rim}`,
+      flexShrink: 0,
+    }}>
+      {parts.map((part, i) => (
+        <span key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.07em" }}>
+            {part}
+          </span>
+          {i < parts.length - 1 && (
+            <span style={{ color: S.rim, fontSize: 9, fontFamily: S.fontMono }}>·</span>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function ExecutionDeskPage() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
@@ -106,7 +228,7 @@ export default function ExecutionDeskPage() {
     setStep((s) => Math.max(1, s - 1) as PipelineStep);
   }, []);
 
-  // Allow clicking completed steps in progress bar
+  // Allow clicking completed steps in step bar
   const handleStepClick = useCallback((target: PipelineStep) => {
     if (target < step) setStep(target);
   }, [step]);
@@ -144,6 +266,27 @@ export default function ExecutionDeskPage() {
           borderBottom: `1px solid ${S.rim}`,
         }}
       >
+        {/* Back button: only shown when step > 1 */}
+        {step > 1 && (
+          <>
+            <button
+              onClick={goBack}
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: 9,
+                color: S.tertiary,
+                background: "transparent",
+                border: `1px solid ${S.rim}`,
+                padding: "2px 8px",
+                cursor: "pointer",
+                letterSpacing: "0.04em",
+              }}
+            >
+              ← Back
+            </button>
+            <span style={{ color: S.rim }}>|</span>
+          </>
+        )}
         <button
           onClick={() => router.push("/dashboard")}
           style={{
@@ -221,11 +364,14 @@ export default function ExecutionDeskPage() {
         </button>
       </header>
 
-      {/* Pipeline progress indicator */}
-      <PipelineProgress step={step} onStepClick={handleStepClick} />
+      {/* Step bar (replaces PipelineProgress) */}
+      <StepBar step={step} onStepClick={handleStepClick} />
 
-      {/* Step content */}
-      <div style={{ flex: 1, overflow: "auto" }}>
+      {/* Exposure sub-strip: shown when positions are selected */}
+      <ExposureStrip selectedPositions={selectedPositions} runId={runId} />
+
+      {/* Step content — flex:1 + overflow:auto ensures scrollability without page overflow */}
+      <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
         {step === 1 && (
           <StepReview
             positions={readyPositions}

@@ -16,189 +16,465 @@ import {
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
-  fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-  bgDeep:    "var(--bg-deep)",
-  bgPanel:   "var(--bg-panel)",
-  bgSub:     "var(--bg-sub)",
-  rim:       "var(--border-rim)",
-  soft:      "var(--border-soft)",
-  primary:   "var(--text-primary)",
-  secondary: "var(--text-secondary)",
-  tertiary:  "var(--text-tertiary)",
-  cyan:      "var(--accent-cyan)",
-  amber:     "var(--accent-amber)",
-  pass:      "var(--status-pass,#2ECC71)",
-  fail:      "var(--accent-red,#E74C3C)",
-  navy:      "#0A1F44",
-  royal:     "#1C62F2",
+  fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
+  bgDeep:   "var(--bg-deep)",
+  bgPanel:  "var(--bg-panel)",
+  bgSub:    "var(--bg-sub)",
+  rim:      "var(--border-rim)",
+  soft:     "var(--border-soft)",
+  primary:  "var(--text-primary)",
+  secondary:"var(--text-secondary)",
+  tertiary: "var(--text-tertiary)",
+  cyan:     "var(--accent-cyan)",
+  amber:    "var(--accent-amber)",
+  pass:     "var(--status-pass,#2ECC71)",
+  fail:     "var(--accent-red,#E74C3C)",
+  royal:    "#1C62F2",
 } as const;
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 interface Proposal {
-  id:                      string;
-  position_id:             string;
-  company_id:              string;
-  branch_id?:              string | null;
-  status:                  string;
-  proposed_by:             string;
-  proposed_by_email?:      string | null;
-  proposed_at:             string;
-  proposal_hash:           string;
-  approved_by?:            string | null;
-  approved_by_email?:      string | null;
-  approved_at?:            string | null;
-  approval_notes?:         string | null;
-  approval_hash?:          string | null;
-  execution_ref?:          string | null;
-  executed_at?:            string | null;
-  rejection_reason?:       string | null;
-  created_at:              string;
+  id:                       string;
+  position_id:              string;
+  company_id:               string;
+  branch_id?:               string | null;
+  status:                   string;
+  proposed_by:              string;
+  proposed_by_email?:       string | null;
+  proposed_at:              string;
+  proposal_hash:            string;
+  approved_by?:             string | null;
+  approved_by_email?:       string | null;
+  approved_at?:             string | null;
+  approval_notes?:          string | null;
+  approval_hash?:           string | null;
+  execution_ref?:           string | null;
+  executed_at?:             string | null;
+  rejection_reason?:        string | null;
+  created_at:               string;
   second_approver_required: boolean;
-  second_approver_id?:     string | null;
-  second_approver_email?:  string | null;
-  second_approved_at?:     string | null;
-  second_approval_notes?:  string | null;
-  second_approval_hash?:   string | null;
-  risk_decision_hash?:     string | null;
-  risk_verdict?:           string | null;
-  actual_fill_rate?:       number | null;
-  actual_fill_notional?:   number | null;
-  slippage_bps?:           number | null;
-  fill_timestamp?:         string | null;
-  fill_hash?:              string | null;
+  second_approver_id?:      string | null;
+  second_approver_email?:   string | null;
+  second_approved_at?:      string | null;
+  second_approval_notes?:   string | null;
+  second_approval_hash?:    string | null;
+  risk_decision_hash?:      string | null;
+  risk_verdict?:            string | null;
+  actual_fill_rate?:        number | null;
+  actual_fill_notional?:    number | null;
+  slippage_bps?:            number | null;
+  fill_timestamp?:          string | null;
+  fill_hash?:               string | null;
 }
 
-// ── Status chip ───────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function fmt(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("en-GB", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function truncHash(h: string | null | undefined): string {
+  if (!h) return "";
+  if (h.length <= 24) return h;
+  return `${h.slice(0, 16)}…${h.slice(-4)}`;
+}
+
+// ── StatusChip ────────────────────────────────────────────────────────────────
 function StatusChip({ status }: { status: string }) {
   const color =
-    status === "PROPOSED"   ? S.amber  :
-    status === "APPROVED"   ? S.pass   :
-    status === "EXECUTED"   ? S.cyan   :
-    status === "REJECTED"   ? S.fail   :
-    status === "WITHDRAWN"  ? S.tertiary :
+    status === "PROPOSED"  ? S.amber :
+    status === "APPROVED"  ? S.cyan  :
+    status === "EXECUTED"  ? S.pass  :
+    status === "REJECTED"  ? S.fail  :
     S.tertiary;
+
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: "0.625rem", fontWeight: 700,
+      fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 700,
       letterSpacing: "0.1em", padding: "2px 8px",
       border: `1px solid color-mix(in srgb, ${color} 40%, transparent)`,
-      color, background: `color-mix(in srgb, ${color} 10%, transparent)`,
-      borderRadius: 2, textTransform: "uppercase" as const,
+      background: `color-mix(in srgb, ${color} 10%, transparent)`,
+      color, borderRadius: 2, textTransform: "uppercase" as const,
     }}>
       {status}
     </span>
   );
 }
 
-// ── Hash display ──────────────────────────────────────────────────────────────
-function HashPill({ hash, label }: { hash?: string | null; label: string }) {
-  if (!hash) return null;
+// ── SectionTitle ──────────────────────────────────────────────────────────────
+function SectionTitle({ children }: { children: string }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em" }}>
-        {label}
-      </span>
-      <span style={{
-        fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.cyan,
-        background: `color-mix(in srgb, ${S.cyan} 6%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${S.cyan} 20%, transparent)`,
-        padding: "2px 6px", letterSpacing: "0.04em", wordBreak: "break-all" as const,
-      }}>
-        {hash}
-      </span>
+    <div style={{
+      fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.12em",
+      color: S.cyan, textTransform: "uppercase" as const,
+      paddingBottom: 10, marginBottom: 4, borderBottom: `1px solid ${S.rim}`,
+    }}>
+      {children}
     </div>
   );
 }
 
-// ── Detail row ────────────────────────────────────────────────────────────────
-function DetailRow({ label, value, mono = false }: { label: string; value?: string | number | null; mono?: boolean }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column" as const, gap: 2, padding: "8px 0", borderBottom: `1px solid ${S.soft}` }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
-        {label}
-      </span>
-      <span style={{
-        fontFamily: mono ? S.fontMono : S.fontUI,
-        fontSize: mono ? "0.6875rem" : "0.8125rem",
-        color: value != null ? S.primary : S.tertiary,
-        wordBreak: "break-all" as const,
-      }}>
-        {value != null ? String(value) : "—"}
-      </span>
-    </div>
-  );
-}
-
-// ── Action button ─────────────────────────────────────────────────────────────
-function ActionBtn({
-  label, color, bg, border, onClick, disabled, icon,
+// ── DetailRow (2-column CSS grid) ─────────────────────────────────────────────
+function DetailRow({
+  label, value, email = false,
 }: {
   label: string;
-  color: string;
-  bg: string;
-  border: string;
+  value?: string | number | null;
+  email?: boolean;
+}) {
+  const display = value != null && value !== "" ? String(value) : "—";
+  return (
+    <div style={{
+      display: "grid", gridTemplateColumns: "160px 1fr", gap: "0 16px",
+      alignItems: "start", padding: "8px 0",
+      borderBottom: `1px solid ${S.soft}`,
+    }}>
+      <span style={{
+        fontFamily: S.fontMono, fontSize: "0.5625rem",
+        color: S.tertiary, letterSpacing: "0.08em",
+        textTransform: "uppercase" as const, paddingTop: 1,
+      }}>
+        {label}
+      </span>
+      <span style={{
+        fontFamily: S.fontMono, fontSize: "0.6875rem",
+        color: email ? S.secondary : S.primary,
+        wordBreak: "break-all" as const, lineHeight: 1.4,
+      }}>
+        {display}
+      </span>
+    </div>
+  );
+}
+
+// ── HashChain timeline ────────────────────────────────────────────────────────
+interface ChainNode {
+  label: string;
+  hash:  string | null | undefined;
+}
+
+function HashChainTimeline({ nodes }: { nodes: ChainNode[] }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column" as const }}>
+      {nodes.map((node, i) => {
+        const exists = !!node.hash;
+        const isLast = i === nodes.length - 1;
+        return (
+          <div key={node.label} style={{ display: "flex", alignItems: "stretch", gap: 12 }}>
+            {/* Dot + connector line */}
+            <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", width: 16, flexShrink: 0 }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                marginTop: 4,
+                background: exists
+                  ? `color-mix(in srgb, ${S.cyan} 90%, transparent)`
+                  : "transparent",
+                border: exists
+                  ? `1px solid ${S.cyan}`
+                  : `1px solid ${S.rim}`,
+              }} />
+              {!isLast && (
+                <div style={{
+                  width: 1, flex: 1,
+                  background: exists ? S.cyan : S.rim,
+                  opacity: exists ? 0.3 : 0.2,
+                  minHeight: 16,
+                }} />
+              )}
+            </div>
+            {/* Label + hash */}
+            <div style={{
+              display: "flex", flexDirection: "column" as const,
+              paddingBottom: isLast ? 0 : 14, paddingTop: 2, flex: 1,
+            }}>
+              <span style={{
+                fontFamily: S.fontMono, fontSize: "0.5625rem",
+                letterSpacing: "0.1em", textTransform: "uppercase" as const,
+                color: exists ? S.primary : S.tertiary,
+                fontWeight: exists ? 700 : 400,
+              }}>
+                {node.label}
+              </span>
+              {exists && (
+                <span style={{
+                  fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.cyan,
+                  letterSpacing: "0.04em", marginTop: 2,
+                }}>
+                  {truncHash(node.hash)}
+                </span>
+              )}
+              {!exists && (
+                <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, opacity: 0.5 }}>
+                  not yet recorded
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── WorkflowGuide ─────────────────────────────────────────────────────────────
+function WorkflowGuide({ status }: { status: string }) {
+  const steps = [
+    {
+      key:   "PROPOSED",
+      label: "PROPOSED",
+      desc:  "Maker submits. Checker reviews under SoD.",
+      color: S.amber,
+    },
+    {
+      key:   "APPROVED",
+      label: "APPROVED",
+      desc:  "Checker approved. Ready for execution.",
+      color: S.cyan,
+    },
+    {
+      key:   "EXECUTED",
+      label: "EXECUTED",
+      desc:  "Position transitioned to HEDGED.",
+      color: S.pass,
+    },
+  ];
+
+  const isTerminal = status === "REJECTED" || status === "WITHDRAWN";
+  const currentIdx = steps.findIndex(s => s.key === status);
+
+  return (
+    <div style={{
+      marginTop: "auto", paddingTop: 16, borderTop: `1px solid ${S.soft}`,
+    }}>
+      <div style={{
+        fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.1em",
+        color: S.tertiary, textTransform: "uppercase" as const, marginBottom: 12,
+      }}>
+        4-Eyes Workflow
+      </div>
+      {isTerminal && (
+        <div style={{
+          fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.fail,
+          marginBottom: 10, opacity: 0.8,
+        }}>
+          Terminal state: {status}
+        </div>
+      )}
+      {steps.map((step, i) => {
+        const active   = step.key === status;
+        const complete = !isTerminal && currentIdx > i;
+        const dim      = !active && !complete;
+        return (
+          <div key={step.key} style={{
+            display: "flex", alignItems: "flex-start", gap: 10,
+            marginBottom: 10, opacity: dim ? 0.35 : 1,
+          }}>
+            <div style={{
+              width: 7, height: 7, borderRadius: "50%", flexShrink: 0, marginTop: 3,
+              background: active || complete ? step.color : "transparent",
+              border: `1px solid ${active || complete ? step.color : S.rim}`,
+            }} />
+            <div>
+              <div style={{
+                fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em",
+                color: active ? step.color : S.primary,
+                fontWeight: active ? 700 : 400,
+              }}>
+                {step.label}
+              </div>
+              <div style={{
+                fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, marginTop: 1,
+              }}>
+                {step.desc}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── FeedbackBanner ────────────────────────────────────────────────────────────
+function FeedbackBanner({
+  type, message,
+}: {
+  type: "error" | "success";
+  message: string;
+}) {
+  const color = type === "error" ? S.fail : S.pass;
+  const Icon  = type === "error" ? AlertTriangle : CheckCircle;
+  return (
+    <div style={{
+      padding: "10px 14px", marginBottom: 12,
+      background: `color-mix(in srgb, ${color} 8%, transparent)`,
+      border: `1px solid ${color}`, borderLeft: `3px solid ${color}`,
+      fontFamily: S.fontMono, fontSize: "0.6875rem", color,
+      display: "flex", alignItems: "center", gap: 8,
+    }}>
+      <Icon size={12} style={{ flexShrink: 0 }} />
+      <span>{message}</span>
+    </div>
+  );
+}
+
+// ── InputField ────────────────────────────────────────────────────────────────
+function InputField({
+  label, value, onChange, placeholder, type = "text", required = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: "text" | "number";
+  required?: boolean;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
+      <label style={{
+        fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em",
+        textTransform: "uppercase" as const, color: S.tertiary,
+      }}>
+        {label}{required && <span style={{ color: S.fail }}> *</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          fontFamily: S.fontMono, fontSize: "0.6875rem",
+          background: S.bgSub, border: `1px solid ${S.rim}`,
+          color: S.primary, padding: "6px 8px", outline: "none", width: "100%",
+        }}
+      />
+    </div>
+  );
+}
+
+// ── TextareaField ─────────────────────────────────────────────────────────────
+function TextareaField({
+  label, value, onChange, placeholder, required = false, borderColor,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  borderColor?: string;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
+      <label style={{
+        fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.08em",
+        textTransform: "uppercase" as const, color: S.tertiary,
+      }}>
+        {label}{required && <span style={{ color: S.fail }}> *</span>}
+      </label>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={3}
+        style={{
+          fontFamily: S.fontMono, fontSize: "0.6875rem",
+          background: S.bgSub,
+          border: `1px solid ${borderColor ?? S.rim}`,
+          color: S.primary, padding: "6px 8px",
+          resize: "vertical" as const, outline: "none", width: "100%",
+        }}
+      />
+    </div>
+  );
+}
+
+// ── ActionButton ──────────────────────────────────────────────────────────────
+function ActionButton({
+  label, onClick, disabled = false, loading = false,
+  variant, height = 40, icon,
+}: {
+  label: string;
   onClick: () => void;
   disabled?: boolean;
+  loading?: boolean;
+  variant: "approve" | "reject" | "execute" | "secondary" | "danger";
+  height?: number;
   icon?: React.ReactNode;
 }) {
+  const styles: Record<string, { bg: string; border: string; color: string }> = {
+    approve:   { bg: `color-mix(in srgb, ${S.pass} 15%, transparent)`,  border: S.pass,   color: S.pass   },
+    reject:    { bg: "transparent",                                        border: S.fail,   color: S.fail   },
+    execute:   { bg: S.royal,                                             border: S.royal,  color: "#ffffff" },
+    secondary: { bg: `color-mix(in srgb, ${S.cyan} 10%, transparent)`,  border: S.cyan,   color: S.cyan   },
+    danger:    { bg: `color-mix(in srgb, ${S.fail} 12%, transparent)`,  border: S.fail,   color: S.fail   },
+  };
+  const st = styles[variant];
+  const isDisabled = disabled || loading;
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
+      disabled={isDisabled}
       style={{
-        display: "flex", alignItems: "center", gap: 6,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+        width: "100%", height,
         fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 700,
-        letterSpacing: "0.08em", textTransform: "uppercase" as const,
-        padding: "8px 18px", border: `1px solid ${border}`,
-        color: disabled ? S.tertiary : color,
-        background: disabled ? "transparent" : bg,
-        borderColor: disabled ? S.rim : border,
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.5 : 1,
+        letterSpacing: "0.1em", textTransform: "uppercase" as const,
+        background: isDisabled ? "transparent" : st.bg,
+        border: `1px solid ${isDisabled ? S.rim : st.border}`,
+        color: isDisabled ? S.tertiary : st.color,
+        cursor: isDisabled ? "not-allowed" : "pointer",
+        opacity: isDisabled ? 0.5 : 1,
+        borderRadius: 2,
         transition: "opacity 0.15s",
       }}
     >
       {icon}
-      {label}
+      {loading ? "WORKING…" : label}
     </button>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Page ───────────────────────────────────────────────────────────────────────
 export default function ProposalDetailPage() {
-  const params  = useParams<{ staging_id: string }>();
-  const router  = useRouter();
-  const { token, user } = useAuth();
+  const params      = useParams<{ staging_id: string }>();
+  const router      = useRouter();
+  const { token }   = useAuth();
 
-  const proposalId = params?.staging_id ?? "";
+  const proposalId  = params?.staging_id ?? "";
 
-  const [proposal,      setProposal]     = useState<Proposal | null>(null);
-  const [loading,       setLoading]      = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [error,         setError]        = useState<string | null>(null);
-  const [actionError,   setActionError]  = useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
-
-  // Reject form state
-  const [showRejectForm,  setShowRejectForm]  = useState(false);
-  const [rejectReason,    setRejectReason]    = useState("");
-
-  // Approve notes state
-  const [approvalNotes, setApprovalNotes] = useState("");
-
-  // Fill recording state
-  const [showFillForm,    setShowFillForm]    = useState(false);
-  const [fillPrice,       setFillPrice]       = useState("");
-  const [fillNotional,    setFillNotional]    = useState("");
-  const [fillRef,         setFillRef]         = useState("");
+  const [proposal,       setProposal]      = useState<Proposal | null>(null);
+  const [loading,        setLoading]       = useState(true);
+  const [actionLoading,  setActionLoading] = useState(false);
+  const [error,          setError]         = useState<string | null>(null);
+  const [actionError,    setActionError]   = useState<string | null>(null);
+  const [actionSuccess,  setActionSuccess] = useState<string | null>(null);
+  const [showRejectForm, setShowRejectForm]= useState(false);
+  const [rejectReason,   setRejectReason]  = useState("");
+  const [approvalNotes,  setApprovalNotes] = useState("");
+  const [showFillForm,   setShowFillForm]  = useState(false);
+  const [fillPrice,      setFillPrice]     = useState("");
+  const [fillNotional,   setFillNotional]  = useState("");
+  const [fillRef,        setFillRef]       = useState("");
 
   // Auth guard
   useEffect(() => {
-    if (!token && typeof window !== "undefined") {
-      router.push("/login");
-    }
+    if (!token && typeof window !== "undefined") router.push("/login");
   }, [token, router]);
+
+  // Auto-dismiss success banner
+  useEffect(() => {
+    if (!actionSuccess) return;
+    const t = setTimeout(() => setActionSuccess(null), 4000);
+    return () => clearTimeout(t);
+  }, [actionSuccess]);
 
   // Fetch proposal
   const fetchProposal = useCallback(async () => {
@@ -208,10 +484,10 @@ export default function ProposalDetailPage() {
     try {
       const res = await dashboardFetch(`/v1/proposals/${proposalId}`, token);
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+        const body = await res.json().catch(() => ({})) as { detail?: string };
         throw new Error(body?.detail ?? `HTTP ${res.status}`);
       }
-      const data: Proposal = await res.json();
+      const data = await res.json() as Proposal;
       setProposal(data);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load proposal");
@@ -220,116 +496,109 @@ export default function ProposalDetailPage() {
     }
   }, [token, proposalId]);
 
-  useEffect(() => { fetchProposal(); }, [fetchProposal]);
+  useEffect(() => { void fetchProposal(); }, [fetchProposal]);
 
-  // ── Actions ──────────────────────────────────────────────────────────────
+  // ── Actions ────────────────────────────────────────────────────────────────
 
   async function handleApprove() {
     if (!token || !proposalId) return;
-    setActionLoading(true);
-    setActionError(null);
-    setActionSuccess(null);
+    setActionLoading(true); setActionError(null); setActionSuccess(null);
     try {
       const res = await dashboardFetch(`/v1/proposals/${proposalId}/approve`, token, {
         method: "PATCH",
-        body: JSON.stringify({ approval_notes: approvalNotes || null }),
+        body:   JSON.stringify({ approval_notes: approvalNotes || null }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+        const body = await res.json().catch(() => ({})) as { detail?: string };
         throw new Error(body?.detail ?? `HTTP ${res.status}`);
       }
-      const updated: Proposal = await res.json();
-      setProposal(updated);
+      const updated = await res.json() as Proposal;
+      setProposal(updated); setApprovalNotes("");
       setActionSuccess("Proposal approved successfully.");
-      setApprovalNotes("");
     } catch (e: unknown) {
       setActionError(e instanceof Error ? e.message : "Approve failed");
-    } finally {
-      setActionLoading(false);
-    }
+    } finally { setActionLoading(false); }
   }
 
   async function handleReject() {
     if (!token || !proposalId || !rejectReason.trim()) return;
-    setActionLoading(true);
-    setActionError(null);
-    setActionSuccess(null);
+    setActionLoading(true); setActionError(null); setActionSuccess(null);
     try {
       const res = await dashboardFetch(`/v1/proposals/${proposalId}/reject`, token, {
         method: "PATCH",
-        body: JSON.stringify({ reason: rejectReason.trim() }),
+        body:   JSON.stringify({ reason: rejectReason.trim() }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+        const body = await res.json().catch(() => ({})) as { detail?: string };
         throw new Error(body?.detail ?? `HTTP ${res.status}`);
       }
-      const updated: Proposal = await res.json();
-      setProposal(updated);
+      const updated = await res.json() as Proposal;
+      setProposal(updated); setShowRejectForm(false); setRejectReason("");
       setActionSuccess("Proposal rejected.");
-      setShowRejectForm(false);
-      setRejectReason("");
     } catch (e: unknown) {
       setActionError(e instanceof Error ? e.message : "Reject failed");
-    } finally {
-      setActionLoading(false);
-    }
+    } finally { setActionLoading(false); }
   }
 
   async function handleExecute() {
     if (!token || !proposalId) return;
-    setActionLoading(true);
-    setActionError(null);
-    setActionSuccess(null);
+    setActionLoading(true); setActionError(null); setActionSuccess(null);
     try {
       const res = await dashboardFetch(`/v1/proposals/${proposalId}/execute`, token, {
         method: "POST",
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+        const body = await res.json().catch(() => ({})) as { detail?: string };
         throw new Error(body?.detail ?? `HTTP ${res.status}`);
       }
-      const updated: Proposal = await res.json();
+      const updated = await res.json() as Proposal;
       setProposal(updated);
       setActionSuccess("Proposal executed. Position is now HEDGED.");
     } catch (e: unknown) {
       setActionError(e instanceof Error ? e.message : "Execute failed");
-    } finally {
-      setActionLoading(false);
-    }
+    } finally { setActionLoading(false); }
   }
 
   async function handleFillRecord() {
     if (!token || !proposalId || !fillPrice) return;
-    setActionLoading(true);
-    setActionError(null);
-    setActionSuccess(null);
+    setActionLoading(true); setActionError(null); setActionSuccess(null);
     try {
       const body: Record<string, unknown> = { fill_price: parseFloat(fillPrice) };
       if (fillNotional) body.fill_notional = parseFloat(fillNotional);
       if (fillRef)      body.fill_ref      = fillRef.trim();
       const res = await dashboardFetch(`/v1/proposals/${proposalId}/fill`, token, {
         method: "PATCH",
-        body: JSON.stringify(body),
+        body:   JSON.stringify(body),
       });
       if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
+        const b = await res.json().catch(() => ({})) as { detail?: string };
         throw new Error(b?.detail ?? `HTTP ${res.status}`);
       }
-      const updated: Proposal = await res.json();
+      const updated = await res.json() as Proposal;
       setProposal(updated);
+      setShowFillForm(false); setFillPrice(""); setFillNotional(""); setFillRef("");
       setActionSuccess("Fill recorded. Hash chain updated.");
-      setShowFillForm(false);
-      setFillPrice(""); setFillNotional(""); setFillRef("");
     } catch (e: unknown) {
       setActionError(e instanceof Error ? e.message : "Fill record failed");
-    } finally {
-      setActionLoading(false);
-    }
+    } finally { setActionLoading(false); }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   if (!token) return null;
+
+  const awaitingSecond =
+    proposal?.second_approver_required === true &&
+    !proposal?.second_approver_id;
+
+  const chainNodes: ChainNode[] = proposal
+    ? [
+        { label: "PROPOSAL",   hash: proposal.proposal_hash },
+        { label: "RISK GATE",  hash: proposal.risk_decision_hash },
+        { label: "APPROVAL",   hash: proposal.approval_hash },
+        { label: "DUAL KEY",   hash: proposal.second_approval_hash },
+        { label: "FILL",       hash: proposal.fill_hash },
+      ]
+    : [];
 
   return (
     <div style={{
@@ -337,441 +606,408 @@ export default function ProposalDetailPage() {
       background: S.bgDeep, fontFamily: S.fontUI, color: S.primary,
     }}>
 
-      {/* Page header */}
+      {/* ── Header 44px ── */}
       <header style={{
-        display: "flex", alignItems: "center", gap: 12, height: 44,
-        padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
-        flexShrink: 0,
+        height: 44, display: "flex", alignItems: "center", gap: 10,
+        padding: "0 20px", background: S.bgPanel,
+        borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
       }}>
         <button
           onClick={() => router.push("/staging")}
           style={{
-            display: "flex", alignItems: "center", gap: 4,
-            fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
-            background: "transparent", border: `1px solid ${S.rim}`,
-            padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
+            display: "flex", alignItems: "center", gap: 5,
+            fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+            color: S.tertiary, background: "transparent",
+            border: `1px solid ${S.rim}`, padding: "3px 10px",
+            cursor: "pointer", borderRadius: 2,
           }}
         >
-          <ArrowLeft size={12} /> Back
+          <ArrowLeft size={11} />
+          STAGING QUEUE
         </button>
-        <span style={{ color: S.rim }}>|</span>
+
+        <span style={{ color: S.rim, fontFamily: S.fontMono, fontSize: "0.75rem" }}>|</span>
+
         <ShieldCheck size={14} color={S.cyan} />
+
         <span style={{
-          fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700,
-          letterSpacing: "0.06em", textTransform: "uppercase" as const, color: S.primary,
+          fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 700,
+          letterSpacing: "0.08em", textTransform: "uppercase" as const, color: S.primary,
         }}>
-          Proposal Review
+          PROPOSAL REVIEW
         </span>
+
         {proposal && (
           <>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary }}>
+            <span style={{
+              fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+              letterSpacing: "0.06em",
+            }}>
               {proposalId.slice(0, 8).toUpperCase()}
             </span>
             <StatusChip status={proposal.status} />
           </>
         )}
+
         <div style={{ flex: 1 }} />
+
         <button
-          onClick={fetchProposal}
+          onClick={() => void fetchProposal()}
           disabled={loading}
           style={{
-            display: "flex", alignItems: "center", gap: 4,
-            fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
-            background: "transparent", border: `1px solid ${S.rim}`,
-            padding: "2px 8px", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 5,
+            fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+            color: S.tertiary, background: "transparent",
+            border: `1px solid ${S.rim}`, padding: "3px 10px",
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.5 : 1, borderRadius: 2,
           }}
         >
-          <RefreshCw size={10} /> Refresh
+          <RefreshCw size={10} />
+          REFRESH
         </button>
       </header>
 
-      {/* Content */}
-      <div style={{ flex: 1, padding: "20px", maxWidth: 1100, width: "100%", margin: "0 auto" }}>
+      {/* ── Body ── */}
+      <div style={{ flex: 1, padding: "20px 24px", maxWidth: 1200, width: "100%", margin: "0 auto" }}>
 
         {/* Loading */}
         {loading && (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "center",
-            height: 200, fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
-            letterSpacing: "0.08em",
+            height: 240, fontFamily: S.fontMono, fontSize: "0.6875rem",
+            color: S.tertiary, letterSpacing: "0.1em",
           }}>
-            LOADING PROPOSAL...
+            LOADING PROPOSAL…
           </div>
         )}
 
         {/* Fetch error */}
         {!loading && error && (
-          <div style={{
-            padding: "12px 16px",
-            background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
-            border: `1px solid ${S.fail}`, borderLeft: `3px solid ${S.fail}`,
-            fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail,
-            marginBottom: 16,
-          }}>
-            <AlertTriangle size={12} style={{ display: "inline", marginRight: 6 }} />
-            {error}
-          </div>
+          <FeedbackBanner type="error" message={error} />
         )}
 
-        {/* Action feedback */}
-        {actionError && (
-          <div style={{
-            padding: "10px 16px", marginBottom: 12,
-            background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
-            border: `1px solid ${S.fail}`, borderLeft: `3px solid ${S.fail}`,
-            fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail,
-          }}>
-            <AlertTriangle size={12} style={{ display: "inline", marginRight: 6 }} />
-            {actionError}
-          </div>
-        )}
-
-        {actionSuccess && (
-          <div style={{
-            padding: "10px 16px", marginBottom: 12,
-            background: `color-mix(in srgb, ${S.pass} 8%, transparent)`,
-            border: `1px solid ${S.pass}`, borderLeft: `3px solid ${S.pass}`,
-            fontFamily: S.fontMono, fontSize: "0.75rem", color: S.pass,
-          }}>
-            <CheckCircle size={12} style={{ display: "inline", marginRight: 6 }} />
-            {actionSuccess}
-          </div>
-        )}
-
+        {/* Proposal loaded */}
         {!loading && proposal && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20, alignItems: "start" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "65% 35%",
+            gap: 20, alignItems: "start",
+          }}>
 
-            {/* Left: proposal details */}
-            <div style={{
-              background: S.bgPanel, border: `1px solid ${S.rim}`,
-              padding: "20px 24px",
-            }}>
+            {/* ── LEFT COLUMN ── */}
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 20 }}>
+
+              {/* Proposal Details panel */}
               <div style={{
-                fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.1em",
-                color: S.cyan, textTransform: "uppercase" as const, marginBottom: 16,
-                paddingBottom: 8, borderBottom: `1px solid ${S.rim}`,
+                background: S.bgPanel, border: `1px solid ${S.rim}`,
+                padding: "20px 24px",
               }}>
-                Proposal Details
+                <SectionTitle>PROPOSAL DETAILS</SectionTitle>
+
+                <div style={{ marginTop: 12 }}>
+                  <DetailRow label="PROPOSAL ID"      value={proposal.id}                       />
+                  <DetailRow label="POSITION ID"      value={proposal.position_id}              />
+                  <DetailRow label="EXECUTION REF"    value={proposal.execution_ref}            />
+                  <DetailRow label="STATUS"           value={proposal.status}                   />
+                  <DetailRow label="PROPOSED BY"      value={proposal.proposed_by_email}        email />
+                  <DetailRow label="PROPOSED AT"      value={fmt(proposal.proposed_at)}         />
+                  <DetailRow label="RISK VERDICT"     value={proposal.risk_verdict}             />
+                  <DetailRow label="APPROVED BY"      value={proposal.approved_by_email}        email />
+                  <DetailRow label="APPROVED AT"      value={fmt(proposal.approved_at)}         />
+                  <DetailRow label="APPROVAL NOTES"   value={proposal.approval_notes}           />
+                  {proposal.executed_at && (
+                    <DetailRow label="EXECUTED AT"    value={fmt(proposal.executed_at)}         />
+                  )}
+                  {proposal.rejection_reason && (
+                    <DetailRow label="REJECTION REASON" value={proposal.rejection_reason}       />
+                  )}
+                  {proposal.second_approver_required && (
+                    <>
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 8,
+                        padding: "8px 10px", margin: "8px 0",
+                        background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
+                        border: `1px solid ${S.amber}`, borderLeft: `3px solid ${S.amber}`,
+                      }}>
+                        <AlertTriangle size={11} color={S.amber} style={{ flexShrink: 0 }} />
+                        <span style={{
+                          fontFamily: S.fontMono, fontSize: "0.5625rem",
+                          color: S.amber, letterSpacing: "0.08em",
+                          textTransform: "uppercase" as const,
+                        }}>
+                          DUAL-KEY AUTHORIZATION REQUIRED
+                        </span>
+                      </div>
+                      <DetailRow label="2ND APPROVER"
+                        value={proposal.second_approver_email ?? "PENDING SECOND APPROVER"} email />
+                      <DetailRow label="2ND APPROVED AT" value={fmt(proposal.second_approved_at)} />
+                      <DetailRow label="2ND APPROVAL NOTES" value={proposal.second_approval_notes} />
+                    </>
+                  )}
+                  {proposal.actual_fill_rate != null && (
+                    <>
+                      <DetailRow label="FILL RATE"
+                        value={proposal.actual_fill_rate.toFixed(6)} />
+                      <DetailRow label="FILL NOTIONAL"
+                        value={proposal.actual_fill_notional?.toLocaleString() ?? "—"} />
+                      <DetailRow label="SLIPPAGE"
+                        value={proposal.slippage_bps != null
+                          ? `${proposal.slippage_bps.toFixed(2)} bps` : "—"} />
+                    </>
+                  )}
+                </div>
               </div>
 
-              <DetailRow label="Position ID"       value={proposal.position_id}       mono />
-              <DetailRow label="Execution Ref"     value={proposal.execution_ref}     mono />
-              <DetailRow label="Status"            value={proposal.status}            mono />
-              <DetailRow label="Proposed By"       value={proposal.proposed_by_email} />
-              <DetailRow label="Proposed At"       value={proposal.proposed_at ? new Date(proposal.proposed_at).toLocaleString() : null} />
-              <DetailRow label="Risk Verdict"      value={proposal.risk_verdict}      mono />
-              <DetailRow label="Approved By"       value={proposal.approved_by_email} />
-              <DetailRow label="Approved At"       value={proposal.approved_at ? new Date(proposal.approved_at).toLocaleString() : null} />
-              <DetailRow label="Approval Notes"    value={proposal.approval_notes} />
-              <DetailRow label="Executed At"       value={proposal.executed_at ? new Date(proposal.executed_at).toLocaleString() : null} />
-              <DetailRow label="Rejection Reason"  value={proposal.rejection_reason} />
-              {proposal.second_approver_required && (
-                <>
-                  <DetailRow label="2nd Approver Required" value="YES" mono />
-                  <DetailRow label="2nd Approver"          value={proposal.second_approver_email} />
-                  <DetailRow label="2nd Approved At"       value={proposal.second_approved_at ? new Date(proposal.second_approved_at).toLocaleString() : null} />
-                </>
-              )}
-              {proposal.actual_fill_rate != null && (
-                <>
-                  <DetailRow label="Fill Rate"     value={proposal.actual_fill_rate}     mono />
-                  <DetailRow label="Fill Notional" value={proposal.actual_fill_notional} mono />
-                  <DetailRow label="Slippage (bps)" value={proposal.slippage_bps != null ? `${proposal.slippage_bps.toFixed(2)} bps` : null} mono />
-                </>
-              )}
-
-              {/* Hash chain section */}
-              <div style={{ marginTop: 20, display: "flex", flexDirection: "column" as const, gap: 10 }}>
-                <div style={{
-                  fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
-                  letterSpacing: "0.1em", textTransform: "uppercase" as const,
-                  paddingTop: 12, borderTop: `1px solid ${S.rim}`,
-                }}>
-                  Hash Chain
+              {/* Audit Chain panel */}
+              <div style={{
+                background: S.bgPanel, border: `1px solid ${S.rim}`,
+                padding: "20px 24px",
+              }}>
+                <SectionTitle>AUDIT CHAIN</SectionTitle>
+                <div style={{ marginTop: 16 }}>
+                  <HashChainTimeline nodes={chainNodes} />
                 </div>
-                <HashPill hash={proposal.proposal_hash}        label="PROPOSAL HASH" />
-                <HashPill hash={proposal.approval_hash}        label="APPROVAL HASH" />
-                <HashPill hash={proposal.risk_decision_hash}   label="RISK DECISION HASH" />
-                <HashPill hash={proposal.second_approval_hash} label="2ND APPROVAL HASH" />
-                <HashPill hash={proposal.fill_hash}            label="FILL HASH" />
               </div>
             </div>
 
-            {/* Right: action panel */}
-            <div style={{
-              background: S.bgPanel, border: `1px solid ${S.rim}`,
-              padding: "20px 20px",
-              display: "flex", flexDirection: "column" as const, gap: 16,
-            }}>
+            {/* ── RIGHT COLUMN (sticky) ── */}
+            <div style={{ position: "sticky" as const, top: 20 }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.1em",
-                color: S.cyan, textTransform: "uppercase" as const,
-                paddingBottom: 10, borderBottom: `1px solid ${S.rim}`,
+                background: S.bgPanel, border: `1px solid ${S.rim}`,
+                padding: "20px", display: "flex", flexDirection: "column" as const, gap: 14,
               }}>
-                Checker Actions
-              </div>
+                <SectionTitle>CHECKER ACTIONS</SectionTitle>
 
-              {/* PROPOSED state: show approve + reject */}
-              {proposal.status === "PROPOSED" && (
-                <>
-                  {/* Approval notes */}
-                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
-                    <label style={{
-                      fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
-                      letterSpacing: "0.08em", textTransform: "uppercase" as const,
-                    }}>
-                      Approval Notes (optional)
-                    </label>
-                    <textarea
+                {/* Action feedback banners at top of right panel */}
+                {actionError   && <FeedbackBanner type="error"   message={actionError}   />}
+                {actionSuccess && <FeedbackBanner type="success" message={actionSuccess} />}
+
+                {/* ── PROPOSED state ── */}
+                {proposal.status === "PROPOSED" && (
+                  <>
+                    <TextareaField
+                      label="APPROVAL NOTES"
                       value={approvalNotes}
-                      onChange={e => setApprovalNotes(e.target.value)}
-                      rows={3}
-                      placeholder="Add notes..."
-                      style={{
-                        fontFamily: S.fontMono, fontSize: "0.6875rem",
-                        background: S.bgSub, border: `1px solid ${S.rim}`,
-                        color: S.primary, padding: "6px 8px", resize: "vertical" as const,
-                        outline: "none",
-                      }}
+                      onChange={setApprovalNotes}
+                      placeholder="Add notes (optional)…"
                     />
-                  </div>
 
-                  <ActionBtn
-                    label="Approve"
-                    color={S.pass}
-                    bg={`color-mix(in srgb, ${S.pass} 12%, transparent)`}
-                    border={S.pass}
-                    onClick={handleApprove}
-                    disabled={actionLoading}
-                    icon={<CheckCircle size={13} />}
-                  />
-
-                  {!showRejectForm ? (
-                    <ActionBtn
-                      label="Reject"
-                      color={S.fail}
-                      bg={`color-mix(in srgb, ${S.fail} 10%, transparent)`}
-                      border={S.fail}
-                      onClick={() => setShowRejectForm(true)}
+                    <ActionButton
+                      label="APPROVE"
+                      variant="approve"
+                      height={40}
+                      onClick={() => void handleApprove()}
                       disabled={actionLoading}
-                      icon={<XCircle size={13} />}
+                      loading={actionLoading}
+                      icon={<CheckCircle size={13} />}
                     />
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
-                      <label style={{
-                        fontFamily: S.fontMono, fontSize: "0.5rem", color: S.fail,
-                        letterSpacing: "0.08em", textTransform: "uppercase" as const,
-                      }}>
-                        Rejection Reason *
-                      </label>
-                      <textarea
-                        value={rejectReason}
-                        onChange={e => setRejectReason(e.target.value)}
-                        rows={3}
-                        placeholder="State reason for rejection..."
-                        style={{
-                          fontFamily: S.fontMono, fontSize: "0.6875rem",
-                          background: S.bgSub,
-                          border: `1px solid ${S.fail}`,
-                          color: S.primary, padding: "6px 8px", resize: "vertical" as const,
-                          outline: "none",
-                        }}
+
+                    {!showRejectForm ? (
+                      <ActionButton
+                        label="REJECT"
+                        variant="reject"
+                        height={36}
+                        onClick={() => setShowRejectForm(true)}
+                        disabled={actionLoading}
+                        icon={<XCircle size={13} />}
                       />
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <ActionBtn
-                          label="Confirm Reject"
-                          color={S.fail}
-                          bg={`color-mix(in srgb, ${S.fail} 12%, transparent)`}
-                          border={S.fail}
-                          onClick={handleReject}
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                        <TextareaField
+                          label="REJECTION REASON"
+                          value={rejectReason}
+                          onChange={setRejectReason}
+                          placeholder="State reason for rejection…"
+                          required
+                          borderColor={S.fail}
+                        />
+                        <ActionButton
+                          label="CONFIRM REJECTION"
+                          variant="danger"
+                          height={36}
+                          onClick={() => void handleReject()}
                           disabled={actionLoading || !rejectReason.trim()}
+                          loading={actionLoading}
                           icon={<XCircle size={13} />}
                         />
                         <button
                           onClick={() => { setShowRejectForm(false); setRejectReason(""); }}
                           style={{
-                            fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
+                            fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
                             background: "transparent", border: `1px solid ${S.rim}`,
-                            padding: "6px 12px", cursor: "pointer",
+                            padding: "6px 12px", cursor: "pointer", borderRadius: 2,
                           }}
                         >
-                          Cancel
+                          CANCEL
                         </button>
                       </div>
-                    </div>
-                  )}
-                </>
-              )}
+                    )}
 
-              {/* APPROVED state: show execute */}
-              {proposal.status === "APPROVED" && (
-                <>
-                  {proposal.second_approver_required && !proposal.second_approver_id && (
                     <div style={{
-                      padding: "8px 10px",
-                      background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
-                      border: `1px solid ${S.amber}`, borderLeft: `3px solid ${S.amber}`,
-                      fontFamily: S.fontMono, fontSize: "0.625rem", color: S.amber,
+                      fontFamily: S.fontMono, fontSize: "0.5625rem",
+                      color: S.tertiary, lineHeight: 1.6,
                     }}>
-                      <AlertTriangle size={11} style={{ display: "inline", marginRight: 6 }} />
-                      Dual-key required. A second approver must confirm before execution.
-                      <br />
-                      <span style={{ fontSize: "0.5625rem", opacity: 0.75 }}>
-                        PATCH /v1/proposals/{"{id}"}/second-approve
+                      You are approving as checker. Maker:{" "}
+                      <span style={{ color: S.secondary }}>
+                        {proposal.proposed_by_email ?? proposal.proposed_by}
                       </span>
                     </div>
-                  )}
+                  </>
+                )}
 
-                  <ActionBtn
-                    label="Execute"
-                    color={S.royal}
-                    bg={`color-mix(in srgb, ${S.royal} 15%, transparent)`}
-                    border={S.royal}
-                    onClick={handleExecute}
-                    disabled={
-                      actionLoading ||
-                      (proposal.second_approver_required && !proposal.second_approver_id)
-                    }
-                    icon={<Play size={13} />}
-                  />
+                {/* ── APPROVED state ── */}
+                {proposal.status === "APPROVED" && (
+                  <>
+                    {awaitingSecond && (
+                      <div style={{
+                        padding: "10px 12px",
+                        background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
+                        border: `1px solid ${S.amber}`, borderLeft: `3px solid ${S.amber}`,
+                        fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.amber,
+                        display: "flex", alignItems: "flex-start", gap: 8, lineHeight: 1.5,
+                      }}>
+                        <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+                        <span>
+                          SECOND APPROVAL REQUIRED BEFORE EXECUTION
+                        </span>
+                      </div>
+                    )}
 
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary, lineHeight: 1.5 }}>
-                    Executing will finalise this proposal and transition the position to{" "}
-                    <span style={{ color: S.pass }}>HEDGED</span>.
-                    This action is irreversible.
-                  </div>
-                </>
-              )}
-
-              {/* Terminal states */}
-              {(proposal.status === "REJECTED" || proposal.status === "WITHDRAWN") && (
-                <div style={{
-                  padding: "10px 12px",
-                  background: S.bgSub, border: `1px solid ${S.rim}`,
-                  fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary,
-                  lineHeight: 1.6,
-                }}>
-                  This proposal is in a terminal state ({proposal.status}) and requires no further action.
-                </div>
-              )}
-
-              {/* EXECUTED + no fill → offer fill recording */}
-              {proposal.status === "EXECUTED" && !proposal.fill_hash && (
-                <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
-                  <div style={{
-                    padding: "8px 10px",
-                    background: `color-mix(in srgb, ${S.cyan} 5%, transparent)`,
-                    border: `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`,
-                    fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.cyan, lineHeight: 1.5,
-                  }}>
-                    Position hedged. Record the actual fill from your execution venue to close the audit chain.
-                  </div>
-                  {!showFillForm ? (
-                    <ActionBtn
-                      label="Record Fill"
-                      color={S.cyan}
-                      bg={`color-mix(in srgb, ${S.cyan} 10%, transparent)`}
-                      border={S.cyan}
-                      onClick={() => setShowFillForm(true)}
-                      disabled={actionLoading}
-                      icon={<CheckCircle size={13} />}
+                    <ActionButton
+                      label="EXECUTE"
+                      variant="execute"
+                      height={44}
+                      onClick={() => void handleExecute()}
+                      disabled={actionLoading || awaitingSecond}
+                      loading={actionLoading}
+                      icon={<Play size={13} />}
                     />
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
-                      {[
-                        { label: "Fill Price *", val: fillPrice, set: setFillPrice, placeholder: "e.g. 20.1850", type: "number" },
-                        { label: "Fill Notional (optional)", val: fillNotional, set: setFillNotional, placeholder: "e.g. 5000000", type: "number" },
-                        { label: "Fill Ref / Ticket ID (optional)", val: fillRef, set: setFillRef, placeholder: "e.g. IBK-92841", type: "text" },
-                      ].map(({ label, val, set, placeholder, type }) => (
-                        <div key={label} style={{ display: "flex", flexDirection: "column" as const, gap: 3 }}>
-                          <label style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
-                            {label}
-                          </label>
-                          <input
-                            type={type}
-                            value={val}
-                            onChange={e => set(e.target.value)}
-                            placeholder={placeholder}
-                            style={{
-                              fontFamily: S.fontMono, fontSize: "0.6875rem",
-                              background: S.bgSub, border: `1px solid ${S.rim}`,
-                              color: S.primary, padding: "5px 8px", outline: "none",
-                            }}
-                          />
-                        </div>
-                      ))}
-                      <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                        <ActionBtn
-                          label="Confirm Fill"
-                          color={S.cyan}
-                          bg={`color-mix(in srgb, ${S.cyan} 12%, transparent)`}
-                          border={S.cyan}
-                          onClick={handleFillRecord}
+
+                    <div style={{
+                      fontFamily: S.fontMono, fontSize: "0.5625rem",
+                      color: S.tertiary, lineHeight: 1.6,
+                    }}>
+                      This action is irreversible and will transition the position to{" "}
+                      <span style={{ color: S.pass }}>HEDGED</span>.
+                    </div>
+                  </>
+                )}
+
+                {/* ── EXECUTED — no fill_hash ── */}
+                {proposal.status === "EXECUTED" && !proposal.fill_hash && (
+                  <>
+                    <div style={{
+                      padding: "10px 12px",
+                      background: `color-mix(in srgb, ${S.cyan} 6%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`,
+                      fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.cyan,
+                      lineHeight: 1.5,
+                    }}>
+                      Record actual fill to complete the audit chain.
+                    </div>
+
+                    {!showFillForm ? (
+                      <ActionButton
+                        label="RECORD FILL"
+                        variant="secondary"
+                        height={36}
+                        onClick={() => setShowFillForm(true)}
+                        disabled={actionLoading}
+                        icon={<CheckCircle size={13} />}
+                      />
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                        <InputField
+                          label="FILL PRICE"
+                          value={fillPrice}
+                          onChange={setFillPrice}
+                          placeholder="e.g. 1.2485"
+                          type="number"
+                          required
+                        />
+                        <InputField
+                          label="FILL NOTIONAL"
+                          value={fillNotional}
+                          onChange={setFillNotional}
+                          placeholder="e.g. 5000000"
+                          type="number"
+                        />
+                        <InputField
+                          label="FILL REFERENCE / TICKET ID"
+                          value={fillRef}
+                          onChange={setFillRef}
+                          placeholder="e.g. IBK-92841"
+                        />
+                        <ActionButton
+                          label="CONFIRM FILL"
+                          variant="secondary"
+                          height={36}
+                          onClick={() => void handleFillRecord()}
                           disabled={actionLoading || !fillPrice}
+                          loading={actionLoading}
                           icon={<CheckCircle size={13} />}
                         />
                         <button
-                          onClick={() => { setShowFillForm(false); setFillPrice(""); setFillNotional(""); setFillRef(""); }}
-                          style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 12px", cursor: "pointer" }}
+                          onClick={() => {
+                            setShowFillForm(false);
+                            setFillPrice(""); setFillNotional(""); setFillRef("");
+                          }}
+                          style={{
+                            fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
+                            background: "transparent", border: `1px solid ${S.rim}`,
+                            padding: "6px 12px", cursor: "pointer", borderRadius: 2,
+                          }}
                         >
-                          Cancel
+                          CANCEL
                         </button>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </>
+                )}
 
-              {/* EXECUTED + fill recorded */}
-              {proposal.status === "EXECUTED" && proposal.fill_hash && (
-                <div style={{
-                  padding: "10px 12px",
-                  background: `color-mix(in srgb, ${S.pass} 6%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
-                  fontFamily: S.fontMono, fontSize: "0.625rem", color: S.pass, lineHeight: 1.6,
-                }}>
-                  <CheckCircle size={11} style={{ display: "inline", marginRight: 6 }} />
-                  Fill recorded. Audit chain complete.
-                </div>
-              )}
-
-              {/* Workflow guide */}
-              <div style={{
-                marginTop: 8, padding: "12px", background: S.bgSub,
-                border: `1px solid ${S.soft}`, borderLeft: `3px solid ${S.rim}`,
-              }}>
-                <div style={{
-                  fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary,
-                  letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 8,
-                }}>
-                  4-Eyes Workflow
-                </div>
-                {[
-                  { label: "PROPOSED",  desc: "Awaiting checker approval",    active: proposal.status === "PROPOSED"  },
-                  { label: "APPROVED",  desc: "Ready to execute",              active: proposal.status === "APPROVED"  },
-                  { label: "EXECUTED",  desc: "Position hedged",               active: proposal.status === "EXECUTED"  },
-                ].map(({ label, desc, active }) => (
-                  <div key={label} style={{
-                    display: "flex", alignItems: "flex-start", gap: 8,
-                    marginBottom: 6, opacity: active ? 1 : 0.4,
+                {/* ── EXECUTED — fill_hash present ── */}
+                {proposal.status === "EXECUTED" && proposal.fill_hash && (
+                  <div style={{
+                    padding: "12px 14px",
+                    background: `color-mix(in srgb, ${S.pass} 6%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
+                    borderLeft: `3px solid ${S.pass}`,
+                    display: "flex", flexDirection: "column" as const, gap: 4,
                   }}>
                     <div style={{
-                      width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                      marginTop: 4,
-                      background: active
-                        ? (label === "EXECUTED" ? S.pass : label === "APPROVED" ? S.royal : S.amber)
-                        : S.rim,
-                    }} />
-                    <div>
-                      <div style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", color: active ? S.primary : S.tertiary, fontWeight: active ? 700 : 400 }}>
-                        {label}
-                      </div>
-                      <div style={{ fontFamily: S.fontMono, fontSize: "0.5rem", color: S.tertiary }}>
-                        {desc}
-                      </div>
+                      display: "flex", alignItems: "center", gap: 8,
+                      fontFamily: S.fontMono, fontSize: "0.6875rem",
+                      fontWeight: 700, color: S.pass,
+                    }}>
+                      <CheckCircle size={13} />
+                      AUDIT CHAIN COMPLETE
                     </div>
+                    {proposal.fill_timestamp && (
+                      <div style={{
+                        fontFamily: S.fontMono, fontSize: "0.5625rem",
+                        color: S.tertiary, marginTop: 2,
+                      }}>
+                        Fill recorded on {fmt(proposal.fill_timestamp)}
+                      </div>
+                    )}
                   </div>
-                ))}
+                )}
+
+                {/* ── REJECTED / WITHDRAWN ── */}
+                {(proposal.status === "REJECTED" || proposal.status === "WITHDRAWN") && (
+                  <div style={{
+                    padding: "10px 12px", background: S.bgSub,
+                    border: `1px solid ${S.rim}`,
+                    fontFamily: S.fontMono, fontSize: "0.5625rem",
+                    color: S.tertiary, lineHeight: 1.6,
+                  }}>
+                    This proposal is in a terminal state and requires no further action.
+                  </div>
+                )}
+
+                {/* ── 4-Eyes workflow guide (always visible) ── */}
+                <WorkflowGuide status={proposal.status} />
               </div>
             </div>
 
