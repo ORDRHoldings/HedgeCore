@@ -54,7 +54,7 @@ const WIDGET_COMPONENTS: Record<WidgetId, React.ComponentType<WidgetComponentPro
   risk_pulse: RiskPulseWidget, fx_news: FxNewsWidget, econ_calendar: EconCalendarWidget,
 };
 // Bump this whenever the default layout changes — forces all users to get the new default
-const LAYOUT_VERSION = 5;
+const LAYOUT_VERSION = 6;
 const layoutKey = (uid: string) => `dashboard_layout_${uid}`;
 const helpOpenKey = (uid: string) => `dashboard_help_open_${uid}`;
 function saveLayout(uid: string, widgetIds: string[], grid: GridItem[]) {
