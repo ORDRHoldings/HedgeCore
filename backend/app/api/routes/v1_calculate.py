@@ -73,6 +73,7 @@ def _check_calc_rate(user_id: str) -> bool:
 
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from app.core.schema_state import require_schema_ready
 
 from pydantic import BaseModel, ValidationError
 
@@ -318,6 +319,8 @@ async def calculate(
     session: AsyncSession     = Depends(get_async_session),
 
     current_user: User        = Depends(get_current_user),
+
+    _schema: None             = Depends(require_schema_ready),
 
 ):
 

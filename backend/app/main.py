@@ -1076,19 +1076,47 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
 
     ]
 
-    for stmt in raw_ddl:
-
+    # ── Advisory lock: serialise DDL across concurrent instances ────────────────
+    # pg_advisory_lock is session-level (auto-released when connection closes).
+    # SQLite (ALLOW_SQLITE_DEMO) does not support advisory locks — skipped silently.
+    _is_pg = "sqlite" not in str(async_engine.url).lower()
+    _lock_conn = None
+    if _is_pg:
         try:
+            _lock_conn = await async_engine.connect()
+            await _lock_conn.execute(
+                text("SELECT pg_advisory_lock(hashtext('ordr_schema_bootstrap_v1'))")
+            )
+            logger.info("?? Schema DDL advisory lock acquired (ordr_schema_bootstrap_v1)")
+        except Exception as _le:
+            logger.warning(f"Advisory lock unavailable (non-PG env?): {_le}")
+            if _lock_conn:
+                try:
+                    await _lock_conn.close()
+                except Exception:
+                    pass
+                _lock_conn = None
 
-            async with async_engine.begin() as conn:
-
-                await conn.execute(text(stmt))
-
-        except Exception as e:
-
-            logger.debug(f"DDL skipped: {e}")
-
-
+    try:
+        for stmt in raw_ddl:
+            try:
+                async with async_engine.begin() as conn:
+                    await conn.execute(text(stmt))
+            except Exception as e:
+                logger.debug(f"DDL skipped: {e}")
+    finally:
+        if _lock_conn:
+            try:
+                await _lock_conn.execute(
+                    text("SELECT pg_advisory_unlock(hashtext('ordr_schema_bootstrap_v1'))")
+                )
+            except Exception:
+                pass
+            try:
+                await _lock_conn.close()
+            except Exception:
+                pass
+            logger.info("?? Schema DDL advisory lock released (ordr_schema_bootstrap_v1)")
 
     logger.info("? Database tables ensured")
 
@@ -1113,6 +1141,29 @@ async def lifespan(app: FastAPI):
     except Exception as e:
 
         logger.warning(f"?? _ensure_tables skipped: {e}")
+
+
+
+    # ── Schema readiness check + fail-closed state ────────────────────────────
+    try:
+        from app.core.schema_state import run_readiness_checks, set_schema_ready
+        from app.core.db import async_engine as _eng
+        _readiness = await run_readiness_checks(_eng)
+        set_schema_ready(_readiness["schema_ready"])
+        if _readiness["schema_ready"]:
+            logger.info("? Schema readiness: ALL checks passed")
+        else:
+            logger.error(
+                f"? Schema readiness FAILED — missing: {_readiness['missing_items']}. "
+                "Execution endpoints will return HTTP 503 until schema is ready."
+            )
+    except Exception as _se:
+        logger.warning(f"Schema readiness check error: {_se}")
+        try:
+            from app.core.schema_state import set_schema_ready
+            set_schema_ready(False)
+        except Exception:
+            pass
 
 
 
