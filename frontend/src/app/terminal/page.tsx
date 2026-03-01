@@ -157,7 +157,7 @@ export default function TerminalPage() {
         <Chip label="SESSION" value={user?.email ?? "—"} />
         <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
           <ActionChip label="[RUN ENGINE]" href="/input" router={router} />
-          <ActionChip label="[EXECUTION]" href="/execution" router={router} />
+          <ActionChip label="[EXECUTION]" href="/execution-desk" router={router} />
           <ActionChip label="[SCENARIOS]" href="/scenario-studio" router={router} />
           <ActionChip label="[AUDIT]" href="/audit-trail" router={router} />
         </div>
