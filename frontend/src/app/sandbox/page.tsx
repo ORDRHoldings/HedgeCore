@@ -528,7 +528,7 @@ function SandboxPageInner() {
         }}>📄 Quick Export</button>
 
         {sandboxResult && (
-          <button onClick={() => router.push("/execution")} style={{
+          <button onClick={() => router.push("/execution-desk")} style={{
             fontFamily: S.fontUI, fontSize: 11, fontWeight: 700,
             padding: "5px 16px",
             border: `1px solid ${S.cyan}`,
@@ -828,7 +828,7 @@ function SandboxPageInner() {
                         padding: "7px 16px", border: `1px solid ${S.rim}`,
                         color: S.secondary, background: "transparent", cursor: "pointer", borderRadius: 2,
                       }}>⬇ Download Whitepaper</button>
-                      <button onClick={() => router.push("/execution")} style={{
+                      <button onClick={() => router.push("/execution-desk")} style={{
                         fontFamily: S.fontUI, fontSize: 13, fontWeight: 700,
                         padding: "7px 20px", border: `1px solid ${S.cyan}`,
                         color: S.cyan, background: "transparent", cursor: "pointer", borderRadius: 2,
