@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import uuid
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -607,4 +608,361 @@ class TestReportStateMachineGating:
         source = self._source()
         assert "20" in source and "saved" in source.lower(), (
             "Saved reports must be bounded to prevent localStorage overflow"
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestExportRBACPermission — reports.export RBAC on all 4 endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestExportRBACPermission:
+    """reports.export RBAC permission gate on all 4 export endpoints."""
+
+    def _source(self) -> str:
+        path = os.path.join(
+            os.path.dirname(__file__),
+            "..", "app", "api", "routes", "v1_export.py",
+        )
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    def _perms_source(self) -> str:
+        path = os.path.join(
+            os.path.dirname(__file__),
+            "..", "app", "models", "permission.py",
+        )
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    def test_reports_export_permission_in_seed(self):
+        """reports.export umbrella permission must exist in SEED_PERMISSIONS."""
+        src = self._perms_source()
+        assert '"reports.export"' in src, (
+            "reports.export must be in SEED_PERMISSIONS"
+        )
+
+    def test_reports_export_permission_module_action(self):
+        """reports.export must have module=reports, action=export."""
+        import re
+        src = self._perms_source()
+        pattern = r'"reports\.export"\s*,\s*"reports"\s*,\s*"export"'
+        assert re.search(pattern, src), (
+            "SEED_PERMISSIONS tuple must be (reports.export, reports, export, ...)"
+        )
+
+    def test_check_permission_helper_defined(self):
+        """_check_permission async helper must be defined in v1_export.py."""
+        src = self._source()
+        assert "async def _check_permission(" in src, (
+            "_check_permission must be defined in v1_export.py"
+        )
+
+    def test_check_permission_raises_403(self):
+        """_check_permission must raise HTTPException 403 when permission missing."""
+        src = self._source()
+        assert "status_code=403" in src, (
+            "_check_permission must raise HTTP 403 when codename not in perms"
+        )
+
+    def test_check_permission_called_on_pdf_endpoint(self):
+        """export_pdf must call _check_permission with reports.export."""
+        src = self._source()
+        pdf_idx = src.find("async def export_pdf(")
+        excel_idx = src.find("async def export_excel(")
+        pdf_body = src[pdf_idx:excel_idx]
+        assert "_check_permission" in pdf_body, "export_pdf must call _check_permission"
+        assert '"reports.export"' in src, "_check_permission must use reports.export codename"
+
+    def test_check_permission_called_on_excel_endpoint(self):
+        """export_excel must call _check_permission."""
+        src = self._source()
+        excel_idx = src.find("async def export_excel(")
+        zip_idx = src.find("async def export_zip(")
+        excel_body = src[excel_idx:zip_idx]
+        assert "_check_permission" in excel_body, "export_excel must call _check_permission"
+
+    def test_check_permission_called_on_zip_endpoint(self):
+        """export_zip must call _check_permission."""
+        src = self._source()
+        zip_idx = src.find("async def export_zip(")
+        committee_idx = src.find("async def get_committee_pack(")
+        zip_body = src[zip_idx:committee_idx]
+        assert "_check_permission" in zip_body, "export_zip must call _check_permission"
+
+    def test_check_permission_called_on_committee_pack(self):
+        """get_committee_pack must call _check_permission."""
+        src = self._source()
+        committee_idx = src.find("async def get_committee_pack(")
+        # Find a reasonable end boundary
+        end_idx = src.find("\nasync def ", committee_idx + 30)
+        if end_idx == -1:
+            end_idx = committee_idx + 4000
+        committee_body = src[committee_idx:end_idx]
+        assert "_check_permission" in committee_body, (
+            "get_committee_pack must call _check_permission"
+        )
+
+    def test_reports_export_assigned_to_supervisor(self):
+        """reports.export must be in supervisor role permissions."""
+        src = self._perms_source()
+        sup_idx = src.find('"supervisor"')
+        ra_idx = src.find('"risk_analyst"', sup_idx)
+        sup_block = src[sup_idx:ra_idx]
+        assert '"reports.export"' in sup_block, (
+            "supervisor role must have reports.export permission"
+        )
+
+    def test_reports_export_assigned_to_risk_analyst(self):
+        """reports.export must be in risk_analyst role permissions."""
+        src = self._perms_source()
+        ra_idx = src.find('"risk_analyst"')
+        ra_block = src[ra_idx:ra_idx + 1500]
+        assert '"reports.export"' in ra_block, (
+            "risk_analyst role must have reports.export permission"
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestExportServerAudit — server-side audit events on export
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestExportServerAudit:
+    """Server-side audit event emitted (not fire-and-forget) on every export."""
+
+    def _source(self) -> str:
+        path = os.path.join(
+            os.path.dirname(__file__),
+            "..", "app", "api", "routes", "v1_export.py",
+        )
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    def test_build_audit_event_imported(self):
+        """build_audit_event must be imported in v1_export.py."""
+        src = self._source()
+        assert "build_audit_event" in src, (
+            "build_audit_event must be imported from app.models.audit_event"
+        )
+
+    def test_genesis_hash_imported(self):
+        """GENESIS_HASH must be imported for chain continuity."""
+        src = self._source()
+        assert "GENESIS_HASH" in src, (
+            "GENESIS_HASH must be imported for audit chain init"
+        )
+
+    def test_write_export_audit_helper_defined(self):
+        """_write_export_audit async helper must be defined."""
+        src = self._source()
+        assert "async def _write_export_audit(" in src, (
+            "_write_export_audit helper must be defined in v1_export.py"
+        )
+
+    def test_audit_helper_awaits_session_commit(self):
+        """_write_export_audit must await session.commit() — not fire-and-forget."""
+        src = self._source()
+        helper_idx = src.find("async def _write_export_audit(")
+        next_router_idx = src.find("\n@router", helper_idx + 10)
+        helper_body = src[helper_idx:next_router_idx]
+        assert "await session.commit()" in helper_body, (
+            "_write_export_audit must await session.commit() inline"
+        )
+
+    def test_audit_event_entity_type_calculation_run(self):
+        """Audit event must tag entity_type=calculation_run."""
+        src = self._source()
+        helper_idx = src.find("async def _write_export_audit(")
+        next_router_idx = src.find("\n@router", helper_idx + 10)
+        helper_body = src[helper_idx:next_router_idx]
+        assert "calculation_run" in helper_body, (
+            "Audit event entity_type must be calculation_run"
+        )
+
+    def test_audit_called_on_all_four_endpoints(self):
+        """_write_export_audit must be called in all 4 export handlers."""
+        src = self._source()
+        call_count = src.count("await _write_export_audit(")
+        assert call_count >= 4, (
+            f"_write_export_audit must be called 4 times, found {call_count}"
+        )
+
+    def test_audit_payload_has_export_format(self):
+        """Audit payload must include export_format field."""
+        src = self._source()
+        assert '"export_format"' in src, (
+            "Audit payload must include export_format field"
+        )
+
+    def test_pdf_audit_tagged_pdf(self):
+        """export_pdf must emit audit with format PDF."""
+        src = self._source()
+        pdf_idx = src.find("async def export_pdf(")
+        excel_idx = src.find("async def export_excel(")
+        pdf_body = src[pdf_idx:excel_idx]
+        assert '"PDF"' in pdf_body, "export_pdf audit call must pass format PDF"
+
+    def test_committee_pack_audit_tagged_committee_pack(self):
+        """get_committee_pack must emit audit with format COMMITTEE_PACK."""
+        src = self._source()
+        assert '"COMMITTEE_PACK"' in src, (
+            "get_committee_pack audit must pass format COMMITTEE_PACK"
+        )
+        committee_idx = src.find("async def get_committee_pack(")
+        assert "_write_export_audit" in src[committee_idx:], (
+            "_write_export_audit must be called inside get_committee_pack"
+        )
+    def test_audit_non_fatal_on_exception(self):
+        """Audit failure must not crash export (try/except in helper)."""
+        src = self._source()
+        helper_idx = src.find("async def _write_export_audit(")
+        next_router_idx = src.find("\n@router", helper_idx + 10)
+        helper_body = src[helper_idx:next_router_idx]
+        assert "except Exception" in helper_body, (
+            "_write_export_audit must catch Exception so audit never blocks export"
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestBindingGateContract — run_envelope_id gate blocks export
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestBindingGateContract:
+    """run_envelope_id absence must be an ERROR (not WARNING) blocking export."""
+
+    def _source(self) -> str:
+        path = os.path.join(
+            os.path.dirname(__file__),
+            "..", "..", "frontend", "src", "app", "reports", "page.tsx",
+        )
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    def test_no_binding_is_error_severity(self):
+        """Missing run_envelope_id must produce severity ERROR (not WARNING)."""
+        import re
+        src = self._source()
+        pattern = r'NO_BINDING.*?severity.*?ERROR'
+        assert re.search(pattern, src, re.DOTALL), (
+            "NO_BINDING issue must have severity ERROR to block export"
+        )
+
+    def test_no_binding_checks_run_envelope_id(self):
+        """Binding gate must check run_envelope_id specifically."""
+        src = self._source()
+        idx = src.find("NO_BINDING")
+        context = src[max(0, idx - 200):idx + 300]
+        assert "run_envelope_id" in context, (
+            "NO_BINDING check must reference run_envelope_id"
+        )
+
+    def test_can_export_depends_on_error_count(self):
+        """canExport must depend on errCount so ERROR issues block export."""
+        src = self._source()
+        assert "canExport" in src and "errCount" in src, (
+            "canExport must reference errCount to block on ERROR-severity issues"
+        )
+
+    def test_export_button_disabled_state_references_can_export(self):
+        """Export button must use canExport in its disabled prop."""
+        src = self._source()
+        assert "canExport" in src and "isRunning" in src, (
+            "Export button disabled must reference canExport and isRunning"
+        )
+
+    def test_no_binding_error_message_guides_user(self):
+        """NO_BINDING error message must mention engine run or binding."""
+        src = self._source()
+        idx = src.find("NO_BINDING")
+        context = src[idx:idx + 500]
+        lowered = context.lower()
+        assert "run" in lowered or "engine" in lowered or "binding" in lowered, (
+            "NO_BINDING error message must guide user to bind an engine run"
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestEnhancedReportHash — preset_id + version in canonical hash
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestEnhancedReportHash:
+    """computeReportHash canonical form must include preset_id and version."""
+
+    def _source(self) -> str:
+        path = os.path.join(
+            os.path.dirname(__file__),
+            "..", "..", "frontend", "src", "app", "reports", "page.tsx",
+        )
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+
+    def _hash_fn_body(self) -> str:
+        src = self._source()
+        start = src.find("async function computeReportHash(")
+        end = src.find("\nfunction buildReportHTML(", start)
+        return src[start:end]
+
+    def test_compute_report_hash_accepts_preset_id(self):
+        """computeReportHash must accept presetId parameter."""
+        body = self._hash_fn_body()
+        assert "presetId" in body, (
+            "computeReportHash must accept presetId parameter"
+        )
+
+    def test_compute_report_hash_accepts_version(self):
+        """computeReportHash must accept version parameter."""
+        body = self._hash_fn_body()
+        assert "version" in body, (
+            "computeReportHash must accept version parameter"
+        )
+
+    def test_preset_id_in_canonical_json(self):
+        """preset_id must be serialised into the canonical JSON."""
+        body = self._hash_fn_body()
+        assert "preset_id" in body, (
+            "preset_id must be included in canonical JSON for hash"
+        )
+
+    def test_version_in_canonical_json(self):
+        """version field must be serialised into the canonical JSON."""
+        import re
+        body = self._hash_fn_body()
+        assert re.search(r'version["\s]*:', body), (
+            "version must be included in canonical JSON for hash"
+        )
+
+    def test_html_export_passes_preset_id(self):
+        """HTML export must pass template_id to computeReportHash."""
+        src = self._source()
+        html_idx = src.find('fmt === "HTML"')
+        next_else = src.find("} else if (", html_idx)
+        html_block = src[html_idx:next_else]
+        assert "template_id" in html_block, (
+            "HTML export must pass template_id as presetId"
+        )
+
+    def test_pdf_export_passes_preset_id(self):
+        """PDF export must pass template_id to computeReportHash."""
+        src = self._source()
+        pdf_idx = src.find('fmt === "PDF"')
+        next_else = src.find("} else if (", pdf_idx)
+        pdf_block = src[pdf_idx:next_else]
+        assert "template_id" in pdf_block, (
+            "PDF export must pass template_id as presetId"
+        )
+
+    def test_zip_committee_export_passes_preset_id(self):
+        """ZIP_COMMITTEE export must pass template_id to computeReportHash."""
+        src = self._source()
+        zip_idx = src.find('fmt === "ZIP_COMMITTEE"')
+        zip_block = src[zip_idx:zip_idx + 600]
+        assert "template_id" in zip_block, (
+            "ZIP_COMMITTEE export must pass template_id as presetId"
+        )
+
+    def test_default_version_is_numeric(self):
+        """version parameter must default to numeric 1."""
+        import re
+        body = self._hash_fn_body()
+        assert re.search(r'version.*=\s*1', body), (
+            "version parameter must default to numeric 1"
         )
