@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import HedgeDeskPipeline from "@/components/hedge-desk/HedgeDeskPipeline";
+import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
 
 const HD = {
   navy:    "#0A1F44",
@@ -139,6 +140,8 @@ export default function HedgeDeskPage() {
           {user.email ?? ""}
         </span>
       </header>
+
+      <WorkflowBreadcrumb active="execution" />
 
       {/* Pipeline body */}
       <div style={{ flex: 1, overflow: "hidden" }}>
