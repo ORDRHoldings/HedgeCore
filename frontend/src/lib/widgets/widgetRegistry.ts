@@ -169,9 +169,9 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     id: "command_hub",
     title: "Command Hub",
     description: "Stunning visual navigation grid to every module in the application. Role-filtered, color-coded, with keyboard shortcuts.",
-    defaultW: 6,
-    defaultH: 6,
-    minW: 4,
+    defaultW: 2,
+    defaultH: 13,
+    minW: 2,
     minH: 4,
     requiredPermission: null,
   },
@@ -233,37 +233,38 @@ type RoleLayout = { widgetIds: string[]; grid: GridItem[] };
 
 const ROLE_LAYOUTS: Record<string, RoleLayout> = {
   admin: {
-    // ── Asymmetric Bloomberg layout (rowHeight=44, margin=6 → ~694px total) ──
+    // ── Navigation-rail layout (rowHeight=44, margin=6 → ~694px total) ──
     //
-    //  ┌─────────┬─────────────────────┬─────────────┐  y=0
-    //  │  Risk   │    Command Hub      │ Market      │
-    //  │  Pulse  │    (x=3, w=5, h=8)  │ Pulse       │
-    //  │  (w=3,  │                     │ (x=8, w=4,  │
-    //  │   h=8)  │                     │  h=4)       │
-    //  │         │                     ├─────────────┤  y=4
-    //  │         │                     │ USD Radar   │
-    //  │         │                     │ (x=8, w=4,  │
-    //  │         │                     │  h=4)       │
-    //  ├─────────┴──────────┬──────────┴─────────────┤  y=8
-    //  │  Geopolitical      │  Currency Intelligence  │
-    //  │  (x=0, w=4, h=5)   │  (x=4, w=8, h=5)       │
-    //  └────────────────────┴────────────────────────┘  y=13
+    //  ┌────┬──────────────────────┬────────────┐  y=0
+    //  │    │   Risk Pulse         │ Market     │
+    //  │ C  │   (x=2, w=6, h=8)   │ Pulse      │
+    //  │ O  │                      │ (x=8, w=4, │
+    //  │ M  │                      │  h=4)      │
+    //  │ M  │                      ├────────────┤  y=4
+    //  │ A  │                      │ USD Radar  │
+    //  │ N  │                      │ (x=8, w=4, │
+    //  │ D  │                      │  h=4)      │
+    //  │    ├────────────┬─────────┴────────────┤  y=8
+    //  │ H  │ Geopolit.  │ Currency Intelligence │
+    //  │ U  │ (x=2, w=4, │ (x=6, w=6, h=5)      │
+    //  │ B  │  h=5)      │                      │
+    //  └────┴────────────┴──────────────────────┘  y=13
     //
     //  Rationale:
-    //  — Asymmetric widths (3-5-4) break the equal-column monotony
-    //  — Risk Pulse tall pillar = oracle anchor, always in view
-    //  — Command Hub slightly off-center = dominant but not overbearing
-    //  — Market Pulse + USD Radar stacked right = live data panel
-    //  — Currency Intel gets 2/3 of bottom row = intelligence-first hierarchy
+    //  — Command Hub = ultra-narrow left rail (w=2, h=13) spanning full height
+    //    Acts as a persistent navigation sidebar, like a Bloomberg function bar
+    //  — Risk Pulse = dominant center oracle at w=6 — large score display
+    //  — Market Pulse + USD Radar stacked right (w=4) = live data side panel
+    //  — Geopolitical (w=4) + Currency Intel (w=6) split the floor asymmetrically
     //
-    widgetIds: ["risk_pulse", "command_hub", "market_pulse", "usd_exposure_radar", "geopolitical", "currency_intel"],
+    widgetIds: ["command_hub", "risk_pulse", "market_pulse", "usd_exposure_radar", "geopolitical", "currency_intel"],
     grid: [
-      { i: "risk_pulse",         x: 0, y: 0, w: 3, h: 8 },  // left pillar   — score oracle
-      { i: "command_hub",        x: 3, y: 0, w: 5, h: 8 },  // center hero   — nav grid
-      { i: "market_pulse",       x: 8, y: 0, w: 4, h: 4 },  // right top     — live tickers
-      { i: "usd_exposure_radar", x: 8, y: 4, w: 4, h: 4 },  // right bottom  — USD dynamics
-      { i: "geopolitical",       x: 0, y: 8, w: 4, h: 5 },  // floor left    — geo intel
-      { i: "currency_intel",     x: 4, y: 8, w: 8, h: 5 },  // floor right   — wide table
+      { i: "command_hub",        x: 0, y: 0, w: 2, h: 13 }, // left rail     — full-height nav sidebar
+      { i: "risk_pulse",         x: 2, y: 0, w: 6, h: 8  }, // center oracle — dominant score display
+      { i: "market_pulse",       x: 8, y: 0, w: 4, h: 4  }, // right top     — live tickers
+      { i: "usd_exposure_radar", x: 8, y: 4, w: 4, h: 4  }, // right bottom  — USD dynamics
+      { i: "geopolitical",       x: 2, y: 8, w: 4, h: 5  }, // floor center  — geo intel
+      { i: "currency_intel",     x: 6, y: 8, w: 6, h: 5  }, // floor right   — wide table
     ],
   },
   ceo: {
@@ -356,16 +357,16 @@ const ROLE_LAYOUTS: Record<string, RoleLayout> = {
   },
 };
 
-// Default fallback — same asymmetric Bloomberg layout as admin
+// Default fallback — same navigation-rail layout as admin
 const DEFAULT_LAYOUT: RoleLayout = {
-  widgetIds: ["risk_pulse", "command_hub", "market_pulse", "usd_exposure_radar", "geopolitical", "currency_intel"],
+  widgetIds: ["command_hub", "risk_pulse", "market_pulse", "usd_exposure_radar", "geopolitical", "currency_intel"],
   grid: [
-    { i: "risk_pulse",         x: 0, y: 0, w: 3, h: 8 },
-    { i: "command_hub",        x: 3, y: 0, w: 5, h: 8 },
-    { i: "market_pulse",       x: 8, y: 0, w: 4, h: 4 },
-    { i: "usd_exposure_radar", x: 8, y: 4, w: 4, h: 4 },
-    { i: "geopolitical",       x: 0, y: 8, w: 4, h: 5 },
-    { i: "currency_intel",     x: 4, y: 8, w: 8, h: 5 },
+    { i: "command_hub",        x: 0, y: 0, w: 2, h: 13 },
+    { i: "risk_pulse",         x: 2, y: 0, w: 6, h: 8  },
+    { i: "market_pulse",       x: 8, y: 0, w: 4, h: 4  },
+    { i: "usd_exposure_radar", x: 8, y: 4, w: 4, h: 4  },
+    { i: "geopolitical",       x: 2, y: 8, w: 4, h: 5  },
+    { i: "currency_intel",     x: 6, y: 8, w: 6, h: 5  },
   ],
 };
 
