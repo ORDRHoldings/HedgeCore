@@ -654,7 +654,57 @@ async def propose_execution(
     return ProposalResponse.from_orm_safe(proposal)
 
 
+# ── GET /v1/proposals — list all proposals for the company ──────────────────
+# BUGFIX: This endpoint was missing — POST /v1/proposals existed but no GET,
+# so FastAPI returned HTTP 405 Method Not Allowed on the Trade History page.
 
+@router.get("", response_model=list[ProposalResponse])
+
+async def list_proposals(
+
+    status:       Optional[str] = None,
+
+    limit:        int           = 200,
+
+    session:      AsyncSession  = Depends(get_async_session),
+
+    current_user: User          = Depends(get_current_user),
+
+):
+
+    """
+
+    List execution proposals for the caller's company, newest first.
+
+    Optional ?status= filter (PROPOSED, APPROVED, EXECUTED, REJECTED, WITHDRAWN).
+
+    Requires: trades.view
+
+    """
+
+    await _check_permission(session, current_user, "trades.view")
+
+    q = (
+
+        sa_select(ExecutionProposal)
+
+        .where(ExecutionProposal.company_id == current_user.company_id)
+
+        .order_by(ExecutionProposal.proposed_at.desc())
+
+        .limit(limit)
+
+    )
+
+    if status:
+
+        q = q.where(ExecutionProposal.status == status.upper())
+
+    result = await session.execute(q)
+
+    proposals = list(result.scalars().all())
+
+    return [ProposalResponse.from_orm_safe(p) for p in proposals]
 
 
 @router.get("/pending", response_model=list[ProposalResponse])
