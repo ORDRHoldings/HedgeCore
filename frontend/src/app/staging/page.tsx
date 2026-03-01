@@ -346,7 +346,34 @@ export default function StagingListPage() {
                         {artifact.proposal_id.slice(0, 12)}…
                       </td>
                       <td style={{ padding: "10px 12px" }}>
-                        <StatusChip status={artifact.authorization_status} />
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+                          <StatusChip status={artifact.authorization_status} />
+                          {(artifact as StagedArtifact & { second_approver_required?: boolean; second_approver_id?: string | null }).second_approver_required && (
+                            (artifact as StagedArtifact & { second_approver_required?: boolean; second_approver_id?: string | null }).second_approver_id ? (
+                              <span style={{
+                                fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 700,
+                                letterSpacing: "0.08em", padding: "1px 6px",
+                                border: `1px solid color-mix(in srgb, ${S.pass} 30%, transparent)`,
+                                color: S.pass,
+                                background: `color-mix(in srgb, ${S.pass} 10%, transparent)`,
+                                borderRadius: 2,
+                              }}>
+                                2ND APPROVED
+                              </span>
+                            ) : (
+                              <span style={{
+                                fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 700,
+                                letterSpacing: "0.08em", padding: "1px 6px",
+                                border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
+                                color: S.amber,
+                                background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
+                                borderRadius: 2,
+                              }}>
+                                2ND APPROVAL REQUIRED
+                              </span>
+                            )
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: "10px 12px" }}>
                         <IntegrityBar score={artifact.integrity_score} />

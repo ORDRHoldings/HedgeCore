@@ -56,7 +56,7 @@ import jwt
 
 from jwt import ExpiredSignatureError, DecodeError, InvalidTokenError
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 
 from fastapi.security import OAuth2PasswordBearer
 
@@ -288,13 +288,20 @@ def _build_claims(
 
 
 
-def create_access_token(sub: str | UUID, email: Optional[str] = None, token_version: Optional[int] = None) -> str:
+def create_access_token(
+    sub: str | UUID,
+    email: Optional[str] = None,
+    token_version: Optional[int] = None,
+    mfa_verified: bool = False,
+) -> str:
 
     """Mint short-lived access token (UUID-safe, includes 'nbf')."""
 
     sub_str = str(sub)
 
     claims = _build_claims(sub=sub_str, email=email, token_type="access", token_version=token_version)
+
+    claims["mfa_verified"] = mfa_verified
 
     return _encode_jwt(claims, settings.ACCESS_EXPIRE_MIN)
 
@@ -624,6 +631,43 @@ async def verify_api_key(raw_api_key: str, db: AsyncSession) -> "app.models.api_
 
 
 
+
+
+# -------------------------------------------------------------------
+
+# ? MFA Verified Dependency
+
+# -------------------------------------------------------------------
+
+async def get_mfa_verified(request: Request) -> bool:
+
+    """
+
+    FastAPI dependency: reads mfa_verified claim from Bearer token.
+
+    Returns False (never raises) if token is absent or malformed.
+
+    This allows endpoints to inspect the claim without hard-failing auth.
+
+    """
+
+    auth = request.headers.get("Authorization", "")
+
+    if not auth.startswith("Bearer "):
+
+        return False
+
+    token = auth.split(" ", 1)[1]
+
+    try:
+
+        payload = decode_token(token, expected_type="access")
+
+        return bool(payload.get("mfa_verified", False))
+
+    except Exception:
+
+        return False
 
 
 # -------------------------------------------------------------------

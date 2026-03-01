@@ -46,7 +46,13 @@ from __future__ import annotations
 
 
 
+import hashlib
+
+import json
+
 import logging
+
+from datetime import datetime, timezone
 
 from uuid import UUID
 
@@ -64,13 +70,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
 
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_mfa_verified
 
 from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 
 from app.models.execution_proposal import ExecutionProposal
 
 from app.models.user import User
+
+from app.models.user_mfa import UserMFA
 
 from app.services import rbac_service
 
@@ -141,6 +149,13 @@ class WithdrawProposalRequest(BaseModel):
 
 
 
+class SecondApproveRequest(BaseModel):
+
+    notes: Optional[str] = Field(default=None, max_length=1024)
+
+
+
+
 
 class ProposalResponse(BaseModel):
 
@@ -180,6 +195,19 @@ class ProposalResponse(BaseModel):
 
     created_at:         str
 
+    # L-12 dual-key fields
+    second_approver_required: bool             = False
+
+    second_approver_id:       Optional[UUID]   = None
+
+    second_approver_email:    Optional[str]    = None
+
+    second_approved_at:       Optional[str]    = None
+
+    second_approval_notes:    Optional[str]    = None
+
+    second_approval_hash:     Optional[str]    = None
+
 
 
     model_config = ConfigDict(from_attributes=True)
@@ -192,41 +220,56 @@ class ProposalResponse(BaseModel):
 
         return cls(
 
-            id                = p.id,
+            id                       = p.id,
 
-            position_id       = p.position_id,
+            position_id              = p.position_id,
 
-            company_id        = p.company_id,
+            company_id               = p.company_id,
 
-            branch_id         = p.branch_id,
+            branch_id                = p.branch_id,
 
-            status            = p.status,
+            status                   = p.status,
 
-            proposed_by       = p.proposed_by,
+            proposed_by              = p.proposed_by,
 
-            proposed_by_email = p.proposed_by_email,
+            proposed_by_email        = p.proposed_by_email,
 
-            proposed_at       = p.proposed_at.isoformat() if p.proposed_at else "",
+            proposed_at              = p.proposed_at.isoformat() if p.proposed_at else "",
 
-            proposal_hash     = p.proposal_hash,
+            proposal_hash            = p.proposal_hash,
 
-            approved_by       = p.approved_by,
+            approved_by              = p.approved_by,
 
-            approved_by_email = p.approved_by_email,
+            approved_by_email        = p.approved_by_email,
 
-            approved_at       = p.approved_at.isoformat() if p.approved_at else None,
+            approved_at              = p.approved_at.isoformat() if p.approved_at else None,
 
-            approval_notes    = p.approval_notes,
+            approval_notes           = p.approval_notes,
 
-            approval_hash     = p.approval_hash,
+            approval_hash            = p.approval_hash,
 
-            execution_ref     = p.execution_ref,
+            execution_ref            = p.execution_ref,
 
-            executed_at       = p.executed_at.isoformat() if p.executed_at else None,
+            executed_at              = p.executed_at.isoformat() if p.executed_at else None,
 
-            rejection_reason  = p.rejection_reason,
+            rejection_reason         = p.rejection_reason,
 
-            created_at        = p.created_at.isoformat() if p.created_at else "",
+            created_at               = p.created_at.isoformat() if p.created_at else "",
+
+            second_approver_required = getattr(p, "second_approver_required", False) or False,
+
+            second_approver_id       = getattr(p, "second_approver_id", None),
+
+            second_approver_email    = getattr(p, "second_approver_email", None),
+
+            second_approved_at       = (
+                p.second_approved_at.isoformat()
+                if getattr(p, "second_approved_at", None) else None
+            ),
+
+            second_approval_notes    = getattr(p, "second_approval_notes", None),
+
+            second_approval_hash     = getattr(p, "second_approval_hash", None),
 
         )
 
@@ -239,6 +282,51 @@ class ProposalResponse(BaseModel):
 # Auth helpers
 
 # ---------------------------------------------------------------------------
+
+
+
+async def _check_mfa_gate(session: AsyncSession, user: User, mfa_verified: bool) -> None:
+
+    """
+
+    L-11: If the user has MFA enabled, the current token must have mfa_verified=True.
+
+    Raises 403 with detail 'MFA_REQUIRED' if gate is not satisfied.
+
+    """
+
+    from sqlalchemy import select as _sa_select
+
+    result = await session.execute(
+
+        _sa_select(UserMFA).where(UserMFA.user_id == user.id)
+
+    )
+
+    mfa_row = result.scalars().first()
+
+    if mfa_row and mfa_row.is_enabled and not mfa_verified:
+
+        raise HTTPException(
+
+            status_code=403,
+
+            detail={
+
+                "detail": "MFA_REQUIRED",
+
+                "message": (
+
+                    "Multi-factor authentication required for this action. "
+
+                    "Please verify your TOTP code at POST /v1/mfa/verify."
+
+                ),
+
+            },
+
+        )
+
 
 
 
@@ -458,6 +546,47 @@ async def propose_execution(
 
         raise HTTPException(status_code=500, detail="Internal server error")
 
+    # L-12: check dual-key threshold against active policy (non-fatal)
+    try:
+
+        from app.services import policy_service as _pol_svc
+
+        from app.services import policy_revision_service as _pr_svc
+
+        from app.schemas_v1.policy import PolicyConfig as _PolicyConfig
+
+        _instance = await _pol_svc.get_active_instance(session, current_user)
+
+        if _instance is not None:
+
+            _rev = await _pr_svc.get_latest_revision(session, _instance.id)
+
+            if _rev is not None and _rev.canonical_policy:
+
+                _pol_cfg = _PolicyConfig(**_rev.canonical_policy)
+
+                if (
+
+                    _pol_cfg.dual_key_required
+
+                    and data.hedge_amount is not None
+
+                    and data.hedge_rate is not None
+
+                ):
+
+                    notional = data.hedge_amount * data.hedge_rate
+
+                    if notional >= _pol_cfg.dual_key_threshold_usd:
+
+                        proposal.second_approver_required = True
+
+                        await session.commit()
+
+    except Exception:
+
+        logger.debug("dual-key threshold check failed (non-fatal)", exc_info=True)
+
 
 
     await _emit_proposal_audit(
@@ -600,6 +729,8 @@ async def approve_proposal(
 
     current_user: User         = Depends(get_current_user),
 
+    mfa_verified: bool         = Depends(get_mfa_verified),
+
 ):
 
     """
@@ -613,6 +744,8 @@ async def approve_proposal(
     """
 
     await _check_permission(session, current_user, "trades.execute")
+
+    await _check_mfa_gate(session, current_user, mfa_verified)
 
     try:
 
@@ -842,6 +975,8 @@ async def execute_approved_proposal(
 
     current_user: User         = Depends(get_current_user),
 
+    mfa_verified: bool         = Depends(get_mfa_verified),
+
 ):
 
     """
@@ -855,6 +990,28 @@ async def execute_approved_proposal(
     """
 
     await _check_permission(session, current_user, "trades.execute")
+
+    await _check_mfa_gate(session, current_user, mfa_verified)
+
+    # L-12: dual-key guard -- second approver must be set if required
+    from app.services.execution_proposal_service import _get_proposal as _gp
+    try:
+        _proposal_check = await _gp(session, proposal_id, current_user.company_id)
+        if (
+            getattr(_proposal_check, "second_approver_required", False)
+            and not getattr(_proposal_check, "second_approver_id", None)
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "SECOND_APPROVAL_REQUIRED: This proposal requires a second approver "
+                    "due to its notional size. See PATCH /v1/proposals/{id}/second-approve."
+                ),
+            )
+    except HTTPException:
+        raise
+    except ValueError:
+        pass  # will surface as 404/422 in ep_service below
 
     try:
 
@@ -909,6 +1066,161 @@ async def execute_approved_proposal(
             "approval_hash":   proposal.approval_hash,
 
             "executed_at":     proposal.executed_at.isoformat() if proposal.executed_at else None,
+
+        },
+
+        request = request,
+
+    )
+
+    return ProposalResponse.from_orm_safe(proposal)
+
+
+@router.patch("/{proposal_id}/second-approve", response_model=ProposalResponse)
+
+async def second_approve_proposal(
+
+    proposal_id:  UUID,
+
+    data:         SecondApproveRequest,
+
+    request:      Request,
+
+    session:      AsyncSession = Depends(get_async_session),
+
+    current_user: User         = Depends(get_current_user),
+
+    mfa_verified: bool         = Depends(get_mfa_verified),
+
+):
+
+    """
+
+    L-12: Second approver confirms a proposal that requires dual-key approval.
+
+    Proposal must already be in APPROVED status (first approval complete).
+
+    Enforces full SoD: second approver cannot be the maker or first approver.
+
+    Requires: trades.execute
+
+    """
+
+    await _check_permission(session, current_user, "trades.execute")
+
+    await _check_mfa_gate(session, current_user, mfa_verified)
+
+    from app.services.execution_proposal_service import _get_proposal
+
+    try:
+
+        proposal = await _get_proposal(session, proposal_id, current_user.company_id)
+
+    except ValueError as e:
+
+        raise HTTPException(status_code=404, detail=str(e))
+
+    if proposal.status != "APPROVED":
+
+        raise HTTPException(
+
+            status_code=409,
+
+            detail=f"Proposal must be in APPROVED status for second approval. Current: {proposal.status}",
+
+        )
+
+    if not getattr(proposal, "second_approver_required", False):
+
+        raise HTTPException(
+
+            status_code=400,
+
+            detail="Second approval not required for this proposal",
+
+        )
+
+    if getattr(proposal, "second_approver_id", None):
+
+        raise HTTPException(
+
+            status_code=409,
+
+            detail="Already has second approval",
+
+        )
+
+    # SoD: second approver cannot be the maker or the first approver
+
+    if current_user.id == proposal.proposed_by:
+
+        raise HTTPException(
+
+            status_code=403,
+
+            detail="SoD violation: second approver cannot be the original proposer",
+
+        )
+
+    if proposal.approved_by and current_user.id == proposal.approved_by:
+
+        raise HTTPException(
+
+            status_code=403,
+
+            detail="SoD violation: second approver cannot be the same as the first approver",
+
+        )
+
+    now = datetime.now(timezone.utc)
+
+    proposal.second_approver_id    = current_user.id
+
+    proposal.second_approver_email = current_user.email
+
+    proposal.second_approved_at    = now
+
+    proposal.second_approval_notes = data.notes
+
+    # Hash chains: second approval -> approval_hash -> proposal_hash
+
+    chain_content = {
+
+        "second_approver_id": str(current_user.id),
+
+        "second_approved_at": now.isoformat(),
+
+        "approval_hash":      proposal.approval_hash,
+
+    }
+
+    proposal.second_approval_hash = hashlib.sha256(
+
+        json.dumps(chain_content, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+    ).hexdigest()
+
+    await session.commit()
+
+    await session.refresh(proposal)
+
+    await _emit_proposal_audit(
+
+        session, current_user,
+
+        event_type  = "LIFECYCLE",
+
+        description = f"Execution proposal SECOND APPROVED by {current_user.email}",
+
+        proposal_id = str(proposal.id),
+
+        payload     = {
+
+            "status":               "APPROVED",
+
+            "second_approver_id":   str(current_user.id),
+
+            "second_approval_hash": proposal.second_approval_hash,
 
         },
 

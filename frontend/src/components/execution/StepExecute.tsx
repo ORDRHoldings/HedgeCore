@@ -3,9 +3,9 @@
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { PositionRow } from "@/api/positionClient";
-import { markReadyToExecute, executePosition } from "@/api/positionClient";
 import { computeAllTickets, type FuturesTicket } from "@/lib/execution/contractSizing";
 import type { CalculateResponse, ScenarioTotalResult } from "@/api/types";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 /* ── Design tokens ─────────────────────────────────────────────────────── */
 const S = {
@@ -42,9 +42,7 @@ interface Props {
   onComplete: () => void;
 }
 
-type ExecPhase = "idle" | "executing" | "done" | "error";
-type HedgedPhase = "idle" | "confirming" | "marking" | "done" | "error";
-type SummaryModalState = "hidden" | "open";
+type SubmitPhase = "idle" | "submitting" | "submitted" | "error";
 
 /* ── Aggregate order for IBKR ─────────────────────────────────────────── */
 interface AggregatedOrder {
@@ -163,21 +161,12 @@ export default function StepExecute({
   positions, calcResult, runId, token, onBack, onComplete,
 }: Props) {
   const router = useRouter();
-  const [skipApproval, setSkipApproval] = useState(true);
-  const [execPhase, setExecPhase] = useState<ExecPhase>("idle");
-  const [execProgress, setExecProgress] = useState(0);
-  const [execTotal, setExecTotal] = useState(0);
-  const [execMessage, setExecMessage] = useState("");
-  const [execError, setExecError] = useState<string | null>(null);
-  const [updatedPositions, setUpdatedPositions] = useState<Map<string, PositionRow>>(new Map());
-
-  // HEDGED transition state
-  const [hedgedPhase, setHedgedPhase] = useState<HedgedPhase>("idle");
-  const [hedgedProgress, setHedgedProgress] = useState(0);
-  const [hedgedError, setHedgedError] = useState<string | null>(null);
-
-  // Completion summary modal
-  const [summaryModal, setSummaryModal] = useState<SummaryModalState>("hidden");
+  const [submitPhase, setSubmitPhase] = useState<SubmitPhase>("idle");
+  const [submitProgress, setSubmitProgress] = useState(0);
+  const [submitTotal, setSubmitTotal] = useState(0);
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [createdProposalIds, setCreatedProposalIds] = useState<string[]>([]);
 
   /* ── Compute tickets ──────────────────────────────────────────────── */
   const tickets: FuturesTicket[] = useMemo(() => {
@@ -305,121 +294,212 @@ export default function StepExecute({
     window.open(`mailto:fx-desk@company.com?subject=${subject}&body=${body}`, "_self");
   }, [aggregatedOrders, totalContracts, totalNotionalCovered, primaryCcy, runId]);
 
-  /* ── Execute (mark READY_TO_EXECUTE) ─────────────────────────────── */
-  const handleExecute = useCallback(async () => {
-    setExecPhase("executing");
-    setExecError(null);
-    setExecTotal(positions.length);
-    setExecProgress(0);
+  /* ── Submit proposals (4-eyes) ────────────────────────────────────── */
+  const handleSubmitForApproval = useCallback(async () => {
+    setSubmitPhase("submitting");
+    setSubmitError(null);
+    setSubmitTotal(positions.length);
+    setSubmitProgress(0);
+
+    const effectiveRunId = runId.includes(";") ? runId.split(";")[0] : runId;
+    const ids: string[] = [];
 
     try {
-      const updated = new Map<string, PositionRow>();
       for (let i = 0; i < positions.length; i++) {
-        const pos = positions[i];
-        const ticket = tickets[i];
-        setExecMessage(`Marking positions ready... (${i + 1}/${positions.length})`);
-        setExecProgress(i + 1);
-        try {
-          const effectiveRunId = runId.includes(";") ? runId.split(";")[0] : runId;
-          const result = await markReadyToExecute(
-            pos.id, effectiveRunId,
-            ticket ? ticket.totalCovered : Math.abs(pos.amount),
-            ticket ? ticket.estimatedRate : undefined,
-            token,
-          );
-          updated.set(pos.id, result);
-        } catch (err: unknown) {
-          if (!skipApproval) throw err;
-          updated.set(pos.id, { ...pos, execution_status: "READY_TO_EXECUTE" });
-        }
-      }
-      setUpdatedPositions(updated);
-      setExecMessage("Done \u2713");
-      setExecPhase("done");
-    } catch (err: unknown) {
-      setExecError(err instanceof Error ? err.message : "Execution failed");
-      setExecPhase("error");
-    }
-  }, [positions, tickets, runId, token, skipApproval]);
+        const position = positions[i];
+        setSubmitMessage(`Submitting proposal ${i + 1} of ${positions.length}...`);
+        setSubmitProgress(i + 1);
 
-  /* ── Mark as HEDGED ──────────────────────────────────────────────── */
-  const handleMarkHedged = useCallback(async () => {
-    setHedgedPhase("marking");
-    setHedgedError(null);
-    setHedgedProgress(0);
+        const buckets = calcResult?.hedge_plan?.buckets;
+        const firstBucket = buckets?.[0];
 
-    try {
-      const effectiveRunId = runId.includes(";") ? runId.split(";")[0] : runId;
-      for (let i = 0; i < positions.length; i++) {
-        const pos = positions[i];
-        const ticket = tickets[i];
-        setHedgedProgress(i + 1);
-        try {
-          const result = await executePosition(
-            pos.id,
-            `IBKR-${effectiveRunId.slice(0, 8)}`,
-            ticket ? ticket.totalCovered : Math.abs(pos.amount),
-            ticket ? ticket.estimatedRate : undefined,
-            token,
-          );
-          setUpdatedPositions((prev) => {
-            const next = new Map(prev);
-            next.set(pos.id, result);
-            return next;
-          });
-        } catch (err: unknown) {
-          // Skip if already hedged (409)
-          const msg = err instanceof Error ? err.message : "";
-          if (!msg.includes("409") && !msg.includes("ILLEGAL_TRANSITION")) throw err;
+        const res = await dashboardFetch("/v1/proposals", token, {
+          method: "POST",
+          body: JSON.stringify({
+            position_id: position.id,
+            execution_ref: `EXEC-${effectiveRunId.slice(0, 8).toUpperCase()}-${position.id.slice(0, 4).toUpperCase()}`,
+            hedge_amount: firstBucket?.action_usd ?? null,
+            hedge_rate: firstBucket?.forward_rate ?? null,
+            run_id: effectiveRunId,
+            notes: "Submitted via Execution Desk",
+          }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          throw new Error(`HTTP ${res.status} for position ${position.id.slice(0, 8)}: ${text}`);
         }
+
+        const data = await res.json();
+        if (data?.id) ids.push(data.id as string);
       }
-      setHedgedPhase("done");
+
+      setCreatedProposalIds(ids);
+      setSubmitMessage("Done");
+      setSubmitPhase("submitted");
+      onComplete();
     } catch (err: unknown) {
-      setHedgedError(err instanceof Error ? err.message : "Failed to mark as hedged");
-      setHedgedPhase("error");
+      setSubmitError(err instanceof Error ? err.message : "Submission failed");
+      setSubmitPhase("error");
     }
-  }, [positions, tickets, runId, token]);
+  }, [positions, calcResult, runId, token, onComplete]);
 
   /* ── Render ────────────────────────────────────────────────────────── */
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, fontFamily: S.fontUI, color: S.primary }}>
 
-      {/* ═══ Success banner ═══ */}
-      {execPhase === "done" && hedgedPhase !== "done" && (
-        <div style={{ padding: "16px 20px", background: "rgba(34,197,94,0.08)", borderBottom: `1px solid ${S.pass}`, flexShrink: 0 }}>
-          <div style={{ fontFamily: S.fontMono, fontSize: 15, fontWeight: 700, letterSpacing: "0.08em", color: S.pass, marginBottom: 4 }}>
-            &#10003; EXECUTION COMPLETE &mdash; {positions.length} position{positions.length !== 1 ? "s" : ""} marked READY
-          </div>
-          <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary }}>
-            Your hedge orders are ready to send to your broker. Use the IBKR panel below to place the trade, then mark positions as HEDGED.
-          </div>
-        </div>
-      )}
-
-      {/* ═══ HEDGED success banner ═══ */}
-      {hedgedPhase === "done" && (
-        <div style={{ padding: "16px 20px", background: "rgba(34,197,94,0.12)", borderBottom: `2px solid ${S.pass}`, flexShrink: 0 }}>
-          <div style={{ fontFamily: S.fontMono, fontSize: 15, fontWeight: 700, letterSpacing: "0.08em", color: S.pass, marginBottom: 4 }}>
-            &#10003; ALL {positions.length} POSITIONS MARKED HEDGED
-          </div>
-          <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary }}>
-            Audit events recorded. Positions are now in terminal HEDGED state with immutable execution references.
-          </div>
-        </div>
-      )}
-
       {/* ═══ Error banner ═══ */}
-      {execPhase === "error" && execError && (
+      {submitPhase === "error" && submitError && (
         <div style={{ padding: "12px 16px", background: "rgba(239,68,68,0.08)", borderBottom: `1px solid ${S.fail}`, flexShrink: 0, fontFamily: S.fontMono, fontSize: 11, color: S.fail }}>
-          ERROR: {execError}
+          ERROR: {submitError}
         </div>
       )}
 
       {/* ═══ Main content (scrollable) ═══ */}
       <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
 
-        {/* ─── Hedge Economics Panel (shown after execution) ─── */}
-        {execPhase === "done" && hedgeEcon && (
+        {/* ─── AWAITING APPROVAL panel (shown after successful submission) ─── */}
+        {submitPhase === "submitted" && (
+          <div style={{ margin: "16px 16px 0", padding: "28px 24px", background: S.bgPanel, border: `2px solid ${S.cyan}`, borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: S.cyan, textTransform: "uppercase", marginBottom: 6 }}>
+              PROPOSALS SUBMITTED
+            </div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, marginBottom: 20 }}>
+              Awaiting checker approval before execution
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
+                PROPOSAL IDs ({createdProposalIds.length})
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {createdProposalIds.length > 0 ? (
+                  createdProposalIds.map((id) => (
+                    <div key={id} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, padding: "6px 10px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 3 }}>
+                      {id.slice(0, 8).toUpperCase()}
+                      <span style={{ color: S.tertiary, fontSize: 10, marginLeft: 8 }}>{id}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                    {positions.length} proposal{positions.length !== 1 ? "s" : ""} created (IDs not returned by server)
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={() => router.push("/staging")}
+              style={{
+                height: 48, padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                background: S.cyan, color: S.bgDeep, border: "none", borderRadius: 4,
+                fontFamily: S.fontMono, fontSize: 13, fontWeight: 800, letterSpacing: "0.10em",
+                cursor: "pointer", transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.85"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+            >
+              VIEW STAGING QUEUE &rarr;
+            </button>
+          </div>
+        )}
+
+        {/* ─── IBKR Order Preview Panel (shown before submission as preview) ─── */}
+        {submitPhase !== "submitted" && aggregatedOrders.length > 0 && (
+          <div style={{ margin: "16px 16px 0", padding: 0, background: S.bgPanel, border: `1px solid ${S.soft}`, borderRadius: 8, overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ padding: "16px 20px", background: S.bgSub, borderBottom: `1px solid ${S.soft}` }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
+                BROKER ORDER PREVIEW (PRE-APPROVAL)
+              </div>
+              {aggregatedOrders.map((agg, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: i < aggregatedOrders.length - 1 ? 8 : 0 }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: agg.side === "SELL" ? S.fail : S.pass }}>
+                    {agg.side}
+                  </span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 28, fontWeight: 800, color: S.primary, lineHeight: 1 }}>
+                    {agg.contracts}
+                  </span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 16, fontWeight: 600, color: S.secondary }}>
+                    &times; {agg.symbol}
+                  </span>
+                  <span style={{ fontFamily: S.fontUI, fontSize: 14, color: S.secondary }}>
+                    {agg.contractName}
+                  </span>
+                </div>
+              ))}
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 8 }}>
+                {aggregatedOrders.map((agg, i) => (
+                  <span key={i}>
+                    {i > 0 && " \u00B7 "}
+                    @ {fmtDec.format(agg.avgRate)} &middot; {agg.settlementMonth} &middot; {agg.exchange}
+                  </span>
+                ))}
+              </div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 6 }}>
+                {aggregatedOrders.map((agg, i) => (
+                  <div key={i}>
+                    {fmtNum.format(agg.contractSize)} {agg.currency}/contract &middot; Total: {fmtNum.format(agg.totalNotional)} {agg.currency} &middot; From {agg.ticketCount} position{agg.ticketCount !== 1 ? "s" : ""}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Secondary action buttons (download / email — preview only) */}
+            <div style={{ padding: "12px 20px", display: "flex", gap: 10 }}>
+              <button
+                onClick={openIbkr}
+                style={{
+                  flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  background: "transparent", color: S.secondary, border: `1px solid ${S.soft}`, borderRadius: 4,
+                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                PREVIEW IN IBKR
+              </button>
+              <button
+                onClick={downloadIbkr}
+                style={{
+                  flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  background: "transparent", color: S.cyan, border: `1px solid ${S.cyan}`, borderRadius: 4,
+                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                DOWNLOAD ORDER FILE
+              </button>
+              <button
+                onClick={emailOrder}
+                style={{
+                  flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  background: "transparent", color: S.secondary, border: `1px solid ${S.soft}`, borderRadius: 4,
+                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
+                </svg>
+                EMAIL TO FX DESK
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Hedge Economics Panel ─── */}
+        {submitPhase !== "submitted" && hedgeEcon && (
           <div style={{ margin: "16px 16px 0", padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
             <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 12 }}>
               HEDGE ECONOMICS
@@ -477,8 +557,8 @@ export default function StepExecute({
           </div>
         )}
 
-        {/* ─── Audit Trail Reference (shown after execution) ─── */}
-        {execPhase === "done" && auditRef && (
+        {/* ─── Audit Trail Reference ─── */}
+        {submitPhase !== "submitted" && auditRef && (
           <div style={{ margin: "12px 16px 0", padding: "10px 16px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
             <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
               AUDIT TRAIL REFERENCE
@@ -494,120 +574,16 @@ export default function StepExecute({
           </div>
         )}
 
-        {/* ─── IBKR Order Panel (shown after execution) ─── */}
-        {execPhase === "done" && aggregatedOrders.length > 0 && (
-          <div style={{ margin: "16px 16px 0", padding: 0, background: S.bgPanel, border: `2px solid ${S.pass}`, borderRadius: 8, overflow: "hidden" }}>
-            {/* Header */}
-            <div style={{ padding: "16px 20px", background: "rgba(34,197,94,0.06)", borderBottom: `1px solid ${S.pass}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.pass, textTransform: "uppercase", marginBottom: 8 }}>
-                BROKER ORDER TICKET
-              </div>
-              {aggregatedOrders.map((agg, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: i < aggregatedOrders.length - 1 ? 8 : 0 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: agg.side === "SELL" ? S.fail : S.pass }}>
-                    {agg.side}
-                  </span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 28, fontWeight: 800, color: S.primary, lineHeight: 1 }}>
-                    {agg.contracts}
-                  </span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 16, fontWeight: 600, color: S.secondary }}>
-                    &times; {agg.symbol}
-                  </span>
-                  <span style={{ fontFamily: S.fontUI, fontSize: 14, color: S.secondary }}>
-                    {agg.contractName}
-                  </span>
-                </div>
-              ))}
-              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 8 }}>
-                {aggregatedOrders.map((agg, i) => (
-                  <span key={i}>
-                    {i > 0 && " \u00B7 "}
-                    @ {fmtDec.format(agg.avgRate)} &middot; {agg.settlementMonth} &middot; {agg.exchange}
-                  </span>
-                ))}
-              </div>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 6 }}>
-                {aggregatedOrders.map((agg, i) => (
-                  <div key={i}>
-                    {fmtNum.format(agg.contractSize)} {agg.currency}/contract &middot; Total: {fmtNum.format(agg.totalNotional)} {agg.currency} &middot; From {agg.ticketCount} position{agg.ticketCount !== 1 ? "s" : ""}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div style={{ padding: "16px 20px" }}>
-              <button
-                onClick={openIbkr}
-                style={{
-                  width: "100%", height: 52, display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                  background: "linear-gradient(135deg, #d42028 0%, #b71c1c 100%)",
-                  color: "#fff", border: "none", borderRadius: 6,
-                  fontFamily: S.fontMono, fontSize: 14, fontWeight: 800, letterSpacing: "0.10em",
-                  cursor: "pointer", transition: "all 0.15s", boxShadow: "0 2px 8px rgba(212,32,40,0.3)",
-                }}
-                onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.transform = "translateY(-1px)"; (e.target as HTMLButtonElement).style.boxShadow = "0 4px 12px rgba(212,32,40,0.4)"; }}
-                onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.transform = "none"; (e.target as HTMLButtonElement).style.boxShadow = "0 2px 8px rgba(212,32,40,0.3)"; }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-                OPEN IN IBKR TRADER WORKSTATION
-              </button>
-              <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, textAlign: "center", marginTop: 6, marginBottom: 14 }}>
-                Opens Interactive Brokers FXTrader with your order pre-filled. You must be logged in to IBKR.
-              </div>
-
-              <div style={{ display: "flex", gap: 10 }}>
-                <button
-                  onClick={downloadIbkr}
-                  style={{
-                    flex: 1, height: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    background: "transparent", color: S.cyan, border: `1px solid ${S.cyan}`, borderRadius: 4,
-                    fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em",
-                    cursor: "pointer", transition: "all 0.15s",
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  DOWNLOAD ORDER FILE (JSON)
-                </button>
-                <button
-                  onClick={emailOrder}
-                  style={{
-                    flex: 1, height: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    background: "transparent", color: S.secondary, border: `1px solid ${S.soft}`, borderRadius: 4,
-                    fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em",
-                    cursor: "pointer", transition: "all 0.15s",
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    <polyline points="22,6 12,13 2,6" />
-                  </svg>
-                  EMAIL TO FX DESK
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* ─── Section 1: Contract Tickets (individual positions) ─── */}
         <div style={{ padding: "12px 16px 0" }}>
           <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
-            {execPhase === "done" ? "POSITION DETAIL" : "CONTRACT TICKETS"} ({tickets.length})
+            CONTRACT TICKETS ({tickets.length})
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {tickets.map((ticket, i) => {
               const isFutures = ticket.instrumentType === "FUTURES";
               const borderColor = isFutures ? (ticket.side === "SELL" ? S.amber : S.pass) : S.cyan;
-              const posUpdated = updatedPositions.get(ticket.positionId);
               return (
                 <div key={i} style={{ background: S.bgSub, border: `1px solid ${S.soft}`, borderLeft: `4px solid ${borderColor}`, borderRadius: 4, padding: "14px 16px", position: "relative" }}>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
@@ -649,11 +625,6 @@ export default function StepExecute({
                     <span>Position: <span style={{ color: S.primary }}>{ticket.recordId}</span></span>
                     {ticket.estimatedCostUsd > 0 && (<><span style={{ color: S.soft }}>&middot;</span><span>Est. Cost: <span style={{ color: S.amber }}>{fmtUsd.format(ticket.estimatedCostUsd)}</span></span></>)}
                   </div>
-                  {posUpdated && (
-                    <div style={{ position: "absolute", top: 12, right: 16, padding: "3px 8px", borderRadius: 3, fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", background: "rgba(34,197,94,0.12)", color: S.pass, border: `1px solid ${S.pass}` }}>
-                      {posUpdated.execution_status}
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -674,227 +645,73 @@ export default function StepExecute({
           </div>
         </div>
 
-        {/* ─── Section 3: Execution Controls ─── */}
-        <div style={{ margin: "16px 16px 16px", padding: "14px 16px", background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 4 }}>
-          {execPhase === "idle" && (
-            <>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, cursor: "pointer" }}>
-                <input type="checkbox" checked={skipApproval} onChange={(e) => setSkipApproval(e.target.checked)} style={{ accentColor: S.cyan, cursor: "pointer" }} />
-                <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
-                  Skip 4-eyes approval (demo mode)
-                </span>
-              </label>
-              <button
-                onClick={handleExecute}
-                style={{
-                  height: 48, padding: "0 40px", background: S.pass, color: S.bgDeep, border: "none", borderRadius: 4,
-                  fontFamily: S.fontMono, fontSize: 14, fontWeight: 800, letterSpacing: "0.10em", cursor: "pointer", transition: "all 0.15s",
-                }}
-              >
-                CONFIRM EXECUTION
-              </button>
-              <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, marginTop: 8 }}>
-                This will mark all {positions.length} positions as READY_TO_EXECUTE and generate your broker ticket.
-              </div>
-            </>
-          )}
-
-          {execPhase === "executing" && (
-            <div>
-              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, color: S.cyan, letterSpacing: "0.06em", marginBottom: 8 }}>
-                {execMessage}
-              </div>
-              <div style={{ height: 4, borderRadius: 2, background: S.bgDeep, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: execTotal > 0 ? `${(execProgress / execTotal) * 100}%` : "0%", borderRadius: 2, background: S.cyan, transition: "width 0.2s ease" }} />
-              </div>
-            </div>
-          )}
-
-          {execPhase === "done" && hedgedPhase === "idle" && (
-            <div>
-              <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginBottom: 12 }}>
-                Positions are READY_TO_EXECUTE. After sending the order to your broker, mark them as HEDGED to complete the lifecycle.
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button
-                  onClick={() => setHedgedPhase("confirming")}
-                  style={{
-                    height: 44, padding: "0 28px", background: S.pass, color: S.bgDeep, border: "none", borderRadius: 4,
-                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", cursor: "pointer", transition: "all 0.15s",
-                  }}
-                >
-                  MARK AS HEDGED
-                </button>
-                <button
-                  onClick={() => setSummaryModal("open")}
-                  style={{
-                    height: 44, padding: "0 24px", background: "transparent", color: S.cyan, border: `1px solid ${S.cyan}`, borderRadius: 4,
-                    fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", cursor: "pointer", transition: "all 0.15s",
-                  }}
-                >
-                  VIEW POSITIONS &rarr;
-                </button>
-              </div>
-            </div>
-          )}
-
-          {execPhase === "done" && hedgedPhase === "confirming" && (
-            <div>
-              <div style={{ padding: "12px 14px", background: "rgba(251,191,36,0.08)", border: `1px solid ${S.amber}`, borderRadius: 4, marginBottom: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.amber, letterSpacing: "0.06em", marginBottom: 4 }}>
-                  IRREVERSIBLE ACTION
+        {/* ─── Section 3: Submission Controls ─── */}
+        {submitPhase !== "submitted" && (
+          <div style={{ margin: "16px 16px 16px", padding: "14px 16px", background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 4 }}>
+            {submitPhase === "idle" && (
+              <>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginBottom: 14, padding: "10px 12px", background: "rgba(0,200,255,0.05)", border: `1px solid rgba(0,200,255,0.15)`, borderRadius: 4 }}>
+                  Submitting will create an <strong style={{ color: S.primary }}>ExecutionProposal</strong> for each position. A checker must approve in the Staging Queue before any position is marked HEDGED.
                 </div>
-                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
-                  This will permanently mark {positions.length} position{positions.length !== 1 ? "s" : ""} as <strong>HEDGED</strong>.
-                  This is a terminal state — positions cannot be modified after this. An audit event will be recorded for each position.
+                <button
+                  onClick={handleSubmitForApproval}
+                  style={{
+                    height: 48, padding: "0 40px", background: S.cyan, color: S.bgDeep, border: "none", borderRadius: 4,
+                    fontFamily: S.fontMono, fontSize: 14, fontWeight: 800, letterSpacing: "0.10em", cursor: "pointer", transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.85"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+                >
+                  SUBMIT FOR APPROVAL (4-EYES)
+                </button>
+                <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, marginTop: 8 }}>
+                  This will create {positions.length} proposal{positions.length !== 1 ? "s" : ""} pending checker approval.
+                </div>
+              </>
+            )}
+
+            {submitPhase === "submitting" && (
+              <div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, color: S.cyan, letterSpacing: "0.06em", marginBottom: 8 }}>
+                  {submitMessage}
+                </div>
+                <div style={{ height: 4, borderRadius: 2, background: S.bgDeep, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: submitTotal > 0 ? `${(submitProgress / submitTotal) * 100}%` : "0%", borderRadius: 2, background: S.cyan, transition: "width 0.2s ease" }} />
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button
-                  onClick={handleMarkHedged}
-                  style={{
-                    height: 44, padding: "0 28px", background: S.pass, color: S.bgDeep, border: "none", borderRadius: 4,
-                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", cursor: "pointer", transition: "all 0.15s",
-                  }}
-                >
-                  CONFIRM HEDGED
-                </button>
-                <button
-                  onClick={() => setHedgedPhase("idle")}
-                  style={{
-                    height: 44, padding: "0 20px", background: "transparent", color: S.tertiary, border: "none",
-                    fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, cursor: "pointer",
-                  }}
-                >
-                  CANCEL
-                </button>
-              </div>
-            </div>
-          )}
+            )}
 
-          {execPhase === "done" && hedgedPhase === "marking" && (
-            <div>
-              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, color: S.pass, letterSpacing: "0.06em", marginBottom: 8 }}>
-                Marking as HEDGED... ({hedgedProgress}/{positions.length})
-              </div>
-              <div style={{ height: 4, borderRadius: 2, background: S.bgDeep, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${(hedgedProgress / positions.length) * 100}%`, borderRadius: 2, background: S.pass, transition: "width 0.2s ease" }} />
-              </div>
-            </div>
-          )}
-
-          {execPhase === "done" && hedgedPhase === "done" && (
-            <div>
-              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.pass, letterSpacing: "0.06em", marginBottom: 14 }}>
-                &#10003; All {positions.length} positions marked HEDGED — audit events recorded
-              </div>
-
-              {/* Post-execution navigation */}
-              <div style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
-                NEXT STEPS
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-                <NavButton label="VIEW POSITIONS" icon={gridIcon} onClick={() => router.push("/position-desk")} />
-                <NavButton label="AUDIT TRAIL" icon={shieldIcon} onClick={() => router.push("/audit-trail")} />
-                <NavButton label="REPORTS" icon={fileIcon} onClick={() => router.push("/reports")} />
-                <NavButton label="SANDBOX" icon={flaskIcon} onClick={() => router.push("/sandbox")} />
-              </div>
-            </div>
-          )}
-
-          {execPhase === "done" && hedgedPhase === "error" && (
-            <div>
-              <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.fail, marginBottom: 8 }}>
-                ERROR: {hedgedError}
-              </div>
-              <button
-                onClick={handleMarkHedged}
-                style={{
-                  height: 40, padding: "0 24px", background: S.amber, color: S.bgDeep, border: "none", borderRadius: 4,
-                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", cursor: "pointer",
-                }}
-              >
-                RETRY
-              </button>
-            </div>
-          )}
-
-          {execPhase === "error" && (
-            <button
-              onClick={handleExecute}
-              style={{
-                height: 40, padding: "0 24px", background: S.amber, color: S.bgDeep, border: "none", borderRadius: 4,
-                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", cursor: "pointer",
-              }}
-            >
-              RETRY EXECUTION
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ═══ Execution Summary Modal ═══ */}
-      {summaryModal === "open" && (
-        <div
-          onClick={() => setSummaryModal("hidden")}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}
-        >
-          <div onClick={e => e.stopPropagation()} style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "28px 32px", minWidth: 440, maxWidth: 560, boxShadow: "0 12px 48px rgba(0,0,0,0.5)" }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.cyan, letterSpacing: "0.12em", marginBottom: 16 }}>EXECUTION SUMMARY</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+            {submitPhase === "error" && (
               <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>POSITIONS PROCESSED</div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 20, fontWeight: 700, color: S.primary }}>{positions.length}</div>
-              </div>
-              <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>STATUS</div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: S.amber }}>READY_TO_EXECUTE</div>
-              </div>
-              <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>RUN ID</div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>{runId.slice(0, 16)}…</div>
-              </div>
-              {calcResult?.hedge_plan?.summary && (
-                <div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>HEDGE ACTION (USD)</div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: S.pass }}>
-                    ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(calcResult.hedge_plan.summary.total_action_usd)}
-                  </div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.fail, marginBottom: 8 }}>
+                  ERROR: {submitError}
                 </div>
-              )}
-            </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 20, padding: "8px 10px", background: S.bgSub, border: `1px solid ${S.soft}`, lineHeight: 1.6 }}>
-              Positions are READY_TO_EXECUTE. Send orders to your broker, then return to mark as HEDGED to complete the lifecycle.
-            </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-              <button
-                onClick={() => setSummaryModal("hidden")}
-                style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "7px 16px", cursor: "pointer" }}
-              >
-                Stay Here
-              </button>
-              <button
-                onClick={() => { setSummaryModal("hidden"); onComplete(); }}
-                style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.04em", color: S.bgDeep, background: S.cyan, border: "none", padding: "7px 20px", cursor: "pointer" }}
-              >
-                Go to Position Desk →
-              </button>
-            </div>
+                <button
+                  onClick={handleSubmitForApproval}
+                  style={{
+                    height: 40, padding: "0 24px", background: S.amber, color: S.bgDeep, border: "none", borderRadius: 4,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", cursor: "pointer",
+                  }}
+                >
+                  RETRY SUBMISSION
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ═══ Footer ═══ */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, padding: "0 16px", background: S.bgPanel, borderTop: `1px solid ${S.rim}`, flexShrink: 0, marginTop: "auto" }}>
         <button
           onClick={onBack}
-          disabled={execPhase === "executing" || hedgedPhase === "marking"}
+          disabled={submitPhase === "submitting"}
           style={{
             height: 36, padding: "0 20px", background: "transparent",
-            color: (execPhase === "executing" || hedgedPhase === "marking") ? S.soft : S.tertiary,
+            color: submitPhase === "submitting" ? S.soft : S.tertiary,
             border: `1px solid ${S.soft}`, borderRadius: 4,
             fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-            cursor: (execPhase === "executing" || hedgedPhase === "marking") ? "not-allowed" : "pointer", transition: "all 0.15s",
+            cursor: submitPhase === "submitting" ? "not-allowed" : "pointer", transition: "all 0.15s",
           }}
         >
           &#9666; BACK TO RISK CHECK
@@ -921,30 +738,9 @@ function SummaryCell({ label, value, color }: { label: string; value: string; co
   );
 }
 
-/* ── Navigation button helper ────────────────────────────────────────── */
-function NavButton({ label, icon, onClick }: { label: string; icon: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
-        padding: "12px 8px", background: "transparent",
-        border: `1px solid var(--border-soft)`, borderRadius: 4,
-        fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 9, fontWeight: 600,
-        letterSpacing: "0.08em", color: "var(--text-secondary)",
-        cursor: "pointer", transition: "all 0.15s",
-      }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--accent-cyan)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border-soft)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; }}
-    >
-      <span dangerouslySetInnerHTML={{ __html: icon }} />
-      {label}
-    </button>
-  );
-}
-
 /* ── SVG icons for nav buttons ───────────────────────────────────────── */
-const gridIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`;
-const shieldIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
-const fileIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
-const flaskIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v7l5 8H4l5-8V3z"/><line x1="8" y1="3" x2="16" y2="3"/></svg>`;
+// (kept for potential future use)
+// const gridIcon = `<svg .../>`;
+// const shieldIcon = `<svg .../>`;
+// const fileIcon = `<svg .../>`;
+// const flaskIcon = `<svg .../>`;

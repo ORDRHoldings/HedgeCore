@@ -113,8 +113,20 @@ router.include_router(v1_proposals_router)
 # Phase 1 ? Policy Revision lineage & diff (owns /v1/policies/revisions)
 router.include_router(v1_policy_revisions_router)
 
+# L-11 MFA (owns /v1/mfa)
+from app.api.routes.v1_mfa import router as v1_mfa_router
+router.include_router(v1_mfa_router)
+
 # Support Ticketing (owns /v1/support)
 from app.api.routes.v1_support import router as v1_support_router
 router.include_router(v1_support_router)
+
+# Risk Check (owns /v1/risk-check)
+from app.api.routes.v1_risk_check import router as v1_risk_check_router
+router.include_router(v1_risk_check_router)
+
+# Market Snapshot WORM store (owns /v1/market-snapshots)
+from app.api.routes.v1_market_snapshots import router as v1_market_snapshots_router
+router.include_router(v1_market_snapshots_router)
 
 __all__ = ["router"]

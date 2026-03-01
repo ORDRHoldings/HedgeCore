@@ -292,6 +292,14 @@ export default function LoginPage() {
   const [mounted,    setMounted]    = useState(false);
   const [focusField, setFocusField] = useState<"user" | "pass" | null>(null);
 
+  // MFA challenge state
+  const [mfaChallenge,    setMfaChallenge]    = useState(false);
+  const [mfaToken,        setMfaToken]        = useState<string | null>(null);
+  const [mfaCode,         setMfaCode]         = useState("");
+  const [mfaLoading,      setMfaLoading]      = useState(false);
+  const [mfaError,        setMfaError]        = useState<string | null>(null);
+  const mfaInputRef = useRef<HTMLInputElement>(null);
+
   const { login }   = useAuth();
   const router      = useRouter();
   const usernameRef = useRef<HTMLInputElement>(null);
@@ -330,6 +338,32 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.success) {
+      // Check if MFA is enabled — read access token from cookie set by login()
+      try {
+        const cookieToken = document.cookie
+          .split("; ")
+          .find(r => r.startsWith("access_token="))
+          ?.split("=")[1] ?? null;
+        if (cookieToken) {
+          const BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://hedgecore.onrender.com/api";
+          const mfaRes = await fetch(`${BASE}/v1/mfa/status`, {
+            headers: { Authorization: `Bearer ${cookieToken}` },
+            signal: AbortSignal.timeout(5000),
+          });
+          if (mfaRes.ok) {
+            const mfaData = await mfaRes.json();
+            if (mfaData.is_enabled) {
+              // Pause navigation — require TOTP verification
+              setMfaToken(cookieToken);
+              setMfaChallenge(true);
+              setTimeout(() => mfaInputRef.current?.focus(), 80);
+              return;
+            }
+          }
+        }
+      } catch {
+        // If MFA status check fails, proceed normally (fail-open for connectivity issues)
+      }
       router.push("/dashboard");
     } else {
       const msg = result.error ?? "Authentication failed";
@@ -338,8 +372,189 @@ export default function LoginPage() {
     }
   };
 
+  const handleMfaVerify = async () => {
+    if (mfaCode.length !== 6) { setMfaError("Enter a 6-digit code."); return; }
+    setMfaLoading(true);
+    setMfaError(null);
+    try {
+      const BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://hedgecore.onrender.com/api";
+      const res = await fetch(`${BASE}/v1/mfa/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${mfaToken}`,
+        },
+        body: JSON.stringify({ totp_code: mfaCode }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) {
+        router.push("/dashboard");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setMfaError((data as { detail?: string }).detail ?? "Invalid code — try again.");
+        setMfaCode("");
+        setTimeout(() => mfaInputRef.current?.focus(), 80);
+      }
+    } catch {
+      setMfaError("Verification request failed — check your connection.");
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
   const inputHasError = !!error && errKind === "auth";
   const errCfg        = errKind ? ERR_MAP[errKind] : null;
+
+  // MFA challenge render (replaces full form card content when active)
+  const mfaChallengeContent = mfaChallenge ? (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+
+      {/* Heading */}
+      <div>
+        <h1 style={{
+          fontFamily:    C.fontHead,
+          fontSize:      "1.5rem",
+          fontWeight:    800,
+          color:         C.ink,
+          margin:        0,
+          lineHeight:    1.15,
+          letterSpacing: "-0.03em",
+        }}>
+          MFA Verification
+        </h1>
+        <p style={{
+          fontFamily: C.fontUI,
+          fontSize:   "0.75rem",
+          color:      C.inkSub,
+          margin:     "6px 0 0",
+          lineHeight: 1.6,
+        }}>
+          Enter your 6-digit authenticator code to complete sign-in.
+        </p>
+      </div>
+
+      {/* Code input */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <label style={{
+          fontFamily:    C.fontMono,
+          fontSize:      "0.625rem",
+          fontWeight:    700,
+          color:         C.inkMid,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+        }}>
+          Authenticator Code
+        </label>
+        <input
+          ref={mfaInputRef}
+          type="text"
+          inputMode="numeric"
+          maxLength={6}
+          value={mfaCode}
+          onChange={e => { setMfaCode(e.target.value.replace(/\D/g, "")); setMfaError(null); }}
+          onKeyDown={e => e.key === "Enter" && handleMfaVerify()}
+          placeholder="000000"
+          disabled={mfaLoading}
+          style={{
+            width:        "100%",
+            padding:      "14px 16px",
+            fontFamily:   C.fontMono,
+            fontSize:     "1.5rem",
+            fontWeight:   700,
+            letterSpacing:"0.3em",
+            textAlign:    "center",
+            color:        C.ink,
+            background:   C.cream,
+            border:       `1.5px solid ${mfaError ? C.red : C.stoneDeep}`,
+            borderRadius: 3,
+            outline:      "none",
+            boxSizing:    "border-box",
+            boxShadow:    mfaError ? "0 0 0 3px rgba(185,28,28,0.08)" : "none",
+            caretColor:   C.orange,
+            opacity:      mfaLoading ? 0.55 : 1,
+            cursor:       mfaLoading ? "not-allowed" : "text",
+          }}
+          aria-label="6-digit MFA code"
+        />
+      </div>
+
+      {/* Error */}
+      {mfaError && (
+        <div style={{
+          padding:      "10px 14px",
+          background:   C.redBg,
+          border:       `1px solid ${C.redBorder}`,
+          borderLeft:   `3px solid ${C.red}`,
+          borderRadius: 3,
+          fontFamily:   C.fontMono,
+          fontSize:     "0.625rem",
+          color:        C.red,
+          letterSpacing:"0.08em",
+        }}>
+          ⊘ {mfaError}
+        </div>
+      )}
+
+      {/* Verify button */}
+      <button
+        onClick={handleMfaVerify}
+        disabled={mfaLoading || mfaCode.length !== 6}
+        className="btn-session"
+        style={{
+          width:          "100%",
+          padding:        "13px 20px",
+          fontFamily:     C.fontUI,
+          fontSize:       "0.8125rem",
+          fontWeight:     700,
+          letterSpacing:  "0.07em",
+          textTransform:  "uppercase",
+          color:          (mfaLoading || mfaCode.length !== 6) ? C.inkMid : C.white,
+          background:     (mfaLoading || mfaCode.length !== 6) ? "rgba(217,114,24,0.35)" : C.orange,
+          border:         "none",
+          borderRadius:   3,
+          cursor:         (mfaLoading || mfaCode.length !== 6) ? "not-allowed" : "pointer",
+          display:        "flex",
+          alignItems:     "center",
+          justifyContent: "center",
+          gap:            10,
+        }}
+      >
+        {mfaLoading ? (
+          <>
+            <span style={{
+              width: 14, height: 14,
+              border: `1.5px solid ${C.stoneDeep}`,
+              borderTop: `1.5px solid ${C.orange}`,
+              borderRadius: "50%",
+              animation: "ordr-spin 650ms linear infinite",
+              flexShrink: 0,
+            }} aria-hidden="true" />
+            <span>Verifying…</span>
+          </>
+        ) : (
+          <span>Verify</span>
+        )}
+      </button>
+
+      {/* Back link */}
+      <button
+        onClick={() => { setMfaChallenge(false); setMfaToken(null); setMfaCode(""); setMfaError(null); }}
+        style={{
+          fontFamily:    C.fontMono,
+          fontSize:      "0.58rem",
+          color:         C.inkLight,
+          letterSpacing: "0.07em",
+          background:    "none",
+          border:        "none",
+          cursor:        "pointer",
+          textAlign:     "center",
+          padding:       0,
+        }}
+      >
+        ← Back to sign-in
+      </button>
+    </div>
+  ) : null;
 
   // D1: enhanced input style with proper disabled state
   const inputStyle = (focused: boolean, hasError: boolean): React.CSSProperties => ({
@@ -549,6 +764,10 @@ export default function LoginPage() {
                   </div>
                 </div>
               </div>
+
+              {/* ── MFA challenge OR normal login form ── */}
+              {mfaChallenge ? mfaChallengeContent : (
+              <>
 
               {/* ── A3: Page heading — 1.5rem / -0.03em ── */}
               <div style={{ marginBottom: 30 }}>
@@ -867,6 +1086,9 @@ export default function LoginPage() {
                   Unauthorized access is prohibited and subject to civil and criminal penalties.
                 </p>
               </div>
+
+              </>
+              )}
 
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { CalculateResponse, BucketResult, PolicyConfig } from "../../api/types";
 import ExecutiveSummaryPanel from "./ExecutiveSummaryPanel";
 import ExposureInsightsPanel from "./ExposureInsightsPanel";
@@ -17,12 +17,34 @@ import {
   generateExecutiveNarrative,
 } from "../../utils/reportCalcs";
 import {
-  exportReportCsv, exportCommitteePackPdf, exportExecutiveBriefPdf,
+  exportReportCsv, exportCommitteePackPdf, exportExecutiveBriefPdf, exportDataXlsx,
 } from "../../utils/clientExport";
+
+// ── Report versioning (L-14) ─────────────────────────────────────────────────
+interface SavedReport {
+  id: string;       // `${userId}_${runId}_v${n}`
+  name: string;     // e.g. "Report v1 — 2026-02-28 14:32"
+  runId: string;
+  savedAt: number;  // epoch ms
+  snapshot: Record<string, unknown>; // serialized state
+}
+
+const MAX_SAVED = 20;
+
+function loadSavedReports(userId: string): SavedReport[] {
+  try {
+    return JSON.parse(localStorage.getItem(`savedReports_${userId}`) ?? "[]") as SavedReport[];
+  } catch { return []; }
+}
+
+function saveSavedReports(userId: string, reports: SavedReport[]): void {
+  localStorage.setItem(`savedReports_${userId}`, JSON.stringify(reports.slice(-MAX_SAVED)));
+}
 
 interface ReportsContainerProps {
   result:   CalculateResponse;
   baseCcy?: string;
+  userId?:  string;
 }
 
 const FALLBACK_POLICY: PolicyConfig = {
@@ -43,17 +65,19 @@ const REPORTS = [
 ];
 
 function ReportSection({
-  number, title, meaning, guidance, children, onExportPdf, onExportCsv,
+  number, title, meaning, guidance, children, onExportPdf, onExportCsv, onExportXlsx,
 }: {
   number: string; title: string; meaning: string; guidance: string[];
   children: React.ReactNode;
   onExportPdf?: () => Promise<void> | void;
   onExportCsv?: () => void;
+  onExportXlsx?: () => void;
 }) {
   const [expanded, setExpanded] = useState(true);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfDone, setPdfDone] = useState(false);
   const [csvDone, setCsvDone] = useState(false);
+  const [xlsxDone, setXlsxDone] = useState(false);
 
   const handlePdf = async () => {
     if (!onExportPdf || pdfBusy) return;
@@ -67,6 +91,12 @@ function ReportSection({
     onExportCsv();
     setCsvDone(true);
     setTimeout(() => setCsvDone(false), 2200);
+  };
+  const handleXlsx = () => {
+    if (!onExportXlsx) return;
+    onExportXlsx();
+    setXlsxDone(true);
+    setTimeout(() => setXlsxDone(false), 2200);
   };
 
   return (
@@ -119,6 +149,14 @@ function ReportSection({
                 {csvDone ? "Saved ✓" : "Export CSV ↓"}
               </button>
             )}
+            {onExportXlsx && (
+              <button
+                onClick={handleXlsx}
+                className={`text-[10px] font-mono px-3 py-1.5 border transition-colors ${xlsxDone ? "border-[var(--accent-green)]/40 text-[var(--accent-green)]" : "border-[var(--border-rim)] text-[var(--text-tertiary)] hover:border-[var(--accent-cyan)] hover:text-[var(--accent-cyan)]"}`}
+              >
+                {xlsxDone ? "Saved ✓" : "Export XLSX ↓"}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -126,10 +164,54 @@ function ReportSection({
   );
 }
 
-export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsContainerProps) {
+export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" }: ReportsContainerProps) {
   const [activeReport, setActiveReport] = useState("coverage");
   const { hedge_plan, scenario_results, validation_report } = result;
   const { summary, buckets } = hedge_plan;
+
+  // ── L-14: Report versioning ───────────────────────────────────────────────
+  const currentRunId = result.run_id ?? result.run_envelope?.run_id ?? "unknown";
+  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+  const [showSaved, setShowSaved] = useState(false);
+  const [saveFlash, setSaveFlash] = useState(false);
+
+  useEffect(() => {
+    if (userId) setSavedReports(loadSavedReports(userId));
+  }, [userId]);
+
+  function handleSaveVersion() {
+    if (!userId) return;
+    const existing = loadSavedReports(userId);
+    const vNum = existing.filter((r) => r.runId === currentRunId).length + 1;
+    const now = new Date();
+    const label = `${now.toISOString().slice(0, 10)} ${now.toTimeString().slice(0, 5)}`;
+    const newReport: SavedReport = {
+      id: `${userId}_${currentRunId}_v${vNum}`,
+      name: `Report v${vNum} — ${label}`,
+      runId: currentRunId,
+      savedAt: Date.now(),
+      snapshot: { activeReport, baseCcy, runId: currentRunId },
+    };
+    const updated = [...existing, newReport].slice(-MAX_SAVED);
+    saveSavedReports(userId, updated);
+    setSavedReports(updated);
+    setSaveFlash(true);
+    setTimeout(() => setSaveFlash(false), 2200);
+  }
+
+  function handleLoadVersion(report: SavedReport) {
+    if (report.snapshot.activeReport && typeof report.snapshot.activeReport === "string") {
+      setActiveReport(report.snapshot.activeReport);
+    }
+    setShowSaved(false);
+  }
+
+  function handleDeleteVersion(id: string) {
+    if (!userId) return;
+    const updated = loadSavedReports(userId).filter((r) => r.id !== id);
+    saveSavedReports(userId, updated);
+    setSavedReports(updated);
+  }
 
   const kpis          = useMemo(() => scenarioKpis(scenario_results.totals, summary), [scenario_results, summary]);
   const concentration = useMemo(() => concentrationAnalysis(buckets), [buckets]);
@@ -154,8 +236,8 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
 
   return (
     <div className="space-y-5">
-      {/* Report navigation tabs */}
-      <div className="flex gap-1.5 flex-wrap">
+      {/* Report navigation tabs + version toolbar */}
+      <div className="flex gap-1.5 flex-wrap items-center">
         {REPORTS.map(r => (
           <button
             key={r.key}
@@ -170,7 +252,65 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
             {r.label}
           </button>
         ))}
+        {userId && (
+          <>
+            <div className="flex-1" />
+            <button
+              onClick={handleSaveVersion}
+              className={`text-[10px] font-mono px-3 py-1.5 border transition-colors ${saveFlash ? "border-[var(--accent-green)]/40 text-[var(--accent-green)]" : "border-[var(--border-rim)] text-[var(--text-tertiary)] hover:border-[var(--accent-cyan)] hover:text-[var(--accent-cyan)]"}`}
+              title="Save a versioned snapshot of the current report view"
+            >
+              {saveFlash ? "Saved ✓" : "SAVE VERSION"}
+            </button>
+            <button
+              onClick={() => setShowSaved(s => !s)}
+              className="text-[10px] font-mono px-3 py-1.5 border border-[var(--border-rim)] text-[var(--text-tertiary)] hover:border-[var(--accent-cyan)] hover:text-[var(--accent-cyan)] transition-colors"
+            >
+              {showSaved ? "▴" : "▾"} SAVED REPORTS ({savedReports.length})
+            </button>
+          </>
+        )}
       </div>
+
+      {/* ── L-14: Saved reports panel ── */}
+      {userId && showSaved && (
+        <div className="bg-[var(--bg-panel)] border border-[var(--border-rim)] rounded overflow-hidden">
+          <div className="px-4 py-2.5 bg-[var(--bg-deep)] border-b border-[var(--border-soft)] flex items-center gap-3">
+            <span className="text-[10px] font-mono text-[var(--text-tertiary)] tracking-widest">SAVED REPORTS</span>
+            <span className="text-[10px] font-mono text-[var(--text-tertiary)]">— {savedReports.length} version{savedReports.length !== 1 ? "s" : ""} stored</span>
+          </div>
+          {savedReports.length === 0 ? (
+            <div className="px-4 py-6 text-sm text-[var(--text-tertiary)] text-center">
+              No saved versions yet. Click SAVE VERSION to snapshot the current report view.
+            </div>
+          ) : (
+            <div className="divide-y divide-[var(--border-soft)]">
+              {[...savedReports].reverse().map((rep) => (
+                <div key={rep.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--bg-sub)] transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-[var(--text-primary)] truncate">{rep.name}</div>
+                    <div className="text-[10px] font-mono text-[var(--text-tertiary)] mt-0.5">
+                      Run: {rep.runId.slice(0, 8)}… · {new Date(rep.savedAt).toLocaleString("en-GB")}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleLoadVersion(rep)}
+                    className="text-[10px] font-mono px-2.5 py-1 border border-[var(--accent-cyan)]/40 text-[var(--accent-cyan)] hover:border-[var(--accent-cyan)] transition-colors shrink-0"
+                  >
+                    LOAD
+                  </button>
+                  <button
+                    onClick={() => handleDeleteVersion(rep.id)}
+                    className="text-[10px] font-mono px-2.5 py-1 border border-[var(--border-rim)] text-[var(--text-tertiary)] hover:border-[var(--accent-red)] hover:text-[var(--accent-red)] transition-colors shrink-0"
+                  >
+                    DELETE
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── R1: Coverage & Residual ── */}
       {activeReport === "coverage" && (
@@ -186,6 +326,13 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
           ]}
           onExportPdf={() => exportCommitteePackPdf(result, baseCcy)}
           onExportCsv={() => exportReportCsv("coverage", result, baseCcy)}
+          onExportXlsx={() => {
+            const rows = buckets.map(b => {
+              const cov = Math.abs(b.commercial_exposure_mxn) > 0 ? Math.abs(b.hedge_position_mxn) / Math.abs(b.commercial_exposure_mxn) : 0;
+              return [b.bucket, baseCcy, b.commercial_exposure_mxn, b.existing_hedges_mxn, b.action_mxn, b.hedge_position_mxn, b.residual_mxn, (cov * 100).toFixed(1) + "%", b.suppressed ? "YES" : "NO"];
+            });
+            exportDataXlsx(["Bucket", "Currency", "Commercial Exposure", "Existing Hedges", "New Action", "Hedge Position", "Residual", "Coverage %", "Suppressed"], rows, `R01_Coverage_${result.run_envelope.run_id.slice(0, 12)}.xlsx`);
+          }}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
@@ -261,6 +408,10 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
           ]}
           onExportPdf={() => exportCommitteePackPdf(result, baseCcy)}
           onExportCsv={() => exportReportCsv("cost", result, baseCcy)}
+          onExportXlsx={() => {
+            const rows = buckets.filter(b => !b.suppressed).map(b => [b.bucket, b.action_mxn, b.action_usd, FALLBACK_POLICY.cost_assumptions.spread_bps, b.friction_usd, b.carry_note ?? ""]);
+            exportDataXlsx(["Bucket", "Notional", "Action USD", "Spread (bps)", "Friction USD", "Carry Note"], rows, `R02_CostSlippage_${result.run_envelope.run_id.slice(0, 12)}.xlsx`);
+          }}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
@@ -325,6 +476,10 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
           ]}
           onExportPdf={() => exportCommitteePackPdf(result, baseCcy)}
           onExportCsv={() => exportReportCsv("scenario", result, baseCcy)}
+          onExportXlsx={() => {
+            const rows = scenario_results.totals.map(t => [t.sigma, t.shocked_spot, t.total_unhedged_usd, t.total_hedged_usd, t.total_hedge_benefit_usd]);
+            exportDataXlsx(["Shock (σ)", "Shocked Spot", "Unhedged (USD)", "Hedged (USD)", "Hedge Benefit (USD)"], rows, `R03_Scenario_${result.run_envelope.run_id.slice(0, 12)}.xlsx`);
+          }}
         >
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
@@ -386,6 +541,11 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
           ]}
           onExportPdf={() => exportCommitteePackPdf(result, baseCcy)}
           onExportCsv={() => exportReportCsv("compliance", result, baseCcy)}
+          onExportXlsx={() => {
+            const rows = compliance.checks.map(c => [c.label, c.pass ? "PASS" : "FAIL", c.detail]);
+            rows.push(["SCORE", compliance.score >= 80 ? "PASS" : "FAIL", `${compliance.score}% — ${compliance.classification}`]);
+            exportDataXlsx(["Rule", "Status", "Detail"], rows, `R04_Compliance_${result.run_envelope.run_id.slice(0, 12)}.xlsx`);
+          }}
         >
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="w-full md:w-56 shrink-0 bg-[var(--bg-deep)] border border-[var(--border-soft)] rounded p-2">
@@ -477,6 +637,15 @@ export default function ReportsContainer({ result, baseCcy = "MXN" }: ReportsCon
           ]}
           onExportPdf={() => exportCommitteePackPdf(result, baseCcy)}
           onExportCsv={() => exportReportCsv("liquidity", result, baseCcy)}
+          onExportXlsx={() => {
+            const sorted = [...buckets].sort((a, b) => Math.abs(b.commercial_exposure_mxn) - Math.abs(a.commercial_exposure_mxn));
+            const rows = sorted.map((b, rank) => {
+              const pct = totalExposure > 0 ? Math.abs(b.commercial_exposure_mxn) / totalExposure : 0;
+              const cov = Math.abs(b.commercial_exposure_mxn) > 0 ? Math.abs(b.hedge_position_mxn) / Math.abs(b.commercial_exposure_mxn) : 0;
+              return [rank + 1, b.bucket, b.commercial_exposure_mxn, (pct * 100).toFixed(1) + "%", (cov * 100).toFixed(1) + "%", pct > 0.6 ? "HIGH CONC" : pct > 0.3 ? "MODERATE" : "OK"];
+            });
+            exportDataXlsx(["Rank", "Bucket", "Exposure", "% of Total", "Coverage %", "Risk Flag"], rows, `R05_Liquidity_${result.run_envelope.run_id.slice(0, 12)}.xlsx`);
+          }}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
