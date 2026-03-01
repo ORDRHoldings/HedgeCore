@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, Suspense } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, Suspense } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
@@ -377,7 +377,6 @@ function SandboxPageInner() {
 
   const [activeTab, setActiveTab] = useState<SandboxTab>("stress");
   const [selectedCrisis, setSelectedCrisis] = useState<CrisisEvent | null>(null);
-  const [showWhitepaper, setShowWhitepaper] = useState(false);
 
   // Widget mode
   const isWidget = searchParams?.get("widget") === "true";
@@ -427,6 +426,15 @@ function SandboxPageInner() {
     },
     [dispatch]
   );
+
+  // Auto-run demo simulation on mount when no result exists
+  const autoRanRef = useRef(false);
+  useEffect(() => {
+    if (!autoRanRef.current && !sandboxResult && !sandboxLoading && token) {
+      autoRanRef.current = true;
+      dispatch(sandboxCalculateThunk({ request: DEMO_REQUEST, token }));
+    }
+  }, [sandboxResult, sandboxLoading, token, dispatch]);
 
   // Widget mode
   if (isWidget) {
@@ -543,12 +551,6 @@ function SandboxPageInner() {
           </button>
         )}
 
-        <button onClick={() => setShowWhitepaper(!showWhitepaper)} style={{
-          fontFamily: S.fontMono, fontSize: 10, fontWeight: 600,
-          padding: "4px 10px", border: `1px solid ${S.soft}`,
-          color: S.tertiary, background: "transparent", cursor: "pointer", borderRadius: 2,
-        }}>📄 Quick Export</button>
-
         {sandboxResult && (
           <button onClick={() => router.push("/hedge-desk")} style={{
             fontFamily: S.fontUI, fontSize: 11, fontWeight: 700,
@@ -558,13 +560,6 @@ function SandboxPageInner() {
           }}>Execution Bridge →</button>
         )}
       </div>
-
-      {/* ── Whitepaper quick export panel (collapsible) ── */}
-      {showWhitepaper && (
-        <div style={{ padding: "10px 16px", borderBottom: `1px solid ${S.rim}`, background: S.sub }}>
-          <WhitepaperExport sandboxResult={sandboxResult} />
-        </div>
-      )}
 
       {/* ── Main body: 3-column flex ── */}
       <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
@@ -620,25 +615,12 @@ function SandboxPageInner() {
                 SIMULATION LAB STATUS
               </div>
               <div style={{
-                padding: "8px 12px", border: `1px solid ${S.soft}`, borderRadius: 3,
+                padding: "8px 12px", border: `1px solid ${S.cyan}`, borderRadius: 3,
                 fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5,
+                background: `color-mix(in srgb, ${S.cyan} 5%, transparent)`,
               }}>
-                Load positions from the Position Desk, or run the built-in demo scenario below.
+                {sandboxLoading ? "▶ Running demo simulation…" : "Demo simulation running — all 7 quant tabs will populate momentarily."}
               </div>
-              <button
-                onClick={() => { if (token) dispatch(sandboxCalculateThunk({ request: DEMO_REQUEST, token })); }}
-                disabled={sandboxLoading || !token}
-                style={{
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
-                  padding: "7px 14px", border: `1px solid ${S.cyan}`,
-                  color: S.cyan, background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
-                  cursor: sandboxLoading || !token ? "not-allowed" : "pointer",
-                  opacity: sandboxLoading || !token ? 0.5 : 1,
-                  borderRadius: 2, transition: "all 0.12s",
-                }}
-              >
-                {sandboxLoading ? "RUNNING…" : "▶ RUN DEMO SIMULATION"}
-              </button>
               <DataSourceBadge status={liveStatus} fetchedAt={fetchedAt} />
               {liveSpot && (
                 <div style={{
