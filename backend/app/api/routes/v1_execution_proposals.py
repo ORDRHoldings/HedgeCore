@@ -999,6 +999,21 @@ async def withdraw_proposal(
 
 
 
+class ExecuteWithFillRequest(BaseModel):
+    """Optional body for POST /v1/proposals/{id}/execute.
+
+    If fill data is supplied the proposal is executed and immediately enriched
+    with the actual fill price in a single round-trip — useful for the
+    Hedge Desk solo-mode flow where the operator fills and records in one step.
+    """
+
+    fill_price:    Optional[float] = Field(default=None, gt=0, description="Actual fill price (e.g. 19.2340)")
+    fill_notional: Optional[float] = Field(default=None, gt=0, description="Actual notional filled")
+    fill_currency: Optional[str]   = Field(default=None, max_length=8, description="Fill currency (e.g. 'MXN')")
+    fill_timestamp: Optional[str]  = Field(default=None, description="ISO 8601 fill timestamp")
+    fill_notes:    Optional[str]   = Field(default=None, max_length=512)
+
+
 @router.post("/{proposal_id}/execute", response_model=ProposalResponse)
 
 async def execute_approved_proposal(
@@ -1006,6 +1021,8 @@ async def execute_approved_proposal(
     proposal_id:  UUID,
 
     request:      Request,
+
+    data:         Optional[ExecuteWithFillRequest] = None,
 
     session:      AsyncSession = Depends(get_async_session),
 
@@ -1108,6 +1125,69 @@ async def execute_approved_proposal(
         request = request,
 
     )
+
+    # STEP 6: If fill data supplied, record it inline (single round-trip for Hedge Desk)
+    if data and data.fill_price is not None:
+
+        proposed_rate = proposal.proposal_payload.get("hedge_rate") if proposal.proposal_payload else None
+
+        slippage_bps: Optional[float] = None
+
+        if proposed_rate and proposed_rate > 0:
+
+            slippage_bps = abs(data.fill_price - proposed_rate) / proposed_rate * 10000
+
+        proposal.actual_fill_rate     = data.fill_price
+
+        proposal.actual_fill_notional = data.fill_notional
+
+        proposal.slippage_bps         = slippage_bps
+
+        fill_payload = {
+
+            "fill_price":     data.fill_price,
+
+            "fill_notional":  data.fill_notional,
+
+            "fill_currency":  data.fill_currency,
+
+            "fill_timestamp": data.fill_timestamp or datetime.now(timezone.utc).isoformat(),
+
+            "slippage_bps":   slippage_bps,
+
+            "source":         "inline_execute",
+
+        }
+
+        fill_hash_input = json.dumps(fill_payload, sort_keys=True, default=str).encode()
+
+        proposal.fill_hash = hashlib.sha256(fill_hash_input).hexdigest()
+
+        await session.commit()
+
+        await session.refresh(proposal)
+
+        await _emit_proposal_audit(
+
+            session, current_user,
+
+            event_type  = "LIFECYCLE",
+
+            description = (
+
+                f"Fill recorded inline: {data.fill_currency or ''} {data.fill_price:.6f}"
+
+                + (f" (slippage {slippage_bps:.1f} bps)" if slippage_bps is not None else "")
+
+            ),
+
+            proposal_id = str(proposal.id),
+
+            payload     = fill_payload,
+
+            request     = request,
+
+        )
 
     return ProposalResponse.from_orm_safe(proposal)
 
@@ -1388,6 +1468,165 @@ async def batch_propose_execution(
             failed.append({"position_id": str(item.position_id), "error": str(e)})
 
     return BatchProposeResponse(created=created, failed=failed)
+
+
+# ---------------------------------------------------------------------------
+# POST /v1/proposals/batch-and-approve — Solo mode: create + self-approve
+# ---------------------------------------------------------------------------
+
+
+class BatchAndApproveResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    approved: list[ProposalResponse]
+    failed: list[dict]
+    governance_mode: str = "solo"
+
+
+@router.post("/batch-and-approve", response_model=BatchAndApproveResponse, status_code=201)
+
+async def batch_propose_and_approve(
+
+    data:         BatchProposeRequest,
+
+    request:      Request,
+
+    session:      AsyncSession = Depends(get_async_session),
+
+    current_user: User         = Depends(get_current_user),
+
+    mfa_verified: bool         = Depends(get_mfa_verified),
+
+):
+
+    """
+
+    Solo governance mode: atomically create and self-approve proposals.
+
+    Requires company.settings['governance_mode'] == 'solo'.
+
+    If the company is in team mode this endpoint returns 403.
+
+    Requires: trades.edit + trades.execute
+
+    """
+
+    await _check_permission(session, current_user, "trades.edit")
+
+    await _check_permission(session, current_user, "trades.execute")
+
+    await _check_mfa_gate(session, current_user, mfa_verified)
+
+    # Verify solo mode
+    from app.models.organization import Company
+    company_result = await session.execute(
+        sa_select(Company).where(Company.id == current_user.company_id)
+    )
+    company = company_result.scalar_one_or_none()
+    settings = company.settings or {} if company else {}
+    governance_mode = settings.get("governance_mode", "team")
+
+    if governance_mode != "solo":
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "TEAM_MODE_ACTIVE: batch-and-approve is only available when "
+                "company.settings.governance_mode == 'solo'. "
+                "Use POST /v1/proposals/batch and await checker approval via the staging queue."
+            ),
+        )
+
+    approved: list[ProposalResponse] = []
+    failed: list[dict] = []
+
+    for item in data.proposals:
+
+        try:
+
+            proposal = await ep_service.propose_execution(
+
+                session,
+
+                user               = current_user,
+
+                position_id        = item.position_id,
+
+                execution_ref      = item.execution_ref,
+
+                hedge_amount       = item.hedge_amount,
+
+                hedge_rate         = item.hedge_rate,
+
+                run_id             = item.run_id,
+
+                policy_revision_id = item.policy_revision_id,
+
+                notes              = item.notes,
+
+                risk_decision_hash = item.risk_decision_hash,
+
+                risk_verdict       = item.risk_verdict,
+
+            )
+
+            # Self-approve (solo governance mode — bypasses SoD intentionally)
+            proposal = await ep_service.approve_proposal_solo(
+
+                session,
+
+                user           = current_user,
+
+                proposal_id    = proposal.id,
+
+                approval_notes = "Solo governance mode: self-approved by proposer",
+
+            )
+
+            approved.append(ProposalResponse.from_orm_safe(proposal))
+
+            await _emit_proposal_audit(
+
+                session, current_user,
+
+                event_type  = "LIFECYCLE",
+
+                description = (
+                    f"Solo batch-and-approve: PROPOSED+APPROVED for position {item.position_id}"
+                ),
+
+                proposal_id = str(proposal.id),
+
+                payload     = {
+
+                    "status":           "APPROVED",
+
+                    "governance_mode":  "solo",
+
+                    "execution_ref":    item.execution_ref,
+
+                    "position_id":      str(item.position_id),
+
+                    "proposal_hash":    proposal.proposal_hash,
+
+                    "approval_hash":    proposal.approval_hash,
+
+                    "batch":            True,
+
+                },
+
+                request = request,
+
+            )
+
+        except Exception as e:
+
+            logger.warning(
+                "Batch-and-approve failed for position %s: %s", item.position_id, e
+            )
+
+            failed.append({"position_id": str(item.position_id), "error": str(e)})
+
+    return BatchAndApproveResponse(approved=approved, failed=failed, governance_mode="solo")
 
 
 # ---------------------------------------------------------------------------

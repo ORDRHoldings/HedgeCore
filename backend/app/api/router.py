@@ -129,4 +129,8 @@ router.include_router(v1_risk_check_router)
 from app.api.routes.v1_market_snapshots import router as v1_market_snapshots_router
 router.include_router(v1_market_snapshots_router)
 
+# Company governance settings (owns /v1/company)
+from app.api.routes.v1_company_settings import router as v1_company_settings_router
+router.include_router(v1_company_settings_router)
+
 __all__ = ["router"]

@@ -260,6 +260,41 @@ async def approve_proposal(
     return proposal
 
 
+async def approve_proposal_solo(
+    session: AsyncSession,
+    *,
+    user: User,
+    proposal_id: _uuid.UUID,
+    approval_notes: Optional[str] = None,
+) -> ExecutionProposal:
+    """
+    Solo governance mode: self-approval (bypasses SoD check).
+
+    Only called when company.settings['governance_mode'] == 'solo'.
+    Records the approval with an explicit solo-mode marker in the hash input.
+    """
+    proposal = await _get_proposal(session, proposal_id, user.company_id)
+    _assert_proposal_transition(proposal.status, "APPROVED", proposal_id)
+
+    # NOTE: SoD check intentionally omitted — solo mode explicitly permits self-approval.
+    notes = approval_notes or "Solo governance mode: self-approved by proposer"
+    now = datetime.now(timezone.utc)
+    proposal.approved_by       = user.id
+    proposal.approved_by_email = user.email
+    proposal.approved_at       = now
+    proposal.approval_notes    = notes
+    proposal.approval_hash     = compute_approval_hash(
+        approved_by    = str(user.id),
+        approved_at    = now,
+        approval_notes = notes,
+        proposal_hash  = proposal.proposal_hash,
+    )
+    proposal.status = "APPROVED"
+    await session.commit()
+    await session.refresh(proposal)
+    return proposal
+
+
 async def reject_proposal(
     session: AsyncSession,
     *,
