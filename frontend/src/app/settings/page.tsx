@@ -90,10 +90,15 @@ export default function SettingsPage() {
     if (!authLoading && !isAuthenticated) router.replace("/auth/login");
   }, [authLoading, isAuthenticated, router]);
 
-  // Activate tab from URL hash
+  // Activate tab from URL hash — responds to both mount and subsequent hash changes
   useEffect(() => {
-    const hash = window.location.hash.slice(1);
-    if (hash && HASH_MAP[hash]) setActiveTab(HASH_MAP[hash]);
+    const apply = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash && HASH_MAP[hash]) setActiveTab(HASH_MAP[hash]);
+    };
+    apply();
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
   }, []);
 
   const addToast = useCallback((kind: Toast["kind"], msg: string) => {
