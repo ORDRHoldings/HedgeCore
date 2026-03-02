@@ -319,18 +319,18 @@ const NAV: NavSection[] = [
     header: "Configuration",
     items: [
       // CONFIGURATION
-      { label: "General",           desc: "Organisation name, currency, timezone, branding",        href: "/settings",                    icon: Ic.user },
-      { label: "Policy Limits",     desc: "Hedge ratios, trade size limits, governance controls",   href: "/settings#policy_limits",      icon: Ic.shield,    badge: "RISK",  badgeColor: S.amber },
-      { label: "Execution",         desc: "Default product, stress sigma, friction thresholds",     href: "/settings#execution",          icon: Ic.lightning, badge: "EXEC",  badgeColor: S.cyan  },
-      { label: "API & Config",      desc: "Alpha Vantage, backend URL, IBKR TWS connectivity",     href: "/settings#api_config",         icon: Ic.key,       badge: "KEYS",  badgeColor: S.red   },
-      { label: "Notifications",     desc: "Alert triggers, email recipients, webhook endpoints",    href: "/settings#notifications",      icon: Ic.clock },
+      { label: "General",           desc: "Organisation name, currency, timezone, branding",        href: "/settings",                        icon: Ic.user },
+      { label: "Policy Limits",     desc: "Hedge ratios, trade size limits, governance controls",   href: "/settings?tab=policy_limits",      icon: Ic.shield,    badge: "RISK",  badgeColor: S.amber },
+      { label: "Execution",         desc: "Default product, stress sigma, friction thresholds",     href: "/settings?tab=execution",          icon: Ic.lightning, badge: "EXEC",  badgeColor: S.cyan  },
+      { label: "API & Config",      desc: "Alpha Vantage, backend URL, IBKR TWS connectivity",     href: "/settings?tab=api_config",         icon: Ic.key,       badge: "KEYS",  badgeColor: S.red   },
+      { label: "Notifications",     desc: "Alert triggers, email recipients, webhook endpoints",    href: "/settings?tab=notifications",      icon: Ic.clock },
       // ACCESS & SECURITY
-      { label: "Security",          desc: "TOTP MFA enrolment and device management",              href: "/settings#security",           icon: Ic.shield,    badge: "MFA",   badgeColor: S.cyan  },
-      { label: "Users & Roles",     desc: "Team members, RBAC role assignments",                   href: "/settings#users_roles",        icon: Ic.user,      badge: "RBAC",  badgeColor: "#8B5CF6" },
-      { label: "API Key Management",desc: "Generate, label, and revoke programmatic API keys",     href: "/settings#api_key_mgmt",       icon: Ic.key,       badge: "MGMT",  badgeColor: S.amber },
+      { label: "Security",          desc: "TOTP MFA enrolment and device management",              href: "/settings?tab=security",           icon: Ic.shield,    badge: "MFA",   badgeColor: S.cyan  },
+      { label: "Users & Roles",     desc: "Team members, RBAC role assignments",                   href: "/settings?tab=users_roles",        icon: Ic.user,      badge: "RBAC",  badgeColor: "#8B5CF6" },
+      { label: "API Key Management",desc: "Generate, label, and revoke programmatic API keys",     href: "/settings?tab=api_key_mgmt",       icon: Ic.key,       badge: "MGMT",  badgeColor: S.amber },
       // ORGANISATION
-      { label: "Organisation",      desc: "Company identity, branches, governance mode",           href: "/settings#organisation",       icon: Ic.db },
-      { label: "Audit Trail",       desc: "Immutable event log with hash-chain integrity",         href: "/settings#audit_trail",        icon: Ic.check,     badge: "WORM",  badgeColor: "#8B5CF6" },
+      { label: "Organisation",      desc: "Company identity, branches, governance mode",           href: "/settings?tab=organisation",       icon: Ic.db },
+      { label: "Audit Trail",       desc: "Immutable event log with hash-chain integrity",         href: "/settings?tab=audit_trail",        icon: Ic.check,     badge: "WORM",  badgeColor: "#8B5CF6" },
     ],
   },
   {
