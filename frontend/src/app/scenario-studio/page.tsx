@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useHedge } from "../../lib/hedgeContext";
 import HelpPanel from "../../components/layout/HelpPanel";
 import { SCENARIO_STUDIO_HELP } from "../../lib/helpContent";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -848,6 +849,8 @@ function TabAudit({ runId }: { runId: string | null }) {
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function ScenarioStudio() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
   const router = useRouter();
   const { result } = useHedge();
   const maxPnL = Math.max(...DISTRIBUTION.map(d => Math.abs(d.pnl)));

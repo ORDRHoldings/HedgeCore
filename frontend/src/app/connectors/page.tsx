@@ -22,6 +22,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { listConnectorRuns } from "../../api/connectorClient";
 import type { ConnectorRun } from "../../api/connectorClient";
 import HelpPanel from "@/components/layout/HelpPanel";
@@ -181,6 +182,8 @@ function KpiCard({ label, value, sub, color }: { label: string; value: string; s
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ConnectorsPage() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const renderTs = useRenderTs();

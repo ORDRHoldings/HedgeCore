@@ -8,6 +8,7 @@
 
 import { X, Plus, Check } from "lucide-react";
 import { WIDGET_REGISTRY, type WidgetDef } from "@/lib/widgets/widgetRegistry";
+import { usePlanGate } from "@/lib/hooks/usePlanGate";
 import { useAuth } from "@/lib/authContext";
 
 const S = {
@@ -43,10 +44,12 @@ export default function WidgetCatalog({
   onReset,
 }: WidgetCatalogProps) {
   const { user, hasPermission } = useAuth();
+  const { hasAccess: hasPlanAccess } = usePlanGate();
 
   const available = WIDGET_REGISTRY.filter((w) => {
-    if (!w.requiredPermission) return true;
-    return hasPermission(w.requiredPermission);
+    if (w.requiredPermission && !hasPermission(w.requiredPermission)) return false;
+    if (w.requiredPlan && !hasPlanAccess(w.requiredPlan)) return false;
+    return true;
   });
 
   if (!open) return null;

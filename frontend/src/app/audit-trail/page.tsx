@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { AUDIT_HELP } from "@/lib/help";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -434,6 +435,8 @@ function EventRow({ event, expanded, onToggle }: {
 // Page Component
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function AuditTrailPage() {
+  const _planAllowed = usePlanRedirect("enterprise");
+  if (!_planAllowed) return null;
   const renderTs = useRenderTs();
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();

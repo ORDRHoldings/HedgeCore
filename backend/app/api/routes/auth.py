@@ -527,6 +527,11 @@ async def read_me(request: Request, db: AsyncSession = Depends(get_session)) -> 
 
 
 
+        # Resolve plan tier from company settings (default: enterprise)
+        plan_tier = "enterprise"
+        if getattr(user, "company", None) and getattr(user.company, "settings", None):
+            plan_tier = (user.company.settings or {}).get("plan_tier", "enterprise")
+
         return UserMeResponse(
 
             id=user.id,
@@ -554,6 +559,8 @@ async def read_me(request: Request, db: AsyncSession = Depends(get_session)) -> 
             permissions=permissions,
 
             hierarchy_level=hierarchy_level,
+
+            plan_tier=plan_tier,
 
         )
 

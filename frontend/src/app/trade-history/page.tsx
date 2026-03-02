@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 // ─── Design tokens ───────────────────────────────────────────────────────────
 const S = {
@@ -124,6 +125,8 @@ function localPart(email: string | null): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function TradeHistoryPage() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
   const router = useRouter();
   const { user, token } = useAuth();
 

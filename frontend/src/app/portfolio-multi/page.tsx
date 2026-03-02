@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "../../lib/authContext";
 import { PAIR_REGISTRY, GROUP_LABELS, getPairsByGroup, type PairGroup } from "../../constants/pairRegistry";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -98,6 +99,8 @@ function GroupCard({ group }: { group: PairGroup }) {
 }
 
 export default function PortfolioMultiPage() {
+  const _planAllowed = usePlanRedirect("enterprise");
+  if (!_planAllowed) return null;
   const { user } = useAuth();
   const [activeGroup, setActiveGroup] = useState<PairGroup | "ALL">("ALL");
 

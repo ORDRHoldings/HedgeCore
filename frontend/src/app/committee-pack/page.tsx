@@ -25,6 +25,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../lib/authContext";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import {
   fetchCommitteePack,
   type CommitteePackResponse,
@@ -940,6 +941,8 @@ function CommitteePackInner() {
 
 // ── Page wrapper with Suspense (required by useSearchParams) ───────────────────
 export default function CommitteePackPage() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       <div style={{ flex: 1, overflowY: "auto" }}>

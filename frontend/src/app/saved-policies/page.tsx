@@ -17,6 +17,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import EmptyState from "../../components/ui/EmptyState";
 import Link from "next/link";
 import { Bookmark, Download, Upload } from "lucide-react";
@@ -777,6 +778,8 @@ function ActionBtn({ label, accent, danger, onClick, disabled }: {
 
 // -- Main page component ----------------------------------------------------------
 export default function SavedPoliciesPage() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
   const renderTs = useRenderTs();

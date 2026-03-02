@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useHedge } from '../../lib/hedgeContext';
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { deriveCurrencyContext } from '../../utils/currencyContext';
 import ExportBar from '../../components/export/ExportBar';
 import TabBar from '../../components/tabs/TabBar';
@@ -50,6 +51,8 @@ function getInitialExecutionTab(): string {
 }
 
 export default function ResultsPage() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
   const { result, lastInputs } = useHedge();
   const [activeSection, setActiveSection] = useState(getInitialSection);
   const [activeExecutionTab, setActiveExecutionTab] = useState(getInitialExecutionTab);

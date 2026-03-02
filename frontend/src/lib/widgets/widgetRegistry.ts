@@ -3,7 +3,7 @@
  * Defines all available dashboard widgets and default layouts per user role.
  */
 
-import type { UserContext } from "@/lib/authContext";
+import type { UserContext, PlanTier } from "@/lib/authContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +22,7 @@ export interface WidgetDef {
   minW: number;
   minH: number;
   requiredPermission: string | null;  // null = any authenticated user
+  requiredPlan?: PlanTier;            // minimum plan tier (default: all plans)
 }
 
 export interface GridItem {
@@ -84,6 +85,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minW: 6,
     minH: 4,
     requiredPermission: "reports.view_all_branches",
+    requiredPlan: "enterprise",
   },
   {
     id: "polisophic_mini",
@@ -94,6 +96,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minW: 4,
     minH: 3,
     requiredPermission: null,
+    requiredPlan: "enterprise",
   },
   {
     id: "quick_actions",
@@ -144,6 +147,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minW: 5,
     minH: 6,
     requiredPermission: null,
+    requiredPlan: "enterprise",
   },
   {
     id: "hedge_health",
@@ -174,6 +178,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minW: 2,
     minH: 4,
     requiredPermission: null,
+    requiredPlan: "enterprise",
   },
   {
     id: "geopolitical",
@@ -184,6 +189,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minW: 4,
     minH: 4,
     requiredPermission: null,
+    requiredPlan: "enterprise",
   },
   {
     id: "usd_exposure_radar",
@@ -194,6 +200,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minW: 4,
     minH: 4,
     requiredPermission: null,
+    requiredPlan: "enterprise",
   },
   {
     id: "risk_pulse",
@@ -204,6 +211,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minW: 3,
     minH: 5,
     requiredPermission: null,
+    requiredPlan: "enterprise",
   },
   {
     id: "fx_news",
@@ -244,6 +252,7 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minW: 4,
     minH: 4,
     requiredPermission: "trades.view",
+    requiredPlan: "enterprise",
   },
 ];
 

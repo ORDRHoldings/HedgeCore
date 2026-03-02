@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { ACCESS_CONTROL_HELP } from "@/lib/helpContent";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -94,6 +95,8 @@ interface ApiRole {
 // Page Component
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function AccessControlPage() {
+  const _planAllowed = usePlanRedirect("enterprise");
+  if (!_planAllowed) return null;
   const renderTs = useRenderTs();
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();

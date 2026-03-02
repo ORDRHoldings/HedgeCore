@@ -28,6 +28,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { useRouter } from "next/navigation";
 import { useHedge } from "../../lib/hedgeContext";
 import { listPositions, getExposureAggregation } from "../../api/positionClient";
@@ -367,6 +368,8 @@ function RiskRadar({ dims }: { dims: RDim[] }) {
 // ── Main page ──────────────────────────────────────────────────────────────
 
 export default function PortfolioRisk() {
+  const _planAllowed = usePlanRedirect("enterprise");
+  if (!_planAllowed) return null;
   const renderTs   = useRenderTs();
   const router     = useRouter();
   const { result, lastInputs } = useHedge();

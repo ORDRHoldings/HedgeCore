@@ -7,4 +7,11 @@
  * GARCH vol modelling, stress testing, audit & governance engine.
  */
 
-export { default } from "@/app/sandbox/whitepaper/page";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
+import WhitepaperPage from "@/app/sandbox/whitepaper/page";
+
+export default function MethodologyPage() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
+  return <WhitepaperPage />;
+}

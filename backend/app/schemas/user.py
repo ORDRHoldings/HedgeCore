@@ -1,7 +1,10 @@
 from uuid import UUID
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 from pydantic import BaseModel, EmailStr, ConfigDict, Field
+
+# ── Plan tiers ─────────────────────────────────────────────────────────────────
+PlanTier = Literal["smb", "professional", "enterprise"]
 
 
 class UserPublic(BaseModel):
@@ -61,3 +64,6 @@ class UserMeResponse(BaseModel):
     roles: List[str] = Field(default_factory=list)
     permissions: List[str] = Field(default_factory=list)
     hierarchy_level: Optional[int] = None
+
+    # Plan tier (from company.settings)
+    plan_tier: PlanTier = "enterprise"

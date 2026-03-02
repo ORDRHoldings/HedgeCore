@@ -51,6 +51,8 @@ function _isTokenExpired(token: string): boolean {
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+export type PlanTier = "smb" | "professional" | "enterprise";
+
 export interface UserContext {
   id: string;
   email: string;
@@ -64,6 +66,7 @@ export interface UserContext {
   roles: string[];
   permissions: string[];
   hierarchy_level: number | null;
+  plan_tier: PlanTier;
 }
 
 interface AuthContextType {
@@ -113,7 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
       if (!res.ok) return null;
-      return await res.json();
+      const data = await res.json();
+      // Ensure plan_tier always has a default
+      if (!data.plan_tier) data.plan_tier = "enterprise";
+      return data;
     } catch {
       return null;
     }

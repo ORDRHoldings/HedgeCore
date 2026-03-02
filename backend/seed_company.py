@@ -439,7 +439,7 @@ async def seed():
             session.add(_Company(
                 id=COMPANY_ID, name="Synex Capital Partners",
                 slug="synex-capital", domain="synexcapital.com",
-                settings={"default_currency": "USD"},
+                settings={"default_currency": "USD", "plan_tier": "enterprise"},
             ))
             await session.flush()
 
@@ -599,6 +599,8 @@ async def seed():
                     "fiscal_year_start": "January",
 
                     "risk_framework": "Basel III Enhanced",
+
+                    "plan_tier": "enterprise",
 
                 },
 

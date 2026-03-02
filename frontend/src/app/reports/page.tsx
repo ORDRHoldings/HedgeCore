@@ -20,6 +20,7 @@
 import { useState, useCallback, useMemo, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { REPORT_PRESETS, REPORT_CATEGORIES } from "../../constants/reportPresets";
 import { useHedge } from "../../lib/hedgeContext";
 import { listRuns, type RunSummary } from "../../api/runsClient";
@@ -1802,6 +1803,8 @@ function ReportStudioInner() {
 
 // Suspense boundary required by Next.js App Router for useSearchParams()
 export default function ReportStudioPage() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
   return (
     <Suspense fallback={
       <div style={{ background: "#FAFAFA", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>

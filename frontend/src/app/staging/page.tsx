@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import type { RootState, AppDispatch } from "../../lib/store";
 import { listStagingThunk } from "../../lib/store/slices/pipelineSlice";
 import type { StagedArtifact } from "../../api/pipelineTypes";
@@ -133,6 +134,8 @@ const BLINK_STYLE = `
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function StagingListPage() {
+  const _planAllowed = usePlanRedirect("enterprise");
+  if (!_planAllowed) return null;
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const renderTs = useRenderTs();

@@ -13,7 +13,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useAuth } from "@/lib/authContext";
+import { useAuth, type PlanTier } from "@/lib/authContext";
+import { usePlanGate } from "@/lib/hooks/usePlanGate";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
@@ -206,6 +207,7 @@ interface NavItem {
   icon:  React.ReactNode;
   badge?: string;
   badgeColor?: string;
+  minTier?: PlanTier; // minimum plan tier to show this item
 }
 
 interface NavSection {
@@ -216,6 +218,7 @@ interface NavSection {
   header:   string;   // dropdown header label
   items:    NavItem[];
   teamOnly?: boolean; // hide in solo governance mode
+  minTier?: PlanTier; // minimum plan tier to show this section
 }
 
 // ── Navigation config ──────────────────────────────────────────────────────────
@@ -226,9 +229,9 @@ const NAV: NavSection[] = [
     header: "Overview",
     items: [
       { label: "Summary",               desc: "KPIs, P&L snapshot, FX exposure heat-map",                          href: "/dashboard",        icon: Ic.dashboard               },
-      { label: "Portfolio Risk",         desc: "Delta, vega, correlation across positions — R1–R8 taxonomy",         href: "/portfolio-risk",   icon: Ic.bar_chart, badge: "RISK",  badgeColor: S.amber },
-      { label: "Polisophic",             desc: "Political & macro risk intelligence feed",                            href: "/polisophic",       icon: Ic.governance, badge: "INTEL", badgeColor: S.amber },
-      { label: "Multi-Pair Portfolio",   desc: "26-pair exposure matrix: G10, EM, NDF settlement breakdown",         href: "/portfolio-multi",  icon: Ic.bar_chart, badge: "MULTI", badgeColor: S.cyan },
+      { label: "Portfolio Risk",         desc: "Delta, vega, correlation across positions — R1–R8 taxonomy",         href: "/portfolio-risk",   icon: Ic.bar_chart, badge: "RISK",  badgeColor: S.amber, minTier: "enterprise" as PlanTier },
+      { label: "Polisophic",             desc: "Political & macro risk intelligence feed",                            href: "/polisophic",       icon: Ic.governance, badge: "INTEL", badgeColor: S.amber, minTier: "enterprise" as PlanTier },
+      { label: "Multi-Pair Portfolio",   desc: "26-pair exposure matrix: G10, EM, NDF settlement breakdown",         href: "/portfolio-multi",  icon: Ic.bar_chart, badge: "MULTI", badgeColor: S.cyan, minTier: "enterprise" as PlanTier },
     ],
   },
   {
@@ -238,12 +241,12 @@ const NAV: NavSection[] = [
     items: [
       { label: "Position Desk",        desc: "Lifecycle control tower — status, policy, execute, reject", href: "/position-desk",          icon: Ic.table,     badge: "DESK",  badgeColor: S.cyan  },
       { label: "Ingestion Desk",       desc: "Manual entry, CSV/XLSX import, connector hub",              href: "/input",                  icon: Ic.pen },
-      { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit",            href: "/upload-csv",             icon: Ic.upload,    badge: "BULK",  badgeColor: S.amber },
-      { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",                        href: "/database-connection",    icon: Ic.db,        badge: "SQL",   badgeColor: S.cyan  },
-      { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",             href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",   badgeColor: S.amber },
-      { label: "Accounting Systems",   desc: "QuickBooks, Xero, Sage invoice import",                     href: "/accounting-connection",  icon: Ic.reports },
-      { label: "Connectors Hub",       desc: "Unified data pipeline status — all connectors",             href: "/connectors",             icon: Ic.plug,      badge: "HUB",   badgeColor: S.cyan  },
-      { label: "Import History",       desc: "Audit log of all file & connector imports",                 href: "/import-history",         icon: Ic.clock,     badge: "AUDIT", badgeColor: S.cyan  },
+      { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit",            href: "/upload-csv",             icon: Ic.upload,    badge: "BULK",  badgeColor: S.amber, minTier: "professional" as PlanTier },
+      { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",                        href: "/database-connection",    icon: Ic.db,        badge: "SQL",   badgeColor: S.cyan,  minTier: "professional" as PlanTier },
+      { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",             href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",   badgeColor: S.amber, minTier: "professional" as PlanTier },
+      { label: "Accounting Systems",   desc: "QuickBooks, Xero, Sage invoice import",                     href: "/accounting-connection",  icon: Ic.reports, minTier: "professional" as PlanTier },
+      { label: "Connectors Hub",       desc: "Unified data pipeline status — all connectors",             href: "/connectors",             icon: Ic.plug,      badge: "HUB",   badgeColor: S.cyan,  minTier: "professional" as PlanTier },
+      { label: "Import History",       desc: "Audit log of all file & connector imports",                 href: "/import-history",         icon: Ic.clock,     badge: "AUDIT", badgeColor: S.cyan,  minTier: "professional" as PlanTier },
     ],
   },
   {
@@ -252,9 +255,9 @@ const NAV: NavSection[] = [
     header: "Hedge Policy",
     items: [
       { label: "Policy Desk",       desc: "Assign policies to positions — active, template, favorite, AI", href: "/policy-desk",       icon: Ic.table,  badge: "DESK",  badgeColor: S.cyan  },
-      { label: "Policy Library",    desc: "Browse 60 institutional preset policies",        href: "/policies",          icon: Ic.book },
-      { label: "AI Policy Wizard",  desc: "Generate tailored policy from your risk profile",href: "/ai-policy-wizard",  icon: Ic.ai,     badge: "AI",    badgeColor: S.amber },
-      { label: "My Saved Policies", desc: "User-scoped & branch-published policies",        href: "/saved-policies",    icon: Ic.shield, badge: "SAVED", badgeColor: S.cyan  },
+      { label: "Policy Library",    desc: "Browse 60 institutional preset policies",        href: "/policies",          icon: Ic.book, minTier: "professional" as PlanTier },
+      { label: "AI Policy Wizard",  desc: "Generate tailored policy from your risk profile",href: "/ai-policy-wizard",  icon: Ic.ai,     badge: "AI",    badgeColor: S.amber, minTier: "professional" as PlanTier },
+      { label: "My Saved Policies", desc: "User-scoped & branch-published policies",        href: "/saved-policies",    icon: Ic.shield, badge: "SAVED", badgeColor: S.cyan,  minTier: "professional" as PlanTier },
     ],
   },
   {
@@ -263,7 +266,7 @@ const NAV: NavSection[] = [
     header: "Hedge Execution",
     items: [
       { label: "Hedge Desk",    desc: "SELECT → CALCULATE → RISK → APPROVE → EXECUTE — full hedge pipeline",        href: "/hedge-desk",    icon: Ic.terminal,  badge: "DESK",  badgeColor: S.cyan  },
-      { label: "Trade History", desc: "Proposals, fills, slippage, tamper-evident audit trail",                      href: "/trade-history", icon: Ic.clock,     badge: "LOG",   badgeColor: S.cyan  },
+      { label: "Trade History", desc: "Proposals, fills, slippage, tamper-evident audit trail",                      href: "/trade-history", icon: Ic.clock,     badge: "LOG",   badgeColor: S.cyan, minTier: "professional" as PlanTier },
       { label: "Hedge Monitor", desc: "Live MTM P&L, hedge effectiveness, roll schedule, reg capital",               href: "/hedge-monitor", icon: Ic.bar_chart, badge: "LIVE",  badgeColor: S.green },
     ],
   },
@@ -276,7 +279,7 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Reports", href: "/reports", icon: Ic.reports,
+    label: "Reports", href: "/reports", icon: Ic.reports, minTier: "professional" as PlanTier,
     prefixes: ["/reports", "/results"],
     header: "Report Studio",
     items: [
@@ -289,7 +292,7 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Research", href: "/sandbox", icon: Ic.lightning,
+    label: "Research", href: "/sandbox", icon: Ic.lightning, minTier: "enterprise" as PlanTier,
     prefixes: ["/sandbox", "/scenario-studio", "/methodology"],
     header: "Research & Simulation",
     items: [
@@ -300,7 +303,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Governance", href: "/audit-trail", icon: Ic.governance,
-    teamOnly: true,
+    teamOnly: true, minTier: "enterprise" as PlanTier,
     // TODO(admin-dashboard): Move "Access Control" (/access-control) to a future Admin Dashboard
     // module when it is built. The page/route is preserved; only the nav entry is removed here.
     prefixes: ["/hedgewiki", "/hedges", "/audit-trail", "/run-viewer", "/lineage", "/committee-pack", "/staging"],
@@ -326,15 +329,15 @@ const NAV: NavSection[] = [
       { label: "Notifications",     desc: "Alert triggers, email recipients, webhook endpoints",    href: "/settings?tab=notifications",      icon: Ic.clock },
       // ACCESS & SECURITY
       { label: "Security",          desc: "TOTP MFA enrolment and device management",              href: "/settings?tab=security",           icon: Ic.shield,    badge: "MFA",   badgeColor: S.cyan  },
-      { label: "Users & Roles",     desc: "Team members, RBAC role assignments",                   href: "/settings?tab=users_roles",        icon: Ic.user,      badge: "RBAC",  badgeColor: "#8B5CF6" },
-      { label: "API Key Management",desc: "Generate, label, and revoke programmatic API keys",     href: "/settings?tab=api_key_mgmt",       icon: Ic.key,       badge: "MGMT",  badgeColor: S.amber },
+      { label: "Users & Roles",     desc: "Team members, RBAC role assignments",                   href: "/settings?tab=users_roles",        icon: Ic.user,      badge: "RBAC",  badgeColor: "#8B5CF6", minTier: "enterprise" as PlanTier },
+      { label: "API Key Management",desc: "Generate, label, and revoke programmatic API keys",     href: "/settings?tab=api_key_mgmt",       icon: Ic.key,       badge: "MGMT",  badgeColor: S.amber, minTier: "professional" as PlanTier },
       // ORGANISATION
-      { label: "Organisation",      desc: "Company identity, branches, governance mode",           href: "/settings?tab=organisation",       icon: Ic.db },
-      { label: "Audit Trail",       desc: "Immutable event log with hash-chain integrity",         href: "/settings?tab=audit_trail",        icon: Ic.check,     badge: "WORM",  badgeColor: "#8B5CF6" },
+      { label: "Organisation",      desc: "Company identity, branches, governance mode",           href: "/settings?tab=organisation",       icon: Ic.db, minTier: "enterprise" as PlanTier },
+      { label: "Audit Trail",       desc: "Immutable event log with hash-chain integrity",         href: "/settings?tab=audit_trail",        icon: Ic.check,     badge: "WORM",  badgeColor: "#8B5CF6", minTier: "enterprise" as PlanTier },
     ],
   },
   {
-    label: "Help", href: "/help", icon: Ic.help,
+    label: "Help", href: "/help", icon: Ic.help, minTier: "professional" as PlanTier,
     prefixes: ["/help"],
     header: "Support",
     items: [
@@ -520,6 +523,7 @@ function MenuBarItem({ sec, isActive, isOpen, onOpen, onClose }: MenuBarItemProp
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function AppTopBar() {
   const { user, token, logout, isAuthenticated } = useAuth();
+  const { hasAccess: hasPlanAccess } = usePlanGate();
   const router   = useRouter();
   const pathname = usePathname() ?? "";
 
@@ -581,7 +585,16 @@ export default function AppTopBar() {
   const name    = user.full_name ?? user.email;
   const section = resolveSection(pathname);
 
-  const visibleNav = NAV.filter(sec => !sec.teamOnly || governanceMode === "team");
+  const visibleNav = NAV
+    .filter(sec => {
+      if (sec.teamOnly && governanceMode !== "team") return false;
+      if (sec.minTier && !hasPlanAccess(sec.minTier)) return false;
+      return true;
+    })
+    .map(sec => ({
+      ...sec,
+      items: sec.items.filter(item => !item.minTier || hasPlanAccess(item.minTier)),
+    }));
 
   return (
     <div
