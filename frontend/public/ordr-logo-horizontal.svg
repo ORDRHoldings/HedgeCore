@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" fill="none">
-  <!-- ORDR Terminal — vertical stacked logo -->
-  <!-- Knotwork mark: 4 interlocked rings + upper-right arrow -->
-  <g transform="translate(100, 95)">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 56" fill="none">
+  <!-- ORDR Terminal — horizontal logo -->
+  <!-- Knotwork mark: 4 interlocked rings + upper-right arrow, centered at (32,28) -->
+  <g transform="translate(32,28) scale(0.44)">
     <circle cx="-32" cy="0" r="34" stroke="#111111" stroke-width="10" fill="none"/>
     <circle cx="32" cy="0" r="34" stroke="#111111" stroke-width="10" fill="none"/>
     <circle cx="0" cy="-20" r="34" stroke="#111111" stroke-width="10" fill="none"/>
@@ -11,7 +11,7 @@
     <polyline points="28,-52 46,-52 46,-34" stroke="#111111" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
   </g>
   <!-- ORDR wordmark -->
-  <text x="100" y="164" font-family="'Manrope','Arial Black',sans-serif" font-weight="800" font-size="28" letter-spacing="6" text-anchor="middle" fill="#111111">ORDR</text>
+  <text x="64" y="26" font-family="'Manrope','Arial Black',sans-serif" font-weight="800" font-size="21" letter-spacing="4" fill="#111111">ORDR</text>
   <!-- TERMINAL sub-label in brand orange -->
-  <text x="100" y="194" font-family="'Manrope','Arial Black',sans-serif" font-weight="800" font-size="22" letter-spacing="5" text-anchor="middle" fill="#F58220">TERMINAL</text>
+  <text x="65" y="44" font-family="'Manrope','Arial Black',sans-serif" font-weight="800" font-size="13" letter-spacing="4.5" fill="#F58220">TERMINAL</text>
 </svg>
