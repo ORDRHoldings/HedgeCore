@@ -21,8 +21,8 @@ import { useAuth } from "../../lib/authContext";
 import { fetchPositionLineage } from "../../api/positionClient";
 import type { LineageNode, LineageEdge, LineageResponse } from "../../api/positionClient";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import HelpPanel from "@/components/layout/HelpPanel";
-import { LINEAGE_HELP } from "@/lib/helpContent";
+import HelpPanelV2 from "@/components/help/HelpPanelV2";
+import { LINEAGE_HELP } from "@/lib/help/lineage";
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
@@ -328,13 +328,16 @@ function LineageContent() {
 
   const positionId = params.get("position") ?? "";
 
-  const [lineage,     setLineage]    = useState<LineageResponse | null>(null);
-  const [loading,     setLoading]    = useState(false);
-  const [error,       setError]      = useState<string | null>(null);
-  const [selectedId,  setSelectedId] = useState<string | null>(null);
-  const [renderTs,    setRenderTs]   = useState("");
-  const [positions,   setPositions]  = useState<{ id: string; record_id: string; currency: string; execution_status: string }[]>([]);
-  const [posLoading,  setPosLoading] = useState(false);
+  const [lineage,          setLineage]          = useState<LineageResponse | null>(null);
+  const [loading,          setLoading]          = useState(false);
+  const [error,            setError]            = useState<string | null>(null);
+  const [selectedId,       setSelectedId]       = useState<string | null>(null);
+  const [renderTs,         setRenderTs]         = useState("");
+  const [positions,        setPositions]        = useState<{ id: string; record_id: string; entity?: string; currency: string; amount?: string; execution_status: string }[]>([]);
+  const [posLoading,       setPosLoading]       = useState(false);
+  const [integrityStatus,  setIntegrityStatus]  = useState<"VERIFIED" | "FAILED" | "PARTIAL" | "UNKNOWN">("UNKNOWN");
+  const [refreshKey,       setRefreshKey]       = useState(0);
+  const [posSearch,        setPosSearch]        = useState("");
 
   // Hydration-safe timestamp
   useEffect(() => {
@@ -371,6 +374,12 @@ function LineageContent() {
           setLineage(data);
           // Auto-select the first node (Position)
           if (data.nodes.length > 0) setSelectedId(data.nodes[0].id);
+          // Set integrity status from backend
+          const iv = (data.summary as { integrity_verified?: boolean | null }).integrity_verified;
+          if (iv === true) setIntegrityStatus("VERIFIED");
+          else if (iv === false) setIntegrityStatus("FAILED");
+          else if (data.summary.has_policy_revision && data.summary.has_run) setIntegrityStatus("PARTIAL");
+          else setIntegrityStatus("UNKNOWN");
         }
       })
       .catch(err => {
@@ -378,7 +387,26 @@ function LineageContent() {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [positionId, isAuthenticated, authLoading, token]);
+  }, [positionId, isAuthenticated, authLoading, token, refreshKey]);
+
+  // Export evidence bundle
+  function handleExportEvidence() {
+    if (!lineage) return;
+    const bundle = {
+      exported_at: new Date().toISOString(),
+      position_id: lineage.position_id,
+      summary: lineage.summary,
+      nodes: lineage.nodes,
+      edges: lineage.edges,
+    };
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `lineage-evidence-${lineage.position_id.slice(0, 8)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // Sort nodes for display in the chain (left-to-right by type order)
   const sortedNodes = lineage
@@ -401,6 +429,13 @@ function LineageContent() {
     return edge?.label ?? null;
   }
 
+  // Filtered positions for search
+  const filteredPositions = positions.filter(p =>
+    !posSearch || p.record_id.toLowerCase().includes(posSearch.toLowerCase()) ||
+    (p.entity ?? "").toLowerCase().includes(posSearch.toLowerCase()) ||
+    p.currency.toLowerCase().includes(posSearch.toLowerCase())
+  );
+
   if (authLoading) {
     return (
       <div style={{ background: S.bgDeep, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -412,60 +447,67 @@ function LineageContent() {
   const posId8 = positionId.slice(0, 8).toUpperCase();
 
   return (
-    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, color: S.primary, display: "flex", flexDirection: "column" }}>
+    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, color: S.primary, display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
 
       {/* ── Page header ── */}
-      <div style={{
-        height:        44,
-        padding:       "0 24px",
-        borderBottom:  `1px solid ${S.rim}`,
-        background:    S.bgPanel,
-        display:       "flex",
-        alignItems:    "center",
-        justifyContent:"space-between",
-        flexShrink:    0,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link
-            href="/position-desk"
-            style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2 }}
-          >
-            ← Position Desk
-          </Link>
-          <span style={{ color: S.soft }}>·</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
-            LINEAGE
+      <div style={{ height: 44, padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        <Link href="/position-desk" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2, letterSpacing: "0.04em" }}>
+          ← POSITION DESK
+        </Link>
+        <span style={{ color: S.rim }}>|</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.primary }}>POSITION LINEAGE</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, border: `1px solid ${S.soft}`, padding: "1px 5px", borderRadius: 2, letterSpacing: "0.06em" }}>PROVENANCE GRAPH</span>
+        {positionId && <Badge text={posId8} color={S.cyan} />}
+        {lineage && <Badge text={lineage.summary.execution_status} color={statusColor(lineage.summary.execution_status)} />}
+        <div style={{ flex: 1 }} />
+        {/* Refresh button */}
+        <button onClick={() => { setLineage(null); setIntegrityStatus("UNKNOWN"); setRefreshKey(k => k + 1); }}
+          style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, borderRadius: 2, padding: "4px 12px", cursor: "pointer" }}>
+          ↻ REFRESH
+        </button>
+        {/* Integrity status display */}
+        {lineage && (
+          <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+            color: integrityStatus === "VERIFIED" ? S.pass : integrityStatus === "FAILED" ? S.fail : S.tertiary,
+            background: integrityStatus === "VERIFIED" ? `color-mix(in srgb, ${S.pass} 10%, transparent)` : integrityStatus === "FAILED" ? `color-mix(in srgb, ${S.fail} 10%, transparent)` : S.bgSub,
+            border: `1px solid ${integrityStatus === "VERIFIED" ? S.pass : integrityStatus === "FAILED" ? S.fail : S.rim}`,
+            borderRadius: 2, padding: "3px 8px"
+          }}>
+            {integrityStatus === "VERIFIED" ? "✓ INTEGRITY VERIFIED" : integrityStatus === "FAILED" ? "✗ INTEGRITY FAILED" : integrityStatus === "PARTIAL" ? "~ PARTIAL" : "INTEGRITY UNKNOWN"}
           </span>
-          {positionId && (
-            <>
-              <span style={{ color: S.soft }}>·</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, letterSpacing: "0.06em" }}>
-                {posId8}
-              </span>
-            </>
-          )}
-          {lineage && (
-            <>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, border: `1px solid ${S.soft}`, padding: "1px 5px", borderRadius: 2 }}>
-                {lineage.summary.node_count} NODES
-              </span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, border: `1px solid ${S.soft}`, padding: "1px 5px", borderRadius: 2 }}>
-                {lineage.summary.edge_count} EDGES
-              </span>
-              <Badge text={lineage.summary.execution_status} color={statusColor(lineage.summary.execution_status)} />
-            </>
-          )}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
-            {renderTs}
-          </span>
-        </div>
+        )}
+        {/* Export evidence */}
+        {lineage && (
+          <button onClick={handleExportEvidence}
+            style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, borderRadius: 2, padding: "4px 12px", cursor: "pointer" }}>
+            EXPORT JSON
+          </button>
+        )}
+        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{renderTs}</span>
       </div>
+
+      {/* ── KPI strip ── */}
+      {lineage && (
+        <div style={{ height: 44, background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, display: "flex", gap: 0, padding: "0 20px", flexShrink: 0 }}>
+          {[
+            { label: "NODES", value: String(lineage.summary.node_count), color: S.primary },
+            { label: "EDGES", value: String(lineage.summary.edge_count), color: S.primary },
+            { label: "PROPOSALS", value: String(lineage.summary.proposal_count), color: lineage.summary.proposal_count > 0 ? S.pass : S.tertiary },
+            { label: "POLICY", value: lineage.summary.has_policy ? "ASSIGNED" : "NONE", color: lineage.summary.has_policy ? S.cyan : S.tertiary },
+            { label: "RUN", value: lineage.summary.has_run ? "LINKED" : "NONE", color: lineage.summary.has_run ? S.cyan : S.tertiary },
+            { label: "INTEGRITY", value: integrityStatus, color: integrityStatus === "VERIFIED" ? S.pass : integrityStatus === "FAILED" ? S.fail : S.tertiary },
+          ].map(({ label, value, color }, i, arr) => (
+            <div key={label} style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "0 20px", borderRight: i < arr.length - 1 ? `1px solid ${S.rim}` : "none" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.09em" }}>{label}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Content ── */}
       <div style={{ flex: 1, overflow: "auto" }}>
-        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "24px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
 
           {/* ── No position ID: show positions list ── */}
           {!positionId && (
@@ -495,6 +537,17 @@ function LineageContent() {
                   Positions
                   <span style={{ color: S.soft }}>·</span>
                   <span style={{ color: S.secondary }}>{posLoading ? "LOADING…" : `${positions.length} RECORDS`}</span>
+                  <div style={{ flex: 1 }} />
+                  <input
+                    value={posSearch}
+                    onChange={e => setPosSearch(e.target.value)}
+                    placeholder="SEARCH…"
+                    style={{
+                      fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.06em",
+                      color: S.primary, background: S.bgSub, border: `1px solid ${S.rim}`,
+                      borderRadius: 2, padding: "3px 8px", outline: "none", width: 140,
+                    }}
+                  />
                 </div>
 
                 {posLoading && (
@@ -509,14 +562,27 @@ function LineageContent() {
                   </div>
                 )}
 
-                {!posLoading && positions.map((p, i) => (
+                {/* Table header */}
+                {!posLoading && positions.length > 0 && (
+                  <div style={{
+                    display: "grid", gridTemplateColumns: "1fr 1fr 80px 1fr",
+                    alignItems: "center", gap: 12, padding: "6px 16px",
+                    borderBottom: `1px solid ${S.soft}`, background: S.bgSub,
+                  }}>
+                    {["RECORD ID", "ENTITY", "CCY", "STATUS"].map(h => (
+                      <span key={h} style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.07em", color: S.tertiary, fontWeight: 600 }}>{h}</span>
+                    ))}
+                  </div>
+                )}
+
+                {!posLoading && filteredPositions.map((p, i) => (
                   <Link
                     key={p.id}
                     href={`/lineage?position=${encodeURIComponent(p.id)}`}
                     style={{
-                      display: "grid", gridTemplateColumns: "1fr 70px 1fr",
+                      display: "grid", gridTemplateColumns: "1fr 1fr 80px 1fr",
                       alignItems: "center", gap: 12, padding: "9px 16px",
-                      borderBottom: i < positions.length - 1 ? `1px solid ${S.soft}` : "none",
+                      borderBottom: i < filteredPositions.length - 1 ? `1px solid ${S.soft}` : "none",
                       textDecoration: "none", background: "transparent", transition: "background 0.1s",
                     }}
                     onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, ${S.cyan} 5%, transparent)`)}
@@ -524,6 +590,9 @@ function LineageContent() {
                   >
                     <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, letterSpacing: "0.06em" }}>
                       {p.record_id}
+                    </span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                      {p.entity ?? "—"}
                     </span>
                     <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber }}>
                       {p.currency}
@@ -724,8 +793,8 @@ export default function LineagePage() {
     >
       <LineageContent />
     </Suspense>
-  
-    <HelpPanel config={LINEAGE_HELP} storageKey="lineage" />
+
+    <HelpPanelV2 module={LINEAGE_HELP} storageKey="lineage" />
     </div>
   );
 }
