@@ -4,144 +4,201 @@ import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { S } from "../../types/settings";
 import SectionHeader from "../shared/SectionHeader";
 
+/* ── Backend shapes ──────────────────────────────────────────────────────── */
 interface AuditEvent {
-  id:          string;
-  event_type:  string;
-  description: string;
-  actor_email: string | null;
-  entity_type: string | null;
-  entity_id:   string | null;
-  created_at:  string;
-  event_hash:  string | null;
+  id:              string;
+  event_type:      string;
+  description:     string;
+  actor_email:     string | null;
+  actor_role:      string | null;
+  entity_type:     string | null;
+  entity_id:       string | null;
+  payload:         Record<string, unknown>;
+  event_hash:      string;
+  prev_event_hash: string;
+  ip_address:      string | null;
+  created_at:      string;
 }
 
-interface ChainStatus {
-  valid:    boolean;
-  checked:  number;
-  broken_at: string | null;
-  message:  string;
+interface ChainReport {
+  is_intact:      boolean;
+  events_checked: number;
+  broken_at:      string | null;
+  tenant_id:      string | null;
+  verified_at:    string;
 }
 
 interface Props { token: string; }
 
-const EVENT_COLORS: Record<string, string> = {
+/* ── Event type colours ──────────────────────────────────────────────────── */
+const TYPE_COLORS: Record<string, string> = {
   CALCULATE: "#06B6D4",
   APPROVE:   "#10B981",
   REJECT:    "#EF4444",
   SYSTEM:    "#8B5CF6",
   AUTH:      "#F59E0B",
+  PIPELINE:  "#3B82F6",
+  USER:      "#EC4899",
+  POLICY:    "#14B8A6",
 };
+const eventColor = (t: string) => TYPE_COLORS[t.toUpperCase()] ?? "#6B7280";
 
-function eventColor(type: string): string {
-  return EVENT_COLORS[type] ?? "#6B7280";
-}
+const EVENT_TYPES = ["CALCULATE", "APPROVE", "REJECT", "SYSTEM", "AUTH", "PIPELINE", "USER", "POLICY"];
+const PAGE_SIZE   = 50;
 
+/* ── Component ───────────────────────────────────────────────────────────── */
 export default function AuditTrailTab({ token }: Props) {
-  const [events,   setEvents]   = useState<AuditEvent[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState<string | null>(null);
-  const [chain,    setChain]    = useState<ChainStatus | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [page,     setPage]     = useState(0);
-  const [total,    setTotal]    = useState(0);
-  const PAGE_SIZE = 50;
+  const [events,     setEvents]     = useState<AuditEvent[]>([]);
+  const [total,      setTotal]      = useState(0);
+  const [page,       setPage]       = useState(0);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState<string | null>(null);
+  const [chain,      setChain]      = useState<ChainReport | null>(null);
+  const [checking,   setChecking]   = useState(false);
+  const [expanded,   setExpanded]   = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState("");
+  const [fromTs,     setFromTs]     = useState("");
+  const [toTs,       setToTs]       = useState("");
 
-  const load = useCallback(async (offset = 0) => {
+  /* Fetch events */
+  const load = useCallback(async (offset = 0, type = typeFilter, from = fromTs, to = toTs) => {
     setLoading(true); setError(null);
     try {
-      const res = await dashboardFetch(
-        `/v1/audit-events?limit=${PAGE_SIZE}&offset=${offset}`, token
-      );
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
+      if (type)  params.set("event_type", type);
+      if (from)  params.set("from_ts", from + "T00:00:00");
+      if (to)    params.set("to_ts",   to   + "T23:59:59");
+
+      const res = await dashboardFetch(`/v1/audit?${params}`, token);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as { events?: AuditEvent[]; total?: number } | AuditEvent[];
-      if (Array.isArray(data)) {
-        setEvents(data);
-        setTotal(data.length);
-      } else {
-        setEvents((data as { events?: AuditEvent[] }).events ?? []);
-        setTotal((data as { total?: number }).total ?? 0);
-      }
+      const data = await res.json() as { items?: AuditEvent[]; total?: number };
+      setEvents(data.items ?? []);
+      setTotal(data.total ?? data.items?.length ?? 0);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load audit events.");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, typeFilter, fromTs, toTs]);
 
   useEffect(() => { load(0); }, [load]);
 
+  /* Verify chain */
   const handleVerifyChain = async () => {
     setChecking(true); setChain(null);
     try {
-      const res = await dashboardFetch("/v1/audit-events/chain", token);
+      const res = await dashboardFetch("/v1/audit/chain/verify", token);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setChain(await res.json() as ChainStatus);
+      setChain(await res.json() as ChainReport);
     } catch (e: unknown) {
-      setChain({ valid: false, checked: 0, broken_at: null, message: e instanceof Error ? e.message : "Chain check failed." });
+      setChain({ is_intact: false, events_checked: 0, broken_at: null, tenant_id: null,
+        verified_at: new Date().toISOString() });
     } finally {
       setChecking(false);
     }
   };
 
-  const goPage = (p: number) => {
-    setPage(p);
-    load(p * PAGE_SIZE);
+  const goPage = (p: number) => { setPage(p); load(p * PAGE_SIZE); };
+
+  const applyFilters = () => { setPage(0); load(0, typeFilter, fromTs, toTs); };
+
+  const clearFilters = () => {
+    setTypeFilter(""); setFromTs(""); setToTs("");
+    setPage(0); load(0, "", "", "");
   };
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  const headerCell: React.CSSProperties = {
+  /* ── Styles ──────────────────────────────────────────────────────────── */
+  const th: React.CSSProperties = {
     fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.09em",
     color: S.tertiary, textTransform: "uppercase", padding: "6px 10px",
-    borderBottom: `1px solid ${S.rim}`, textAlign: "left",
+    borderBottom: `1px solid ${S.rim}`, textAlign: "left", whiteSpace: "nowrap",
   };
-  const cell: React.CSSProperties = {
+  const td: React.CSSProperties = {
     fontFamily: S.fontUI, fontSize: 11, color: S.primary,
-    padding: "7px 10px", borderBottom: `1px solid ${S.soft}`,
-    verticalAlign: "top",
+    padding: "7px 10px", borderBottom: `1px solid ${S.soft}`, verticalAlign: "top",
+  };
+  const inputStyle: React.CSSProperties = {
+    fontFamily: S.fontUI, fontSize: 11, color: S.primary,
+    background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 2,
+    padding: "5px 8px", outline: "none",
   };
 
+  /* ── Render ──────────────────────────────────────────────────────────── */
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Chain integrity header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <SectionHeader label={`Audit Events${total ? ` (${total})` : ""}`} />
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {chain && (
             <span style={{
               fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
-              color: chain.valid ? S.pass : S.fail,
-              background: chain.valid ? `color-mix(in srgb, ${S.pass} 10%, transparent)` : `color-mix(in srgb, ${S.fail} 10%, transparent)`,
-              border: `1px solid ${chain.valid ? S.pass : S.fail}40`,
+              color: chain.is_intact ? S.pass : S.fail,
+              background: chain.is_intact
+                ? `color-mix(in srgb, ${S.pass} 10%, transparent)`
+                : `color-mix(in srgb, ${S.fail} 10%, transparent)`,
+              border: `1px solid ${chain.is_intact ? S.pass : S.fail}40`,
               borderRadius: 2, padding: "3px 9px",
             }}>
-              {chain.valid ? `✓ CHAIN VALID (${chain.checked} events)` : `✗ CHAIN BROKEN${chain.broken_at ? ` AT ${chain.broken_at.slice(0, 8)}…` : ""}`}
+              {chain.is_intact
+                ? `✓ CHAIN VALID (${chain.events_checked} events)`
+                : `✗ CHAIN BROKEN${chain.broken_at ? ` · NEAR ${chain.broken_at.slice(0, 8)}…` : ""}`}
             </span>
           )}
-          <button
-            onClick={handleVerifyChain}
-            disabled={checking}
-            style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
-              color: "#000", background: checking ? S.tertiary : S.cyan, border: "none", borderRadius: 2,
-              padding: "5px 14px", cursor: checking ? "wait" : "pointer",
-            }}
-          >
+          <button onClick={handleVerifyChain} disabled={checking} style={{
+            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+            color: "#000", background: checking ? S.tertiary : S.cyan,
+            border: "none", borderRadius: 2, padding: "5px 14px", cursor: checking ? "wait" : "pointer",
+          }}>
             {checking ? "VERIFYING…" : "VERIFY HASH CHAIN"}
           </button>
-          <button
-            onClick={() => load(page * PAGE_SIZE)}
-            style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
-              color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}40`,
-              borderRadius: 2, padding: "5px 10px", cursor: "pointer",
-            }}
-          >
-            ↻
-          </button>
+          <button onClick={() => load(page * PAGE_SIZE)} style={{
+            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+            color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}40`,
+            borderRadius: 2, padding: "5px 10px", cursor: "pointer",
+          }}>↻</button>
         </div>
       </div>
 
+      {/* Filters */}
+      <div style={{
+        background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 2,
+        padding: "12px 14px", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end",
+      }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary }}>EVENT TYPE</span>
+          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} style={{ ...inputStyle, minWidth: 140 }}>
+            <option value="">All types</option>
+            {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary }}>FROM DATE</span>
+          <input type="date" value={fromTs} onChange={e => setFromTs(e.target.value)} style={inputStyle} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary }}>TO DATE</span>
+          <input type="date" value={toTs} onChange={e => setToTs(e.target.value)} style={inputStyle} />
+        </div>
+        <div style={{ display: "flex", gap: 6, alignSelf: "flex-end" }}>
+          <button onClick={applyFilters} style={{
+            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+            color: "#000", background: S.cyan, border: "none", borderRadius: 2,
+            padding: "5px 14px", cursor: "pointer",
+          }}>APPLY</button>
+          {(typeFilter || fromTs || toTs) && (
+            <button onClick={clearFilters} style={{
+              fontFamily: S.fontMono, fontSize: 10, color: S.secondary, background: "transparent",
+              border: `1px solid ${S.rim}`, borderRadius: 2, padding: "5px 10px", cursor: "pointer",
+            }}>CLEAR</button>
+          )}
+        </div>
+      </div>
+
+      {/* Table */}
       {loading ? (
         <div style={{ textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, padding: "32px 0", letterSpacing: "0.09em" }}>
           LOADING…
@@ -152,51 +209,91 @@ export default function AuditTrailTab({ token }: Props) {
         </div>
       ) : (
         <>
-          <div style={{ background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 2, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={{ background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 2, overflow: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
               <thead>
                 <tr>
-                  <th style={headerCell}>TIMESTAMP</th>
-                  <th style={headerCell}>TYPE</th>
-                  <th style={headerCell}>ACTOR</th>
-                  <th style={headerCell}>DESCRIPTION</th>
-                  <th style={headerCell}>ENTITY</th>
-                  <th style={headerCell}>HASH</th>
+                  <th style={th}>TIMESTAMP</th>
+                  <th style={th}>TYPE</th>
+                  <th style={th}>ACTOR</th>
+                  <th style={th}>DESCRIPTION</th>
+                  <th style={th}>ENTITY</th>
+                  <th style={th}>HASH</th>
                 </tr>
               </thead>
               <tbody>
                 {events.length === 0 ? (
-                  <tr><td colSpan={6} style={{ ...cell, textAlign: "center", color: S.tertiary, padding: "24px" }}>No audit events found.</td></tr>
+                  <tr>
+                    <td colSpan={6} style={{ ...td, textAlign: "center", color: S.tertiary, padding: "28px" }}>
+                      No audit events found{typeFilter || fromTs || toTs ? " — try clearing filters" : ""}.
+                    </td>
+                  </tr>
                 ) : events.map(e => {
                   const color = eventColor(e.event_type);
+                  const isExp = expanded === e.id;
+                  const hasPayload = e.payload && Object.keys(e.payload).length > 0;
                   return (
-                    <tr key={e.id}>
-                      <td style={{ ...cell, fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, whiteSpace: "nowrap" }}>
-                        {e.created_at.replace("T", " ").slice(0, 16)}
-                      </td>
-                      <td style={{ ...cell, padding: "6px 10px" }}>
-                        <span style={{
-                          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
-                          color, background: `color-mix(in srgb, ${color} 10%, transparent)`,
-                          border: `1px solid ${color}30`, borderRadius: 2, padding: "2px 6px",
-                        }}>
-                          {e.event_type}
-                        </span>
-                      </td>
-                      <td style={{ ...cell, fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
-                        {e.actor_email ?? "—"}
-                      </td>
-                      <td style={{ ...cell, maxWidth: 280 }}>
-                        <span style={{ fontSize: 11, color: S.primary, lineHeight: 1.4 }}>{e.description}</span>
-                      </td>
-                      <td style={{ ...cell, fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
-                        {e.entity_type ? `${e.entity_type}` : "—"}
-                        {e.entity_id && <span style={{ display: "block", fontSize: 9, color: S.tertiary }}>{e.entity_id.slice(0, 8)}…</span>}
-                      </td>
-                      <td style={{ ...cell, fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
-                        {e.event_hash ? `${e.event_hash.slice(0, 8)}…` : "—"}
-                      </td>
-                    </tr>
+                    <>
+                      <tr key={e.id}
+                        onClick={() => hasPayload && setExpanded(isExp ? null : e.id)}
+                        style={{ cursor: hasPayload ? "pointer" : "default", background: isExp ? `color-mix(in srgb, ${S.cyan} 3%, transparent)` : "transparent" }}
+                        onMouseEnter={ev => { if (!isExp) (ev.currentTarget as HTMLTableRowElement).style.background = S.bgPanel; }}
+                        onMouseLeave={ev => { if (!isExp) (ev.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}
+                      >
+                        <td style={{ ...td, fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, whiteSpace: "nowrap" }}>
+                          {e.created_at.replace("T", " ").slice(0, 16)}
+                        </td>
+                        <td style={{ ...td, padding: "6px 10px" }}>
+                          <span style={{
+                            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                            color, background: `color-mix(in srgb, ${color} 10%, transparent)`,
+                            border: `1px solid ${color}30`, borderRadius: 2, padding: "2px 6px",
+                          }}>
+                            {e.event_type}
+                          </span>
+                        </td>
+                        <td style={{ ...td, fontFamily: S.fontMono, fontSize: 10, color: S.secondary, whiteSpace: "nowrap" }}>
+                          {e.actor_email ?? "—"}
+                          {e.actor_role && (
+                            <span style={{ display: "block", fontSize: 9, color: S.tertiary }}>{e.actor_role}</span>
+                          )}
+                        </td>
+                        <td style={{ ...td, maxWidth: 260 }}>
+                          <span style={{ fontSize: 11, lineHeight: 1.4 }}>{e.description}</span>
+                          {hasPayload && (
+                            <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.cyan, marginLeft: 6 }}>
+                              {isExp ? "▲" : "▶"} JSON
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ ...td, fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, whiteSpace: "nowrap" }}>
+                          {e.entity_type ?? "—"}
+                          {e.entity_id && (
+                            <span style={{ display: "block", fontSize: 9 }}>{e.entity_id.slice(0, 8)}…</span>
+                          )}
+                        </td>
+                        <td style={{ ...td, fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+                          {e.event_hash ? `${e.event_hash.slice(0, 8)}…` : "—"}
+                        </td>
+                      </tr>
+
+                      {isExp && hasPayload && (
+                        <tr key={`${e.id}-payload`}>
+                          <td colSpan={6} style={{ background: S.bgDeep, borderBottom: `1px solid ${S.rim}`, padding: "0 10px 10px" }}>
+                            <pre style={{
+                              fontFamily: S.fontMono, fontSize: 10, color: S.secondary,
+                              margin: 0, padding: "10px 12px",
+                              background: S.bgDeep, borderRadius: 2,
+                              whiteSpace: "pre-wrap", wordBreak: "break-word",
+                              maxHeight: 240, overflowY: "auto",
+                              border: `1px solid ${S.soft}`,
+                            }}>
+                              {JSON.stringify(e.payload, null, 2)}
+                            </pre>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
               </tbody>
@@ -224,10 +321,29 @@ export default function AuditTrailTab({ token }: Props) {
         </>
       )}
 
+      {/* Chain integrity callout */}
+      {chain && !chain.is_intact && (
+        <div style={{
+          background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
+          border: `1px solid ${S.fail}`, borderLeft: `3px solid ${S.fail}`,
+          borderRadius: 2, padding: "12px 16px",
+        }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.fail, letterSpacing: "0.08em", marginBottom: 4 }}>
+            ✗ HASH CHAIN INTEGRITY FAILURE
+          </div>
+          <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.6 }}>
+            Chain break detected{chain.broken_at ? ` near event ${chain.broken_at}` : ""}.
+            Events: {chain.events_checked} checked. Verified: {new Date(chain.verified_at).toLocaleString()}.
+            Contact your compliance team immediately — this may indicate log tampering.
+          </div>
+        </div>
+      )}
+
+      {/* WORM footer */}
       <div style={{ background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "10px 14px", fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.6 }}>
         <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.secondary, marginRight: 6, letterSpacing: "0.07em" }}>WORM</span>
-        Audit events are append-only. Hash chain links each event to its predecessor — tamper-evident by design.
-        Use "Verify Hash Chain" to confirm integrity of the full event log.
+        Audit events are append-only and tamper-evident. Each event is cryptographically chained to its predecessor via SHA-256.
+        Use <strong>Verify Hash Chain</strong> to confirm end-to-end integrity. Click any row with a JSON payload to expand it.
       </div>
     </div>
   );
