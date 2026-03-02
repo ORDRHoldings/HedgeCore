@@ -407,3 +407,76 @@ def _greedy_allocate(
         constrained=True,
         optimization_method="greedy_priority",
     )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# RISK-01: Delta-VaR based MCTR
+# Replaces simplified linear index decay for production use.
+# Original allocate_hedges() is UNCHANGED.
+# ──────────────────────────────────────────────────────────────────────────────
+
+def compute_mctr_delta_var(
+    positions: list,
+    covariance_matrix: dict,
+    confidence: float = 0.95,
+) -> dict[str, float]:
+    """Marginal Contribution to Risk using delta-VaR methodology.
+
+    MCTR_i = (Σ × w)_i / sqrt(w' × Σ × w) × VaR_portfolio
+    where VaR_portfolio = sqrt(w' Σ w) × z_α
+
+    This replaces the simplified 5%-per-bucket-index decay in _build_candidates.
+
+    Args:
+        positions: List of objects with .id (str) and .weight (float).
+        covariance_matrix: Dict keyed by (i, j) integer tuples → covariance.
+        confidence: VaR confidence level. Default 0.95.
+
+    Returns:
+        Dict mapping position.id → MCTR float. Empty dict if positions empty.
+    """
+    n = len(positions)
+    if n == 0:
+        return {}
+
+    try:
+        from scipy.stats import norm  # type: ignore[import]
+        z_alpha = norm.ppf(confidence)
+    except ImportError:
+        # scipy not available — use normal approximation table
+        _z_table = {0.90: 1.282, 0.95: 1.645, 0.99: 2.326}
+        z_alpha = _z_table.get(confidence, 1.645)
+
+    # Build weight vector
+    weights = [getattr(pos, "weight", 1.0 / n) for pos in positions]
+
+    # Build covariance matrix from dict
+    cov = [[covariance_matrix.get((i, j), 0.0) for j in range(n)] for i in range(n)]
+
+    # Portfolio variance: w' Σ w
+    portfolio_variance = 0.0
+    for i in range(n):
+        for j in range(n):
+            portfolio_variance += weights[i] * cov[i][j] * weights[j]
+
+    portfolio_vol = portfolio_variance ** 0.5
+    portfolio_var = portfolio_vol * z_alpha
+
+    if portfolio_vol < 1e-12:
+        # Zero variance — all MCTRs are zero
+        return {getattr(pos, "id", str(i)): 0.0 for i, pos in enumerate(positions)}
+
+    # Sigma × w (matrix-vector product)
+    sigma_w = [
+        sum(cov[i][j] * weights[j] for j in range(n))
+        for i in range(n)
+    ]
+
+    # MCTR_i = σ_w[i] / portfolio_vol × VaR_portfolio
+    result: dict[str, float] = {}
+    for i, pos in enumerate(positions):
+        pos_id = getattr(pos, "id", str(i))
+        beta_i = sigma_w[i] / portfolio_vol
+        result[pos_id] = beta_i * portfolio_var
+
+    return result

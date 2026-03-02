@@ -196,3 +196,75 @@ def compute_currency_netting(
         netting_efficiency_pct=efficiency,
         redundant_legs_eliminated=len(netting_pairs),
     )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ARCH-02: Cross-rate triangulation validation
+# ──────────────────────────────────────────────────────────────────────────────
+
+def validate_triangular_consistency(
+    rates: dict[str, float],
+    tolerance_bps: float = 5.0,
+) -> list[str]:
+    """Check triangular arbitrage bounds across all 3-pair combinations.
+
+    For any triplet (AB, BC, AC): |AB × BC − AC| / AC < tolerance_bps / 10_000.
+    Returns list of violation descriptions. Empty list = no violations.
+
+    Args:
+        rates: Dict of pair → rate, e.g. {"USDEUR": 0.92, "EURGBP": 0.86, "USDGBP": 0.7912}.
+               Both "USDEUR" and "EURUSD" forms accepted (inverted automatically).
+        tolerance_bps: Maximum allowed triangulation error in basis points. Default 5 bps.
+
+    Returns:
+        List of human-readable violation strings (empty = clean).
+    """
+    violations: list[str] = []
+    if len(rates) < 3:
+        return violations
+
+    # Build a lookup that handles both directions
+    def get_rate(a: str, b: str) -> float | None:
+        direct = rates.get(f"{a}{b}")
+        if direct is not None:
+            return direct
+        inverse = rates.get(f"{b}{a}")
+        if inverse and inverse != 0.0:
+            return 1.0 / inverse
+        return None
+
+    # Extract unique currencies
+    currencies: set[str] = set()
+    for pair in rates:
+        if len(pair) == 6:
+            currencies.add(pair[:3])
+            currencies.add(pair[3:])
+
+    currency_list = sorted(currencies)
+    n = len(currency_list)
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            for k in range(j + 1, n):
+                a, b, c = currency_list[i], currency_list[j], currency_list[k]
+                ab = get_rate(a, b)
+                bc = get_rate(b, c)
+                ac = get_rate(a, c)
+
+                if ab is None or bc is None or ac is None:
+                    continue  # Incomplete triplet — skip
+
+                if abs(ac) < 1e-10:
+                    continue
+
+                implied_ac = ab * bc
+                deviation_bps = abs(implied_ac - ac) / abs(ac) * 10_000.0
+
+                if deviation_bps > tolerance_bps:
+                    violations.append(
+                        f"Triangulation breach: {a}/{b} ({ab:.6f}) × {b}/{c} ({bc:.6f}) "
+                        f"= {implied_ac:.6f} vs {a}/{c} = {ac:.6f} "
+                        f"({deviation_bps:.1f} bps > {tolerance_bps:.1f} bps tolerance)"
+                    )
+
+    return violations

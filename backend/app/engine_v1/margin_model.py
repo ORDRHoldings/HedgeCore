@@ -79,6 +79,7 @@ def compute_margin(
     market: dict[str, Any],
     policy: dict[str, Any],
     scenario_max_shock: float = 0.10,
+    value_dates: dict | None = None,
 ) -> MarginSummary:
     """Calculate margin requirements and funding costs for hedge positions.
 
@@ -123,7 +124,16 @@ def compute_margin(
 
         # Funding cost: margin ? (funding_rate / 10000) ? (days / 360)
         # Estimate 90 days for average position
-        days = _estimate_days(bucket)
+        # LIQ-02: use actual value dates when provided
+        if value_dates and bucket in value_dates:
+            from datetime import date
+            try:
+                target = date.fromisoformat(value_dates[bucket])
+                days = max(1, (target - date.today()).days)
+            except (ValueError, TypeError):
+                days = _estimate_days(bucket)
+        else:
+            days = _estimate_days(bucket)
         funding_cost = initial_margin * (funding_rate_bps / 10000.0) * (days / 360.0)
 
         positions.append(PositionMargin(

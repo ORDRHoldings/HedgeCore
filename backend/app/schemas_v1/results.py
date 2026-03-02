@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas_v1.errors import ValidationErrorDetail
 from app.schemas_v1.policy import PolicyConfig
@@ -103,8 +103,8 @@ class TraceLite(BaseModel):
 
 
 class CalculateRequest(BaseModel):
-    trades: list  # Will accept TradeRow dicts
-    hedges: list  # Will accept HedgeRow dicts
+    trades: list = Field(..., max_length=10_000)
+    hedges: list = Field(default_factory=list, max_length=10_000)
     market: dict
     policy: dict
     # Optional: pass a previously-persisted market snapshot ID instead of

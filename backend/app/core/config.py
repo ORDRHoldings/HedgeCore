@@ -22,6 +22,7 @@ Centralized environment configuration using pydantic-settings.
 
 
 
+import logging
 import os
 
 from typing import List, Optional
@@ -31,6 +32,72 @@ from pydantic import AnyHttpUrl, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# SEC-01: Secret resolution with Vault / AWS SM / env fallback
+# ──────────────────────────────────────────────────────────────────────────────
+
+_sec_log = logging.getLogger(__name__)
+
+
+def _resolve_secret(env_key: str, vault_path: str | None = None) -> str:
+    """Resolve secret: Vault → AWS Secrets Manager → Environment → raise (prod).
+
+    Priority:
+    1. HashiCorp Vault (if VAULT_ADDR env var is set)
+    2. AWS Secrets Manager (if AWS_SECRET_NAME env var is set)
+    3. Environment variable (standard .env / process env)
+    4. Empty string in dev; RuntimeError in production
+
+    Backward compatible: existing code that reads env vars directly still works.
+    """
+    import os as _os
+
+    # ── 1. HashiCorp Vault ──────────────────────────────────────────────────
+    vault_addr = _os.getenv("VAULT_ADDR")
+    if vault_addr and vault_path:
+        try:
+            import hvac  # type: ignore[import]
+            client = hvac.Client(url=vault_addr, token=_os.getenv("VAULT_TOKEN"))
+            secret = client.secrets.kv.v2.read_secret_version(path=vault_path)
+            value = secret["data"]["data"].get(env_key, "")
+            if value:
+                return value
+        except Exception as _exc:
+            _sec_log.warning("Vault lookup failed for %s: %s", env_key, _exc)
+
+    # ── 2. AWS Secrets Manager ──────────────────────────────────────────────
+    aws_secret_name = _os.getenv("AWS_SECRET_NAME")
+    if aws_secret_name and not vault_addr:
+        try:
+            import boto3  # type: ignore[import]
+            import json as _json
+            sm_client = boto3.client(
+                "secretsmanager",
+                region_name=_os.getenv("AWS_REGION", "us-east-1"),
+            )
+            response = sm_client.get_secret_value(SecretId=aws_secret_name)
+            secrets = _json.loads(response["SecretString"])
+            if env_key in secrets and secrets[env_key]:
+                return str(secrets[env_key])
+        except Exception as _exc:
+            _sec_log.warning("AWS Secrets Manager lookup failed for %s: %s", env_key, _exc)
+
+    # ── 3. Environment variable ─────────────────────────────────────────────
+    val = _os.getenv(env_key, "")
+
+    if val in ("***REDACTED_JWT_SECRET***", "***REDACTED_DB_PASSWORD***"):
+        _sec_log.warning(
+            "SECURITY: %s is using a dev default value — rotate before production deployment",
+            env_key,
+        )
+
+    if not val and _os.getenv("ENV", "dev") == "production":
+        raise RuntimeError(
+            f"CRITICAL: {env_key} is not set in production environment. "
+            "Set it via environment variable, Vault, or AWS Secrets Manager."
+        )
+
+    return val
 
 
 

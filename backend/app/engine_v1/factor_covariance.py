@@ -91,6 +91,7 @@ def compute_factor_covariance(
     exposures: dict[str, float],
     hedges: dict[str, float],
     market: dict[str, Any],
+    strict: bool = False,
 ) -> FactorCovarianceResult:
     """Compute variance decomposition and MCTR.
 
@@ -117,6 +118,8 @@ def compute_factor_covariance(
     if not factors:
         # No matching factors in covariance matrix -- use simple diagonal
         factors = list(exposures.keys())
+        if strict:
+            raise ValueError("Factor covariance requires covariance_matrix in market snapshot — strict mode enabled (RISK-04)")
         for f in factors:
             cov_matrix.setdefault(f, {})[f] = 0.01  # 1% variance default
 

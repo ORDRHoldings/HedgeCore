@@ -156,6 +156,7 @@ def apply_extended_scenarios(
     market: dict[str, Any],
     policy: dict[str, Any],
     margin_total: float = 0.0,
+    duration_fraction: float | None = None,
 ) -> ExtendedScenarioResult:
     """Run extended scenario analysis.
 
@@ -199,7 +200,8 @@ def apply_extended_scenarios(
         rate_impact = 0.0
         if scenario.rate_shock_bps != 0:
             # Simplified: rate shock ? notional ? avg_duration_fraction
-            rate_impact = hedge_notional_usd * (scenario.rate_shock_bps / 10000.0) * 0.25
+            _duration_frac = duration_fraction if duration_fraction is not None else 0.25  # RISK-03
+            rate_impact = hedge_notional_usd * (scenario.rate_shock_bps / 10000.0) * _duration_frac
 
         # Add rate impact to losses
         pre_hedge_loss += rate_impact * 0.5  # partial impact on unhedged

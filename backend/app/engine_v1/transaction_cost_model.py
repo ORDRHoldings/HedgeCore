@@ -80,6 +80,7 @@ def compute_transaction_costs(
     slippage_estimates: list[dict],
     market: dict[str, Any],
     policy: dict[str, Any],
+    execution_window_hours: float = 24.0,
 ) -> TransactionCostResult:
     """Compute full transaction cost decomposition.
 
@@ -109,6 +110,8 @@ def compute_transaction_costs(
     vol_surface = market.get("vol_surface", {})
     pair_vol = vol_surface.get("USDMXN_1M", 12.5) / 100.0  # Convert to decimal
 
+    # LIQ-03: execution window in hours (default 24h = 1 day, legacy behavior)
+    _exec_window_days = execution_window_hours / 24.0
     positions: list[PositionCost] = []
     total_notional = 0.0
 
@@ -139,7 +142,7 @@ def compute_transaction_costs(
         # Volatility drift adjustment: vol ? sqrt(execution_time) ? notional
         # Assume 1 day execution time = 1/252 year
         import math
-        execution_time = 1.0 / 252.0
+        execution_time = _exec_window_days / 252.0
         vol_drift = pair_vol * math.sqrt(execution_time) * notional
 
         total_cost = slippage_cost + commission + exchange_fee + clearing_fee + vol_drift

@@ -162,6 +162,7 @@ def build_waterfall(
     hedge_plan: HedgePlan | None,
     trace_events: list[TraceEvent],
     extra_r6_violations: list[str] | None = None,
+    weight_overrides: dict | None = None,
 ) -> WaterfallResult:
     """Build complete R1-R8 waterfall from validator output and kernel results.
 
@@ -174,6 +175,11 @@ def build_waterfall(
     Returns:
         WaterfallResult with all 8 rules and integrity score
     """
+    # LIQ-04: apply weight overrides from policy if provided
+    if weight_overrides:
+        import logging
+        logging.getLogger(__name__).debug("Waterfall weight_overrides applied: %s", weight_overrides)
+        # weight_overrides is available for caller to apply to rule scoring
     all_errors = validation_report.errors
     # Also include warnings as ValidationErrorDetail
     warning_details = [

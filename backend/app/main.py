@@ -388,13 +388,13 @@ async def _ensure_tables():
 
     # Step 1: Drop orphan indexes that may block create_all
 
-    for idx in ["ix_permissions_module"]:
+    for _drop_sql in ["DROP INDEX IF EXISTS ix_permissions_module"]:
 
         try:
 
             async with async_engine.begin() as conn:
 
-                await conn.execute(text(f"DROP INDEX IF EXISTS {idx}"))
+                await conn.execute(text(_drop_sql))
 
         except Exception:
 
@@ -1385,14 +1385,37 @@ app.add_middleware(
 @app.middleware("http")
 
 async def security_headers(request: Request, call_next):
-
+    """SEC-07: Comprehensive security response headers."""
     response: Response = await call_next(request)
 
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
 
     response.headers.setdefault("X-Frame-Options", "DENY")
 
-    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob: https:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' wss: ws: https:; "
+            "frame-ancestors 'none';"
+        ),
+    )
+
+    response.headers.setdefault(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains",
+    )
+
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=()",
+    )
 
     return response
 
