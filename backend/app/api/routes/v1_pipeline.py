@@ -292,9 +292,12 @@ async def submit_to_staging(
 
     try:
 
+        _company_id = str(current_user.company_id) if current_user.company_id else None
         artifact = await pipeline_service.submit_to_staging(
 
-            session, proposal_id, str(current_user.id), request
+            session, proposal_id, str(current_user.id), request,
+
+            company_id=_company_id,
 
         )
 
@@ -329,10 +332,11 @@ async def list_staging(
     current_user: User = Depends(get_current_user),
 ):
     """List staged artifacts with optional status filter and pagination."""
+    _company_id = str(current_user.company_id) if current_user.company_id else None
     artifacts = await pipeline_service.list_staging(
-        session, limit=limit, offset=offset, status_filter=status
+        session, limit=limit, offset=offset, status_filter=status, company_id=_company_id,
     )
-    total = await pipeline_db.count_staging(session, status_filter=status)
+    total = await pipeline_db.count_staging(session, status_filter=status, company_id_filter=_company_id)
     return StagingListResponse(
         artifacts=artifacts,
         total=total,
@@ -356,7 +360,8 @@ async def get_staging(
 
     """Get a specific staged artifact."""
 
-    artifact = await pipeline_service.get_staging(session, staging_id)
+    _company_id = str(current_user.company_id) if current_user.company_id else None
+    artifact = await pipeline_service.get_staging(session, staging_id, company_id=_company_id)
 
     if not artifact:
 
@@ -369,49 +374,29 @@ async def get_staging(
 
 
 @router.post("/staging/{staging_id}/authorize")
-
 async def authorize_staged(
-
     staging_id: str,
-
     request: AuthorizeRequest,
-
     session: AsyncSession = Depends(get_async_session),
-
     current_user: User = Depends(get_current_user),
-
 ):
-
-    """Approve, reject, or return a staged artifact."""
-
+    """Authorize a staged artifact."""
     # P1-5: Per-action permission gate
     if request.action.value == "REJECT":
         await _check_permission(session, current_user, "pipeline.reject")
     else:
         await _check_permission(session, current_user, "pipeline.approve")
-
-
-
-    # Resolve user's actual role (not hardcoded)
-
+    # Resolve actual role
     roles = await rbac_service.get_roles_by_user(session, current_user.id)
-
     user_role = roles[0] if roles else "unknown"
-
-
-
+    _cid = str(current_user.company_id) if current_user.company_id else None
     try:
-
         result = await pipeline_service.authorize_staged(
-
-            session, staging_id, str(current_user.id), user_role, request
-
+            session, staging_id, str(current_user.id), user_role, request,
+            company_id=_cid,
         )
-
     except ValueError as e:
-
         error_msg = str(e)
-
         if "SNAPSHOT_STALE" in error_msg or "CONCURRENT_MODIFICATION" in error_msg:
 
             raise HTTPException(status_code=409, detail=error_msg)

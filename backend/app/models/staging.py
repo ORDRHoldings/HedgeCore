@@ -18,6 +18,8 @@ from datetime import datetime, timezone
 
 
 
+from typing import Optional
+
 from sqlalchemy import String, Float, Integer, DateTime, Text, ForeignKey, UniqueConstraint
 
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -123,6 +125,11 @@ class StagingArtifact(Base):
     # Optimistic lock version (incremented on each status change)
 
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # Tenant isolation: scopes artifact to a single company
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True, index=True
+    )
 
 
 

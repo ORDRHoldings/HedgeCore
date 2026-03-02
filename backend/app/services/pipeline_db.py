@@ -146,6 +146,7 @@ def _staging_orm_to_schema(row: StagingORM) -> StagedArtifact:
         required_approvals=row.required_approvals,
         version=row.version,
         approvals=approvals,
+        company_id=str(row.company_id) if row.company_id else None,
     )
 
 
@@ -168,6 +169,7 @@ async def save_staging(session: AsyncSession, artifact: StagedArtifact) -> None:
             if hasattr(artifact.authorization_status, "value")
             else str(artifact.authorization_status),
         required_approvals=artifact.required_approvals,
+        company_id=uuid.UUID(artifact.company_id) if artifact.company_id else None,
     )
     session.add(orm)
     await session.commit()
@@ -265,11 +267,18 @@ async def load_all_staging(
     limit: int = 100,
     offset: int = 0,
     status_filter: str | None = None,
+    company_id_filter: str | None = None,
 ) -> list[StagedArtifact]:
-    """Load staging artifacts with optional status filter and pagination."""
+    """Load staging artifacts with optional status and tenant filters."""
     q = select(StagingORM).options(selectinload(StagingORM.approvals))
     if status_filter:
         q = q.where(StagingORM.authorization_status == status_filter)
+    if company_id_filter:
+        try:
+            cid = uuid.UUID(company_id_filter)
+            q = q.where(StagingORM.company_id == cid)
+        except (ValueError, AttributeError):
+            pass
     q = q.order_by(StagingORM.submitted_at.desc()).limit(limit).offset(offset)
     result = await session.execute(q)
     return [_staging_orm_to_schema(r) for r in result.scalars().all()]
@@ -278,11 +287,18 @@ async def load_all_staging(
 async def count_staging(
     session: AsyncSession,
     status_filter: str | None = None,
+    company_id_filter: str | None = None,
 ) -> int:
-    """Count total staging artifacts, optionally filtered by status."""
+    """Count total staging artifacts, optionally filtered by status and tenant."""
     q = select(func.count()).select_from(StagingORM)
     if status_filter:
         q = q.where(StagingORM.authorization_status == status_filter)
+    if company_id_filter:
+        try:
+            cid = uuid.UUID(company_id_filter)
+            q = q.where(StagingORM.company_id == cid)
+        except (ValueError, AttributeError):
+            pass
     result = await session.execute(q)
     return result.scalar_one()
 
