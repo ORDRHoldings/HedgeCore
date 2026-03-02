@@ -35,14 +35,20 @@ from app.schemas_v1.policies import PolicySeedStatusResponse
 
 
 # ---------------------------------------------------------------------------
-# Expected short_names — the canonical list of 33 system policy presets
+# Expected short_names — canonical list of 60 system policy presets (expanded in Prompt 3)
 # ---------------------------------------------------------------------------
 EXPECTED_SHORT_NAMES = {
+    # Original 33
     "SME", "FULL", "CNSV", "BLNC", "ACTV", "COST", "LAYR",
     "BANK", "AMGR", "PE", "INSR", "SOVR", "XPRT", "CBNK",
     "AIRL", "TECH", "REIT", "PHRM", "AGRI", "AUTO",
     "RETL", "HSPT", "SHIP", "MINE", "BLDG", "MDIA",
     "NGO", "FAML", "HFND", "VCGR", "IMEX", "ENGY", "EDUC",
+    # Extended 27 (added Prompt 3)
+    "FXPB", "PNSN", "UNIV", "BRLC", "CLUD", "COCO", "COFF",
+    "CROO", "DEVB", "GRNT", "HDWR", "HOSP", "INRT", "LNGX",
+    "MDEV", "MEAT", "MUNI", "MXNN", "OFSC", "OILG", "REITX",
+    "RENW", "SEMI", "SPVX", "SWFD", "TRYC", "ZARR",
 }
 
 # Required fields in every preset config
@@ -55,7 +61,7 @@ REQUIRED_HEDGE_RATIO_KEYS = {"confirmed", "forecast"}
 # ---------------------------------------------------------------------------
 
 def test_all_33_presets_present():
-    """_POLICY_PRESETS_SEED must contain all 33 canonical short_names."""
+    """_POLICY_PRESETS_SEED must contain all 60 canonical short_names."""
     seed_short_names = {t["short_name"] for t in _POLICY_PRESETS_SEED}
     missing = EXPECTED_SHORT_NAMES - seed_short_names
     extra   = seed_short_names - EXPECTED_SHORT_NAMES
@@ -175,28 +181,30 @@ def test_seed_idempotent_insert_logic():
 
 def test_seed_status_schema_valid_when_seeded():
     """PolicySeedStatusResponse parses correctly when all presets are present."""
+    n = len(EXPECTED_SHORT_NAMES)
     status = PolicySeedStatusResponse(
         seeded=True,
-        count=33,
-        expected_count=33,
+        count=n,
+        expected_count=n,
         missing_short_names=[],
     )
     assert status.seeded is True
-    assert status.count == 33
+    assert status.count == n
     assert status.missing_short_names == []
 
 
 def test_seed_status_schema_missing_presets():
     """PolicySeedStatusResponse reports missing short_names correctly."""
     missing = ["EDUC", "NGO"]
+    n = len(EXPECTED_SHORT_NAMES)
     status = PolicySeedStatusResponse(
         seeded=False,
-        count=31,
-        expected_count=33,
+        count=n - 2,
+        expected_count=n,
         missing_short_names=missing,
     )
     assert status.seeded is False
-    assert status.count == 31
+    assert status.count == n - 2
     assert set(status.missing_short_names) == {"EDUC", "NGO"}
 
 

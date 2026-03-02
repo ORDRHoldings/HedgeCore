@@ -103,8 +103,21 @@ def validate_forward_consistency(
     -------
     ForwardValidationResult
     """
-    spot = market.get("spot_usdmxn", 17.15)
-    fwd_points = market.get("forward_points_by_month", {})
+    if pair == "USDMXN":
+        spot = market.get("spot_usdmxn", 17.15)
+    else:
+        fx_rates = market.get("fx_rates", {})
+        spot = fx_rates.get(pair, 0.0)
+        if spot <= 0:
+            return ForwardValidationResult()
+
+    pair_fwd_points = market.get("pair_forward_points", {})
+    if pair in pair_fwd_points:
+        fwd_points = pair_fwd_points[pair]
+    elif pair == "USDMXN":
+        fwd_points = market.get("forward_points_by_month", {})
+    else:
+        fwd_points = {}
     interest_curves = market.get("interest_curves", {})
 
     soft_tol = policy.get("forward_arbitrage_soft_tolerance", 0.005)

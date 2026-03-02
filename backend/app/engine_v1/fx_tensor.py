@@ -133,7 +133,7 @@ def compute_exposure_tensor(
     # Group trades by currency pair
     pair_buckets: dict[str, list[dict]] = {}
     for trade in trades:
-        asset_ccy = trade.get("asset_currency", trade.get("currency", "MXN"))
+        asset_ccy = trade.get("asset_currency", trade.get("currency", "USD"))
         funding_ccy = trade.get("funding_currency", "USD")
         pair = f"{funding_ccy}{asset_ccy}"
         pair_buckets.setdefault(pair, []).append(trade)

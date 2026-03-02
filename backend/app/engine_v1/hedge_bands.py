@@ -103,10 +103,18 @@ def check_hedge_bands(
         band_max = band[1]
 
         # Get exposure and hedge values
-        hedge_pos = abs(bucket.get("hedge_position_mxn", 0.0) or
-                        bucket.get("action_mxn", 0.0))
-        exposure = abs(bucket.get("commercial_exposure_mxn", 0.0) or
-                       bucket.get("gross_exposure_mxn", 0.0))
+        hedge_pos = abs(
+            bucket.get("hedge_position_local", 0.0) or
+            bucket.get("hedge_position_mxn", 0.0) or
+            bucket.get("action_local", 0.0) or
+            bucket.get("action_mxn", 0.0) or 0.0
+        )
+        exposure = abs(
+            bucket.get("commercial_exposure_local", 0.0) or
+            bucket.get("commercial_exposure_mxn", 0.0) or
+            bucket.get("gross_exposure_local", 0.0) or
+            bucket.get("gross_exposure_mxn", 0.0) or 0.0
+        )
 
         checked += 1
 

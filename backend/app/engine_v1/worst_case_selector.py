@@ -92,8 +92,16 @@ def select_worst_case(
                 shocks = bucket_scenario.get("shocks", [])
                 for shock in shocks:
                     shock_name = f"{name}_{shock.get('shock', 0)}"
-                    pre_loss = shock.get("pre_hedge_mxn", 0.0)
-                    post_loss = shock.get("post_hedge_mxn", 0.0)
+                    pre_loss = (
+                        shock.get("pre_hedge_usd", 0.0) or
+                        shock.get("pre_hedge_local", 0.0) or
+                        shock.get("pre_hedge_mxn", 0.0) or 0.0
+                    )
+                    post_loss = (
+                        shock.get("post_hedge_usd", 0.0) or
+                        shock.get("post_hedge_local", 0.0) or
+                        shock.get("post_hedge_mxn", 0.0) or 0.0
+                    )
                     improvement = abs(pre_loss) - abs(post_loss)
                     all_losses.append(ScenarioLoss(
                         scenario_name=shock_name,
@@ -122,10 +130,10 @@ def select_worst_case(
                 if isinstance(impact, dict):
                     all_losses.append(ScenarioLoss(
                         scenario_name=f"sigma_{shock_key}",
-                        pre_hedge_loss=impact.get("pre_hedge_mxn", 0.0),
-                        post_hedge_loss=impact.get("post_hedge_mxn", 0.0),
-                        improvement=abs(impact.get("pre_hedge_mxn", 0.0)) -
-                                    abs(impact.get("post_hedge_mxn", 0.0)),
+                        pre_hedge_loss=impact.get("pre_hedge_usd", 0.0) or impact.get("pre_hedge_mxn", 0.0) or 0.0,
+                        post_hedge_loss=impact.get("post_hedge_usd", 0.0) or impact.get("post_hedge_mxn", 0.0) or 0.0,
+                        improvement=abs(impact.get("pre_hedge_usd", 0.0) or impact.get("pre_hedge_mxn", 0.0) or 0.0) -
+                                    abs(impact.get("post_hedge_usd", 0.0) or impact.get("post_hedge_mxn", 0.0) or 0.0),
                     ))
 
     # Process extended scenarios
