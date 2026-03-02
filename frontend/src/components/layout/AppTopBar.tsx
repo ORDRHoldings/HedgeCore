@@ -602,28 +602,12 @@ export default function AppTopBar() {
           href="/dashboard"
           style={{ display: "flex", alignItems: "center", textDecoration: "none", flexShrink: 0 }}
         >
-          {/* ORDR Terminal horizontal logo — inline SVG */}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 260 56"
-            fill="none"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/ordr-logo-horizontal.png"
+            alt="ORDR Terminal"
             style={{ height: 28, width: "auto", display: "block" }}
-            aria-label="ORDR Terminal"
-          >
-            {/* Knotwork mark: 4 interlocked rings + upper-right arrow */}
-            <g transform="translate(32,28) scale(0.44)">
-              <circle cx="-32" cy="0" r="34" stroke="#111111" strokeWidth="10" fill="none"/>
-              <circle cx="32" cy="0" r="34" stroke="#111111" strokeWidth="10" fill="none"/>
-              <circle cx="0" cy="-20" r="34" stroke="#111111" strokeWidth="10" fill="none"/>
-              <circle cx="0" cy="20" r="34" stroke="#111111" strokeWidth="10" fill="none"/>
-              <line x1="18" y1="-30" x2="46" y2="-52" stroke="#111111" strokeWidth="8" strokeLinecap="round"/>
-              <polyline points="28,-52 46,-52 46,-34" stroke="#111111" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-            </g>
-            {/* ORDR wordmark */}
-            <text x="64" y="26" fontFamily="'Manrope','Arial Black',sans-serif" fontWeight="800" fontSize="21" letterSpacing="4" fill="#111111">ORDR</text>
-            {/* TERMINAL sub-label in brand orange */}
-            <text x="65" y="44" fontFamily="'Manrope','Arial Black',sans-serif" fontWeight="800" fontSize="13" letterSpacing="4.5" fill="#F58220">TERMINAL</text>
-          </svg>
+          />
         </Link>
 
         {/* Divider */}
