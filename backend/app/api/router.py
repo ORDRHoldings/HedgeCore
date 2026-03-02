@@ -137,4 +137,8 @@ router.include_router(v1_company_settings_router)
 from app.api.routes.v1_reports import router as v1_reports_router
 router.include_router(v1_reports_router)
 
+# Multi-currency calculate endpoint (owns /v1/calculate/multi)
+from app.api.routes.v1_calculate_multi import router as v1_calculate_multi_router
+router.include_router(v1_calculate_multi_router)
+
 __all__ = ["router"]
