@@ -318,6 +318,56 @@ export function riskPostureClassification(
   return { posture, coveragePct, residualPct, worstCaseReductionPct };
 }
 
+// ── Extended Engine Integration (RPT-05) ──────────────────────────────────
+
+export interface ExtendedEngineData {
+  factor_covariance: {
+    condition_number?: number;
+    eigenvalues?: number[];
+  } | null;
+  margin: {
+    total_im_usd?: number;
+    margin_by_bucket?: Record<string, number>;
+  } | null;
+  liquidity: {
+    total_adv_coverage_pct?: number;
+    illiquid_buckets?: string[];
+  } | null;
+  nav_attribution: {
+    fx_delta_contribution?: number;
+    total_pnl_usd?: number;
+  } | null;
+  tca: {
+    total_cost_usd?: number;
+    average_bps?: number;
+  } | null;
+  waterfall: {
+    steps?: { label: string; value: number }[];
+    net_hedge_benefit_usd?: number;
+  } | null;
+}
+
+export function extractExtendedKpis(extended: ExtendedEngineData): {
+  marginRequired: number | null;
+  liquidityScore: number | null;  // 0-100
+  tcaBps: number | null;
+  netHedgeBenefit: number | null;
+} {
+  return {
+    marginRequired: extended.margin?.total_im_usd ?? null,
+    liquidityScore: extended.liquidity?.total_adv_coverage_pct != null
+      ? Math.min(100, extended.liquidity.total_adv_coverage_pct * 100)
+      : null,
+    tcaBps: extended.tca?.average_bps ?? null,
+    netHedgeBenefit: extended.waterfall?.net_hedge_benefit_usd ?? null,
+  };
+}
+
+export function extendedDataAvailable(extended: ExtendedEngineData | null | undefined): boolean {
+  if (!extended) return false;
+  return Object.values(extended).some(v => v !== null && v !== undefined);
+}
+
 // ── Executive Narrative Engine ──
 
 export function generateExecutiveNarrative(

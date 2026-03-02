@@ -133,4 +133,8 @@ router.include_router(v1_market_snapshots_router)
 from app.api.routes.v1_company_settings import router as v1_company_settings_router
 router.include_router(v1_company_settings_router)
 
+# RPT-04 + RPT-06: Report persistence & scheduling (owns /v1/reports)
+from app.api.routes.v1_reports import router as v1_reports_router
+router.include_router(v1_reports_router)
+
 __all__ = ["router"]

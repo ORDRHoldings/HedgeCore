@@ -19,8 +19,55 @@
  *  RadarChart            – Multi-dimensional risk radar (R-06)
  */
 
+import React from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
+
+// ── RPT-09: Chart Error Boundary ──────────────────────────────────────────────
+
+class ChartErrorBoundary extends React.Component<
+  { chartName?: string; children: React.ReactNode },
+  { hasError: boolean; error: string | null }
+> {
+  constructor(props: { chartName?: string; children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error.message };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error(`[Chart Error] ${this.props.chartName ?? "unknown"}:`, error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", height: "120px",
+          border: "1px solid var(--border-rim)",
+          background: "var(--bg-sub)",
+          gap: 8,
+        }}>
+          <span style={{ fontSize: 11, fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", color: "var(--text-tertiary)" }}>
+            Chart failed to render
+          </span>
+          <button
+            style={{
+              fontSize: 10, fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+              border: "1px solid var(--border-rim)", background: "none",
+              color: "var(--accent-cyan)", padding: "4px 10px", cursor: "pointer",
+            }}
+            onClick={() => this.setState({ hasError: false, error: null })}
+          >
+            RETRY
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ── Design token constants ─────────────────────────────────────────────────────
 // Hex values matching globals.css custom properties.
@@ -181,11 +228,13 @@ export function HorizontalStackedBar({
   };
 
   return (
-    <ReactECharts
-      option={option}
-      style={{ height, width: "100%" }}
-      opts={{ renderer: "canvas" }}
-    />
+    <ChartErrorBoundary chartName="HorizontalStackedBar">
+      <ReactECharts
+        option={option}
+        style={{ height, width: "100%" }}
+        opts={{ renderer: "canvas" }}
+      />
+    </ChartErrorBoundary>
   );
 }
 
@@ -272,11 +321,13 @@ export function BucketBarChart({
   };
 
   return (
-    <ReactECharts
-      option={option}
-      style={{ height, width: "100%" }}
-      opts={{ renderer: "canvas" }}
-    />
+    <ChartErrorBoundary chartName="BucketBarChart">
+      <ReactECharts
+        option={option}
+        style={{ height, width: "100%" }}
+        opts={{ renderer: "canvas" }}
+      />
+    </ChartErrorBoundary>
   );
 }
 
@@ -402,11 +453,13 @@ export function EChartsWaterfallChart({ steps, height = 240 }: WaterfallChartPro
   };
 
   return (
-    <ReactECharts
-      option={option}
-      style={{ height, width: "100%" }}
-      opts={{ renderer: "canvas" }}
-    />
+    <ChartErrorBoundary chartName="EChartsWaterfallChart">
+      <ReactECharts
+        option={option}
+        style={{ height, width: "100%" }}
+        opts={{ renderer: "canvas" }}
+      />
+    </ChartErrorBoundary>
   );
 }
 
@@ -482,11 +535,13 @@ export function DonutChart({
   };
 
   return (
-    <ReactECharts
-      option={option}
-      style={{ height, width: "100%" }}
-      opts={{ renderer: "canvas" }}
-    />
+    <ChartErrorBoundary chartName="DonutChart">
+      <ReactECharts
+        option={option}
+        style={{ height, width: "100%" }}
+        opts={{ renderer: "canvas" }}
+      />
+    </ChartErrorBoundary>
   );
 }
 
@@ -573,10 +628,12 @@ export function RadarChart({ dimensions, label = "Risk Posture", height = 280 }:
   };
 
   return (
-    <ReactECharts
-      option={option}
-      style={{ height, width: "100%" }}
-      opts={{ renderer: "canvas" }}
-    />
+    <ChartErrorBoundary chartName="RadarChart">
+      <ReactECharts
+        option={option}
+        style={{ height, width: "100%" }}
+        opts={{ renderer: "canvas" }}
+      />
+    </ChartErrorBoundary>
   );
 }
