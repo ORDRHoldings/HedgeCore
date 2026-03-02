@@ -157,6 +157,7 @@ def apply_extended_scenarios(
     policy: dict[str, Any],
     margin_total: float = 0.0,
     duration_fraction: float | None = None,
+    position_durations: list[dict] | None = None,  # FIX-02: per-position duration data
 ) -> ExtendedScenarioResult:
     """Run extended scenario analysis.
 
@@ -199,13 +200,25 @@ def apply_extended_scenarios(
         # Rate shock impact (carry cost change)
         rate_impact = 0.0
         if scenario.rate_shock_bps != 0:
-            # Simplified: rate shock ? notional ? avg_duration_fraction
-            _duration_frac = duration_fraction if duration_fraction is not None else 0.25  # RISK-03
-            rate_impact = hedge_notional_usd * (scenario.rate_shock_bps / 10000.0) * _duration_frac
+            # FIX-02: use actual weighted-average duration if position_durations provided
+            if position_durations and len(position_durations) > 0:
+                total_notional = sum(abs(p.get("notional_usd", 0)) for p in position_durations)
+                if total_notional > 0:
+                    weighted_duration = sum(
+                        abs(p.get("notional_usd", 0)) * p.get("duration_years", 0.25)
+                        for p in position_durations
+                    ) / total_notional
+                else:
+                    weighted_duration = duration_fraction if duration_fraction is not None else 0.25
+            elif duration_fraction is not None:
+                weighted_duration = duration_fraction  # Legacy: explicit fraction
+            else:
+                weighted_duration = 0.25  # Conservative fallback
+            rate_impact = hedge_notional_usd * (scenario.rate_shock_bps / 10000.0) * weighted_duration
 
-        # Add rate impact to losses
-        pre_hedge_loss += rate_impact * 0.5  # partial impact on unhedged
-        post_hedge_loss += rate_impact
+        # Add rate impact to losses (rate shocks always amplify loss magnitude)
+        pre_hedge_loss -= abs(rate_impact) * 0.5  # FIX-02: rate shock increases loss
+        post_hedge_loss -= abs(rate_impact)        # FIX-02: longer duration = larger impact
 
         # Margin impact
         margin_impact = margin_total * scenario.margin_shock if scenario.margin_shock else 0.0
@@ -239,3 +252,64 @@ def apply_extended_scenarios(
         scenario_count=len(impacts),
         compound_scenarios_included=has_compound,
     )
+
+def compute_position_durations(
+    hedge_actions: list[dict],
+    as_of_date: str | None = None,
+) -> list[dict]:
+    """Compute duration_years for each position from value_date.
+
+    FIX-02: Replaces flat 0.25 year assumption with actual tenor-derived duration.
+
+    Parameters
+    ----------
+    hedge_actions : list[dict]
+        Positions with 'value_date' (YYYY-MM-DD or YYYY-MM) and 'action_usd'
+        or 'notional_usd'.
+    as_of_date : str
+        Reference date (YYYY-MM-DD). Defaults to today.
+
+    Returns
+    -------
+    list[dict]
+        Each with 'bucket', 'notional_usd', 'duration_years', 'days_to_maturity'.
+    """
+    from datetime import date, datetime
+
+    if as_of_date:
+        try:
+            ref = datetime.strptime(as_of_date[:10], "%Y-%m-%d").date()
+        except ValueError:
+            ref = date.today()
+    else:
+        ref = date.today()
+
+    results = []
+    for action in hedge_actions:
+        notional = abs(action.get("action_usd", action.get("notional_usd", 0.0)))
+        vd = action.get("value_date", "")
+
+        if isinstance(vd, date):
+            maturity_date = vd
+        elif isinstance(vd, str) and len(vd) >= 7:
+            try:
+                if len(vd) == 7:  # YYYY-MM
+                    maturity_date = datetime.strptime(vd + "-15", "%Y-%m-%d").date()
+                else:
+                    maturity_date = datetime.strptime(vd[:10], "%Y-%m-%d").date()
+            except ValueError:
+                maturity_date = ref
+        else:
+            maturity_date = ref
+
+        days = max((maturity_date - ref).days, 1)
+        duration_years = days / 365.25
+
+        results.append({
+            "bucket": action.get("bucket", ""),
+            "notional_usd": notional,
+            "duration_years": duration_years,
+            "days_to_maturity": days,
+        })
+
+    return results

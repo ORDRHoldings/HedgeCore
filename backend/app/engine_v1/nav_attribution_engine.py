@@ -120,11 +120,39 @@ def compute_nav_attribution(
         nav_local = amount_local
         nav_base = amount_usd  # Already in USD
 
-        # FX contribution: sensitivity to 1% FX move
+        # FX contribution: actual delta cascade (FIX-04)
         fx_contrib = 0.0
         if currency != base_currency and abs(amount_usd) > 0:
-            _fx_delta = fx_delta if fx_delta is not None else 0.01  # Default: 1% move (RISK-02)
-            fx_contrib = amount_usd * _fx_delta
+            if fx_delta is not None:
+                # Priority 0: caller-supplied fx_delta (backward compat)
+                fx_contrib = amount_usd * fx_delta
+            else:
+                # Priority 1: actual fx_deltas from market snapshot
+                fx_deltas_map: dict[str, float] = market.get("fx_deltas", {})
+                pair_key = f"USD{currency}" if base_currency == "USD" else f"{base_currency}{currency}"
+                actual_delta = fx_deltas_map.get(pair_key, None)
+
+                if actual_delta is not None:
+                    fx_contrib = amount_usd * actual_delta
+                else:
+                    # Priority 2: compute from spot vs previous_close
+                    prev_rates: dict[str, float] = market.get("previous_close_rates", {})
+                    current_rate = fx_rates.get(pair_key, 0.0)
+                    prev_rate = prev_rates.get(pair_key, 0.0)
+                    if current_rate > 0 and prev_rate > 0:
+                        implied_delta = (current_rate - prev_rate) / prev_rate
+                        fx_contrib = amount_usd * implied_delta
+                    else:
+                        # Priority 3: pair-specific daily vol proxy from registry
+                        try:
+                            from app.engine_v1.pair_registry import get_pair_meta
+                            import math
+                            meta = get_pair_meta(pair_key)
+                            # Daily vol ≈ annual vol proxy × 10 = conservative daily move
+                            daily_move = (meta.typical_spread_bps / 10000.0) * 10
+                            fx_contrib = amount_usd * daily_move
+                        except (ValueError, ImportError):
+                            fx_contrib = amount_usd * 0.01  # Ultimate fallback
 
         # Carry contribution: interest differential ? notional ? time
         time_frac = maturity_months / 12.0

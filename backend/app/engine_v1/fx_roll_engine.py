@@ -30,6 +30,8 @@ class RollEntry:
     carry_cost_usd: float
     slippage_usd: float
     total_roll_cost_usd: float
+    instrument: str = "FWD"                    # FIX-08: track instrument at each roll
+    instrument_transition: str | None = None   # FIX-08: "FWD→NDF" if transitioned
 
     def to_dict(self) -> dict:
         return {
@@ -42,6 +44,8 @@ class RollEntry:
             "carry_cost_usd": self.carry_cost_usd,
             "slippage_usd": self.slippage_usd,
             "total_roll_cost_usd": self.total_roll_cost_usd,
+            "instrument": self.instrument,
+            "instrument_transition": self.instrument_transition,
         }
 
 
@@ -80,11 +84,31 @@ def _next_month(bucket: str) -> str:
         return bucket
 
 
+def _bucket_to_months(bucket: str, as_of: str | None = None) -> int:
+    """Compute months from as_of to bucket mid-month."""
+    from datetime import date, datetime
+    ref = date.today()
+    if as_of:
+        try:
+            ref = datetime.strptime(as_of[:10], "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    try:
+        parts = bucket.split("-")
+        year, month = int(parts[0]), int(parts[1])
+        target = date(year, month, 15)
+        delta = (target.year - ref.year) * 12 + (target.month - ref.month)
+        return max(0, delta)
+    except (ValueError, IndexError):
+        return 0
+
+
 def generate_roll_ladder(
     hedge_positions: list[dict],
     market: dict[str, Any],
     policy: dict[str, Any],
     roll_horizon_months: int = 3,
+    pair: str = "USDMXN",  # FIX-08: pair for instrument transition logic
 ) -> RollLadderResult:
     """Generate roll schedule for forward positions.
 
@@ -100,6 +124,8 @@ def generate_roll_ladder(
         PolicyConfig as dict. Uses 'cost_assumptions.spread_bps'.
     roll_horizon_months : int
         How many months forward to project rolls.
+    pair : str
+        Currency pair for instrument transition detection. Default USDMXN.
 
     Returns
     -------
@@ -108,6 +134,15 @@ def generate_roll_ladder(
     fwd_points = market.get("forward_points_by_month", {})
     spot = market.get("spot_usdmxn", 17.15)
     spread_bps = policy.get("cost_assumptions", {}).get("spread_bps", 5.0)
+    as_of = market.get("as_of", None)
+
+    # FIX-08: load pair metadata for instrument transition detection
+    pair_meta = None
+    try:
+        from app.engine_v1.pair_registry import get_pair_meta
+        pair_meta = get_pair_meta(pair)
+    except (ValueError, ImportError):
+        pass
 
     rolls: list[RollEntry] = []
 
@@ -127,13 +162,25 @@ def generate_roll_ladder(
             fwd_old = fwd_points.get(current_bucket, 0.0)
             fwd_new = fwd_points.get(next_bucket, 0.0)
 
-            # Carry cost: (fwd_new - fwd_old) ? notional / spot
+            # Carry cost: (fwd_new - fwd_old) × notional / spot
             carry_cost = (fwd_new - fwd_old) * notional / spot if spot > 0 else 0.0
 
-            # Slippage: notional ? (spread_bps / 10000)
+            # Slippage: notional × (spread_bps / 10000)
             slippage = notional * (spread_bps / 10000.0)
 
             total_cost = abs(carry_cost) + slippage
+
+            # FIX-08: detect instrument transition for next tenor
+            next_instrument = instrument
+            transition_note: str | None = None
+            if pair_meta:
+                months_to_next = _bucket_to_months(next_bucket, as_of=str(as_of) if as_of else None)
+                if months_to_next > pair_meta.max_tenor_months and instrument == "FWD":
+                    next_instrument = "NDF"
+                    transition_note = f"FWD→NDF at {next_bucket} (exceeds {pair_meta.max_tenor_months}M tenor)"
+                elif pair_meta.is_ndf and instrument == "FWD":
+                    next_instrument = "NDF"
+                    transition_note = f"FWD→NDF: {pair} is NDF-only pair"
 
             rolls.append(RollEntry(
                 roll_date=next_bucket,
@@ -145,9 +192,12 @@ def generate_roll_ladder(
                 carry_cost_usd=carry_cost,
                 slippage_usd=slippage,
                 total_roll_cost_usd=total_cost,
+                instrument=next_instrument,
+                instrument_transition=transition_note,
             ))
 
             current_bucket = next_bucket
+            instrument = next_instrument  # carry instrument forward
 
     total_carry = sum(r.carry_cost_usd for r in rolls)
     total_slippage = sum(r.slippage_usd for r in rolls)

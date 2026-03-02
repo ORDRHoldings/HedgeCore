@@ -59,6 +59,30 @@ class CurrencyExposureNet:
 
 
 @dataclass
+class TriangulationCheck:
+    """Triangular arbitrage consistency check for a netting pair (FIX-10)."""
+
+    pair_1: str
+    pair_2: str
+    synthetic_pair: str
+    synthetic_rate: float
+    market_rate: "float | None"
+    deviation_pct: float
+    status: str  # "OK", "WARNING", "SUSPECT"
+
+    def to_dict(self) -> dict:
+        return {
+            "pair_1": self.pair_1,
+            "pair_2": self.pair_2,
+            "synthetic_pair": self.synthetic_pair,
+            "synthetic_rate": self.synthetic_rate,
+            "market_rate": self.market_rate,
+            "deviation_pct": self.deviation_pct,
+            "status": self.status,
+        }
+
+
+@dataclass
 class NettingResult:
     """Currency netting analysis result."""
 
@@ -69,6 +93,8 @@ class NettingResult:
     total_savings_usd: float = 0.0
     netting_efficiency_pct: float = 0.0
     redundant_legs_eliminated: int = 0
+    triangulation_checks: "list[TriangulationCheck]" = field(default_factory=list)  # FIX-10
+    triangulation_warnings: int = 0  # FIX-10
 
     def to_dict(self) -> dict:
         return {
@@ -79,6 +105,8 @@ class NettingResult:
             "total_savings_usd": self.total_savings_usd,
             "netting_efficiency_pct": self.netting_efficiency_pct,
             "redundant_legs_eliminated": self.redundant_legs_eliminated,
+            "triangulation_checks": [t.to_dict() for t in self.triangulation_checks],
+            "triangulation_warnings": self.triangulation_warnings,
         }
 
 
@@ -187,6 +215,10 @@ def compute_currency_netting(
     total_savings = sum(n.savings_usd for n in netting_pairs)
     efficiency = (total_savings / gross_before * 100.0) if gross_before > 0 else 0.0
 
+    # FIX-10: triangulation consistency check
+    tri_checks = validate_netting_triangulation(netting_pairs, fx_rates)
+    tri_warnings = sum(1 for c in tri_checks if c.status in ("WARNING", "SUSPECT"))
+
     return NettingResult(
         currency_exposures=currency_exposures,
         netting_pairs=netting_pairs,
@@ -195,7 +227,81 @@ def compute_currency_netting(
         total_savings_usd=total_savings,
         netting_efficiency_pct=efficiency,
         redundant_legs_eliminated=len(netting_pairs),
+        triangulation_checks=tri_checks,
+        triangulation_warnings=tri_warnings,
     )
+
+def validate_netting_triangulation(
+    netting_pairs: "list[NettingPair]",
+    fx_rates: dict[str, float],
+    tolerance_pct: float = 0.5,
+) -> "list[TriangulationCheck]":
+    """Validate synthetic cross rates against market rates (FIX-10).
+
+    Parameters
+    ----------
+    netting_pairs : list[NettingPair]
+        Netting pairs from compute_currency_netting().
+    fx_rates : dict[str, float]
+        Market FX rates keyed by pair code.
+    tolerance_pct : float
+        Maximum acceptable deviation (%). Default 0.5%.
+
+    Returns
+    -------
+    list[TriangulationCheck]
+    """
+    checks: list[TriangulationCheck] = []
+
+    for np in netting_pairs:
+        rate_1 = fx_rates.get(np.original_pair_1, 0.0)
+        rate_2 = fx_rates.get(np.original_pair_2, 0.0)
+        market_cross = fx_rates.get(np.synthetic_pair, None)
+
+        if rate_1 <= 0 or rate_2 <= 0:
+            continue
+
+        p1_base = np.original_pair_1[:3]
+        p1_quote = np.original_pair_1[3:]
+        p2_base = np.original_pair_2[:3]
+        p2_quote = np.original_pair_2[3:]
+
+        synthetic_rate: float = 0.0
+        if p1_quote == p2_base:
+            synthetic_rate = rate_1 * rate_2
+        elif p1_base == p2_quote:
+            synthetic_rate = rate_1 / rate_2 if rate_2 > 0 else 0.0
+        elif p1_base == p2_base:
+            synthetic_rate = rate_1 / rate_2 if rate_2 > 0 else 0.0
+        elif p1_quote == p2_quote:
+            synthetic_rate = rate_1 / rate_2 if rate_2 > 0 else 0.0
+        else:
+            continue
+
+        if synthetic_rate <= 0:
+            continue
+
+        deviation_pct = 0.0
+        status = "OK"
+        if market_cross and market_cross > 0:
+            deviation_pct = abs(synthetic_rate - market_cross) / market_cross * 100.0
+            if deviation_pct > tolerance_pct * 2:
+                status = "SUSPECT"
+            elif deviation_pct > tolerance_pct:
+                status = "WARNING"
+
+        checks.append(TriangulationCheck(
+            pair_1=np.original_pair_1,
+            pair_2=np.original_pair_2,
+            synthetic_pair=np.synthetic_pair,
+            synthetic_rate=synthetic_rate,
+            market_rate=market_cross,
+            deviation_pct=deviation_pct,
+            status=status,
+        ))
+
+    return checks
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────

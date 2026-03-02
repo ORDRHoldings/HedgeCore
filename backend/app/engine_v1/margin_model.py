@@ -124,16 +124,15 @@ def compute_margin(
 
         # Funding cost: margin ? (funding_rate / 10000) ? (days / 360)
         # Estimate 90 days for average position
-        # LIQ-02: use actual value dates when provided
-        if value_dates and bucket in value_dates:
-            from datetime import date
-            try:
-                target = date.fromisoformat(value_dates[bucket])
-                days = max(1, (target - date.today()).days)
-            except (ValueError, TypeError):
-                days = _estimate_days(bucket)
+        # FIX-06: use action-level value_date when available
+        action_value_date = action.get("value_date", None)
+        as_of = market.get("as_of", None)
+        if action_value_date:
+            days = _estimate_days(bucket, value_date=str(action_value_date), as_of=str(as_of) if as_of else None)
+        elif value_dates and bucket in value_dates:
+            days = _estimate_days(bucket, value_date=value_dates[bucket], as_of=str(as_of) if as_of else None)
         else:
-            days = _estimate_days(bucket)
+            days = _estimate_days(bucket, as_of=str(as_of) if as_of else None)
         funding_cost = initial_margin * (funding_rate_bps / 10000.0) * (days / 360.0)
 
         positions.append(PositionMargin(
@@ -169,13 +168,62 @@ def compute_margin(
     )
 
 
-def _estimate_days(bucket: str) -> int:
-    """Estimate days to maturity from bucket string (YYYY-MM)."""
+def _estimate_days(
+    bucket: str,
+    value_date: str | None = None,
+    as_of: str | None = None,
+) -> int:
+    """Compute actual calendar days to maturity (FIX-06).
+
+    Parameters
+    ----------
+    bucket : str
+        YYYY-MM bucket string.
+    value_date : str | None
+        Actual value date (YYYY-MM-DD). Preferred over bucket estimate.
+    as_of : str | None
+        Reference date. Defaults to today.
+
+    Returns
+    -------
+    int
+        Calendar days to maturity, minimum 1.
+    """
+    from datetime import date, datetime
+
+    # Determine reference date
+    if as_of:
+        try:
+            ref = datetime.strptime(as_of[:10], "%Y-%m-%d").date()
+        except ValueError:
+            ref = date.today()
+    else:
+        ref = date.today()
+
+    # Priority 1: Use actual value_date
+    if value_date:
+        try:
+            if isinstance(value_date, date):
+                maturity = value_date
+            elif isinstance(value_date, str):
+                maturity = datetime.strptime(value_date[:10], "%Y-%m-%d").date()
+            else:
+                maturity = None
+            if maturity:
+                return max(1, (maturity - ref).days)
+        except (ValueError, TypeError):
+            pass
+
+    # Priority 2: Estimate from bucket (mid-month)
     try:
         parts = bucket.split("-")
         if len(parts) >= 2:
+            year = int(parts[0])
             month = int(parts[1])
-            return max(30, month * 30)
-        return 90
+            maturity = date(year, month, 15)  # Mid-month estimate
+            return max(1, (maturity - ref).days)
     except (ValueError, IndexError):
-        return 90
+        pass
+
+    # Priority 3: Conservative default
+    return 90
