@@ -22,6 +22,19 @@ import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { SETTINGS_HELP } from "@/lib/help";
 
 import { S, DEFAULT_SETTINGS, STORAGE_KEY, HASH_MAP, SettingsTab, AllSettings, Toast, ChangeEntry } from "./types/settings";
+
+// Canonical param value for each tab (reverse of HASH_MAP)
+const TAB_TO_PARAM: Partial<Record<SettingsTab, string>> = {
+  POLICY_LIMITS: "policy_limits",
+  EXECUTION:     "execution",
+  API_CONFIG:    "api_config",
+  NOTIFICATIONS: "notifications",
+  SECURITY:      "security",
+  USERS_ROLES:   "users_roles",
+  API_KEY_MGMT:  "api_key_mgmt",
+  ORGANISATION:  "organisation",
+  AUDIT_TRAIL:   "audit_trail",
+};
 import { useSettings } from "./hooks/useSettings";
 import { useGovernedSave } from "./hooks/useGovernedSave";
 
@@ -81,22 +94,26 @@ function SettingsPageInner() {
   const searchParams = useSearchParams();
   const renderTs     = useRenderTs();
 
-  const [activeTab,  setActiveTab]  = useState<SettingsTab>("GENERAL");
   const [toasts,     setToasts]     = useState<Toast[]>([]);
   const [changeLog,  setChangeLog]  = useState<ChangeEntry[]>([]);
   const [showLog,    setShowLog]    = useState(false);
+
+  // Derive activeTab directly from URL — no state, no effect that can misfire.
+  // searchParams.get() is stable within a render even if the object reference changes.
+  const tabParam  = searchParams.get("tab") ?? "";
+  const activeTab: SettingsTab =
+    tabParam && HASH_MAP[tabParam] ? HASH_MAP[tabParam] : "GENERAL";
 
   // Auth guard
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.replace("/auth/login");
   }, [authLoading, isAuthenticated, router]);
 
-  // Activate tab from ?tab= query param — re-runs whenever Next.js navigation updates searchParams
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab && HASH_MAP[tab]) setActiveTab(HASH_MAP[tab]);
-    else if (!tab) setActiveTab("GENERAL");
-  }, [searchParams]);
+  // Tab navigation — updates URL; searchParams re-derives activeTab on next render
+  const handleTabChange = useCallback((tab: SettingsTab) => {
+    const param = TAB_TO_PARAM[tab];
+    router.replace(param ? `/settings?tab=${param}` : "/settings", { scroll: false });
+  }, [router]);
 
   const addToast = useCallback((kind: Toast["kind"], msg: string) => {
     const id = Math.random().toString(36).slice(2);
@@ -183,7 +200,7 @@ function SettingsPageInner() {
           onToggleLog={() => setShowLog(p => !p)}
         />
 
-        <SettingsTabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <SettingsTabBar activeTab={activeTab} onTabChange={handleTabChange} />
 
         {/* Content */}
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 24px 60px", width: "100%" }}>
