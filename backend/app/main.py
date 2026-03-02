@@ -971,6 +971,13 @@ async def _ensure_tables():
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()",
 
+        # ?? P1: staging_artifacts.version column + approvals idempotency constraint ??
+        # Added by P1 hardening (optimistic lock + idempotency). Alembic migration
+        # b1f2a3c4d5e6 created these tables without these columns — patch here so
+        # existing production DBs are upgraded on first restart.
+        "ALTER TABLE staging_artifacts ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 0",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_approval_per_actor_action ON approvals(staging_artifact_id, approver_id, action)",
+
         # ?? L-12: Dual-key approval columns for execution_proposals ??
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approver_required BOOLEAN NOT NULL DEFAULT FALSE",
         "ALTER TABLE execution_proposals ADD COLUMN IF NOT EXISTS second_approver_id UUID",
