@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef, Suspense } from "rea
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import type { RootState, AppDispatch } from "../../lib/store";
 import {
   sandboxCalculateThunk,
@@ -1386,6 +1387,8 @@ function SandboxPageInner() {
 
 // ─── Export with Suspense boundary ────────────────────────────────────────────
 export default function SandboxPage() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
   return (
     <Suspense fallback={
       <div style={{

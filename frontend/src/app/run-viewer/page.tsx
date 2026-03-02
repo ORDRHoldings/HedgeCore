@@ -17,6 +17,7 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../lib/authContext";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { fetchRunDetail, listRuns } from "../../api/runsClient";
 import type { RunDetailResponse, RunSummary } from "../../api/runsClient";
 import type { TraceEvent } from "../../api/types";
@@ -869,6 +870,8 @@ function RunViewerContent() {
 }
 
 export default function RunViewerPage() {
+  const _planAllowed = usePlanRedirect("enterprise");
+  if (!_planAllowed) return null;
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       <div style={{ flex: 1, overflowY: "auto" }}>

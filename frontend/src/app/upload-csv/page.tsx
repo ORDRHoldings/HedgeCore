@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import {
   importPositionsCsv,
   type ImportResult,
@@ -69,6 +70,8 @@ const CURRENCIES = ["USD","EUR","GBP","JPY","CHF","CAD","AUD","NZD","MXN","BRL",
 const STAGES: ImportStatus[] = ["uploading","parsing","validating","committing"];
 
 export default function UploadCsvPage() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
   const router = useRouter();
   const { user, token, isAuthenticated } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);

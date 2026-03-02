@@ -6,6 +6,8 @@ import type { Layout } from "react-grid-layout";
 import { Plus, RotateCcw, HelpCircle, Activity, Clock, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import type { UserContext } from "@/lib/authContext";
+import { usePlanGate } from "@/lib/hooks/usePlanGate";
+import SmbDashboard from "@/components/dashboard/SmbDashboard";
 import { WIDGET_REGISTRY, getDefaultLayoutForRole, type GridItem, type WidgetId } from "@/lib/widgets/widgetRegistry";
 import WidgetCatalog from "@/components/dashboard/WidgetCatalog";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
@@ -178,6 +180,10 @@ export default function DashboardPage() {
   if (!isAuthenticated || !user || !token) {
     router.replace("/auth/login");
     return <div style={loadingStyle}>Redirecting…</div>;
+  }
+  // ── SMB plan → fixed simple dashboard (no grid layout) ──
+  if (user.plan_tier === "smb") {
+    return <SmbDashboard token={token} user={user} />;
   }
   const rglLayout = toRGLLayout(gridItems);
   const role = user.roles?.[0] ?? "risk_analyst";

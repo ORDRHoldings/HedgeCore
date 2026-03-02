@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import EmptyState from "../../components/ui/EmptyState";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { POLISOPHIC_HELP } from "@/lib/helpContent";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -396,6 +397,8 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function Polisophic() {
+  const _planAllowed = usePlanRedirect("enterprise");
+  if (!_planAllowed) return null;
   const renderTs = useRenderTs();
   const router = useRouter();
   const { user } = useAuth();

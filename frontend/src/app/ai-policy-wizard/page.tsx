@@ -27,6 +27,7 @@ import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { AI_WIZARD_HELP } from "@/lib/helpContent";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import {
   suggestPolicyAI,
   createPolicyTemplate,
@@ -1627,6 +1628,8 @@ function validateStep(idx: number, s: WizardState): string | null {
 const WIZARD_STORAGE_KEY = 'ai_wizard_state_v1';
 
 export default function AIPolicyWizardPage() {
+  const _planAllowed = usePlanRedirect("professional");
+  if (!_planAllowed) return null;
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
 

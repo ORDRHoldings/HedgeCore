@@ -18,6 +18,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../lib/authContext";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { fetchPositionLineage } from "../../api/positionClient";
 import type { LineageNode, LineageEdge, LineageResponse } from "../../api/positionClient";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -774,6 +775,8 @@ function LineageContent() {
 }
 
 export default function LineagePage() {
+  const _planAllowed = usePlanRedirect("enterprise");
+  if (!_planAllowed) return null;
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
 
