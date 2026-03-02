@@ -119,9 +119,19 @@ export async function submitToStaging(
   return data;
 }
 
-export async function listStaging(token?: string): Promise<StagedArtifact[]> {
-  const { data } = await api.get<StagedArtifact[]>("/staging", authHeaders(token));
-  return data;
+export async function listStaging(
+  token?: string,
+  params?: { limit?: number; offset?: number; status?: string },
+): Promise<StagedArtifact[]> {
+  const limit = params?.limit ?? 100;
+  const offset = params?.offset ?? 0;
+  const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  if (params?.status) query.set("status", params.status);
+  const { data } = await api.get<{ artifacts: StagedArtifact[]; total: number }>(
+    `/staging?${query.toString()}`,
+    authHeaders(token),
+  );
+  return data.artifacts ?? (data as unknown as StagedArtifact[]);
 }
 
 export async function getStaging(

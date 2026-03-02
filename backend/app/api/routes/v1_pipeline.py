@@ -14,7 +14,8 @@ Mutation endpoints enforce inline permission checks via rbac_service.
 
 
 
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,7 +48,7 @@ from app.schemas_v1.pipeline import (
 
 )
 
-from app.services import pipeline_service, rbac_service
+from app.services import pipeline_service, rbac_service, pipeline_db
 
 
 
@@ -320,25 +321,21 @@ async def submit_to_staging(
 
 
 @router.get("/staging")
-
 async def list_staging(
-
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    status: Optional[str] = Query(default=None),
     session: AsyncSession = Depends(get_async_session),
-
     current_user: User = Depends(get_current_user),
-
 ):
-
-    """List all staged artifacts."""
-
-    artifacts = await pipeline_service.list_staging(session)
-
+    """List staged artifacts with optional status filter and pagination."""
+    artifacts = await pipeline_service.list_staging(
+        session, limit=limit, offset=offset, status_filter=status
+    )
+    total = await pipeline_db.count_staging(session, status_filter=status)
     return StagingListResponse(
-
         artifacts=artifacts,
-
-        total=len(artifacts),
-
+        total=total,
     ).model_dump(mode="json")
 
 
@@ -387,7 +384,11 @@ async def authorize_staged(
 
     """Approve, reject, or return a staged artifact."""
 
-    await _check_permission(session, current_user, "pipeline.approve")
+    # P1-5: Per-action permission gate
+    if request.action.value == "REJECT":
+        await _check_permission(session, current_user, "pipeline.reject")
+    else:
+        await _check_permission(session, current_user, "pipeline.approve")
 
 
 
@@ -411,7 +412,7 @@ async def authorize_staged(
 
         error_msg = str(e)
 
-        if "SNAPSHOT_STALE" in error_msg:
+        if "SNAPSHOT_STALE" in error_msg or "CONCURRENT_MODIFICATION" in error_msg:
 
             raise HTTPException(status_code=409, detail=error_msg)
 

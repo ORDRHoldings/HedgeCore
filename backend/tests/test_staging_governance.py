@@ -4,16 +4,29 @@ test_staging_governance.py
 Governance hardening tests for the Staging Queue pipeline.
 
 Coverage:
-  1. self_approval_blocked   -- submitter ≠ approver enforced
-  2. status_already_terminal -- cannot re-authorize APPROVED/REJECTED artifact
-  3. staged_artifact_schema  -- required fields present and typed
-  4. approval_record_schema  -- signature_hash format
-  5. authorization_status_enum -- all expected values present
-  6. check_snapshot_staleness_fresh  -- fresh snapshot not stale
-  7. check_snapshot_staleness_old    -- old snapshot flagged
-  8. staging_list_order_desc -- load_all_staging orders by submitted_at DESC
-  9. nav_access_control_removed  -- governance nav does NOT expose /access-control
- 10. governance_nav_items_complete -- expected nav items still present
+  1.  self_approval_blocked        -- submitter ≠ approver enforced
+  2.  status_already_terminal      -- cannot re-authorize APPROVED/REJECTED artifact
+  3.  staged_artifact_schema       -- required fields present and typed
+  4.  approval_record_schema       -- signature_hash format
+  5.  authorization_status_enum    -- all expected values present
+  6.  check_snapshot_staleness_fresh  -- fresh snapshot not stale
+  7.  check_snapshot_staleness_old    -- old snapshot flagged
+  8.  staging_list_order_desc      -- load_all_staging orders by submitted_at DESC
+  9.  nav_access_control_removed   -- governance nav does NOT expose /access-control
+  10. governance_nav_items_complete -- expected nav items still present
+
+P1 Hardening (added):
+  11. p1_version_field_in_schema   -- StagedArtifact has version field (P1-4)
+  12. p1_version_field_in_orm      -- StagingArtifact ORM has version column (P1-4)
+  13. p1_approval_unique_constraint -- Approval has UniqueConstraint (P1-3)
+  14. p1_load_all_staging_accepts_pagination -- load_all_staging limit/offset/status_filter (P1-2)
+  15. p1_count_staging_exists      -- count_staging function importable (P1-2)
+  16. p1_update_staging_versioned  -- update_staging_status_versioned importable (P1-4)
+  17. p1_emit_pipeline_event       -- _emit_pipeline_event importable (P1-1)
+  18. p1_audit_event_import        -- build_audit_event + GENESIS_HASH importable (P1-1)
+  19. p1_route_list_staging_pagination -- /staging route accepts limit/offset (P1-2)
+  20. p1_per_action_permission     -- REJECT uses pipeline.reject, others use pipeline.approve (P1-5)
+  21. p1_concurrent_modification_error -- CONCURRENT_MODIFICATION raises 409 (P1-4)
 """
 from __future__ import annotations
 
@@ -321,3 +334,250 @@ class TestGovernanceNavItemsComplete:
         nearby = src[max(0, gov_idx - 500): gov_idx + 200]
         assert '"/access-control"' not in nearby, \
             "/access-control must be removed from Governance prefixes"
+
+
+# ---------------------------------------------------------------------------
+# P1 Hardening Tests
+# ---------------------------------------------------------------------------
+
+
+class TestP1VersionField:
+    """P1-4: Optimistic lock — version field present in schema + ORM."""
+
+    def test_staged_artifact_schema_has_version(self):
+        """StagedArtifact Pydantic schema must have a version field (P1-4)."""
+        from app.schemas_v1.pipeline import StagedArtifact
+        import inspect
+        fields = StagedArtifact.model_fields
+        assert "version" in fields, "StagedArtifact Pydantic schema must have 'version' field"
+        # Default should be 0 (non-negative integer)
+        default = fields["version"].default
+        assert default == 0, f"version default must be 0, got {default}"
+
+    def test_staging_orm_has_version_column(self):
+        """StagingArtifact ORM must have a 'version' column (P1-4)."""
+        from app.models.staging import StagingArtifact
+        mapper = StagingArtifact.__mapper__
+        col_names = [c.key for c in mapper.columns]
+        assert "version" in col_names, "StagingArtifact ORM must have 'version' column"
+
+
+class TestP1ApprovalUniqueConstraint:
+    """P1-3: Idempotency — unique constraint on (staging_artifact_id, approver_id, action)."""
+
+    def test_approval_has_unique_constraint(self):
+        """Approval model must declare UniqueConstraint preventing duplicate approvals (P1-3)."""
+        from app.models.staging import Approval
+        from sqlalchemy import UniqueConstraint
+        table_args = getattr(Approval, "__table_args__", None)
+        assert table_args is not None, "Approval must have __table_args__"
+        has_uq = any(isinstance(a, UniqueConstraint) for a in table_args)
+        assert has_uq, "Approval must have a UniqueConstraint"
+
+    def test_approval_unique_constraint_columns(self):
+        """UniqueConstraint must cover staging_artifact_id, approver_id, action (P1-3)."""
+        from app.models.staging import Approval
+        from sqlalchemy import UniqueConstraint
+        table_args = getattr(Approval, "__table_args__", ())
+        for constraint in table_args:
+            if isinstance(constraint, UniqueConstraint):
+                col_names = {c for c in constraint.columns.keys()}
+                assert col_names == {"staging_artifact_id", "approver_id", "action"}, \
+                    f"UniqueConstraint columns must be (staging_artifact_id, approver_id, action), got {col_names}"
+                return
+        pytest.fail("No UniqueConstraint found in Approval.__table_args__")
+
+    def test_save_approval_returns_bool(self):
+        """save_approval must return bool (True=saved, False=duplicate) (P1-3)."""
+        import inspect
+        from app.services.pipeline_db import save_approval
+        sig = inspect.signature(save_approval)
+        assert inspect.iscoroutinefunction(save_approval), "save_approval must be async"
+        # Return annotation should be bool (check source hints)
+        hints = save_approval.__annotations__
+        # At minimum it must be importable and async — runtime type check via source
+        import pathlib
+        src = (pathlib.Path(__file__).parent.parent / "app" / "services" / "pipeline_db.py").read_text()
+        assert "IntegrityError" in src, "pipeline_db must import and handle IntegrityError (P1-3)"
+        assert "return False" in src, "save_approval must return False on duplicate (P1-3)"
+
+
+class TestP1Pagination:
+    """P1-2: Pagination — load_all_staging supports limit/offset/status_filter."""
+
+    def test_load_all_staging_accepts_pagination_params(self):
+        """load_all_staging must accept limit, offset, status_filter params (P1-2)."""
+        import inspect
+        from app.services.pipeline_db import load_all_staging
+        sig = inspect.signature(load_all_staging)
+        params = sig.parameters
+        assert "limit" in params, "load_all_staging must accept 'limit'"
+        assert "offset" in params, "load_all_staging must accept 'offset'"
+        assert "status_filter" in params, "load_all_staging must accept 'status_filter'"
+
+    def test_load_all_staging_defaults(self):
+        """load_all_staging defaults: limit=100, offset=0, status_filter=None (P1-2)."""
+        import inspect
+        from app.services.pipeline_db import load_all_staging
+        sig = inspect.signature(load_all_staging)
+        p = sig.parameters
+        assert p["limit"].default == 100
+        assert p["offset"].default == 0
+        assert p["status_filter"].default is None
+
+    def test_count_staging_importable(self):
+        """count_staging must be importable from pipeline_db (P1-2)."""
+        from app.services.pipeline_db import count_staging
+        import inspect
+        assert inspect.iscoroutinefunction(count_staging), "count_staging must be async"
+        sig = inspect.signature(count_staging)
+        assert "status_filter" in sig.parameters
+
+    def test_list_staging_service_accepts_pagination(self):
+        """pipeline_service.list_staging must forward limit/offset/status_filter (P1-2)."""
+        import inspect
+        from app.services.pipeline_service import list_staging
+        sig = inspect.signature(list_staging)
+        p = sig.parameters
+        assert "limit" in p, "list_staging must accept 'limit'"
+        assert "offset" in p, "list_staging must accept 'offset'"
+        assert "status_filter" in p, "list_staging must accept 'status_filter'"
+
+    def test_route_query_params_in_source(self):
+        """GET /staging route must declare limit, offset, status Query params (P1-2)."""
+        import pathlib
+        src = (pathlib.Path(__file__).parent.parent / "app" / "api" / "routes" / "v1_pipeline.py").read_text()
+        # Find the list_staging endpoint
+        idx = src.find("async def list_staging(")
+        assert idx != -1, "list_staging route must exist"
+        fn_body = src[idx: idx + 600]
+        assert "Query" in fn_body, "list_staging route must use Query params"
+        assert "limit" in fn_body, "list_staging route must have limit param"
+        assert "offset" in fn_body, "list_staging route must have offset param"
+
+
+class TestP1OptimisticLock:
+    """P1-4: update_staging_status_versioned — optimistic lock implementation."""
+
+    def test_update_staging_status_versioned_importable(self):
+        """update_staging_status_versioned must be importable from pipeline_db (P1-4)."""
+        from app.services.pipeline_db import update_staging_status_versioned
+        import inspect
+        assert inspect.iscoroutinefunction(update_staging_status_versioned)
+
+    def test_update_staging_status_versioned_signature(self):
+        """update_staging_status_versioned must accept staging_id, status, expected_version (P1-4)."""
+        import inspect
+        from app.services.pipeline_db import update_staging_status_versioned
+        sig = inspect.signature(update_staging_status_versioned)
+        params = sig.parameters
+        assert "staging_id" in params
+        assert "status" in params
+        assert "expected_version" in params
+
+    def test_concurrent_modification_error_code_exists(self):
+        """CONCURRENT_MODIFICATION error must be raised in pipeline_service.authorize_staged (P1-4)."""
+        import pathlib
+        src = (pathlib.Path(__file__).parent.parent / "app" / "services" / "pipeline_service.py").read_text()
+        assert "CONCURRENT_MODIFICATION" in src, \
+            "pipeline_service must raise CONCURRENT_MODIFICATION on version conflict"
+
+    def test_concurrent_modification_returns_409_in_route(self):
+        """CONCURRENT_MODIFICATION must map to HTTP 409 in v1_pipeline.py (P1-4)."""
+        import pathlib
+        src = (pathlib.Path(__file__).parent.parent / "app" / "api" / "routes" / "v1_pipeline.py").read_text()
+        idx = src.find("authorize_staged")
+        assert idx != -1
+        fn_area = src[idx: idx + 1000]
+        assert "CONCURRENT_MODIFICATION" in fn_area, \
+            "authorize_staged route must handle CONCURRENT_MODIFICATION → 409"
+
+
+class TestP1AuditPersistence:
+    """P1-1: _emit_pipeline_event — timeline events persisted to audit_events WORM table."""
+
+    def test_emit_pipeline_event_importable(self):
+        """_emit_pipeline_event must be defined in pipeline_service (P1-1)."""
+        import pathlib
+        src = (pathlib.Path(__file__).parent.parent / "app" / "services" / "pipeline_service.py").read_text()
+        assert "_emit_pipeline_event" in src, \
+            "pipeline_service must define _emit_pipeline_event"
+
+    def test_build_audit_event_imported_in_service(self):
+        """pipeline_service must import build_audit_event from audit_event model (P1-1)."""
+        import pathlib
+        src = (pathlib.Path(__file__).parent.parent / "app" / "services" / "pipeline_service.py").read_text()
+        assert "build_audit_event" in src, \
+            "pipeline_service must import build_audit_event (P1-1)"
+        assert "GENESIS_HASH" in src, \
+            "pipeline_service must import GENESIS_HASH (P1-1)"
+
+    def test_audit_event_model_factory(self):
+        """build_audit_event factory must produce AuditEvent with correct fields (P1-1)."""
+        from app.models.audit_event import build_audit_event, GENESIS_HASH
+        event = build_audit_event(
+            event_type="LIFECYCLE",
+            description="Test pipeline event",
+            payload={"staging_id": "STG-TESTABCD", "action": "SUBMITTED"},
+            prev_event_hash=GENESIS_HASH,
+            entity_type="staging_artifact",
+            entity_id="STG-TESTABCD",
+        )
+        assert event.event_type == "LIFECYCLE"
+        assert len(event.event_hash) == 64
+        assert event.prev_event_hash == GENESIS_HASH
+        assert event.entity_type == "staging_artifact"
+
+    def test_emit_called_on_submit(self):
+        """submit_to_staging source must call _emit_pipeline_event (P1-1)."""
+        import pathlib, re
+        src = (pathlib.Path(__file__).parent.parent / "app" / "services" / "pipeline_service.py").read_text()
+        # Find submit_to_staging function body
+        idx = src.find("async def submit_to_staging(")
+        assert idx != -1
+        fn_body = src[idx: idx + 2000]
+        assert "_emit_pipeline_event" in fn_body, \
+            "submit_to_staging must call _emit_pipeline_event (P1-1)"
+
+    def test_emit_called_on_authorize(self):
+        """authorize_staged source must call _emit_pipeline_event (P1-1)."""
+        import pathlib
+        src = (pathlib.Path(__file__).parent.parent / "app" / "services" / "pipeline_service.py").read_text()
+        idx = src.find("async def authorize_staged(")
+        assert idx != -1
+        fn_body = src[idx: idx + 4000]
+        assert "_emit_pipeline_event" in fn_body, \
+            "authorize_staged must call _emit_pipeline_event (P1-1)"
+
+
+class TestP1PerActionPermission:
+    """P1-5: REJECT action requires pipeline.reject; APPROVE requires pipeline.approve."""
+
+    def test_reject_uses_pipeline_reject_permission(self):
+        """authorize_staged route must check pipeline.reject for REJECT action (P1-5)."""
+        import pathlib
+        src = (pathlib.Path(__file__).parent.parent / "app" / "api" / "routes" / "v1_pipeline.py").read_text()
+        idx = src.find("async def authorize_staged(")
+        assert idx != -1
+        fn_body = src[idx: idx + 1000]
+        assert '"pipeline.reject"' in fn_body or "'pipeline.reject'" in fn_body, \
+            "authorize_staged must check pipeline.reject for REJECT action (P1-5)"
+
+    def test_approve_uses_pipeline_approve_permission(self):
+        """authorize_staged route must check pipeline.approve for APPROVE/RETURN actions (P1-5)."""
+        import pathlib
+        src = (pathlib.Path(__file__).parent.parent / "app" / "api" / "routes" / "v1_pipeline.py").read_text()
+        idx = src.find("async def authorize_staged(")
+        assert idx != -1
+        fn_body = src[idx: idx + 1000]
+        assert '"pipeline.approve"' in fn_body or "'pipeline.approve'" in fn_body, \
+            "authorize_staged must check pipeline.approve for non-REJECT actions (P1-5)"
+
+    def test_pipeline_reject_permission_in_seed(self):
+        """pipeline.reject must exist in SEED_PERMISSIONS (P1-5)."""
+        from app.models.permission import SEED_PERMISSIONS
+        codenames = {p[0] for p in SEED_PERMISSIONS}  # tuples: (codename, module, action, desc)
+        assert "pipeline.reject" in codenames, \
+            "pipeline.reject must be in SEED_PERMISSIONS"
+        assert "pipeline.approve" in codenames, \
+            "pipeline.approve must be in SEED_PERMISSIONS"

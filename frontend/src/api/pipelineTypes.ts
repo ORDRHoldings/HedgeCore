@@ -103,6 +103,7 @@ export interface StagedArtifact {
   authorization_status: AuthorizationStatus;
   approvals: ApprovalRecord[];
   required_approvals: number;
+  version?: number;
 }
 
 // ---------------------------------------------------------------------------
