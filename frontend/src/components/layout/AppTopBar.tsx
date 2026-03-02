@@ -222,12 +222,13 @@ interface NavSection {
 const NAV: NavSection[] = [
   {
     label: "Dashboard", href: "/dashboard", icon: Ic.dashboard,
-    prefixes: ["/dashboard", "/portfolio-risk", "/polisophic"],
+    prefixes: ["/dashboard", "/portfolio-risk", "/polisophic", "/portfolio-multi"],
     header: "Overview",
     items: [
-      { label: "Summary",        desc: "KPIs, P&L snapshot, FX exposure heat-map",                          href: "/dashboard",      icon: Ic.dashboard               },
-      { label: "Portfolio Risk", desc: "Delta, vega, correlation across positions — R1–R8 taxonomy",         href: "/portfolio-risk", icon: Ic.bar_chart, badge: "RISK",  badgeColor: S.amber },
-      { label: "Polisophic",     desc: "Political & macro risk intelligence feed",                            href: "/polisophic",     icon: Ic.governance, badge: "INTEL", badgeColor: S.amber },
+      { label: "Summary",               desc: "KPIs, P&L snapshot, FX exposure heat-map",                          href: "/dashboard",        icon: Ic.dashboard               },
+      { label: "Portfolio Risk",         desc: "Delta, vega, correlation across positions — R1–R8 taxonomy",         href: "/portfolio-risk",   icon: Ic.bar_chart, badge: "RISK",  badgeColor: S.amber },
+      { label: "Polisophic",             desc: "Political & macro risk intelligence feed",                            href: "/polisophic",       icon: Ic.governance, badge: "INTEL", badgeColor: S.amber },
+      { label: "Multi-Pair Portfolio",   desc: "26-pair exposure matrix: G10, EM, NDF settlement breakdown",         href: "/portfolio-multi",  icon: Ic.bar_chart, badge: "MULTI", badgeColor: S.cyan },
     ],
   },
   {
@@ -280,7 +281,7 @@ const NAV: NavSection[] = [
     header: "Report Studio",
     items: [
       { label: "Report Studio",        desc: "Institutional report builder — 30 presets, AI composer, export",  href: "/reports",                icon: Ic.reports,    badge: "STUDIO",  badgeColor: S.cyan  },
-      { label: "Preset Library",       desc: "Browse 30 board/treasury/risk/audit/compliance presets",          href: "/reports?view=library",   icon: Ic.book,       badge: "30",      badgeColor: S.cyan  },
+      { label: "Preset Library",       desc: "Browse 35 board/treasury/risk/audit/compliance presets",          href: "/reports?view=library",   icon: Ic.book,       badge: "35",      badgeColor: S.cyan  },
       { label: "AI Report Builder",    desc: "Goal-driven AI composer — governed, no hallucinated data",        href: "/reports?view=builder",   icon: Ic.ai,         badge: "AI",      badgeColor: S.amber },
       { label: "Saved Reports",        desc: "Your saved, versioned, and scheduled reports",                    href: "/reports?view=saved",     icon: Ic.shield,     badge: "SAVED",   badgeColor: S.cyan  },
       { label: "Hedge Plan Report",    desc: "Full hedge schedule with rationale — results view",               href: "/results",                icon: Ic.bar_chart },

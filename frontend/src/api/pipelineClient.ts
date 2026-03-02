@@ -61,6 +61,20 @@ export async function sandboxCalculate(
   return data;
 }
 
+export async function sandboxCalculateMulti(
+  req: SandboxCalculateRequest,
+  pair: string,
+  token?: string,
+): Promise<SandboxCalculateResponse> {
+  const payload = { ...req, pair };
+  const { data } = await api.post<SandboxCalculateResponse>(
+    "/sandbox/calculate",
+    payload,
+    authHeaders(token),
+  );
+  return { ...data, pair };
+}
+
 // ---------------------------------------------------------------------------
 // Proposals
 // ---------------------------------------------------------------------------

@@ -633,6 +633,97 @@ const T30_COMMITTEE_ZIP = tmpl(
   { pages: 16, export: "ZIP_COMMITTEE", tags: ["committee", "zip", "bundle", "full"] }
 );
 
+// ── Multi-Currency Presets (T31–T35) ─────────────────────────────────────────
+resetSeq();
+const T31_MULTICCY_OVERVIEW = tmpl(
+  "T31_MULTICCY_OVERVIEW",
+  "Multi-Currency Portfolio Overview",
+  "MCCY-OVW",
+  "Cross-currency exposure summary with G10 and EM pair breakdown, NDF exposure, and hedge coverage matrix.",
+  "EXECUTIVE_BOARD",
+  ["CFO", "TREASURER"] as ReportAudience[],
+  ["DASHBOARD", "POSITION_DESK"] as ReportModule[],
+  [
+    sec("EXECUTIVE_SUMMARY",       "Portfolio KPIs",            {}),
+    sec("EXPOSURE_DECOMPOSITION",  "Exposure by Currency Pair", {}),
+    sec("HEDGE_PLAN_TABLE",        "Pair-Level Hedge Coverage",  {}),
+    sec("CUSTOM_NARRATIVE",        "NDF Portfolio Summary",      { ai_assisted: true }),
+  ],
+  { required_inputs: ["positions", "market_snapshot"], export: "PDF" as ExportFormat, tags: ["multicurrency", "portfolio", "ndf", "g10", "em", "hedge"], pages: 4 }
+);
+
+resetSeq();
+const T32_NDF_PORTFOLIO = tmpl(
+  "T32_NDF_PORTFOLIO",
+  "NDF Portfolio Analysis",
+  "NDF-PORT",
+  "Deep-dive NDF exposure report covering EM pairs: BRL, COP, CLP, INR, KRW, TWD and others. Settlement risk, fixing schedule, and roll analysis.",
+  "TREASURY_FX",
+  ["TREASURER", "ANALYST"] as ReportAudience[],
+  ["POSITION_DESK", "EXECUTION"] as ReportModule[],
+  [
+    sec("EXECUTIVE_SUMMARY",  "NDF Portfolio KPIs",       {}),
+    sec("HEDGE_PLAN_TABLE",   "NDF Fixing Schedule",      {}),
+    sec("EXECUTION_LOG",      "Roll Ladder",              {}),
+    sec("CUSTOM_NARRATIVE",   "Settlement Risk Narrative", { ai_assisted: true }),
+  ],
+  { required_inputs: ["positions", "market_snapshot"], export: "PDF" as ExportFormat, tags: ["ndf", "em", "fixing", "settlement", "roll", "brl", "cop", "inr", "krw"], pages: 5 }
+);
+
+resetSeq();
+const T33_CROSS_CCY_CORR = tmpl(
+  "T33_CROSS_CCY_CORR",
+  "Cross-Currency Correlation Analysis",
+  "CCY-CORR",
+  "Pairwise correlation matrix for active currency pairs with factor attribution and diversification benefit quantification.",
+  "RISK_COMMITTEE",
+  ["RISK_COMMITTEE", "ANALYST"] as ReportAudience[],
+  ["MACRO_OVERLAY", "SCENARIO_STRESS"] as ReportModule[],
+  [
+    sec("SCENARIO_SENSITIVITY",  "Correlation Matrix",              {}),
+    sec("EXPOSURE_DECOMPOSITION", "Diversification Benefit",        {}),
+    sec("STRESS_TEST_RESULTS",   "Factor Attribution",              {}),
+    sec("CUSTOM_NARRATIVE",      "Portfolio Diversification Commentary", { ai_assisted: true }),
+  ],
+  { required_inputs: ["positions", "market_snapshot"], export: "PDF" as ExportFormat, tags: ["correlation", "multicurrency", "diversification", "factor", "var", "risk"], pages: 4 }
+);
+
+resetSeq();
+const T34_EM_RISK_PACK = tmpl(
+  "T34_EM_RISK_PACK",
+  "Emerging Market Currency Risk Pack",
+  "EM-RISK",
+  "Stress and scenario analysis for EM FX exposure covering political risk, liquidity events, and currency crises.",
+  "RISK_COMMITTEE",
+  ["RISK_COMMITTEE", "BOARD"] as ReportAudience[],
+  ["SCENARIO_STRESS", "MACRO_OVERLAY"] as ReportModule[],
+  [
+    sec("EXECUTIVE_SUMMARY",    "EM Risk KPIs",              {}),
+    sec("STRESS_TEST_RESULTS",  "EM Pair Stress Results",    {}),
+    sec("SCENARIO_SENSITIVITY", "Liquidity Risk by Pair",    {}),
+    sec("MACRO_OVERLAY",        "EM Political Risk Overlay", { ai_assisted: true }),
+  ],
+  { required_inputs: ["positions", "market_snapshot", "scenarios"], export: "PDF" as ExportFormat, tags: ["em", "stress", "political", "liquidity", "scenario", "brl", "mxn", "inr", "crisis"], pages: 6 }
+);
+
+resetSeq();
+const T35_G10_CARRY = tmpl(
+  "T35_G10_CARRY",
+  "G10 Carry & Forward Analysis",
+  "G10-CARRY",
+  "Forward curve analysis, interest rate differential carry, and roll-down for G10 currency positions.",
+  "TREASURY_FX",
+  ["TREASURER", "CFO"] as ReportAudience[],
+  ["POSITION_DESK", "MACRO_OVERLAY"] as ReportModule[],
+  [
+    sec("FORWARD_CURVE",        "Forward Points by Pair",      {}),
+    sec("HEDGE_EFFICIENCY",     "Carry Cost vs Coverage",      {}),
+    sec("HEDGE_PLAN_TABLE",     "Interest Rate Differentials", {}),
+    sec("CUSTOM_NARRATIVE",     "Carry Strategy Commentary",   { ai_assisted: true }),
+  ],
+  { required_inputs: ["positions", "market_snapshot"], export: "PDF" as ExportFormat, tags: ["g10", "carry", "forward", "interest_rate", "eurusd", "usdjpy", "roll"], pages: 4 }
+);
+
 // ─── Export catalog ────────────────────────────────────────────────────────────
 
 export const REPORT_PRESETS: ReportTemplate[] = [
@@ -647,6 +738,7 @@ export const REPORT_PRESETS: ReportTemplate[] = [
   T23_AUDIT_PACK, T24_REGULATORY_REPORT, T25_SOX_CONTROLS,
   T26_MACRO_OVERLAY, T27_COUNTRY_RISK,
   T28_DAILY_TREASURY, T29_HEDGE_RATIO_TREND, T30_COMMITTEE_ZIP,
+  T31_MULTICCY_OVERVIEW, T32_NDF_PORTFOLIO, T33_CROSS_CCY_CORR, T34_EM_RISK_PACK, T35_G10_CARRY,
 ];
 
 // ─── Category metadata ─────────────────────────────────────────────────────────
@@ -662,6 +754,7 @@ export const REPORT_CATEGORIES: { key: string; label: string; count: number; des
   { key: "DATA_QUALITY",      label: "Data Quality / Ingestion", count: 2,  description: "Validation errors, reconciliation, quality" },
   { key: "CONNECTOR_HEALTH",  label: "Connector Health",         count: 2,  description: "ERP, CSV, DB connector run health & lineage" },
   { key: "COMPLIANCE_AUDIT",  label: "Compliance & Audit",       count: 4,  description: "IFRS 9, SOX, BCBS, regulatory, audit packs" },
+  { key: "MULTI_CURRENCY",    label: "Multi-Currency",           count: 5,  description: "Multi-pair portfolio, NDF, correlation, EM risk, and carry analysis" },
 ];
 
 export const ALL_REPORT_TAGS = [
@@ -676,4 +769,5 @@ export const ALL_REPORT_TAGS = [
   "regulatory", "isda", "sox", "controls", "segregation",
   "macro", "geopolitical", "polisophic", "country", "ndf",
   "daily", "flash", "intraday", "annual", "committee", "zip", "bundle",
+  "multicurrency", "ndf", "correlation", "diversification", "em", "carry", "forward",
 ];

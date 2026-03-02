@@ -1,7 +1,11 @@
 "use client";
 
-import { JsonViewer } from "../ui/XRayDrawer";
 import EmptyState from "../ui/EmptyState";
+import CapitalAdequacyPanel from "./CapitalAdequacyPanel";
+import MarginBreakdownTable from "./MarginBreakdownTable";
+import ConcentrationPanel from "./ConcentrationPanel";
+import HedgeBandChart from "./HedgeBandChart";
+import TransactionCostPanel from "./TransactionCostPanel";
 
 interface ConstraintsTabProps {
   capitalAdequacy: Record<string, unknown> | undefined;
@@ -26,45 +30,30 @@ export default function ConstraintsTab({
   }
 
   return (
-    <div className="space-y-3">
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {capitalAdequacy && (
-        <div>
-          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
-            Capital Adequacy
-          </h3>
-          <JsonViewer data={capitalAdequacy} />
+        <div style={{ background: "var(--bg-sub)", border: "1px solid var(--border-rim)", borderRadius: 4, overflow: "hidden" }}>
+          <CapitalAdequacyPanel capitalAdequacy={capitalAdequacy} />
         </div>
       )}
       {marginBreakdown && (
-        <div>
-          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
-            Margin Breakdown
-          </h3>
-          <JsonViewer data={marginBreakdown} />
+        <div style={{ background: "var(--bg-sub)", border: "1px solid var(--border-rim)", borderRadius: 4, overflow: "hidden" }}>
+          <MarginBreakdownTable marginBreakdown={marginBreakdown} />
         </div>
       )}
       {concentration && (
-        <div>
-          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
-            Concentration
-          </h3>
-          <JsonViewer data={concentration} />
+        <div style={{ background: "var(--bg-sub)", border: "1px solid var(--border-rim)", borderRadius: 4, overflow: "hidden" }}>
+          <ConcentrationPanel concentration={concentration} />
         </div>
       )}
       {hedgeBands && (
-        <div>
-          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
-            Hedge Bands
-          </h3>
-          <JsonViewer data={hedgeBands} />
+        <div style={{ background: "var(--bg-sub)", border: "1px solid var(--border-rim)", borderRadius: 4, overflow: "hidden" }}>
+          <HedgeBandChart hedgeBands={hedgeBands} />
         </div>
       )}
       {transactionCosts && (
-        <div>
-          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
-            Transaction Costs
-          </h3>
-          <JsonViewer data={transactionCosts} />
+        <div style={{ background: "var(--bg-sub)", border: "1px solid var(--border-rim)", borderRadius: 4, overflow: "hidden" }}>
+          <TransactionCostPanel transactionCosts={transactionCosts} />
         </div>
       )}
     </div>

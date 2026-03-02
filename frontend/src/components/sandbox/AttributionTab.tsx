@@ -1,7 +1,8 @@
 "use client";
 
-import { JsonViewer } from "../ui/XRayDrawer";
 import EmptyState from "../ui/EmptyState";
+import AttributionWaterfall from "./AttributionWaterfall";
+import CorrelationHeatmap from "./CorrelationHeatmap";
 
 interface AttributionTabProps {
   navAttribution: Record<string, unknown> | undefined;
@@ -17,21 +18,15 @@ export default function AttributionTab({
   }
 
   return (
-    <div className="space-y-3">
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {navAttribution && (
-        <div>
-          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
-            NAV Attribution
-          </h3>
-          <JsonViewer data={navAttribution} />
+        <div style={{ background: "var(--bg-sub)", border: "1px solid var(--border-rim)", borderRadius: 4, overflow: "hidden" }}>
+          <AttributionWaterfall navAttribution={navAttribution} />
         </div>
       )}
       {factorCovariance && (
-        <div>
-          <h3 className="text-[0.75rem] font-medium text-[var(--text-secondary)] uppercase mb-1">
-            Factor Covariance
-          </h3>
-          <JsonViewer data={factorCovariance} />
+        <div style={{ background: "var(--bg-sub)", border: "1px solid var(--border-rim)", borderRadius: 4, overflow: "hidden" }}>
+          <CorrelationHeatmap factorCovariance={factorCovariance} />
         </div>
       )}
     </div>

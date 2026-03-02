@@ -235,6 +235,16 @@ export const WIDGET_REGISTRY: WidgetDef[] = [
     minH: 4,
     requiredPermission: "trades.view",
   },
+  {
+    id: "multi_pair_exposure",
+    title: "Multi-Pair Exposure",
+    description: "Cross-currency exposure bar chart: 26-pair registry with NDF badges, hedge % coverage, and exposure in USD.",
+    defaultW: 6,
+    defaultH: 6,
+    minW: 4,
+    minH: 4,
+    requiredPermission: "trades.view",
+  },
 ];
 
 // ─── Default Layouts per Role ─────────────────────────────────────────────────
@@ -288,14 +298,15 @@ const ROLE_LAYOUTS: Record<string, RoleLayout> = {
     ],
   },
   cfo: {
-    widgetIds: ["kpi_summary", "exposure_summary", "fx_rates", "branch_comparison", "polisophic_mini", "recent_runs"],
+    widgetIds: ["kpi_summary", "exposure_summary", "fx_rates", "branch_comparison", "polisophic_mini", "recent_runs", "multi_pair_exposure"],
     grid: [
-      { i: "kpi_summary",       x: 0, y: 0,  w: 12, h: 3 },
-      { i: "exposure_summary",  x: 0, y: 3,  w: 6,  h: 5 },
-      { i: "fx_rates",          x: 6, y: 3,  w: 6,  h: 5 },
-      { i: "branch_comparison", x: 0, y: 8,  w: 8,  h: 5 },
-      { i: "polisophic_mini",   x: 8, y: 8,  w: 4,  h: 5 },
-      { i: "recent_runs",       x: 0, y: 13, w: 12, h: 5 },
+      { i: "kpi_summary",         x: 0, y: 0,  w: 12, h: 3 },
+      { i: "exposure_summary",    x: 0, y: 3,  w: 6,  h: 5 },
+      { i: "fx_rates",            x: 6, y: 3,  w: 6,  h: 5 },
+      { i: "branch_comparison",   x: 0, y: 8,  w: 8,  h: 5 },
+      { i: "polisophic_mini",     x: 8, y: 8,  w: 4,  h: 5 },
+      { i: "recent_runs",         x: 0, y: 13, w: 12, h: 5 },
+      { i: "multi_pair_exposure", x: 0, y: 18, w: 6,  h: 6 },
     ],
   },
   head_of_risk: {

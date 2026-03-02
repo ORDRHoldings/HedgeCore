@@ -6,6 +6,7 @@ import { fmtUSD, fmtRate } from '../../utils/formatters';
 import ConfidencePanel from './ConfidencePanel';
 import CopyTicketButton from './CopyTicketButton';
 import IbkrHandoff from './IbkrHandoff';
+import { getPairMeta } from '../../constants/pairRegistry';
 
 interface Props {
   bucket: BucketResult;
@@ -16,6 +17,8 @@ interface Props {
   baseCcy: string;
   /** Optional callback fired when the trade ticket is copied */
   onTicketCopied?: (bucketId: string) => void;
+  /** Whether this pair settles as NDF (cash-settled) */
+  isNdf?: boolean;
 }
 
 /** BUY or SELL from the sign of the action notional.
@@ -52,7 +55,7 @@ function lastBusinessDay(bucket: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default function BucketTicketCard({ bucket, mapping, worstCase, runId, baseCcy, onTicketCopied }: Props) {
+export default function BucketTicketCard({ bucket, mapping, worstCase, runId, baseCcy, onTicketCopied, isNdf }: Props) {
   const isFutures = mapping.is_proxy;
   const hasAction = bucket.action_mxn !== 0 && !bucket.suppressed;
   const side = getBrokerSide(bucket.action_mxn);
@@ -63,6 +66,10 @@ export default function BucketTicketCard({ bucket, mapping, worstCase, runId, ba
 
   // Per-ticket DV01
   const bucketDV01 = Math.abs(bucket.action_usd) * 0.0001;
+
+  // NDF detection: use prop or fallback to pairRegistry lookup
+  const ndfFromRegistry = getPairMeta(baseCcy ? `USD${baseCcy}` : "")?.isNdf ?? false;
+  const isNdfPair = isNdf ?? ndfFromRegistry;
 
   // Max loss under worst-case stress
   const maxLossUsd = worstCase ? Math.abs(worstCase.hedge_benefit_usd) : null;
@@ -118,6 +125,19 @@ export default function BucketTicketCard({ bucket, mapping, worstCase, runId, ba
               ? `${side} ${contracts} ${contracts === 1 ? 'contract' : 'contracts'}`
               : getDirectionLabel(bucket.action_mxn, baseCcy)
             }
+            {isNdfPair && (
+              <span style={{
+                display: "inline-flex", alignItems: "center",
+                fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+                fontSize: 9, fontWeight: 700,
+                color: "var(--accent-amber)",
+                padding: "2px 6px",
+                border: "1px solid var(--accent-amber)",
+                borderRadius: 2,
+                background: "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
+                marginLeft: 8,
+              }}>NDF CASH-SETTLED</span>
+            )}
           </p>
         )}
 
