@@ -11,6 +11,7 @@ const C = {
   white:       "#FFFFFF",
   obsidian:    "#050505",
   slate900:    "#0F172A",
+  slate700:    "#334155",
   slate600:    "#475569",
   slate400:    "#94A3B8",
   slate300:    "#CBD5E1",
@@ -24,7 +25,8 @@ const C = {
   amber:       "#D97706",
   amberBg:     "rgba(217,119,6,0.06)",
   amberBorder: "rgba(217,119,6,0.20)",
-  rule:        "rgba(0,0,0,0.03)",
+  rule:        "rgba(0,0,0,0.05)",
+  ruleLight:   "rgba(0,0,0,0.03)",
   fontHead:    "'Manrope','Inter',sans-serif",
   fontUI:      "'Inter','IBM Plex Sans',sans-serif",
   fontMono:    "'JetBrains Mono','IBM Plex Mono',monospace",
@@ -80,35 +82,6 @@ function IconEyeClosed() {
       <path d="M2 2.5L12.5 13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
       <path d="M6.3 6.35a2 2 0 002.4 2.4M4.6 4.7C3 5.6 1.8 6.7 1 7.5c.9 1.6 3.2 5 6.5 5 1.3 0 2.5-.5 3.5-1.2M9.4 3.8A6.8 6.8 0 007.5 3.5C4.2 3.5 1.9 6.1 1 7.5c.3.7.9 1.5 1.6 2.2"
         stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// ─── ORDR Terminal Logo — dark mark for light background ─────────────────────
-// Faithful to the provided logo: interlocked rope-knot mark with arrow,
-// "ORDR" bold black, "TERMINAL" in brand orange
-function ORDRLogo() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 420 108"
-      fill="none"
-      style={{ width: 233, height: "auto", display: "block" }}
-      aria-label="ORDR Terminal"
-    >
-      {/* Knotwork mark: 4 interlocked rings + upper-right arrow */}
-      <g transform="translate(66,54)">
-        <circle cx="-32" cy="0" r="34" stroke="#050505" strokeWidth="10" fill="none"/>
-        <circle cx="32" cy="0" r="34" stroke="#050505" strokeWidth="10" fill="none"/>
-        <circle cx="0" cy="-20" r="34" stroke="#050505" strokeWidth="10" fill="none"/>
-        <circle cx="0" cy="20" r="34" stroke="#050505" strokeWidth="10" fill="none"/>
-        <line x1="18" y1="-30" x2="46" y2="-52" stroke="#050505" strokeWidth="8" strokeLinecap="round"/>
-        <polyline points="28,-52 46,-52 46,-34" stroke="#050505" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-      </g>
-      {/* ORDR wordmark — bold, commanding */}
-      <text x="148" y="50" fontFamily="'Manrope','Arial Black',sans-serif" fontWeight="800" fontSize="48" letterSpacing="8" fill="#050505">ORDR</text>
-      {/* TERMINAL sub-label in brand orange */}
-      <text x="150" y="86" fontFamily="'Manrope','Arial Black',sans-serif" fontWeight="800" fontSize="28" letterSpacing="9" fill="#FF7A00">TERMINAL</text>
     </svg>
   );
 }
@@ -355,7 +328,7 @@ export default function LoginPage() {
     fontWeight: 600,
     textTransform: "uppercase",
     letterSpacing: "2px",
-    color: C.obsidian,
+    color: C.slate700,
     marginBottom: 8,
   };
 
@@ -455,18 +428,37 @@ export default function LoginPage() {
   // ─── Login form ────────────────────────────────────────────────────────────
   const loginForm = (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-      {/* Sys info label */}
-      <p style={{
-        fontFamily: C.fontMono,
-        fontSize: "9px",
-        textAlign: "center",
-        textTransform: "uppercase",
-        letterSpacing: "0.314em",
-        color: C.slate400,
-        marginBottom: 34,
-      }}>
-        Terminal Authentication Required
-      </p>
+
+      {/* ── Context header ── */}
+      <div style={{ marginBottom: 34 }}>
+        <p style={{
+          fontFamily: C.fontMono,
+          fontSize: "9px",
+          textTransform: "uppercase",
+          letterSpacing: "0.25em",
+          color: C.slate400,
+          margin: "0 0 13px 0",
+          textAlign: "center",
+        }}>
+          Institutional FX Hedge Governance
+        </p>
+        <div style={{
+          width: "100%", height: 1,
+          background: C.rule,
+          marginBottom: 21,
+        }} />
+        <p style={{
+          fontFamily: C.fontUI,
+          fontSize: "12px",
+          color: C.slate600,
+          lineHeight: 1.7,
+          margin: 0,
+          textAlign: "center",
+        }}>
+          Authenticate to access deterministic hedge calculations,
+          policy governance, and the execution pipeline.
+        </p>
+      </div>
 
       {/* Error banner */}
       {error && errCfg && (
@@ -524,7 +516,7 @@ export default function LoginPage() {
           onChange={e => { setUsername(e.target.value); clearError(); }}
           onFocus={() => setFocusField("user")}
           onBlur={() => setFocusField(null)}
-          placeholder="UID-000000"
+          placeholder="Enter your user ID"
           disabled={loading}
           autoComplete="username"
           style={inputStyle("user", inputHasError)}
@@ -607,37 +599,50 @@ export default function LoginPage() {
         {loading ? (
           <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             <span className="login-spin">⟳</span>
-            SYNCHRONIZING NODES...
+            AUTHENTICATING...
           </span>
         ) : "ESTABLISH LINK"}
       </button>
 
-      {/* Auth message line */}
+      {/* ── Security & compliance badges ── */}
       <div style={{
-        textAlign: "center",
-        fontFamily: C.fontMono,
-        fontSize: "9px",
-        marginTop: 13,
-        color: C.orange,
-        height: "1em",
-        letterSpacing: "0.05em",
+        marginTop: 34,
+        borderTop: `1px solid ${C.rule}`,
+        paddingTop: 21,
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: 8,
       }}>
-        {/* Populated on success by auth flow redirect */}
+        {["AES-256", "HASH-CHAINED AUDIT", "RBAC", "4-EYES APPROVAL"].map(badge => (
+          <span key={badge} style={{
+            fontFamily: C.fontMono,
+            fontSize: "7px",
+            fontWeight: 500,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: C.slate400,
+            padding: "3px 8px",
+            border: `1px solid ${C.platinum}`,
+            borderRadius: 1,
+          }}>
+            {badge}
+          </span>
+        ))}
       </div>
 
       {/* Footer status */}
       <div style={{
-        marginTop: 55,
-        borderTop: `1px solid ${C.rule}`,
-        paddingTop: 21,
+        marginTop: 21,
         display: "flex",
         justifyContent: "space-between",
+        alignItems: "center",
         fontFamily: C.fontMono,
         fontSize: "8px",
         color: C.slate400,
         letterSpacing: "0.06em",
       }}>
-        <span>φ-DESIGN ARCHITECTURE</span>
+        <span>© {new Date().getFullYear()} SYNEXIUN</span>
         <span style={{ color: C.green, display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{
             width: 5, height: 5, borderRadius: "50%",
@@ -712,13 +717,13 @@ export default function LoginPage() {
         style={{
           position: "relative",
           zIndex: 10,
-          width: 377,
-          padding: 55,
-          background: "rgba(255, 255, 255, 0.85)",
+          width: 420,
+          padding: "48px 44px",
+          background: "rgba(255, 255, 255, 0.88)",
           backdropFilter: "blur(40px) saturate(200%)",
           WebkitBackdropFilter: "blur(40px) saturate(200%)",
           border: "1px solid rgba(255, 255, 255, 0.6)",
-          borderRadius: 2,
+          borderRadius: 3,
           boxShadow: "0 55px 144px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(0,0,0,0.02)",
           animation: "loginTerminalBloom 1.618s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.5s",
           // Start state (before animation)
@@ -727,12 +732,9 @@ export default function LoginPage() {
           willChange: "transform, opacity, filter",
         }}
       >
-        {/* Logo — bold, stunning, visible */}
+        {/* Logo — PNG, bold, stunning, visible */}
         <div
-          style={{
-            textAlign: "center",
-            marginBottom: 55,
-          }}
+          style={{ textAlign: "center", marginBottom: 34 }}
           onMouseEnter={() => setLogoHovered(true)}
           onMouseLeave={() => setLogoHovered(false)}
         >
@@ -741,7 +743,16 @@ export default function LoginPage() {
             transform: logoHovered ? "scale(1.05)" : "scale(1)",
             display: "inline-block",
           }}>
-            <ORDRLogo />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/ordr-logo-horizontal.png"
+              alt="ORDR Terminal"
+              style={{
+                width: 260,
+                height: "auto",
+                display: "block",
+              }}
+            />
           </div>
         </div>
 
@@ -781,7 +792,6 @@ export default function LoginPage() {
           letter-spacing: 0.04em;
           line-height: 1.7;
         }
-        /* Crosshair cursor on the page (matches reference) */
         .login-init-overlay,
         .login-init-overlay * {
           cursor: default;
