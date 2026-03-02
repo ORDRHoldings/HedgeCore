@@ -120,3 +120,83 @@ class CalculateResponse(BaseModel):
     scenario_results: ScenarioResults
     run_envelope: RunEnvelope
     trace_lite: TraceLite
+
+
+# ── Multi-Currency Generic Results (backward-compatible additions) ────────────
+
+class GenericHedgePlanSummary(BaseModel):
+    pair: str
+    local_ccy: str
+    total_commercial_exposure_local: float
+    total_existing_hedges_local: float
+    total_action_local: float
+    total_action_usd: float
+    total_friction_usd: float
+    total_hedge_position_local: float
+    total_residual_local: float
+
+
+class GenericBucketResult(BaseModel):
+    """Currency-agnostic bucket result for any pair."""
+    bucket: str
+    pair: str
+    local_ccy: str
+    confirmed_flow_local: float
+    forecast_flow_local: float
+    commercial_exposure_local: float
+    existing_hedges_local: float
+    target_signed_local: float
+    action_local: float
+    action_direction: str | None
+    forward_rate: float
+    carry_note: str
+    action_usd: float
+    friction_usd: float
+    suppressed: bool
+    hedge_position_local: float
+    residual_local: float
+
+    def to_legacy_bucket(self) -> "BucketResult":
+        """Convert to legacy BucketResult for USDMXN backward compat."""
+        return BucketResult(
+            bucket=self.bucket,
+            confirmed_flow_mxn=self.confirmed_flow_local,
+            forecast_flow_mxn=self.forecast_flow_local,
+            commercial_exposure_mxn=self.commercial_exposure_local,
+            existing_hedges_mxn=self.existing_hedges_local,
+            target_signed_mxn=self.target_signed_local,
+            action_mxn=self.action_local,
+            action_direction=self.action_direction,
+            forward_rate=self.forward_rate,
+            carry_note=self.carry_note,
+            action_usd=self.action_usd,
+            friction_usd=self.friction_usd,
+            suppressed=self.suppressed,
+            hedge_position_mxn=self.hedge_position_local,
+            residual_mxn=self.residual_local,
+        )
+
+
+class GenericHedgePlan(BaseModel):
+    """Multi-currency hedge plan."""
+    pair: str
+    local_ccy: str
+    buckets: list[GenericBucketResult]
+    summary: GenericHedgePlanSummary
+
+    def to_legacy_plan(self) -> "HedgePlan":
+        """Convert to legacy HedgePlan for USDMXN backward compat."""
+        from app.schemas_v1.results import HedgePlan, HedgePlanSummary
+        legacy_buckets = [b.to_legacy_bucket() for b in self.buckets]
+        return HedgePlan(
+            buckets=legacy_buckets,
+            summary=HedgePlanSummary(
+                total_commercial_exposure_mxn=self.summary.total_commercial_exposure_local,
+                total_existing_hedges_mxn=self.summary.total_existing_hedges_local,
+                total_action_mxn=self.summary.total_action_local,
+                total_action_usd=self.summary.total_action_usd,
+                total_friction_usd=self.summary.total_friction_usd,
+                total_hedge_position_mxn=self.summary.total_hedge_position_local,
+                total_residual_mxn=self.summary.total_residual_local,
+            ),
+        )
