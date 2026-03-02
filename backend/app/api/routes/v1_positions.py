@@ -1347,6 +1347,8 @@ async def get_position_lineage(
 
     # Node 1b: PolicyRevision pinned to this position
 
+    pr = None
+
     if pos.policy_revision_id:
 
         from app.models.policy_revision import PolicyRevision
@@ -1394,6 +1396,8 @@ async def get_position_lineage(
 
 
     # Node 2: CalculationRun
+
+    run = None
 
     if pos.last_run_id:
 
@@ -1458,6 +1462,8 @@ async def get_position_lineage(
         sa_select(ExecutionProposal)
 
         .where(ExecutionProposal.position_id == position_id)
+
+        .where(ExecutionProposal.company_id == current_user.company_id)
 
         .order_by(ExecutionProposal.created_at.asc())
 
@@ -1533,6 +1539,20 @@ async def get_position_lineage(
 
 
 
+    # Integrity check: run must use the exact policy revision pinned to this position
+    integrity_verified: bool | None = None
+    if run is not None and pr is not None:
+        pr_match = (
+            run.policy_revision_id is not None
+            and str(run.policy_revision_id) == str(pos.policy_revision_id)
+        )
+        hash_match = (
+            run.policy_hash is not None
+            and pr.policy_hash is not None
+            and run.policy_hash == pr.policy_hash
+        )
+        integrity_verified = pr_match and hash_match
+
     return {
 
         "position_id": str(position_id),
@@ -1556,6 +1576,8 @@ async def get_position_lineage(
             "proposal_count":        len(proposals),
 
             "execution_status":      pos.execution_status,
+
+            "integrity_verified":    integrity_verified,
 
         },
 
