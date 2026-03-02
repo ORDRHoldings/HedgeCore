@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import type { CalculateResponse, BucketResult, PolicyConfig } from "../../api/types";
+import { useAuth } from "@/lib/authContext";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 import ExecutiveSummaryPanel from "./ExecutiveSummaryPanel";
 import ExposureInsightsPanel from "./ExposureInsightsPanel";
 import HedgeEfficiencyPanel from "./HedgeEfficiencyPanel";
@@ -179,6 +181,22 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
     if (userId) setSavedReports(loadSavedReports(userId));
   }, [userId]);
 
+  // ── RPT-01: Active Policy Injection ──────────────────────────────────────
+  const { token } = useAuth();
+  const [activePolicy, setActivePolicy] = useState<PolicyConfig | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    dashboardFetch("/api/v1/policies/active", token)
+      .then((data: unknown) => {
+        if (data && typeof data === "object" && "hedge_ratios" in data)
+          setActivePolicy(data as PolicyConfig);
+      })
+      .catch(() => {}); // silent fallback to FALLBACK_POLICY
+  }, [token]);
+
+  const policy = activePolicy ?? FALLBACK_POLICY;
+
   function handleSaveVersion() {
     if (!userId) return;
     const existing = loadSavedReports(userId);
@@ -215,7 +233,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
 
   const kpis          = useMemo(() => scenarioKpis(scenario_results.totals, summary), [scenario_results, summary]);
   const concentration = useMemo(() => concentrationAnalysis(buckets), [buckets]);
-  const compliance    = useMemo(() => policyComplianceChecks(buckets, summary, FALLBACK_POLICY), [buckets, summary]);
+  const compliance    = useMemo(() => policyComplianceChecks(buckets, summary, policy), [buckets, summary, policy]);
 
   const totalExposure = useMemo(
     () => buckets.reduce((s, b) => s + Math.abs(b.commercial_exposure_mxn), 0),
@@ -399,7 +417,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
         <ReportSection
           number="R-02"
           title="Cost & Slippage Report"
-          meaning={`Total estimated friction cost is ${fmtUSD(summary.total_friction_usd)}, derived from bid-ask spread assumptions across ${buckets.filter(b => !b.suppressed).length} active buckets at ${FALLBACK_POLICY.cost_assumptions.spread_bps} bps. Cost is fully deterministic and recalculates on each run.`}
+          meaning={`Total estimated friction cost is ${fmtUSD(summary.total_friction_usd)}, derived from bid-ask spread assumptions across ${buckets.filter(b => !b.suppressed).length} active buckets at ${policy.cost_assumptions.spread_bps} bps. Cost is fully deterministic and recalculates on each run.`}
           guidance={[
             "Compare spread assumption (bps) against live broker quotes before finalizing execution.",
             "Friction cost does not include carry/funding — review carry_note on each bucket ticket.",
@@ -409,15 +427,15 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
           onExportPdf={() => exportCommitteePackPdf(result, baseCcy)}
           onExportCsv={() => exportReportCsv("cost", result, baseCcy)}
           onExportXlsx={() => {
-            const rows = buckets.filter(b => !b.suppressed).map(b => [b.bucket, b.action_mxn, b.action_usd, FALLBACK_POLICY.cost_assumptions.spread_bps, b.friction_usd, b.carry_note ?? ""]);
+            const rows = buckets.filter(b => !b.suppressed).map(b => [b.bucket, b.action_mxn, b.action_usd, policy.cost_assumptions.spread_bps, b.friction_usd, b.carry_note ?? ""]);
             exportDataXlsx(["Bucket", "Notional", "Action USD", "Spread (bps)", "Friction USD", "Carry Note"], rows, `R02_CostSlippage_${result.run_envelope.run_id.slice(0, 12)}.xlsx`);
           }}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               { label: "Total Friction Cost",  value: fmtUSD(summary.total_friction_usd),               color: "var(--accent-amber)" },
-              { label: "Spread Assumption",    value: `${FALLBACK_POLICY.cost_assumptions.spread_bps} bps`, color: "var(--text-primary)" },
-              { label: "Execution Product",    value: FALLBACK_POLICY.execution_product,                 color: "var(--accent-cyan)" },
+              { label: "Spread Assumption",    value: `${policy.cost_assumptions.spread_bps} bps`, color: "var(--text-primary)" },
+              { label: "Execution Product",    value: policy.execution_product,                 color: "var(--accent-cyan)" },
             ].map(kpi => (
               <div key={kpi.label} className="bg-[var(--bg-deep)] border border-[var(--border-soft)] rounded p-3">
                 <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider">{kpi.label}</div>
@@ -450,7 +468,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
                     <td className="font-mono text-[var(--accent-cyan)]">{b.bucket}</td>
                     <td className="numeric font-mono">{fmtMXN(Math.abs(b.action_mxn))}</td>
                     <td className="numeric font-mono">{fmtUSD(Math.abs(b.action_usd))}</td>
-                    <td className="numeric font-mono">{FALLBACK_POLICY.cost_assumptions.spread_bps}</td>
+                    <td className="numeric font-mono">{policy.cost_assumptions.spread_bps}</td>
                     <td className="numeric font-mono text-[var(--accent-amber)]">{fmtUSD(b.friction_usd)}</td>
                     <td className="text-[10px] text-[var(--text-tertiary)]">{b.carry_note}</td>
                   </tr>
@@ -606,12 +624,12 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
             <div className="text-[10px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Policy Parameters Reference</div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
               {[
-                { label: "Bucket Mode",     value: FALLBACK_POLICY.bucket_mode },
-                { label: "Confirmed Ratio", value: fmtPct(FALLBACK_POLICY.hedge_ratios.confirmed) },
-                { label: "Forecast Ratio",  value: fmtPct(FALLBACK_POLICY.hedge_ratios.forecast) },
-                { label: "Spread (bps)",    value: `${FALLBACK_POLICY.cost_assumptions.spread_bps} bps` },
-                { label: "Product",         value: FALLBACK_POLICY.execution_product },
-                { label: "Min Trade",       value: `$${FALLBACK_POLICY.min_trade_size_usd.toLocaleString()}` },
+                { label: "Bucket Mode",     value: policy.bucket_mode },
+                { label: "Confirmed Ratio", value: fmtPct(policy.hedge_ratios.confirmed) },
+                { label: "Forecast Ratio",  value: fmtPct(policy.hedge_ratios.forecast) },
+                { label: "Spread (bps)",    value: `${policy.cost_assumptions.spread_bps} bps` },
+                { label: "Product",         value: policy.execution_product },
+                { label: "Min Trade",       value: `$${policy.min_trade_size_usd.toLocaleString()}` },
               ].map(p => (
                 <div key={p.label}>
                   <div className="text-[10px] text-[var(--text-tertiary)]">{p.label}</div>
@@ -859,11 +877,11 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
           summary={summary} totals={scenario_results.totals} buckets={buckets}
           trades={[]} hedges={[]}
           market={{ as_of: result.run_envelope.timestamp, spot_usdmxn: 0, forward_points_by_month: {}, provider_metadata: {} }}
-          validationReport={validation_report} policy={FALLBACK_POLICY}
+          validationReport={validation_report} policy={policy}
         />
         <ExposureInsightsPanel buckets={buckets} />
         <HedgeEfficiencyPanel buckets={buckets} summary={summary} />
-        <PolicyCompliancePanel buckets={buckets} summary={summary} policy={FALLBACK_POLICY} validationReport={validation_report} />
+        <PolicyCompliancePanel buckets={buckets} summary={summary} policy={policy} validationReport={validation_report} />
         <ScenarioSensitivityPanel totals={scenario_results.totals} perBucket={scenario_results.per_bucket} summary={summary} />
       </div>
     </div>

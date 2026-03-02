@@ -38,7 +38,7 @@ from typing import Optional
 
 
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from fastapi.responses import Response
 
@@ -712,6 +712,81 @@ def _serialize_policy_revision(rev: PolicyRevision) -> dict:
 
 
 
+
+# ?? RPT-08: Server-side per-section PDF export ???????????????????????????
+
+
+@router.get("/export/pdf-section/{run_id}")
+async def export_pdf_section(
+    run_id: str,
+    section: str = Query("coverage", description="Section: coverage|scenario|compliance|executive"),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Server-side per-section PDF export. Returns binary PDF with Content-Disposition."""
+    await rbac_service.require_permission(session, current_user, "reports.export")
+
+    # Fetch run (same tenant check as committee-pack)
+    run = await session.get(CalculationRun, run_id)
+    if not run:
+        raise HTTPException(404, detail=f"Run {run_id!r} not found")
+    if not current_user.is_superuser and run.company_id and run.company_id != current_user.company_id:
+        raise HTTPException(404, detail=f"Run {run_id!r} not found")
+
+    result = {
+        "run_id": run.id,
+        "run_envelope": run.run_envelope or {},
+        "section": section,
+    }
+
+    try:
+        pdf_bytes = render_bank_pack_pdf(result)
+        await _write_export_audit(session, current_user, run_id, f"PDF_SECTION_{section.upper()}")
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="report-{section}-{run_id[:8]}.pdf"'},
+        )
+    except Exception as e:
+        raise HTTPException(500, detail=f"PDF generation failed: {e}")
+
+
+# ?? RPT-10: Server-side XLSX export ???????????????????????????????????????????
+
+
+@router.get("/export/xlsx/{run_id}")
+async def export_xlsx(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Server-side XLSX export of hedge plan data. Returns binary XLSX."""
+    await rbac_service.require_permission(session, current_user, "reports.export")
+
+    run = await session.get(CalculationRun, run_id)
+    if not run:
+        raise HTTPException(404, detail=f"Run {run_id!r} not found")
+    if not current_user.is_superuser and run.company_id and run.company_id != current_user.company_id:
+        raise HTTPException(404, detail=f"Run {run_id!r} not found")
+
+    result = {
+        "run_id": run.id,
+        "run_envelope": run.run_envelope or {},
+    }
+
+    try:
+        xlsx_bytes = render_bank_pack_xlsx(result)
+        await _write_export_audit(session, current_user, run_id, "XLSX_DB")
+        return Response(
+            content=xlsx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="hedge-plan-{run_id[:8]}.xlsx"'},
+        )
+    except Exception as e:
+        raise HTTPException(500, detail=f"XLSX generation failed: {e}")
+
+
+# ??? Helpers ???????????????????????????????????????????????????????????????????
 
 def _pack_from_cache(cached) -> dict:
 

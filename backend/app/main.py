@@ -1101,6 +1101,37 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
     FOR EACH ROW EXECUTE FUNCTION market_snapshots_worm();
 EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
 
+        # -- RPT-04: Saved report snapshots (per-user, max 20 enforced in API layer) --
+        """CREATE TABLE IF NOT EXISTS saved_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    run_id VARCHAR(64) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    snapshot JSONB NOT NULL DEFAULT '{}',
+    version_number INTEGER NOT NULL DEFAULT 1,
+    saved_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_saved_reports_user ON saved_reports(user_id, saved_at)",
+        "CREATE INDEX IF NOT EXISTS ix_saved_reports_company ON saved_reports(company_id, saved_at)",
+        "CREATE INDEX IF NOT EXISTS ix_saved_reports_run ON saved_reports(run_id)",
+
+        # -- RPT-06: Report schedules (API-layer only; no live Celery in v1) ----------
+        """CREATE TABLE IF NOT EXISTS report_schedules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    frequency VARCHAR(16) NOT NULL,
+    report_type VARCHAR(64) NOT NULL,
+    recipients JSONB NOT NULL DEFAULT '[]',
+    last_run_at TIMESTAMPTZ,
+    next_run_at TIMESTAMPTZ,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_report_schedules_user ON report_schedules(user_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_report_schedules_company ON report_schedules(company_id, is_active)",
+        "CREATE INDEX IF NOT EXISTS ix_report_schedules_next_run ON report_schedules(is_active, next_run_at)",
+
     ]
 
     # ── Advisory lock: serialise DDL across concurrent instances ────────────────
