@@ -91,6 +91,7 @@ def estimate_slippage(
     market: dict[str, Any],
     policy: dict[str, Any],
     impact_factor: float = DEFAULT_IMPACT_FACTOR,
+    require_adv: bool = False,
 ) -> LiquidityResult:
     """Estimate execution slippage using square-root impact model.
 
@@ -128,6 +129,10 @@ def estimate_slippage(
         # Look up ADV -- try specific pair+instrument, then generic
         pair = action.get("pair", "USDMXN")
         adv_key = f"{pair}_{instrument}"
+        # LIQ-01: require_adv strict mode
+        adv_available = adv_key in adv_data or f"USDMXN_{instrument}" in adv_data
+        if not adv_available and require_adv:
+            raise ValueError(f"ADV data required for liquidity computation (require_adv=True) — missing key: {adv_key}")
         adv = adv_data.get(adv_key, adv_data.get(f"USDMXN_{instrument}", 5_000_000_000))
 
         participation_rate = order_size / adv if adv > 0 else 1.0

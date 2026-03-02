@@ -108,57 +108,61 @@ async def dashboard_summary(
     """
     user = await _resolve_user(request, db)
 
-    # Resolve permissions
-    permissions = await rbac_service.get_permissions_by_user(db, user.id)
-    has_all_branches = (
-        "reports.view_all_branches" in permissions or user.is_superuser
-    )
-    roles = await rbac_service.get_roles_by_user(db, user.id)
-    hierarchy_level = await rbac_service.get_user_hierarchy_level(db, user.id)
+    try:
+        # Resolve permissions
+        permissions = await rbac_service.get_permissions_by_user(db, user.id)
+        has_all_branches = (
+            "reports.view_all_branches" in permissions or user.is_superuser
+        )
+        roles = await rbac_service.get_roles_by_user(db, user.id)
+        hierarchy_level = await rbac_service.get_user_hierarchy_level(db, user.id)
 
-    branch_code = _get_branch_code(user)
-    branch_obj = getattr(user, "branch", None)
-    branch_name = getattr(branch_obj, "name", branch_code)
+        branch_code = _get_branch_code(user)
+        branch_obj = getattr(user, "branch", None)
+        branch_name = getattr(branch_obj, "name", branch_code)
 
-    # Scoped user IDs subquery
-    user_ids_sq = _scoped_user_ids(user, has_all_branches)
+        # Scoped user IDs subquery
+        user_ids_sq = _scoped_user_ids(user, has_all_branches)
 
-    # Count active proposals (not REJECTED) within scope
-    active_q = (
-        select(func.count())
-        .select_from(Proposal)
-        .where(Proposal.created_by.in_(user_ids_sq))
-        .where(Proposal.status.notin_(["REJECTED"]))
-    )
-    active_count = (await db.execute(active_q)).scalar() or 0
+        # Count active proposals (not REJECTED) within scope
+        active_q = (
+            select(func.count())
+            .select_from(Proposal)
+            .where(Proposal.created_by.in_(user_ids_sq))
+            .where(Proposal.status.notin_(["REJECTED"]))
+        )
+        active_count = (await db.execute(active_q)).scalar() or 0
 
-    # Count pending staging artifacts within scope
-    pending_q = (
-        select(func.count())
-        .select_from(StagingArtifact)
-        .where(StagingArtifact.submitted_by.in_(user_ids_sq))
-        .where(StagingArtifact.authorization_status == "PENDING")
-    )
-    pending_count = (await db.execute(pending_q)).scalar() or 0
+        # Count pending staging artifacts within scope
+        pending_q = (
+            select(func.count())
+            .select_from(StagingArtifact)
+            .where(StagingArtifact.submitted_by.in_(user_ids_sq))
+            .where(StagingArtifact.authorization_status == "PENDING")
+        )
+        pending_count = (await db.execute(pending_q)).scalar() or 0
 
-    kpis = {
-        "active_proposals": active_count,
-        "pending_approvals": pending_count,
-        "total_exposure_usd": 0,       # Phase 2: positions API
-        "hedge_coverage_pct": 0,        # Phase 2: positions API
-        "open_alerts": 0,               # Phase 8: Polisophic
-        "team_size": 0,                 # Future: org API
-    }
+        kpis = {
+            "active_proposals": active_count,
+            "pending_approvals": pending_count,
+            "total_exposure_usd": 0,       # Phase 2: positions API
+            "hedge_coverage_pct": 0,        # Phase 2: positions API
+            "open_alerts": 0,               # Phase 8: Polisophic
+            "team_size": 0,                 # Future: org API
+        }
 
-    return {
-        "branch_name": branch_name if not has_all_branches else "All Branches",
-        "company_name": getattr(getattr(user, "company", None), "name", None) or "--",
-        "role": roles[0] if roles else "--",
-        "hierarchy_level": hierarchy_level,
-        "is_company_wide": has_all_branches,
-        "branch_currency": _get_branch_currency(user),
-        "kpis": kpis,
-    }
+        return {
+            "branch_name": branch_name if not has_all_branches else "All Branches",
+            "company_name": getattr(getattr(user, "company", None), "name", None) or "--",
+            "role": roles[0] if roles else "--",
+            "hierarchy_level": hierarchy_level,
+            "is_company_wide": has_all_branches,
+            "branch_currency": _get_branch_currency(user),
+            "kpis": kpis,
+        }
+    except Exception as _exc:
+        logger.error("dashboard_summary query failed: %s", _exc, exc_info=True)
+        return {"branch_name": "Error", "kpis": {}}
 
 
 # ?????????????????????????????????????????????????????????????????????????????
@@ -176,30 +180,34 @@ async def recent_runs(
     """
     user = await _resolve_user(request, db)
 
-    # Query user's own proposals -- UUID-to-UUID comparison
-    q = (
-        select(Proposal)
-        .where(Proposal.created_by == user.id)
-        .order_by(Proposal.created_at.desc())
-        .limit(10)
-    )
-    result = await db.execute(q)
-    proposals = result.scalars().all()
+    try:
+        # Query user's own proposals -- UUID-to-UUID comparison
+        q = (
+            select(Proposal)
+            .where(Proposal.created_by == user.id)
+            .order_by(Proposal.created_at.desc())
+            .limit(10)
+        )
+        result = await db.execute(q)
+        proposals = result.scalars().all()
 
-    # Map to response -- extract from frozen_inputs or null
-    runs = []
-    for p in proposals:
-        fi = p.frozen_inputs or {}
-        runs.append({
-            "id": p.proposal_id,
-            "created_at": p.created_at.isoformat() if p.created_at else None,
-            "status": p.status,
-            "currency_pair": fi.get("currency_pair") or None,
-            "notional": fi.get("notional") or None,
-            "hedge_ratio": fi.get("hedge_ratio") or None,
-        })
+        # Map to response -- extract from frozen_inputs or null
+        runs = []
+        for p in proposals:
+            fi = p.frozen_inputs or {}
+            runs.append({
+                "id": p.proposal_id,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "status": p.status,
+                "currency_pair": fi.get("currency_pair") or None,
+                "notional": fi.get("notional") or None,
+                "hedge_ratio": fi.get("hedge_ratio") or None,
+            })
 
-    return runs
+        return runs
+    except Exception as _exc:
+        logger.error("recent_runs query failed: %s", _exc, exc_info=True)
+        return []
 
 
 # ?????????????????????????????????????????????????????????????????????????????
@@ -229,28 +237,32 @@ async def pending_approvals(
     )
     user_ids_sq = _scoped_user_ids(user, has_all_branches)
 
-    q = (
-        select(StagingArtifact)
-        .where(StagingArtifact.submitted_by.in_(user_ids_sq))
-        .where(StagingArtifact.authorization_status == "PENDING")
-        .order_by(StagingArtifact.submitted_at.desc())
-        .limit(20)
-    )
-    result = await db.execute(q)
-    artifacts = result.scalars().all()
+    try:
+        q = (
+            select(StagingArtifact)
+            .where(StagingArtifact.submitted_by.in_(user_ids_sq))
+            .where(StagingArtifact.authorization_status == "PENDING")
+            .order_by(StagingArtifact.submitted_at.desc())
+            .limit(20)
+        )
+        result = await db.execute(q)
+        artifacts = result.scalars().all()
 
-    return [
-        {
-            "id": a.staging_id,
-            "proposal_id": a.proposal_id,
-            "submitted_by": str(a.submitted_by),
-            "submitted_at": a.submitted_at.isoformat() if a.submitted_at else None,
-            "justification": a.justification or "",
-            "integrity_score": a.integrity_score,
-            "authorization_status": a.authorization_status,
-        }
-        for a in artifacts
-    ]
+        return [
+            {
+                "id": a.staging_id,
+                "proposal_id": a.proposal_id,
+                "submitted_by": str(a.submitted_by),
+                "submitted_at": a.submitted_at.isoformat() if a.submitted_at else None,
+                "justification": a.justification or "",
+                "integrity_score": a.integrity_score,
+                "authorization_status": a.authorization_status,
+            }
+            for a in artifacts
+        ]
+    except Exception as _exc:
+        logger.error("pending_approvals query failed: %s", _exc, exc_info=True)
+        return []
 
 
 # ?????????????????????????????????????????????????????????????????????????????
@@ -292,37 +304,41 @@ async def team_activity(
     if not user_id_rows:
         return []
 
-    # AuthAuditLog.user_id is int (type mismatch bug with users.id UUID).
-    # Use text() for this specific query with a cast workaround.
-    user_id_strings = [str(uid) for uid in user_id_rows]
-    stmt = text("""
-        SELECT al.created_at as ts,
-               COALESCE(u.full_name, u.email) as user_name,
-               al.event_type as action,
-               al.route as module,
-               al.status
-        FROM auth_audit_logs al
-        LEFT JOIN users u ON u.id::text = al.user_id::text
-        WHERE al.user_id::text = ANY(:user_ids)
-        ORDER BY al.created_at DESC
-        LIMIT 20
-    """)
-    result = await db.execute(stmt, {"user_ids": user_id_strings})
-    rows = result.mappings().all()
+    try:
+        # AuthAuditLog.user_id is int (type mismatch bug with users.id UUID).
+        # Use text() for this specific query with a cast workaround.
+        user_id_strings = [str(uid) for uid in user_id_rows]
+        stmt = text("""
+            SELECT al.created_at as ts,
+                   COALESCE(u.full_name, u.email) as user_name,
+                   al.event_type as action,
+                   al.route as module,
+                   al.status
+            FROM auth_audit_logs al
+            LEFT JOIN users u ON u.id::text = al.user_id::text
+            WHERE al.user_id::text = ANY(:user_ids)
+            ORDER BY al.created_at DESC
+            LIMIT 20
+        """)
+        result = await db.execute(stmt, {"user_ids": user_id_strings})
+        rows = result.mappings().all()
 
-    branch_code = _get_branch_code(user)
+        branch_code = _get_branch_code(user)
 
-    return [
-        {
-            "ts": str(r["ts"]),
-            "user_name": r["user_name"] or "Unknown",
-            "action": str(r["action"] or "").replace("_", " ").title(),
-            "module": (r["module"] or "System").split("/")[-1].title(),
-            "status": str(r["status"] or "SUCCESS"),
-            "branch": branch_code,
-        }
-        for r in rows
-    ]
+        return [
+            {
+                "ts": str(r["ts"]),
+                "user_name": r["user_name"] or "Unknown",
+                "action": str(r["action"] or "").replace("_", " ").title(),
+                "module": (r["module"] or "System").split("/")[-1].title(),
+                "status": str(r["status"] or "SUCCESS"),
+                "branch": branch_code,
+            }
+            for r in rows
+        ]
+    except Exception as _exc:
+        logger.error("team_activity query failed: %s", _exc, exc_info=True)
+        return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────

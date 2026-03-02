@@ -72,7 +72,17 @@ def _check_calc_rate(user_id: str) -> bool:
 
 
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+# SEC-04: Distributed rate limiter (Redis-backed with in-memory fallback)
+import os as _os
+from app.core.rate_limiter import RateLimiter as _RateLimiter
+
+_distributed_rate_limiter = _RateLimiter(
+    redis_url=_os.getenv("REDIS_URL"),
+    max_requests=_CALC_RATE_LIMIT,
+    window_seconds=int(_CALC_RATE_WINDOW),
+)
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from app.core.schema_state import require_schema_ready
 
 from pydantic import BaseModel, ValidationError
@@ -138,7 +148,7 @@ _run_store: dict[str, CalculateResponse] = {}
 
 def get_run(run_id: str) -> CalculateResponse | None:
 
-    return _run_store.get(run_id)
+    return _run_store.get(run_id)  # Legacy helper — use compound key in API routes
 
 
 
@@ -338,7 +348,7 @@ async def calculate(
 
 
 
-    if not _check_calc_rate(str(current_user.id)):
+    if not _distributed_rate_limiter.is_allowed(f"calc:{current_user.id}"):
 
         raise HTTPException(
 
@@ -668,7 +678,7 @@ async def calculate(
 
     # Update in-memory cache (fast lookup for export endpoints)
 
-    _run_store[run_id] = response
+    _run_store[f"{current_user.company_id}:{run_id}"] = response
 
     if len(_run_store) > 50:
 
@@ -775,7 +785,7 @@ async def get_run_detail(
     """
 
     # Fast path: in-memory cache (with tenant isolation)
-    cached = _run_store.get(run_id)
+    cached = _run_store.get(f"{current_user.company_id}:{run_id}")
     if cached:
         # Even on cache hit, verify tenant via DB (P0: prevents cross-tenant leaks).
         # Superusers bypass; non-superusers whose run row is in DB must match company_id.
@@ -840,4 +850,116 @@ async def get_run_detail(
         "created_at":         row.created_at.isoformat() if row.created_at else None,
 
     }
+
+
+# ── POST /v1/calculate/extended ───────────────────────────────────────────────
+# API-01: Runs the standard calculate pipeline PLUS all engine_v1 extended
+# modules (factor covariance, margin, liquidity, NAV attribution, TCA, rolls,
+# capital adequacy, waterfall).  Reuses the exact same auth/RBAC/rate-limit
+# guards as the standard endpoint.
+# Returns ExtendedCalculateResponse: { base: CalculateResponse, extended: {...} }
+
+
+from app.schemas_v1.extended_response import ExtendedCalculateResponse
+
+
+@router.post("/calculate/extended", response_model=ExtendedCalculateResponse)
+async def calculate_extended(
+    request_data: "CalculateRequest",
+    session: AsyncSession = Depends(get_async_session),
+    current_user: "User" = Depends(get_current_user),
+    _schema: None = Depends(require_schema_ready),
+):
+    """Extended calculation: standard pipeline + all engine_v1 analytical modules.
+
+    Identical auth, RBAC, and rate-limit guards as POST /v1/calculate.
+    All extended modules are non-fatal — failures are captured as None.
+    """
+    # Reuse the standard calculate handler to get the base result
+    base_result = await calculate(request_data, session, current_user, None)
+
+    # Run all extended engine_v1 modules (non-fatal wrappers)
+    extended: dict = {}
+
+    # Factor covariance
+    try:
+        from app.engine_v1.factor_covariance import build_factor_covariance_matrix
+        import pandas as pd
+        ccy_list = [t.get("currency", "MXN") for t in (request_data.trades or [])]
+        if ccy_list:
+            cov = build_factor_covariance_matrix(pd.Index(set(ccy_list)))
+            extended["factor_covariance"] = cov.to_dict() if hasattr(cov, "to_dict") else str(cov)
+        else:
+            extended["factor_covariance"] = None
+    except Exception as _e:
+        extended["factor_covariance"] = None
+        _log.warning("factor_covariance extended module failed: %s", _e)
+
+    # Margin model
+    try:
+        from app.engine_v1.margin_model import compute_im_schedule
+        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
+        extended["margin"] = compute_im_schedule(plan) if plan else None
+    except Exception as _e:
+        extended["margin"] = None
+        _log.warning("margin extended module failed: %s", _e)
+
+    # Liquidity
+    try:
+        from app.engine_v1.liquidity_model import assess_liquidity
+        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
+        snapshot = request_data.market_snapshot if hasattr(request_data, "market_snapshot") else None
+        extended["liquidity"] = assess_liquidity(plan, snapshot) if plan and snapshot else None
+    except Exception as _e:
+        extended["liquidity"] = None
+        _log.warning("liquidity extended module failed: %s", _e)
+
+    # NAV attribution
+    try:
+        from app.engine_v1.nav_attribution_engine import compute_nav_attribution
+        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
+        snapshot = request_data.market_snapshot if hasattr(request_data, "market_snapshot") else None
+        extended["nav_attribution"] = compute_nav_attribution(plan, snapshot) if plan and snapshot else None
+    except Exception as _e:
+        extended["nav_attribution"] = None
+        _log.warning("nav_attribution extended module failed: %s", _e)
+
+    # Transaction cost analysis
+    try:
+        from app.engine_v1.transaction_cost_model import compute_tca
+        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
+        policy = request_data.policy_overrides if hasattr(request_data, "policy_overrides") else None
+        extended["tca"] = compute_tca(plan, policy) if plan else None
+    except Exception as _e:
+        extended["tca"] = None
+        _log.warning("tca extended module failed: %s", _e)
+
+    # FX rolls
+    try:
+        from app.engine_v1.fx_roll_engine import compute_roll_schedule
+        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
+        extended["rolls"] = compute_roll_schedule(plan) if plan else None
+    except Exception as _e:
+        extended["rolls"] = None
+        _log.warning("rolls extended module failed: %s", _e)
+
+    # Capital adequacy
+    try:
+        from app.engine_v1.capital_adequacy import compute_capital_charges
+        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
+        extended["capital"] = compute_capital_charges(plan) if plan else None
+    except Exception as _e:
+        extended["capital"] = None
+        _log.warning("capital extended module failed: %s", _e)
+
+    # Waterfall
+    try:
+        from app.engine_v1.waterfall import compute_waterfall
+        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
+        extended["waterfall"] = compute_waterfall(plan) if plan else None
+    except Exception as _e:
+        extended["waterfall"] = None
+        _log.warning("waterfall extended module failed: %s", _e)
+
+    return ExtendedCalculateResponse(base=base_result, extended=extended)
 

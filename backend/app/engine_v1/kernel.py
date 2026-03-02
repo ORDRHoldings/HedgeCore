@@ -145,3 +145,62 @@ def compute_hedge_plan(
     )
 
     return HedgePlan(buckets=buckets, summary=summary), trace_events
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ARCH-01: Multi-currency kernel wrapper
+# Backward compatible: USDMXN routes to legacy compute_hedge_plan unchanged.
+# ──────────────────────────────────────────────────────────────────────────────
+
+def compute_hedge_plan_multi(
+    trades_df: "pd.DataFrame",
+    hedges_df: "pd.DataFrame",
+    market: "MarketSnapshot",
+    policy: "PolicyConfig",
+    pair: str = "USDMXN",
+) -> "tuple[HedgePlan, list[TraceEvent]]":
+    """Multi-currency kernel wrapper.
+
+    Routes to the correct spot/forward data based on currency pair.
+    For USDMXN (default): calls compute_hedge_plan directly — zero regression risk.
+    For other pairs: extracts pair-specific data from market.pairs dict.
+
+    Args:
+        trades_df: Normalized trades DataFrame.
+        hedges_df: Normalized hedges DataFrame.
+        market: MarketSnapshot (may include .pairs for non-USDMXN pairs).
+        policy: PolicyConfig.
+        pair: Currency pair identifier, e.g. "USDMXN", "USDEUR". Default "USDMXN".
+
+    Returns:
+        (HedgePlan, list[TraceEvent]) — same as compute_hedge_plan.
+
+    Raises:
+        ValueError: If pair is not USDMXN and no market data exists for it.
+    """
+    if pair == "USDMXN":
+        # Exact same code path as today — zero regression risk
+        return compute_hedge_plan(trades_df, hedges_df, market, policy)
+
+    # Multi-pair: extract pair-specific snapshot from market.pairs
+    pairs_data = getattr(market, "pairs", {}) or {}
+    pair_data = pairs_data.get(pair)
+    if pair_data is None:
+        raise ValueError(
+            f"No market data for pair: {pair!r}. "
+            f"Available pairs: {list(pairs_data.keys()) or ['USDMXN (default)']}"
+        )
+
+    # Build a compatible MarketSnapshot from pair-specific data
+    pair_spot = pair_data.get("spot") if isinstance(pair_data, dict) else getattr(pair_data, "spot", None)
+    pair_fwd = pair_data.get("forward_points") if isinstance(pair_data, dict) else getattr(pair_data, "forward_points", {})
+
+    if pair_spot is None:
+        raise ValueError(f"Pair {pair!r} market data missing 'spot' field")
+
+    pair_market = MarketSnapshot(
+        spot_usdmxn=pair_spot,
+        forward_points_by_month=pair_fwd or {},
+    )
+
+    return compute_hedge_plan(trades_df, hedges_df, pair_market, policy)

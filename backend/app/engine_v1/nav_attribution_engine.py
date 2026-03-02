@@ -76,6 +76,7 @@ class NavAttributionResult:
 def compute_nav_attribution(
     positions: list[dict],
     market: dict[str, Any],
+    fx_delta: float | None = None,
     base_currency: str = "USD",
 ) -> NavAttributionResult:
     """Compute multi-currency NAV attribution.
@@ -122,7 +123,8 @@ def compute_nav_attribution(
         # FX contribution: sensitivity to 1% FX move
         fx_contrib = 0.0
         if currency != base_currency and abs(amount_usd) > 0:
-            fx_contrib = amount_usd * 0.01  # 1% move impact
+            _fx_delta = fx_delta if fx_delta is not None else 0.01  # Default: 1% move (RISK-02)
+            fx_contrib = amount_usd * _fx_delta
 
         # Carry contribution: interest differential ? notional ? time
         time_frac = maturity_months / 12.0
