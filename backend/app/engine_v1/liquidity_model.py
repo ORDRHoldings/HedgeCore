@@ -126,14 +126,27 @@ def estimate_slippage(
         if order_size < 1.0:
             continue
 
-        # Look up ADV -- try specific pair+instrument, then generic
+        # Look up ADV -- try specific pair+instrument, then pair-only, then registry fallback
         pair = action.get("pair", "USDMXN")
         adv_key = f"{pair}_{instrument}"
-        # LIQ-01: require_adv strict mode
-        adv_available = adv_key in adv_data or f"USDMXN_{instrument}" in adv_data
-        if not adv_available and require_adv:
-            raise ValueError(f"ADV data required for liquidity computation (require_adv=True) — missing key: {adv_key}")
-        adv = adv_data.get(adv_key, adv_data.get(f"USDMXN_{instrument}", 5_000_000_000))
+
+        adv = adv_data.get(adv_key, None)
+        if adv is None:
+            adv = adv_data.get(pair, None)
+
+        if adv is None:
+            if require_adv:
+                raise ValueError(
+                    f"ADV data required for {pair} but not provided in market.adv_data. "
+                    f"Pass require_adv=False to use registry fallback. Missing key: {adv_key}"
+                )
+            # FIX-05: pair-aware registry fallback (replaces $5B flat default)
+            try:
+                from app.engine_v1.pair_registry import get_pair_meta
+                meta = get_pair_meta(pair)
+                adv = meta.typical_adv_usd
+            except (ValueError, ImportError):
+                adv = 5_000_000_000  # Ultimate fallback
 
         participation_rate = order_size / adv if adv > 0 else 1.0
         liquidity_score = _compute_liquidity_score(participation_rate)

@@ -48,6 +48,16 @@ class PolicyConfig(BaseModel):
         default_factory=dict,
         description="Per-pair policy overrides. Key = pair code (EURUSD, USDJPY, etc.)"
     )
+    execution_window_hours: float = Field(
+        default=24.0,
+        ge=1.0,
+        le=720.0,
+        description="Expected execution window in hours. Affects vol drift cost estimation. Default 24h (1 day)."
+    )
+    waterfall_weights: dict[str, int] = Field(
+        default_factory=dict,
+        description="Override waterfall rule weights. Key=R1..R8, Value=0-100. Auto-normalized to sum 100."
+    )
 
     def get_hedge_ratios(self, pair: str = "USDMXN") -> "HedgeRatios":
         override = self.pair_overrides.get(pair)
