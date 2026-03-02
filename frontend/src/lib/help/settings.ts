@@ -3,7 +3,7 @@ import type { ModuleHelp } from "@/lib/help/types";
 export const SETTINGS_HELP: ModuleHelp = {
   moduleId: "settings",
   pageTitle: "Settings",
-  pageSubtitle: "CONFIGURATION · API KEYS · TEAM MANAGEMENT",
+  pageSubtitle: "CONFIGURATION · ACCESS & SECURITY · ORGANISATION",
   sections: [
     {
       id: "settings-overview",

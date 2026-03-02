@@ -1,6 +1,6 @@
 # Scenario Matrix Summary
 
-- Generated: 2026-02-17 14:21:28 UTC
+- Generated: 2026-03-02 01:38:19 UTC
 - Total scenarios: 16
 - Validation PASS: 14
 - Validation FAIL: 2
