@@ -15,9 +15,9 @@
  *   components/tabs/             — 10 tab files
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useAuth } from "../../lib/authContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { SETTINGS_HELP } from "@/lib/help";
 
@@ -75,10 +75,11 @@ function ToastStack({ toasts }: { toasts: Toast[] }) {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-export default function SettingsPage() {
+function SettingsPageInner() {
   const { isAuthenticated, isLoading: authLoading, user, token } = useAuth();
-  const router    = useRouter();
-  const renderTs  = useRenderTs();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const renderTs     = useRenderTs();
 
   const [activeTab,  setActiveTab]  = useState<SettingsTab>("GENERAL");
   const [toasts,     setToasts]     = useState<Toast[]>([]);
@@ -90,16 +91,12 @@ export default function SettingsPage() {
     if (!authLoading && !isAuthenticated) router.replace("/auth/login");
   }, [authLoading, isAuthenticated, router]);
 
-  // Activate tab from URL hash — responds to both mount and subsequent hash changes
+  // Activate tab from ?tab= query param — re-runs whenever Next.js navigation updates searchParams
   useEffect(() => {
-    const apply = () => {
-      const hash = window.location.hash.slice(1);
-      if (hash && HASH_MAP[hash]) setActiveTab(HASH_MAP[hash]);
-    };
-    apply();
-    window.addEventListener("hashchange", apply);
-    return () => window.removeEventListener("hashchange", apply);
-  }, []);
+    const tab = searchParams.get("tab");
+    if (tab && HASH_MAP[tab]) setActiveTab(HASH_MAP[tab]);
+    else if (!tab) setActiveTab("GENERAL");
+  }, [searchParams]);
 
   const addToast = useCallback((kind: Toast["kind"], msg: string) => {
     const id = Math.random().toString(36).slice(2);
@@ -211,5 +208,17 @@ export default function SettingsPage() {
       </div>
       <HelpPanelV2 module={SETTINGS_HELP} storageKey="settings" />
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ background: "var(--bg-deep,#0D0F11)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 11, color: "var(--text-tertiary,#6B7280)", letterSpacing: "0.1em" }}>LOADING…</span>
+      </div>
+    }>
+      <SettingsPageInner />
+    </Suspense>
   );
 }
