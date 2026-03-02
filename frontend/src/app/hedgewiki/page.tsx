@@ -40,7 +40,9 @@ type EntryId =
   | "ifrs9-eff" | "ifrs9-cfh" | "fvh" | "ias39"
   | "asc815-20" | "asc815-30"
   | "hedge-ratio-policy" | "bucket-mode" | "min-trade"
-  | "hc-exposure-model" | "hc-netting" | "hc-bucketing" | "hc-ladder";
+  | "hc-exposure-model" | "hc-netting" | "hc-bucketing" | "hc-ladder" | "hc-runevelope"
+  | "r1-directional" | "r2-volatility" | "r3-convexity" | "r4-carry"
+  | "r5-concentration" | "r6-credit" | "r7-liquidity" | "r8-tail";
 
 interface Entry {
   id: EntryId;
@@ -246,6 +248,91 @@ const ENTRIES: Record<EntryId, Entry> = {
     hedgecoreField: "SandboxResult.hedge_ladder · HedgeRow",
     auditNote: "Ladder generation is the terminal step of the pipeline. Full reproducibility guaranteed by run_id and snapshot_hash.",
   },
+
+  // ── HedgeCore RunEnvelope ────────────────────────────────────────────────────
+  "hc-runevelope": {
+    id: "hc-runevelope", title: "RunEnvelope — Audit Hash Chain", version: "v1.3", updated: "2026-03-01",
+    category: "HEDGECORE ARCHITECTURE", status: "STABLE",
+    abstract: "Every HedgeCore calculation emits a RunEnvelope — a cryptographic receipt binding all inputs and outputs to a single run_id. Fields: run_id (UUID v4), timestamp (ISO-8601 UTC), engine_version (semver), inputs_hash (SHA-256 of canonical JSON of trades+hedges+market+policy), outputs_hash (SHA-256 of hedge_plan+scenario_results), trades_hash, hedges_hash, market_hash, policy_hash. The inputs_hash enables replay: given the same inputs, the same engine version must produce the same outputs_hash — any discrepancy indicates tampering or non-determinism. The RunEnvelope is stored in the WORM calculation_runs table and referenced by the SandboxResult, FreezeArtifact, and LedgerEntry provenance chain. For audit: compare the run_id in the ledger entry against the corresponding RunEnvelope in the audit trail viewer.",
+    citations: ["HedgeCore API §RunEnvelope", "SHA-256 FIPS 180-4", "WORM table policy §audit_events", "IFRS 9.B6.5.28 (contemporaneous documentation)"],
+    linkedIds: ["hc-ladder", "hc-bucketing"],
+    hedgecoreField: "RunEnvelope · calculation_runs.run_id · /api/v1/runs/{run_id}",
+    auditNote: "To verify a run: GET /v1/runs/{run_id} → compare inputs_hash with your local SHA-256(canonical_json(inputs)). Any mismatch must be escalated to the Risk team.",
+  },
+
+  // ── Risk Taxonomy (R1–R8, FROZEN v1) ─────────────────────────────────────────
+  "r1-directional": {
+    id: "r1-directional", title: "R1: Directional / Delta", version: "v1.0", updated: "2026-01-01",
+    category: "RISK TAXONOMY", status: "STABLE",
+    abstract: "First-order directional exposure to underlying FX rate moves. For an MXN exporter, R1 captures the USD value change of unhedged MXN receivables as the USD/MXN spot rate moves. Quantified as USD PnL per 1% move in the FX rate. The hedge ladder directly reduces R1 by converting directional exposure into fixed forward rates. R1 is the primary objective of the HedgeCore hedge programme — the engine minimises R1 residual after applying hedge ratios. R1 residual is reported per bucket in the scenario stress output.",
+    citations: ["risk_taxonomy.py §R1 (FROZEN)", "BIS FX Exposure Framework 2022 §3.1", "IFRS 9.6.4.1(a) (economic relationship)", "HedgeCore API §ScenarioBucketResult"],
+    linkedIds: ["hc-ladder", "ndf", "r4-carry"],
+    hedgecoreField: "ScenarioResults.per_bucket.unhedged_usd · hedge_benefit_usd",
+    auditNote: "R1 residual after hedging must not exceed policy.max_residual_ratio. Reported in scenario stress output per bucket.",
+  },
+  "r2-volatility": {
+    id: "r2-volatility", title: "R2: Volatility / Vega", version: "v1.0", updated: "2026-01-01",
+    category: "RISK TAXONOMY", status: "STABLE",
+    abstract: "Exposure to changes in implied FX volatility. For vanilla forward hedges and NDFs, vega exposure is zero (linear instruments). R2 becomes material when vanilla options are used as hedging instruments — the time value component creates volatility sensitivity. HedgeCore v1 does not price options natively; R2 is flagged as a disclosure item only. Quantified as USD per 1 vol point (vega-dollar equivalent). Policy must explicitly state whether options are eligible instruments before R2 hedging is permitted.",
+    citations: ["risk_taxonomy.py §R2 (FROZEN)", "Garman-Kohlhagen (1983) §vega", "IFRS 9.B6.5.15 (time value exclusion)", "HedgeCore API §capability_flags"],
+    linkedIds: ["vanilla-option", "r3-convexity", "r1-directional"],
+    hedgecoreField: "WaterfallRule.rule_id = R2 · capability_flags.options_enabled",
+    auditNote: "R2 is zero for pure NDF/forward programmes. Disclose if options are in scope.",
+  },
+  "r3-convexity": {
+    id: "r3-convexity", title: "R3: Convexity / Gamma", version: "v1.0", updated: "2026-01-01",
+    category: "RISK TAXONOMY", status: "STABLE",
+    abstract: "Second-order nonlinear exposure capturing convexity under large FX moves. For NDF and vanilla forward portfolios, gamma is negligible — the P&L profile is linear. R3 becomes significant under extreme shock scenarios (3σ+) where linear approximation breaks down. HedgeCore scenario analysis applies shocks of ±1σ, ±2σ, ±3σ to the spot rate; the difference between linear and actual P&L quantifies the R3 contribution. If gamma is linearised, it must be disclosed per risk_taxonomy.py constraint.",
+    citations: ["risk_taxonomy.py §R3 (FROZEN)", "BIS Working Paper 2019 §convexity", "IFRS 9.B6.4.12 (non-linear hedging instruments)"],
+    linkedIds: ["r2-volatility", "r1-directional", "hc-ladder"],
+    hedgecoreField: "ScenarioResults.totals.shocked_spot · sigma",
+    auditNote: "R3 disclosure required if any non-linear instrument is designated as hedging instrument.",
+  },
+  "r4-carry": {
+    id: "r4-carry", title: "R4: Carry / Cost Governance (Theta)", version: "v1.0", updated: "2026-01-01",
+    category: "RISK TAXONOMY", status: "STABLE",
+    abstract: "Governance axis for cost-of-hedge: forward points, bid-offer spread, financing costs, and option theta. R4 is treated as a constraint rather than a hedgeable risk — the engine uses R4 to reject hedge actions that exceed the policy cost budget. The HedgeCore friction calculation (spread_bps × notional) quantifies explicit transaction costs per hedge trade. Forward carry (forward points vs spot) is the primary cost driver for NDF hedges. R4 is not hedgeable; it is managed by policy (spread_bps, min_trade_size_usd, execution_product).",
+    citations: ["risk_taxonomy.py §R4 (FROZEN)", "HedgeCore API §BucketResult.friction_usd", "FX Global Code Principle 14 (costs)", "IFRS 9.6.4.1(c) (hedge ratio — cost)"],
+    linkedIds: ["r1-directional", "ndf", "min-trade"],
+    hedgecoreField: "BucketResult.friction_usd · policy.cost_assumptions.spread_bps",
+    auditNote: "Total friction_usd must be disclosed in the hedge plan summary. Exceeding cost budget triggers R4 FAIL in the waterfall.",
+  },
+  "r5-concentration": {
+    id: "r5-concentration", title: "R5: Concentration / Correlation", version: "v1.0", updated: "2026-01-01",
+    category: "RISK TAXONOMY", status: "STABLE",
+    abstract: "Portfolio concentration risk and correlation structure. For a single-currency FX programme (e.g. MXN only), R5 measures exposure concentration in a single FX pair. For multi-currency portfolios (EUR, MXN, BRL simultaneously), R5 captures correlation between currency moves — a correlated shock could amplify losses across pairs. HedgeCore multi-currency mode tracks R5 implicitly through the portfolio exposure decomposition. Policy must specify concentration limits (max % in any single pair) if the portfolio covers multiple currencies.",
+    citations: ["risk_taxonomy.py §R5 (FROZEN)", "BIS Correlation Risk Paper 2021 §4", "IFRS 9.B6.3.9 (hedged item — groups)", "HedgeCore pairRegistry.ts"],
+    linkedIds: ["r1-directional", "r6-credit", "hc-exposure-model"],
+    hedgecoreField: "provider_metadata.fx_rates · pairRegistry.ts · PortfolioExposure",
+    auditNote: "Multi-currency programmes must disclose correlation assumptions. Single-pair programmes: R5 is low.",
+  },
+  "r6-credit": {
+    id: "r6-credit", title: "R6: Credit / Spread", version: "v1.0", updated: "2026-01-01",
+    category: "RISK TAXONOMY", status: "STABLE",
+    abstract: "Counterparty credit risk on open derivative positions. For an NDF or forward hedge, R6 is the replacement cost if the counterparty defaults before settlement — the mark-to-market of the hedge position at the time of default. Mitigated by: (1) ISDA Master Agreement close-out netting; (2) CSA/VM CSA bilateral margining; (3) central clearing (CCP) for eligible products. HedgeCore does not compute CVA natively in v1; R6 is disclosed as a qualitative risk item. Counterparty selection and credit line limits are policy-governed.",
+    citations: ["risk_taxonomy.py §R6 (FROZEN)", "Basel III SA-CCR §3 (counterparty credit)", "IFRS 13.48 (CVA/DVA)", "ISDA 2024 Netting Opinion"],
+    linkedIds: ["isda-netting", "csa", "r5-concentration"],
+    hedgecoreField: "counterparty.isda_version · counterparty.csa_type",
+    auditNote: "R6 disclosure required in hedge plan. CVA must be computed externally and referenced in the audit trail.",
+  },
+  "r7-liquidity": {
+    id: "r7-liquidity", title: "R7: Liquidity / Microstructure", version: "v1.0", updated: "2026-01-01",
+    category: "RISK TAXONOMY", status: "STABLE",
+    abstract: "Liquidity and execution risk: bid-offer spread widening, market impact, depth collapse, and unwind constraints. For MXN NDF hedges, R7 is most significant during risk-off periods when MXN bid-offer spreads widen sharply. HedgeCore models R7 implicitly through spread_bps (which is widened for NDF vs deliverable FWD). Minimum trade size (min_trade_size_usd) is a liquidity governance parameter — sub-minimum residuals are unhedgeable. Instrument eligibility must enforce liquidity gating; all approximations must be disclosed.",
+    citations: ["risk_taxonomy.py §R7 (FROZEN)", "BIS Liquidity Framework 2023 §5", "FX Global Code Principle 10 (execution)", "HedgeCore API §policy.cost_assumptions"],
+    linkedIds: ["r4-carry", "min-trade", "ndf"],
+    hedgecoreField: "policy.cost_assumptions.spread_bps · policy.min_trade_size_usd",
+    auditNote: "Spread widening scenarios (2× normal spread_bps) should be stress-tested quarterly.",
+  },
+  "r8-tail": {
+    id: "r8-tail", title: "R8: Tail / Gap / Crash", version: "v1.0", updated: "2026-01-01",
+    category: "RISK TAXONOMY", status: "STABLE",
+    abstract: "Extreme tail events: discontinuous FX moves, crashes, and gap risk beyond linear scenario models. For MXN, historical tail events include: 2008 Lehman (MXN −30% in weeks), 2016 US election night (MXN −13% in hours), 2020 COVID (MXN −25% in days). HedgeCore scenario analysis captures tail risk through the ±3σ stress scenario. The hedge_benefit_usd at 3σ is the primary R8 metric — it quantifies how much capital the hedge programme saves in a tail event. Tail hedges (deep OTM options, etc.) are policy-gated and not implemented in v1.",
+    citations: ["risk_taxonomy.py §R8 (FROZEN)", "Banxico Risk Report 2023 §tail risk", "IFRS 9.B6.4.15 (stress testing)", "HedgeCore API §ScenarioTotalResult"],
+    linkedIds: ["r1-directional", "r3-convexity", "hc-ladder"],
+    hedgecoreField: "ScenarioResults.totals[sigma=3].hedge_benefit_usd",
+    auditNote: "3σ hedge benefit must be reported to the Treasury Committee quarterly. R8 is the primary metric for programme value demonstration.",
+  },
 };
 
 const CATEGORIES = [
@@ -254,7 +341,8 @@ const CATEGORIES = [
   { id: "IFRS 9 STANDARD",       label: "IFRS 9 Standard",          count: 4,  icon: "≡" },
   { id: "ASC 815 (US GAAP)",     label: "ASC 815 (US GAAP)",        count: 2,  icon: "≡" },
   { id: "POLICY TEMPLATES",      label: "Policy Templates",         count: 3,  icon: "⊡" },
-  { id: "HEDGECORE ARCHITECTURE",label: "HedgeCore Architecture",   count: 4,  icon: "⬡" },
+  { id: "HEDGECORE ARCHITECTURE",label: "HedgeCore Architecture",   count: 5,  icon: "⬡" },
+  { id: "RISK TAXONOMY",         label: "Risk Taxonomy (R1–R8)",    count: 8,  icon: "⊛" },
 ] as const;
 
 type CategoryId = typeof CATEGORIES[number]["id"];
@@ -295,7 +383,15 @@ export default function HedgeWiki() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>("FX INSTRUMENTS");
   const [activeEntry, setActiveEntry] = useState<EntryId>("ndf");
 
-  const filteredEntries = Object.values(ENTRIES).filter(e => e.category === activeCategory);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchFiltered = searchQuery.trim()
+    ? Object.values(ENTRIES).filter(e =>
+        e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.abstract.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.category.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : null;
+  const filteredEntries = searchFiltered ?? Object.values(ENTRIES).filter(e => e.category === activeCategory);
   const entry = ENTRIES[activeEntry] ?? Object.values(ENTRIES)[0];
 
   return (
@@ -328,6 +424,19 @@ export default function HedgeWiki() {
         </div>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            type="text"
+            placeholder="Search articles…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              fontFamily: S.fontMono, fontSize: "0.6875rem",
+              background: S.bgSub, border: `1px solid ${S.rim}`,
+              color: S.primary, padding: "3px 8px", outline: "none",
+              width: 160,
+            }}
+            aria-label="Search knowledge articles"
+          />
           <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 6px", border: `1px solid ${S.rim}`, color: S.tertiary }}>
             {Object.keys(ENTRIES).length} ARTICLES · {CATEGORIES.length} DOMAINS
           </span>
@@ -390,7 +499,7 @@ export default function HedgeWiki() {
         {/* PANE 2: Entry list */}
         <div data-wiki-sidebar style={{ borderRight: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", overflow: "auto" }}>
           <div style={{ padding: "14px 14px 8px", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>
-            {activeCategory} · {filteredEntries.length} ENTRIES
+            {searchQuery.trim() ? `SEARCH RESULTS · ${filteredEntries.length} MATCHES` : `${activeCategory} · ${filteredEntries.length} ENTRIES`}
           </div>
           <div style={{ height: 1, background: S.rim }} />
           {filteredEntries.map(e => {

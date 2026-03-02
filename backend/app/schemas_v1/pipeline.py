@@ -265,6 +265,7 @@ class StagedArtifact(BaseModel):
     required_approvals: int = 1
 
     version: int = 0
+    company_id: str | None = None
 
 
 

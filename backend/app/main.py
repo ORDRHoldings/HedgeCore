@@ -1139,6 +1139,35 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
         "CREATE INDEX IF NOT EXISTS ix_report_schedules_company ON report_schedules(company_id, is_active)",
         "CREATE INDEX IF NOT EXISTS ix_report_schedules_next_run ON report_schedules(is_active, next_run_at)",
 
+        # 🔒 P0: Tenant isolation — company_id on staging_artifacts 🔒
+        "ALTER TABLE staging_artifacts ADD COLUMN IF NOT EXISTS company_id UUID",
+        "CREATE INDEX IF NOT EXISTS ix_staging_artifacts_company ON staging_artifacts(company_id)",
+        # 🔒 P0: DB-level SoD trigger — prevent self-approval at DB layer 🔒
+        """
+        CREATE OR REPLACE FUNCTION prevent_self_approval()
+        RETURNS TRIGGER AS 11751
+        BEGIN
+            IF NEW.approver_id = (
+                SELECT submitted_by FROM staging_artifacts WHERE id = NEW.staging_artifact_id
+            ) THEN
+                RAISE EXCEPTION 'SELF_APPROVAL_BLOCKED: approver_id must differ from submitted_by';
+            END IF;
+            RETURN NEW;
+        END;
+        11751 LANGUAGE plpgsql
+        """,
+        """
+        DO 11751 BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_trigger WHERE tgname = 'trg_approvals_no_self_approval'
+            ) THEN
+                CREATE TRIGGER trg_approvals_no_self_approval
+                BEFORE INSERT ON approvals
+                FOR EACH ROW EXECUTE FUNCTION prevent_self_approval();
+            END IF;
+        END 11751
+        """,
+
     ]
 
     # ── Advisory lock: serialise DDL across concurrent instances ────────────────

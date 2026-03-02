@@ -1307,6 +1307,8 @@ async def submit_to_staging(
 
     request: SubmitToStagingRequest,
 
+    company_id: str | None = None,
+
 ) -> StagedArtifact:
 
     """Submit a proposal to staging for governance review."""
@@ -1342,6 +1344,8 @@ async def submit_to_staging(
         integrity_score=proposal.waterfall.integrity_score,
 
         authorization_status=AuthorizationStatus.PENDING,
+
+        company_id=company_id,
 
     )
 
@@ -1382,16 +1386,24 @@ async def list_staging(
     limit: int = 100,
     offset: int = 0,
     status_filter: str | None = None,
+    company_id: str | None = None,
 ) -> list[StagedArtifact]:
-    return await pipeline_db.load_all_staging(session, limit=limit, offset=offset, status_filter=status_filter)
+    return await pipeline_db.load_all_staging(
+        session, limit=limit, offset=offset,
+        status_filter=status_filter, company_id_filter=company_id,
+    )
 
 
 
 
 
-async def get_staging(session: AsyncSession, staging_id: str) -> StagedArtifact | None:
-
-    return await pipeline_db.load_staging(session, staging_id)
+async def get_staging(
+    session: AsyncSession, staging_id: str, company_id: str | None = None
+) -> StagedArtifact | None:
+    artifact = await pipeline_db.load_staging(session, staging_id)
+    if artifact and company_id and artifact.company_id and artifact.company_id != company_id:
+        return None  # Tenant isolation: return 404 rather than 403 (don't leak existence)
+    return artifact
 
 
 
@@ -1409,11 +1421,16 @@ async def authorize_staged(
 
     request: AuthorizeRequest,
 
+    company_id: str | None = None,
+
 ) -> StagedArtifact | LedgerEntry:
 
     """Process an authorization action on a staged artifact."""
 
     artifact = await pipeline_db.load_staging(session, staging_id)
+    # Tenant isolation: reject cross-tenant authorization
+    if artifact and company_id and artifact.company_id and artifact.company_id != company_id:
+        raise ValueError(f"TENANT_ISOLATION: Staging artifact {staging_id} not accessible")
     artifact_version = getattr(artifact, "version", 0)
 
     if not artifact:
