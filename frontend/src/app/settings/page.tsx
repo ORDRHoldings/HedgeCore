@@ -210,6 +210,103 @@ function SectionHeader({ label }: { label: string }) {
   );
 }
 
+function GovernedBanner({ lastModifiedAt, lastModifiedBy }: { lastModifiedAt?: string | null; lastModifiedBy?: string | null }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      background: `color-mix(in srgb, var(--accent-cyan,#06B6D4) 5%, transparent)`,
+      border: `1px solid color-mix(in srgb, var(--accent-cyan,#06B6D4) 15%, transparent)`,
+      borderLeft: `3px solid var(--accent-cyan,#06B6D4)`,
+      borderRadius: 2, padding: "7px 12px", marginBottom: 16,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.cyan }}>
+          ⊛ AFFECTS OUTPUTS
+        </span>
+        <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>
+          These settings are server-backed and affect hedge engine outputs. Changes require <strong>company.edit_settings</strong> permission and are audit-logged.
+        </span>
+      </div>
+      {lastModifiedAt && (
+        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, flexShrink: 0, marginLeft: 12 }}>
+          Last saved: {lastModifiedAt.replace("T", " ").slice(0, 16)} UTC{lastModifiedBy ? ` by ${lastModifiedBy}` : ""}
+        </span>
+      )}
+    </div>
+  );
+}
+
+interface DiffField { label: string; before: string; after: string; }
+function DiffPreviewModal({
+  open, fields, onConfirm, onCancel, saving,
+}: { open: boolean; fields: DiffField[]; onConfirm: () => void; onCancel: () => void; saving: boolean }) {
+  if (!open) return null;
+  const changed = fields.filter(f => f.before !== f.after);
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9000,
+      background: "rgba(0,0,0,0.7)", backdropFilter: "blur(2px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{
+        background: "var(--bg-panel,#141618)", border: "1px solid var(--border-rim,#2A2D34)",
+        borderRadius: 4, padding: 28, width: 560, maxHeight: "80vh", overflow: "auto",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+      }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", color: S.primary, marginBottom: 4 }}>
+          CONFIRM GOVERNED SETTINGS CHANGE
+        </div>
+        <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginBottom: 20 }}>
+          The following changes affect hedge engine outputs and will be audit-logged.
+        </div>
+        {changed.length === 0 ? (
+          <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>No changes detected.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {changed.map(f => (
+              <div key={f.label} style={{
+                background: "var(--bg-sub,#1A1D21)", border: "1px solid var(--border-soft,#1F2228)",
+                borderRadius: 2, padding: "8px 12px",
+              }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, marginBottom: 4 }}>{f.label}</div>
+                <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 11, color: "var(--accent-red,#EF4444)", textDecoration: "line-through" }}>{f.before}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>→</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 11, color: "var(--status-pass,#10B981)", fontWeight: 700 }}>{f.after}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+          <button
+            onClick={onConfirm}
+            disabled={saving || changed.length === 0}
+            style={{
+              fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+              color: "#000", background: saving || changed.length === 0 ? S.tertiary : S.cyan,
+              border: "none", borderRadius: 2, padding: "8px 22px", cursor: saving || changed.length === 0 ? "not-allowed" : "pointer",
+            }}
+          >
+            {saving ? "SAVING…" : "CONFIRM & SAVE"}
+          </button>
+          <button
+            onClick={onCancel}
+            disabled={saving}
+            style={{
+              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+              color: S.secondary, background: "transparent",
+              border: "1px solid var(--border-rim,#2A2D34)", borderRadius: 2, padding: "8px 18px", cursor: "pointer",
+            }}
+          >
+            CANCEL
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Field({
   label, hint, children,
 }: { label: string; hint?: string; children: React.ReactNode }) {
@@ -399,8 +496,8 @@ function GeneralTab({
 
 // ── Tab: Policy Limits ────────────────────────────────────────────────────────
 function PolicyLimitsTab({
-  s, set,
-}: { s: PolicyLimitSettings; set: (v: PolicyLimitSettings) => void }) {
+  s, set, lastModifiedAt, lastModifiedBy,
+}: { s: PolicyLimitSettings; set: (v: PolicyLimitSettings) => void; lastModifiedAt?: string | null; lastModifiedBy?: string | null }) {
   const u = (k: keyof PolicyLimitSettings) => (v: number) => set({ ...s, [k]: v });
   const pctFmt = (v: number) => `${(v * 100).toFixed(0)}%`;
   const usdFmt = (v: number) =>
@@ -408,6 +505,7 @@ function PolicyLimitsTab({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <GovernedBanner lastModifiedAt={lastModifiedAt} lastModifiedBy={lastModifiedBy} />
       {/* Hedge ratios */}
       <div>
         <SectionHeader label="Hedge Ratios" />
@@ -492,8 +590,8 @@ function PolicyLimitsTab({
 
 // ── Tab: Execution ────────────────────────────────────────────────────────────
 function ExecutionTab({
-  s, set,
-}: { s: ExecutionSettings; set: (v: ExecutionSettings) => void }) {
+  s, set, lastModifiedAt, lastModifiedBy,
+}: { s: ExecutionSettings; set: (v: ExecutionSettings) => void; lastModifiedAt?: string | null; lastModifiedBy?: string | null }) {
   const u = <K extends keyof ExecutionSettings>(k: K) =>
     (v: ExecutionSettings[K]) => set({ ...s, [k]: v });
 
@@ -508,6 +606,7 @@ function ExecutionTab({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <GovernedBanner lastModifiedAt={lastModifiedAt} lastModifiedBy={lastModifiedBy} />
       {/* Product */}
       <div>
         <SectionHeader label="Default Execution Product" />
@@ -1274,6 +1373,10 @@ export default function SettingsPage() {
   const [changeLog, setChangeLog]     = useState<ChangeEntry[]>([]);
   const [showLog, setShowLog]         = useState(false);
   const prevSettings                  = useRef<AllSettings>(DEFAULT_SETTINGS);
+  const [serverMeta, setServerMeta] = useState<{ last_modified_at?: string | null; last_modified_by?: string | null }>({});
+  const [showDiffModal, setShowDiffModal] = useState(false);
+  const [diffFields, setDiffFields] = useState<Array<{ label: string; before: string; after: string }>>([]);
+  const [pendingSave, setPendingSave] = useState<AllSettings | null>(null);
 
   // Auth guard
   useEffect(() => {
@@ -1304,6 +1407,31 @@ export default function SettingsPage() {
     } catch { /* ignore */ }
   }, []);
 
+  // Load governed settings from server (server is source of truth for policy + execution)
+  useEffect(() => {
+    if (!token) return;
+    dashboardFetch("/v1/company/settings", token)
+      .then(async res => {
+        if (!res.ok) return;
+        const data = await res.json() as {
+          policy_limits?: PolicyLimitSettings | null;
+          execution_settings?: ExecutionSettings | null;
+          last_modified_at?: string | null;
+          last_modified_by?: string | null;
+        };
+        setServerMeta({ last_modified_at: data.last_modified_at, last_modified_by: data.last_modified_by });
+        if (data.policy_limits) {
+          setSettings(p => ({ ...p, policy: { ...p.policy, ...data.policy_limits! } }));
+          prevSettings.current = { ...prevSettings.current, policy: { ...prevSettings.current.policy, ...data.policy_limits! } };
+        }
+        if (data.execution_settings) {
+          setSettings(p => ({ ...p, execution: { ...p.execution, ...data.execution_settings! } }));
+          prevSettings.current = { ...prevSettings.current, execution: { ...prevSettings.current.execution, ...data.execution_settings! } };
+        }
+      })
+      .catch(() => { /* non-critical, fall back to localStorage */ });
+  }, [token]);
+
   // Mark dirty on change
   useEffect(() => {
     if (JSON.stringify(settings) !== JSON.stringify(prevSettings.current)) {
@@ -1317,9 +1445,61 @@ export default function SettingsPage() {
     setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
   }, []);
 
+  const buildDiffFields = useCallback((tab: SettingsTab): Array<{ label: string; before: string; after: string }> => {
+    const prev = prevSettings.current;
+    const curr = settings;
+    const fields: Array<{ label: string; before: string; after: string }> = [];
+    if (tab === "POLICY_LIMITS") {
+      const keys: Array<[keyof PolicyLimitSettings, string]> = [
+        ["confirmed_hedge_ratio", "Confirmed Hedge Ratio"],
+        ["forecast_hedge_ratio", "Forecast Hedge Ratio"],
+        ["min_trade_size_usd", "Min Trade Size (USD)"],
+        ["max_single_trade_usd", "Max Trade Size (USD)"],
+        ["cooling_off_hours", "Cooling-Off (hours)"],
+        ["spread_bps", "Spread (bps)"],
+        ["required_approvals", "Required Approvals"],
+        ["integrity_threshold", "Integrity Threshold"],
+      ];
+      for (const [k, label] of keys) {
+        const b = String(prev.policy[k]);
+        const a = String(curr.policy[k]);
+        fields.push({ label, before: b, after: a });
+      }
+    } else if (tab === "EXECUTION") {
+      const keys: Array<[keyof ExecutionSettings, string]> = [
+        ["default_product", "Default Product"],
+        ["stress_sigma", "Stress Sigma"],
+        ["max_friction_bps", "Max Friction (bps)"],
+        ["auto_submit_below_usd", "Auto-Submit Below (USD)"],
+        ["counterparty_limit_usd", "Counterparty Limit (USD)"],
+      ];
+      for (const [k, label] of keys) {
+        const b = String(prev.execution[k]);
+        const a = String(curr.execution[k]);
+        fields.push({ label, before: b, after: a });
+      }
+    }
+    return fields;
+  }, [settings]);
+
   const handleSave = useCallback(async () => {
+    const isGoverned = activeTab === "POLICY_LIMITS" || activeTab === "EXECUTION";
+    if (isGoverned) {
+      const fields = buildDiffFields(activeTab);
+      const changed = fields.filter(f => f.before !== f.after);
+      if (changed.length === 0) {
+        addToast("success", "No changes to save.");
+        return;
+      }
+      setDiffFields(fields);
+      const snapshot: AllSettings = { ...settings, last_saved: new Date().toISOString() };
+      setPendingSave(snapshot);
+      setShowDiffModal(true);
+      return;
+    }
+    // Non-governed tabs: localStorage only
     setSaving(true);
-    await new Promise(res => setTimeout(res, 300)); // simulate async save
+    await new Promise(res => setTimeout(res, 200));
     const saved: AllSettings = { ...settings, last_saved: new Date().toISOString() };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
@@ -1332,13 +1512,65 @@ export default function SettingsPage() {
         msg: `Settings saved by ${user?.email ?? "unknown"} — tab: ${activeTab}`,
       };
       setChangeLog(p => [entry, ...p].slice(0, 50));
-      addToast("success", "Settings saved successfully.");
+      addToast("success", "Settings saved.");
     } catch {
       addToast("error", "Failed to save settings — localStorage unavailable.");
     } finally {
       setSaving(false);
     }
-  }, [settings, activeTab, user, addToast]);
+  }, [settings, activeTab, user, addToast, buildDiffFields]);
+
+  const handleConfirmGoverned = useCallback(async () => {
+    if (!pendingSave || !token) return;
+    setSaving(true);
+    try {
+      const body: Record<string, unknown> = {};
+      if (activeTab === "POLICY_LIMITS") {
+        body.policy_limits = pendingSave.policy;
+      } else if (activeTab === "EXECUTION") {
+        body.execution_settings = {
+          default_product: pendingSave.execution.default_product,
+          stress_sigma: pendingSave.execution.stress_sigma,
+          max_friction_bps: pendingSave.execution.max_friction_bps,
+          auto_submit_below_usd: pendingSave.execution.auto_submit_below_usd,
+          counterparty_limit_usd: pendingSave.execution.counterparty_limit_usd,
+        };
+      }
+      const res = await dashboardFetch("/v1/company/settings", token, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const detail = (err as { detail?: string }).detail ?? `HTTP ${res.status}`;
+        if (res.status === 403) {
+          addToast("error", `Permission denied: ${detail}`);
+        } else {
+          addToast("error", `Failed to save: ${detail}`);
+        }
+        return;
+      }
+      const saved = await res.json() as { last_modified_at?: string; last_modified_by?: string };
+      setServerMeta({ last_modified_at: saved.last_modified_at, last_modified_by: saved.last_modified_by });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingSave));
+      setSettings(pendingSave);
+      prevSettings.current = pendingSave;
+      setDirty(false);
+      const entry: ChangeEntry = {
+        ts: new Date().toISOString().replace("T", " ").slice(0, 19),
+        tab: activeTab,
+        msg: `Governed settings saved by ${user?.email ?? "unknown"} — tab: ${activeTab} — server-backed ✓`,
+      };
+      setChangeLog(p => [entry, ...p].slice(0, 50));
+      addToast("success", "Governed settings saved and audit-logged.");
+      setShowDiffModal(false);
+      setPendingSave(null);
+    } catch {
+      addToast("error", "Network error saving governed settings.");
+    } finally {
+      setSaving(false);
+    }
+  }, [pendingSave, activeTab, token, user, addToast]);
 
   const handleReset = useCallback(() => {
     setSettings(DEFAULT_SETTINGS);
@@ -1347,8 +1579,8 @@ export default function SettingsPage() {
 
   const TABS: { key: SettingsTab; label: string; badge?: string }[] = [
     { key: "GENERAL",       label: "General" },
-    { key: "POLICY_LIMITS", label: "Policy Limits", badge: "RISK" },
-    { key: "EXECUTION",     label: "Execution",     badge: "EXEC" },
+    { key: "POLICY_LIMITS", label: "Policy Limits", badge: "⊛ GOVERNED" },
+    { key: "EXECUTION",     label: "Execution",     badge: "⊛ GOVERNED" },
     { key: "API_KEYS",      label: "API & Keys",    badge: "KEYS" },
     { key: "NOTIFICATIONS", label: "Notifications" },
     { key: "SECURITY",      label: "Security",      badge: "MFA" },
@@ -1365,6 +1597,13 @@ export default function SettingsPage() {
   return (
     <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, display: "flex" }}>
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+      <DiffPreviewModal
+        open={showDiffModal}
+        fields={diffFields}
+        onConfirm={handleConfirmGoverned}
+        onCancel={() => { setShowDiffModal(false); setPendingSave(null); }}
+        saving={saving}
+      />
       <ToastStack toasts={toasts} />
 
       {/* ── Top bar ── */}
@@ -1506,10 +1745,12 @@ export default function SettingsPage() {
             <GeneralTab      s={settings.org}           set={org =>         setSettings(p => ({ ...p, org }))} />
           )}
           {activeTab === "POLICY_LIMITS" && (
-            <PolicyLimitsTab s={settings.policy}        set={policy =>      setSettings(p => ({ ...p, policy }))} />
+            <PolicyLimitsTab s={settings.policy} set={policy => setSettings(p => ({ ...p, policy }))}
+              lastModifiedAt={serverMeta.last_modified_at} lastModifiedBy={serverMeta.last_modified_by} />
           )}
-          {activeTab === "EXECUTION"     && (
-            <ExecutionTab    s={settings.execution}     set={execution =>   setSettings(p => ({ ...p, execution }))} />
+          {activeTab === "EXECUTION" && (
+            <ExecutionTab s={settings.execution} set={execution => setSettings(p => ({ ...p, execution }))}
+              lastModifiedAt={serverMeta.last_modified_at} lastModifiedBy={serverMeta.last_modified_by} />
           )}
           {activeTab === "API_KEYS"      && (
             <ApiKeysTab      s={settings.api_keys}      set={api_keys =>    setSettings(p => ({ ...p, api_keys }))} />
