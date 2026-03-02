@@ -7,8 +7,10 @@ import { useAuth } from "../../lib/authContext";
 import type { RootState, AppDispatch } from "../../lib/store";
 import {
   sandboxCalculateThunk,
+  sandboxCalculateMultiThunk,
   setXRayOpen,
   setXRayContext,
+  setSelectedPair,
 } from "../../lib/store/slices/pipelineSlice";
 import type { CalculateRequest, PolicyConfig } from "../../api/types";
 
@@ -70,6 +72,15 @@ import WhitepaperExport from "../../components/sandbox/WhitepaperExport";
 import { HedgeGauge } from "../../components/sandbox/VisualizationSuite";
 import AuditEngine from "../../components/sandbox/AuditEngine";
 import { AICommentaryPanel } from "../../components/sandbox/AICommentaryPanel";
+import PairSelector from "../../components/sandbox/PairSelector";
+import AttributionTab from "../../components/sandbox/AttributionTab";
+import LiquidityTab from "../../components/sandbox/LiquidityTab";
+import ConstraintsTab from "../../components/sandbox/ConstraintsTab";
+import ForwardValidationPanel from "../../components/sandbox/ForwardValidationPanel";
+import NettingSummaryPanel from "../../components/sandbox/NettingSummaryPanel";
+import TensorDecompositionPanel from "../../components/sandbox/TensorDecompositionPanel";
+import { getDemoRequest } from "../../constants/demoFixtures";
+import { getPairMeta } from "../../constants/pairRegistry";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const S = {
@@ -89,7 +100,7 @@ const S = {
 } as const;
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
-type SandboxTab = "stress" | "attribution" | "crises" | "whatif" | "regulatory" | "microstructure" | "audit";
+type SandboxTab = "stress" | "attribution" | "crises" | "whatif" | "regulatory" | "microstructure" | "audit" | "v2analytics";
 
 const TABS: Array<{ id: SandboxTab; label: string; icon: string; subtitle: string }> = [
   { id: "stress",          label: "Stress Testing",     icon: "⚡", subtitle: "Scenario P&L · Tornado chart · Historical shocks · CF-VaR" },
@@ -99,6 +110,7 @@ const TABS: Array<{ id: SandboxTab; label: string; icon: string; subtitle: strin
   { id: "regulatory",      label: "Regulatory Capital", icon: "⚖", subtitle: "SA-CCR (BCBS 279) · CVA · ISDA SIMM v2.6 · Leverage Ratio" },
   { id: "microstructure",  label: "Market Structure",   icon: "◎", subtitle: "BIS 2022 spreads · Kyle's λ · Almgren-Chriss execution" },
   { id: "audit",           label: "Audit Report",       icon: "🔐", subtitle: "14-rule compliance engine · Certification · Governance chain" },
+  { id: "v2analytics", label: "V2 Analytics", icon: "⬡", subtitle: "Forward validation · Netting · Attribution · Liquidity · Constraints · Tensor" },
 ];
 
 // ─── Live market data hook ────────────────────────────────────────────────────
@@ -373,6 +385,7 @@ function SandboxPageInner() {
     xrayOpen,
     error,
     decisionPacketMode,
+    selectedPair,
   } = useSelector((s: RootState) => s.pipeline);
 
   const [activeTab, setActiveTab] = useState<SandboxTab>("stress");
@@ -391,8 +404,10 @@ function SandboxPageInner() {
   const primaryCurrency = useMemo(() => {
     const m = sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined;
     const meta = m?.provider_metadata as Record<string, unknown> | undefined;
-    return (meta?.primary_currency as string | undefined) ?? "MXN";
-  }, [sandboxResult]);
+    const fromResult = meta?.primary_currency as string | undefined;
+    if (fromResult) return fromResult;
+    return getPairMeta(selectedPair)?.localCcy ?? "MXN";
+  }, [sandboxResult, selectedPair]);
 
   // Live spot hook
   const { liveSpot, liveStatus, fetchedAt, refreshSpot } = useLiveSpot(primaryCurrency);
@@ -419,6 +434,12 @@ function SandboxPageInner() {
     return Math.min(1.25, hedged / Math.max(exp, 1));
   }, [sandboxResult]);
 
+  const handlePairChange = useCallback((pair: string) => {
+    dispatch(setSelectedPair(pair));
+    const req = getDemoRequest(pair);
+    dispatch(sandboxCalculateMultiThunk({ request: req, pair, token: token ?? undefined }));
+  }, [dispatch, token]);
+
   const handleXRay = useCallback(
     (context: Record<string, unknown>) => {
       dispatch(setXRayContext(context));
@@ -432,9 +453,10 @@ function SandboxPageInner() {
   useEffect(() => {
     if (!autoRanRef.current && !sandboxResult && !sandboxLoading && token) {
       autoRanRef.current = true;
-      dispatch(sandboxCalculateThunk({ request: DEMO_REQUEST, token }));
+      const req = getDemoRequest(selectedPair);
+      dispatch(sandboxCalculateMultiThunk({ request: req, pair: selectedPair, token }));
     }
-  }, [sandboxResult, sandboxLoading, token, dispatch]);
+  }, [sandboxResult, sandboxLoading, token, selectedPair, dispatch]);
 
   // Widget mode
   if (isWidget) {
@@ -497,6 +519,7 @@ function SandboxPageInner() {
         <span style={{ fontFamily: S.fontMono, fontSize: 11, letterSpacing: "0.12em", color: S.tertiary }}>
           SIMULATION LAB
         </span>
+        <PairSelector value={selectedPair} onChange={handlePairChange} />
 
         {/* Live data badge */}
         <DataSourceBadge status={liveStatus} fetchedAt={fetchedAt} />
@@ -560,6 +583,42 @@ function SandboxPageInner() {
           }}>Execution Bridge →</button>
         )}
       </div>
+
+      {/* ── Pair Context Banner ── */}
+      {(() => {
+        const meta = getPairMeta(selectedPair);
+        if (!meta) return null;
+        return (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "4px 16px",
+            borderBottom: `1px solid ${S.soft}`,
+            background: `color-mix(in srgb, ${S.sub} 60%, ${S.panel})`,
+            flexShrink: 0,
+          }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>PAIR</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.cyan }}>{meta.label}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{meta.group}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>·</span>
+            {meta.isNdf ? (
+              <span style={{
+                fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.amber,
+                padding: "1px 6px", border: `1px solid ${S.amber}`, borderRadius: 2,
+                background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
+              }}>NDF CASH-SETTLED</span>
+            ) : (
+              <span style={{
+                fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.green,
+                padding: "1px 6px", border: `1px solid ${S.green}`, borderRadius: 2,
+                background: `color-mix(in srgb, ${S.green} 10%, transparent)`,
+              }}>DELIVERABLE</span>
+            )}
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>Spot fallback: {meta.demoSpot.toLocaleString("en", { maximumFractionDigits: 4, minimumFractionDigits: 2 })}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>ADV: ${meta.adv_mn.toLocaleString()}M</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>1M Vol: {meta.vol1m}%</span>
+          </div>
+        );
+      })()}
 
       {/* ── Main body: 3-column flex ── */}
       <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
@@ -1086,6 +1145,64 @@ function SandboxPageInner() {
                       are indicative only — official RWA computations must use approved internal models or regulator-approved
                       standardised approaches.
                     </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══════════ TAB: V2 ANALYTICS ══════════ */}
+            {activeTab === "v2analytics" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {!sandboxResult && (
+                  <EmptyState type="empty" message="Run a simulation to populate V2 analytics modules" />
+                )}
+                {sandboxResult && v2 && (
+                  <>
+                    <div style={{
+                      padding: "10px 16px", background: `color-mix(in srgb, ${S.cyan} 4%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${S.cyan} 20%, transparent)`, borderRadius: 4,
+                      fontFamily: S.fontMono, fontSize: 11, color: S.secondary,
+                    }}>
+                      <span style={{ color: S.cyan, fontWeight: 700 }}>V2 ANALYTICS ENGINE</span>
+                      {" — "}
+                      {Object.keys(v2).filter(k => (v2 as Record<string, unknown>)[k] != null).length} modules active · Pair: <span style={{ color: S.cyan }}>{selectedPair}</span>
+                    </div>
+                    <div style={{ background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden" }}>
+                      <AttributionTab
+                        navAttribution={v2.nav_attribution as Record<string, unknown> | undefined}
+                        factorCovariance={v2.factor_covariance as Record<string, unknown> | undefined}
+                      />
+                    </div>
+                    <div style={{ background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden" }}>
+                      <LiquidityTab
+                        liquidityResult={v2.liquidity_result as Record<string, unknown> | undefined}
+                        liquidityRegime={v2.liquidity_regime as Record<string, unknown> | undefined}
+                      />
+                    </div>
+                    <div style={{ background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden" }}>
+                      <ConstraintsTab
+                        capitalAdequacy={v2.capital_adequacy as Record<string, unknown> | undefined}
+                        concentration={v2.concentration as Record<string, unknown> | undefined}
+                        marginBreakdown={v2.margin_breakdown as Record<string, unknown> | undefined}
+                        hedgeBands={v2.hedge_bands as Record<string, unknown> | undefined}
+                        transactionCosts={v2.transaction_costs as Record<string, unknown> | undefined}
+                      />
+                    </div>
+                    {v2.forward_validation && (
+                      <div style={{ background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden" }}>
+                        <ForwardValidationPanel forwardValidation={v2.forward_validation as Record<string, unknown>} />
+                      </div>
+                    )}
+                    {v2.currency_netting && (
+                      <div style={{ background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden" }}>
+                        <NettingSummaryPanel currencyNetting={v2.currency_netting as Record<string, unknown>} />
+                      </div>
+                    )}
+                    {v2.tensor_result && (
+                      <div style={{ background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden" }}>
+                        <TensorDecompositionPanel tensorResult={v2.tensor_result as Record<string, unknown>} />
+                      </div>
+                    )}
                   </>
                 )}
               </div>

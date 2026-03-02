@@ -52,6 +52,7 @@ export interface PipelineState {
   xrayContext: Record<string, unknown> | null;
 
   decisionPacketMode: boolean;
+  selectedPair: string;
 
   error: PipelineError | null;
 }
@@ -83,6 +84,7 @@ const initialState: PipelineState = {
   xrayContext: null,
 
   decisionPacketMode: false,
+  selectedPair: "USDMXN",
 
   error: null,
 };
@@ -120,6 +122,20 @@ export const sandboxCalculateThunk = createAsyncThunk(
   ) => {
     try {
       return await pipelineClient.sandboxCalculate(request, token);
+    } catch (err: unknown) {
+      return rejectWithValue(extractError(err));
+    }
+  },
+);
+
+export const sandboxCalculateMultiThunk = createAsyncThunk(
+  "pipeline/sandboxCalculateMulti",
+  async (
+    { request, pair, token }: { request: SandboxCalculateRequest; pair: string; token?: string },
+    { rejectWithValue },
+  ) => {
+    try {
+      return await pipelineClient.sandboxCalculateMulti(request, pair, token);
     } catch (err: unknown) {
       return rejectWithValue(extractError(err));
     }
@@ -291,6 +307,9 @@ const pipelineSlice = createSlice({
     setDecisionPacketMode(state, action: PayloadAction<boolean>) {
       state.decisionPacketMode = action.payload;
     },
+    setSelectedPair: (state, action: PayloadAction<string>) => {
+      state.selectedPair = action.payload;
+    },
     clearError(state) {
       state.error = null;
     },
@@ -314,6 +333,25 @@ const pipelineSlice = createSlice({
         },
       )
       .addCase(sandboxCalculateThunk.rejected, (state, action) => {
+        state.sandboxLoading = false;
+        state.error = action.payload as PipelineError;
+      });
+
+    // ── Sandbox Calculate Multi ───────────────────────────────────────
+    builder
+      .addCase(sandboxCalculateMultiThunk.pending, (state) => {
+        state.sandboxLoading = true;
+        state.error = null;
+      })
+      .addCase(
+        sandboxCalculateMultiThunk.fulfilled,
+        (state, action: PayloadAction<SandboxCalculateResponse>) => {
+          state.sandboxLoading = false;
+          state.sandboxResult = action.payload;
+          state.activeState = "SANDBOX";
+        },
+      )
+      .addCase(sandboxCalculateMultiThunk.rejected, (state, action) => {
         state.sandboxLoading = false;
         state.error = action.payload as PipelineError;
       });
@@ -529,6 +567,7 @@ export const {
   setXRayOpen,
   setXRayContext,
   setDecisionPacketMode,
+  setSelectedPair,
   clearError,
   clearSandboxResult,
 } = pipelineSlice.actions;

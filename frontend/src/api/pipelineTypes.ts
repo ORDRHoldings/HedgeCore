@@ -193,6 +193,7 @@ export interface SandboxCalculateResponse {
   frozen_inputs: Record<string, unknown>;
   run_envelope: unknown;
   v2_results: V2Results;
+  pair?: string;      // Active pair ID, e.g. "EURUSD", "USDMXN"
 }
 
 // ---------------------------------------------------------------------------

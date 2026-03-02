@@ -79,6 +79,8 @@ export interface CalculateRequest {
   policy: PolicyConfig;
   /** Optional: ID of a previously-persisted WORM market snapshot. */
   market_snapshot_id?: string;
+  /** Optional: active currency pair, e.g. "EURUSD", "USDMXN". Passed to multi-currency engine. */
+  pair?: string;
 }
 
 export interface ValidationErrorDetail {
