@@ -48,8 +48,9 @@ class CreditDurationResult:
 def map_credit_duration(
     equity_delta: float,
     policy: dict[str, Any],
-    equity_vol: float = DEFAULT_EQUITY_VOL,
-    credit_vol: float = DEFAULT_CREDIT_VOL,
+    equity_vol: float | None = None,   # None triggers auto-detect from market
+    credit_vol: float | None = None,
+    market: dict[str, Any] | None = None,  # NEW: for vol lookup
 ) -> CreditDurationResult:
     """Map equity exposure to credit spread duration equivalent.
 
@@ -68,6 +69,21 @@ def map_credit_duration(
     -------
     CreditDurationResult
     """
+    # Auto-detect vol from market snapshot when not explicitly provided
+    if equity_vol is None:
+        if market:
+            vol_surface = market.get("vol_surface", {})
+            equity_vol = vol_surface.get("SPX_REALIZED_1M", DEFAULT_EQUITY_VOL)
+        else:
+            equity_vol = DEFAULT_EQUITY_VOL
+
+    if credit_vol is None:
+        if market:
+            vol_surface = market.get("vol_surface", {})
+            credit_vol = vol_surface.get("HYG_SPREAD_VOL", DEFAULT_CREDIT_VOL)
+        else:
+            credit_vol = DEFAULT_CREDIT_VOL
+
     correlation = policy.get("credit_equity_correlation", 0.7)
 
     # Core formula: equity -> credit spread duration

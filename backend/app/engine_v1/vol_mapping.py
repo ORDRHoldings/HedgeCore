@@ -65,8 +65,13 @@ def map_vega_to_vix(
     vix_contract_vega = policy.get("vix_contract_vega", 400.0)
 
     # Front and back month VIX levels
-    vix_front = vol_surface.get("VIX_1M", 18.0)
-    vix_back = vol_surface.get("VIX_3M", 20.0)
+    vix_front = vol_surface.get("VIX_1M", 0.0)
+    vix_back = vol_surface.get("VIX_3M", 0.0)
+
+    if vix_front <= 0:
+        vix_front = 18.0  # institutional fallback when vol surface absent
+    if vix_back <= 0:
+        vix_back = 20.0  # institutional fallback when vol surface absent
 
     # Term structure adjustment: linear interpolation
     # Weight towards back month based on target tenor

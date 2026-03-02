@@ -3,14 +3,13 @@
 Generalizes /v1/calculate to support any of 26 registered currency pairs.
 USDMXN still routes to this endpoint but uses the generic kernel.
 The legacy /v1/calculate endpoint is UNCHANGED.
+
+Updated in Prompt 3 to route through sandbox_calculate_multi() in pipeline_service,
+which runs the full V2 satellite module suite and stores the result for proposal creation.
 """
 from __future__ import annotations
 
-import hashlib
-import json as _json
-import uuid
-from datetime import datetime, timezone
-from typing import Literal
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -18,24 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
 from app.core.security import get_current_user
-from app.engine_v1.kernel_multi import compute_hedge_plan_generic
-from app.engine_v1.normalizer_multi import normalize_hedges_multi, normalize_trades_multi
-from app.engine_v1.pair_registry import PAIR_REGISTRY, get_pair_meta
-from app.engine_v1.scenarios_multi import compute_scenarios_multi
+from app.engine_v1.pair_registry import PAIR_REGISTRY
 from app.models.user import User
-from app.schemas_v1.hedges import MultiCurrencyHedgeRow
-from app.schemas_v1.market import MarketSnapshot
-from app.schemas_v1.policy import PolicyConfig
-from app.schemas_v1.results import (
-    GenericHedgePlan,
-    RunEnvelope,
-    ScenarioResults,
-    TraceLite,
-    TraceEvent,
-    ValidationReport,
-)
-from app.schemas_v1.trades import TradeRow
+from app.schemas_v1.pipeline import SandboxCalculateRequest
 from app.services import rbac_service
+from app.services.pipeline_service import sandbox_calculate_multi
 
 router = APIRouter(prefix="/v1", tags=["v1-calculate-multi"])
 
@@ -51,12 +37,12 @@ class MultiCalculateRequest(BaseModel):
 class MultiCalculateResponse(BaseModel):
     run_id: str
     pair: str
-    local_ccy: str
-    validation_report: ValidationReport
-    hedge_plan: GenericHedgePlan
-    scenario_results: ScenarioResults
-    run_envelope: RunEnvelope
-    trace_lite: TraceLite
+    validation_status: str
+    v2_results: dict[str, Any]
+    waterfall: dict[str, Any] | None = None
+    hedge_plan: dict[str, Any] | None = None
+    scenario_results: dict[str, Any] | None = None
+    run_envelope: dict[str, Any] | None = None
 
 
 @router.post("/calculate/multi", response_model=MultiCalculateResponse)
@@ -66,10 +52,15 @@ async def calculate_multi(
     db: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> MultiCalculateResponse:
-    """Multi-currency hedge plan calculation.
+    """Multi-currency hedge plan calculation routed through the full V2 pipeline.
 
-    Accepts any of 26 registered currency pairs. USDMXN produces results
-    bit-identical to /v1/calculate (verified by regression test suite).
+    Accepts any of 26 registered currency pairs. All V2 satellite modules
+    (margin, liquidity, factor covariance, concentration, capital adequacy, etc.)
+    are executed and returned in v2_results. The run is stored in the sandbox
+    store and can be promoted to a proposal via POST /v1/pipeline/proposals.
+
+    USDMXN delegates to the legacy sandbox_calculate() for bit-identical results.
+    All other pairs use kernel_multi + normalizer_multi + scenarios_multi.
     """
     # RBAC
     if not await rbac_service.user_has_permission(db, current_user.id, "calculate.recommend"):
@@ -82,87 +73,61 @@ async def calculate_multi(
             status_code=422,
             detail=f"Unknown pair {pair!r}. Supported: {sorted(PAIR_REGISTRY.keys())}",
         )
-    meta = get_pair_meta(pair)
 
-    run_id = str(uuid.uuid4())
-    timestamp = datetime.now(timezone.utc)
-    trace_events: list[TraceEvent] = []
+    # Build SandboxCalculateRequest from the multi request fields
+    sandbox_req = SandboxCalculateRequest(
+        trades=request_data.trades,
+        hedges=request_data.hedges,
+        market=request_data.market,
+        policy=request_data.policy,
+    )
 
-    # Parse inputs
     try:
-        trades = [TradeRow(**t) for t in request_data.trades]
-        hedges = [MultiCurrencyHedgeRow(**h) for h in request_data.hedges]
-        market = MarketSnapshot(**request_data.market)
-        policy = PolicyConfig(**request_data.policy)
+        result = sandbox_calculate_multi(str(current_user.id), sandbox_req, pair=pair)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"Input parse error: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Pipeline error: {exc}") from exc
 
-    # Normalize
-    trades_df = normalize_trades_multi(trades)
-    hedges_df = normalize_hedges_multi(hedges)
+    # Serialize sub-components for the response
+    hedge_plan_dict: dict | None = None
+    if result.get("hedge_plan") is not None:
+        try:
+            hedge_plan_dict = result["hedge_plan"].model_dump(mode="json")
+        except Exception:
+            hedge_plan_dict = None
 
-    if trades_df.empty:
-        raise HTTPException(status_code=422, detail="No trades provided")
+    scenario_dict: dict | None = None
+    if result.get("scenario_results") is not None:
+        try:
+            scenario_dict = result["scenario_results"].model_dump(mode="json")
+        except Exception:
+            scenario_dict = None
 
-    # Validation stub — uses same pattern as /v1/calculate but pair-aware
-    validation_report = ValidationReport(status="PASS", errors=[], warnings=[])
+    waterfall_dict: dict | None = None
+    if result.get("waterfall_result") is not None:
+        try:
+            waterfall_dict = result["waterfall_result"].model_dump(mode="json")
+        except Exception:
+            waterfall_dict = None
 
-    # Kernel
-    try:
-        hedge_plan, kernel_events = compute_hedge_plan_generic(
-            trades_df, hedges_df, market, policy, pair=pair
-        )
-        trace_events.extend(kernel_events)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Kernel error: {exc}") from exc
+    envelope_dict: dict | None = None
+    if result.get("run_envelope") is not None:
+        try:
+            envelope_dict = result["run_envelope"].model_dump(mode="json")
+        except Exception:
+            envelope_dict = None
 
-    # Get spot for scenarios
-    if pair == "USDMXN":
-        spot = market.spot_usdmxn
-    else:
-        pairs_attr = getattr(market, "pairs", None) or {}
-        pair_data = pairs_attr.get(pair)
-        spot = pair_data.spot if pair_data else market.spot_usdmxn
-
-    # Scenarios
-    scenario_results = compute_scenarios_multi(hedge_plan.buckets, spot=spot, pair=pair)
-
-    # Audit hashes
-    inputs_raw = _json.dumps(
-        {"pair": pair, "trades": request_data.trades, "hedges": request_data.hedges,
-         "market": request_data.market, "policy": request_data.policy},
-        sort_keys=True, default=str
-    )
-    outputs_raw = _json.dumps(
-        {"hedge_plan": hedge_plan.model_dump(), "scenario_results": scenario_results.model_dump()},
-        sort_keys=True, default=str
-    )
-    inputs_hash = hashlib.sha256(inputs_raw.encode()).hexdigest()
-    outputs_hash = hashlib.sha256(outputs_raw.encode()).hexdigest()
-    run_hash = hashlib.sha256(f"{inputs_hash}{outputs_hash}".encode()).hexdigest()
-
-    run_envelope = RunEnvelope(
-        run_id=run_id,
-        timestamp=timestamp,
-        engine_version="v1_multi/1.0.0",
-        inputs_hash=inputs_hash,
-        outputs_hash=outputs_hash,
-        run_hash=run_hash,
-        trades_hash=hashlib.sha256(_json.dumps(request_data.trades, sort_keys=True, default=str).encode()).hexdigest(),
-        hedges_hash=hashlib.sha256(_json.dumps(request_data.hedges, sort_keys=True, default=str).encode()).hexdigest(),
-        market_hash=hashlib.sha256(_json.dumps(request_data.market, sort_keys=True, default=str).encode()).hexdigest(),
-        policy_hash=hashlib.sha256(_json.dumps(request_data.policy, sort_keys=True, default=str).encode()).hexdigest(),
-    )
-
-    trace_lite = TraceLite(run_id=run_id, events=trace_events)
+    validation_report = result.get("validation_report")
+    validation_status = validation_report.status if validation_report else "UNKNOWN"
 
     return MultiCalculateResponse(
-        run_id=run_id,
+        run_id=result["run_id"],
         pair=pair,
-        local_ccy=meta.local_ccy,
-        validation_report=validation_report,
-        hedge_plan=hedge_plan,
-        scenario_results=scenario_results,
-        run_envelope=run_envelope,
-        trace_lite=trace_lite,
+        validation_status=validation_status,
+        v2_results=result.get("v2_results", {}),
+        waterfall=waterfall_dict,
+        hedge_plan=hedge_plan_dict,
+        scenario_results=scenario_dict,
+        run_envelope=envelope_dict,
     )

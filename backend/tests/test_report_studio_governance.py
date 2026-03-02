@@ -248,7 +248,8 @@ class TestCacheTenantLeakFix:
         assert fn_idx >= 0, "get_run_detail not found in v1_calculate.py"
 
         # Find _run_store.get within that function (after the function def)
-        cache_idx = source.find("_run_store.get(run_id)", fn_idx)
+        # Compound key form: _run_store.get(f"{company_id}:{run_id}") or _run_store.get(run_id)
+        cache_idx = source.find("_run_store.get(", fn_idx)
         assert cache_idx >= 0, "_run_store.get not found in get_run_detail"
 
         # Return the next 700 chars (covers the if-cached block)

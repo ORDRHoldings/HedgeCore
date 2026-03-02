@@ -212,3 +212,6 @@ def compute_hedge_plan_generic(
     )
 
     return GenericHedgePlan(pair=pair, local_ccy=local_ccy, buckets=buckets, summary=summary), trace_events
+
+# Alias for backward compat with pipeline_service imports
+compute_hedge_plan_multi = compute_hedge_plan_generic
