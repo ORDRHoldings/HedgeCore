@@ -60,6 +60,8 @@ from app.middleware.rate_limit import RateLimitMiddleware
 
 from app.middleware.api_key_auth import APIKeyAuthMiddleware
 
+from app.middleware.csrf import CSRFMiddleware
+
 
 
 from app.tasks.audit_cleanup import cleanup_audit_tables
@@ -1354,6 +1356,8 @@ app.add_middleware(
 
 app.add_middleware(APIKeyAuthMiddleware)
 
+# SEC-06: CSRF double-submit cookie protection (skipped when CSRF_DISABLED=1)
+app.add_middleware(CSRFMiddleware)
 
 
 # CORS outermost -- added last so it runs first (intercepts OPTIONS preflight)
