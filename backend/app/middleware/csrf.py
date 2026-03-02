@@ -30,8 +30,9 @@ from starlette.responses import JSONResponse, Response
 
 # Paths that bypass CSRF validation (unauthenticated or token-issuing)
 _CSRF_EXEMPT_PREFIXES = (
-    "/api/v1/auth/",
-    "/auth/",
+    "/api/auth/",       # Auth routes: /api/auth/login, /api/auth/refresh, etc.
+    "/api/v1/auth/",    # Alias if auth ever moves under /v1
+    "/auth/",           # Bare auth prefix
     "/docs",
     "/openapi.json",
     "/redoc",
