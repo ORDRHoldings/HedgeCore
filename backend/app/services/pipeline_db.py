@@ -9,7 +9,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update as sa_update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -143,6 +144,7 @@ def _staging_orm_to_schema(row: StagingORM) -> StagedArtifact:
         integrity_score=row.integrity_score,
         authorization_status=AuthorizationStatus(row.authorization_status),
         required_approvals=row.required_approvals,
+        version=row.version,
         approvals=approvals,
     )
 
@@ -175,14 +177,14 @@ async def save_approval(
     session: AsyncSession,
     staging_id: str,
     approval: ApprovalRecord,
-) -> None:
-    """Save an approval record to a staging artifact."""
+) -> bool:
+    """Save an approval record. Returns False (idempotent) if duplicate exists."""
     result = await session.execute(
         select(StagingORM).where(StagingORM.staging_id == staging_id)
     )
     staging_row = result.scalars().first()
     if not staging_row:
-        return
+        return False
 
     try:
         approver_uuid = uuid.UUID(approval.approver_id)
@@ -199,8 +201,13 @@ async def save_approval(
         comment=approval.comment or "",
         created_at=approval.timestamp,
     )
-    session.add(orm)
-    await session.commit()
+    try:
+        session.add(orm)
+        await session.commit()
+        return True
+    except IntegrityError:
+        await session.rollback()
+        return False
 
 
 async def update_staging_status(
@@ -218,6 +225,28 @@ async def update_staging_status(
         await session.commit()
 
 
+async def update_staging_status_versioned(
+    session: AsyncSession,
+    staging_id: str,
+    status: str,
+    expected_version: int,
+) -> bool:
+    """Optimistic-lock update: only succeeds if current version == expected_version.
+    Returns True if updated, False if version conflict (concurrent modification)."""
+    stmt = (
+        sa_update(StagingORM)
+        .where(
+            StagingORM.staging_id == staging_id,
+            StagingORM.version == expected_version,
+        )
+        .values(authorization_status=status, version=expected_version + 1)
+        .execution_options(synchronize_session="fetch")
+    )
+    result = await session.execute(stmt)
+    await session.commit()
+    return result.rowcount == 1
+
+
 async def load_staging(session: AsyncSession, staging_id: str) -> StagedArtifact | None:
     """Load a StagedArtifact from the database."""
     result = await session.execute(
@@ -231,14 +260,31 @@ async def load_staging(session: AsyncSession, staging_id: str) -> StagedArtifact
     return _staging_orm_to_schema(row)
 
 
-async def load_all_staging(session: AsyncSession) -> list[StagedArtifact]:
-    """Load all staging artifacts."""
-    result = await session.execute(
-        select(StagingORM)
-        .options(selectinload(StagingORM.approvals))
-        .order_by(StagingORM.submitted_at.desc())
-    )
+async def load_all_staging(
+    session: AsyncSession,
+    limit: int = 100,
+    offset: int = 0,
+    status_filter: str | None = None,
+) -> list[StagedArtifact]:
+    """Load staging artifacts with optional status filter and pagination."""
+    q = select(StagingORM).options(selectinload(StagingORM.approvals))
+    if status_filter:
+        q = q.where(StagingORM.authorization_status == status_filter)
+    q = q.order_by(StagingORM.submitted_at.desc()).limit(limit).offset(offset)
+    result = await session.execute(q)
     return [_staging_orm_to_schema(r) for r in result.scalars().all()]
+
+
+async def count_staging(
+    session: AsyncSession,
+    status_filter: str | None = None,
+) -> int:
+    """Count total staging artifacts, optionally filtered by status."""
+    q = select(func.count()).select_from(StagingORM)
+    if status_filter:
+        q = q.where(StagingORM.authorization_status == status_filter)
+    result = await session.execute(q)
+    return result.scalar_one()
 
 
 # ---------------------------------------------------------------------------

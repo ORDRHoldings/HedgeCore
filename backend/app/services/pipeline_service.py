@@ -43,6 +43,7 @@ from app.engine_v1.fx_roll_engine import generate_roll_ladder
 from app.engine_v1.fx_tensor import compute_exposure_tensor
 
 from app.engine_v1.hasher import sha256_of_dict
+from app.models.audit_event import build_audit_event, GENESIS_HASH
 
 from app.engine_v1.hedge_bands import check_hedge_bands
 
@@ -149,6 +150,38 @@ _timelines: dict[str, list[TimelineEvent]] = {}  # entity_id -> events
 
 
 MAX_STORE_SIZE = 100
+
+
+
+async def _emit_pipeline_event(
+    session,
+    entity_id: str,
+    event_tag: str,
+    actor_id: str,
+    description: str,
+    payload: dict,
+) -> None:
+    """Persist a pipeline lifecycle event to the WORM audit_events table."""
+    from app.models.audit_event import AuditEvent
+    try:
+        import uuid as _uuid
+        actor_uuid = _uuid.UUID(actor_id) if actor_id else None
+    except (ValueError, AttributeError):
+        actor_uuid = None
+    event = build_audit_event(
+        event_type="LIFECYCLE",
+        description=description,
+        payload=payload,
+        prev_event_hash=GENESIS_HASH,
+        actor_id=actor_uuid,
+        entity_type="staging_artifact",
+        entity_id=entity_id,
+    )
+    session.add(event)
+    try:
+        await session.commit()
+    except Exception:
+        await session.rollback()
 
 
 
@@ -1330,6 +1363,12 @@ async def submit_to_staging(
 
                   f"Staging artifact created from {proposal_id}")
 
+    await _emit_pipeline_event(
+        session, staging_id, "SUBMITTED", user_id,
+        f"Proposal {proposal_id} submitted to staging",
+        {"staging_id": staging_id, "proposal_id": proposal_id, "integrity_score": artifact.integrity_score},
+    )
+
 
 
     return artifact
@@ -1338,9 +1377,13 @@ async def submit_to_staging(
 
 
 
-async def list_staging(session: AsyncSession) -> list[StagedArtifact]:
-
-    return await pipeline_db.load_all_staging(session)
+async def list_staging(
+    session: AsyncSession,
+    limit: int = 100,
+    offset: int = 0,
+    status_filter: str | None = None,
+) -> list[StagedArtifact]:
+    return await pipeline_db.load_all_staging(session, limit=limit, offset=offset, status_filter=status_filter)
 
 
 
@@ -1371,6 +1414,7 @@ async def authorize_staged(
     """Process an authorization action on a staged artifact."""
 
     artifact = await pipeline_db.load_staging(session, staging_id)
+    artifact_version = getattr(artifact, "version", 0)
 
     if not artifact:
 
@@ -1458,7 +1502,11 @@ async def authorize_staged(
 
     if request.action == ApprovalAction.REJECT:
 
-        await pipeline_db.update_staging_status(session, staging_id, AuthorizationStatus.REJECTED.value)
+        updated = await pipeline_db.update_staging_status_versioned(
+            session, staging_id, AuthorizationStatus.REJECTED.value, artifact_version
+        )
+        if not updated:
+            raise ValueError("CONCURRENT_MODIFICATION: Artifact was modified concurrently. Please reload and retry.")
 
         if proposal:
 
@@ -1466,19 +1514,35 @@ async def authorize_staged(
 
         artifact.authorization_status = AuthorizationStatus.REJECTED
 
+        await _emit_pipeline_event(
+            session, staging_id, "REJECTED", user_id,
+            f"Staging artifact {staging_id} rejected",
+            {"staging_id": staging_id, "action": "REJECT", "comment": request.comment},
+        )
+
         return artifact
 
 
 
     if request.action == ApprovalAction.RETURN:
 
-        await pipeline_db.update_staging_status(session, staging_id, AuthorizationStatus.RETURNED.value)
+        updated = await pipeline_db.update_staging_status_versioned(
+            session, staging_id, AuthorizationStatus.RETURNED.value, artifact_version
+        )
+        if not updated:
+            raise ValueError("CONCURRENT_MODIFICATION: Artifact was modified concurrently. Please reload and retry.")
 
         if proposal:
 
             await pipeline_db.update_proposal_status(session, artifact.proposal_id, ProposalStatus.RETURNED.value)
 
         artifact.authorization_status = AuthorizationStatus.RETURNED
+
+        await _emit_pipeline_event(
+            session, staging_id, "RETURNED", user_id,
+            f"Staging artifact {staging_id} returned",
+            {"staging_id": staging_id, "action": "RETURN", "comment": request.comment},
+        )
 
         return artifact
 
@@ -1496,13 +1560,23 @@ async def authorize_staged(
 
     # All approvals received -- create ledger entry
 
-    await pipeline_db.update_staging_status(session, staging_id, AuthorizationStatus.APPROVED.value)
+    updated = await pipeline_db.update_staging_status_versioned(
+        session, staging_id, AuthorizationStatus.APPROVED.value, artifact_version
+    )
+    if not updated:
+        raise ValueError("CONCURRENT_MODIFICATION: Artifact was modified concurrently. Please reload and retry.")
 
     if proposal:
 
         await pipeline_db.update_proposal_status(session, artifact.proposal_id, ProposalStatus.AUTHORIZED.value)
 
     artifact.authorization_status = AuthorizationStatus.APPROVED
+
+    await _emit_pipeline_event(
+        session, staging_id, "APPROVED", user_id,
+        f"Staging artifact {staging_id} approved",
+        {"staging_id": staging_id, "action": "APPROVE", "comment": request.comment},
+    )
 
 
 
