@@ -172,7 +172,7 @@ ROLE_PERMISSIONS = {
 
     "head_of_risk": [
 
-        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv",
+        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv", "trades.execute",
 
         "hedges.view", "hedges.create", "hedges.edit", "hedges.delete",
 
@@ -202,7 +202,7 @@ ROLE_PERMISSIONS = {
 
     "branch_manager": [
 
-        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv",
+        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv", "trades.execute",
 
         "hedges.view", "hedges.create", "hedges.edit", "hedges.delete",
 
@@ -230,7 +230,7 @@ ROLE_PERMISSIONS = {
 
     "supervisor": [
 
-        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv",
+        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv", "trades.execute",
 
         "hedges.view", "hedges.create", "hedges.edit", "hedges.delete",
 
@@ -260,7 +260,7 @@ ROLE_PERMISSIONS = {
 
     "senior_analyst": [
 
-        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv",
+        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv", "trades.execute",
 
         "hedges.view", "hedges.create", "hedges.edit",
 
@@ -282,7 +282,7 @@ ROLE_PERMISSIONS = {
 
     "risk_analyst": [
 
-        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv",
+        "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv", "trades.execute",
 
         "hedges.view", "hedges.create", "hedges.edit",
 

@@ -183,9 +183,12 @@ export default function PhaseExecute({
           }
         }),
       );
-      const has409 = results.some(r => r.status === "rejected" && (r.reason as { code?: number })?.code === 409);
+      const has409   = results.some(r => r.status === "rejected" && (r.reason as { code?: number })?.code === 409);
       const hasOther = results.some(r => r.status === "rejected" && (r.reason as { code?: number })?.code !== 409);
+      // Team mode: show staging-queue notice and halt
       if (has409 && governanceMode === "team") { setAwaitingApproval(true); setExecuting(false); return; }
+      // Solo mode: proposals must already be APPROVED — 409 means something went wrong upstream
+      if (has409) throw new Error("PROPOSAL_NOT_APPROVED — proposals were not approved before execution. Please restart the pipeline and ensure Solo Mode is active on your company settings.");
       if (hasOther) { const f = results.find(r => r.status === "rejected" && (r.reason as { code?: number })?.code !== 409); throw (f as PromiseRejectedResult).reason; }
       saveTradeHistory({
         id: `TH-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,

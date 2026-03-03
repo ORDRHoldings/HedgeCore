@@ -862,7 +862,7 @@ async def approve_proposal(
     from app.models.organization import Company
     from sqlalchemy import select as _sel
     _co = (await session.execute(_sel(Company).where(Company.id == current_user.company_id))).scalar_one_or_none()
-    _gov_mode = ((_co.settings or {}).get("governance_mode", "team")) if _co else "team"
+    _gov_mode = ((_co.settings or {}).get("governance_mode", "solo")) if _co else "solo"
 
     try:
 
@@ -1615,7 +1615,7 @@ async def batch_propose_and_approve(
     )
     company = company_result.scalar_one_or_none()
     settings = company.settings or {} if company else {}
-    governance_mode = settings.get("governance_mode", "team")
+    governance_mode = settings.get("governance_mode", "solo")
 
     if governance_mode != "solo":
         raise HTTPException(
