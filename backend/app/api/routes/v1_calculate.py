@@ -112,6 +112,8 @@ from app.engine_v1.validator import validate_all
 
 from app.models.calculation_run import CalculationRun
 
+from app.models.position import Position
+
 from app.models.user import User
 
 from app.schemas_v1.hedges import HedgeRow
@@ -190,6 +192,26 @@ class RunListResponse(BaseModel):
 
 # ?? Persist helper ????????????????????????????????????????????????????????????
 
+
+async def _resolve_position_ids(
+    session: AsyncSession,
+    user: Optional[User],
+    trades: list[TradeRow],
+) -> list[str]:
+    """Resolve trade record_ids to Position UUIDs for the run's position_ids field."""
+    if not user or not trades:
+        return []
+    try:
+        record_ids = [t.record_id for t in trades]
+        q = (
+            select(Position.id, Position.record_id)
+            .where(Position.company_id == user.company_id)
+            .where(Position.record_id.in_(record_ids))
+        )
+        rows = list((await session.execute(q)).all())
+        return [str(row.id) for row in rows]
+    except Exception:
+        return []
 
 
 async def _persist_run(
@@ -282,7 +304,7 @@ async def _persist_run(
 
         run_hash           = envelope.run_hash,
 
-        position_ids       = [],   # populated by caller if position IDs are known
+        position_ids       = await _resolve_position_ids(session, user, trades),
 
         run_envelope       = {
 
