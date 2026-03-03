@@ -1,13 +1,11 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { loginAsDemo } from './helpers/auth';
 
 test.describe('Report Export', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/auth/login');
-    await page.fill('[name="email"]', 'demo@demo.com');
-    await page.fill('[name="password"]', 'demo');
-    await page.click('[type="submit"]');
+    await loginAsDemo(page);
   });
 
   test('exports Hedge Plan Report as CSV', async ({ page }) => {

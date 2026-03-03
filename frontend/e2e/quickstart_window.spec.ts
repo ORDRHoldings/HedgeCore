@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginAsDemo } from './helpers/auth';
 
 /**
  * QuickStartWindow E2E tests
@@ -7,21 +8,6 @@ import { test, expect } from '@playwright/test';
  * The window is a right-side drawer that appears on the Dashboard
  * after login when show_quickstart preference is true (default).
  */
-
-const LOGIN_EMAIL = 'demo@demo.com';
-const LOGIN_PASSWORD = 'demo';
-
-async function login(page: import('@playwright/test').Page) {
-  await page.goto('/auth/login');
-  // Try both email field patterns
-  const emailField = page.locator('[name="email"], [type="email"], [placeholder*="email" i]').first();
-  const passwordField = page.locator('[name="password"], [type="password"]').first();
-  await emailField.fill(LOGIN_EMAIL);
-  await passwordField.fill(LOGIN_PASSWORD);
-  await page.locator('[type="submit"], button:has-text("Sign in"), button:has-text("Login"), button:has-text("SIGN IN"), button:has-text("LOG IN")').first().click();
-  // Wait for dashboard
-  await page.waitForURL('**/dashboard', { timeout: 15000 });
-}
 
 async function resetQuickstartPref(page: import('@playwright/test').Page, token: string) {
   // Reset preference via API so window shows again
@@ -48,7 +34,7 @@ test.describe('QuickStartWindow', () => {
   });
 
   test('appears on dashboard after login', async ({ page }) => {
-    await login(page);
+    await loginAsDemo(page);
 
     // The Quick Start Window should be visible
     // Look for the panel's header text or role
@@ -64,7 +50,7 @@ test.describe('QuickStartWindow', () => {
   });
 
   test('contains step workflow items', async ({ page }) => {
-    await login(page);
+    await loginAsDemo(page);
     await page.waitForLoadState('networkidle');
 
     // Should show the 4 workflow steps
@@ -73,7 +59,7 @@ test.describe('QuickStartWindow', () => {
   });
 
   test('close button dismisses window for this session', async ({ page }) => {
-    await login(page);
+    await loginAsDemo(page);
     await page.waitForLoadState('networkidle');
 
     // Find and click close button
@@ -95,7 +81,7 @@ test.describe('QuickStartWindow', () => {
   });
 
   test('dont show again persists preference', async ({ page }) => {
-    await login(page);
+    await loginAsDemo(page);
     await page.waitForLoadState('networkidle');
 
     // Find "Don't show again" toggle/checkbox/button
@@ -125,7 +111,7 @@ test.describe('QuickStartWindow', () => {
   });
 
   test('quick links navigate to correct pages', async ({ page }) => {
-    await login(page);
+    await loginAsDemo(page);
     await page.waitForLoadState('networkidle');
 
     // Look for Position Desk link
@@ -137,7 +123,7 @@ test.describe('QuickStartWindow', () => {
   });
 
   test('ESC key closes the window', async ({ page }) => {
-    await login(page);
+    await loginAsDemo(page);
     await page.waitForLoadState('networkidle');
 
     // Wait for panel to appear
@@ -151,7 +137,7 @@ test.describe('QuickStartWindow', () => {
   });
 
   test('KPI strip shows without errors (empty system)', async ({ page }) => {
-    await login(page);
+    await loginAsDemo(page);
     await page.waitForLoadState('networkidle');
 
     // KPI strip should render even with no data

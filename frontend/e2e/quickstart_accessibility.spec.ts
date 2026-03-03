@@ -1,22 +1,10 @@
 import { test, expect } from '@playwright/test';
-
-const LOGIN_EMAIL = 'demo@demo.com';
-const LOGIN_PASSWORD = 'demo';
-
-async function login(page: import('@playwright/test').Page) {
-  await page.goto('/auth/login');
-  const emailField = page.locator('[name="email"], [type="email"]').first();
-  const passwordField = page.locator('[type="password"]').first();
-  await emailField.fill(LOGIN_EMAIL);
-  await passwordField.fill(LOGIN_PASSWORD);
-  await page.locator('[type="submit"]').first().click();
-  await page.waitForURL('**/dashboard', { timeout: 15000 });
-}
+import { loginAsDemo } from './helpers/auth';
 
 test.describe('QuickStartWindow Accessibility', () => {
 
   test('panel has correct ARIA role', async ({ page }) => {
-    await login(page);
+    await loginAsDemo(page);
     await page.waitForLoadState('networkidle');
 
     const dialog = page.locator('[role="dialog"]').first();
@@ -30,7 +18,7 @@ test.describe('QuickStartWindow Accessibility', () => {
   });
 
   test('close button has aria-label', async ({ page }) => {
-    await login(page);
+    await loginAsDemo(page);
     await page.waitForLoadState('networkidle');
 
     const closeBtn = page.locator('[aria-label="Close Quick Start"]').first();
@@ -41,7 +29,7 @@ test.describe('QuickStartWindow Accessibility', () => {
   });
 
   test('panel does not trap focus (user can tab to main content)', async ({ page }) => {
-    await login(page);
+    await loginAsDemo(page);
     await page.waitForLoadState('networkidle');
 
     // Tab multiple times — should eventually reach elements outside the panel

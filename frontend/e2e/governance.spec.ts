@@ -1,11 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { loginAsDemo } from './helpers/auth';
 
 test.describe('Governance — Audit Trail + Chain Integrity', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/auth/login');
-    await page.fill('[name="email"]', 'demo@demo.com');
-    await page.fill('[name="password"]', 'demo');
-    await page.click('[type="submit"]');
+    await loginAsDemo(page);
   });
 
   test('audit trail loads from backend (not localStorage)', async ({ page }) => {

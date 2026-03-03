@@ -1,16 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { loginAsDemo } from "./helpers/auth";
 
 test.describe("Position Desk — persistence", () => {
   test.beforeEach(async ({ page }) => {
-    // Login as demo user
-    await page.goto("/login");
-    await page.fill(
-      'input[name="email"], input[type="email"], input[placeholder*="email" i], input[placeholder*="username" i]',
-      "demo",
-    );
-    await page.fill('input[name="password"], input[type="password"]', "demo");
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/dashboard|position-desk/, { timeout: 10000 });
+    await loginAsDemo(page);
   });
 
   test("create exposure via New Exposure form — persists after page reload", async ({ page }) => {
