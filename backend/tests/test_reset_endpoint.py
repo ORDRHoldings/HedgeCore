@@ -183,15 +183,14 @@ def test_reset_mxn001_slug_triggers_seed():
 
 
 def test_reset_mxn001_seeds_company_settings():
-    """MXN001 seed company must have MXN as default currency and smb plan_tier."""
-    # We test the settings dict that _seed_mxn001 would create without calling the DB.
-    expected_settings = {
-        "default_currency": "MXN",
-        "plan_tier": "smb",
-        "fiscal_year_start": "January",
-    }
-    assert expected_settings["default_currency"] == "MXN"
-    assert expected_settings["plan_tier"] == "smb"
+    """MXN001 company is 'Pollo Import Co' per tutorial; user is MXN001/senior_analyst."""
+    import inspect
+    from app.api.routes.v1_admin_reset import _seed_mxn001
+    src = inspect.getsource(_seed_mxn001)
+    assert "Pollo Import Co" in src, "Company name must be 'Pollo Import Co' per ORDR-Lite-Tutorial"
+    assert "MXN001" in src, "Terminal ID must be 'MXN001' per tutorial"
+    assert "senior_analyst" in src, "SMB user must have senior_analyst role per tutorial"
+    assert "smb" in src, "plan_tier must be 'smb'"
 
 
 # ---------------------------------------------------------------------------
