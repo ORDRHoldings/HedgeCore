@@ -6,19 +6,20 @@
 
 @layer base {
   :root {
-    --bg-deep: #09090E;
-    --bg-sub: #111520;
-    --bg-panel: #0D1017;
-    --border-rim: #1A1F30;
-    --border-soft: #222A3F;
+    /* ── Light Alabaster Palette ── */
+    --bg-deep: #F8FAFC;
+    --bg-sub: #F1F5F9;
+    --bg-panel: #FFFFFF;
+    --border-rim: #E2E8F0;
+    --border-soft: #CBD5E1;
     --accent-cyan: #1C62F2;
-    --accent-indigo: #5BA3F5;
-    --accent-amber: #F0A830;
-    --accent-red: #FF4B6A;
-    --accent-green: #00C896;
-    --text-primary: #C8D4EA;
-    --text-secondary: #6A7A98;
-    --text-tertiary: #3A4460;
+    --accent-indigo: #4F46E5;
+    --accent-amber: #D97706;
+    --accent-red: #DC2626;
+    --accent-green: #059669;
+    --text-primary: #0F172A;
+    --text-secondary: #334155;
+    --text-tertiary: #94A3B8;
     --font-heading: 'Manrope', sans-serif;
     --font-ui: 'Inter', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -38,7 +39,7 @@
     --text-2xl:  1.25rem;     /* 20px */
 
     /* ══════════════════════════════════════════════════════════
-       Terminal Design System (Bloomberg/Aladdin Architecture)
+       Terminal Design System — Light Institutional Theme
        ══════════════════════════════════════════════════════════ */
 
     /* Typography */
@@ -53,23 +54,23 @@
     --terminal-space-6: 24px;
     --terminal-space-8: 32px;
 
-    /* Colors - Dark Institutional Theme */
-    --terminal-bg: #0A0E12;
-    --terminal-topbar-bg: #141821;
-    --terminal-rail-bg: #0F1419;
-    --terminal-workspace-bg: #0A0E12;
-    --terminal-panel-bg: #141821;
-    --terminal-border: #1E2835;
-    --terminal-hover-bg: #1A202C;
+    /* Colors - Light Institutional Theme */
+    --terminal-bg: #F8FAFC;
+    --terminal-topbar-bg: #FFFFFF;
+    --terminal-rail-bg: #F1F5F9;
+    --terminal-workspace-bg: #F8FAFC;
+    --terminal-panel-bg: #FFFFFF;
+    --terminal-border: #E2E8F0;
+    --terminal-hover-bg: #EFF6FF;
 
-    --terminal-text-primary: #E8EDF4;
-    --terminal-text-secondary: #8A94A6;
-    --terminal-text-tertiary: #4A5568;
+    --terminal-text-primary: #0F172A;
+    --terminal-text-secondary: #334155;
+    --terminal-text-tertiary: #94A3B8;
 
-    --terminal-accent: #3B82F6;
-    --terminal-success: #10B981;
-    --terminal-warning: #F59E0B;
-    --terminal-danger: #EF4444;
+    --terminal-accent: #1C62F2;
+    --terminal-success: #059669;
+    --terminal-warning: #D97706;
+    --terminal-danger: #DC2626;
 
     /* Dimensions */
     --terminal-row-height: 24px;
@@ -80,18 +81,18 @@
     --terminal-rightrail-width: 360px;
 
     /* Pipeline state colors */
-    --state-sandbox-bg: #141825;
-    --state-sandbox-border: #2D3554;
-    --state-staging-bg: #1A1506;
-    --state-staging-border: #F0A830;
-    --state-ledger-bg: #091220;
-    --state-ledger-border: #3B8EEA;
+    --state-sandbox-bg: #F1F5F9;
+    --state-sandbox-border: #94A3B8;
+    --state-staging-bg: #FFFBEB;
+    --state-staging-border: #D97706;
+    --state-ledger-bg: #EFF6FF;
+    --state-ledger-border: #1C62F2;
 
     /* Status semantic */
-    --status-pass: #00C896;
-    --status-fail: #FF4B6A;
-    --status-warn: #F0A830;
-    --status-pending: #6A7A98;
+    --status-pass: #059669;
+    --status-fail: #DC2626;
+    --status-warn: #D97706;
+    --status-pending: #94A3B8;
 
     /* Depth layers */
     --z-drawer: 50;
