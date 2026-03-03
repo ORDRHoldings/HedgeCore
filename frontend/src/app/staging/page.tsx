@@ -12,6 +12,131 @@ import HelpPanel from "@/components/layout/HelpPanel";
 import { STAGING_HELP } from "@/lib/helpContent";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
+// ── Execution Proposals panel (new hedge-desk workflow) ───────────────────────
+interface ExecProposal {
+  id: string;
+  status: string;
+  position_id: string;
+  execution_ref: string;
+  hedge_amount: number | null;
+  hedge_rate: number | null;
+  proposed_by_email: string | null;
+  proposed_at: string | null;
+  run_id: string | null;
+}
+
+function ExecutionProposalsPanel({ token }: { token: string }) {
+  const router = useRouter();
+  const [proposals, setProposals] = useState<ExecProposal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [approving, setApproving] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await dashboardFetch("/v1/proposals/pending?limit=50", token);
+      if (res.ok) {
+        const data = await res.json() as ExecProposal[];
+        setProposals(data);
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleApprove = async (id: string) => {
+    setApproving(id);
+    try {
+      const res = await dashboardFetch(`/v1/proposals/${id}/approve`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ notes: "Approved via staging queue" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { detail?: string };
+        setToast(err.detail ?? `HTTP ${res.status}`);
+        setTimeout(() => setToast(null), 4000);
+      } else {
+        await load();
+      }
+    } finally {
+      setApproving(null);
+    }
+  };
+
+  if (loading) return null;
+  if (proposals.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      {toast && (
+        <div style={{ padding: "8px 14px", background: "color-mix(in srgb,var(--accent-red) 8%,transparent)", border: "1px solid var(--accent-red)", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 11, color: "var(--accent-red)", marginBottom: 8 }}>
+          {toast}
+        </div>
+      )}
+      <div style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 9, letterSpacing: "0.08em", color: "var(--accent-amber)", marginBottom: 8, textTransform: "uppercase" as const }}>
+        ⚑ {proposals.length} EXECUTION PROPOSAL{proposals.length !== 1 ? "S" : ""} AWAITING CHECKER APPROVAL
+      </div>
+      <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border-rim)" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" as const }}>
+          <thead>
+            <tr style={{ background: "var(--bg-sub)" }}>
+              {["PROPOSAL ID", "POSITION", "EXECUTION REF", "AMOUNT USD", "RATE", "PROPOSED BY", "AGE", "ACTION"].map(h => (
+                <th key={h} style={{ padding: "7px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 9, letterSpacing: "0.07em", color: "var(--text-tertiary)", textAlign: "left" as const, borderBottom: "1px solid var(--border-rim)" }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {proposals.map((p, i) => (
+              <tr key={p.id} style={{ borderBottom: i < proposals.length - 1 ? "1px solid var(--border-soft)" : "none" }}>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, color: "var(--accent-cyan)" }}>
+                  {p.id.slice(0, 8)}…
+                </td>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10 }}>
+                  {p.position_id.slice(0, 8)}…
+                </td>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10 }}>
+                  {p.execution_ref || "—"}
+                </td>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10 }}>
+                  {p.hedge_amount != null ? `$${Math.round(p.hedge_amount).toLocaleString()}` : "—"}
+                </td>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10 }}>
+                  {p.hedge_rate != null ? p.hedge_rate.toFixed(4) : "—"}
+                </td>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, color: "var(--text-secondary)" }}>
+                  {p.proposed_by_email || "—"}
+                </td>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, color: "var(--text-secondary)" }}>
+                  {p.proposed_at ? (() => { const d = Date.now() - new Date(p.proposed_at).getTime(); const m = Math.floor(d/60000); return m < 60 ? `${m}m` : `${Math.floor(m/60)}h`; })() : "—"}
+                </td>
+                <td style={{ padding: "8px 12px", textAlign: "right" as const }}>
+                  <button
+                    onClick={() => handleApprove(p.id)}
+                    disabled={approving === p.id}
+                    style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 9, letterSpacing: "0.07em", fontWeight: 700, padding: "4px 12px", background: approving === p.id ? "var(--text-tertiary)" : "var(--status-pass,#22c55e)", color: "var(--bg-deep)", border: "none", cursor: approving === p.id ? "not-allowed" : "pointer" }}
+                  >
+                    {approving === p.id ? "…" : "APPROVE ✓"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ marginTop: 6, fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 9, color: "var(--text-tertiary)" }}>
+        After approving, return to the Execution Desk to complete the trade.
+      </div>
+    </div>
+  );
+}
+
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -321,6 +446,9 @@ export default function StagingListPage() {
 
       {/* ── Content ── */}
       <div style={{ flex: 1, padding: "16px 20px", maxWidth: 1440, width: "100%", margin: "0 auto" }}>
+
+        {/* Execution proposals panel (new hedge-desk workflow) */}
+        {token && <ExecutionProposalsPanel token={token} />}
 
         {/* Error banner */}
         {error && (
