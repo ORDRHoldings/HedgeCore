@@ -241,6 +241,13 @@ async def risk_check(
                 if worst_net_pnl is None or v < worst_net_pnl:
                     worst_net_pnl = v
 
+        # Compute hedge effectiveness ratio from hedge plan summary
+        total_exposure = float(hp_summary.get("total_commercial_exposure_mxn", 0.0) or 0.0)
+        total_hedge    = float(hp_summary.get("total_hedge_position_mxn", 0.0) or 0.0)
+        eff_ratio: Optional[float] = (
+            abs(total_hedge / total_exposure) if total_exposure != 0 else 1.0
+        )
+
         return {
             "sized_hedges": sized_hedges,
             "costs": {"total": friction_usd},
@@ -249,7 +256,7 @@ async def risk_check(
                     "net_pnl_usd": worst_net_pnl if worst_net_pnl is not None else 0.0,
                     "scenario_id": None,
                 },
-                "hedge_effectiveness": {"min": None},
+                "hedge_effectiveness": {"min": eff_ratio},
             },
             "rejections": {},
         }
