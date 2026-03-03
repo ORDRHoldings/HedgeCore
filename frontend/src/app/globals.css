@@ -6,19 +6,19 @@
 
 @layer base {
   :root {
-    --bg-deep: #F7F9FC;
-    --bg-sub: #F1F4F8;
-    --bg-panel: #FFFFFF;
-    --border-rim: #D8DEE6;
-    --border-soft: #E6EBF1;
-    --accent-cyan: #1E3A8A;
-    --accent-indigo: #3B51A3;
-    --accent-amber: #B45309;
-    --accent-red: #B91C1C;
-    --accent-green: #15803D;
-    --text-primary: #1B2430;
-    --text-secondary: #5C6773;
-    --text-tertiary: #6B7280;
+    --bg-deep: #09090E;
+    --bg-sub: #111520;
+    --bg-panel: #0D1017;
+    --border-rim: #1A1F30;
+    --border-soft: #222A3F;
+    --accent-cyan: #3B8EEA;
+    --accent-indigo: #5BA3F5;
+    --accent-amber: #F0A830;
+    --accent-red: #FF4B6A;
+    --accent-green: #00C896;
+    --text-primary: #C8D4EA;
+    --text-secondary: #6A7A98;
+    --text-tertiary: #3A4460;
     --font-heading: 'Manrope', sans-serif;
     --font-ui: 'Inter', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
@@ -80,18 +80,18 @@
     --terminal-rightrail-width: 360px;
 
     /* Pipeline state colors */
-    --state-sandbox-bg: #F3F4F6;
-    --state-sandbox-border: #9CA3AF;
-    --state-staging-bg: #FFFBEB;
-    --state-staging-border: #D97706;
-    --state-ledger-bg: #EFF6FF;
-    --state-ledger-border: #1E3A8A;
+    --state-sandbox-bg: #141825;
+    --state-sandbox-border: #2D3554;
+    --state-staging-bg: #1A1506;
+    --state-staging-border: #F0A830;
+    --state-ledger-bg: #091220;
+    --state-ledger-border: #3B8EEA;
 
     /* Status semantic */
-    --status-pass: #15803D;
-    --status-fail: #B91C1C;
-    --status-warn: #B45309;
-    --status-pending: #6B7280;
+    --status-pass: #00C896;
+    --status-fail: #FF4B6A;
+    --status-warn: #F0A830;
+    --status-pending: #6A7A98;
 
     /* Depth layers */
     --z-drawer: 50;
