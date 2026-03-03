@@ -171,10 +171,21 @@ async def propose_execution(
     Position must be in READY_TO_EXECUTE state.
     At most one active (PROPOSED|APPROVED) proposal allowed per position.
     """
-    # Guard: position must be ready
+    # Guard: position must be ready (or auto-advance from POLICY_ASSIGNED when run_id present)
     pos = await session.get(Position, position_id)
     if not pos or pos.company_id != user.company_id:
         raise ValueError("Position not found")
+    if pos.execution_status == "POLICY_ASSIGNED" and run_id:
+        # Auto-transition: creating a proposal with a run_id IS the declaration that
+        # the position is ready to execute. Transition inline rather than requiring a
+        # separate PATCH /v1/positions/{id}/ready call.
+        pos.execution_status = "READY_TO_EXECUTE"
+        pos.last_run_id = run_id
+        if hedge_amount is not None:
+            pos.hedge_amount = hedge_amount  # type: ignore[assignment]
+        if hedge_rate is not None:
+            pos.hedge_rate = hedge_rate      # type: ignore[assignment]
+        await session.flush()
     if pos.execution_status != "READY_TO_EXECUTE":
         raise ValueError(
             f"Position must be READY_TO_EXECUTE to propose execution. "
