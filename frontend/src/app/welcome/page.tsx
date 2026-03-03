@@ -1,109 +1,66 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
-import { useParticleField } from "@/lib/hooks/useParticleField";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import {
-  Shield, Activity, Calculator, FileCheck, Link2, BarChart3,
-  Globe, Lock, CheckCircle2, ArrowRight,
-} from "lucide-react";
+import { ArrowRight, Globe, Shield, Calculator, FileCheck } from "lucide-react";
 
+/* ── Design tokens — matches globals.css dark terminal theme ─────────────── */
 const T = {
-  bgDeep:   "#09090E",
-  bgPanel:  "#0D1017",
-  bgSub:    "#111520",
+  bg:       "#09090E",
+  panel:    "#0D1017",
+  sub:      "#111520",
   rim:      "#1A1F30",
   soft:     "#222A3F",
-  cyan:     "#3B8EEA",
-  cyanDim:  "rgba(59,142,234,0.10)",
-  cyanBdr:  "rgba(59,142,234,0.22)",
-  amber:    "#F0A830",
+  blue:     "#1C62F2",
+  blueDim:  "rgba(28,98,242,0.08)",
+  blueBdr:  "rgba(28,98,242,0.20)",
   green:    "#00C896",
-  red:      "#FF4B6A",
+  amber:    "#F0A830",
   primary:  "#C8D4EA",
   secondary:"#6A7A98",
-  tertiary: "#3A4460",
+  muted:    "#3A4460",
   mono:     "'IBM Plex Mono','JetBrains Mono',monospace",
   ui:       "'IBM Plex Sans','Inter',sans-serif",
+  head:     "'Manrope','IBM Plex Sans',sans-serif",
 } as const;
 
-const WORKFLOW_STEPS = [
-  { icon: Globe,       num: "01", title: "EXPOSE",    desc: "Register multi-currency FX exposures across entities" },
-  { icon: Shield,      num: "02", title: "POLICY",    desc: "Apply governance hedge policies & ratio limits" },
-  { icon: Calculator,  num: "03", title: "CALCULATE", desc: "Deterministic engine — reproducible, auditable" },
-  { icon: FileCheck,   num: "04", title: "EXECUTE",   desc: "4-eyes approval & hash-chained ledger commit" },
-];
+const STEPS = [
+  { icon: Globe,       code: "01", name: "EXPOSE",    note: "Register multi-currency FX exposures" },
+  { icon: Shield,      code: "02", name: "POLICY",    note: "Assign governance hedge policies" },
+  { icon: Calculator,  code: "03", name: "CALCULATE", note: "Run deterministic hedge engine" },
+  { icon: FileCheck,   code: "04", name: "EXECUTE",   note: "4-eyes approval & ledger commit" },
+] as const;
 
 export default function WelcomePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, user, token } = useAuth();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [ready,        setReady]       = useState(false);
-  const [displayName,  setDisplayName] = useState("");
-  const [cursorOn,     setCursorOn]    = useState(true);
-  const [typeDone,     setTypeDone]    = useState(false);
-  const [healthOk,     setHealthOk]    = useState<boolean | null>(null);
-  const [skipChecked,  setSkipChecked] = useState(false);
-  const [nowStr,       setNowStr]      = useState("");
-  const [mounted,      setMounted]     = useState(false);
-  const [activeStep,   setActiveStep]  = useState<number | null>(null);
+  const [ready,       setReady]       = useState(false);
+  const [skipChecked, setSkipChecked] = useState(false);
+  const [healthOk,    setHealthOk]    = useState<boolean | null>(null);
+  const [hovStep,     setHovStep]     = useState<number | null>(null);
+  const [hovBtn,      setHovBtn]      = useState(false);
 
-  useParticleField(canvasRef);
+  useEffect(() => { setReady(true); }, []);
 
-  useEffect(() => { setReady(true); setMounted(true); }, []);
-
-  // Clock
-  useEffect(() => {
-    function fmt() {
-      const d = new Date();
-      const date = d.toISOString().slice(0, 10);
-      const hh   = String(d.getUTCHours()).padStart(2, "0");
-      const mm   = String(d.getUTCMinutes()).padStart(2, "0");
-      setNowStr(`${date}  ${hh}:${mm} UTC`);
-    }
-    fmt();
-    const iv = setInterval(fmt, 30_000);
-    return () => clearInterval(iv);
-  }, []);
-
-  // Auth guard
   useEffect(() => {
     if (ready && !isLoading && !isAuthenticated) router.replace("/auth/login");
   }, [ready, isLoading, isAuthenticated, router]);
 
-  // Skip redirect
   useEffect(() => {
     if (!user) return;
-    if (localStorage.getItem(`welcome_skipped_${user.id}`) === "true") router.replace("/dashboard");
+    if (localStorage.getItem(`welcome_skipped_${user.id}`) === "true") {
+      router.replace("/dashboard");
+    }
   }, [user, router]);
 
-  // Typewriter
-  useEffect(() => {
-    if (!user?.full_name) return;
-    const name = user.full_name.toUpperCase();
-    let i = 0;
-    const iv = setInterval(() => {
-      i++;
-      setDisplayName(name.slice(0, i));
-      if (i >= name.length) { clearInterval(iv); setTimeout(() => setTypeDone(true), 300); }
-    }, 70);
-    return () => clearInterval(iv);
-  }, [user?.full_name]);
-
-  // Cursor blink
-  useEffect(() => {
-    if (!typeDone) return;
-    const iv = setInterval(() => setCursorOn(p => !p), 530);
-    return () => clearInterval(iv);
-  }, [typeDone]);
-
-  // Health check
   useEffect(() => {
     if (!token) return;
-    dashboardFetch("/health", token).then(r => setHealthOk(r.ok)).catch(() => setHealthOk(false));
+    dashboardFetch("/health", token)
+      .then(r => setHealthOk(r.ok))
+      .catch(() => setHealthOk(false));
   }, [token]);
 
   const handleLaunch = useCallback(() => {
@@ -123,328 +80,226 @@ export default function WelcomePage() {
   if (!ready || isLoading) {
     return (
       <div style={{
-        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        background: T.bgDeep, fontFamily: T.mono, fontSize: 11, color: T.tertiary,
-        letterSpacing: "0.2em",
+        height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: T.bg, fontFamily: T.mono, fontSize: 11,
+        color: T.muted, letterSpacing: "0.18em",
       }}>
-        INITIALIZING SESSION…
+        LOADING SESSION…
       </div>
     );
   }
   if (!isAuthenticated || !user || !token) return null;
 
-  const isSMB    = user.plan_tier === "smb";
-  const role     = (user.roles?.[0] ?? "analyst").replace(/_/g, " ").toUpperCase();
-  const company  = user.company?.name?.toUpperCase() ?? "ORDR";
-  const permCount = user.permissions?.length ?? 0;
-
-  const statusRows = [
-    {
-      label: "PLATFORM",
-      value: healthOk === null ? "CHECKING…" : healthOk ? "OPERATIONAL" : "DEGRADED",
-      dot:   healthOk === null ? T.tertiary  : healthOk ? T.green : T.amber,
-    },
-    { label: "AUTHORITY",  value: role,                              dot: T.cyan  },
-    { label: "PROFILE",    value: isSMB ? "SMB PLAN" : "ENTERPRISE", dot: T.cyan  },
-    { label: "SCOPE",      value: company,                           dot: T.tertiary },
-    { label: "PERMISSIONS", value: `${permCount} GRANTS`,            dot: T.tertiary },
-  ];
-
-  const secBadges = [
-    { icon: Lock,         label: "AES-256"        },
-    { icon: Link2,        label: "HASH-CHAINED"   },
-    { icon: Shield,       label: "RBAC"            },
-    { icon: CheckCircle2, label: "4-EYES APPROVAL" },
-    { icon: BarChart3,    label: "AUDIT TRAIL"     },
-    { icon: Activity,     label: "LIVE ENGINE"     },
-  ];
+  const role    = (user.roles?.[0] ?? "analyst").replace(/_/g, " ").toUpperCase();
+  const name    = (user.full_name ?? user.email ?? "").toUpperCase();
+  const company = (user.company?.name ?? "").toUpperCase();
+  const plan    = (user.plan_tier ?? "enterprise").toUpperCase();
 
   return (
     <div style={{
-      height: "100vh", display: "flex", flexDirection: "column",
-      background: T.bgDeep, fontFamily: T.ui, color: T.primary,
-      overflow: "hidden",
+      minHeight: "100vh",
+      background: T.bg,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: T.ui,
+      padding: "32px 20px",
     }}>
-      {/* Particle canvas */}
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: "fixed", inset: 0, width: "100%", height: "100%",
-          zIndex: 0, opacity: 0.18, pointerEvents: "none",
-        }}
-      />
 
-      {/* ── Top strip ────────────────────────────────────────────────────────── */}
+      {/* ── Card ─────────────────────────────────────────────────────────── */}
       <div style={{
-        height: 44, flexShrink: 0, zIndex: 1,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 28px", background: T.bgPanel,
-        borderBottom: `1px solid ${T.rim}`,
-      }}>
-        <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 700, color: T.cyan, letterSpacing: "0.25em" }}>
-          ⬡ ORDR TERMINAL
-        </span>
-        <span style={{ fontFamily: T.mono, fontSize: 9, color: T.tertiary, letterSpacing: "0.1em" }}>
-          {nowStr}
-        </span>
-      </div>
-
-      {/* ── Main body ────────────────────────────────────────────────────────── */}
-      <div style={{
-        flex: 1, display: "flex", overflow: "hidden", zIndex: 1,
-        opacity: mounted ? 1 : 0,
-        transition: "opacity 0.5s ease",
+        width: "100%",
+        maxWidth: 480,
+        background: T.panel,
+        border: `1px solid ${T.rim}`,
+        borderRadius: 4,
+        overflow: "hidden",
       }}>
 
-        {/* ─ Left panel ───────────────────────────────────────────────────── */}
+        {/* Card header bar */}
         <div style={{
-          width: "38%", flexShrink: 0,
-          borderRight: `1px solid ${T.rim}`,
-          display: "flex", flexDirection: "column",
-          padding: "44px 40px 32px",
-          overflowY: "auto",
+          padding: "16px 28px",
+          borderBottom: `1px solid ${T.rim}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}>
-          {/* Session label */}
-          <div style={{
-            fontFamily: T.mono, fontSize: 8, letterSpacing: "0.22em",
-            color: T.tertiary, marginBottom: 20,
+          <span style={{
+            fontFamily: T.mono, fontSize: 11, fontWeight: 700,
+            color: T.blue, letterSpacing: "0.22em",
           }}>
-            TERMINAL SESSION INITIALIZED
-          </div>
-
-          {/* Name + cursor */}
-          <div style={{
-            fontFamily: T.mono, fontSize: 26, fontWeight: 700,
-            color: T.primary, letterSpacing: "0.04em", lineHeight: 1.15,
-            minHeight: 60, display: "flex", alignItems: "center", gap: 4,
-          }}>
-            <span>{displayName}</span>
+            ⬡ ORDR
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{
-              display: "inline-block", width: 2, height: "0.75em",
-              background: T.cyan,
-              opacity: typeDone ? (cursorOn ? 1 : 0) : 1,
-              transition: "opacity 80ms",
+              width: 5, height: 5, borderRadius: "50%",
+              background: healthOk === null ? T.muted : healthOk ? T.green : T.amber,
+              display: "inline-block",
+              boxShadow: healthOk ? `0 0 6px ${T.green}60` : "none",
             }} />
-          </div>
-
-          {/* Role badge + company */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 16 }}>
             <span style={{
-              fontFamily: T.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
-              color: T.cyan, background: T.cyanDim,
-              border: `1px solid ${T.cyanBdr}`,
-              padding: "3px 10px", borderRadius: 2,
+              fontFamily: T.mono, fontSize: 8, letterSpacing: "0.14em",
+              color: T.muted,
             }}>
-              {role}
+              {healthOk === null ? "CHECKING" : healthOk ? "OPERATIONAL" : "DEGRADED"}
             </span>
-            <span style={{ fontFamily: T.mono, fontSize: 9, color: T.secondary, letterSpacing: "0.06em" }}>
-              {company}
-            </span>
-          </div>
-
-          {/* Divider */}
-          <div style={{ height: 1, background: T.rim, margin: "32px 0" }} />
-
-          {/* Status rows */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-            {statusRows.map((row, i) => (
-              <div key={i} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "11px 0",
-                borderBottom: i < statusRows.length - 1 ? `1px solid ${T.rim}` : "none",
-              }}>
-                <span style={{ fontFamily: T.mono, fontSize: 8, letterSpacing: "0.15em", color: T.tertiary }}>
-                  {row.label}
-                </span>
-                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                  <span style={{
-                    width: 5, height: 5, borderRadius: "50%",
-                    background: row.dot, flexShrink: 0,
-                    boxShadow: `0 0 6px ${row.dot}80`,
-                  }} />
-                  <span style={{ fontFamily: T.mono, fontSize: 10, color: T.primary, letterSpacing: "0.06em" }}>
-                    {row.value}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Spacer */}
-          <div style={{ flex: 1 }} />
-
-          {/* Security badges */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 32 }}>
-            {secBadges.map(b => (
-              <span key={b.label} style={{
-                display: "inline-flex", alignItems: "center", gap: 4,
-                fontFamily: T.mono, fontSize: 7, letterSpacing: "0.1em",
-                color: T.tertiary, border: `1px solid ${T.rim}`,
-                padding: "3px 7px", borderRadius: 2,
-              }}>
-                <b.icon size={8} strokeWidth={1.5} />
-                {b.label}
-              </span>
-            ))}
           </div>
         </div>
 
-        {/* ─ Right panel ──────────────────────────────────────────────────── */}
-        <div style={{
-          flex: 1, display: "flex", flexDirection: "column",
-          padding: "44px 52px 32px",
-          overflowY: "auto",
-        }}>
-          {/* Workflow header */}
+        {/* Identity section */}
+        <div style={{ padding: "32px 28px 28px" }}>
           <div style={{
-            fontFamily: T.mono, fontSize: 8, letterSpacing: "0.22em",
-            color: T.tertiary, marginBottom: 32,
+            fontFamily: T.mono, fontSize: 8,
+            color: T.muted, letterSpacing: "0.18em", marginBottom: 10,
           }}>
-            {isSMB ? "HEDGE WORKFLOW" : "INSTITUTIONAL WORKFLOW"}
+            SESSION INITIALIZED
           </div>
 
-          {/* Steps */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
-            {WORKFLOW_STEPS.map((step, idx) => {
-              const Icon = step.icon;
-              const isActive = activeStep === idx;
-              return (
-                <div
-                  key={step.num}
-                  onMouseEnter={() => setActiveStep(idx)}
-                  onMouseLeave={() => setActiveStep(null)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 24,
-                    padding: "20px 22px",
-                    background: isActive ? T.cyanDim : "transparent",
-                    borderLeft: `2px solid ${isActive ? T.cyan : T.rim}`,
-                    borderRadius: "0 3px 3px 0",
-                    cursor: "default",
-                    opacity: mounted ? 1 : 0,
-                    transform: mounted ? "translateX(0)" : "translateX(-12px)",
-                    transition: `opacity 0.5s ease ${idx * 80}ms, transform 0.5s ease ${idx * 80}ms, background 120ms, border-color 120ms`,
-                  }}
-                >
-                  {/* Big faint step number */}
+          <div style={{
+            fontFamily: T.head, fontSize: 22, fontWeight: 700,
+            color: T.primary, letterSpacing: "-0.01em",
+            lineHeight: 1.2, marginBottom: 12,
+          }}>
+            Welcome back
+            {name ? `, ${name.split(" ")[0]}` : ""}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{
+              fontFamily: T.mono, fontSize: 9, fontWeight: 600,
+              letterSpacing: "0.1em", color: T.blue,
+              background: T.blueDim, border: `1px solid ${T.blueBdr}`,
+              padding: "2px 9px", borderRadius: 2,
+            }}>
+              {role}
+            </span>
+            {company && (
+              <span style={{
+                fontFamily: T.mono, fontSize: 9, color: T.secondary,
+                letterSpacing: "0.06em",
+              }}>
+                {company}
+              </span>
+            )}
+            <span style={{
+              fontFamily: T.mono, fontSize: 9, color: T.muted,
+              letterSpacing: "0.06em",
+            }}>
+              {plan}
+            </span>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: T.rim, margin: "0 0" }} />
+
+        {/* Workflow steps */}
+        <div style={{ padding: "8px 0" }}>
+          {STEPS.map((s, i) => {
+            const Icon = s.icon;
+            const hov  = hovStep === i;
+            return (
+              <div
+                key={s.code}
+                onMouseEnter={() => setHovStep(i)}
+                onMouseLeave={() => setHovStep(null)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  padding: "13px 28px",
+                  background: hov ? T.blueDim : "transparent",
+                  borderLeft: `2px solid ${hov ? T.blue : "transparent"}`,
+                  transition: "all 120ms ease",
+                  cursor: "default",
+                }}
+              >
+                {/* Step number */}
+                <span style={{
+                  fontFamily: T.mono, fontSize: 10, fontWeight: 700,
+                  color: hov ? T.blue : T.muted, letterSpacing: "0.06em",
+                  width: 20, flexShrink: 0, transition: "color 120ms",
+                }}>
+                  {s.code}
+                </span>
+
+                {/* Icon */}
+                <Icon
+                  size={14}
+                  strokeWidth={1.5}
+                  style={{ color: hov ? T.blue : T.secondary, flexShrink: 0, transition: "color 120ms" }}
+                />
+
+                {/* Text */}
+                <div style={{ flex: 1 }}>
                   <span style={{
-                    fontFamily: T.mono, fontSize: 36, fontWeight: 700,
-                    color: isActive ? "rgba(59,142,234,0.2)" : T.rim,
-                    lineHeight: 1, userSelect: "none", minWidth: 52,
-                    transition: "color 120ms",
+                    fontFamily: T.mono, fontSize: 11, fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    color: hov ? T.primary : T.secondary,
+                    marginRight: 12, transition: "color 120ms",
                   }}>
-                    {step.num}
+                    {s.name}
                   </span>
-
-                  {/* Icon */}
-                  <div style={{
-                    width: 34, height: 34, borderRadius: 3, flexShrink: 0,
-                    background: isActive ? T.cyanDim : `${T.bgSub}`,
-                    border: `1px solid ${isActive ? T.cyanBdr : T.rim}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "all 120ms",
+                  <span style={{
+                    fontFamily: T.ui, fontSize: 11,
+                    color: T.muted, lineHeight: 1,
                   }}>
-                    <Icon size={15} strokeWidth={1.5} style={{ color: isActive ? T.cyan : T.secondary }} />
-                  </div>
-
-                  {/* Text */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontFamily: T.mono, fontSize: 12, fontWeight: 700,
-                      letterSpacing: "0.1em", color: isActive ? T.primary : T.secondary,
-                      marginBottom: 4, transition: "color 120ms",
-                    }}>
-                      {step.title}
-                    </div>
-                    <div style={{
-                      fontFamily: T.ui, fontSize: 12, color: T.secondary,
-                      lineHeight: 1.5,
-                    }}>
-                      {step.desc}
-                    </div>
-                  </div>
-
-                  {/* Arrow */}
-                  <ArrowRight size={13} style={{
-                    color: isActive ? T.cyan : T.tertiary,
-                    flexShrink: 0, transition: "color 120ms",
-                  }} />
+                    {s.note}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
+        </div>
 
-          {/* Divider */}
-          <div style={{ height: 1, background: T.rim, margin: "32px 0" }} />
+        {/* Divider */}
+        <div style={{ height: 1, background: T.rim }} />
 
-          {/* Launch */}
+        {/* CTA section */}
+        <div style={{ padding: "24px 28px" }}>
           <button
             onClick={handleLaunch}
-            className="welcome-launch-btn"
+            onMouseEnter={() => setHovBtn(true)}
+            onMouseLeave={() => setHovBtn(false)}
             style={{
-              width: "100%", height: 50,
-              fontFamily: T.mono, fontSize: 12, fontWeight: 700,
-              letterSpacing: "0.22em", color: T.bgDeep,
-              background: T.cyan, border: "none", borderRadius: 2,
-              cursor: "pointer", display: "flex", alignItems: "center",
-              justifyContent: "center", gap: 12,
-              transition: "all 200ms ease",
+              width: "100%",
+              height: 44,
+              fontFamily: T.mono, fontSize: 11, fontWeight: 700,
+              letterSpacing: "0.18em",
+              color: "#fff",
+              background: hovBtn ? "#1456D8" : T.blue,
+              border: "none", borderRadius: 3,
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              transition: "background 150ms ease",
             }}
           >
-            ENTER TERMINAL
-            <ArrowRight size={14} strokeWidth={2.5} />
+            LAUNCH TERMINAL
+            <ArrowRight size={14} strokeWidth={2} />
           </button>
 
-          {/* Skip checkbox */}
           <label style={{
             display: "flex", alignItems: "center", gap: 8,
-            marginTop: 14, cursor: "pointer", alignSelf: "center",
+            marginTop: 16, cursor: "pointer",
           }}>
             <input
               type="checkbox"
               checked={skipChecked}
               onChange={e => setSkipChecked(e.target.checked)}
-              style={{ accentColor: T.cyan, width: 12, height: 12 }}
+              style={{ accentColor: T.blue, width: 12, height: 12 }}
             />
-            <span style={{ fontFamily: T.mono, fontSize: 8, letterSpacing: "0.08em", color: T.tertiary }}>
+            <span style={{
+              fontFamily: T.mono, fontSize: 8,
+              color: T.muted, letterSpacing: "0.1em",
+            }}>
               {"DON'T SHOW THIS AGAIN"}
             </span>
           </label>
         </div>
-      </div>
 
-      {/* ── Bottom status bar ────────────────────────────────────────────────── */}
-      <div style={{
-        height: 30, flexShrink: 0, zIndex: 1,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 28px", background: T.bgPanel,
-        borderTop: `1px solid ${T.rim}`,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-          <span style={{
-            width: 5, height: 5, borderRadius: "50%",
-            background: healthOk === null ? T.tertiary : healthOk ? T.green : T.amber,
-            boxShadow: healthOk ? `0 0 6px ${T.green}60` : "none",
-          }} />
-          <span style={{ fontFamily: T.mono, fontSize: 8, letterSpacing: "0.12em", color: T.tertiary }}>
-            {healthOk === null ? "CHECKING PLATFORM…" : healthOk ? "ALL SYSTEMS OPERATIONAL" : "PLATFORM DEGRADED"}
-          </span>
-        </div>
-        <span style={{ fontFamily: T.mono, fontSize: 8, letterSpacing: "0.08em", color: T.tertiary }}>
-          © {new Date().getFullYear()} SYNEXIUN · ORDR TERMINAL
-        </span>
       </div>
+      {/* ── end card ─────────────────────────────────────────────────────── */}
 
-      <style>{`
-        .welcome-launch-btn:hover {
-          background: #5BA3F5 !important;
-          box-shadow: 0 0 32px rgba(59,142,234,0.35) !important;
-          letter-spacing: 0.28em !important;
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0; }
-        }
-      `}</style>
     </div>
   );
 }
