@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pydantic import BaseModel
 
@@ -69,8 +69,6 @@ from app.models.audit_event import AuditEvent, GENESIS_HASH, build_audit_event, 
 from app.models.user import User
 
 from app.services import rbac_service
-import os as _os
-from app.core.dev_fault import is_dev_fault_allowed
 
 
 
@@ -444,13 +442,9 @@ async def get_audit_event(
 
 async def verify_audit_chain(
 
-    request:          Request,
-
     session:          AsyncSession = Depends(get_async_session),
 
     current_user:     User         = Depends(get_current_user),
-
-    dev_chain_fail_: bool          = Query(False, alias="__dev_chain_fail", include_in_schema=False),
 
 ):
 
@@ -473,17 +467,6 @@ async def verify_audit_chain(
       - events_checked: number of events verified
 
     """
-
-    # DEV-FAULT-1: synthesised FAIL report for runtime repro (localhost-only)
-    if dev_chain_fail_ and is_dev_fault_allowed(request):
-        from datetime import datetime, timezone as _tz
-        return ChainIntegrityReport(
-            tenant_id      = str(current_user.company_id) if current_user.company_id else None,
-            events_checked = 0,
-            broken_at      = "00000000-dev0-fail-0000-000000000000",
-            is_intact      = False,
-            verified_at    = datetime.now(_tz.utc).isoformat(),
-        )
 
     try:
         q = (
