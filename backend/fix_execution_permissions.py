@@ -95,7 +95,7 @@ async def main() -> None:
                     await session.execute(text(
                         "INSERT INTO role_permissions (role_id, permission_id) VALUES (:r, :p)"
                     ), {"r": role_id, "p": perm_id})
-                    print(f"[2] {role_name:20s} → trades.execute GRANTED ✓")
+                    print(f"[2] {role_name:20s} -> trades.execute GRANTED OK")
 
             # ── 3. Set governance_mode = "solo" where missing ─────────────────
             companies = (await session.execute(
@@ -113,7 +113,7 @@ async def main() -> None:
                         text("UPDATE companies SET settings = :s WHERE id = :id"),
                         {"s": json.dumps(settings), "id": comp_id},
                     )
-                    print(f"[3] Company '{comp_name}' → governance_mode=solo ✓")
+                    print(f"[3] Company '{comp_name}' -> governance_mode=solo OK")
                     updated += 1
                 else:
                     print(f"[3] Company '{comp_name}' already has governance_mode='{settings['governance_mode']}' — skipped")
@@ -122,7 +122,7 @@ async def main() -> None:
                 print("[3] All companies already have governance_mode set")
 
     await engine.dispose()
-    print("\n✓ Done — permissions and governance_mode updated successfully.")
+    print("\nDone — permissions and governance_mode updated successfully.")
 
 
 if __name__ == "__main__":
