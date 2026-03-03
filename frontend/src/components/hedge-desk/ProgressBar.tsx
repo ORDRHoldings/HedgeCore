@@ -27,6 +27,8 @@ interface ProgressBarProps {
   currentPhase: number;
   completedPhases: Set<number>;
   onPhaseClick: (i: number) => void;
+  positionCount?: number;
+  runId?: string | null;
 }
 
 export default function ProgressBar({
@@ -34,7 +36,17 @@ export default function ProgressBar({
   currentPhase,
   completedPhases,
   onPhaseClick,
+  positionCount = 0,
+  runId,
 }: ProgressBarProps) {
+  function getSubtitle(label: string): string | null {
+    const upper = label.toUpperCase();
+    if (upper === "SELECT")    return `${positionCount} selected`;
+    if (upper === "CALCULATE") return runId ? `run: ${runId.slice(0, 8)}` : `${positionCount} pos`;
+    if (upper === "COMPLETE")  return "✓ done";
+    // RISK, REVIEW, EXECUTE
+    return runId ? `run: ${runId.slice(0, 8)}` : null;
+  }
   return (
     <div style={{
       display: "flex",
@@ -108,18 +120,35 @@ export default function ProgressBar({
               </div>
 
               {/* Label */}
-              <span style={{
-                fontFamily: HD.fontMono,
-                fontSize: 10,
-                fontWeight: labelWeight,
-                color: labelColor,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                whiteSpace: "nowrap",
-                transition: "color 0.2s",
-              }}>
-                {label}
-              </span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                <span style={{
+                  fontFamily: HD.fontMono,
+                  fontSize: 10,
+                  fontWeight: labelWeight,
+                  color: labelColor,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                  transition: "color 0.2s",
+                }}>
+                  {label}
+                </span>
+                {isActive && (() => {
+                  const sub = getSubtitle(label);
+                  return sub ? (
+                    <span style={{
+                      fontFamily: HD.fontMono,
+                      fontSize: 9,
+                      fontWeight: 400,
+                      color: HD.secondary,
+                      letterSpacing: "0.04em",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {sub}
+                    </span>
+                  ) : null;
+                })()}
+              </div>
             </div>
 
             {/* Connector line (between nodes) */}
