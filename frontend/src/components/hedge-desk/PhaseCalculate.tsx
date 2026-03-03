@@ -76,7 +76,8 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
   const loadMarket = useCallback(async () => {
     setMarketLoading(true);
     setMarketError(null);
-    try {
+
+    async function fetchMarket() {
       const res = await fetch("/api/market-autofill", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,15 +85,24 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
       });
       if (!res.ok) throw new Error(`Market autofill HTTP ${res.status}`);
       const data = await res.json();
-      // Response: { market: { as_of, spot_usdmxn, forward_points_by_month, provider_metadata }, currencies_detected }
-      const mkt = data.market as Record<string, unknown>;
-      if (mkt) {
-        setMarketSnapshot(mkt);
-      } else {
-        throw new Error("No market data in response");
+      const mkt = data.market as Record<string, unknown> | undefined;
+      if (!mkt) throw new Error("No market data in response");
+      return mkt;
+    }
+
+    try {
+      // First attempt
+      let mkt: Record<string, unknown>;
+      try {
+        mkt = await fetchMarket();
+      } catch {
+        // Single automatic retry after 1 second
+        await new Promise(r => setTimeout(r, 1000));
+        mkt = await fetchMarket();
       }
+      setMarketSnapshot(mkt);
+      setMarketError(null);
     } catch (e) {
-      // Non-fatal — we build a fallback snapshot
       setMarketError(e instanceof Error ? e.message : "Market autofill unavailable");
       setMarketSnapshot(null);
     } finally {
@@ -120,32 +130,23 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
         // Use default policy
       }
 
-      // 2. Build market snapshot — use live Finnhub data if available, else fallback
+      // 2. Build market snapshot — use live data if already loaded, else fetch now
       let mktSnap: Record<string, unknown>;
       if (marketSnapshot) {
         mktSnap = { ...marketSnapshot };
       } else {
-        // Fallback: construct a minimal snapshot with default values
-        const today = new Date().toISOString().split("T")[0];
-        const fwdPoints: Record<string, number> = {};
-        for (const p of positions) {
-          if (p.value_date) {
-            const bucket = String(p.value_date).slice(0, 7);
-            if (!fwdPoints[bucket]) fwdPoints[bucket] = 0;
-          }
-        }
-        const now = new Date();
-        for (let i = 0; i < 4; i++) {
-          const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-          if (!fwdPoints[key]) fwdPoints[key] = 0;
-        }
-        mktSnap = {
-          as_of: today,
-          spot_usdmxn: 19.5,
-          forward_points_by_month: fwdPoints,
-          provider_metadata: { source: "indicative_fallback", data_class: "INDICATIVE_FALLBACK" },
-        };
+        // marketSnapshot not yet available — fetch it directly so we never use a hardcoded rate
+        const fallbackRes = await fetch("/api/market-autofill", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currencies, trade_value_dates: valueDates }),
+        });
+        if (!fallbackRes.ok) throw new Error("Market data unavailable — please retry");
+        const fallbackData = await fallbackRes.json();
+        const fallbackMkt = fallbackData.market as Record<string, unknown> | undefined;
+        if (!fallbackMkt) throw new Error("Market data unavailable — please retry");
+        mktSnap = { ...fallbackMkt };
+        setMarketSnapshot(fallbackMkt);
       }
 
       // 3. Build trades payload
@@ -344,9 +345,24 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
               </>
             );
           })() : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>USD/MXN (DEFAULT)</span>
-              <span style={{ fontFamily: HD.fontMono, fontSize: 13, fontWeight: 600, color: HD.amber }}>19.5000</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.amber, letterSpacing: "0.1em" }}>
+                ⚠ MARKET DATA UNAVAILABLE
+              </span>
+              {marketError && (
+                <span style={{ fontFamily: HD.fontUI, fontSize: 11, color: HD.tertiary }}>{marketError}</span>
+              )}
+              <button
+                onClick={loadMarket}
+                style={{
+                  fontFamily: HD.fontMono, fontSize: 9, letterSpacing: "0.08em",
+                  color: HD.cyan, background: "none",
+                  border: `1px solid ${HD.soft}`, padding: "4px 10px",
+                  cursor: "pointer", borderRadius: 3, alignSelf: "flex-start",
+                }}
+              >
+                ↻ RETRY
+              </button>
             </div>
           )}
         </div>
