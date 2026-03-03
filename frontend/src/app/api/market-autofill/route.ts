@@ -17,6 +17,9 @@ import { NextRequest, NextResponse } from 'next/server';
 const FH_KEY  = process.env.FINNHUB_API_KEY ?? '';
 const FH_BASE = 'https://finnhub.io/api/v1';
 
+// Primary spot-rate source: exchangerate-api.com (free, no key, ~170 currencies)
+const ERA_URL = 'https://api.exchangerate-api.com/v4/latest/USD';
+
 // ── CME FX futures symbol mapping ─────────────────────────────────────────
 // Finnhub uses the continuous contract notation (1! = front month, 2! = back month, …)
 // All prices are quoted in USD per 1 unit of FCY (invert to get FCY/USD rate)
@@ -54,16 +57,14 @@ const DEMO_SPOTS: Record<string, number> = {
   ZAR: 18.91, TRY: 36.20, RUB: 90.10,
 };
 
-// ── Fetch all forex spot rates in a single Finnhub call ───────────────────
-async function fetchFinnhubForexRates(): Promise<Record<string, number> | null> {
-  if (!FH_KEY) return null;
+// ── Fetch all forex spot rates from exchangerate-api.com (free, no key) ──
+async function fetchLiveForexRates(): Promise<Record<string, number> | null> {
   try {
-    const url = `${FH_BASE}/forex/rates?base=USD&token=${FH_KEY}`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(ERA_URL, { cache: 'no-store', signal: AbortSignal.timeout(8_000) });
     if (!res.ok) return null;
-    const json = await res.json() as { base?: string; quote?: Record<string, number> };
-    if (!json.quote || typeof json.quote !== 'object') return null;
-    return json.quote;
+    const json = await res.json() as { base?: string; rates?: Record<string, number> };
+    if (!json.rates || typeof json.rates !== 'object') return null;
+    return json.rates;
   } catch {
     return null;
   }
@@ -266,15 +267,15 @@ export async function POST(req: NextRequest) {
 
     const primaryCurrency = currencies[0] ?? 'MXN';
 
-    // ── Step 1: Spot rate from Finnhub forex/rates ──────────────────────
+    // ── Step 1: Spot rate from exchangerate-api.com (live, free) ────────
     let spot: number | null = null;
     let spotSource = 'indicative_fallback';
 
     if (primaryCurrency !== 'USD') {
-      const rates = await fetchFinnhubForexRates();
+      const rates = await fetchLiveForexRates();
       if (rates && rates[primaryCurrency] && rates[primaryCurrency] > 0) {
         spot = parseFloat(rates[primaryCurrency].toFixed(6));
-        spotSource = 'finnhub_live';
+        spotSource = 'live';
       }
     }
 
@@ -294,7 +295,7 @@ export async function POST(req: NextRequest) {
       forwardSource = 'cme_futures';
     } else {
       forwardPoints = estimateForwardPoints(spot, primaryCurrency, requiredBuckets);
-      forwardSource = spotSource === 'finnhub_live' ? 'carry_estimate' : 'indicative_fallback';
+      forwardSource = spotSource === 'live' ? 'carry_estimate' : 'indicative_fallback';
     }
 
     // ── Step 3: Assemble market snapshot ────────────────────────────────
@@ -304,16 +305,16 @@ export async function POST(req: NextRequest) {
       ? `${primaryCurrency}/USD`
       : `USD/${primaryCurrency}`;
 
-    const isLive = spotSource === 'finnhub_live';
+    const isLive = spotSource === 'live';
     const dataClass = isLive ? 'LIVE' : 'INDICATIVE_FALLBACK';
 
     let note: string;
     if (!isLive) {
-      note = 'Indicative fallback rates — configure FINNHUB_API_KEY in .env.local for live data.';
+      note = 'Indicative fallback rates (BIS EOD 2026-02-27) — exchangerate-api.com unreachable.';
     } else if (forwardSource === 'cme_futures') {
-      note = `Live spot from Finnhub. Forward rates from CME futures (${Object.keys(CME_SYMBOLS[primaryCurrency] ?? []).length > 0 ? (CME_SYMBOLS[primaryCurrency] ?? []).join(', ') : 'N/A'}).`;
+      note = `Live spot from exchangerate-api.com. Forward rates from CME futures (${(CME_SYMBOLS[primaryCurrency] ?? []).join(', ')}).`;
     } else {
-      note = `Live spot from Finnhub. Forward points estimated from carry differentials (no CME contract for ${primaryCurrency}).`;
+      note = `Live spot from exchangerate-api.com. Forward points estimated from carry differentials.`;
     }
 
     const market = {
@@ -321,7 +322,7 @@ export async function POST(req: NextRequest) {
       spot_usdmxn: spot,
       forward_points_by_month: forwardPoints,
       provider_metadata: {
-        source:              isLive ? `finnhub_${forwardSource}` : 'indicative_fallback',
+        source:              isLive ? `live_${forwardSource}` : 'indicative_fallback',
         data_class:          dataClass,
         spot_source:         spotSource,
         forward_source:      forwardSource,
