@@ -183,7 +183,6 @@ function KpiCard({ label, value, sub, color }: { label: string; value: string; s
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ConnectorsPage() {
   const _planAllowed = usePlanRedirect("professional");
-  if (!_planAllowed) return null;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const renderTs = useRenderTs();
@@ -242,6 +241,8 @@ export default function ConnectorsPage() {
       : runs.filter(r => r.connector_type?.toUpperCase() === filterType),
     [runs, filterType],
   );
+
+  if (!_planAllowed) return null;
 
   if (authLoading) {
     return (

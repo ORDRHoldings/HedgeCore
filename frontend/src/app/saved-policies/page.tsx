@@ -779,7 +779,6 @@ function ActionBtn({ label, accent, danger, onClick, disabled }: {
 // -- Main page component ----------------------------------------------------------
 export default function SavedPoliciesPage() {
   const _planAllowed = usePlanRedirect("professional");
-  if (!_planAllowed) return null;
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
   const renderTs = useRenderTs();
@@ -819,10 +818,9 @@ export default function SavedPoliciesPage() {
   const [historyDrawer, setHistoryDrawer] = useState<{ id: string; name: string; code: string } | null>(null);
 
   // Auth guard
-  if (!isAuthenticated) {
-    router.push("/auth/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!isAuthenticated) router.push("/auth/login");
+  }, [isAuthenticated, router]);
 
   // -- Toast helpers --------------------------------------------------------------
   const addToast = useCallback((type: Toast["type"], message: string) => {
@@ -1009,6 +1007,8 @@ export default function SavedPoliciesPage() {
       },
     });
   }, [token, addToast]);
+
+  if (!_planAllowed || !isAuthenticated) return null;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: S.bgDeep }}>

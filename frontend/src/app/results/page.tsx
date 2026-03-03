@@ -52,10 +52,11 @@ function getInitialExecutionTab(): string {
 
 export default function ResultsPage() {
   const _planAllowed = usePlanRedirect("professional");
-  if (!_planAllowed) return null;
   const { result, lastInputs } = useHedge();
   const [activeSection, setActiveSection] = useState(getInitialSection);
   const [activeExecutionTab, setActiveExecutionTab] = useState(getInitialExecutionTab);
+
+  if (!_planAllowed) return null;
 
   const baseCcy = lastInputs
     ? deriveCurrencyContext(lastInputs.trades, lastInputs.market).baseCcy

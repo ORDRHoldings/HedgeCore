@@ -1629,7 +1629,6 @@ const WIZARD_STORAGE_KEY = 'ai_wizard_state_v1';
 
 export default function AIPolicyWizardPage() {
   const _planAllowed = usePlanRedirect("professional");
-  if (!_planAllowed) return null;
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
 
@@ -1830,7 +1829,7 @@ export default function AIPolicyWizardPage() {
 
   const handleApply = useCallback(() => { router.push('/policies'); }, [router]);
 
-  if (!isAuthenticated) return null;
+  if (!_planAllowed || !isAuthenticated) return null;
 
   // ── Render step by index ───────────────────────────────────────────────────
 

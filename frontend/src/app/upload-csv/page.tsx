@@ -71,7 +71,6 @@ const STAGES: ImportStatus[] = ["uploading","parsing","validating","committing"]
 
 export default function UploadCsvPage() {
   const _planAllowed = usePlanRedirect("professional");
-  if (!_planAllowed) return null;
   const router = useRouter();
   const { user, token, isAuthenticated } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,6 +96,8 @@ export default function UploadCsvPage() {
   useEffect(() => {
     if (!isAuthenticated) router.push("/auth/login");
   }, [isAuthenticated, router]);
+
+  if (!_planAllowed) return null;
 
   const handleDragOver  = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true); };
   const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); };

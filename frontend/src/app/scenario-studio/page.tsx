@@ -850,11 +850,12 @@ function TabAudit({ runId }: { runId: string | null }) {
 
 export default function ScenarioStudio() {
   const _planAllowed = usePlanRedirect("professional");
-  if (!_planAllowed) return null;
   const router = useRouter();
   const { result } = useHedge();
   const maxPnL = Math.max(...DISTRIBUTION.map(d => Math.abs(d.pnl)));
   const [activeTab, setActiveTab] = useState<ScenarioTab>("library");
+
+  if (!_planAllowed) return null;
 
   const activeRunId = result?.run_id ?? null;
 

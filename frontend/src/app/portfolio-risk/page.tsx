@@ -369,7 +369,6 @@ function RiskRadar({ dims }: { dims: RDim[] }) {
 
 export default function PortfolioRisk() {
   const _planAllowed = usePlanRedirect("enterprise");
-  if (!_planAllowed) return null;
   const renderTs   = useRenderTs();
   const router     = useRouter();
   const { result, lastInputs } = useHedge();
@@ -403,6 +402,8 @@ export default function PortfolioRisk() {
   useEffect(() => {
     loadPositions();
   }, [loadPositions]);
+
+  if (!_planAllowed) return null;
 
   // ── Compute risk dimensions from hedge context ────────────────────────────
 
