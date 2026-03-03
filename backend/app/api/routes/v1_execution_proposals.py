@@ -858,19 +858,33 @@ async def approve_proposal(
 
     await _check_mfa_gate(session, current_user, mfa_verified)
 
+    # Resolve governance_mode from company settings
+    from app.models.organization import Company
+    from sqlalchemy import select as _sel
+    _co = (await session.execute(_sel(Company).where(Company.id == current_user.company_id))).scalar_one_or_none()
+    _gov_mode = ((_co.settings or {}).get("governance_mode", "team")) if _co else "team"
+
     try:
 
-        proposal = await ep_service.approve_proposal(
+        if _gov_mode == "solo":
+            proposal = await ep_service.approve_proposal_solo(
+                session,
+                user           = current_user,
+                proposal_id    = proposal_id,
+                approval_notes = data.approval_notes,
+            )
+        else:
+            proposal = await ep_service.approve_proposal(
 
-            session,
+                session,
 
-            user           = current_user,
+                user           = current_user,
 
-            proposal_id    = proposal_id,
+                proposal_id    = proposal_id,
 
-            approval_notes = data.approval_notes,
+                approval_notes = data.approval_notes,
 
-        )
+            )
 
     except ValueError as e:
 
