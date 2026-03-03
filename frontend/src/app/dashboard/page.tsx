@@ -290,11 +290,26 @@ export default function DashboardPage() {
     if (ready && !isLoading && !isAuthenticated) router.replace("/auth/login");
   }, [ready, isLoading, isAuthenticated, router]);
 
+  // SMB default layout — simple 6-widget grid
+  const SMB_DEFAULT_LAYOUT = {
+    widgetIds: ["kpi_summary", "exposure_summary", "hedge_health", "risk_pulse", "pipeline_status", "fx_rates"],
+    grid: [
+      { i: "kpi_summary",      x: 0, y: 0, w: 8, h: 4 },
+      { i: "exposure_summary", x: 8, y: 0, w: 4, h: 4 },
+      { i: "hedge_health",     x: 0, y: 4, w: 4, h: 4 },
+      { i: "risk_pulse",       x: 4, y: 4, w: 4, h: 4 },
+      { i: "pipeline_status",  x: 0, y: 8, w: 6, h: 4 },
+      { i: "fx_rates",         x: 6, y: 8, w: 6, h: 4 },
+    ],
+  };
+
   // Load per-view layout whenever user or viewMode changes
   useEffect(() => {
     if (!user) return;
+    const isSmbUser = user?.plan_tier === "smb";
     const saved = loadLayout(user.id, viewMode);
     if (saved) { setWidgetIds(saved.widgetIds); setGridItems(saved.grid); }
+    else if (isSmbUser && viewMode === "OVERVIEW") { setWidgetIds(SMB_DEFAULT_LAYOUT.widgetIds); setGridItems(SMB_DEFAULT_LAYOUT.grid); }
     else { const d = VIEW_DEFAULTS[viewMode]; setWidgetIds(d.widgetIds); setGridItems(d.grid); }
   }, [user?.id, viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -822,7 +822,7 @@ export default function StepExecute({
       </div>
 
       {/* ═══ Footer ═══ */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, padding: "0 16px", background: S.bgPanel, borderTop: `1px solid ${S.rim}`, flexShrink: 0, marginTop: "auto" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, padding: "0 16px", background: S.bgPanel, borderTop: `1px solid ${S.rim}`, flexShrink: 0, position: "sticky", bottom: 0, zIndex: 10 }}>
         <button
           onClick={onBack}
           disabled={submitPhase === "submitting"}

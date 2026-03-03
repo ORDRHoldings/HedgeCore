@@ -2,31 +2,139 @@
 
 import { useState } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import DisclosurePanel from "./DisclosurePanel";
+import type { BucketResult } from "@/api/types";
 import {
-  LoaderIcon, CheckCircleIcon, AlertCircleIcon, ExternalLinkIcon, ChevronLeftIcon
+  CheckCircleIcon, AlertCircleIcon, LoaderIcon, ChevronLeftIcon,
+  CopyIcon, ExternalLinkIcon, ShieldCheckIcon, UserCheckIcon,
 } from "lucide-react";
 
-const HD = {
-  navy:    "#0A1F44",
-  royal:   "#1C62F2",
-  emerald: "#2ECC71",
-  crimson: "#E74C3C",
-  slate:   "#8A9AB5",
-  bgPanel: "var(--bg-panel)",
-  bgSub:   "var(--bg-sub)",
-  bgDeep:  "var(--bg-deep)",
-  rim:     "var(--border-rim)",
-  soft:    "var(--border-soft)",
-  primary: "var(--text-primary)",
-  secondary:"var(--text-secondary)",
-  tertiary: "var(--text-tertiary)",
-  cyan:    "var(--accent-cyan)",
-  amber:   "var(--accent-amber)",
-  fontUI:  "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono:"var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+// ─── Design tokens ──────────────────────────────────────────────────────────
+const S = {
+  bgPanel:   "var(--bg-panel)",
+  bgSub:     "var(--bg-sub)",
+  bgDeep:    "var(--bg-deep)",
+  rim:       "var(--border-rim)",
+  soft:      "var(--border-soft)",
+  primary:   "var(--text-primary)",
+  secondary: "var(--text-secondary)",
+  tertiary:  "var(--text-tertiary)",
+  cyan:      "var(--accent-cyan)",
+  amber:     "var(--accent-amber)",
+  red:       "var(--accent-red,#E74C3C)",
+  green:     "var(--status-pass,#22c55e)",
+  mono:      "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  ui:        "var(--font-terminal,'IBM Plex Sans',sans-serif)",
 } as const;
 
+// ─── CME contract specifications ────────────────────────────────────────────
+const CME_SPECS: Record<string, {
+  symbol: string; name: string; contract_size: number;
+  currency: string; margin_est: number; tick_size: number; tick_value: number;
+}> = {
+  MXN: { symbol: "M6M", name: "Mexican Peso Futures",      contract_size: 500_000,   currency: "MXN", margin_est: 1800, tick_size: 0.000025,  tick_value: 12.50 },
+  EUR: { symbol: "6E",  name: "Euro FX Futures",           contract_size: 125_000,   currency: "EUR", margin_est: 2200, tick_size: 0.00005,   tick_value: 6.25  },
+  GBP: { symbol: "6B",  name: "British Pound Futures",     contract_size: 62_500,    currency: "GBP", margin_est: 1900, tick_size: 0.0001,    tick_value: 6.25  },
+  JPY: { symbol: "6J",  name: "Japanese Yen Futures",      contract_size: 12_500_000, currency: "JPY", margin_est: 2000, tick_size: 0.0000005, tick_value: 6.25  },
+  CAD: { symbol: "6C",  name: "Canadian Dollar Futures",   contract_size: 100_000,   currency: "CAD", margin_est: 1500, tick_size: 0.00005,   tick_value: 5.00  },
+  CHF: { symbol: "6S",  name: "Swiss Franc Futures",       contract_size: 125_000,   currency: "CHF", margin_est: 2100, tick_size: 0.0001,    tick_value: 12.50 },
+  AUD: { symbol: "6A",  name: "Australian Dollar Futures", contract_size: 100_000,   currency: "AUD", margin_est: 1400, tick_size: 0.0001,    tick_value: 10.00 },
+  NZD: { symbol: "6N",  name: "NZ Dollar Futures",         contract_size: 100_000,   currency: "NZD", margin_est: 1300, tick_size: 0.0001,    tick_value: 10.00 },
+};
+
+const DEFAULT_SPEC = CME_SPECS.MXN;
+
+// ─── IBKR deep link helpers ──────────────────────────────────────────────────
+function ibkrNativeUrl(
+  spec: typeof CME_SPECS[string],
+  side: string,
+  qty: number,
+  rate: number,
+): string {
+  return `ibkr://order?symbol=${spec.symbol}&secType=FUT&exchange=CME&side=${side}&quantity=${qty}&orderType=LMT&lmtPrice=${rate.toFixed(5)}&currency=USD&tif=GTC`;
+}
+
+function openIbkr(spec: typeof CME_SPECS[string], side: string, qty: number, rate: number): void {
+  const native = ibkrNativeUrl(spec, side, qty, rate);
+  const web = `https://www.interactivebrokers.com/en/trading/order-ticket.php?symbol=${spec.symbol}&side=${side}&quantity=${qty}`;
+  window.open(native, "_self");
+  setTimeout(() => window.open(web, "_blank", "noopener,noreferrer"), 2000);
+}
+
+// ─── Formatters ──────────────────────────────────────────────────────────────
+function fmt(n: number, dec = 0): string {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: dec }).format(n);
+}
+function fmtUsd(n: number): string {
+  return "$" + fmt(Math.abs(n), 0);
+}
+function fmtRate(n: number): string {
+  return n.toFixed(4);
+}
+
+// ─── Trade history entry ─────────────────────────────────────────────────────
+interface TradeHistoryEntry {
+  id: string;
+  timestamp: string;
+  run_id: string;
+  positions: string[];
+  legs: Array<{
+    bucket: string;
+    symbol: string;
+    contracts: number;
+    forward_rate: number;
+    action_usd: number;
+    action_mxn: number;
+    margin_req: number;
+    side: string;
+  }>;
+  total_contracts: number;
+  total_action_usd: number;
+  total_margin: number;
+  risk_verdict: string;
+  fill_price?: number;
+  status: "HEDGED";
+}
+
+function saveTradeHistory(entry: TradeHistoryEntry): void {
+  try {
+    const existing: TradeHistoryEntry[] = JSON.parse(
+      localStorage.getItem("ordr_trade_history") ?? "[]"
+    );
+    existing.unshift(entry);
+    localStorage.setItem("ordr_trade_history", JSON.stringify(existing.slice(0, 100)));
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
+// ─── Ticket metrics ──────────────────────────────────────────────────────────
+interface TicketMetrics {
+  spec: typeof CME_SPECS[string];
+  side: string;
+  contracts: number;
+  margin: number;
+  notional: number;
+  estCost: number;
+  hedgeEffectiveness: string;
+  currency: string;
+}
+
+function computeTicket(bucket: BucketResult): TicketMetrics {
+  const currency = "MXN"; // default — extend when multi-currency lands
+  const spec = CME_SPECS[currency] ?? DEFAULT_SPEC;
+  const contracts = Math.max(1, Math.ceil(Math.abs(bucket.action_mxn) / spec.contract_size));
+  const margin = contracts * spec.margin_est;
+  const notional = contracts * spec.contract_size;
+  const estCost = Math.abs(bucket.action_usd) * 0.0005;
+  const hedgeEffectiveness = Math.min(
+    100,
+    (notional / Math.abs(bucket.action_mxn || 1)) * 100,
+  ).toFixed(1);
+  const side = bucket.action_direction === "SELL_MXN_BUY_USD" ? "SELL" : "BUY";
+  return { spec, side, contracts, margin, notional, estCost, hedgeEffectiveness, currency };
+}
+
+// ─── Props ───────────────────────────────────────────────────────────────────
 interface PhaseExecuteProps {
   proposalIds: string[];
   calcResult: Record<string, unknown>;
@@ -36,24 +144,219 @@ interface PhaseExecuteProps {
   onBack: () => void;
 }
 
-function buildIbkrUrl(calcResult: Record<string, unknown>): string {
-  const instrument = (calcResult.instrument as string) ?? "FORWARD";
-  const currency   = (calcResult.currency as string) ?? "MXN";
-  const hedgeAmount = (calcResult.hedge_amount as number) ?? 0;
-  const hedgeRate   = (calcResult.hedge_rate as number) ?? 0;
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-  // Map common instruments to IBKR symbols
-  const symbolMap: Record<string, string> = {
-    MXN: "M6E", EUR: "6E", GBP: "6B", JPY: "6J", CAD: "6C", CHF: "6S", AUD: "6A",
-  };
-  const symbol   = symbolMap[currency] ?? "M6E";
-  const side     = "SELL"; // Typically selling foreign currency to hedge AP
-  const quantity = Math.max(1, Math.round(hedgeAmount / 500000)); // ~500k per contract
-  const lmtPrice = hedgeRate > 0 ? hedgeRate.toFixed(6) : "0.000000";
-
-  return `ibkr://order?symbol=${symbol}&secType=FUT&exchange=CME&side=${side}&quantity=${quantity}&orderType=LMT&lmtPrice=${lmtPrice}`;
+function StatCell({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", gap: 3,
+      padding: "10px 14px",
+      borderRight: `1px solid var(--border-soft)`,
+    }}>
+      <span style={{
+        fontFamily: S.mono, fontSize: 10, letterSpacing: "0.1em",
+        color: S.tertiary, textTransform: "uppercase",
+      }}>{label}</span>
+      <span style={{
+        fontFamily: S.mono, fontSize: 15, fontWeight: 700,
+        color: accent ?? S.primary,
+      }}>{value}</span>
+    </div>
+  );
 }
 
+interface TicketCardProps {
+  bucket: BucketResult;
+  index: number;
+  fillPrice: string;
+}
+
+function TicketCard({ bucket, index, fillPrice }: TicketCardProps) {
+  const [copied, setCopied] = useState(false);
+  const m = computeTicket(bucket);
+  const displayRate = fillPrice && parseFloat(fillPrice) > 0
+    ? parseFloat(fillPrice)
+    : bucket.forward_rate;
+
+  const bucketLabel = bucket.bucket ?? `BUCKET ${index + 1}`;
+
+  const dirLabel = m.side === "SELL"
+    ? "SELL MXN / BUY USD"
+    : "BUY MXN / SELL USD";
+
+  const copyTicket = () => {
+    const text = [
+      `TICKET #${index + 1} — ${bucketLabel}`,
+      `Instrument: ${m.spec.symbol} — ${m.spec.name} (CME)`,
+      `Direction: ${dirLabel}`,
+      `Contracts: ${m.contracts}`,
+      `Forward Rate: ${fmtRate(displayRate)}`,
+      `Notional: ${fmt(m.notional)} ${m.currency}`,
+      `Contract Size: ${fmt(m.spec.contract_size)} ${m.currency}`,
+      `Total USD: ${fmtUsd(bucket.action_usd)}`,
+      `Margin Req: ${fmtUsd(m.margin)}`,
+      `Tick Size: ${m.spec.tick_size}`,
+      `Tick Value: $${m.spec.tick_value}`,
+      `Est Cost: ${fmtUsd(m.estCost)}`,
+      `Hedge Effectiveness: ${m.hedgeEffectiveness}%`,
+    ].join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => undefined);
+  };
+
+  return (
+    <div style={{
+      background: S.bgPanel,
+      border: `1px solid var(--border-rim)`,
+      borderRadius: 4,
+      overflow: "hidden",
+    }}>
+      {/* Ticket header */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "10px 16px",
+        background: S.bgSub,
+        borderBottom: `1px solid var(--border-rim)`,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{
+            fontFamily: S.mono, fontSize: 11, fontWeight: 700,
+            letterSpacing: "0.12em", color: S.tertiary,
+          }}>
+            TICKET #{index + 1}
+          </span>
+          <span style={{
+            width: 1, height: 12, background: "var(--border-soft)",
+            display: "inline-block",
+          }} />
+          <span style={{
+            fontFamily: S.mono, fontSize: 12, fontWeight: 600,
+            color: S.primary, letterSpacing: "0.06em",
+          }}>
+            {bucketLabel.toUpperCase()}
+          </span>
+        </div>
+        <span style={{
+          fontFamily: S.mono, fontSize: 11, fontWeight: 700,
+          letterSpacing: "0.1em",
+          color: m.side === "SELL" ? S.red : S.cyan,
+          background: m.side === "SELL"
+            ? "color-mix(in srgb, var(--accent-red,#E74C3C) 10%, transparent)"
+            : "color-mix(in srgb, var(--accent-cyan) 10%, transparent)",
+          border: m.side === "SELL"
+            ? "1px solid color-mix(in srgb, var(--accent-red,#E74C3C) 25%, transparent)"
+            : "1px solid color-mix(in srgb, var(--accent-cyan) 25%, transparent)",
+          padding: "3px 10px", borderRadius: 2,
+        }}>
+          {dirLabel}
+        </span>
+      </div>
+
+      {/* Instrument line */}
+      <div style={{ padding: "10px 16px", borderBottom: `1px solid var(--border-soft)` }}>
+        <span style={{ fontFamily: S.mono, fontSize: 11, color: S.tertiary, letterSpacing: "0.08em" }}>
+          INSTRUMENT
+        </span>
+        <span style={{
+          marginLeft: 12, fontFamily: S.mono, fontSize: 13, fontWeight: 600, color: S.primary,
+        }}>
+          {m.spec.symbol} — {m.spec.name} (CME)
+        </span>
+      </div>
+
+      {/* Primary stats row */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(5, 1fr)",
+        borderBottom: `1px solid var(--border-soft)`,
+      }}>
+        <StatCell label="CONTRACTS"  value={fmt(m.contracts)} />
+        <StatCell label="FWD RATE"   value={fmtRate(displayRate)} />
+        <StatCell label="NOTIONAL"   value={fmt(m.notional)} />
+        <StatCell label="SIZE / CONT" value={fmt(m.spec.contract_size)} />
+        <StatCell label="TOTAL USD"  value={fmtUsd(bucket.action_usd)} accent={S.cyan} />
+      </div>
+
+      {/* Secondary stats row */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+        borderBottom: `1px solid var(--border-soft)`,
+      }}>
+        <StatCell label="MARGIN REQ"  value={fmtUsd(m.margin)} accent={S.amber} />
+        <StatCell label="TICK SIZE"   value={String(m.spec.tick_size)} />
+        <StatCell label="TICK VALUE"  value={`$${m.spec.tick_value}`} />
+        <StatCell label="EST COST"    value={fmtUsd(m.estCost)} />
+      </div>
+
+      {/* Effectiveness bar */}
+      <div style={{
+        padding: "10px 16px",
+        borderBottom: `1px solid var(--border-soft)`,
+        display: "flex", alignItems: "center", gap: 12,
+      }}>
+        <span style={{ fontFamily: S.mono, fontSize: 11, color: S.tertiary, letterSpacing: "0.08em", flexShrink: 0 }}>
+          HEDGE EFFECTIVENESS
+        </span>
+        <div style={{
+          flex: 1, height: 4, background: "var(--border-soft)", borderRadius: 2, overflow: "hidden",
+        }}>
+          <div style={{
+            width: `${m.hedgeEffectiveness}%`,
+            height: "100%",
+            background: parseFloat(m.hedgeEffectiveness) >= 95
+              ? S.green
+              : parseFloat(m.hedgeEffectiveness) >= 80
+                ? S.amber
+                : S.red,
+            borderRadius: 2,
+            transition: "width 0.4s ease",
+          }} />
+        </div>
+        <span style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 700, color: S.primary, flexShrink: 0 }}>
+          {m.hedgeEffectiveness}%
+        </span>
+        <span style={{ fontFamily: S.mono, fontSize: 11, color: S.tertiary, flexShrink: 0 }}>
+          of bucket exposure covered
+        </span>
+      </div>
+
+      {/* Actions */}
+      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+        <button
+          onClick={() => openIbkr(m.spec, m.side, m.contracts, displayRate)}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
+            color: "#1C62F2",
+            background: "color-mix(in srgb,#1C62F2 8%,transparent)",
+            border: "1px solid color-mix(in srgb,#1C62F2 25%,transparent)",
+            padding: "8px 16px", borderRadius: 3, cursor: "pointer",
+          }}
+        >
+          <ExternalLinkIcon size={12} color="#1C62F2" />
+          OPEN IN IBKR
+        </button>
+        <button
+          onClick={copyTicket}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
+            color: copied ? S.green : S.tertiary,
+            background: "transparent",
+            border: `1px solid var(--border-soft)`,
+            padding: "8px 16px", borderRadius: 3, cursor: "pointer",
+          }}
+        >
+          <CopyIcon size={12} color={copied ? S.green : S.tertiary} />
+          {copied ? "COPIED" : "COPY TICKET"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function PhaseExecute({
   proposalIds,
   calcResult,
@@ -62,13 +365,32 @@ export default function PhaseExecute({
   onComplete,
   onBack,
 }: PhaseExecuteProps) {
-  const [fillPrice, setFillPrice]   = useState<string>("");
-  const [executing, setExecuting]   = useState(false);
-  const [error, setError]           = useState<string | null>(null);
-  const [awaitingApproval, setAwaitingApproval] = useState(false);
-  const [done, setDone]             = useState(false);
+  const [fillPrice, setFillPrice]                 = useState<string>("");
+  const [executing, setExecuting]                 = useState(false);
+  const [error, setError]                         = useState<string | null>(null);
+  const [awaitingApproval, setAwaitingApproval]   = useState(false);
+  const [done, setDone]                           = useState(false);
 
-  const ibkrUrl = buildIbkrUrl(calcResult);
+  // Extract buckets from calcResult
+  const hedgePlan = calcResult.hedge_plan as { buckets?: BucketResult[]; summary?: Record<string, number> } | undefined;
+  const buckets: BucketResult[] = (hedgePlan?.buckets ?? []).filter(b => !b.suppressed && Math.abs(b.action_mxn) > 0);
+  const runId = (calcResult.run_id as string) ?? "";
+
+  // Aggregate totals across all tickets
+  const totals = buckets.reduce(
+    (acc, b) => {
+      const m = computeTicket(b);
+      acc.contracts += m.contracts;
+      acc.notional  += m.notional;
+      acc.margin    += m.margin;
+      acc.cost      += m.estCost;
+      acc.actionUsd += Math.abs(b.action_usd);
+      return acc;
+    },
+    { contracts: 0, notional: 0, margin: 0, cost: 0, actionUsd: 0 },
+  );
+
+  const fillOk = !executing && !done;
 
   const handleMarkHedged = async () => {
     setExecuting(true);
@@ -80,7 +402,6 @@ export default function PhaseExecute({
     try {
       const results = await Promise.allSettled(
         proposalIds.map(async (id) => {
-          // Execute the proposal
           const execRes = await dashboardFetch(`/v1/proposals/${id}/execute`, token, {
             method: "POST",
             body: JSON.stringify({}),
@@ -94,24 +415,26 @@ export default function PhaseExecute({
             throw new Error((errData as { detail?: string }).detail ?? `HTTP ${execRes.status}`);
           }
 
-          // If fill price provided, PATCH fill data
           if (parsedFillPrice > 0) {
             await dashboardFetch(`/v1/proposals/${id}/fill`, token, {
               method: "PATCH",
               body: JSON.stringify({
                 fill_price:     parsedFillPrice,
-                fill_notional:  (calcResult.hedge_amount as number) ?? 0,
-                fill_currency:  (calcResult.currency as string) ?? "MXN",
+                fill_notional:  totals.actionUsd,
+                fill_currency:  "MXN",
                 fill_timestamp: new Date().toISOString(),
               }),
-            }).catch(() => undefined); // fill is best-effort
+            }).catch(() => undefined);
           }
-        })
+        }),
       );
 
-      // Check for 409 (awaiting approval) pattern
-      const has409 = results.some(r => r.status === "rejected" && (r.reason as { code?: number })?.code === 409);
-      const hasOtherErrors = results.some(r => r.status === "rejected" && (r.reason as { code?: number })?.code !== 409);
+      const has409 = results.some(
+        r => r.status === "rejected" && (r.reason as { code?: number })?.code === 409,
+      );
+      const hasOtherErrors = results.some(
+        r => r.status === "rejected" && (r.reason as { code?: number })?.code !== 409,
+      );
 
       if (has409 && governanceMode === "team") {
         setAwaitingApproval(true);
@@ -120,9 +443,39 @@ export default function PhaseExecute({
       }
 
       if (hasOtherErrors) {
-        const firstError = results.find(r => r.status === "rejected" && (r.reason as { code?: number })?.code !== 409);
+        const firstError = results.find(
+          r => r.status === "rejected" && (r.reason as { code?: number })?.code !== 409,
+        );
         throw (firstError as PromiseRejectedResult).reason;
       }
+
+      // Save trade history
+      const historyEntry: TradeHistoryEntry = {
+        id: `TH-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
+        timestamp: new Date().toISOString(),
+        run_id: runId,
+        positions: proposalIds,
+        legs: buckets.map(b => {
+          const m = computeTicket(b);
+          return {
+            bucket: b.bucket,
+            symbol: m.spec.symbol,
+            contracts: m.contracts,
+            forward_rate: b.forward_rate,
+            action_usd: b.action_usd,
+            action_mxn: b.action_mxn,
+            margin_req: m.margin,
+            side: m.side,
+          };
+        }),
+        total_contracts: totals.contracts,
+        total_action_usd: totals.actionUsd,
+        total_margin: totals.margin,
+        risk_verdict: (calcResult.risk_verdict as string) ?? "APPROVED",
+        ...(parsedFillPrice > 0 ? { fill_price: parsedFillPrice } : {}),
+        status: "HEDGED",
+      };
+      saveTradeHistory(historyEntry);
 
       setDone(true);
       onComplete({ fillPrice: parsedFillPrice, proposalIds });
@@ -134,94 +487,119 @@ export default function PhaseExecute({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "20px 24px", height: "100%", overflowY: "auto" }}>
-
-      {/* Back */}
-      <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", alignSelf: "flex-start", padding: 0 }}>
-        <ChevronLeftIcon size={14} color={HD.slate} />
-        <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.slate, letterSpacing: "0.06em" }}>BACK TO REVIEW</span>
-      </button>
-
-      {/* Proposals list */}
-      <div style={{ background: HD.bgPanel, border: `1px solid ${HD.rim}`, borderRadius: 4, overflow: "hidden" }}>
-        <div style={{ padding: "8px 14px", background: HD.bgSub, borderBottom: `1px solid ${HD.soft}` }}>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
-            APPROVED PROPOSALS ({proposalIds.length})
+    <div style={{
+      display: "flex", flexDirection: "column",
+      minHeight: "100%", background: S.bgDeep,
+    }}>
+      {/* ── Header strip ───────────────────────────────────────────────── */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "10px 20px",
+        background: "#050d1a",
+        borderBottom: `1px solid var(--border-rim)`,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <button
+            onClick={onBack}
+            style={{
+              display: "flex", alignItems: "center", gap: 4,
+              background: "none", border: "none", cursor: "pointer", padding: 0,
+            }}
+          >
+            <ChevronLeftIcon size={13} color="var(--text-tertiary)" />
+            <span style={{ fontFamily: S.mono, fontSize: 11, color: "var(--text-tertiary)", letterSpacing: "0.07em" }}>
+              BACK TO REVIEW
+            </span>
+          </button>
+          <span style={{ width: 1, height: 14, background: "var(--border-soft)", display: "inline-block" }} />
+          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: "var(--text-primary)" }}>
+            EXECUTION TERMINAL
           </span>
         </div>
-        {proposalIds.map((id, i) => (
-          <div key={id} style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "7px 14px",
-            borderBottom: i < proposalIds.length - 1 ? `1px solid ${HD.soft}` : "none",
-            background: i % 2 === 0 ? HD.bgPanel : HD.bgSub,
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "color-mix(in srgb, var(--status-pass,#22c55e) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--status-pass,#22c55e) 25%, transparent)",
+            padding: "4px 12px", borderRadius: 2,
           }}>
-            <CheckCircleIcon size={12} color={HD.emerald} />
-            <code style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.secondary }}>{id}</code>
+            <ShieldCheckIcon size={12} color={S.green} />
+            <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.green, letterSpacing: "0.1em" }}>
+              RISK: APPROVE
+            </span>
           </div>
-        ))}
-      </div>
-
-      {/* IBKR deep link */}
-      <div style={{ background: HD.bgPanel, border: `1px solid ${HD.soft}`, borderRadius: 4, padding: "14px 16px" }}>
-        <div style={{ marginBottom: 10 }}>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
-            IBKR TWS EXECUTION
-          </span>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "color-mix(in srgb, var(--accent-cyan) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--accent-cyan) 25%, transparent)",
+            padding: "4px 12px", borderRadius: 2,
+          }}>
+            <UserCheckIcon size={12} color={S.cyan} />
+            <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.cyan, letterSpacing: "0.1em" }}>
+              4-EYES: {governanceMode === "team" ? "MAKER" : "SOLO"}
+            </span>
+          </div>
         </div>
-        <DisclosurePanel title="IBKR Order Details" level="L2" defaultOpen>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 12 }}>
-            {[
-              ["INSTRUMENT",    (calcResult.instrument as string) ?? "FORWARD"],
-              ["HEDGE AMOUNT",  calcResult.hedge_amount != null ? String(calcResult.hedge_amount) : "—"],
-              ["HEDGE RATE",    calcResult.hedge_rate   != null ? (calcResult.hedge_rate as number).toFixed(6) : "—"],
-            ].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.08em" }}>{k}</span>
-                <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 600, color: HD.primary }}>{v}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.08em" }}>DEEP LINK URL</span>
-            <div style={{ marginTop: 4, padding: "6px 8px", background: HD.bgSub, borderRadius: 2, border: `1px solid ${HD.soft}` }}>
-              <code style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.slate, wordBreak: "break-all" }}>{ibkrUrl}</code>
-            </div>
-          </div>
-        </DisclosurePanel>
-        <a
-          href={ibkrUrl}
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            fontFamily: HD.fontMono,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            color: HD.royal,
-            background: `color-mix(in srgb,${HD.royal} 8%,transparent)`,
-            border: `1px solid color-mix(in srgb,${HD.royal} 30%,transparent)`,
-            padding: "10px 20px",
-            borderRadius: 3,
-            textDecoration: "none",
-            marginTop: 8,
-          }}
-        >
-          <ExternalLinkIcon size={14} color={HD.royal} />
-          OPEN IN IBKR TWS
-        </a>
       </div>
 
-      {/* Fill price */}
-      <div style={{ background: HD.bgPanel, border: `1px solid ${HD.soft}`, borderRadius: 4, padding: "14px 16px" }}>
-        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
-            ACTUAL FILL PRICE (OPTIONAL)
+      {/* ── Body ───────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0 20px" }}>
+
+        {/* Section 1: Trade ticket cards */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            marginBottom: 12,
+          }}>
+            <span style={{
+              fontFamily: S.mono, fontSize: 10, fontWeight: 700,
+              letterSpacing: "0.14em", color: S.tertiary,
+            }}>
+              TRADE TICKETS
+            </span>
+            <span style={{
+              fontFamily: S.mono, fontSize: 10,
+              background: "var(--border-soft)", color: S.tertiary,
+              padding: "1px 7px", borderRadius: 10,
+            }}>
+              {buckets.length > 0 ? `${buckets.length} LEG${buckets.length !== 1 ? "S" : ""}` : "NO ACTIVE LEGS"}
+            </span>
+          </div>
+
+          {buckets.length === 0 ? (
+            <div style={{
+              padding: "24px 20px",
+              background: S.bgPanel, border: `1px solid var(--border-soft)`,
+              borderRadius: 4, textAlign: "center",
+            }}>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}>
+                NO ACTIONABLE BUCKETS — ALL POSITIONS SUPPRESSED OR ZERO
+              </span>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {buckets.map((b, i) => (
+                <TicketCard key={b.bucket ?? i} bucket={b} index={i} fillPrice={fillPrice} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section 2: Fill price input */}
+        <div style={{
+          background: S.bgPanel,
+          border: `1px solid var(--border-soft)`,
+          borderRadius: 4,
+          padding: "14px 16px",
+          marginBottom: 20,
+          display: "flex", alignItems: "center", gap: 16,
+        }}>
+          <span style={{
+            fontFamily: S.mono, fontSize: 11, fontWeight: 700,
+            letterSpacing: "0.1em", color: S.tertiary, flexShrink: 0,
+          }}>
+            FILL PRICE (OPTIONAL)
           </span>
           <input
             type="number"
@@ -229,81 +607,160 @@ export default function PhaseExecute({
             min="0"
             value={fillPrice}
             onChange={e => setFillPrice(e.target.value)}
-            placeholder="0.000000"
+            placeholder="Leave blank to use forward rate"
             style={{
-              fontFamily: HD.fontMono,
-              fontSize: 13,
-              color: HD.primary,
-              background: HD.bgSub,
-              border: `1px solid ${HD.soft}`,
+              flex: 1,
+              fontFamily: S.mono, fontSize: 13,
+              color: S.primary,
+              background: S.bgSub,
+              border: `1px solid var(--border-soft)`,
               borderRadius: 3,
               padding: "8px 12px",
               outline: "none",
-              width: "100%",
-              boxSizing: "border-box",
+              minWidth: 0,
             }}
           />
-          <span style={{ fontFamily: HD.fontUI, fontSize: 11, color: HD.tertiary, lineHeight: 1.5 }}>
-            If filled in IBKR, enter the actual execution price for slippage tracking.
-          </span>
-        </label>
-      </div>
+        </div>
 
-      {/* Awaiting approval notice */}
-      {awaitingApproval && (
-        <div style={{ padding: "12px 14px", background: `color-mix(in srgb,${HD.amber} 10%,transparent)`, border: `1px solid color-mix(in srgb,${HD.amber} 30%,transparent)`, borderRadius: 4, display: "flex", gap: 10 }}>
-          <AlertCircleIcon size={16} color={HD.amber} style={{ flexShrink: 0 }} />
-          <div>
-            <div style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, color: HD.amber, marginBottom: 4 }}>
-              AWAITING CHECKER APPROVAL
-            </div>
-            <div style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
-              One or more proposals are not yet approved. Check the staging queue for pending checker sign-off.
+        {/* Section 3: Total summary row */}
+        {buckets.length > 0 && (
+          <div style={{
+            background: S.bgPanel,
+            border: `1px solid var(--border-rim)`,
+            borderRadius: 4,
+            marginBottom: 20,
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            overflow: "hidden",
+          }}>
+            {[
+              ["TOTAL CONTRACTS",  fmt(totals.contracts)],
+              ["TOTAL NOTIONAL",   fmtUsd(totals.actionUsd)],
+              ["TOTAL MARGIN REQ", fmtUsd(totals.margin)],
+              ["EST TOTAL COST",   fmtUsd(totals.cost)],
+            ].map(([label, value], idx) => (
+              <div key={label} style={{
+                padding: "14px 18px",
+                borderRight: idx < 3 ? `1px solid var(--border-soft)` : "none",
+              }}>
+                <div style={{
+                  fontFamily: S.mono, fontSize: 10, letterSpacing: "0.12em",
+                  color: S.tertiary, marginBottom: 6,
+                }}>
+                  {label}
+                </div>
+                <div style={{
+                  fontFamily: S.mono, fontSize: 20, fontWeight: 700,
+                  color: idx === 2 ? S.amber : S.primary,
+                }}>
+                  {value}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Awaiting approval notice */}
+        {awaitingApproval && (
+          <div style={{
+            display: "flex", alignItems: "flex-start", gap: 10,
+            padding: "12px 14px",
+            background: "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
+            borderRadius: 4,
+            marginBottom: 16,
+          }}>
+            <AlertCircleIcon size={15} color={S.amber} style={{ flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <div style={{
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700,
+                color: S.amber, letterSpacing: "0.08em", marginBottom: 4,
+              }}>
+                AWAITING CHECKER APPROVAL
+              </div>
+              <div style={{ fontFamily: S.ui, fontSize: 13, color: S.secondary }}>
+                One or more proposals are pending checker sign-off. Check the staging queue.
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Error */}
-      {error && (
-        <div style={{ padding: "10px 14px", background: `color-mix(in srgb,${HD.crimson} 10%,transparent)`, border: `1px solid color-mix(in srgb,${HD.crimson} 30%,transparent)`, borderRadius: 4 }}>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.crimson }}>{error}</span>
-        </div>
-      )}
+        {/* Error */}
+        {error && (
+          <div style={{
+            padding: "10px 14px",
+            background: "color-mix(in srgb, var(--accent-red,#E74C3C) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--accent-red,#E74C3C) 30%, transparent)",
+            borderRadius: 4, marginBottom: 16,
+          }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.red }}>{error}</span>
+          </div>
+        )}
 
-      {/* Done state */}
-      {done && (
-        <div style={{ padding: "12px 14px", background: `color-mix(in srgb,${HD.emerald} 8%,transparent)`, border: `1px solid color-mix(in srgb,${HD.emerald} 25%,transparent)`, borderRadius: 4, display: "flex", alignItems: "center", gap: 10 }}>
-          <CheckCircleIcon size={16} color={HD.emerald} />
-          <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, color: HD.emerald, letterSpacing: "0.08em" }}>
-            HEDGED SUCCESSFULLY — ADVANCING PIPELINE...
-          </span>
-        </div>
-      )}
+        {/* Done state */}
+        {done && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "12px 14px",
+            background: "color-mix(in srgb, var(--status-pass,#22c55e) 8%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--status-pass,#22c55e) 25%, transparent)",
+            borderRadius: 4, marginBottom: 16,
+          }}>
+            <CheckCircleIcon size={15} color={S.green} />
+            <span style={{
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700,
+              color: S.green, letterSpacing: "0.08em",
+            }}>
+              HEDGED SUCCESSFULLY — ADVANCING PIPELINE...
+            </span>
+          </div>
+        )}
 
-      {/* Mark hedged button */}
-      {!done && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "auto" }}>
-          <button
-            onClick={handleMarkHedged}
-            disabled={executing}
-            style={{
-              display: "flex", alignItems: "center", gap: 8,
-              fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
-              color: "#ffffff",
-              background: executing ? HD.slate : HD.emerald,
-              border: "none",
-              padding: "12px 28px",
-              cursor: executing ? "not-allowed" : "pointer",
-              borderRadius: 3,
-            }}
-          >
-            {executing && <LoaderIcon size={14} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />}
-            {!executing && <CheckCircleIcon size={14} color="#ffffff" />}
-            MARK AS HEDGED
-          </button>
-        </div>
-      )}
+        {/* Spacer so content isn't obscured by sticky bar */}
+        <div style={{ height: 80 }} />
+      </div>
+
+      {/* ── Sticky bottom bar ───────────────────────────────────────────── */}
+      <div style={{
+        position: "sticky", bottom: 0, zIndex: 10,
+        background: S.bgPanel,
+        borderTop: `2px solid var(--border-rim)`,
+        padding: "16px 24px",
+        display: "flex", alignItems: "center",
+        justifyContent: "space-between", gap: 16,
+        flexShrink: 0,
+      }}>
+        <span style={{
+          fontFamily: S.mono, fontSize: 11, color: S.secondary,
+          letterSpacing: "0.04em",
+        }}>
+          {proposalIds.length} proposal{proposalIds.length !== 1 ? "s" : ""} —&nbsp;
+          4-eyes approval required after submission
+        </span>
+        <button
+          onClick={handleMarkHedged}
+          disabled={!fillOk}
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: done
+              ? S.tertiary
+              : executing
+                ? "color-mix(in srgb, var(--status-pass,#22c55e) 60%, #000)"
+                : S.green,
+            color: "#000",
+            border: "none",
+            borderRadius: 3,
+            padding: "14px 32px",
+            cursor: (!fillOk) ? "default" : "pointer",
+            fontFamily: S.mono, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em",
+            transition: "background 0.2s ease",
+          }}
+        >
+          {executing && <LoaderIcon size={14} color="#000" style={{ animation: "spin 1s linear infinite" }} />}
+          {done && <CheckCircleIcon size={14} color="#000" />}
+          {done ? "MARKED AS HEDGED" : executing ? "EXECUTING..." : "MARK AS HEDGED"}
+        </button>
+      </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

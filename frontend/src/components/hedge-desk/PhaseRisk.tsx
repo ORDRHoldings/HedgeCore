@@ -108,6 +108,14 @@ export default function PhaseRisk({
 
   const isSmbTier = planTier === "smb";
 
+  useEffect(() => {
+    if (isSmbTier) {
+      onComplete("APPROVE", "");
+    }
+  }, [isSmbTier]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (isSmbTier) return null;
+
   const handleProceed = () => {
     if (!riskData) return;
     // SMB: unavailable gate auto-passes — no scary caution flow
