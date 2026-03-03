@@ -419,6 +419,8 @@ function InputPageInner() {
   const [inlineSaving, setInlineSaving]   = useState(false);
   const [amountDisplay, setAmountDisplay] = useState('');
   const [focusedField, setFocusedField]   = useState<string | null>(null);
+  /** Server-confirmed record ID shown after a successful inline save. Cleared on next edit. */
+  const [inlineSavedId, setInlineSavedId] = useState<string | null>(null);
 
   // ── Load positions from DB on mount ───────────────────────────────────────
   useEffect(() => {
@@ -678,14 +680,20 @@ function InputPageInner() {
     setInlineTouched({ record_id: true, entity: true, amount: true, value_date: true });
     if (!inlineValid || !token) return;
     setInlineSaving(true);
-
+    setInlineSavedId(null);
 
     const result = await dispatch(createPositionThunk({ trade: inlineForm, token }));
     setInlineSaving(false);
     if (createPositionThunk.fulfilled.match(result)) {
+      const serverRecordId = result.payload.record_id;
+      // Show server-confirmed record ID — proof the write reached the DB
+      setInlineSavedId(serverRecordId);
       setInlineForm(EMPTY_INLINE);
       setInlineTouched({});
-      showToast('Position added');
+      setAmountDisplay('');
+      // Refresh the list from the server to confirm the position is persisted
+      dispatch(listPositionsThunk({ token }));
+      showToast(`Saved — Record ID: ${serverRecordId}`);
     } else {
       showToast(`Error: ${result.payload as string}`);
     }
@@ -694,6 +702,8 @@ function InputPageInner() {
 
   const setInlineField = useCallback(<K extends keyof TradeRow>(field: K, value: TradeRow[K]) => {
     setInlineForm(f => ({ ...f, [field]: value }));
+    // Clear the server-confirmed save banner as soon as the user starts a new entry
+    setInlineSavedId(null);
   }, []);
 
   const touchInline = useCallback((field: string) => {
@@ -1190,8 +1200,14 @@ function InputPageInner() {
 
                 {/* Submit row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 14px', borderTop: `1px solid ${S.borderSoft}` }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.textTertiary, letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {(() => {
+                  <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: inlineSavedId ? S.green : S.textTertiary }}>
+                    {inlineSavedId ? (
+                      <>
+                        <span style={{ fontWeight: 700 }}>SAVED</span>
+                        {' — Record ID: '}
+                        <span style={{ letterSpacing: '0.06em' }}>{inlineSavedId}</span>
+                      </>
+                    ) : (() => {
                       const parts: string[] = [];
                       if (inlineForm.type) parts.push(inlineForm.type);
                       if (inlineForm.currency) parts.push(inlineForm.currency);
@@ -1202,7 +1218,7 @@ function InputPageInner() {
                   </span>
                   <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                     <button type="button"
-                      onClick={() => { setInlineForm(EMPTY_INLINE); setInlineTouched({}); setAmountDisplay(''); setFocusedField(null); }}
+                      onClick={() => { setInlineForm(EMPTY_INLINE); setInlineTouched({}); setAmountDisplay(''); setFocusedField(null); setInlineSavedId(null); }}
                       style={{ fontFamily: S.fontMono, fontSize: '0.75rem', letterSpacing: '0.04em', padding: '7px 14px', border: `1px solid ${S.border}`, color: S.textTertiary, background: 'transparent', cursor: 'pointer' }}
                     >CLEAR</button>
                     <button type="button"

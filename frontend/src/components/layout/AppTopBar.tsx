@@ -237,7 +237,7 @@ const NAV: NavSection[] = [
   {
     label: "Position Desk", href: "/position-desk", icon: Ic.table,
     prefixes: ["/position-desk", "/input", "/upload-csv", "/import-history", "/database-connection", "/erp-integration", "/accounting-connection", "/connectors"],
-    header: "Exposure Management",
+    header: "01 · POSITIONS",
     items: [
       { label: "Position Desk",        desc: "Lifecycle control tower — status, policy, execute, reject", href: "/position-desk",          icon: Ic.table,     badge: "DESK",  badgeColor: S.cyan  },
       { label: "New Exposure",          desc: "Manual entry, CSV/XLSX import, connector hub",              href: "/input",                  icon: Ic.pen },
@@ -252,7 +252,7 @@ const NAV: NavSection[] = [
   {
     label: "Policy Engine", href: "/policies", icon: Ic.policy,
     prefixes: ["/policies", "/ai-policy-wizard", "/saved-policies", "/policy-desk"],
-    header: "Hedge Policy",
+    header: "02 · POLICY",
     items: [
       { label: "Policy Desk",       desc: "Assign policies to positions — active, template, favorite, AI", href: "/policy-desk",       icon: Ic.table,  badge: "DESK",  badgeColor: S.cyan  },
       { label: "Policy Library",    desc: "Browse 60 institutional preset policies",        href: "/policies",          icon: Ic.book },
@@ -263,7 +263,7 @@ const NAV: NavSection[] = [
   {
     label: "Hedge Execution", href: "/hedge-desk", icon: Ic.execution,
     prefixes: ["/hedge-desk", "/trade-history", "/hedge-monitor"],
-    header: "Hedge Execution",
+    header: "03 · HEDGE",
     items: [
       { label: "Hedge Desk",    desc: "SELECT → CALCULATE → RISK → APPROVE → EXECUTE — full hedge pipeline",        href: "/hedge-desk",    icon: Ic.terminal,  badge: "DESK",  badgeColor: S.cyan  },
       { label: "Trade History", desc: "Proposals, fills, slippage, tamper-evident audit trail",                      href: "/trade-history", icon: Ic.clock,     badge: "LOG",   badgeColor: S.cyan, minTier: "professional" as PlanTier },

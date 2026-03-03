@@ -45,6 +45,7 @@ import {
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { POSITIONS_HELP } from "@/lib/help";
 import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
+import { getPipelineNextStep } from "@/utils/pipelineNextStep";
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -290,6 +291,9 @@ export default function PositionDeskPage() {
   const [hedgeRate, setHedgeRate]       = useState("");
   const [rejectReason, setRejectReason] = useState("");
 
+  // Top-level active policy (used for pipeline next-step computation)
+  const [topActivePolicy, setTopActivePolicy]           = useState<PolicyInstance | null>(null);
+
   // Policy selector state (for assign-policy modal)
   const [policyTemplates, setPolicyTemplates]           = useState<PolicyTemplate[]>([]);
   const [activePolicyInstance, setActivePolicyInstance] = useState<PolicyInstance | null>(null);
@@ -334,6 +338,14 @@ export default function PositionDeskPage() {
   useEffect(() => { if (modal.type !== null) dispatch(clearLifecycleError()); }, [modal.type, dispatch]);
   // ERR-1: un-dismiss the banner whenever a new error surfaces (new string reference = new error)
   useEffect(() => { if (listError) setErrorDismissed(false); }, [listError]);
+
+  // Fetch active policy for pipeline next-step computation (independent of modal)
+  useEffect(() => {
+    if (!token) return;
+    getActivePolicy(token)
+      .then((inst) => setTopActivePolicy(inst))
+      .catch(() => setTopActivePolicy(null));
+  }, [token]);
 
   // Load templates + favorites + active instance when assign-policy modal opens
   useEffect(() => {
@@ -415,6 +427,13 @@ export default function PositionDeskPage() {
     c.NEEDS_ACTION = positions.filter((p) => NEEDS_ACTION_STATUSES.includes(p.execution_status as ExecStatus)).length;
     return c;
   }, [positions]);
+
+  // Smart pipeline next-step — recomputes when positions or active policy change
+  const pipelineNext = useMemo(
+    () => getPipelineNextStep(positions, topActivePolicy, { amber: S.amber, cyan: S.cyan, pass: S.pass }),
+    [positions, topActivePolicy],
+  );
+
   const openModal = useCallback((type: ModalType, position: PositionRow) => {
     setModal({ type, position });
     setPolicyId(position.policy_id ?? "");
@@ -564,7 +583,24 @@ export default function PositionDeskPage() {
         <div style={{ flex: 1 }} />
         <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{positions.length} positions</span>
         <button onClick={() => token && dispatch(listPositionsThunk({ token }))} title="Refresh (R)" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, background: "transparent", border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>↻ Refresh</button>
-        <button onClick={() => router.push("/hedge-desk")} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.pass, background: `color-mix(in srgb, ${S.pass} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.pass} 25%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>→ Execution</button>
+        <button
+          onClick={() => router.push(pipelineNext.href)}
+          title={pipelineNext.reason}
+          style={{
+            fontFamily: S.fontMono,
+            fontSize: 11,
+            fontWeight: 700,
+            color: pipelineNext.color,
+            background: `color-mix(in srgb, ${pipelineNext.color} 10%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${pipelineNext.color} 35%, transparent)`,
+            padding: "3px 12px",
+            cursor: "pointer",
+            letterSpacing: "0.05em",
+            whiteSpace: "nowrap",
+          }}
+        >
+          NEXT: {pipelineNext.label} →
+        </button>
       </header>
       <WorkflowBreadcrumb active="position" />
       {lifecycleError && (
