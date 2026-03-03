@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Activity, X, ArrowRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import Link from "next/link";
 import type { UserContext } from "@/lib/authContext";
+import GuidedEmptyState from "@/components/ui/GuidedEmptyState";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 const S = {
@@ -157,9 +158,12 @@ export default function HedgeMonitorWidget({ token, onRemove }: Props) {
             <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.1em" }}>LOADING...</span>
           </div>
         ) : !data ? (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>NO DATA</span>
-          </div>
+          <GuidedEmptyState
+            icon={Activity}
+            title="No Active Hedges to Monitor"
+            description="Execute your first hedge to see real-time P&L, effectiveness, and coverage metrics."
+            cta={{ label: "OPEN HEDGE DESK", onClick: () => {} }}
+          />
         ) : (
           <>
             {/* MTM P&L */}

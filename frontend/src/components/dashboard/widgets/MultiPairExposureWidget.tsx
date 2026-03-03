@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { Globe } from "lucide-react";
 import type { WidgetProps } from "@/lib/widgets/widgetRegistry";
 import { PAIR_REGISTRY } from "@/constants/pairRegistry";
+import GuidedEmptyState from "@/components/ui/GuidedEmptyState";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -58,16 +60,8 @@ export default function MultiPairExposureWidget({ token, user, onRemove }: Widge
       // Fall through to demo data
     }
 
-    // Demo data: show a sample portfolio using pairRegistry calibrated spots
-    const demo: PairExposure[] = [
-      { pair: "USDMXN", label: "USD/MXN", exposure_usd: 12_500_000, hedge_pct: 82, is_ndf: false, group: "EM_LATAM" },
-      { pair: "EURUSD", label: "EUR/USD", exposure_usd: 8_200_000,  hedge_pct: 91, is_ndf: false, group: "G10" },
-      { pair: "USDBRL", label: "USD/BRL", exposure_usd: 5_400_000,  hedge_pct: 65, is_ndf: true,  group: "EM_LATAM" },
-      { pair: "USDINR", label: "USD/INR", exposure_usd: 3_800_000,  hedge_pct: 55, is_ndf: true,  group: "EM_ASIA" },
-      { pair: "USDJPY", label: "USD/JPY", exposure_usd: 3_100_000,  hedge_pct: 78, is_ndf: false, group: "G10" },
-      { pair: "USDKRW", label: "USD/KRW", exposure_usd: 2_600_000,  hedge_pct: 48, is_ndf: true,  group: "EM_ASIA" },
-    ];
-    setExposures(demo);
+    // No real data available
+    setExposures([]);
     setLastUpdated(new Date());
     setLoading(false);
   }, [token]);
@@ -143,6 +137,13 @@ export default function MultiPairExposureWidget({ token, user, onRemove }: Widge
       <div style={{ flex: 1, overflowY: "auto" }}>
         {loading ? (
           <div style={{ padding: 16, fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>Loading…</div>
+        ) : exposures.length === 0 ? (
+          <GuidedEmptyState
+            icon={Globe}
+            title="No Multi-Pair Exposures"
+            description="Register positions across currency pairs to see your portfolio exposure breakdown."
+            cta={{ label: "OPEN POSITION DESK", onClick: () => {} }}
+          />
         ) : (
           <div style={{ display: "flex", flexDirection: "column" }}>
             {exposures.map(e => {

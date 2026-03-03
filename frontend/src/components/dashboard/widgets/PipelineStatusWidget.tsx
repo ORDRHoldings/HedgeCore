@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GitMerge, X, ChevronRight, TrendingUp } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
+import GuidedEmptyState from "@/components/ui/GuidedEmptyState";
 import type { UserContext } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
@@ -171,11 +172,11 @@ export default function PipelineStatusWidget({ token, onRemove }: Props) {
         {loading && <EmptyState type="loading" message="Loading pipeline…" />}
 
         {!loading && !data && (
-          <EmptyState
-            type="empty"
-            title="No pipeline activity"
-            message="Run a simulation to see pipeline counts."
-            action={{ label: "Go to Sandbox", onClick: () => router.push("/sandbox") }}
+          <GuidedEmptyState
+            icon={GitMerge}
+            title="Pipeline Clear"
+            description="No proposals in the pipeline. Start with a sandbox calculation to move items through the approval flow."
+            cta={{ label: "OPEN SANDBOX", onClick: () => router.push("/sandbox") }}
           />
         )}
 

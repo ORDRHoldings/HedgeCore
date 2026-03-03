@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { UserContext } from "@/lib/authContext";
 import EmptyState from "@/components/ui/EmptyState";
+import GuidedEmptyState from "@/components/ui/GuidedEmptyState";
 
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -214,14 +215,12 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
         )}
 
         {!loading && !forbidden && !error && count === 0 && (
-          <div style={{ padding: "8px 12px" }}>
-            <EmptyState
-              type="empty"
-              title="No pending approvals"
-              message="Proposals submitted for review will appear here."
-              action={{ label: "Go to Staging", onClick: () => router.push("/staging") }}
-            />
-          </div>
+          <GuidedEmptyState
+            icon={CheckCircle2}
+            title="Approval Queue Clear"
+            description="No proposals awaiting review. Submitted proposals will appear here for your approval."
+            positive
+          />
         )}
 
         {!loading && !forbidden && !error && count > 0 && (
