@@ -48,13 +48,18 @@ def _extract_bearer(request: Request) -> str:
 
 async def _resolve_user(request: Request, db: AsyncSession) -> User:
     """Decode JWT, look up user, return User ORM object."""
+    from sqlalchemy.orm import selectinload
     token = _extract_bearer(request)
     payload = decode_token(token, expected_type="access")
     sub = payload.get("sub")
     if not sub:
         raise HTTPException(status_code=401, detail="Invalid token payload")
     user_id = UUID(str(sub))
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User)
+        .options(selectinload(User.branch), selectinload(User.company))
+        .where(User.id == user_id)
+    )
     user = result.scalars().first()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Invalid or inactive user")
@@ -63,21 +68,27 @@ async def _resolve_user(request: Request, db: AsyncSession) -> User:
 
 def _get_branch_code(user: User) -> str:
     """Return 3-letter branch code from user's branch if available."""
-    branch = getattr(user, "branch", None)
-    if branch:
-        code = getattr(branch, "code", None)
-        if code:
-            return code.upper()
+    try:
+        branch = user.branch
+        if branch:
+            code = getattr(branch, "code", None)
+            if code:
+                return code.upper()
+    except Exception:
+        pass
     return "HQ"  # neutral default -- no fake branch
 
 
 def _get_branch_currency(user: User) -> str:
     """Return branch currency code, defaulting to USD."""
-    branch = getattr(user, "branch", None)
-    if branch:
-        currency = getattr(branch, "currency", None) or getattr(branch, "currency_code", None)
-        if currency:
-            return str(currency).upper()
+    try:
+        branch = user.branch
+        if branch:
+            currency = getattr(branch, "currency", None) or getattr(branch, "currency_code", None)
+            if currency:
+                return str(currency).upper()
+    except Exception:
+        pass
     return "USD"
 
 
@@ -118,8 +129,11 @@ async def dashboard_summary(
         hierarchy_level = await rbac_service.get_user_hierarchy_level(db, user.id)
 
         branch_code = _get_branch_code(user)
-        branch_obj = getattr(user, "branch", None)
-        branch_name = getattr(branch_obj, "name", branch_code)
+        try:
+            branch_obj = user.branch
+            branch_name = getattr(branch_obj, "name", None) or branch_code
+        except Exception:
+            branch_name = branch_code
 
         # Scoped user IDs subquery
         user_ids_sq = _scoped_user_ids(user, has_all_branches)
@@ -153,7 +167,7 @@ async def dashboard_summary(
 
         return {
             "branch_name": branch_name if not has_all_branches else "All Branches",
-            "company_name": getattr(getattr(user, "company", None), "name", None) or "--",
+            "company_name": (getattr(user.company, "name", None) if user.company else None) or "--",
             "role": roles[0] if roles else "--",
             "hierarchy_level": hierarchy_level,
             "is_company_wide": has_all_branches,
