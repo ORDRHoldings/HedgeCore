@@ -29,6 +29,8 @@ from app.models.organization import Branch, Company, Department
 from app.models.rbac import Role, UserRole
 from app.models.user import User
 
+from app.models.permission import Permission, RolePermission, SEED_PERMISSIONS
+
 router = APIRouter(prefix="/v1/admin/reset", tags=["admin-reset"])
 
 # ---------------------------------------------------------------------------
@@ -37,6 +39,17 @@ router = APIRouter(prefix="/v1/admin/reset", tags=["admin-reset"])
 MXN001_COMPANY_ID = uuid.UUID("22222222-2222-2222-2222-222222222222")
 MXN001_BRANCH_ID  = uuid.UUID("22222222-2222-2222-2222-222222222211")
 MXN001_DEPT_ID    = uuid.UUID("22222222-2222-2222-2222-222222222221")
+
+# ---------------------------------------------------------------------------
+# Fixed UUIDs for dual-company seed
+# ---------------------------------------------------------------------------
+SOUTH_COMPANY_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+SOUTH_BRANCH_ID  = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-bbbbbbbbbb01")
+SOUTH_DEPT_ID    = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-cccccccccc01")
+
+DEMOCO_COMPANY_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
+DEMOCO_BRANCH_ID  = uuid.UUID("22222222-2222-2222-2222-222222222201")
+DEMOCO_DEPT_ID    = uuid.UUID("33333333-3333-3333-3333-333333333301")
 
 # ---------------------------------------------------------------------------
 # Business-data DELETE statements (company_id-scoped, FK-safe)
@@ -337,3 +350,261 @@ async def reset_demo_data(
         targets=results,
         audit_event_ids=audit_event_ids,
     )
+
+
+# ---------------------------------------------------------------------------
+# Role definitions for full seed
+# ---------------------------------------------------------------------------
+_SEED_ROLES = [
+    ("admin",          "Full system access -- platform administration",      0,  True),
+    ("cfo",            "Chief Financial Officer -- company-wide oversight",   1,  False),
+    ("head_of_risk",   "Head of Risk -- cross-branch risk governance",       2,  False),
+    ("branch_manager", "Branch Manager -- branch operations oversight",      3,  False),
+    ("supervisor",     "Supervisor -- approve/reject staged artifacts",      5,  True),
+    ("senior_analyst", "Senior FX Analyst -- production calculations",       7,  False),
+    ("risk_analyst",   "Risk Analyst -- sandbox analysis & proposals",      10,  True),
+    ("junior_analyst", "Junior Analyst -- view-only with limited actions",  15,  False),
+    ("auditor",        "Compliance Auditor -- read-only audit access",      12,  False),
+]
+
+_ROLE_PERMS = {
+    "admin": [p[0] for p in SEED_PERMISSIONS],
+    "cfo": [
+        "trades.view","hedges.view","calculate.run_sandbox",
+        "pipeline.approve","pipeline.reject","pipeline.authorize_ledger",
+        "policy.view","policy.edit","policy.activate","market.view",
+        "reports.view_own_branch","reports.view_all_branches",
+        "reports.export_pdf","reports.export_excel","users.view",
+        "company.view_settings","company.edit_settings",
+        "audit.view_own","audit.view_branch","audit.view_all",
+        "overrides.override_subordinate",
+    ],
+    "head_of_risk": [
+        "trades.view","trades.create","trades.edit","trades.delete","trades.import_csv",
+        "hedges.view","hedges.create","hedges.edit","hedges.delete",
+        "calculate.run_sandbox","calculate.run_production",
+        "pipeline.create_proposal","pipeline.submit_staging",
+        "pipeline.approve","pipeline.reject","pipeline.authorize_ledger",
+        "policy.view","policy.edit","policy.activate","policy.create_preset",
+        "market.view","market.edit","market.autofill",
+        "reports.view_own_branch","reports.view_all_branches",
+        "reports.export_pdf","reports.export_excel","users.view",
+        "audit.view_own","audit.view_branch","audit.view_all",
+        "overrides.override_subordinate",
+    ],
+    "branch_manager": [
+        "trades.view","trades.create","trades.edit","trades.delete","trades.import_csv",
+        "hedges.view","hedges.create","hedges.edit","hedges.delete",
+        "calculate.run_sandbox","calculate.run_production",
+        "pipeline.create_proposal","pipeline.submit_staging",
+        "pipeline.approve","pipeline.reject",
+        "policy.view","policy.edit","policy.activate",
+        "market.view","market.edit","market.autofill",
+        "reports.view_own_branch","reports.export_pdf","reports.export_excel",
+        "users.view","audit.view_own","audit.view_branch",
+        "overrides.override_subordinate",
+    ],
+    "supervisor": [
+        "trades.view","trades.create","trades.edit","trades.delete","trades.import_csv",
+        "hedges.view","hedges.create","hedges.edit","hedges.delete",
+        "calculate.run_sandbox","calculate.run_production",
+        "pipeline.create_proposal","pipeline.submit_staging",
+        "pipeline.approve","pipeline.reject",
+        "policy.view","policy.edit","policy.activate",
+        "market.view","market.edit","market.autofill",
+        "reports.view_own_branch","reports.view_all_branches",
+        "reports.export_pdf","reports.export_excel","users.view",
+        "audit.view_own","audit.view_branch",
+        "overrides.override_subordinate",
+    ],
+    "senior_analyst": [
+        "trades.view","trades.create","trades.edit","trades.delete","trades.import_csv",
+        "hedges.view","hedges.create","hedges.edit",
+        "calculate.run_sandbox","calculate.run_production",
+        "pipeline.create_proposal","pipeline.submit_staging",
+        "policy.view","policy.edit","policy.activate","policy.create_preset",
+        "market.view","market.autofill",
+        "reports.view_own_branch","reports.export_pdf",
+        "audit.view_own","audit.view_branch",
+    ],
+    "risk_analyst": [
+        "trades.view","trades.create","trades.edit","trades.delete","trades.import_csv",
+        "hedges.view","hedges.create","hedges.edit",
+        "calculate.run_sandbox","calculate.run_production",
+        "pipeline.create_proposal","pipeline.submit_staging",
+        "policy.view","policy.edit","policy.activate","policy.create_preset",
+        "market.view","market.autofill",
+        "reports.view_own_branch","reports.export_pdf",
+        "audit.view_own","audit.view_branch",
+    ],
+    "junior_analyst": [
+        "trades.view","hedges.view","calculate.run_sandbox",
+        "policy.view","market.view","reports.view_own_branch","audit.view_own",
+    ],
+    "auditor": [
+        "trades.view","hedges.view","policy.view","market.view",
+        "reports.view_own_branch","reports.view_all_branches",
+        "reports.export_pdf","reports.export_excel",
+        "audit.view_own","audit.view_branch","audit.view_all",
+    ],
+}
+
+# Tables to TRUNCATE (FK-safe order, children first)
+_TRUNCATE_TABLES = [
+    "audit_events","audit_logs","auth_audit_log","auth_audit_logs","api_key_audit",
+    "refresh_tokens","api_keys",
+    "ledger_entries","ledger","anchor_hashes","execution_proposals",
+    "approvals","staging_artifacts","staging","proposals",
+    "calculation_runs","positions",
+    "user_policy_favorites","policy_revisions","policy_instances","policy_templates",
+    "connector_run_errors","connector_runs",
+    "role_permissions","user_roles",
+    "users","permissions","roles",
+    "departments","branches","companies",
+]
+
+
+# ---------------------------------------------------------------------------
+# POST /v1/admin/reset/seed-companies
+# Full database reset + seed two companies (no auth required — one-time setup)
+# ---------------------------------------------------------------------------
+
+class SeedResponse(BaseModel):
+    ok: bool
+    companies: List[Dict[str, Any]]
+
+
+@router.post(
+    "/seed-companies",
+    response_model=SeedResponse,
+    summary="Full DB reset + seed South (SMB) and DemoCo (Enterprise)",
+)
+async def seed_companies(
+    request: Request,
+    db: AsyncSession = Depends(get_session),
+) -> SeedResponse:
+    """Wipe everything and create two companies with admin users.
+
+    No auth required (bootstrap endpoint). Idempotent — safe to call repeatedly.
+    """
+    # ── 1. TRUNCATE all tables ────────────────────────────────────────────
+    for table in _TRUNCATE_TABLES:
+        try:
+            await db.execute(text(f'TRUNCATE TABLE "{table}" CASCADE'))
+        except Exception:
+            pass
+
+    # ── 2. Seed permissions ───────────────────────────────────────────────
+    for codename, module, action, description in SEED_PERMISSIONS:
+        db.add(Permission(
+            codename=codename, module=module,
+            action=action, description=description,
+        ))
+    await db.flush()
+
+    # ── 3. Create both companies ──────────────────────────────────────────
+    companies_cfg = [
+        {
+            "id": SOUTH_COMPANY_ID, "name": "South", "slug": "south",
+            "domain": "south.com", "plan_tier": "smb",
+            "branch_id": SOUTH_BRANCH_ID, "dept_id": SOUTH_DEPT_ID,
+            "user_email": "william", "user_pass": "william",
+            "user_name": "William", "job": "Platform Administrator",
+        },
+        {
+            "id": DEMOCO_COMPANY_ID, "name": "DemoCo", "slug": "democo",
+            "domain": "democo.com", "plan_tier": "enterprise",
+            "branch_id": DEMOCO_BRANCH_ID, "dept_id": DEMOCO_DEPT_ID,
+            "user_email": "demo", "user_pass": "demo",
+            "user_name": "Demo Admin", "job": "Platform Administrator",
+        },
+    ]
+
+    seeded = []
+
+    for cfg in companies_cfg:
+        # Company
+        company = Company(
+            id=cfg["id"], name=cfg["name"], slug=cfg["slug"],
+            domain=cfg["domain"],
+            settings={
+                "default_currency": "USD",
+                "fiscal_year_start": "January",
+                "risk_framework": "Basel III Enhanced",
+                "plan_tier": cfg["plan_tier"],
+            },
+        )
+        db.add(company)
+        await db.flush()
+
+        # Branch
+        branch = Branch(
+            id=cfg["branch_id"], company_id=cfg["id"],
+            name="Headquarters", code="HQ", region="Global", timezone="UTC",
+        )
+        db.add(branch)
+        await db.flush()
+
+        # Department
+        dept = Department(
+            id=cfg["dept_id"], branch_id=cfg["branch_id"],
+            name="General", code="GEN",
+        )
+        db.add(dept)
+        await db.flush()
+
+        # Roles for this company
+        role_map: Dict[str, Role] = {}
+        for name, description, level, is_sys in _SEED_ROLES:
+            role = Role(
+                name=name, description=description,
+                hierarchy_level=level, is_system=is_sys,
+                company_id=cfg["id"] if not is_sys else None,
+            )
+            db.add(role)
+            await db.flush()
+            role_map[name] = role
+
+        # Assign permissions to roles
+        for role_name, perm_codes in _ROLE_PERMS.items():
+            role = role_map.get(role_name)
+            if not role:
+                continue
+            for codename in perm_codes:
+                result = await db.execute(
+                    select(Permission).where(Permission.codename == codename)
+                )
+                perm = result.scalars().first()
+                if perm:
+                    db.add(RolePermission(role_id=role.id, permission_id=perm.id))
+        await db.flush()
+
+        # User
+        user = User(
+            email=cfg["user_email"],
+            hashed_password=hash_password(cfg["user_pass"]),
+            full_name=cfg["user_name"],
+            job_title=cfg["job"],
+            is_active=True,
+            is_superuser=True,
+            company_id=cfg["id"],
+            branch_id=cfg["branch_id"],
+            department_id=cfg["dept_id"],
+        )
+        db.add(user)
+        await db.flush()
+
+        # Assign admin role
+        db.add(UserRole(user_id=user.id, role_id=role_map["admin"].id))
+        await db.flush()
+
+        seeded.append({
+            "company": cfg["name"],
+            "plan_tier": cfg["plan_tier"],
+            "login": f"{cfg['user_email']}/{cfg['user_pass']}",
+            "superuser": True,
+        })
+
+    await db.commit()
+
+    return SeedResponse(ok=True, companies=seeded)

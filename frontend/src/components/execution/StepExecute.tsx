@@ -392,6 +392,44 @@ export default function StepExecute({
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, fontFamily: S.fontUI, color: S.primary }}>
 
+      {/* ═══ Top action bar — always visible when idle ═══ */}
+      {submitPhase === "idle" && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "10px 20px",
+          background: `color-mix(in srgb, var(--accent-cyan) 6%, transparent)`,
+          borderBottom: "1px solid var(--border-rim)",
+          flexShrink: 0,
+        }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "var(--accent-cyan)" }}>
+              STEP 5 — EXECUTE
+            </span>
+            <span style={{ fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)", fontSize: 11, color: "var(--text-secondary)" }}>
+              Review execution legs, then submit for checker approval.
+            </span>
+          </div>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={handleSubmitForApproval}
+            style={{
+              fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              padding: "8px 24px",
+              background: "var(--accent-cyan)",
+              color: "var(--bg-deep)",
+              border: "none",
+              cursor: "pointer",
+            }}>
+            SUBMIT FOR CHECKER APPROVAL →
+          </button>
+        </div>
+      )}
+
       {/* ═══ Error banner ═══ */}
       {submitPhase === "error" && submitError && (
         <div style={{ padding: "12px 16px", background: "rgba(239,68,68,0.08)", borderBottom: `1px solid ${S.fail}`, flexShrink: 0, fontFamily: S.fontMono, fontSize: 11, color: S.fail }}>
@@ -413,7 +451,7 @@ export default function StepExecute({
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
                 PROPOSAL IDs ({createdProposalIds.length})
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -465,8 +503,8 @@ export default function StepExecute({
           <div style={{ margin: "16px 16px 0", padding: 0, background: S.bgPanel, border: `1px solid ${S.soft}`, borderRadius: 8, overflow: "hidden" }}>
             {/* Header */}
             <div style={{ padding: "16px 20px", background: S.bgSub, borderBottom: `1px solid ${S.soft}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
-                BROKER ORDER PREVIEW (PRE-APPROVAL)
+              <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: S.primary, textTransform: "uppercase", marginBottom: 8 }}>
+                EXECUTION LEGS
               </div>
               {isDefaultIbkrAccount && (
                 <div style={{ margin: "12px 0", padding: "10px 14px", background: "rgba(231,76,60,0.08)", border: "1px solid #E74C3C", borderRadius: 4, fontFamily: S.fontMono, fontSize: 10, color: "#E74C3C", display: "flex", alignItems: "center", gap: 6 }}>
@@ -597,7 +635,7 @@ export default function StepExecute({
         {/* ─── Hedge Economics Panel ─── */}
         {submitPhase !== "submitted" && hedgeEcon && (
           <div style={{ margin: "16px 16px 0", padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 12 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 12 }}>
               HEDGE ECONOMICS
             </div>
 
@@ -623,14 +661,14 @@ export default function StepExecute({
             {/* Scenario table */}
             {hedgeEcon.scenarios.length > 0 && (
               <>
-                <div style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 6 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 6 }}>
                   STRESS SCENARIO ANALYSIS
                 </div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 10 }}>
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${S.soft}` }}>
                       {["Scenario", "Shocked Spot", "Unhedged P&L", "Hedged P&L", "Hedge Benefit"].map((h) => (
-                        <th key={h} style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, fontSize: 8, letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" }}>
+                        <th key={h} style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, fontSize: 10, letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" }}>
                           {h}
                         </th>
                       ))}
@@ -656,7 +694,7 @@ export default function StepExecute({
         {/* ─── Audit Trail Reference ─── */}
         {submitPhase !== "submitted" && auditRef && (
           <div style={{ margin: "12px 16px 0", padding: "10px 16px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
               AUDIT TRAIL REFERENCE
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 20, fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
@@ -696,7 +734,7 @@ export default function StepExecute({
 
         {/* ─── Section 1: Contract Tickets (individual positions) ─── */}
         <div style={{ padding: "12px 16px 0" }}>
-          <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
             CONTRACT TICKETS ({tickets.length})
           </div>
 
@@ -724,7 +762,7 @@ export default function StepExecute({
                       {ticket.contractName}
                     </span>
                     {!isFutures && (
-                      <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 3, fontSize: 8, fontFamily: S.fontMono, fontWeight: 700, letterSpacing: "0.08em", background: "rgba(0,255,255,0.10)", color: S.cyan, border: `1px solid ${S.cyan}` }}>
+                      <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 3, fontSize: 10, fontFamily: S.fontMono, fontWeight: 700, letterSpacing: "0.08em", background: "rgba(0,255,255,0.10)", color: S.cyan, border: `1px solid ${S.cyan}` }}>
                         VIA OTC COUNTERPARTY
                       </span>
                     )}
@@ -753,7 +791,7 @@ export default function StepExecute({
 
         {/* ─── Section 2: Execution Summary ─── */}
         <div style={{ margin: "16px 16px 0", padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
-          <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
             EXECUTION SUMMARY
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "baseline" }}>
@@ -782,7 +820,7 @@ export default function StepExecute({
                   onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.85"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
                 >
-                  SUBMIT FOR APPROVAL (4-EYES)
+                  SUBMIT FOR CHECKER APPROVAL →
                 </button>
                 <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, marginTop: 8 }}>
                   This will create {positions.length} proposal{positions.length !== 1 ? "s" : ""} pending checker approval.
@@ -848,7 +886,7 @@ export default function StepExecute({
 function SummaryCell({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div>
-      <div style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 8, fontWeight: 600, letterSpacing: "0.10em", color: "var(--text-tertiary)", textTransform: "uppercase" as const, marginBottom: 4 }}>
+      <div style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, fontWeight: 600, letterSpacing: "0.10em", color: "var(--text-tertiary)", textTransform: "uppercase" as const, marginBottom: 4 }}>
         {label}
       </div>
       <div style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 14, fontWeight: 700, color: color ?? "var(--text-primary)" }}>

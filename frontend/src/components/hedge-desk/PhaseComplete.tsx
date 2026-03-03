@@ -152,7 +152,7 @@ export default function PhaseComplete({
             padding: "14px 16px",
             textAlign: "center",
           }}>
-            <div style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em", marginBottom: 6 }}>
+            <div style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary, letterSpacing: "0.1em", marginBottom: 6 }}>
               {card.label}
             </div>
             <div style={{ fontFamily: HD.fontMono, fontSize: 20, fontWeight: 700, color: HD.primary }}>
@@ -165,7 +165,7 @@ export default function PhaseComplete({
       {/* Currency breakdown */}
       <div style={{ width: "100%", maxWidth: 640, background: HD.bgPanel, border: `1px solid ${HD.soft}`, borderRadius: 4, overflow: "hidden" }}>
         <div style={{ padding: "8px 14px", background: HD.bgSub, borderBottom: `1px solid ${HD.soft}` }}>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
+          <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
             NOTIONAL BY CURRENCY
           </span>
         </div>

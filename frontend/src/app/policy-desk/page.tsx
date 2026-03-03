@@ -257,6 +257,8 @@ export default function PolicyDeskPage() {
   // Bulk operation state
   const [bulkRunning, setBulkRunning] = useState(false);
   const [bulkResult, setBulkResult] = useState<BulkAssignResult | null>(null);
+  const [lastAssignedPolicyName, setLastAssignedPolicyName] = useState<string | null>(null);
+  const [lastAssignedPolicyCode, setLastAssignedPolicyCode] = useState<string | null>(null);
 
   // Confirmation preview before active-policy bulk assign
   const [confirmAssignOpen, setConfirmAssignOpen] = useState(false);
@@ -403,6 +405,9 @@ export default function PolicyDeskPage() {
       );
       setBulkResult(result);
       if (result.assigned > 0) {
+        setLastAssignedPolicyName(activePolicy.template?.name ?? null);
+        setLastAssignedPolicyCode(activePolicy.id?.slice(0, 8) ?? null);
+        setPreset("ALL");
         dispatch(listPositionsThunk({ token }));
         setSelected(new Set());
       }
@@ -425,6 +430,10 @@ export default function PolicyDeskPage() {
       );
       setBulkResult(result);
       if (result.assigned > 0) {
+        const tpl = templates.find(t => t.id === selectedTemplate);
+        setLastAssignedPolicyName(tpl?.name ?? null);
+        setLastAssignedPolicyCode(tpl?.id?.slice(0, 8) ?? null);
+        setPreset("ALL");
         dispatch(listPositionsThunk({ token }));
         setSelected(new Set());
       }
@@ -434,7 +443,7 @@ export default function PolicyDeskPage() {
       setBulkRunning(false);
       setAssignMode(null);
     }
-  }, [token, selectedTemplate, selected, dispatch]);
+  }, [token, selectedTemplate, selected, dispatch, templates]);
 
   // Generate AI recommendations
   const handleGenerateAI = useCallback(async () => {
@@ -607,6 +616,35 @@ export default function PolicyDeskPage() {
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: S.bgDeep, overflow: "hidden", flex: 1 }}>
         {/* Workflow progress breadcrumb */}
         <WorkflowBreadcrumb active="policy" />
+        {/* Step 2 guidance strip */}
+        <div style={{
+          background: `color-mix(in srgb, ${S.cyan} 6%, transparent)`,
+          borderBottom: `1px solid ${S.rim}`,
+          padding: "6px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          flexShrink: 0,
+        }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.cyan, letterSpacing: "0.1em" }}>
+            STEP 2 OF 4
+          </span>
+          <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>
+            Bind a policy to each position to govern hedge ratio, instruments, and tenor.
+          </span>
+          {(() => {
+            const needsPolicy = positions.filter(p => p.execution_status === "NEW").length;
+            return needsPolicy > 0 ? (
+              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, marginLeft: "auto" }}>
+                {needsPolicy} position{needsPolicy !== 1 ? "s" : ""} require a policy
+              </span>
+            ) : positions.length > 0 ? (
+              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.pass, marginLeft: "auto" }}>
+                ✓ All positions have a policy assigned
+              </span>
+            ) : null;
+          })()}
+        </div>
         {/* Header */}
         <header style={{
           display: "flex",
@@ -1011,39 +1049,44 @@ export default function PolicyDeskPage() {
           </div>
         )}
 
-        {/* Bulk result banner */}
+        {/* Assignment confirmation banner */}
         {bulkResult && (
           <div style={{
-            background: bulkResult.failed > 0 ? `color-mix(in srgb, ${S.amber} 8%, transparent)` : `color-mix(in srgb, ${S.pass} 8%, transparent)`,
+            background: bulkResult.failed > 0
+              ? `color-mix(in srgb, ${S.amber} 8%, transparent)`
+              : `color-mix(in srgb, ${S.pass} 8%, transparent)`,
             border: `1px solid ${bulkResult.failed > 0 ? S.amber : S.pass}`,
-            padding: "8px 20px",
+            padding: "10px 20px",
             flexShrink: 0,
             display: "flex",
             alignItems: "center",
             gap: 12,
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: bulkResult.failed > 0 ? S.amber : S.pass }}>
-              BULK RESULT
+            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: bulkResult.failed > 0 ? S.amber : S.pass, letterSpacing: "0.08em", minWidth: 120 }}>
+              {bulkResult.failed > 0 ? "PARTIAL FAILURE" : "POLICY ASSIGNED"}
             </span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
-              {bulkResult.assigned} assigned · {bulkResult.skipped} skipped · {bulkResult.failed} failed
-            </span>
-            {bulkResult.errors.length > 0 && (
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail }}>
-                {bulkResult.errors[0]}
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>
+                {lastAssignedPolicyName
+                  ? `${lastAssignedPolicyName}${lastAssignedPolicyCode ? ` (…${lastAssignedPolicyCode})` : ""} → ${bulkResult.assigned} position${bulkResult.assigned !== 1 ? "s" : ""}`
+                  : `${bulkResult.assigned} assigned`}
+                {bulkResult.skipped > 0 && <span style={{ color: S.tertiary }}> · {bulkResult.skipped} skipped</span>}
+                {bulkResult.failed > 0 && <span style={{ color: S.fail }}> · {bulkResult.failed} failed</span>}
               </span>
-            )}
+              {bulkResult.assigned > 0 && (
+                <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.tertiary }}>
+                  Policy governs hedge ratio, instruments, and tenor. Proceed to Hedge Desk to run calculation.
+                </span>
+              )}
+              {bulkResult.errors.length > 0 && (
+                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail }}>
+                  {bulkResult.errors[0]}
+                </span>
+              )}
+            </div>
             <button
-              onClick={() => setBulkResult(null)}
-              style={{
-                marginLeft: "auto",
-                fontFamily: S.fontMono,
-                fontSize: 10,
-                color: S.tertiary,
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-              }}>
+              onClick={() => { setBulkResult(null); setLastAssignedPolicyName(null); setLastAssignedPolicyCode(null); }}
+              style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>
               ✕
             </button>
           </div>

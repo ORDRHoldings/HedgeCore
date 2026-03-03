@@ -117,9 +117,8 @@ export default function PhaseRisk({
   if (isSmbTier) return null;
 
   const handleProceed = () => {
-    if (!riskData) return;
-    // SMB: unavailable gate auto-passes — no scary caution flow
-    const verdict      = (unavailable && isSmbTier) ? "APPROVE" : (unavailable ? "UNAVAILABLE" : riskData.verdict);
+    if (!riskData || unavailable) return; // fail-closed: unavailable gate cannot proceed
+    const verdict      = riskData.verdict;
     const decisionHash = riskData.decision_hash ?? "";
     onComplete(verdict, decisionHash);
   };
@@ -194,8 +193,8 @@ export default function PhaseRisk({
               {badgeLabel}
             </span>
             {unavailable && !isSmbTier && (
-              <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, textAlign: "center", maxWidth: 360 }}>
-                Risk gate endpoint is unavailable. You may proceed with caution — ensure manual policy review is completed.
+              <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.amber, textAlign: "center", maxWidth: 360 }}>
+                Risk gate endpoint is temporarily unavailable. Retry or return to the previous step.
               </span>
             )}
             {unavailable && isSmbTier && (
@@ -214,14 +213,14 @@ export default function PhaseRisk({
       {!loading && riskData?.reasons && riskData.reasons.length > 0 && (
         <div style={{ background: HD.bgPanel, border: `1px solid ${HD.soft}`, borderRadius: 4, overflow: "hidden" }}>
           <div style={{ padding: "8px 14px", background: HD.bgSub, borderBottom: `1px solid ${HD.soft}` }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
               REASONS
             </span>
           </div>
           <div style={{ padding: "8px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
             {riskData.reasons.map((r, i) => (
               <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, marginTop: 2 }}>▸</span>
+                <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary, marginTop: 2 }}>▸</span>
                 <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>{r}</span>
               </div>
             ))}
@@ -233,7 +232,7 @@ export default function PhaseRisk({
       {!loading && isConditions && riskData?.conditions && riskData.conditions.length > 0 && (
         <div style={{ background: `color-mix(in srgb,${HD.amber} 5%,${HD.bgPanel})`, border: `1px solid color-mix(in srgb,${HD.amber} 25%,transparent)`, borderRadius: 4, overflow: "hidden" }}>
           <div style={{ padding: "8px 14px", background: `color-mix(in srgb,${HD.amber} 10%,${HD.bgSub})`, borderBottom: `1px solid color-mix(in srgb,${HD.amber} 20%,transparent)` }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: HD.amber }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.amber }}>
               CONDITIONS
             </span>
           </div>
@@ -287,21 +286,21 @@ export default function PhaseRisk({
         )}
         <button
           onClick={handleProceed}
-          disabled={loading || isRejected}
+          disabled={loading || isRejected || unavailable}
           style={{
             fontFamily: HD.fontMono,
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: "0.1em",
-            color: loading || isRejected ? HD.slate : "#ffffff",
-            background: loading || isRejected ? `color-mix(in srgb,${HD.slate} 20%,transparent)` : HD.royal,
-            border: `1px solid ${loading || isRejected ? HD.soft : HD.royal}`,
+            color: loading || isRejected || unavailable ? HD.slate : "#ffffff",
+            background: loading || isRejected || unavailable ? `color-mix(in srgb,${HD.slate} 20%,transparent)` : HD.royal,
+            border: `1px solid ${loading || isRejected || unavailable ? HD.soft : HD.royal}`,
             padding: "10px 24px",
-            cursor: loading || isRejected ? "not-allowed" : "pointer",
+            cursor: loading || isRejected || unavailable ? "not-allowed" : "pointer",
             borderRadius: 3,
           }}
         >
-          {isRejected ? "BLOCKED BY RISK GATE" : "PROCEED TO REVIEW →"}
+          {isRejected ? "BLOCKED BY RISK GATE" : unavailable ? "GATE UNAVAILABLE — RETRY" : "PROCEED TO REVIEW →"}
         </button>
       </div>
 

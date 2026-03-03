@@ -115,6 +115,59 @@ export default function PhaseSelect({ token, onComplete }: PhaseSelectProps) {
         </p>
       </DisclosurePanel>
 
+      {/* Selection summary card */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        padding: "10px 16px",
+        background: `color-mix(in srgb, var(--accent-cyan) 6%, transparent)`,
+        border: `1px solid var(--border-rim)`,
+        borderRadius: 2,
+        marginBottom: 12,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "var(--accent-cyan)" }}>
+            SELECTION
+          </span>
+          <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+            {selected.size} of {positions.length} selected
+          </span>
+        </div>
+        {selected.size > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, color: "var(--text-tertiary)", letterSpacing: "0.06em" }}>
+              NOTIONAL
+            </span>
+            <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+              {new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
+                positions.filter(p => selected.has(p.id)).reduce((sum, p) => sum + (p.amount || 0), 0)
+              )} {positions.find(p => selected.has(p.id))?.currency ?? ""}
+            </span>
+          </div>
+        )}
+        <div style={{ flex: 1 }} />
+        <button
+          disabled={selected.size === 0}
+          onClick={handleProceed}
+          title={selected.size === 0 ? "Select at least 1 eligible position" : `Proceed with ${selected.size} position${selected.size !== 1 ? "s" : ""}`}
+          style={{
+            fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+            padding: "8px 20px",
+            background: selected.size === 0 ? "transparent" : "var(--accent-cyan)",
+            color: selected.size === 0 ? "var(--text-tertiary)" : "var(--bg-deep)",
+            border: `1px solid ${selected.size === 0 ? "var(--border-rim)" : "var(--accent-cyan)"}`,
+            cursor: selected.size === 0 ? "not-allowed" : "pointer",
+            transition: "all 0.15s",
+          }}>
+          {selected.size === 0 ? "SELECT POSITIONS TO PROCEED" : `PROCEED TO CALCULATE — ${selected.size}`}
+        </button>
+      </div>
+
       {/* Position list */}
       <div style={{
         border: `1px solid ${HD.rim}`,
@@ -146,7 +199,7 @@ export default function PhaseSelect({ token, onComplete }: PhaseSelectProps) {
           {["ENTITY", "STATUS", "CURRENCY", "AMOUNT", "VALUE DATE"].map(h => (
             <span key={h} style={{
               fontFamily: HD.fontMono,
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: 700,
               letterSpacing: "0.1em",
               color: HD.tertiary,
@@ -222,7 +275,7 @@ export default function PhaseSelect({ token, onComplete }: PhaseSelectProps) {
                 {p.entity}
               </span>
               <span style={{
-                fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700,
+                fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700,
                 color: st.color, display: "flex", alignItems: "center",
                 letterSpacing: "0.06em",
               }}>
