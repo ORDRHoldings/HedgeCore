@@ -179,9 +179,14 @@ async def update_company_settings(
     attributes.flag_modified(company, "settings")
     company.settings = settings
 
-    # Stash scalar columns before commit (they expire on commit in async session)
-    company_name = company.name
-    company_slug = company.slug
+    # Stash all ORM attributes needed after commit — async session expires all
+    # objects on commit, so any post-commit attribute access triggers lazy loads
+    # which raise MissingGreenlet in async context.
+    company_name    = company.name
+    company_slug    = company.slug
+    actor_company_id = current_user.company_id
+    actor_id        = current_user.id
+    actor_email     = current_user.email
 
     await session.commit()
 
@@ -194,11 +199,11 @@ async def update_company_settings(
             "policy_limits_snapshot": settings.get("policy_limits"),
             "execution_settings_snapshot": settings.get("execution_settings"),
         },
-        company_id=current_user.company_id,
-        actor_id=current_user.id,
-        actor_email=current_user.email,
+        company_id=actor_company_id,
+        actor_id=actor_id,
+        actor_email=actor_email,
         entity_type="company_settings",
-        entity_id=str(current_user.company_id),
+        entity_id=str(actor_company_id),
     )
     session.add(audit_event)
     await session.commit()
