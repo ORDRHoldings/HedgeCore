@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import type { Layout } from "react-grid-layout";
-import { Plus, RotateCcw, RefreshCw } from "lucide-react";
+import { Plus, RotateCcw, RefreshCw, ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import type { UserContext } from "@/lib/authContext";
 import { WIDGET_REGISTRY, type GridItem, type WidgetId } from "@/lib/widgets/widgetRegistry";
@@ -191,6 +191,79 @@ function fmtUSD(n?: number | null): string {
 function fmtPct(n?: number | null): string {
   if (n == null) return "—";
   return `${(n * 100).toFixed(1)}%`;
+}
+
+// ── Workflow Strip ────────────────────────────────────────────────────────────
+
+interface OnboardingSummary {
+  exposures_open_count: number;
+  policy_assigned: boolean;
+  policy_id: string | null;
+  last_run_id: string | null;
+  pending_proposals_count: number;
+  pending_approvals_count: number;
+}
+
+type WorkflowAction = {
+  label: string;
+  count: number;
+  href: string;
+  color: string;
+  urgency: "high" | "medium" | "low";
+};
+
+function deriveWorkflowAction(d: OnboardingSummary): WorkflowAction | null {
+  if (d.pending_approvals_count > 0)
+    return { label: `${d.pending_approvals_count} proposal${d.pending_approvals_count > 1 ? "s" : ""} approved — EXECUTE`, count: d.pending_approvals_count, href: "/staging", color: "var(--status-pass)", urgency: "high" };
+  if (d.pending_proposals_count > 0)
+    return { label: `${d.pending_proposals_count} proposal${d.pending_proposals_count > 1 ? "s" : ""} awaiting checker approval`, count: d.pending_proposals_count, href: "/staging", color: "var(--accent-amber)", urgency: "high" };
+  if (d.last_run_id && d.exposures_open_count > 0)
+    return { label: `${d.exposures_open_count} position${d.exposures_open_count > 1 ? "s" : ""} ready — submit for execution`, count: d.exposures_open_count, href: "/hedge-desk", color: "var(--accent-cyan)", urgency: "medium" };
+  if (!d.policy_assigned && d.exposures_open_count > 0)
+    return { label: `${d.exposures_open_count} position${d.exposures_open_count > 1 ? "s" : ""} need policy assignment`, count: d.exposures_open_count, href: "/policy-desk", color: "var(--accent-amber)", urgency: "medium" };
+  if (d.exposures_open_count > 0)
+    return { label: `${d.exposures_open_count} position${d.exposures_open_count > 1 ? "s" : ""} open — run calculation`, count: d.exposures_open_count, href: "/hedge-desk", color: "var(--accent-cyan)", urgency: "low" };
+  return null;
+}
+
+function WorkflowStrip({ token, refreshKey }: { token: string; refreshKey: number }) {
+  const [summary, setSummary] = useState<OnboardingSummary | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    dashboardFetch("/v1/ui/onboarding-summary", token)
+      .then(r => r.ok ? r.json() : null)
+      .then((d: OnboardingSummary | null) => { if (d) setSummary(d); })
+      .catch(() => {});
+  }, [token, refreshKey]);
+
+  if (!summary) return null;
+  const action = deriveWorkflowAction(summary);
+  if (!action) return null;
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        height: 28, display: "flex", alignItems: "center",
+        background: `color-mix(in srgb, ${action.color} 7%, var(--bg-sub))`,
+        borderBottom: `1px solid color-mix(in srgb, ${action.color} 25%, var(--border-rim))`,
+        padding: "0 14px", flexShrink: 0, cursor: "pointer", gap: 10,
+      }}
+      onClick={() => router.push(action.href)}
+    >
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: action.color, boxShadow: `0 0 6px ${action.color}`, flexShrink: 0, animation: action.urgency === "high" ? "pulse 1.5s infinite" : undefined }} />
+      <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, color: action.color, letterSpacing: "0.06em", flexShrink: 0 }}>
+        NEXT ACTION
+      </span>
+      <span style={{ width: 1, height: 12, background: `color-mix(in srgb, ${action.color} 30%, transparent)`, flexShrink: 0 }} />
+      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: "var(--text-secondary)", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {action.label}
+      </span>
+      <ArrowRight size={10} color={action.color} style={{ flexShrink: 0, marginLeft: "auto" }} />
+    </div>
+  );
 }
 
 // ── Status Strip ──────────────────────────────────────────────────────────────
@@ -455,6 +528,9 @@ export default function DashboardPage() {
 
       {/* ── Status Strip ────────────────────────────────────────────────────── */}
       <StatusStrip token={token} refreshKey={refreshKey} />
+
+      {/* ── Workflow Strip (contextual next-action banner) ───────────────────── */}
+      <WorkflowStrip token={token} refreshKey={refreshKey} />
 
       {/* ── Main area ───────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
