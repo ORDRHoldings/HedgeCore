@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { S } from "../../types/settings";
 import SectionHeader from "../shared/SectionHeader";
@@ -24,6 +24,14 @@ export default function SecurityTab({ token }: Props) {
   const [disableLoading, setDisableLoading] = useState(false);
   const [disableError,   setDisableError]   = useState<string | null>(null);
   const [copied,         setCopied]         = useState(false);
+
+  // IP Allowlist state
+  const [ipEnabled,      setIpEnabled]      = useState(false);
+  const [ipEntries,      setIpEntries]      = useState<string[]>([]);
+  const [ipDraft,        setIpDraft]        = useState("");
+  const [ipSaving,       setIpSaving]       = useState(false);
+  const [ipSaveMsg,      setIpSaveMsg]      = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const ipSaveMsgTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -77,6 +85,45 @@ export default function SecurityTab({ token }: Props) {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); });
+  };
+
+  // IP Allowlist handlers
+  const handleIpAddEntry = () => {
+    const trimmed = ipDraft.trim();
+    if (!trimmed) return;
+    // Basic validation: not already present
+    if (ipEntries.includes(trimmed)) { setIpDraft(""); return; }
+    setIpEntries(prev => [...prev, trimmed]);
+    setIpDraft("");
+  };
+
+  const handleIpRemoveEntry = (entry: string) => {
+    setIpEntries(prev => prev.filter(e => e !== entry));
+  };
+
+  const handleIpSave = async () => {
+    setIpSaving(true);
+    setIpSaveMsg(null);
+    if (ipSaveMsgTimer.current) clearTimeout(ipSaveMsgTimer.current);
+    try {
+      const res = await dashboardFetch("/v1/settings/security", token, {
+        method: "PATCH",
+        body: JSON.stringify({
+          execution_ip_allowlist_enabled: ipEnabled,
+          execution_ip_allowlist: ipEntries,
+        }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error((e as { detail?: string }).detail ?? `HTTP ${res.status}`);
+      }
+      setIpSaveMsg({ kind: "ok", text: "IP allowlist saved." });
+    } catch (e: unknown) {
+      setIpSaveMsg({ kind: "err", text: e instanceof Error ? e.message : "Save failed." });
+    } finally {
+      setIpSaving(false);
+      ipSaveMsgTimer.current = setTimeout(() => setIpSaveMsg(null), 4000);
+    }
   };
 
   const codeStyle: React.CSSProperties = {
@@ -204,6 +251,97 @@ export default function SecurityTab({ token }: Props) {
       <div style={{ background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "10px 14px", fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.6 }}>
         <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.secondary, marginRight: 6, letterSpacing: "0.07em" }}>TOTP</span>
         MFA uses RFC 6238 time-based one-time passwords (30-second window). Compatible with all standard authenticator apps. Backup codes are single-use emergency recovery tokens — each can only be used once.
+      </div>
+
+      {/* ── IP Allowlist ──────────────────────────────────────────────────────── */}
+      <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+        <SectionHeader label="IP Allowlist" />
+
+        {/* Toggle row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={() => setIpEnabled(v => !v)}
+            style={{
+              width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer", padding: 0, flexShrink: 0,
+              background: ipEnabled ? S.cyan : S.rim, position: "relative", transition: "background 0.15s",
+            }}
+            aria-label={ipEnabled ? "Disable IP allowlist" : "Enable IP allowlist"}
+          >
+            <span style={{
+              display: "block", width: 16, height: 16, borderRadius: "50%", background: "#fff",
+              position: "absolute", top: 3, left: ipEnabled ? 21 : 3, transition: "left 0.15s",
+            }} />
+          </button>
+          <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", color: ipEnabled ? S.cyan : S.tertiary }}>
+            EXECUTION IP ALLOWLIST {ipEnabled ? "ENABLED" : "DISABLED"}
+          </span>
+        </div>
+
+        <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.6 }}>
+          Restrict hedge execution actions (<span style={{ fontFamily: S.fontMono, color: S.secondary }}>POST /v1/proposals</span>,{" "}
+          <span style={{ fontFamily: S.fontMono, color: S.secondary }}>PATCH …/approve</span>,{" "}
+          <span style={{ fontFamily: S.fontMono, color: S.secondary }}>POST …/execute</span>) to specific IP ranges.
+          Leave empty to allow all IPs. Supports exact IPs and CIDR notation (e.g. <span style={{ fontFamily: S.fontMono, color: S.secondary }}>10.0.0.0/8</span>).
+        </div>
+
+        {/* Current entries as chips */}
+        {ipEntries.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {ipEntries.map(entry => (
+              <div key={entry} style={{
+                display: "flex", alignItems: "center", gap: 6,
+                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
+                color: S.primary, background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 2,
+                padding: "3px 8px",
+              }}>
+                {entry}
+                <button
+                  onClick={() => handleIpRemoveEntry(entry)}
+                  style={{ background: "transparent", border: "none", cursor: "pointer", color: S.tertiary, fontSize: 12, padding: 0, lineHeight: 1, display: "flex", alignItems: "center" }}
+                  title={`Remove ${entry}`}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add entry row */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            type="text"
+            value={ipDraft}
+            onChange={e => setIpDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleIpAddEntry(); } }}
+            placeholder="e.g. 10.0.0.0/8 or 192.168.1.100"
+            style={{
+              fontFamily: S.fontMono, fontSize: 11, color: S.primary,
+              background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 2,
+              padding: "7px 10px", outline: "none", flex: 1, boxSizing: "border-box",
+            }}
+          />
+          <button
+            onClick={handleIpAddEntry}
+            disabled={!ipDraft.trim()}
+            style={btn(S.cyan, !ipDraft.trim())}
+          >ADD</button>
+        </div>
+
+        {/* Save button */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={handleIpSave}
+            disabled={ipSaving}
+            style={btn(S.pass, ipSaving)}
+          >{ipSaving ? "SAVING…" : "SAVE IP ALLOWLIST"}</button>
+          {ipSaveMsg && (
+            <span style={{
+              fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.06em",
+              color: ipSaveMsg.kind === "ok" ? S.pass : S.fail,
+            }}>
+              {ipSaveMsg.kind === "ok" ? "✓" : "✗"} {ipSaveMsg.text}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

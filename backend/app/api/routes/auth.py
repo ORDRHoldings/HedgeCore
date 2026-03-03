@@ -45,6 +45,8 @@ from app.core.security import (
 
     decode_token,
 
+    get_session_duration_for_roles,
+
 )
 
 from app.crud import refresh_token as rt_crud
@@ -339,7 +341,20 @@ async def login(
 
 
 
-        access_token = create_access_token(sub=str(user.id), email=user.email)
+        # Determine session duration based on assigned roles (high-privilege = 15 min)
+        try:
+            user_roles = await rbac_service.get_roles_by_user(db, user.id)
+            role_names = [r.name for r in user_roles] if user_roles else []
+        except Exception:
+            role_names = []
+
+        session_minutes = get_session_duration_for_roles(role_names)
+
+        access_token = create_access_token(
+            sub=str(user.id),
+            email=user.email,
+            expires_minutes=session_minutes,
+        )
 
         refresh_token, jti, exp_at = create_refresh_token(sub=str(user.id), email=user.email)
 
@@ -367,9 +382,40 @@ async def login(
 
             user_agent=ua,
 
-            message="Login successful",
+            message=f"Login successful (session={session_minutes}min)",
 
         )
+
+        # Emit SYSTEM audit event for high-privilege logins with shortened session
+        if session_minutes < 30:
+            try:
+                from app.models.audit_event import AuditEvent, GENESIS_HASH, build_audit_event
+                from sqlalchemy import select as _sa_select
+                _q = (
+                    _sa_select(AuditEvent.event_hash)
+                    .where(AuditEvent.company_id == user.company_id)
+                    .order_by(AuditEvent.created_at.desc())
+                    .limit(1)
+                )
+                _res = await db.execute(_q)
+                _prev_hash = _res.scalars().first() or GENESIS_HASH
+                _evt = build_audit_event(
+                    event_type="SYSTEM",
+                    description=f"High-privilege login: session limited to {session_minutes}min",
+                    payload={"roles": role_names, "session_minutes": session_minutes},
+                    prev_event_hash=_prev_hash,
+                    company_id=user.company_id,
+                    branch_id=user.branch_id,
+                    actor_id=user.id,
+                    actor_email=user.email,
+                    entity_type="session",
+                    entity_id=str(user.id),
+                    ip_address=ip,
+                )
+                db.add(_evt)
+                await db.commit()
+            except Exception:
+                logger.warning("Failed to emit high-privilege login audit event", exc_info=True)
 
         return TokenPair(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
 

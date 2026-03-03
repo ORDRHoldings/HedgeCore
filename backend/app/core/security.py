@@ -140,6 +140,29 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # -------------------------------------------------------------------
 
+# ? High-Privilege Session Duration
+
+# -------------------------------------------------------------------
+
+# Roles that receive a shortened access token window for security.
+HIGH_PRIVILEGE_ROLES = {"cfo", "head_of_risk", "cro", "board_observer"}
+HIGH_PRIVILEGE_SESSION_MINUTES = 15  # 15-min access token (vs standard 30 min)
+
+
+def get_session_duration_for_roles(role_names: list[str]) -> int:
+    """Return access token lifetime in minutes based on highest privilege role.
+
+    Returns HIGH_PRIVILEGE_SESSION_MINUTES (15) if any assigned role is in
+    HIGH_PRIVILEGE_ROLES, otherwise returns the configured default (30 min).
+    """
+    role_set = {r.lower() for r in role_names}
+    if role_set & HIGH_PRIVILEGE_ROLES:
+        return HIGH_PRIVILEGE_SESSION_MINUTES
+    return settings.ACCESS_EXPIRE_MIN
+
+
+# -------------------------------------------------------------------
+
 # ? JWT Core Helpers
 
 # -------------------------------------------------------------------
@@ -293,9 +316,17 @@ def create_access_token(
     email: Optional[str] = None,
     token_version: Optional[int] = None,
     mfa_verified: bool = False,
+    expires_minutes: Optional[int] = None,
 ) -> str:
 
-    """Mint short-lived access token (UUID-safe, includes 'nbf')."""
+    """Mint short-lived access token (UUID-safe, includes 'nbf').
+
+    Args:
+        expires_minutes: Override the default token lifetime in minutes.
+                         Used by the login endpoint to apply role-based
+                         session duration (e.g. 15 min for high-privilege roles).
+                         Defaults to settings.ACCESS_EXPIRE_MIN (30 min).
+    """
 
     sub_str = str(sub)
 
@@ -303,7 +334,9 @@ def create_access_token(
 
     claims["mfa_verified"] = mfa_verified
 
-    return _encode_jwt(claims, settings.ACCESS_EXPIRE_MIN)
+    duration = expires_minutes if expires_minutes is not None else settings.ACCESS_EXPIRE_MIN
+
+    return _encode_jwt(claims, duration)
 
 
 
