@@ -38,11 +38,15 @@ import hashlib
 
 import json
 
+import logging
+
 from datetime import datetime, timezone
 
 from typing import Optional
 
 from uuid import UUID
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -481,77 +485,88 @@ async def verify_audit_chain(
             verified_at    = datetime.now(_tz.utc).isoformat(),
         )
 
-    q = (
+    try:
+        q = (
 
-        select(AuditEvent)
+            select(AuditEvent)
 
-        .where(AuditEvent.company_id == current_user.company_id)
+            .where(AuditEvent.company_id == current_user.company_id)
 
-        .order_by(AuditEvent.created_at.asc())
-
-    )
-
-    rows = list((await session.execute(q)).scalars().all())
-
-
-
-    prev_hash = GENESIS_HASH
-
-    broken_at: str | None = None
-
-
-
-    for row in rows:
-
-        # Recompute expected hash
-
-        expected = compute_event_hash(
-
-            event_type  = row.event_type,
-
-            actor_id    = str(row.actor_id) if row.actor_id else None,
-
-            entity_id   = row.entity_id,
-
-            payload     = row.payload or {},
-
-            created_at  = row.created_at,
-
-            prev_hash   = row.prev_event_hash,
+            .order_by(AuditEvent.created_at.asc())
 
         )
 
-        # Check stored hash matches recomputed hash
-
-        if row.event_hash != expected:
-
-            broken_at = str(row.id)
-
-            break
-
-        # Check chain linkage
-
-        if row.prev_event_hash != prev_hash:
-
-            broken_at = str(row.id)
-
-            break
-
-        prev_hash = row.event_hash
+        rows = list((await session.execute(q)).scalars().all())
 
 
 
-    return ChainIntegrityReport(
+        prev_hash = GENESIS_HASH
 
-        tenant_id       = str(current_user.company_id) if current_user.company_id else None,
+        broken_at: str | None = None
 
-        events_checked  = len(rows),
 
-        broken_at       = broken_at,
 
-        is_intact       = broken_at is None,
+        for row in rows:
 
-        verified_at     = datetime.now(timezone.utc).isoformat(),
+            # Recompute expected hash
+            try:
+                expected = compute_event_hash(
 
-    )
+                    event_type  = row.event_type or "",
+
+                    actor_id    = str(row.actor_id) if row.actor_id else None,
+
+                    entity_id   = str(row.entity_id) if row.entity_id else None,
+
+                    payload     = row.payload if isinstance(row.payload, dict) else {},
+
+                    created_at  = row.created_at,
+
+                    prev_hash   = row.prev_event_hash or GENESIS_HASH,
+
+                )
+            except Exception:
+                # If we can't compute the hash for a row, treat it as broken
+                broken_at = str(row.id)
+                break
+
+            # Check stored hash matches recomputed hash
+
+            if row.event_hash != expected:
+
+                broken_at = str(row.id)
+
+                break
+
+            # Check chain linkage
+
+            if row.prev_event_hash != prev_hash:
+
+                broken_at = str(row.id)
+
+                break
+
+            prev_hash = row.event_hash
+
+
+
+        return ChainIntegrityReport(
+
+            tenant_id       = str(current_user.company_id) if current_user.company_id else None,
+
+            events_checked  = len(rows),
+
+            broken_at       = broken_at,
+
+            is_intact       = broken_at is None,
+
+            verified_at     = datetime.now(timezone.utc).isoformat(),
+
+        )
+    except Exception as exc:
+        logger.error("verify_audit_chain failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chain verification failed: {type(exc).__name__}: {exc}",
+        )
 
