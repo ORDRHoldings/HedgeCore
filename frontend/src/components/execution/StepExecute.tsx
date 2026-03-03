@@ -287,11 +287,20 @@ export default function StepExecute({
   const openIbkr = useCallback(() => {
     const primary = aggregatedOrders[0];
     if (!primary) return;
-    const pair = `${primary.symbol}USD`;
     const side = primary.side === "SELL" ? "SELL" : "BUY";
-    const url = `https://ndg.interactivebrokers.com/fxtrader?pair=${pair}&side=${side}&notional=${Math.round(totalNotionalUsd)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  }, [aggregatedOrders, totalNotionalUsd]);
+    // Native ibkr:// deep link (opens TWS/IBKR Mobile if installed)
+    const nativeUrl = `ibkr://order?symbol=${primary.symbol}&secType=FUT&exchange=${primary.exchange}&side=${side}&quantity=${primary.contracts}&orderType=LMT&lmtPrice=${primary.avgRate.toFixed(5)}&currency=USD&tif=DAY`;
+    // Web fallback — IBKR's Client Portal order entry
+    const webUrl = `https://www.interactivebrokers.com/en/trading/order-ticket.php?symbol=${primary.symbol}&side=${side}`;
+    // Try native first; browser will fall back silently to web if app not installed
+    try {
+      window.open(nativeUrl, "_self");
+      // Brief delay then open web fallback in new tab as safety net
+      setTimeout(() => window.open(webUrl, "_blank", "noopener,noreferrer"), 2000);
+    } catch {
+      window.open(webUrl, "_blank", "noopener,noreferrer");
+    }
+  }, [aggregatedOrders]);
 
   /* ── Email to execution desk ───────────────────────────────────────── */
   const emailOrder = useCallback(() => {
@@ -514,7 +523,7 @@ export default function StepExecute({
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />
                 </svg>
-                PREVIEW IN IBKR
+                OPEN IN IBKR ↗
               </button>
               <button
                 onClick={downloadIbkr}
@@ -546,6 +555,40 @@ export default function StepExecute({
                   <polyline points="22,6 12,13 2,6" />
                 </svg>
                 EMAIL TO FX DESK
+              </button>
+              <button
+                onClick={() => {
+                  const ts = new Date().toISOString().slice(0, 16) + " UTC";
+                  const lines = [
+                    `ORDR TERMINAL — TRADE TICKET`,
+                    `Run: ${runId.slice(0, 12)}...  |  ${ts}`,
+                    ``,
+                    `ORDERS`,
+                    ...aggregatedOrders.map(o =>
+                      `  ${o.side} ${o.contracts}x ${o.symbol} (${o.contractName})  @${fmtDec.format(o.avgRate)}  settle ${o.settlementMonth}  ${o.exchange}`
+                    ),
+                    ``,
+                    `TOTALS`,
+                    `  Contracts:    ${totalContracts}`,
+                    `  Notional:     ${fmtNum.format(totalNotionalCovered)} ${primaryCcy}`,
+                    `  USD Equiv:    ${fmtUsd.format(totalNotionalUsd)}`,
+                    `  Est. Friction: ${fmtUsd.format(totalFriction)}`,
+                    `  Residual:     ${fmtNum.format(totalResidual)} ${primaryCcy}`,
+                  ].join("\n");
+                  navigator.clipboard.writeText(lines).catch(() => {});
+                }}
+                style={{
+                  flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  background: "transparent", color: S.tertiary, border: `1px solid ${S.soft}`, borderRadius: 4,
+                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                COPY TICKET
               </button>
             </div>
           </div>

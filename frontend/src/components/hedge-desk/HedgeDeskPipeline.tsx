@@ -28,7 +28,7 @@ interface HedgeDeskPipelineProps {
   governanceMode: "solo" | "team";
 }
 
-export default function HedgeDeskPipeline({ token, governanceMode }: HedgeDeskPipelineProps) {
+export default function HedgeDeskPipeline({ token, user, governanceMode }: HedgeDeskPipelineProps) {
   const [phase, setPhase]                     = useState(0);
   const [completedPhases, setCompletedPhases] = useState<Set<number>>(new Set());
 
@@ -124,6 +124,7 @@ export default function HedgeDeskPipeline({ token, governanceMode }: HedgeDeskPi
               calcResult={calcResult}
               policyInstanceId={policyInstanceId}
               token={token}
+              planTier={user.plan_tier}
               onComplete={(verdict, decisionHash) => {
                 setRiskVerdict(verdict);
                 setRiskDecisionHash(decisionHash);

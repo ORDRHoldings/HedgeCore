@@ -36,6 +36,7 @@ interface PhaseRiskProps {
   calcResult: Record<string, unknown>;
   policyInstanceId?: string;
   token: string;
+  planTier?: string;
   onComplete: (verdict: string, decisionHash: string) => void;
   onBack: () => void;
 }
@@ -54,6 +55,7 @@ export default function PhaseRisk({
   calcResult,
   policyInstanceId,
   token,
+  planTier,
   onComplete,
   onBack,
 }: PhaseRiskProps) {
@@ -104,9 +106,12 @@ export default function PhaseRisk({
 
   useEffect(() => { runRiskCheck(); }, [runRiskCheck]);
 
+  const isSmbTier = planTier === "smb";
+
   const handleProceed = () => {
     if (!riskData) return;
-    const verdict      = unavailable ? "UNAVAILABLE" : riskData.verdict;
+    // SMB: unavailable gate auto-passes — no scary caution flow
+    const verdict      = (unavailable && isSmbTier) ? "APPROVE" : (unavailable ? "UNAVAILABLE" : riskData.verdict);
     const decisionHash = riskData.decision_hash ?? "";
     onComplete(verdict, decisionHash);
   };
@@ -119,7 +124,9 @@ export default function PhaseRisk({
   let badgeColor: string = HD.slate;
   let badgeLabel: string = "RUNNING...";
   let BadgeIcon: React.ElementType = LoaderIcon;
-  if (!loading && unavailable) {
+  if (!loading && unavailable && isSmbTier) {
+    badgeColor = HD.tertiary; badgeLabel = "POLICY CHECK: NOT REQUIRED"; BadgeIcon = CheckCircleIcon;
+  } else if (!loading && unavailable) {
     badgeColor = HD.amber; badgeLabel = "RISK GATE UNAVAILABLE"; BadgeIcon = AlertTriangleIcon;
   } else if (!loading && isPassed && !isConditions) {
     badgeColor = HD.emerald; badgeLabel = "RISK GATE PASSED"; BadgeIcon = CheckCircleIcon;
@@ -178,9 +185,14 @@ export default function PhaseRisk({
             }}>
               {badgeLabel}
             </span>
-            {unavailable && (
+            {unavailable && !isSmbTier && (
               <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, textAlign: "center", maxWidth: 360 }}>
                 Risk gate endpoint is unavailable. You may proceed with caution — ensure manual policy review is completed.
+              </span>
+            )}
+            {unavailable && isSmbTier && (
+              <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.tertiary, textAlign: "center", maxWidth: 360 }}>
+                Policy risk check is not required for your plan. You may proceed.
               </span>
             )}
             {error && !unavailable && (
