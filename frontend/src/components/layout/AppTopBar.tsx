@@ -255,7 +255,7 @@ const NAV: NavSection[] = [
     header: "Hedge Policy",
     items: [
       { label: "Policy Desk",       desc: "Assign policies to positions — active, template, favorite, AI", href: "/policy-desk",       icon: Ic.table,  badge: "DESK",  badgeColor: S.cyan  },
-      { label: "Policy Library",    desc: "Browse 60 institutional preset policies",        href: "/policies",          icon: Ic.book, minTier: "professional" as PlanTier },
+      { label: "Policy Library",    desc: "Browse 60 institutional preset policies",        href: "/policies",          icon: Ic.book },
       { label: "AI Policy Wizard",  desc: "Generate tailored policy from your risk profile",href: "/ai-policy-wizard",  icon: Ic.ai,     badge: "AI",    badgeColor: S.amber, minTier: "professional" as PlanTier },
       { label: "Policy Vault",       desc: "User-scoped & branch-published policies",        href: "/saved-policies",    icon: Ic.shield, badge: "SAVED", badgeColor: S.cyan,  minTier: "professional" as PlanTier },
     ],
@@ -377,6 +377,7 @@ interface MenuBarItemProps {
 }
 
 function MenuBarItem({ sec, isActive, isOpen, onOpen, onClose }: MenuBarItemProps) {
+  const router = useRouter();
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMouseEnter = useCallback(() => {
@@ -515,6 +516,27 @@ function MenuBarItem({ sec, isActive, isOpen, onOpen, onClose }: MenuBarItemProp
               </span>
             </Link>
           ))}
+
+          {/* Policy Engine: proceed to execution CTA */}
+          {sec.label === "Policy Engine" && (
+            <div
+              style={{
+                borderTop: "1px solid var(--border-rim)",
+                padding: "8px 12px",
+                background: "color-mix(in srgb, var(--accent-cyan) 6%, transparent)",
+                display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+                borderRadius: "0 0 4px 4px",
+              }}
+              onClick={() => router.push("/execution-desk")}
+            >
+              <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--accent-cyan)" }}>
+                PROCEED TO EXECUTION →
+              </span>
+              <span style={{ fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)", fontSize: 11, color: "var(--text-secondary)" }}>
+                After assigning policy, run the hedge pipeline
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>
