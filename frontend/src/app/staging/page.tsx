@@ -135,7 +135,6 @@ const BLINK_STYLE = `
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function StagingListPage() {
   const _planAllowed = usePlanRedirect("enterprise");
-  if (!_planAllowed) return null;
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const renderTs = useRenderTs();
@@ -177,6 +176,8 @@ export default function StagingListPage() {
     });
     return list;
   }, [stagingArtifacts, sortField, sortDir, filterStatus]);
+
+  if (!_planAllowed) return null;
 
   const pendingCount = stagingArtifacts.filter(a => a.authorization_status === "PENDING").length;
   const approvedCount = stagingArtifacts.filter(a => a.authorization_status === "APPROVED").length;

@@ -126,7 +126,6 @@ function localPart(email: string | null): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function TradeHistoryPage() {
   const _planAllowed = usePlanRedirect("professional");
-  if (!_planAllowed) return null;
   const router = useRouter();
   const { user, token } = useAuth();
 
@@ -247,7 +246,7 @@ export default function TradeHistoryPage() {
     }
   }, [token]);
 
-  if (!user) return null;
+  if (!_planAllowed || !user) return null;
 
   // ─── Styles (inline, no className ─────────────────────────────────────────
   const headerBar: React.CSSProperties = {

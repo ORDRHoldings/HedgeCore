@@ -96,7 +96,6 @@ interface ApiRole {
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function AccessControlPage() {
   const _planAllowed = usePlanRedirect("enterprise");
-  if (!_planAllowed) return null;
   const renderTs = useRenderTs();
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
@@ -110,7 +109,7 @@ export default function AccessControlPage() {
 
   const [activeTab, setActiveTab] = useState<PageTab>("users");
 
-  if (!isAuthenticated) return null;
+  if (!_planAllowed || !isAuthenticated) return null;
 
   // Determine admin status
   const isAdmin = user?.roles?.some(r => ["admin", "superuser"].includes(r)) ?? user?.is_superuser ?? false;

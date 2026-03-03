@@ -100,9 +100,10 @@ function GroupCard({ group }: { group: PairGroup }) {
 
 export default function PortfolioMultiPage() {
   const _planAllowed = usePlanRedirect("enterprise");
-  if (!_planAllowed) return null;
   const { user } = useAuth();
   const [activeGroup, setActiveGroup] = useState<PairGroup | "ALL">("ALL");
+
+  if (!_planAllowed) return null;
 
   const allNdf = PAIR_REGISTRY.filter(p => p.isNdf).length;
   const allDeliverable = PAIR_REGISTRY.filter(p => !p.isNdf).length;

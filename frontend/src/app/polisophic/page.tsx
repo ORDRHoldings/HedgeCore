@@ -398,11 +398,12 @@ function TopBar({ onBack, tab, setTab }: { onBack: () => void; tab: string; setT
 
 export default function Polisophic() {
   const _planAllowed = usePlanRedirect("enterprise");
-  if (!_planAllowed) return null;
   const renderTs = useRenderTs();
   const router = useRouter();
   const { user } = useAuth();
   const [tab, setTab] = useState("Event Feed");
+
+  if (!_planAllowed) return null;
 
   // Branch exposure mapping for My Exposure Risk tab
   const BRANCH_CURRENCY: Record<string, { currency: string; pairs: string[]; regimeKey: string }> = {

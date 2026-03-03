@@ -436,7 +436,6 @@ function EventRow({ event, expanded, onToggle }: {
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function AuditTrailPage() {
   const _planAllowed = usePlanRedirect("enterprise");
-  if (!_planAllowed) return null;
   const renderTs = useRenderTs();
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
@@ -490,6 +489,8 @@ export default function AuditTrailPage() {
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  if (!_planAllowed) return null;
 
   // ── Chain integrity verification (backend) ────────────────────────────────
   const handleVerify = async () => {
