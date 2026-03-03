@@ -230,6 +230,11 @@ class ProposalResponse(BaseModel):
 
     fill_hash:                Optional[str]    = None
 
+    # From proposal_payload JSONB
+    hedge_amount:             Optional[float]  = None
+
+    hedge_rate:               Optional[float]  = None
+
 
 
     model_config = ConfigDict(from_attributes=True)
@@ -306,6 +311,16 @@ class ProposalResponse(BaseModel):
             fill_timestamp           = getattr(p, "fill_timestamp", None),
 
             fill_hash                = getattr(p, "fill_hash", None),
+
+            hedge_amount             = (
+                p.proposal_payload.get("hedge_amount")
+                if isinstance(p.proposal_payload, dict) else None
+            ),
+
+            hedge_rate               = (
+                p.proposal_payload.get("hedge_rate")
+                if isinstance(p.proposal_payload, dict) else None
+            ),
 
         )
 
