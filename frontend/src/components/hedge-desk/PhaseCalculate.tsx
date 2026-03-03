@@ -42,10 +42,15 @@ interface PhaseCalculateProps {
 }
 
 const DEFAULT_POLICY = {
-  hedge_ratio: 1.0,
-  instrument: "FORWARD",
-  max_notional_usd: 50000000,
+  bucket_mode: "CALENDAR_MONTH",
+  hedge_ratios: { confirmed: 1.0, forecast: 0.5 },
+  cost_assumptions: { spread_bps: 5.0 },
+  execution_product: "NDF",
+  min_trade_size_usd: 0,
+  dual_key_threshold_usd: 1000000,
+  dual_key_required: false,
   allow_indicative_proxy: true,
+  execution_window_hours: 24.0,
 };
 
 function fmt(n: number, decimals = 4): string {
