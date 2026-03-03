@@ -1084,9 +1084,29 @@ export default function PolicyDeskPage() {
                 </span>
               )}
             </div>
+            {bulkResult.assigned > 0 && (
+              <button
+                onClick={() => router.push("/hedge-desk")}
+                style={{
+                  marginLeft: "auto",
+                  fontFamily: S.fontMono,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#0a0e14",
+                  background: S.cyan,
+                  border: "none",
+                  borderRadius: 0,
+                  padding: "5px 12px",
+                  cursor: "pointer",
+                  letterSpacing: "0.06em",
+                  whiteSpace: "nowrap",
+                }}>
+                → GO TO HEDGE DESK
+              </button>
+            )}
             <button
               onClick={() => { setBulkResult(null); setLastAssignedPolicyName(null); setLastAssignedPolicyCode(null); }}
-              style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>
+              style={{ marginLeft: bulkResult.assigned > 0 ? 8 : "auto", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>
               ✕
             </button>
           </div>

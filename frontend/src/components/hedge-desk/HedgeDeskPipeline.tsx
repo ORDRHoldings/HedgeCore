@@ -78,6 +78,8 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
       {/* Progress bar */}
       <ProgressBar
         phases={PHASES}
+        positionCount={selectedPositions.length}
+        runId={runId || null}
         currentPhase={phase}
         completedPhases={completedPhases}
         onPhaseClick={handlePhaseClick}

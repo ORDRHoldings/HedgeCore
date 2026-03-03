@@ -579,6 +579,19 @@ export default function PhaseExecute({
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Disclaimer */}
+              <div style={{
+                background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
+                borderRadius: 3,
+                padding: "5px 12px",
+                fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
+                fontSize: 11,
+                color: "var(--accent-amber)",
+                marginBottom: 10,
+              }}>
+                &#9888;&#160;&#160;ORDR Terminal does not submit orders electronically. These tickets require manual entry into your broker platform (IBKR or equivalent).
+              </div>
               {buckets.map((b, i) => (
                 <TicketCard key={b.bucket ?? i} bucket={b} index={i} fillPrice={fillPrice} />
               ))}
