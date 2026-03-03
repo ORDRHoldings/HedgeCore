@@ -206,6 +206,62 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "20px 24px", height: "100%", overflowY: "auto" }}>
 
+      {/* Top action strip — always visible */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 0",
+        borderBottom: `1px solid ${HD.rim}`,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
+            STEP 2 OF 4 — CALCULATE
+          </span>
+          <span style={{ fontFamily: HD.fontUI, fontSize: 11, color: HD.secondary }}>
+            {positions.length} position{positions.length !== 1 ? "s" : ""} · {currencies.join(", ")} · Confirm snapshot and run.
+          </span>
+        </div>
+        <div style={{ flex: 1 }} />
+        {marketLoading && (
+          <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.slate, letterSpacing: "0.06em" }}>
+            ● LOADING MARKET DATA...
+          </span>
+        )}
+        {!marketLoading && marketSnapshot && (() => {
+          const meta = marketSnapshot.provider_metadata as Record<string, unknown> | undefined;
+          const dataClass = (meta?.data_class ?? "UNKNOWN") as string;
+          const isLive = dataClass === "LIVE";
+          return (
+            <span style={{
+              fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+              color: isLive ? HD.emerald : HD.amber,
+              padding: "2px 6px", borderRadius: 2,
+              background: isLive ? "color-mix(in srgb,#2ECC71 10%,transparent)" : "color-mix(in srgb,var(--accent-amber) 10%,transparent)",
+            }}>
+              {isLive ? "● LIVE" : "● INDICATIVE"}
+            </span>
+          );
+        })()}
+        <button
+          onClick={runCalculation}
+          disabled={calculating || marketLoading}
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+            color: "#ffffff",
+            background: calculating || marketLoading ? HD.slate : HD.royal,
+            border: "none", padding: "10px 24px",
+            cursor: calculating || marketLoading ? "not-allowed" : "pointer",
+            borderRadius: 3, transition: "background 0.15s",
+          }}
+        >
+          {calculating && <LoaderIcon size={14} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />}
+          {calculating ? "RUNNING..." : "RUN CALCULATION"}
+        </button>
+      </div>
+
       {/* Back */}
       <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", alignSelf: "flex-start", padding: 0 }}>
         <ChevronLeftIcon size={14} color={HD.slate} />
@@ -329,6 +385,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
         <button
           onClick={runCalculation}
           disabled={calculating || marketLoading}
+          title="Run deterministic hedge calculation"
           style={{
             display: "flex",
             alignItems: "center",
