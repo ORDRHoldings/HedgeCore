@@ -33,7 +33,7 @@ import EconCalendarWidget         from "@/components/dashboard/widgets/EconCalen
 import HedgeMonitorWidget         from "@/components/dashboard/widgets/HedgeMonitorWidget";
 import MultiPairExposureWidget    from "@/components/dashboard/widgets/MultiPairExposureWidget";
 import WidgetErrorBoundary        from "@/components/ui/WidgetErrorBoundary";
-import OnboardingModal            from "@/components/onboarding/OnboardingModal";
+import QuickStartWindow           from "@/components/quickstart/QuickStartWindow";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -377,7 +377,7 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary, display: "flex", flexDirection: "column" }}>
-      <OnboardingModal userId={user.id} />
+      <QuickStartWindow token={token ?? ""} user={user} />
 
       {/* ── Command Bar ─────────────────────────────────────────────────────── */}
       <div style={{
