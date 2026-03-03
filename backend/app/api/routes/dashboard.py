@@ -347,36 +347,33 @@ async def team_activity(
         return []
 
     try:
-        # AuthAuditLog.user_id is int (type mismatch bug with users.id UUID).
-        # Use text() for this specific query with a cast workaround.
-        user_id_strings = [str(uid) for uid in user_id_rows]
-        stmt = text("""
-            SELECT al.created_at as ts,
-                   COALESCE(u.full_name, u.email) as user_name,
-                   al.event_type as action,
-                   al.route as module,
-                   al.status
-            FROM auth_audit_logs al
-            LEFT JOIN users u ON u.id::text = al.user_id::text
-            WHERE al.user_id::text = ANY(:user_ids)
-            ORDER BY al.created_at DESC
-            LIMIT 20
-        """)
-        result = await db.execute(stmt, {"user_ids": user_id_strings})
-        rows = result.mappings().all()
+        from app.models.audit_event import AuditEvent
 
         branch_code = _get_branch_code(user)
 
+        # Query business audit events scoped to company (or branch)
+        ae_q = (
+            select(AuditEvent)
+            .where(AuditEvent.company_id == user.company_id)
+            .order_by(AuditEvent.created_at.desc())
+            .limit(20)
+        )
+        if not has_all and user.branch_id:
+            ae_q = ae_q.where(AuditEvent.branch_id == user.branch_id)
+
+        ae_rows = list((await db.execute(ae_q)).scalars().all())
+
         return [
             {
-                "ts": str(r["ts"]),
-                "user_name": r["user_name"] or "Unknown",
-                "action": str(r["action"] or "").replace("_", " ").title(),
-                "module": (r["module"] or "System").split("/")[-1].title(),
-                "status": str(r["status"] or "SUCCESS"),
+                "ts": e.created_at.isoformat() if e.created_at else None,
+                "user_name": e.actor_email or "System",
+                "action": e.event_type or "EVENT",
+                "module": e.entity_type or "System",
+                "status": "SUCCESS",
+                "description": e.description or "",
                 "branch": branch_code,
             }
-            for r in rows
+            for e in ae_rows
         ]
     except Exception as _exc:
         logger.error("team_activity query failed: %s", _exc, exc_info=True)
