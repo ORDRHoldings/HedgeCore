@@ -259,7 +259,7 @@ function SectionHeader({
     QUANTITATIVE: S.cyan,
     "CROSS-ASSET": S.green,
     REGULATORY: S.amber,
-    HISTORICAL: "#a78bfa",
+    HISTORICAL: "#93C5FD",
     INFO: S.tertiary,
   };
   const color = levelColor[level] ?? S.tertiary;

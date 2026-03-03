@@ -35,7 +35,7 @@ interface Props { token: string; }
 function roleColor(name: string): string {
   if (["admin", "cfo", "ceo"].includes(name))            return S.amber;
   if (["head_of_risk", "branch_manager"].includes(name)) return S.cyan;
-  if (["auditor"].includes(name))                        return "#8B5CF6";
+  if (["auditor"].includes(name))                        return "#3B82F6";
   if (["supervisor"].includes(name))                     return "#3B82F6";
   return S.secondary;
 }

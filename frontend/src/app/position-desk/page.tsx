@@ -61,7 +61,7 @@ const S = {
   amber:     "var(--accent-amber)",
   pass:      "var(--status-pass,#22c55e)",
   fail:      "var(--accent-red,#ef4444)",
-  purple:    "#a78bfa",
+  purple:    "#93C5FD",
   indigo:    "#818cf8",
 } as const;
 type ExecStatus = "NEW" | "POLICY_ASSIGNED" | "READY_TO_EXECUTE" | "HEDGED" | "REJECTED";

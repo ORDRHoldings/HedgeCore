@@ -312,7 +312,7 @@ const NAV: NavSection[] = [
       { label: "Staging Queue",     desc: "4-eyes approval queue — maker/checker review of staged artifacts",   href: "/staging",     icon: Ic.db,       badge: "QUEUE",   badgeColor: S.cyan  },
       { label: "Ledger",            desc: "Approved hedge entries — immutable settled ledger records",           href: "/ledger",      icon: Ic.check,    badge: "LEDGER",  badgeColor: S.green },
       { label: "Audit Trail",       desc: "Immutable decision log with hash-chain integrity",                    href: "/audit-trail", icon: Ic.check,    badge: "AUDIT",   badgeColor: S.amber },
-      { label: "Run Viewer",        desc: "TraceLite pipeline narrative + SHA-256 RunEnvelope hash chain",       href: "/run-viewer",  icon: Ic.terminal, badge: "TRACE",   badgeColor: "#a78bfa" },
+      { label: "Run Viewer",        desc: "TraceLite pipeline narrative + SHA-256 RunEnvelope hash chain",       href: "/run-viewer",  icon: Ic.terminal, badge: "TRACE",   badgeColor: "#93C5FD" },
       { label: "Position Lineage",  desc: "5-level provenance graph: Position → Policy → Run → Ticket",         href: "/lineage",     icon: Ic.plug,     badge: "GRAPH",   badgeColor: "#818cf8" },
       { label: "Hedge Wiki",        desc: "FX instruments, ISDA, IFRS 9 knowledge graph",                       href: "/hedgewiki",   icon: Ic.book },
     ],
@@ -330,11 +330,11 @@ const NAV: NavSection[] = [
       { label: "Notifications",     desc: "Alert triggers, email recipients, webhook endpoints",    href: "/settings?tab=notifications",      icon: Ic.clock },
       // ACCESS & SECURITY
       { label: "Security",          desc: "TOTP MFA enrolment and device management",              href: "/settings?tab=security",           icon: Ic.shield,    badge: "MFA",   badgeColor: S.cyan  },
-      { label: "Users & Roles",     desc: "Team members, RBAC role assignments",                   href: "/settings?tab=users_roles",        icon: Ic.user,      badge: "RBAC",  badgeColor: "#8B5CF6", minTier: "enterprise" as PlanTier },
+      { label: "Users & Roles",     desc: "Team members, RBAC role assignments",                   href: "/settings?tab=users_roles",        icon: Ic.user,      badge: "RBAC",  badgeColor: "#3B82F6", minTier: "enterprise" as PlanTier },
       { label: "API Key Management",desc: "Generate, label, and revoke programmatic API keys",     href: "/settings?tab=api_key_mgmt",       icon: Ic.key,       badge: "MGMT",  badgeColor: S.amber, minTier: "professional" as PlanTier },
       // ORGANISATION
       { label: "Organisation",      desc: "Company identity, branches, governance mode",           href: "/settings?tab=organisation",       icon: Ic.db, minTier: "enterprise" as PlanTier },
-      { label: "Audit Trail",       desc: "Immutable event log with hash-chain integrity",         href: "/settings?tab=audit_trail",        icon: Ic.check,     badge: "WORM",  badgeColor: "#8B5CF6", minTier: "enterprise" as PlanTier },
+      { label: "Audit Trail",       desc: "Immutable event log with hash-chain integrity",         href: "/settings?tab=audit_trail",        icon: Ic.check,     badge: "WORM",  badgeColor: "#3B82F6", minTier: "enterprise" as PlanTier },
     ],
   },
   {
@@ -354,7 +354,7 @@ const NAV: NavSection[] = [
 function roleColor(role: string): string {
   if (["admin", "cfo", "ceo"].includes(role))            return S.amber;
   if (["head_of_risk", "branch_manager"].includes(role)) return S.cyan;
-  if (["auditor"].includes(role))                        return "#a78bfa";
+  if (["auditor"].includes(role))                        return "#93C5FD";
   return S.secondary;
 }
 

@@ -127,7 +127,7 @@ function GuideCard({ guide, onEscalate }: { guide: GuideDoc; onEscalate: (g: Gui
   const levels = ["L1", "L2", "L3", "L4", "L5"].filter((l) => levelCounts[l]);
 
   const levelColor: Record<string, string> = {
-    L1: "#22D3EE", L2: "#34D399", L3: "#A78BFA", L4: "#F59E0B", L5: "#F87171",
+    L1: "#22D3EE", L2: "#34D399", L3: "#93C5FD", L4: "#F59E0B", L5: "#F87171",
   };
 
   return (

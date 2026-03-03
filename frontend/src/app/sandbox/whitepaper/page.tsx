@@ -20,7 +20,7 @@ const TOKEN = {
   green:   "var(--status-pass,#34d399)",
   amber:   "var(--accent-amber,#fbbf24)",
   red:     "var(--accent-red,#f87171)",
-  violet:  "#a78bfa",
+  violet:  "#93C5FD",
 } as const;
 
 // ─── Whitepaper content ────────────────────────────────────────────────────────

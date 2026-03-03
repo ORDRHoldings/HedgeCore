@@ -30,7 +30,7 @@ const CALLOUT_STYLE: Record<string, { bg: string; border: string; label: string;
   warning:    { bg: "rgba(248,113,113,0.10)", border: "#F87171", label: "WARNING",    labelColor: "#F87171" },
   control:    { bg: "rgba(245,158,11,0.08)",  border: "#F59E0B", label: "CONTROL",    labelColor: "#F59E0B" },
   failure:    { bg: "rgba(185,28,28,0.12)",   border: "#991B1B", label: "FAILURE",    labelColor: "#F87171" },
-  regulatory: { bg: "rgba(167,139,250,0.08)", border: "#A78BFA", label: "REGULATORY", labelColor: "#A78BFA" },
+  regulatory: { bg: "rgba(147,197,253,0.08)", border: "#93C5FD", label: "REGULATORY", labelColor: "#93C5FD" },
 };
 
 // ── Block renderer ─────────────────────────────────────────────────────────────

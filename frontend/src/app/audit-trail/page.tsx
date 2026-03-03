@@ -135,7 +135,7 @@ const TYPE_COLORS: Record<EventType, string> = {
   PROPOSAL:  S.cyan,
   APPROVAL:  S.pass,
   EXECUTION: S.amber,
-  POLICY:    "#a78bfa",
+  POLICY:    "#93C5FD",
   IMPORT:    S.tertiary,
   SYSTEM:    S.tertiary,
 };

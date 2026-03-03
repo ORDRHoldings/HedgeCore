@@ -31,7 +31,7 @@ const S = {
   amber:         "var(--accent-amber,#fbbf24)",
   green:         "var(--status-pass,#34d399)",
   red:           "var(--accent-red,#f87171)",
-  purple:        "var(--accent-purple,#a78bfa)",
+  purple:        "var(--accent-purple,#93C5FD)",
   fontMono:      "'IBM Plex Mono', monospace",
   fontUI:        "'IBM Plex Sans', sans-serif",
 };

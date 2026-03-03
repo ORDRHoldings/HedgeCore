@@ -61,8 +61,8 @@ const S = {
   passBg:    "#F0FDF4",
   fail:      "#B91C1C",
   failBg:    "#FEF2F2",
-  violet:    "#6D28D9",
-  violetBg:  "#F5F3FF",
+  violet:    "#1D4ED8",
+  violetBg:  "#EFF6FF",
   fontUI:    "'IBM Plex Sans', system-ui, sans-serif",
   fontMono:  "'IBM Plex Mono', 'Courier New', monospace",
 } as const;
@@ -201,8 +201,8 @@ function buildReportHTML(
     .filter(s => !["COVER_PAGE", "TABLE_OF_CONTENTS"].includes(s.type))
     .map((s, i) => {
       const narrative = s.ai_assisted && s.narrative
-        ? `<div style="background:#F5F3FF;border-left:3px solid #6D28D9;padding:10px 12px;margin-top:8px;font-size:12px;line-height:1.6;color:#3D4451">
-             <span style="font-family:monospace;font-size:9px;font-weight:700;color:#6D28D9;display:block;margin-bottom:4px">AI-ASSISTED NARRATIVE</span>
+        ? `<div style="background:#EFF6FF;border-left:3px solid #1D4ED8;padding:10px 12px;margin-top:8px;font-size:12px;line-height:1.6;color:#3D4451">
+             <span style="font-family:monospace;font-size:9px;font-weight:700;color:#1D4ED8;display:block;margin-bottom:4px">AI-ASSISTED NARRATIVE</span>
              ${esc(s.narrative)}
            </div>`
         : `<div style="background:#F4F5F7;padding:16px;text-align:center;font-family:monospace;font-size:10px;color:#9CA3AF;border-radius:2px">[${esc(s.type)}] — data injected at generation time</div>`;
@@ -549,7 +549,7 @@ function LibraryPanel({ onSelect }: { onSelect: (t: ReportTemplate) => void }) {
 
   const catColors: Record<string, string> = {
     EXECUTIVE_BOARD:"#0284C7", TREASURY_FX:"#15803D", RISK_COMMITTEE:"#B45309",
-    POLICY_PACK:"#6D28D9", EXECUTION_PACK:"#0E7490", SCENARIO_STRESS:"#B91C1C",
+    POLICY_PACK:"#1D4ED8", EXECUTION_PACK:"#0E7490", SCENARIO_STRESS:"#B91C1C",
     EXPOSURE_DECOMP:"#047857", DATA_QUALITY:"#7C3AED", CONNECTOR_HEALTH:"#C2410C",
     COMPLIANCE_AUDIT:"#1D4ED8",
   };
@@ -1038,7 +1038,7 @@ function BuilderShell({
                       {s.ai_assisted && s.narrative && (
                         <div style={{
                           marginTop: 6, fontFamily: S.fontUI, fontSize: 11, color: S.secondary,
-                          background: S.violetBg, border: `1px solid #DDD6FE`, borderRadius: 2,
+                          background: S.violetBg, border: `1px solid #BFDBFE`, borderRadius: 2,
                           padding: "6px 8px", lineHeight: 1.5,
                         }}>
                           <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.violet, display: "block", marginBottom: 3 }}>AI-ASSISTED NARRATIVE SCAFFOLD</span>
@@ -1143,7 +1143,7 @@ function BuilderShell({
         {step === "AI_ASSIST" && (
           <div style={{ maxWidth: 700, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{
-              background: S.violetBg, border: `1px solid #DDD6FE`, borderRadius: 3,
+              background: S.violetBg, border: `1px solid #BFDBFE`, borderRadius: 3,
               padding: "10px 14px", display: "flex", alignItems: "flex-start", gap: 10,
             }}>
               <span style={{ fontSize: 18, flexShrink: 0 }}>🤖</span>

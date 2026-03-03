@@ -51,7 +51,7 @@ const S = {
   amber:    "var(--accent-amber,#F59E0B)",
   pass:     "var(--status-pass,#10B981)",
   fail:     "var(--accent-red,#EF4444)",
-  violet:   "#8B5CF6",
+  violet:   "#3B82F6",
 } as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────

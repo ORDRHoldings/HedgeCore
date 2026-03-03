@@ -24,7 +24,7 @@ export const GUIDE_LEVEL_META: Record<GuideLevel, {
 }> = {
   L1: { label: "L1", description: "Quick Start",      color: "#22D3EE", bg: "rgba(34,211,238,0.07)",  audience: "All users · 2–5 min"       },
   L2: { label: "L2", description: "Workflows",         color: "#34D399", bg: "rgba(52,211,153,0.07)",  audience: "Operators · day-to-day"     },
-  L3: { label: "L3", description: "Logic & Formulas",  color: "#A78BFA", bg: "rgba(167,139,250,0.07)", audience: "Analysts · technical depth" },
+  L3: { label: "L3", description: "Logic & Formulas",  color: "#93C5FD", bg: "rgba(147,197,253,0.07)", audience: "Analysts · technical depth" },
   L4: { label: "L4", description: "Controls & Audit",  color: "#F59E0B", bg: "rgba(245,158,11,0.07)",  audience: "Risk Officers · governance" },
   L5: { label: "L5", description: "Committee Pack",    color: "#F87171", bg: "rgba(248,113,113,0.07)", audience: "Boards & Regulators"        },
 };

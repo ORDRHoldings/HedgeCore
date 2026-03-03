@@ -66,7 +66,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "sandbox", label: "Sim Lab", shortcut: "S", route: "/sandbox",
-    Icon: FlaskConical, color: "#8B5CF6", glow: "rgba(139,92,246,0.15)",
+    Icon: FlaskConical, color: "#3B82F6", glow: "rgba(59,130,246,0.15)",
     description: "What-if & stress tests", permission: "calculate.run_sandbox",
   },
   {
@@ -139,7 +139,7 @@ export default function CommandHubWidget({ token, user, onRemove }: Props) {
         <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <div style={{
           width: 18, height: 18, borderRadius: 4,
-          background: `linear-gradient(135deg, ${S.cyan}, #8B5CF6)`,
+          background: `linear-gradient(135deg, ${S.cyan}, #3B82F6)`,
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           <LayoutDashboard size={10} color="#fff" />

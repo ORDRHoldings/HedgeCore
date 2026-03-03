@@ -42,7 +42,7 @@ const TYPE_COLORS: Record<string, string> = {
   UPLOAD_EXCEL: S.amber,
   DATABASE: "#60a5fa",
   ERP: "#fb923c",
-  ACCOUNTING: "#a78bfa",
+  ACCOUNTING: "#93C5FD",
 };
 
 // ─── Utility: Format timestamp ───────────────────────────────────────────────

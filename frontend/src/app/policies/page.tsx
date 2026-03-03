@@ -49,7 +49,7 @@ const S = {
   amber:    "var(--accent-amber,#fbbf24)",
   green:    "var(--status-pass,#34d399)",
   red:      "var(--accent-red,#f87171)",
-  purple:   "#a78bfa",
+  purple:   "#93C5FD",
 } as const;
 
 const CATEGORIES = [

@@ -35,7 +35,7 @@ const TYPE_COLORS: Record<string, string> = {
   CALCULATE: "#06B6D4",
   APPROVE:   "#10B981",
   REJECT:    "#EF4444",
-  SYSTEM:    "#8B5CF6",
+  SYSTEM:    "#3B82F6",
   AUTH:      "#F59E0B",
   PIPELINE:  "#3B82F6",
   USER:      "#EC4899",

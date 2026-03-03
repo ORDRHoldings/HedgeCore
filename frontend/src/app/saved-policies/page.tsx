@@ -125,7 +125,7 @@ const INST_COLORS = [
   "var(--accent-amber)",
   "var(--status-pass)",
   "var(--accent-red,#B91C1C)",
-  "#a78bfa",
+  "#93C5FD",
   "#f472b6",
 ];
 

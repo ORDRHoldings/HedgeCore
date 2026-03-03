@@ -43,7 +43,7 @@ const S = {
   amber:         "var(--accent-amber,#fbbf24)",
   green:         "var(--accent-green,#34d399)",
   red:           "var(--accent-red,#f87171)",
-  purple:        "#a78bfa",
+  purple:        "#93C5FD",
 };
 
 // ── Industry options ──────────────────────────────────────────────────────────

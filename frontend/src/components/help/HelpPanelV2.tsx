@@ -76,7 +76,7 @@ function calloutColor(type: Callout["type"]): string {
     case "info":       return "#22D3EE"; // cyan
     case "warning":    return "#F87171"; // red
     case "caution":    return "#F59E0B"; // amber
-    case "regulatory": return "#A78BFA"; // purple
+    case "regulatory": return "#93C5FD"; // purple
   }
 }
 
@@ -85,7 +85,7 @@ function calloutBg(type: Callout["type"]): string {
     case "info":       return "rgba(34,211,238,0.07)";
     case "warning":    return "rgba(248,113,113,0.07)";
     case "caution":    return "rgba(245,158,11,0.07)";
-    case "regulatory": return "rgba(167,139,250,0.07)";
+    case "regulatory": return "rgba(147,197,253,0.07)";
   }
 }
 
