@@ -10,6 +10,8 @@ Every call emits a SYSTEM audit event (non-fatal if DB write fails).
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -27,6 +29,10 @@ from app.models.audit_event import AuditEvent, build_audit_event, GENESIS_HASH
 from app.models.position import Position
 from app.models.user import User
 from app.services import rbac_service
+
+
+def _canonical_json(obj) -> str:
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
 
 logger = logging.getLogger(__name__)
 
@@ -207,6 +213,21 @@ async def risk_check(
 
     result = decision_gate(payload=payload, plan=plan, policy={})
 
+    checked_at = datetime.now(timezone.utc).isoformat()
+
+    # --- Compute endpoint-level decision_hash ---
+    # SHA-256 of canonical_json({verdict, reasons, conditions, checked_at})
+    # This is distinct from the engine's internal hash and provides a
+    # reproducible fingerprint over the response fields + timestamp.
+    endpoint_decision_hash = hashlib.sha256(
+        _canonical_json({
+            "verdict":        result["verdict"],
+            "reasons":        result.get("reasons", []),
+            "conditions":     result.get("conditions", []),
+            "checked_at":     checked_at,
+        }).encode("utf-8")
+    ).hexdigest()
+
     # --- Emit audit event (non-fatal) ---
     await _emit_risk_check_audit(
         session=session,
@@ -224,9 +245,9 @@ async def risk_check(
         reasons=result.get("reasons", []),
         conditions=result.get("conditions", []),
         residual_risks=result.get("residual_risks", []),
-        decision_hash=result.get("decision_hash", ""),
+        decision_hash=endpoint_decision_hash,
         inputs_used=result.get("inputs_used"),
-        checked_at=datetime.now(timezone.utc).isoformat(),
+        checked_at=checked_at,
         policy_revision_id=pinned_revision_id,
         policy_hash=pinned_policy_hash,
     )

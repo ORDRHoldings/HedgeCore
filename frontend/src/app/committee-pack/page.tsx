@@ -144,6 +144,8 @@ function HashRow({
         {label}
       </span>
       <span
+        role="img"
+        aria-label={`SHA-256 hash: ${value ?? "not available"}`}
         title={value ?? "—"}
         style={{
           fontFamily: S.fontMono, fontSize: 9,
@@ -180,7 +182,7 @@ function PolicyRow({ label, value }: { label: string; value: string }) {
     <tr>
       <td style={{
         padding: "5px 10px 5px 0", fontFamily: S.fontMono, fontSize: 10,
-        color: S.tertiary, whiteSpace: "nowrap" as const, verticalAlign: "top",
+        color: S.secondary, whiteSpace: "nowrap" as const, verticalAlign: "top",
         borderBottom: `1px solid ${S.rim}`,
       }}>
         {label}
@@ -210,7 +212,7 @@ function ScenarioBadge({ scenario }: { scenario: CommitteePackScenario }) {
     }}>
       <div style={{
         fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
-        color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4,
+        color: S.secondary, letterSpacing: "0.08em", marginBottom: 4,
       }}>
         σ {sigma > 0 ? `+${(sigma * 100).toFixed(0)}%` : `${(sigma * 100).toFixed(0)}%`}
       </div>

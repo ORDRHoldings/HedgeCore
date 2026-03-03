@@ -306,10 +306,11 @@ const NAV: NavSection[] = [
     teamOnly: true, minTier: "enterprise" as PlanTier,
     // TODO(admin-dashboard): Move "Access Control" (/access-control) to a future Admin Dashboard
     // module when it is built. The page/route is preserved; only the nav entry is removed here.
-    prefixes: ["/hedgewiki", "/hedges", "/audit-trail", "/run-viewer", "/lineage", "/committee-pack", "/staging"],
+    prefixes: ["/hedgewiki", "/hedges", "/audit-trail", "/run-viewer", "/lineage", "/committee-pack", "/staging", "/ledger"],
     header: "Compliance & Audit",
     items: [
       { label: "Staging Queue",     desc: "4-eyes approval queue — maker/checker review of staged artifacts",   href: "/staging",     icon: Ic.db,       badge: "QUEUE",   badgeColor: S.cyan  },
+      { label: "Ledger",            desc: "Approved hedge entries — immutable settled ledger records",           href: "/ledger",      icon: Ic.check,    badge: "LEDGER",  badgeColor: S.green },
       { label: "Audit Trail",       desc: "Immutable decision log with hash-chain integrity",                    href: "/audit-trail", icon: Ic.check,    badge: "AUDIT",   badgeColor: S.amber },
       { label: "Run Viewer",        desc: "TraceLite pipeline narrative + SHA-256 RunEnvelope hash chain",       href: "/run-viewer",  icon: Ic.terminal, badge: "TRACE",   badgeColor: "#a78bfa" },
       { label: "Position Lineage",  desc: "5-level provenance graph: Position → Policy → Run → Ticket",         href: "/lineage",     icon: Ic.plug,     badge: "GRAPH",   badgeColor: "#818cf8" },

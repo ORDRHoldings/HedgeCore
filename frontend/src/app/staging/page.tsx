@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/authContext";
@@ -10,6 +10,7 @@ import { listStagingThunk } from "../../lib/store/slices/pipelineSlice";
 import type { StagedArtifact } from "../../api/pipelineTypes";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { STAGING_HELP } from "@/lib/helpContent";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
@@ -146,6 +147,35 @@ export default function StagingListPage() {
   const [sortField, setSortField] = useState<SortField>("submitted_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [secondApproving, setSecondApproving] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  const showToast = useCallback((msg: string, ok: boolean) => {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  const handleSecondApprove = useCallback(async (proposalId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!token) return;
+    setSecondApproving(proposalId);
+    try {
+      const res = await dashboardFetch(`/v1/proposals/${proposalId}/second-approve`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ notes: "" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { detail?: string }).detail ?? `HTTP ${res.status}`);
+      }
+      showToast("Second approval recorded successfully.", true);
+      dispatch(listStagingThunk({ token }));
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Second approval failed.", false);
+    } finally {
+      setSecondApproving(null);
+    }
+  }, [token, dispatch, showToast]);
 
   useEffect(() => {
     if (token) dispatch(listStagingThunk({ token }));
@@ -209,6 +239,24 @@ export default function StagingListPage() {
     <div style={{ display: 'flex', minHeight: '100vh' }}>
     {/* Inject blink keyframes */}
     <style>{BLINK_STYLE}</style>
+
+    {/* ── Toast notification ── */}
+    {toast && (
+      <div style={{
+        position: "fixed", bottom: 24, right: 24, zIndex: 9999,
+        padding: "12px 18px", borderRadius: 3,
+        background: toast.ok ? `color-mix(in srgb, ${S.pass} 12%, var(--bg-panel))` : `color-mix(in srgb, ${S.fail} 12%, var(--bg-panel))`,
+        border: `1px solid ${toast.ok ? S.pass : S.fail}`,
+        borderLeft: `3px solid ${toast.ok ? S.pass : S.fail}`,
+        fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 700,
+        color: toast.ok ? S.pass : S.fail,
+        letterSpacing: "0.06em",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
+        pointerEvents: "none",
+      }}>
+        {toast.ok ? "✓" : "✗"} {toast.msg}
+      </div>
+    )}
 
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary, flex: 1 }}>
 
@@ -393,8 +441,8 @@ export default function StagingListPage() {
                       <td style={{ padding: "7px 12px" }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
                           <StatusChip status={artifact.authorization_status} />
-                          {(artifact as StagedArtifact & { second_approver_required?: boolean; second_approver_id?: string | null }).second_approver_required && (
-                            (artifact as StagedArtifact & { second_approver_required?: boolean; second_approver_id?: string | null }).second_approver_id ? (
+                          {artifact.second_approver_required && (
+                            artifact.second_approver_id ? (
                               <span style={{
                                 fontFamily: S.fontMono, fontSize: "0.5625rem", fontWeight: 700,
                                 letterSpacing: "0.08em", padding: "1px 6px",
@@ -433,18 +481,37 @@ export default function StagingListPage() {
                         {relativeTime(artifact.submitted_at)}
                       </td>
                       <td style={{ padding: "7px 12px", textAlign: "right" }}>
-                        <button
-                          onClick={e => { e.stopPropagation(); router.push(`/staging/${artifact.proposal_id}`); }}
-                          style={{
-                            fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", fontWeight: 700,
-                            padding: "3px 10px",
-                            border: `1px solid ${isPending ? S.amber : S.rim}`,
-                            color: isPending ? S.amber : S.tertiary,
-                            background: "transparent", cursor: "pointer", borderRadius: 2,
-                          }}
-                        >
-                          {isPending ? "REVIEW →" : "VIEW →"}
-                        </button>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                          {artifact.second_approver_required && !artifact.second_approver_id && (
+                            <button
+                              onClick={e => handleSecondApprove(artifact.proposal_id, e)}
+                              disabled={secondApproving === artifact.proposal_id}
+                              style={{
+                                fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", fontWeight: 700,
+                                padding: "3px 10px",
+                                border: `1px solid ${S.amber}`,
+                                color: secondApproving === artifact.proposal_id ? S.tertiary : S.bgDeep,
+                                background: secondApproving === artifact.proposal_id ? S.rim : S.amber,
+                                cursor: secondApproving === artifact.proposal_id ? "not-allowed" : "pointer",
+                                borderRadius: 2,
+                              }}
+                            >
+                              {secondApproving === artifact.proposal_id ? "…" : "2ND APPROVE"}
+                            </button>
+                          )}
+                          <button
+                            onClick={e => { e.stopPropagation(); router.push(`/staging/${artifact.proposal_id}`); }}
+                            style={{
+                              fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.07em", fontWeight: 700,
+                              padding: "3px 10px",
+                              border: `1px solid ${isPending ? S.amber : S.rim}`,
+                              color: isPending ? S.amber : S.tertiary,
+                              background: "transparent", cursor: "pointer", borderRadius: 2,
+                            }}
+                          >
+                            {isPending ? "REVIEW →" : "VIEW →"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

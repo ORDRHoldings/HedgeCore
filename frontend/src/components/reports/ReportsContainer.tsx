@@ -20,6 +20,7 @@ import {
 } from "../../utils/reportCalcs";
 import {
   exportReportCsv, exportCommitteePackPdf, exportExecutiveBriefPdf, exportDataXlsx,
+  exportReportXlsx,
 } from "../../utils/clientExport";
 
 // ── Report versioning (L-14) ─────────────────────────────────────────────────

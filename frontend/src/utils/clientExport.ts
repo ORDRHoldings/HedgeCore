@@ -928,6 +928,55 @@ export function exportDataXlsx(
 
 
 
+// ═════════════════════════════════════════════════════════════════════════════
+// 10. GENERIC REPORT XLSX (L-06 — Position Desk column labels)
+// ═════════════════════════════════════════════════════════════════════════════
+
+export function exportReportXlsx(
+  reportType: string,
+  rows: Record<string, unknown>[],
+): void {
+  const XLSX = require('xlsx');
+  const headers = [
+    "Record ID", "Entity", "Flow Type", "Currency", "Amount",
+    "Value Date", "Status", "Execution Status", "Hedge Amount", "Hedge Rate",
+  ];
+  if (rows.length === 0) {
+    // Empty export — write headers only
+    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, reportType.slice(0, 31) || "Report");
+    XLSX.writeFile(wb, `${reportType}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    return;
+  }
+  // Build sheet with controlled column order; fall back to row keys for unlisted fields
+  const ws = XLSX.utils.json_to_sheet(rows, { header: Object.keys(rows[0] ?? {}) });
+  // Override first-row headers to human-readable labels where keys match
+  const headerMap: Record<string, string> = {
+    record_id:        "Record ID",
+    entity:           "Entity",
+    flow_type:        "Flow Type",
+    currency:         "Currency",
+    amount:           "Amount",
+    value_date:       "Value Date",
+    status:           "Status",
+    execution_status: "Execution Status",
+    hedge_amount:     "Hedge Amount",
+    hedge_rate:       "Hedge Rate",
+  };
+  const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
+  for (let col = range.s.c; col <= range.e.c; col++) {
+    const cellAddr = XLSX.utils.encode_cell({ r: 0, c: col });
+    const cell = ws[cellAddr];
+    if (cell && typeof cell.v === "string" && headerMap[cell.v]) {
+      cell.v = headerMap[cell.v];
+    }
+  }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, reportType.slice(0, 31) || "Report");
+  XLSX.writeFile(wb, `${reportType}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
 export function exportReportCsv(
   reportKey: string,
   result: CalculateResponse,
