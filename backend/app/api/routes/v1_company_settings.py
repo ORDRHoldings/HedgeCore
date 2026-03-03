@@ -179,9 +179,11 @@ async def update_company_settings(
     attributes.flag_modified(company, "settings")
     company.settings = settings
 
+    # Stash scalar columns before commit (they expire on commit in async session)
+    company_name = company.name
+    company_slug = company.slug
+
     await session.commit()
-    # Avoid lazy-loading branches on refresh — only reload scalar columns
-    await session.refresh(company, attribute_names=["settings", "name", "slug"])
 
     audit_event = build_audit_event(
         event_type="SYSTEM",
@@ -203,8 +205,8 @@ async def update_company_settings(
 
     return CompanySettingsResponse(
         governance_mode=settings.get("governance_mode", "team"),
-        name=company.name,
-        slug=company.slug,
+        name=company_name,
+        slug=company_slug,
         policy_limits=settings.get("policy_limits"),
         execution_settings=settings.get("execution_settings"),
         last_modified_at=settings.get("last_modified_at"),
