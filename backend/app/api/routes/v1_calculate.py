@@ -676,6 +676,128 @@ async def calculate(
 
 
 
+    # --- Step 7: Emit audit events (non-fatal) ---
+
+    try:
+
+        from app.models.audit_event import AuditEvent as _AuditEvent, build_audit_event as _build_audit_event, GENESIS_HASH as _GENESIS_HASH
+
+        # Resolve previous hash for chain (per-tenant)
+
+        _prev_q = (
+
+            select(_AuditEvent.event_hash)
+
+            .where(_AuditEvent.company_id == current_user.company_id)
+
+            .order_by(_AuditEvent.created_at.desc())
+
+            .limit(1)
+
+        )
+
+        _prev_result = await session.execute(_prev_q)
+
+        _prev_hash = _prev_result.scalars().first() or _GENESIS_HASH
+
+        # First audit event: calculation run completed
+
+        _calc_event = _build_audit_event(
+
+            event_type      = "CALCULATE",
+
+            description     = f"Calculation run completed: run_id={run_id}",
+
+            payload         = {
+
+                "run_id":       run_id,
+
+                "inputs_hash":  run_envelope.inputs_hash,
+
+                "outputs_hash": run_envelope.outputs_hash,
+
+                "run_hash":     run_envelope.run_hash,
+
+                "trade_count":  len(trades),
+
+                "hedge_count":  len(response.hedge_plan.buckets) if response.hedge_plan else 0,
+
+            },
+
+            prev_event_hash = _prev_hash,
+
+            company_id      = current_user.company_id,
+
+            branch_id       = current_user.branch_id,
+
+            actor_id        = current_user.id,
+
+            actor_email     = current_user.email,
+
+            entity_type     = "calculation_run",
+
+            entity_id       = run_id,
+
+        )
+
+        session.add(_calc_event)
+
+        await session.flush()
+
+        # Second audit event: market data source fingerprint (L-02)
+
+        _market_source_hash = _market_hash
+
+        _market_event = _build_audit_event(
+
+            event_type      = "CALCULATE",
+
+            description     = f"Market data: source=client, hash={_market_source_hash[:16]}...",
+
+            payload         = {
+
+                "market_source":          "client",
+
+                "market_snapshot_hash":   _market_source_hash,
+
+                "run_id":                 run_id,
+
+                "data_age_note":          "Market data provided by client at calculation time",
+
+            },
+
+            prev_event_hash = _calc_event.event_hash,
+
+            company_id      = current_user.company_id,
+
+            branch_id       = current_user.branch_id,
+
+            actor_id        = current_user.id,
+
+            actor_email     = current_user.email,
+
+            entity_type     = "calculation_run",
+
+            entity_id       = run_id,
+
+        )
+
+        session.add(_market_event)
+
+        await session.commit()
+
+    except Exception:
+
+        _log.warning(
+
+            "Failed to emit audit events for run %s -- result still returned to caller",
+
+            run_id,
+
+            exc_info=True,
+
+        )
+
     # Update in-memory cache (fast lookup for export endpoints)
 
     _run_store[f"{current_user.company_id}:{run_id}"] = response

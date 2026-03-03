@@ -104,6 +104,10 @@ export interface StagedArtifact {
   approvals: ApprovalRecord[];
   required_approvals: number;
   version?: number;
+  second_approver_required?: boolean;
+  second_approver_id?: string | null;
+  proposed_by?: string | null;
+  approved_by?: string | null;
 }
 
 // ---------------------------------------------------------------------------

@@ -154,6 +154,21 @@ export default function SecurityTab({ token }: Props) {
             <div style={{ background: `color-mix(in srgb, ${S.cyan} 4%, transparent)`, border: `1px solid color-mix(in srgb, ${S.cyan} 15%, transparent)`, borderLeft: `3px solid ${S.cyan}`, borderRadius: 2, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.cyan, letterSpacing: "0.09em" }}>ENROLL AUTHENTICATOR</div>
               <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.6 }}>Enter this secret manually in your authenticator app, then enter the 6-digit code below to activate.</div>
+              {setupData.provisioning_uri && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, letterSpacing: "0.09em" }}>SCAN QR CODE:</span>
+                  <div style={{ display: "flex", justifyContent: "flex-start" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(setupData.provisioning_uri)}`}
+                      alt="TOTP QR Code"
+                      width={160}
+                      height={160}
+                      style={{ border: `1px solid ${S.rim}`, borderRadius: 2, background: "#fff", padding: 8 }}
+                    />
+                  </div>
+                </div>
+              )}
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, letterSpacing: "0.09em" }}>TOTP SECRET:</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
