@@ -43,7 +43,7 @@ SMB_DEPT_ID    = uuid.UUID("66666666-6666-6666-6666-666666666601")
 
 # ── Permissions for senior_analyst (the SMB user role) ──
 SMB_PERMISSIONS = [
-    "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv",
+    "trades.view", "trades.create", "trades.edit", "trades.delete", "trades.import_csv", "trades.execute",
     "hedges.view", "hedges.create", "hedges.edit",
     "calculate.run_sandbox", "calculate.run_production",
     "pipeline.create_proposal", "pipeline.submit_staging",

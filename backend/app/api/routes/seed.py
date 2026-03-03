@@ -1134,3 +1134,43 @@ async def migrate_schema(
             await db.rollback()
             errors.append({"stmt": stmt, "error": str(e)})
     return {"status": "ok", "applied": len(applied), "errors": errors}
+
+
+# ── Fix SMB permissions — add missing trades.execute to senior_analyst ─────
+@router.post("/fix-smb-permissions")
+async def fix_smb_permissions(
+    db: AsyncSession = Depends(get_session),
+    current_user=Depends(get_current_user),
+):
+    """One-time fix: add trades.execute to senior_analyst role."""
+    if not getattr(current_user, "is_superuser", False):
+        raise HTTPException(status_code=403, detail="Superuser only")
+
+    from app.models.rbac import Role
+    from app.models.permission import Permission, RolePermission
+
+    role = (await db.execute(
+        select(Role).where(Role.name == "senior_analyst")
+    )).scalar_one_or_none()
+    if not role:
+        return {"error": "senior_analyst role not found"}
+
+    perm = (await db.execute(
+        select(Permission).where(Permission.codename == "trades.execute")
+    )).scalar_one_or_none()
+    if not perm:
+        return {"error": "trades.execute permission not found"}
+
+    existing = (await db.execute(
+        select(RolePermission).where(
+            RolePermission.role_id == role.id,
+            RolePermission.permission_id == perm.id,
+        )
+    )).scalar_one_or_none()
+
+    if existing:
+        return {"status": "already_assigned"}
+
+    db.add(RolePermission(role_id=role.id, permission_id=perm.id))
+    await db.commit()
+    return {"status": "added", "role": "senior_analyst", "permission": "trades.execute"}
