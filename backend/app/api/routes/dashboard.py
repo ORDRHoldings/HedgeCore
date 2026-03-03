@@ -184,13 +184,24 @@ async def dashboard_summary(
         total_pos_count = (await db.execute(total_pos_q)).scalar() or 0
         coverage_pct = round((hedged_count / total_pos_count * 100), 1) if total_pos_count > 0 else 0.0
 
+        # Count active users in scope
+        team_q = (
+            select(func.count())
+            .select_from(User)
+            .where(User.company_id == user.company_id)
+            .where(User.is_active == True)
+        )
+        if not has_all_branches and user.branch_id:
+            team_q = team_q.where(User.branch_id == user.branch_id)
+        team_size = int((await db.execute(team_q)).scalar() or 0)
+
         kpis = {
             "active_proposals": active_count,
             "pending_approvals": pending_count,
             "total_exposure_usd": round(total_exposure, 2),
             "hedge_coverage_pct": coverage_pct,
-            "open_alerts": 0,               # Phase 8: Polisophic
-            "team_size": 0,                 # Future: org API
+            "open_alerts": 0,
+            "team_size": team_size,
         }
 
         return {
@@ -234,15 +245,41 @@ async def recent_runs(
         result = await db.execute(q)
         runs_db = result.scalars().all()
 
+        # Collect all position_ids across runs for a single batch fetch
+        all_pos_ids: list[UUID] = []
+        for r in runs_db:
+            if isinstance(r.position_ids, list):
+                for pid in r.position_ids:
+                    try:
+                        all_pos_ids.append(UUID(str(pid)))
+                    except Exception:
+                        pass
+
+        pos_map: dict[str, Position] = {}
+        if all_pos_ids:
+            pos_q = select(Position).where(Position.id.in_(all_pos_ids))
+            pos_rows = list((await db.execute(pos_q)).scalars().all())
+            pos_map = {str(p.id): p for p in pos_rows}
+
         runs = []
         for r in runs_db:
+            # Derive currency_pair and notional from linked positions
+            pos_ids = r.position_ids if isinstance(r.position_ids, list) else []
+            positions = [pos_map[str(pid)] for pid in pos_ids if str(pid) in pos_map]
+            ccys = list(dict.fromkeys(p.currency for p in positions if p.currency))
+            currency_pair = f"{ccys[0]}/USD" if ccys else None
+            notional = sum(float(p.amount) for p in positions if p.amount) or None
+            hedge_ratio = (
+                round(r.hedge_count / r.trade_count, 2)
+                if r.trade_count and r.trade_count > 0 else None
+            )
             runs.append({
                 "id": str(r.id),
                 "created_at": r.created_at.isoformat() if r.created_at else None,
                 "status": "COMPLETE",
-                "currency_pair": None,
-                "notional": None,
-                "hedge_ratio": None,
+                "currency_pair": currency_pair,
+                "notional": notional,
+                "hedge_ratio": hedge_ratio,
                 "trade_count": r.trade_count,
                 "hedge_count": r.hedge_count,
             })
@@ -282,26 +319,29 @@ async def pending_approvals(
 
     try:
         q = (
-            select(StagingArtifact)
-            .where(StagingArtifact.submitted_by.in_(user_ids_sq))
-            .where(StagingArtifact.authorization_status == "PENDING")
-            .order_by(StagingArtifact.submitted_at.desc())
+            select(ExecutionProposal)
+            .where(ExecutionProposal.company_id == user.company_id)
+            .where(ExecutionProposal.status == "PROPOSED")
+            .order_by(ExecutionProposal.proposed_at.desc())
             .limit(20)
         )
+        if not has_all_branches and user.branch_id:
+            q = q.where(ExecutionProposal.branch_id == user.branch_id)
         result = await db.execute(q)
-        artifacts = result.scalars().all()
+        proposals = result.scalars().all()
 
         return [
             {
-                "id": a.staging_id,
-                "proposal_id": a.proposal_id,
-                "submitted_by": str(a.submitted_by),
-                "submitted_at": a.submitted_at.isoformat() if a.submitted_at else None,
-                "justification": a.justification or "",
-                "integrity_score": a.integrity_score,
-                "authorization_status": a.authorization_status,
+                "id": str(p.id),
+                "position_id": str(p.position_id),
+                "proposed_by": str(p.proposed_by),
+                "proposed_by_email": p.proposed_by_email or "",
+                "proposed_at": p.proposed_at.isoformat() if p.proposed_at else None,
+                "execution_ref": p.execution_ref or "",
+                "risk_verdict": p.risk_verdict or "",
+                "status": p.status,
             }
-            for a in artifacts
+            for p in proposals
         ]
     except Exception as _exc:
         logger.error("pending_approvals query failed: %s", _exc, exc_info=True)
