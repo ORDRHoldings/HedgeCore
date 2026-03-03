@@ -17,6 +17,9 @@ import { NextRequest, NextResponse } from 'next/server';
 const FH_KEY  = process.env.FINNHUB_API_KEY ?? '';
 const FH_BASE = 'https://finnhub.io/api/v1';
 
+const AV_KEY  = process.env.ALPHA_VANTAGE_API_KEY ?? '';
+const AV_BASE = 'https://www.alphavantage.co/query';
+
 // ── CME FX futures symbol mapping ─────────────────────────────────────────
 // Finnhub uses the continuous contract notation (1! = front month, 2! = back month, …)
 // All prices are quoted in USD per 1 unit of FCY (invert to get FCY/USD rate)
@@ -44,14 +47,14 @@ const CARRY_BPS_MONTH: Record<string, number> = {
   CNY: 5,   HKD: 1,   SGD: 3,   RUB: 120,
 };
 
-// ── Fallback demo spots (EOD 2026-02-27, DXY ~99.11) ─────────────────────
+// ── Fallback demo spots (live 2026-03-03, DXY ~105.x) ─────────────────────
 const DEMO_SPOTS: Record<string, number> = {
-  MXN: 20.35, BRL: 5.87,  CLP: 972.0,  COP: 4278.0,
-  EUR: 0.9263, GBP: 0.7921, CHF: 0.8981, SEK: 10.24, NOK: 10.87, DKK: 6.93,
-  PLN: 4.08,  CZK: 23.10, HUF: 368.0,
-  JPY: 150.40, CNY: 7.26, HKD: 7.78,  KRW: 1435.0, SGD: 1.341, TWD: 32.48, INR: 86.50,
-  AUD: 1.581, NZD: 1.728, CAD: 1.437,
-  ZAR: 18.91, TRY: 36.20, RUB: 90.10,
+  MXN: 17.562, BRL: 5.250,  CLP: 978.0,  COP: 4290.0,
+  EUR: 0.9220, GBP: 0.7516, CHF: 0.8940, SEK: 10.41, NOK: 10.93, DKK: 6.89,
+  PLN: 4.12,  CZK: 23.35, HUF: 372.0,
+  JPY: 157.72, CNY: 7.28, HKD: 7.78,  KRW: 1450.0, SGD: 1.345, TWD: 32.60, INR: 87.20,
+  AUD: 1.612, NZD: 1.762, CAD: 1.446,
+  ZAR: 18.65, TRY: 36.80, RUB: 90.10,
 };
 
 // ── Fetch all forex spot rates in a single Finnhub call ───────────────────
@@ -64,6 +67,23 @@ async function fetchFinnhubForexRates(): Promise<Record<string, number> | null> 
     const json = await res.json() as { base?: string; quote?: Record<string, number> };
     if (!json.quote || typeof json.quote !== 'object') return null;
     return json.quote;
+  } catch {
+    return null;
+  }
+}
+
+// ── Fetch spot rate from Alpha Vantage (secondary fallback) ───────────────
+async function fetchAlphaVantageSpotRate(currency: string): Promise<number | null> {
+  if (!AV_KEY || currency === 'USD') return null;
+  try {
+    const url = `${AV_BASE}?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=${currency}&apikey=${AV_KEY}`;
+    const res = await fetch(url, { next: { revalidate: 300 } }); // 5-min cache (AV free: 25 req/day)
+    if (!res.ok) return null;
+    const json = await res.json() as Record<string, unknown>;
+    const data = json['Realtime Currency Exchange Rate'] as Record<string, string> | undefined;
+    if (!data || typeof data['5. Exchange Rate'] !== 'string') return null;
+    const rate = parseFloat(data['5. Exchange Rate']);
+    return rate > 0 ? parseFloat(rate.toFixed(6)) : null;
   } catch {
     return null;
   }
@@ -266,15 +286,25 @@ export async function POST(req: NextRequest) {
 
     const primaryCurrency = currencies[0] ?? 'MXN';
 
-    // ── Step 1: Spot rate from Finnhub forex/rates ──────────────────────
+    // ── Step 1: Spot rate — Finnhub → Alpha Vantage → DEMO_SPOTS ────────
     let spot: number | null = null;
     let spotSource = 'indicative_fallback';
 
     if (primaryCurrency !== 'USD') {
+      // Primary: Finnhub batch forex/rates (single call, all currencies)
       const rates = await fetchFinnhubForexRates();
       if (rates && rates[primaryCurrency] && rates[primaryCurrency] > 0) {
         spot = parseFloat(rates[primaryCurrency].toFixed(6));
         spotSource = 'finnhub_live';
+      }
+
+      // Secondary: Alpha Vantage realtime exchange rate
+      if (spot === null) {
+        const avRate = await fetchAlphaVantageSpotRate(primaryCurrency);
+        if (avRate !== null) {
+          spot = avRate;
+          spotSource = 'alphavantage_live';
+        }
       }
     }
 
@@ -294,7 +324,7 @@ export async function POST(req: NextRequest) {
       forwardSource = 'cme_futures';
     } else {
       forwardPoints = estimateForwardPoints(spot, primaryCurrency, requiredBuckets);
-      forwardSource = spotSource === 'finnhub_live' ? 'carry_estimate' : 'indicative_fallback';
+      forwardSource = (spotSource === 'finnhub_live' || spotSource === 'alphavantage_live') ? 'carry_estimate' : 'indicative_fallback';
     }
 
     // ── Step 3: Assemble market snapshot ────────────────────────────────
@@ -304,16 +334,19 @@ export async function POST(req: NextRequest) {
       ? `${primaryCurrency}/USD`
       : `USD/${primaryCurrency}`;
 
-    const isLive = spotSource === 'finnhub_live';
+    const isLive = spotSource === 'finnhub_live' || spotSource === 'alphavantage_live';
     const dataClass = isLive ? 'LIVE' : 'INDICATIVE_FALLBACK';
+    const spotProviderLabel = spotSource === 'finnhub_live' ? 'Finnhub'
+      : spotSource === 'alphavantage_live' ? 'Alpha Vantage'
+      : 'fallback';
 
     let note: string;
     if (!isLive) {
-      note = 'Indicative fallback rates — configure FINNHUB_API_KEY in .env.local for live data.';
+      note = 'Indicative fallback rates — set FINNHUB_API_KEY or ALPHA_VANTAGE_API_KEY in Vercel environment variables for live data.';
     } else if (forwardSource === 'cme_futures') {
-      note = `Live spot from Finnhub. Forward rates from CME futures (${Object.keys(CME_SYMBOLS[primaryCurrency] ?? []).length > 0 ? (CME_SYMBOLS[primaryCurrency] ?? []).join(', ') : 'N/A'}).`;
+      note = `Live spot from ${spotProviderLabel}. Forward rates from CME futures (${(CME_SYMBOLS[primaryCurrency] ?? []).join(', ') || 'N/A'}).`;
     } else {
-      note = `Live spot from Finnhub. Forward points estimated from carry differentials (no CME contract for ${primaryCurrency}).`;
+      note = `Live spot from ${spotProviderLabel}. Forward points estimated from carry differentials (no CME contract for ${primaryCurrency}).`;
     }
 
     const market = {
@@ -321,7 +354,7 @@ export async function POST(req: NextRequest) {
       spot_usdmxn: spot,
       forward_points_by_month: forwardPoints,
       provider_metadata: {
-        source:              isLive ? `finnhub_${forwardSource}` : 'indicative_fallback',
+        source:              isLive ? `${spotSource}_${forwardSource}` : 'indicative_fallback',
         data_class:          dataClass,
         spot_source:         spotSource,
         forward_source:      forwardSource,
