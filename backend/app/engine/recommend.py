@@ -352,18 +352,31 @@ def recommend(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any]]
     cost_mod = f"{engine_pkg}.cost_engine"
     scenario_mod = f"{engine_pkg}.scenario_engine"
 
+    # --- Validate that payload keys are strings (required for JSON serialization + sorting) ---
+    try:
+        non_str_keys = [k for k in payload.keys() if not isinstance(k, str)]
+        if non_str_keys:
+            raise TypeError(f"payload keys must be strings; got non-string keys: {non_str_keys!r}")
+    except Exception as e:
+        rej = _stage_failure("initialization", e)
+        return {"rejected": rej, "meta": {"decision_trace": None, "duration_ms": 0}}
+
     # --- Trace seed (minimal, deterministic input descriptor) ---
-    input_obj = {
-        "keys": sorted(list(payload.keys())),
-        "market_keys": sorted(list((payload.get("market", {}) or {}).keys()))
-        if isinstance(payload.get("market", {}), Mapping)
-        else [],
-        "has_positions": bool(("positions" in payload) or ("exposure_input" in payload)),
-        "has_instrument_specs": bool("instrument_specs" in payload),
-        "has_instrument_meta": bool("instrument_meta" in payload),
-        "has_assumptions": bool("assumptions" in payload),
-        "has_scenarios": bool("scenarios" in payload),
-    }
+    try:
+        input_obj = {
+            "keys": sorted(list(payload.keys())),
+            "market_keys": sorted(list((payload.get("market", {}) or {}).keys()))
+            if isinstance(payload.get("market", {}), Mapping)
+            else [],
+            "has_positions": bool(("positions" in payload) or ("exposure_input" in payload)),
+            "has_instrument_specs": bool("instrument_specs" in payload),
+            "has_instrument_meta": bool("instrument_meta" in payload),
+            "has_assumptions": bool("assumptions" in payload),
+            "has_scenarios": bool("scenarios" in payload),
+        }
+    except Exception as e:
+        rej = _stage_failure("initialization", e)
+        return {"rejected": rej, "meta": {"decision_trace": None, "duration_ms": 0}}
 
     trace = _build_trace_seed(policy=pol, input_obj=input_obj)
     trace["notes"].append({"overrides_ignored_v1": ignored_overrides})
@@ -447,14 +460,29 @@ def recommend(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any]]
         _attach_trace_fingerprint_and_timestamps(trace=trace, plan_id=None, duration_ms=duration_ms_fail)
         return {"rejected": failure, "meta": {"decision_trace": trace, "duration_ms": duration_ms_fail}}
 
+    def _fn_fingerprint(fn: Callable[..., Any]) -> str:
+        """Return a stable fingerprint for a callable; safe for Mock/wrapped objects.
+
+        Uses qualname > name > type name as fallback to stay deterministic even when
+        the callable is a unittest.mock.MagicMock (which has no stable __name__).
+        """
+        m = str(getattr(fn, "__module__", None) or "")
+        # Prefer __qualname__ (most stable), then __name__, then type name (deterministic for mocks)
+        n = (
+            str(getattr(fn, "__qualname__", None) or "")
+            or str(getattr(fn, "__name__", None) or "")
+            or type(fn).__name__
+        )
+        return _stable_hash({"m": m, "n": n})
+
     trace["module_fingerprints"] = {
-        "exposure": _stable_hash({"m": str(exposure_fn.__module__), "n": str(exposure_fn.__name__)}),
-        "risk_classifier": _stable_hash({"m": str(risk_fn.__module__), "n": str(risk_fn.__name__)}),
-        "strategy_selector": _stable_hash({"m": str(strategy_fn.__module__), "n": str(strategy_fn.__name__)}),
-        "instrument_mapper": _stable_hash({"m": str(instrument_map_fn.__module__), "n": str(instrument_map_fn.__name__)}),
-        "hedge_sizer": _stable_hash({"m": str(sizer_fn.__module__), "n": str(sizer_fn.__name__)}),
-        "cost_engine": _stable_hash({"m": str(cost_fn.__module__), "n": str(cost_fn.__name__)}),
-        "scenario_engine": _stable_hash({"m": str(scenario_fn.__module__), "n": str(scenario_fn.__name__)}),
+        "exposure": _fn_fingerprint(exposure_fn),
+        "risk_classifier": _fn_fingerprint(risk_fn),
+        "strategy_selector": _fn_fingerprint(strategy_fn),
+        "instrument_mapper": _fn_fingerprint(instrument_map_fn),
+        "hedge_sizer": _fn_fingerprint(sizer_fn),
+        "cost_engine": _fn_fingerprint(cost_fn),
+        "scenario_engine": _fn_fingerprint(scenario_fn),
     }
 
     # -------------------------

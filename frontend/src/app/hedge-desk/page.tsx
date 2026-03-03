@@ -141,7 +141,7 @@ export default function HedgeDeskPage() {
         </span>
       </header>
 
-      <WorkflowBreadcrumb active="execution" />
+      <WorkflowBreadcrumb active="hedge" />
 
       {/* Pipeline body */}
       <div style={{ flex: 1, overflow: "hidden" }}>

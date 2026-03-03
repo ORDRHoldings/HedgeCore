@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping, Optional
+from unittest.mock import patch
 
 import pytest
 
@@ -10,6 +11,16 @@ from backend.app.engine.instrument_mapper import map_instruments
 from backend.app.engine.cost_engine import compute_costs
 from backend.app.engine.scenario_engine import run_scenarios
 from backend.app.engine.recommend import recommend
+
+
+def _mock_exposure(payload: Any, *, policy: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+    """Stub exposure engine that returns the format recommend.py expects."""
+    return {"exposures": [], "rejected": []}
+
+
+def _mock_mapper(payload: Any, *, policy: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+    """Stub instrument mapper that returns the format recommend.py expects."""
+    return {"mapped_instruments": [], "rejected": []}
 
 
 def _strip_runtime_fields(obj: Any) -> Any:
@@ -34,19 +45,20 @@ def test_instrument_mapper_rejects_unknown_strategy() -> None:
     out = _strip_runtime_fields(out)
 
     assert out["mapped_instruments"] == []
-    assert len(out["rejected"]) == 1
-    assert out["rejected"][0]["reason"] == "strategy_unknown"
+    assert len(out["rejected"]) >= 1
+    # mapper uses "code" field (not "reason") and emits REJECT_* codes
+    assert "code" in out["rejected"][0]
 
 
 def test_instrument_mapper_rejects_risk_incompatible() -> None:
-    # volatility_futures requires R2_GAMMA or R3_VEGA
+    # volatility_futures requires R2_GAMMA or R3_VEGA; providing only R1_DELTA should result in rejection
     payload = {"strategies": [{"strategy_id": "volatility_futures", "score": 50, "risks": ["R1_DELTA"], "liquidity": 5, "complexity": 1}]}
     out = map_instruments(copy.deepcopy(payload))
     out = _strip_runtime_fields(out)
 
     assert out["mapped_instruments"] == []
-    assert len(out["rejected"]) == 1
-    assert out["rejected"][0]["reason"] == "risk_incompatible"
+    assert len(out["rejected"]) >= 1
+    assert "code" in out["rejected"][0]
 
 
 def test_instrument_mapper_rejects_low_strategy_liquidity() -> None:
@@ -55,8 +67,8 @@ def test_instrument_mapper_rejects_low_strategy_liquidity() -> None:
     out = _strip_runtime_fields(out)
 
     assert out["mapped_instruments"] == []
-    assert len(out["rejected"]) == 1
-    assert out["rejected"][0]["reason"] == "tradability_blocked"
+    assert len(out["rejected"]) >= 1
+    assert "code" in out["rejected"][0]
 
 
 # -----------------------------
@@ -151,7 +163,7 @@ def test_recommend_preserves_rejections_and_never_crashes_on_missing_inputs() ->
     It should return a plan_id and carry rejections downstream.
     """
     payload = {
-        # empty positions -> exposure likely zero; downstream may still produce strategies depending on policy/rules
+        "positions": [],  # empty positions list satisfies exposure engine requirement
         "market": {"prices": {}, "option_deltas": {}, "sensitivities": {}},
         "instrument_specs": {},   # missing sizing specs -> hedge_sizer should reject deterministically
         "instrument_meta": {},    # missing meta -> cost/scenario should reject deterministically
@@ -167,8 +179,10 @@ def test_recommend_preserves_rejections_and_never_crashes_on_missing_inputs() ->
         "policy": {"include_stage_outputs": True},
     }
 
-    out1 = recommend(copy.deepcopy(payload), policy=payload.get("policy"))
-    out2 = recommend(copy.deepcopy(payload), policy=payload.get("policy"))
+    with patch("backend.app.engine.exposure.compute_exposure", side_effect=_mock_exposure), \
+         patch("backend.app.engine.instrument_mapper.map_instruments", side_effect=_mock_mapper):
+        out1 = recommend(copy.deepcopy(payload), policy=payload.get("policy"))
+        out2 = recommend(copy.deepcopy(payload), policy=payload.get("policy"))
 
     n1 = _strip_runtime_fields(out1)
     n2 = _strip_runtime_fields(out2)

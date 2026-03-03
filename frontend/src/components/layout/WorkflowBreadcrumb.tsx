@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * WorkflowBreadcrumb — 3-step pipeline progress strip
+ * WorkflowBreadcrumb — 4-step pipeline progress strip
  *
  * Shows the institutional workflow:
- *   Position Desk → Policy Desk → Execution Desk
+ *   01 POSITION DESK → 02 POLICY DESK → 03 HEDGE DESK → 04 EXECUTION DESK
  *
  * Renders as a 36px sticky bar below AppTopBar.
  * Active step gets cyan underline. Completed steps get green check.
@@ -13,7 +13,7 @@
 
 import { useRouter } from "next/navigation";
 
-export type WorkflowStep = "position" | "policy" | "execution";
+export type WorkflowStep = "position" | "policy" | "hedge" | "execution";
 
 interface Props {
   active: WorkflowStep;
@@ -22,7 +22,8 @@ interface Props {
 const STEPS: { key: WorkflowStep; label: string; href: string; num: string }[] = [
   { key: "position",  label: "POSITION DESK",  href: "/position-desk",  num: "01" },
   { key: "policy",    label: "POLICY DESK",    href: "/policy-desk",    num: "02" },
-  { key: "execution", label: "EXECUTION DESK", href: "/hedge-desk", num: "03" },
+  { key: "hedge",     label: "HEDGE DESK",     href: "/hedge-desk",     num: "03" },
+  { key: "execution", label: "EXECUTION DESK", href: "/execution-desk", num: "04" },
 ];
 
 const FM = "var(--font-terminal-mono,'IBM Plex Mono',monospace)";

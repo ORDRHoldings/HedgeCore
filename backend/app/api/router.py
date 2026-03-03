@@ -145,4 +145,8 @@ router.include_router(v1_calculate_multi_router)
 from app.api.routes.v1_ui import router as v1_ui_router
 router.include_router(v1_ui_router)
 
+# Admin demo-data reset + MXN001 SMB auto-seed (owns /v1/admin/reset)
+from app.api.routes.v1_admin_reset import router as v1_admin_reset_router
+router.include_router(v1_admin_reset_router)
+
 __all__ = ["router"]
