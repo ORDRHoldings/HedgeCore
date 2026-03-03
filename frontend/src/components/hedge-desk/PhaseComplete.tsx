@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { PositionRow } from "@/api/positionClient";
 import DisclosurePanel from "./DisclosurePanel";
-import { CheckCircleIcon, RefreshCwIcon, ClipboardIcon, BarChart2Icon, HistoryIcon } from "lucide-react";
+import { CheckCircleIcon, RefreshCwIcon, ClipboardIcon, BarChart2Icon, HistoryIcon, FileSpreadsheetIcon, FileTextIcon } from "lucide-react";
 import Link from "next/link";
 
 const HD = {
@@ -47,6 +47,13 @@ export default function PhaseComplete({
   onNewRun,
 }: PhaseCompleteProps) {
   const [toastVisible, setToastVisible] = useState(false);
+  const [toastMsg, setToastMsg] = useState("CONFIRMATION DOWNLOADED");
+
+  function showToast(msg: string) {
+    setToastMsg(msg);
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2500);
+  }
 
   const totalNotional = positions.reduce((sum, p) => sum + (p.amount ?? 0), 0);
 
@@ -55,6 +62,83 @@ export default function PhaseComplete({
     acc[p.currency] = (acc[p.currency] ?? 0) + (p.amount ?? 0);
     return acc;
   }, {});
+
+  const handleDownloadExcel = () => {
+    // Build CSV (Excel-compatible) from positions + summary
+    const rows: string[][] = [
+      ["HEDGE EXECUTION REPORT", "", "", "", "", ""],
+      ["Run ID", runId, "", "Generated", new Date().toISOString(), ""],
+      ["Governance Mode", governanceMode, "", "Fill Price", fillData?.fillPrice?.toFixed(6) ?? "—", ""],
+      ["Positions Hedged", String(positions.length), "", "Proposals Filed", String(fillData?.proposalIds.length ?? 0), ""],
+      ["", "", "", "", "", ""],
+      ["POSITION ID", "ENTITY", "CURRENCY", "AMOUNT", "VALUE DATE", "STATUS"],
+      ...positions.map(p => [
+        p.id, p.entity ?? "—", p.currency,
+        String(p.amount ?? 0), p.value_date ?? "—", p.execution_status ?? p.status ?? "—",
+      ]),
+      ["", "", "", "", "", ""],
+      ["PROPOSAL IDS", "", "", "", "", ""],
+      ...(fillData?.proposalIds ?? []).map((id, i) => [`Proposal ${i + 1}`, id, "", "", "", ""]),
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hedge-report-${runId.slice(0, 8)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("EXCEL REPORT DOWNLOADED");
+  };
+
+  const handleDownloadBankPdf = () => {
+    // Generate a structured text report for bank/compliance use
+    const lines = [
+      "ORDR TERMINAL — HEDGE EXECUTION BANK REPORT",
+      "=".repeat(60),
+      "",
+      `Run ID:           ${runId}`,
+      `Generated:        ${new Date().toISOString()}`,
+      `Governance Mode:  ${governanceMode.toUpperCase()}`,
+      `Positions Hedged: ${positions.length}`,
+      `Proposals Filed:  ${fillData?.proposalIds.length ?? 0}`,
+      `Fill Price:       ${fillData?.fillPrice?.toFixed(6) ?? "Not recorded"}`,
+      "",
+      "POSITIONS IN SCOPE",
+      "-".repeat(60),
+      ["ID", "ENTITY", "CCY", "AMOUNT", "VALUE DATE", "STATUS"].join("  |  "),
+      "-".repeat(60),
+      ...positions.map(p =>
+        [p.id.slice(0, 8), (p.entity ?? "—").padEnd(20), p.currency, String(p.amount ?? 0).padStart(12), p.value_date ?? "—", p.execution_status ?? "—"].join("  |  ")
+      ),
+      "",
+      "PROPOSAL IDS",
+      "-".repeat(60),
+      ...(fillData?.proposalIds ?? []).map((id, i) => `Proposal ${i + 1}: ${id}`),
+      "",
+      "CURRENCY BREAKDOWN",
+      "-".repeat(60),
+      ...Object.entries(currencyBreakdown).map(([ccy, total]) => `${ccy}: ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(total)}`),
+      "",
+      `TOTAL NOTIONAL: ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(totalNotional)}`,
+      "",
+      "=".repeat(60),
+      "END OF REPORT",
+    ];
+    const text = lines.join("\n");
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hedge-bank-report-${runId.slice(0, 8)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("BANK REPORT DOWNLOADED");
+  };
 
   const handleDownload = () => {
     const confirmation = {
@@ -86,8 +170,7 @@ export default function PhaseComplete({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setToastVisible(true);
-    setTimeout(() => setToastVisible(false), 2500);
+    showToast("CONFIRMATION DOWNLOADED");
   };
 
   return (
@@ -104,7 +187,7 @@ export default function PhaseComplete({
           fontFamily: HD.fontMono, fontSize: 11, color: HD.emerald, letterSpacing: "0.06em",
           boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
         }}>
-          CONFIRMATION DOWNLOADED
+          {toastMsg}
         </div>
       )}
 
@@ -286,7 +369,40 @@ export default function PhaseComplete({
         </Link>
 
         <button
+          onClick={handleDownloadExcel}
+          title="Download positions and summary as Excel-compatible CSV"
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+            color: HD.cyan,
+            background: `color-mix(in srgb,${HD.cyan} 8%,transparent)`,
+            border: `1px solid color-mix(in srgb,${HD.cyan} 30%,transparent)`,
+            padding: "10px 20px", cursor: "pointer", borderRadius: 3,
+          }}
+        >
+          <FileSpreadsheetIcon size={14} color={HD.cyan} />
+          DOWNLOAD EXCEL
+        </button>
+
+        <button
+          onClick={handleDownloadBankPdf}
+          title="Download structured bank compliance report"
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+            color: HD.secondary,
+            background: HD.bgSub,
+            border: `1px solid ${HD.soft}`,
+            padding: "10px 20px", cursor: "pointer", borderRadius: 3,
+          }}
+        >
+          <FileTextIcon size={14} color={HD.secondary} />
+          BANK REPORT
+        </button>
+
+        <button
           onClick={handleDownload}
+          title="Download raw JSON confirmation artifact"
           style={{
             display: "flex", alignItems: "center", gap: 8,
             fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
@@ -297,7 +413,7 @@ export default function PhaseComplete({
           }}
         >
           <ClipboardIcon size={14} color={HD.tertiary} />
-          DOWNLOAD CONFIRMATION
+          DOWNLOAD JSON
         </button>
       </div>
     </div>

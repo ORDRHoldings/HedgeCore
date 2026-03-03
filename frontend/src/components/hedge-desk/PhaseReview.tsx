@@ -1025,110 +1025,65 @@ export default function PhaseReview({
         gap:             16,
         marginTop:       24,
       }}>
-        {/* Left — utility buttons */}
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {/* Left — back nav */}
+        <button
+          onClick={onBack}
+          style={{
+            height: 36, padding: "0 16px",
+            display: "flex", alignItems: "center", gap: 6,
+            background: "transparent", color: T.secondary,
+            border: `1px solid ${T.rim}`, borderRadius: 3,
+            fontFamily: T.fontMono, fontSize: 10, fontWeight: 600,
+            letterSpacing: "0.06em", cursor: "pointer",
+          }}
+        >
+          <ChevronLeftIcon size={12} color={T.secondary} />
+          BACK TO RISK
+        </button>
+
+        {/* Right — action group */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {_activeBuckets.length > 0 && (
-            <>
-              <button
-                onClick={handleOpenIbkr}
-                style={{
-                  height:        36,
-                  padding:       "0 16px",
-                  display:       "flex",
-                  alignItems:    "center",
-                  gap:            6,
-                  background:    T.royal,
-                  color:         "#fff",
-                  border:        "none",
-                  borderRadius:   3,
-                  fontFamily:    T.fontMono,
-                  fontSize:       10,
-                  fontWeight:     700,
-                  letterSpacing: "0.06em",
-                  cursor:        "pointer",
-                }}
-              >
-                <ExternalLinkIcon size={12} color="#fff" />
-                OPEN IN IBKR
-              </button>
+            <button
+              onClick={handleOpenIbkr}
+              title="Open prefilled order ticket in Interactive Brokers"
+              style={{
+                height: 36, padding: "0 14px",
+                display: "flex", alignItems: "center", gap: 6,
+                background: T.royal, color: "#fff",
+                border: "none", borderRadius: 3,
+                fontFamily: T.fontMono, fontSize: 10, fontWeight: 700,
+                letterSpacing: "0.06em", cursor: "pointer",
+              }}
+            >
+              <ExternalLinkIcon size={12} color="#fff" />
+              IBKR TICKET
+            </button>
+          )}
 
-              <button
-                onClick={handleCopyText}
-                style={{
-                  height:        36,
-                  padding:       "0 16px",
-                  display:       "flex",
-                  alignItems:    "center",
-                  gap:            6,
-                  background:    "transparent",
-                  color:          T.primary,
-                  border:        `1px solid ${T.rim}`,
-                  borderRadius:   3,
-                  fontFamily:    T.fontMono,
-                  fontSize:       10,
-                  fontWeight:     600,
-                  letterSpacing: "0.06em",
-                  cursor:        "pointer",
-                }}
-              >
-                COPY TEXT
-              </button>
-
-              <button
-                onClick={handleCopyJson}
-                style={{
-                  height:        36,
-                  padding:       "0 16px",
-                  display:       "flex",
-                  alignItems:    "center",
-                  gap:            6,
-                  background:    "transparent",
-                  color:          T.cyan,
-                  border:        `1px solid ${T.cyan}`,
-                  borderRadius:   3,
-                  fontFamily:    T.fontMono,
-                  fontSize:       10,
-                  fontWeight:     600,
-                  letterSpacing: "0.06em",
-                  cursor:        "pointer",
-                }}
-              >
-                COPY JSON
-              </button>
-            </>
+          {!submitted && (
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                height: 48, padding: "0 36px",
+                fontFamily: T.fontMono, fontSize: 13, fontWeight: 700,
+                letterSpacing: "0.10em", color: "#ffffff",
+                background: submitting ? T.slate : "var(--accent-cyan)",
+                border: "none", borderRadius: 3,
+                cursor: submitting ? "not-allowed" : "pointer",
+                whiteSpace: "nowrap" as const,
+                boxShadow: submitting ? "none" : `0 0 0 1px color-mix(in srgb,var(--accent-cyan) 60%,transparent)`,
+              }}
+            >
+              {submitting && (
+                <LoaderIcon size={14} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />
+              )}
+              {isSolo ? "APPROVE & SUBMIT PROPOSALS" : "SUBMIT FOR CHECKER APPROVAL"}
+            </button>
           )}
         </div>
-
-        {/* Right — primary CTA */}
-        {!submitted && (
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            style={{
-              display:       "flex",
-              alignItems:    "center",
-              gap:            10,
-              height:         48,
-              padding:       "0 36px",
-              fontFamily:    T.fontMono,
-              fontSize:       13,
-              fontWeight:     700,
-              letterSpacing: "0.10em",
-              color:         "#ffffff",
-              background:     submitting ? T.slate : "var(--accent-cyan)",
-              border:        "none",
-              borderRadius:   3,
-              cursor:         submitting ? "not-allowed" : "pointer",
-              whiteSpace:    "nowrap" as const,
-              boxShadow:     submitting ? "none" : `0 0 0 1px color-mix(in srgb,var(--accent-cyan) 60%,transparent)`,
-            }}
-          >
-            {submitting && (
-              <LoaderIcon size={14} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />
-            )}
-            {isSolo ? "APPROVE & SUBMIT PROPOSALS" : "SUBMIT FOR CHECKER APPROVAL"}
-          </button>
-        )}
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
