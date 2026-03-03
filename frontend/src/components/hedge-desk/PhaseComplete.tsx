@@ -5,6 +5,7 @@ import type { PositionRow } from "@/api/positionClient";
 import DisclosurePanel from "./DisclosurePanel";
 import { CheckCircleIcon, RefreshCwIcon, ClipboardIcon, BarChart2Icon, HistoryIcon, FileSpreadsheetIcon, FileTextIcon } from "lucide-react";
 import Link from "next/link";
+import { API_BASE } from "@/lib/api/apiBase";
 
 const HD = {
   navy:    "#0A1F44",
@@ -45,6 +46,7 @@ export default function PhaseComplete({
   runId,
   governanceMode,
   onNewRun,
+  token,
 }: PhaseCompleteProps) {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState("CONFIRMATION DOWNLOADED");
@@ -63,8 +65,39 @@ export default function PhaseComplete({
     return acc;
   }, {});
 
-  const handleDownloadExcel = () => {
-    // Build CSV (Excel-compatible) from positions + summary
+  async function downloadFromServer(endpoint: "excel" | "pdf" | "bank-pdf", filename: string, toastLabel: string) {
+    try {
+      const resp = await fetch(`${API_BASE}/v1/reports/${encodeURIComponent(runId)}/${endpoint}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (resp.ok) {
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast(toastLabel);
+        return true;
+      }
+    } catch {
+      // fall through to client-side fallback
+    }
+    return false;
+  }
+
+  const handleDownloadExcel = async () => {
+    const serverOk = await downloadFromServer(
+      "excel",
+      `hedge-report-${runId.slice(0, 8)}.csv`,
+      "EXCEL REPORT DOWNLOADED",
+    );
+    if (serverOk) return;
+
+    // Client-side fallback
     const rows: string[][] = [
       ["HEDGE EXECUTION REPORT", "", "", "", "", ""],
       ["Run ID", runId, "", "Generated", new Date().toISOString(), ""],
@@ -93,8 +126,15 @@ export default function PhaseComplete({
     showToast("EXCEL REPORT DOWNLOADED");
   };
 
-  const handleDownloadBankPdf = () => {
-    // Generate a structured text report for bank/compliance use
+  const handleDownloadBankPdf = async () => {
+    const serverOk = await downloadFromServer(
+      "bank-pdf",
+      `bank-compliance-${runId.slice(0, 8)}.txt`,
+      "BANK REPORT DOWNLOADED",
+    );
+    if (serverOk) return;
+
+    // Client-side fallback
     const lines = [
       "ORDR TERMINAL — HEDGE EXECUTION BANK REPORT",
       "=".repeat(60),
