@@ -1,12 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { loginAsDemo } from './helpers/auth';
 
 test.describe('Full Hedge Pipeline — Happy Path', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/auth/login');
-    await page.fill('[name="email"]', 'demo@demo.com');
-    await page.fill('[name="password"]', 'demo');
-    await page.click('[type="submit"]');
-    await expect(page).toHaveURL('/dashboard');
+    await loginAsDemo(page);
   });
 
   test('creates position, assigns policy, executes, views report', async ({ page }) => {
