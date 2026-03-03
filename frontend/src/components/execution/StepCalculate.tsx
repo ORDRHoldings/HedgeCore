@@ -163,6 +163,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
       cost_assumptions: { spread_bps: 5 },
       execution_product: "FWD" as const,
       min_trade_size_usd: 0,
+      allow_indicative_proxy: true,
     }),
     [],
   );
@@ -192,7 +193,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
       }));
 
       try {
-        const res = await calculate({ trades, hedges: [], market: cr.market, policy, ...(cr.snapshotId ? { market_snapshot_id: cr.snapshotId } : {}) });
+        const res = await calculate({ trades, hedges: [], market: cr.market, policy, ...(cr.snapshotId ? { market_snapshot_id: cr.snapshotId } : {}) }, token);
         updated[i] = { ...cr, result: res, status: "done" };
       } catch (err: unknown) {
         let msg = "Calculation error";

@@ -25,8 +25,10 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export async function calculate(req: CalculateRequest): Promise<CalculateResponse> {
-  const { data } = await api.post<CalculateResponse>('/calculate', req);
+export async function calculate(req: CalculateRequest, token?: string): Promise<CalculateResponse> {
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const { data } = await api.post<CalculateResponse>('/calculate', req, { headers });
   return data;
 }
 
