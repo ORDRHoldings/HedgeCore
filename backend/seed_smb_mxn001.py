@@ -2,11 +2,11 @@
 seed_smb_mxn001.py -- Idempotent seed for the MXN001 SMB demo company.
 
 Creates (if not already present):
-  - Company:    SMB Demo MXN  (slug: mxn001, id: 22222222-...-222222222222)
+  - Company:    Pollo Import Co  (slug: mxn001, id: 22222222-...-222222222222)
   - Branch:     Mexico City HQ [MXC]
   - Department: FX Desk [FXD]
-  - User:       smb_demo / smb_demo  (admin, is_superuser=True)
-  - UserRole:   admin role assigned
+  - User:       MXN001 / MXN001  (senior_analyst, is_superuser=False)
+  - UserRole:   senior_analyst role assigned
 
 Idempotent: if company already exists, script exits with a success message
 and makes no changes.
@@ -76,22 +76,23 @@ async def seed():
             return
 
         # ── Create Company ───────────────────────────────────────────────────
-        print("  [1/5] Creating company SMB Demo MXN...")
+        print("  [1/5] Creating company Pollo Import Co...")
         company = Company(
             id=COMPANY_ID,
-            name="SMB Demo MXN",
+            name="Pollo Import Co",
             slug="mxn001",
-            domain="mxn001demo.com",
+            domain="polloimport.com",
             settings={
                 "default_currency": "MXN",
                 "plan_tier": "smb",
                 "fiscal_year_start": "January",
+                "currency_pair": "USD/MXN",
             },
             is_active=True,
         )
         session.add(company)
         await session.flush()
-        print(f"         Company:    SMB Demo MXN  (slug=mxn001, id={COMPANY_ID})")
+        print(f"         Company:    Pollo Import Co  (slug=mxn001, id={COMPANY_ID})")
 
         # ── Create Branch ────────────────────────────────────────────────────
         print("  [2/5] Creating branch Mexico City HQ...")
@@ -121,36 +122,43 @@ async def seed():
         print(f"         Department: FX Desk [FXD]")
 
         # ── Create User ──────────────────────────────────────────────────────
-        print("  [4/5] Creating smb_demo admin user...")
+        print("  [4/5] Creating MXN001 demo user...")
         smb_user = User(
-            email="smb_demo",
-            hashed_password=hash_password("smb_demo"),
-            full_name="SMB Demo Admin",
-            job_title="Platform Administrator",
+            email="MXN001",
+            hashed_password=hash_password("MXN001"),
+            full_name="Demo User — Pollo Import",
+            job_title="FX Risk Analyst",
             is_active=True,
-            is_superuser=True,
+            is_superuser=False,
             company_id=COMPANY_ID,
             branch_id=BRANCH_ID,
             department_id=DEPT_ID,
         )
         session.add(smb_user)
         await session.flush()
-        print(f"         User:       smb_demo / smb_demo  (is_superuser=True)")
+        print(f"         User:       MXN001 / MXN001  (is_superuser=False)")
 
-        # ── Assign admin role ────────────────────────────────────────────────
-        print("  [5/5] Assigning admin role...")
-        admin_result = await session.execute(
-            select(Role).where(Role.name == "admin")
+        # ── Assign senior_analyst role ───────────────────────────────────────
+        print("  [5/5] Assigning senior_analyst role...")
+        role_result = await session.execute(
+            select(Role).where(Role.name == "senior_analyst")
         )
-        admin_role = admin_result.scalars().first()
+        smb_role = role_result.scalars().first()
 
-        if admin_role:
-            session.add(UserRole(user_id=smb_user.id, role_id=admin_role.id))
+        if smb_role:
+            session.add(UserRole(user_id=smb_user.id, role_id=smb_role.id))
             await session.flush()
-            print(f"         Role:       admin (id={admin_role.id})")
+            print(f"         Role:       senior_analyst (id={smb_role.id})")
         else:
-            print(f"         [WARN] 'admin' role not found — user created without role assignment.")
-            print(f"                Run reset_blank_state.py first to seed roles, then re-run this script.")
+            print(f"         [WARN] 'senior_analyst' role not found — trying 'admin' fallback...")
+            admin_result = await session.execute(select(Role).where(Role.name == "admin"))
+            admin_role = admin_result.scalars().first()
+            if admin_role:
+                session.add(UserRole(user_id=smb_user.id, role_id=admin_role.id))
+                await session.flush()
+                print(f"         Role:       admin (fallback, id={admin_role.id})")
+            else:
+                print(f"         [WARN] No role found — run reset_blank_state.py first to seed roles.")
 
         # ── Commit ───────────────────────────────────────────────────────────
         await session.commit()
@@ -161,14 +169,15 @@ async def seed():
     print(f"  MXN001 SMB SEED COMPLETE")
     print(f"{'='*70}")
     print()
-    print(f"  Company:     SMB Demo MXN")
+    print(f"  Company:     Pollo Import Co")
     print(f"  Slug:        mxn001")
     print(f"  Branch:      Mexico City HQ [MXC]")
     print(f"  Department:  FX Desk [FXD]")
     print()
-    print(f"  Login:       smb_demo / smb_demo")
-    print(f"  Superuser:   Yes")
-    print(f"  Role:        admin")
+    print(f"  Login:       MXN001 / MXN001")
+    print(f"  Superuser:   No")
+    print(f"  Role:        senior_analyst")
+    print(f"  Plan Tier:   smb")
     print(f"\n{'='*70}\n")
 
 

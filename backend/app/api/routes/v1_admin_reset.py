@@ -137,18 +137,24 @@ class ResetResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 async def _seed_mxn001(session: AsyncSession) -> Company:
-    """Create MXN001 SMB company + branch + dept + smb_demo admin user."""
+    """Create MXN001 SMB company (Pollo Import Co) + branch + dept + MXN001 user.
+
+    Matches the ORDR-Lite-Tutorial.md specification:
+      - Company:  Pollo Import Co  (plan_tier=smb, default_currency=MXN)
+      - User:     MXN001 / MXN001  (senior_analyst, is_superuser=False)
+    """
 
     # Company
     company = Company(
         id=MXN001_COMPANY_ID,
-        name="SMB Demo MXN",
+        name="Pollo Import Co",
         slug="mxn001",
-        domain="mxn001demo.com",
+        domain="polloimport.com",
         settings={
             "default_currency": "MXN",
             "plan_tier": "smb",
             "fiscal_year_start": "January",
+            "currency_pair": "USD/MXN",
         },
         is_active=True,
     )
@@ -178,14 +184,14 @@ async def _seed_mxn001(session: AsyncSession) -> Company:
     session.add(dept)
     await session.flush()
 
-    # User
+    # User — Terminal ID: MXN001, role: senior_analyst (matches tutorial)
     smb_user = User(
-        email="smb_demo",
-        hashed_password=hash_password("smb_demo"),
-        full_name="SMB Demo Admin",
-        job_title="Platform Administrator",
+        email="MXN001",
+        hashed_password=hash_password("MXN001"),
+        full_name="Demo User — Pollo Import",
+        job_title="FX Risk Analyst",
         is_active=True,
-        is_superuser=True,
+        is_superuser=False,
         company_id=MXN001_COMPANY_ID,
         branch_id=MXN001_BRANCH_ID,
         department_id=MXN001_DEPT_ID,
@@ -193,13 +199,16 @@ async def _seed_mxn001(session: AsyncSession) -> Company:
     session.add(smb_user)
     await session.flush()
 
-    # Assign admin role
-    admin_role_result = await session.execute(
-        select(Role).where(Role.name == "admin")
+    # Assign senior_analyst role (SMB appropriate; falls back to admin if not seeded)
+    role_result = await session.execute(
+        select(Role).where(Role.name == "senior_analyst")
     )
-    admin_role = admin_role_result.scalars().first()
-    if admin_role:
-        session.add(UserRole(user_id=smb_user.id, role_id=admin_role.id))
+    smb_role = role_result.scalars().first()
+    if not smb_role:
+        role_result = await session.execute(select(Role).where(Role.name == "admin"))
+        smb_role = role_result.scalars().first()
+    if smb_role:
+        session.add(UserRole(user_id=smb_user.id, role_id=smb_role.id))
         await session.flush()
 
     return company
