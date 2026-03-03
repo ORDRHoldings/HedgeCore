@@ -457,11 +457,11 @@ async def branch_comparison(
         total_exposure = float((await db.execute(exposure_q)).scalar() or 0)
 
         hedged_q = (
-            select(func.coalesce(func.sum(ExecutionProposal.hedge_amount), 0))
-            .join(Position, ExecutionProposal.position_id == Position.id)
+            select(func.coalesce(func.sum(Position.hedge_amount), 0))
             .where(Position.company_id == user.company_id)
             .where(Position.branch_id == branch_id)
-            .where(ExecutionProposal.status == "EXECUTED")
+            .where(Position.execution_status == "HEDGED")
+            .where(Position.is_active == True)
         )
         hedged_amount = float((await db.execute(hedged_q)).scalar() or 0)
 
@@ -469,6 +469,7 @@ async def branch_comparison(
 
         active_prop_q = (
             select(func.count())
+            .select_from(ExecutionProposal)
             .join(Position, ExecutionProposal.position_id == Position.id)
             .where(Position.company_id == user.company_id)
             .where(Position.branch_id == branch_id)
@@ -478,6 +479,7 @@ async def branch_comparison(
 
         pending_q = (
             select(func.count())
+            .select_from(ExecutionProposal)
             .join(Position, ExecutionProposal.position_id == Position.id)
             .where(Position.company_id == user.company_id)
             .where(Position.branch_id == branch_id)
