@@ -65,15 +65,19 @@ export default function PhaseReview({
   const isSolo = governanceMode === "solo";
 
   const buildProposals = () =>
-    positions.map(p => ({
-      position_id:       p.id,
-      execution_ref:     `HD-${runId.slice(0, 8)}-${p.id.slice(0, 4)}`,
-      hedge_amount:      (calcResult.hedge_amount as number) ?? p.amount ?? 0,
-      hedge_rate:        (calcResult.hedge_rate as number) ?? 0,
-      run_id:            runId,
-      risk_decision_hash: riskDecisionHash,
-      risk_verdict:      riskVerdict,
-    }));
+    positions.map(p => {
+      const amt = (calcResult.hedge_amount as number | undefined) ?? p.amount;
+      const rate = calcResult.hedge_rate as number | undefined;
+      return {
+        position_id:       p.id,
+        execution_ref:     `HD-${runId.slice(0, 8)}-${p.id.slice(0, 4)}`,
+        hedge_amount:      amt && amt > 0 ? amt : undefined,
+        hedge_rate:        rate && rate > 0 ? rate : undefined,
+        run_id:            runId,
+        risk_decision_hash: riskDecisionHash || undefined,
+        risk_verdict:      riskVerdict || undefined,
+      };
+    });
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -89,8 +93,13 @@ export default function PhaseReview({
       });
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error((errData as { detail?: string }).detail ?? `HTTP ${res.status}`);
+        const errData = await res.json().catch(() => ({})) as Record<string, unknown>;
+        const detail = errData.detail;
+        const msg = typeof detail === "string" ? detail
+          : Array.isArray(detail) ? detail.map((d: Record<string, unknown>) => d.msg ?? JSON.stringify(d)).join("; ")
+          : detail ? JSON.stringify(detail)
+          : `HTTP ${res.status}`;
+        throw new Error(msg);
       }
 
       const data = await res.json() as Record<string, unknown>;
