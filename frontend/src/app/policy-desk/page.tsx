@@ -1092,16 +1092,16 @@ export default function PolicyDeskPage() {
                   fontFamily: S.fontMono,
                   fontSize: 11,
                   fontWeight: 700,
-                  color: "#0a0e14",
-                  background: S.cyan,
+                  color: "#ffffff",
+                  background: "#1C62F2",
                   border: "none",
-                  borderRadius: 0,
-                  padding: "5px 12px",
+                  borderRadius: 3,
+                  padding: "8px 18px",
                   cursor: "pointer",
-                  letterSpacing: "0.06em",
+                  letterSpacing: "0.08em",
                   whiteSpace: "nowrap",
                 }}>
-                → GO TO HEDGE DESK
+                GO TO HEDGE DESK →
               </button>
             )}
             <button
