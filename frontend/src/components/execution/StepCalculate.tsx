@@ -672,7 +672,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
                       {b.action_direction ? (
                         <span style={{
                           display: "inline-block", padding: "1px 5px", borderRadius: 2,
-                          fontSize: 7, fontWeight: 700, letterSpacing: "0.06em",
+                          fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
                           background: isSell ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)",
                           color: isSell ? S.fail : S.pass,
                           border: `1px solid ${isSell ? S.fail : S.pass}`,
@@ -685,7 +685,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
                     <span style={{ textAlign: "right", color: S.secondary }}>${fmtUsd.format(b.action_usd)}</span>
                     <span style={{ textAlign: "right", color: S.tertiary }}>{fmtDec.format(b.forward_rate)}</span>
                     <span style={{ textAlign: "right", color: b.friction_usd > 0 ? S.amber : S.tertiary }}>${fmtUsd.format(b.friction_usd)}</span>
-                    <span style={{ fontSize: 8, fontWeight: 600, color: b.suppressed ? S.amber : S.pass }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: b.suppressed ? S.amber : S.pass }}>
                       {b.suppressed ? "SKIP" : "ACT"}
                     </span>
                   </div>
@@ -701,7 +701,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
                   background: S.bgSub, borderTop: `2px solid ${S.rim}`,
                   fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
                 }}>
-                  <span style={{ fontSize: 8, letterSpacing: "0.08em", color: S.tertiary }}>TOTAL</span>
+                  <span style={{ fontSize: 10, letterSpacing: "0.08em", color: S.tertiary }}>TOTAL</span>
                   <span style={{ textAlign: "right", color: S.primary }}>{fmtNum.format(summary.total_commercial_exposure_mxn)}</span>
                   <span />
                   <span style={{ textAlign: "right", color: S.primary }}>{fmtNum.format(summary.total_action_mxn)}</span>
@@ -718,7 +718,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
           {scenarios.length > 0 && (
             <div style={{ padding: "10px 14px 0" }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 8, fontWeight: 600,
+                fontFamily: S.fontMono, fontSize: 10, fontWeight: 600,
                 letterSpacing: "0.10em", color: S.tertiary, marginBottom: 4,
                 textTransform: "uppercase" as const,
               }}>

@@ -517,26 +517,6 @@ function MenuBarItem({ sec, isActive, isOpen, onOpen, onClose }: MenuBarItemProp
             </Link>
           ))}
 
-          {/* Policy Engine: proceed to execution CTA */}
-          {sec.label === "Policy Engine" && (
-            <div
-              style={{
-                borderTop: "1px solid var(--border-rim)",
-                padding: "8px 12px",
-                background: "color-mix(in srgb, var(--accent-cyan) 6%, transparent)",
-                display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
-                borderRadius: "0 0 4px 4px",
-              }}
-              onClick={() => router.push("/execution-desk")}
-            >
-              <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--accent-cyan)" }}>
-                PROCEED TO EXECUTION →
-              </span>
-              <span style={{ fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)", fontSize: 11, color: "var(--text-secondary)" }}>
-                After assigning policy, run the hedge pipeline
-              </span>
-            </div>
-          )}
         </div>
       )}
     </div>
