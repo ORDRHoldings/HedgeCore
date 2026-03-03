@@ -62,33 +62,43 @@ function fmtInt(n: number): string {
 }
 
 export default function PhaseCalculate({ positions, token, onComplete, onBack }: PhaseCalculateProps) {
-  const [marketData, setMarketData]   = useState<Record<string, number>>({});
-  const [marketLoading, setMarketLoading] = useState(true);
-  const [marketError, setMarketError] = useState<string | null>(null);
-  const [calculating, setCalculating] = useState(false);
-  const [calcError, setCalcError]     = useState<string | null>(null);
-  const [calcResult, setCalcResult]   = useState<Record<string, unknown> | null>(null);
+  const [marketSnapshot, setMarketSnapshot] = useState<Record<string, unknown> | null>(null);
+  const [marketLoading, setMarketLoading]   = useState(true);
+  const [marketError, setMarketError]       = useState<string | null>(null);
+  const [calculating, setCalculating]       = useState(false);
+  const [calcError, setCalcError]           = useState<string | null>(null);
+  const [calcResult, setCalcResult]         = useState<Record<string, unknown> | null>(null);
 
-  // Derive unique currencies from positions
+  // Derive unique currencies and value dates from positions
   const currencies = Array.from(new Set(positions.map(p => p.currency)));
+  const valueDates = positions.map(p => p.value_date).filter(Boolean) as string[];
 
   const loadMarket = useCallback(async () => {
     setMarketLoading(true);
     setMarketError(null);
     try {
-      const qs = currencies.map(c => `currencies=${c}`).join("&");
-      const res = await fetch(`/api/market-autofill?${qs}`);
+      const res = await fetch("/api/market-autofill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currencies, trade_value_dates: valueDates }),
+      });
       if (!res.ok) throw new Error(`Market autofill HTTP ${res.status}`);
       const data = await res.json();
-      setMarketData(data as Record<string, number>);
+      // Response: { market: { as_of, spot_usdmxn, forward_points_by_month, provider_metadata }, currencies_detected }
+      const mkt = data.market as Record<string, unknown>;
+      if (mkt) {
+        setMarketSnapshot(mkt);
+      } else {
+        throw new Error("No market data in response");
+      }
     } catch (e) {
-      // Non-fatal — we use defaults
+      // Non-fatal — we build a fallback snapshot
       setMarketError(e instanceof Error ? e.message : "Market autofill unavailable");
-      setMarketData({});
+      setMarketSnapshot(null);
     } finally {
       setMarketLoading(false);
     }
-  }, [currencies.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currencies.join(","), valueDates.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadMarket(); }, [loadMarket]);
 
@@ -110,33 +120,33 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
         // Use default policy
       }
 
-      // 2. Build market snapshot
-      const today = new Date().toISOString().split("T")[0];
-      const spot = (marketData["usdmxn"] ?? marketData["USDMXN"] ?? 19.5) as number;
-
-      // Generate forward point buckets for each trade's value_date month
-      // Uses flat curve (0 fwd points) as sensible default when no live data
-      const fwdPoints: Record<string, number> = {};
-      for (const p of positions) {
-        if (p.value_date) {
-          const bucket = String(p.value_date).slice(0, 7); // "YYYY-MM"
-          if (!fwdPoints[bucket]) fwdPoints[bucket] = 0;
+      // 2. Build market snapshot — use live Finnhub data if available, else fallback
+      let mktSnap: Record<string, unknown>;
+      if (marketSnapshot) {
+        mktSnap = { ...marketSnapshot };
+      } else {
+        // Fallback: construct a minimal snapshot with default values
+        const today = new Date().toISOString().split("T")[0];
+        const fwdPoints: Record<string, number> = {};
+        for (const p of positions) {
+          if (p.value_date) {
+            const bucket = String(p.value_date).slice(0, 7);
+            if (!fwdPoints[bucket]) fwdPoints[bucket] = 0;
+          }
         }
+        const now = new Date();
+        for (let i = 0; i < 4; i++) {
+          const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+          if (!fwdPoints[key]) fwdPoints[key] = 0;
+        }
+        mktSnap = {
+          as_of: today,
+          spot_usdmxn: 19.5,
+          forward_points_by_month: fwdPoints,
+          provider_metadata: { source: "indicative_fallback", data_class: "INDICATIVE_FALLBACK" },
+        };
       }
-      // Also add current month and next 3 months for coverage
-      const now = new Date();
-      for (let i = 0; i < 4; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        if (!fwdPoints[key]) fwdPoints[key] = 0;
-      }
-
-      const marketSnapshot: Record<string, unknown> = {
-        as_of: today,
-        spot_usdmxn: spot,
-        forward_points_by_month: fwdPoints,
-        provider_metadata: { source: "autofill", data_class: "INDICATIVE" },
-      };
 
       // 3. Build trades payload
       const trades = positions.map(p => ({
@@ -153,7 +163,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
       const payload = {
         trades,
         hedges: [],
-        market: marketSnapshot,
+        market: mktSnap,
         policy: policyConfig,
       };
 
@@ -181,7 +191,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
       onComplete({
         runId,
         calcResponse: data,
-        marketSnapshot: marketSnapshot as Record<string, unknown>,
+        marketSnapshot: mktSnap,
         policyInstanceId,
         riskDecisionHash,
       });
@@ -235,18 +245,49 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
           </span>
           {marketLoading && <LoaderIcon size={12} color={HD.slate} style={{ animation: "spin 1s linear infinite" }} />}
           {marketError && <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.amber }}>{marketError} — using defaults</span>}
+          {!marketLoading && marketSnapshot && (() => {
+            const meta = marketSnapshot.provider_metadata as Record<string, unknown> | undefined;
+            const dataClass = (meta?.data_class ?? "UNKNOWN") as string;
+            const isLive = dataClass === "LIVE";
+            return (
+              <span style={{
+                fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                color: isLive ? HD.emerald : HD.amber,
+                background: isLive ? "color-mix(in srgb,#2ECC71 12%,transparent)" : "color-mix(in srgb,var(--accent-amber) 12%,transparent)",
+                padding: "2px 6px", borderRadius: 2,
+              }}>
+                {isLive ? "● LIVE" : "● INDICATIVE"}
+              </span>
+            );
+          })()}
         </div>
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           {marketLoading ? (
-            <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.tertiary }}>Loading...</span>
-          ) : Object.keys(marketData).length > 0 ? (
-            Object.entries(marketData).map(([k, v]) => (
-              <div key={k} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{k.toUpperCase()}</span>
-                <span style={{ fontFamily: HD.fontMono, fontSize: 13, fontWeight: 600, color: HD.primary }}>{fmt(v as number)}</span>
-              </div>
-            ))
-          ) : (
+            <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.tertiary }}>Loading live rates from Finnhub...</span>
+          ) : marketSnapshot ? (() => {
+            const spot = marketSnapshot.spot_usdmxn as number;
+            const meta = marketSnapshot.provider_metadata as Record<string, unknown> | undefined;
+            const pair = (meta?.currency_pair ?? "USD/MXN") as string;
+            const fwd = marketSnapshot.forward_points_by_month as Record<string, number> | undefined;
+            const fwdEntries = fwd ? Object.entries(fwd).sort(([a],[b]) => a.localeCompare(b)).slice(0, 4) : [];
+            return (
+              <>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{pair} SPOT</span>
+                  <span style={{ fontFamily: HD.fontMono, fontSize: 15, fontWeight: 700, color: HD.primary }}>{fmt(spot)}</span>
+                </div>
+                {fwdEntries.map(([bucket, pts]) => (
+                  <div key={bucket} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{bucket} FWD</span>
+                    <span style={{ fontFamily: HD.fontMono, fontSize: 13, fontWeight: 600, color: HD.primary }}>{fmt(spot + pts)}</span>
+                    <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: pts >= 0 ? HD.emerald : HD.crimson }}>
+                      {pts >= 0 ? "+" : ""}{fmt(pts)} pts
+                    </span>
+                  </div>
+                ))}
+              </>
+            );
+          })() : (
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>USD/MXN (DEFAULT)</span>
               <span style={{ fontFamily: HD.fontMono, fontSize: 13, fontWeight: 600, color: HD.amber }}>19.5000</span>
