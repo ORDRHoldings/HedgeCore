@@ -80,7 +80,7 @@ export default function WelcomePage() {
     return (
       <div style={{
         height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        background: T.bg, fontFamily: T.mono, fontSize: 12,
+        background: T.bg, fontFamily: T.mono, fontSize: 14,
         color: T.muted, letterSpacing: "0.18em",
       }}>
         LOADING SESSION…
@@ -125,7 +125,7 @@ export default function WelcomePage() {
           justifyContent: "space-between",
         }}>
           <span style={{
-            fontFamily: T.mono, fontSize: 12, fontWeight: 700,
+            fontFamily: T.mono, fontSize: 14, fontWeight: 700,
             color: T.blue, letterSpacing: "0.22em",
           }}>
             ⬡ ORDR
@@ -138,7 +138,7 @@ export default function WelcomePage() {
               boxShadow: healthOk ? `0 0 6px rgba(28,98,242,0.4)` : "none",
             }} />
             <span style={{
-              fontFamily: T.mono, fontSize: 10, letterSpacing: "0.14em",
+              fontFamily: T.mono, fontSize: 14, letterSpacing: "0.14em",
               color: T.muted,
             }}>
               {healthOk === null ? "CHECKING" : healthOk ? "OPERATIONAL" : "DEGRADED"}
@@ -149,14 +149,14 @@ export default function WelcomePage() {
         {/* Identity section */}
         <div style={{ padding: "32px 28px 24px" }}>
           <div style={{
-            fontFamily: T.mono, fontSize: 9,
+            fontFamily: T.mono, fontSize: 15,
             color: T.muted, letterSpacing: "0.18em", marginBottom: 10,
           }}>
             SESSION INITIALIZED
           </div>
 
           <div style={{
-            fontFamily: T.head, fontSize: 24, fontWeight: 700,
+            fontFamily: T.head, fontSize: 27, fontWeight: 700,
             color: T.primary, letterSpacing: "-0.01em",
             lineHeight: 1.2, marginBottom: 14,
           }}>
@@ -166,7 +166,7 @@ export default function WelcomePage() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{
-              fontFamily: T.mono, fontSize: 10, fontWeight: 600,
+              fontFamily: T.mono, fontSize: 14, fontWeight: 600,
               letterSpacing: "0.1em", color: T.blue,
               background: T.blueDim, border: `1px solid ${T.blueBdr}`,
               padding: "3px 10px", borderRadius: 2,
@@ -175,14 +175,14 @@ export default function WelcomePage() {
             </span>
             {company && (
               <span style={{
-                fontFamily: T.mono, fontSize: 10, color: T.secondary,
+                fontFamily: T.mono, fontSize: 14, color: T.secondary,
                 letterSpacing: "0.06em",
               }}>
                 {company}
               </span>
             )}
             <span style={{
-              fontFamily: T.mono, fontSize: 10, color: T.muted,
+              fontFamily: T.mono, fontSize: 14, color: T.muted,
               letterSpacing: "0.06em",
             }}>
               {plan}
@@ -216,7 +216,7 @@ export default function WelcomePage() {
               >
                 {/* Step number */}
                 <span style={{
-                  fontFamily: T.mono, fontSize: 11, fontWeight: 700,
+                  fontFamily: T.mono, fontSize: 15, fontWeight: 700,
                   color: hov ? T.blue : T.muted, letterSpacing: "0.06em",
                   width: 20, flexShrink: 0, transition: "color 120ms",
                 }}>
@@ -233,7 +233,7 @@ export default function WelcomePage() {
                 {/* Text */}
                 <div style={{ flex: 1 }}>
                   <span style={{
-                    fontFamily: T.mono, fontSize: 12, fontWeight: 700,
+                    fontFamily: T.mono, fontSize: 14, fontWeight: 700,
                     letterSpacing: "0.1em",
                     color: hov ? T.primary : T.secondary,
                     marginRight: 12, transition: "color 120ms",
@@ -241,7 +241,7 @@ export default function WelcomePage() {
                     {s.name}
                   </span>
                   <span style={{
-                    fontFamily: T.ui, fontSize: 12,
+                    fontFamily: T.ui, fontSize: 14,
                     color: T.muted, lineHeight: 1,
                   }}>
                     {s.note}
@@ -264,7 +264,7 @@ export default function WelcomePage() {
             style={{
               width: "100%",
               height: 46,
-              fontFamily: T.mono, fontSize: 12, fontWeight: 700,
+              fontFamily: T.mono, fontSize: 14, fontWeight: 700,
               letterSpacing: "0.18em",
               color: "#fff",
               background: hovBtn ? "#1456D8" : T.blue,
@@ -290,7 +290,7 @@ export default function WelcomePage() {
               style={{ accentColor: T.blue, width: 13, height: 13 }}
             />
             <span style={{
-              fontFamily: T.mono, fontSize: 9,
+              fontFamily: T.mono, fontSize: 15,
               color: T.muted, letterSpacing: "0.1em",
             }}>
               {"DON'T SHOW THIS AGAIN"}

@@ -68,20 +68,20 @@ function Label({ index, title, sub }: { index: string; title: string; sub: strin
       borderBottom: `1px solid ${T.rim}`,
     }}>
       <span style={{
-        fontFamily: T.mono, fontSize: 9, color: T.muted,
+        fontFamily: T.mono, fontSize: 15, color: T.muted,
         letterSpacing: "0.1em", fontWeight: 700,
       }}>
         {index}
       </span>
       <span style={{ width: 1, height: 12, background: T.rim, flexShrink: 0 }} />
       <span style={{
-        fontFamily: T.mono, fontSize: 11, fontWeight: 700,
+        fontFamily: T.mono, fontSize: 15, fontWeight: 700,
         color: T.primary, letterSpacing: "0.1em",
       }}>
         {title}
       </span>
       <span style={{
-        fontFamily: T.ui, fontSize: 11,
+        fontFamily: T.ui, fontSize: 15,
         color: T.muted,
       }}>
         {sub}
@@ -116,7 +116,7 @@ function HubItem({ Icon, label, href }: typeof HUB[number]) {
         style={{ color: hov ? T.blue : T.muted, transition: "color 130ms" }}
       />
       <span style={{
-        fontFamily: T.mono, fontSize: 9, letterSpacing: "0.1em",
+        fontFamily: T.mono, fontSize: 15, letterSpacing: "0.1em",
         color: hov ? T.blue : T.muted,
         transition: "color 130ms", whiteSpace: "nowrap",
       }}>
@@ -156,7 +156,7 @@ export default function DashboardPage() {
     return (
       <div style={{
         height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        background: T.bg, fontFamily: T.mono, fontSize: 12,
+        background: T.bg, fontFamily: T.mono, fontSize: 14,
         color: T.muted, letterSpacing: "0.18em",
       }}>
         LOADING…
@@ -186,7 +186,7 @@ export default function DashboardPage() {
         boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
       }}>
         <span style={{
-          fontFamily: T.mono, fontSize: 12, fontWeight: 700,
+          fontFamily: T.mono, fontSize: 14, fontWeight: 700,
           color: T.blue, letterSpacing: "0.22em",
         }}>
           ⬡ ORDR TERMINAL
@@ -194,7 +194,7 @@ export default function DashboardPage() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{
-            fontFamily: T.mono, fontSize: 10,
+            fontFamily: T.mono, fontSize: 14,
             color: T.muted, letterSpacing: "0.06em",
           }}>
             {ago}
@@ -203,7 +203,7 @@ export default function DashboardPage() {
             onClick={refresh}
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              fontFamily: T.mono, fontSize: 10, letterSpacing: "0.1em",
+              fontFamily: T.mono, fontSize: 14, letterSpacing: "0.1em",
               color: T.secondary, background: "none",
               border: `1px solid ${T.soft}`,
               padding: "5px 12px", borderRadius: 2, cursor: "pointer",
@@ -294,7 +294,7 @@ export default function DashboardPage() {
           flexShrink: 0,
         }}>
           <span style={{
-            fontFamily: T.mono, fontSize: 9, letterSpacing: "0.2em",
+            fontFamily: T.mono, fontSize: 15, letterSpacing: "0.2em",
             color: T.muted, fontWeight: 700,
           }}>
             HUB

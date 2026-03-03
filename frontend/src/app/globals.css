@@ -29,14 +29,14 @@
     --space-lg: 16px;
     --space-xl: 24px;
 
-    /* Typography scale (institutional minimum 12px) */
-    --text-xs:   0.75rem;     /* 12px — absolute minimum */
-    --text-sm:   0.8125rem;   /* 13px */
-    --text-base: 0.875rem;    /* 14px */
-    --text-md:   0.9375rem;   /* 15px */
-    --text-lg:   1rem;        /* 16px */
-    --text-xl:   1.125rem;    /* 18px */
-    --text-2xl:  1.25rem;     /* 20px */
+    /* Typography scale */
+    --text-xs:   0.875rem;    /* 14px */
+    --text-sm:   0.9375rem;   /* 15px */
+    --text-base: 1rem;        /* 16px */
+    --text-md:   1.0625rem;   /* 17px */
+    --text-lg:   1.125rem;    /* 18px */
+    --text-xl:   1.25rem;     /* 20px */
+    --text-2xl:  1.5rem;      /* 24px */
 
     /* ══════════════════════════════════════════════════════════
        Terminal Design System — Light Institutional Theme
