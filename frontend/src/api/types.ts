@@ -70,6 +70,7 @@ export interface PolicyConfig {
   cost_assumptions: { spread_bps: number };
   execution_product: 'NDF' | 'FWD';
   min_trade_size_usd: number;
+  allow_indicative_proxy?: boolean;
 }
 
 export interface CalculateRequest {
