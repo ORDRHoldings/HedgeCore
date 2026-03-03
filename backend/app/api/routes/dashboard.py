@@ -223,27 +223,28 @@ async def recent_runs(
     user = await _resolve_user(request, db)
 
     try:
-        # Query user's own proposals -- UUID-to-UUID comparison
+        # Query calculation runs for the user's company (most recent first)
         q = (
-            select(Proposal)
-            .where(Proposal.created_by == user.id)
-            .order_by(Proposal.created_at.desc())
+            select(CalculationRun)
+            .where(CalculationRun.company_id == user.company_id)
+            .where(CalculationRun.user_id == user.id)
+            .order_by(CalculationRun.created_at.desc())
             .limit(10)
         )
         result = await db.execute(q)
-        proposals = result.scalars().all()
+        runs_db = result.scalars().all()
 
-        # Map to response -- extract from frozen_inputs or null
         runs = []
-        for p in proposals:
-            fi = p.frozen_inputs or {}
+        for r in runs_db:
             runs.append({
-                "id": p.proposal_id,
-                "created_at": p.created_at.isoformat() if p.created_at else None,
-                "status": p.status,
-                "currency_pair": fi.get("currency_pair") or None,
-                "notional": fi.get("notional") or None,
-                "hedge_ratio": fi.get("hedge_ratio") or None,
+                "id": str(r.id),
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "status": "COMPLETE",
+                "currency_pair": None,
+                "notional": None,
+                "hedge_ratio": None,
+                "trade_count": r.trade_count,
+                "hedge_count": r.hedge_count,
             })
 
         return runs
