@@ -441,8 +441,8 @@ export default function PositionDeskPage() {
   const handleAssignPolicy = useCallback(async () => {
     if (!modal.position || !policyId.trim() || !token) return;
     const r = await dispatch(assignPolicyThunk({ id: modal.position.id, policyInstanceId: policyId.trim(), token }));
-    if (r.meta.requestStatus === "fulfilled") closeModal();
-  }, [dispatch, modal.position, policyId, token, closeModal]);
+    if (r.meta.requestStatus === "fulfilled") { closeModal(); router.push("/hedge-desk"); }
+  }, [dispatch, modal.position, policyId, token, closeModal, router]);
 
   const handleMarkReady = useCallback(async () => {
     if (!modal.position || !runId.trim() || !token) return;
