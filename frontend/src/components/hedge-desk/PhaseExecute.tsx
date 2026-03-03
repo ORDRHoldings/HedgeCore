@@ -480,7 +480,17 @@ export default function PhaseExecute({
       setDone(true);
       onComplete({ fillPrice: parsedFillPrice, proposalIds });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Execution failed");
+      if (e instanceof Error) {
+        setError(e.message);
+      } else if (e !== null && typeof e === "object") {
+        const obj = e as Record<string, unknown>;
+        const msg = typeof obj.message === "string" ? obj.message
+          : typeof obj.detail === "string" ? obj.detail
+          : JSON.stringify(e);
+        setError(msg);
+      } else {
+        setError("Execution failed");
+      }
     } finally {
       setExecuting(false);
     }
