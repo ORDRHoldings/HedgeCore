@@ -138,29 +138,57 @@ async def dashboard_summary(
         # Scoped user IDs subquery
         user_ids_sq = _scoped_user_ids(user, has_all_branches)
 
-        # Count active proposals (not REJECTED) within scope
+        # Count active execution proposals (PROPOSED or APPROVED) within scope
         active_q = (
             select(func.count())
-            .select_from(Proposal)
-            .where(Proposal.created_by.in_(user_ids_sq))
-            .where(Proposal.status.notin_(["REJECTED"]))
+            .select_from(ExecutionProposal)
+            .where(ExecutionProposal.proposed_by.in_(user_ids_sq))
+            .where(ExecutionProposal.status.in_(["PROPOSED", "APPROVED"]))
         )
         active_count = (await db.execute(active_q)).scalar() or 0
 
-        # Count pending staging artifacts within scope
+        # Count proposals awaiting checker approval (PROPOSED = needs checker)
         pending_q = (
             select(func.count())
-            .select_from(StagingArtifact)
-            .where(StagingArtifact.submitted_by.in_(user_ids_sq))
-            .where(StagingArtifact.authorization_status == "PENDING")
+            .select_from(ExecutionProposal)
+            .where(ExecutionProposal.company_id == user.company_id)
+            .where(ExecutionProposal.status == "PROPOSED")
         )
         pending_count = (await db.execute(pending_q)).scalar() or 0
+
+        # Compute open exposure: sum of amount for open (non-terminal) positions
+        exposure_q = (
+            select(func.sum(Position.amount))
+            .where(Position.company_id == user.company_id)
+            .where(Position.execution_status.notin_(["HEDGED", "REJECTED"]))
+            .where(Position.is_active == True)
+        )
+        if not has_all_branches and user.branch_id:
+            exposure_q = exposure_q.where(Position.branch_id == user.branch_id)
+        total_exposure = float((await db.execute(exposure_q)).scalar() or 0.0)
+
+        # Hedge coverage: HEDGED positions / total non-rejected positions (by count)
+        hedged_q = (
+            select(func.count())
+            .where(Position.company_id == user.company_id)
+            .where(Position.execution_status == "HEDGED")
+            .where(Position.is_active == True)
+        )
+        total_pos_q = (
+            select(func.count())
+            .where(Position.company_id == user.company_id)
+            .where(Position.execution_status != "REJECTED")
+            .where(Position.is_active == True)
+        )
+        hedged_count = (await db.execute(hedged_q)).scalar() or 0
+        total_pos_count = (await db.execute(total_pos_q)).scalar() or 0
+        coverage_pct = round((hedged_count / total_pos_count * 100), 1) if total_pos_count > 0 else 0.0
 
         kpis = {
             "active_proposals": active_count,
             "pending_approvals": pending_count,
-            "total_exposure_usd": 0,       # Phase 2: positions API
-            "hedge_coverage_pct": 0,        # Phase 2: positions API
+            "total_exposure_usd": round(total_exposure, 2),
+            "hedge_coverage_pct": coverage_pct,
             "open_alerts": 0,               # Phase 8: Polisophic
             "team_size": 0,                 # Future: org API
         }
