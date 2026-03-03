@@ -390,6 +390,54 @@ export default function PhaseReview({
       fontFamily:    T.fontUI,
     }}>
 
+      {/* Step header strip */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 20px",
+        background: `color-mix(in srgb, var(--accent-cyan) 6%, transparent)`,
+        borderBottom: `1px solid ${T.rim}`,
+        flexShrink: 0,
+        position: "sticky",
+        top: 0,
+        zIndex: 5,
+      }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: T.cyan }}>
+            STEP 4 OF 4 — REVIEW HEDGE PLAN
+          </span>
+          <span style={{ fontFamily: T.fontUI, fontSize: 11, color: T.secondary }}>
+            {riskVerdict === "APPROVE" ? "Risk gate: PASS — " : ""}Review execution legs and submit for approval.
+          </span>
+        </div>
+        <div style={{ flex: 1 }} />
+        {!submitted && (
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              height: 36, padding: "0 24px",
+              fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+              color: "#ffffff",
+              background: submitting ? T.slate : "var(--accent-cyan)",
+              border: "none", borderRadius: 3,
+              cursor: submitting ? "not-allowed" : "pointer",
+              whiteSpace: "nowrap" as const,
+            }}
+          >
+            {submitting && <LoaderIcon size={12} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />}
+            {isSolo ? "APPROVE & SUBMIT" : "SUBMIT FOR CHECKER APPROVAL"}
+          </button>
+        )}
+        {submitted && (
+          <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.green, letterSpacing: "0.08em" }}>
+            ✓ SUBMITTED
+          </span>
+        )}
+      </div>
+
       {/* Back nav */}
       <button
         onClick={onBack}
