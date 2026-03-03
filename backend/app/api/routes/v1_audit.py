@@ -450,7 +450,7 @@ async def verify_audit_chain(
 
     current_user:     User         = Depends(get_current_user),
 
-    __dev_chain_fail: bool         = Query(False, include_in_schema=False),
+    dev_chain_fail_: bool          = Query(False, alias="__dev_chain_fail", include_in_schema=False),
 
 ):
 
@@ -475,7 +475,7 @@ async def verify_audit_chain(
     """
 
     # DEV-FAULT-1: synthesised FAIL report for runtime repro (localhost-only)
-    if __dev_chain_fail and is_dev_fault_allowed(request):
+    if dev_chain_fail_ and is_dev_fault_allowed(request):
         from datetime import datetime, timezone as _tz
         return ChainIntegrityReport(
             tenant_id      = str(current_user.company_id) if current_user.company_id else None,
