@@ -75,7 +75,7 @@ export default function HedgeDeskPage() {
       height: "100vh",
       display: "flex",
       flexDirection: "column",
-      background: HD.bgDeep,
+      background: HD.bgPanel,
       overflow: "hidden",
     }}>
       {/* Page header */}

@@ -17,7 +17,7 @@ import Link from "next/link";
 // ─── Bloomberg / BlackRock Terminal Palette ──────────────────────────────────
 
 const D = {
-  bg:        "#09090E",
+  bg:        "var(--bg-panel)",
   panel:     "#0D1017",
   panelAlt:  "#111520",
   panelMid:  "#141825",

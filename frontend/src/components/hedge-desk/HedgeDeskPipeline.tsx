@@ -74,7 +74,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
   }, [completedPhases]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: HD.bgDeep }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: HD.bgPanel }}>
       {/* Progress bar */}
       <ProgressBar
         phases={PHASES}

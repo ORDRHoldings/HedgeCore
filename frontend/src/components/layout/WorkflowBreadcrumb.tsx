@@ -65,7 +65,7 @@ export default function WorkflowBreadcrumb({ active }: Props) {
                 gap: 7,
                 height: 36,
                 padding: "0 14px",
-                background: isActive ? "rgba(0,255,255,0.05)" : "transparent",
+                background: isActive ? "rgba(28,98,242,0.08)" : "transparent",
                 border: "none",
                 borderBottom: isActive
                   ? `2px solid ${CYAN}`
@@ -133,8 +133,8 @@ export default function WorkflowBreadcrumb({ active }: Props) {
             fontWeight: 700,
             letterSpacing: "0.10em",
             color: CYAN,
-            background: "rgba(0,255,255,0.08)",
-            border: "1px solid rgba(0,255,255,0.25)",
+            background: "rgba(28,98,242,0.08)",
+            border: "1px solid rgba(28,98,242,0.25)",
             padding: "5px 14px",
             cursor: "pointer",
             borderRadius: 2,
