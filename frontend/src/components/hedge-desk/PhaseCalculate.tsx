@@ -159,7 +159,11 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error((errData as { detail?: string }).detail ?? `HTTP ${res.status}`);
+        const detail = (errData as Record<string, unknown>).detail;
+        const msg = typeof detail === "string" ? detail
+          : detail ? JSON.stringify(detail)
+          : `HTTP ${res.status}`;
+        throw new Error(msg);
       }
 
       const data = await res.json() as Record<string, unknown>;
