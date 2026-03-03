@@ -38,6 +38,8 @@ from app.core.db import get_session
 
 from app.core.config import settings
 
+from app.core.security import get_current_user
+
 from app.core.security import hash_password
 
 from app.models.user import User
