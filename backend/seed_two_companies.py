@@ -225,12 +225,16 @@ async def seed_company(session, company_id, branch_id, dept_id, company_name, sl
     print(f"         {company_name} ({plan_tier.upper()}) created")
 
 
-async def assign_permissions(session, role_map, company_id):
-    """Assign permissions to all roles for a given company."""
+async def assign_permissions(session, role_map, company_id, assigned_roles):
+    """Assign permissions to all roles for a given company. Skip already-assigned system roles."""
     for role_name, perm_codenames in ROLE_PERMISSIONS.items():
         role = role_map.get(f"{company_id}:{role_name}")
         if not role:
             continue
+        # Skip if this exact role already had permissions assigned (shared system roles)
+        if role.id in assigned_roles:
+            continue
+        assigned_roles.add(role.id)
         for codename in perm_codenames:
             result = await session.execute(select(Permission).where(Permission.codename == codename))
             perm = result.scalars().first()
@@ -240,25 +244,19 @@ async def assign_permissions(session, role_map, company_id):
 
 
 async def create_user(session, email, password, full_name, job_title, company_id, branch_id, dept_id, role_map, role_name="admin"):
-    """Create a user and assign a role."""
-    user = User(
-        email=email,
-        hashed_password=hash_password(password),
-        full_name=full_name,
-        job_title=job_title,
-        is_active=True,
-        is_superuser=True,
-        company_id=company_id,
-        branch_id=branch_id,
-        department_id=dept_id,
-    )
-    session.add(user)
-    await session.flush()
+    """Create a user via raw SQL (avoids ORM column mismatches) and assign a role."""
+    user_id = uuid.uuid4()
+    pw_hash = hash_password(password, _skip_length_check=True)
+    await session.execute(text("""
+        INSERT INTO users (id, email, hashed_password, full_name, company_id, branch_id, department_id, job_title, is_active, is_superuser, token_version)
+        VALUES (:id, :email, :pw, :name, :cid, :bid, :did, :job, true, true, 1)
+    """), {"id": user_id, "email": email, "pw": pw_hash, "name": full_name,
+           "cid": company_id, "bid": branch_id, "did": dept_id, "job": job_title})
 
     role = role_map[f"{company_id}:{role_name}"]
-    session.add(UserRole(user_id=user.id, role_id=role.id))
+    session.add(UserRole(user_id=user_id, role_id=role.id))
     await session.flush()
-    return user
+    return user_id
 
 
 async def seed():
@@ -309,8 +307,9 @@ async def seed():
 
         # ── Assign permissions to roles ───────────────────────────────────
         print("\n  [4/5] Assigning permissions to roles...")
-        await assign_permissions(session, role_map, SOUTH_COMPANY_ID)
-        await assign_permissions(session, role_map, DEMO_COMPANY_ID)
+        assigned_roles = set()
+        await assign_permissions(session, role_map, SOUTH_COMPANY_ID, assigned_roles)
+        await assign_permissions(session, role_map, DEMO_COMPANY_ID, assigned_roles)
         print("         Done for both companies.")
 
         # ── Users ─────────────────────────────────────────────────────────

@@ -758,7 +758,7 @@ export default function PhaseExecute({
         >
           {executing && <LoaderIcon size={14} color="#000" style={{ animation: "spin 1s linear infinite" }} />}
           {done && <CheckCircleIcon size={14} color="#000" />}
-          {done ? "MARKED AS HEDGED" : executing ? "EXECUTING..." : "MARK AS HEDGED"}
+          {done ? "EXECUTION CONFIRMED" : executing ? "EXECUTING..." : "CONFIRM EXECUTION"}
         </button>
       </div>
 
