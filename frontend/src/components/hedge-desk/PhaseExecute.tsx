@@ -223,7 +223,7 @@ export default function PhaseExecute({
   // ── Helpers for market panel ──────────────────────────────────────────────
   const spotMxn = marketSnap?.rates?.find(r => r.symbol === "USDMXN");
   const snapTs  = marketSnap ? new Date(marketSnap.cachedAt).toISOString().slice(11, 19) + " UTC" : null;
-  const srcLive = marketSnap?.source === "finnhub" || marketSnap?.source === "cache";
+  const srcLive = marketSnap?.source === "live" || marketSnap?.source === "cache";
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
