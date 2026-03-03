@@ -1406,7 +1406,7 @@ function InputPageInner() {
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: S.green, display: 'inline-block' }} />
               ALL GATES PASSED —{' '}
               <button
-                onClick={() => router.push('/hedge-desk')}
+                onClick={() => router.push('/policy-engine')}
                 style={{
                   fontFamily: S.fontMono,
                   fontSize: '0.75rem',
@@ -1420,7 +1420,7 @@ function InputPageInner() {
                   letterSpacing: '0.04em',
                 }}
               >
-                PROCEED TO EXECUTION DESK →
+                PROCEED TO POLICY DESK →
               </button>
             </span>
           )}
