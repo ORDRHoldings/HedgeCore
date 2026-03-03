@@ -175,10 +175,13 @@ async def update_company_settings(
     settings["last_modified_at"] = datetime.now(timezone.utc).isoformat()
     settings["last_modified_by"] = current_user.email
 
+    from sqlalchemy.orm import attributes
+    attributes.flag_modified(company, "settings")
     company.settings = settings
 
     await session.commit()
-    await session.refresh(company)
+    # Avoid lazy-loading branches on refresh — only reload scalar columns
+    await session.refresh(company, attribute_names=["settings", "name", "slug"])
 
     audit_event = build_audit_event(
         event_type="SYSTEM",
