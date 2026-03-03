@@ -18,19 +18,20 @@ import {
 
 /* ── Tokens ──────────────────────────────────────────────────────────────── */
 const T = {
-  bg:       "var(--bg-deep)",
-  panel:    "var(--bg-panel)",
-  sub:      "var(--bg-sub)",
-  rim:      "var(--border-rim)",
-  soft:     "var(--border-soft)",
-  blue:     "var(--accent-cyan)",
-  blueDim:  "color-mix(in srgb, var(--accent-cyan) 8%, transparent)",
-  blueBdr:  "color-mix(in srgb, var(--accent-cyan) 18%, transparent)",
-  primary:  "var(--text-primary)",
-  secondary:"var(--text-secondary)",
-  muted:    "var(--text-tertiary)",
-  mono:     "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-  ui:       "var(--font-terminal,'IBM Plex Sans',sans-serif)",
+  bg:        "#F8FAFC",
+  panel:     "#FFFFFF",
+  sub:       "#F1F5F9",
+  rim:       "#E2E8F0",
+  soft:      "#CBD5E1",
+  rule:      "rgba(0,0,0,0.05)",
+  blue:      "#1C62F2",
+  blueDim:   "rgba(28,98,242,0.06)",
+  blueBdr:   "rgba(28,98,242,0.18)",
+  primary:   "#0F172A",
+  secondary: "#334155",
+  muted:     "#94A3B8",
+  mono:      "'JetBrains Mono','IBM Plex Mono',monospace",
+  ui:        "'Inter','IBM Plex Sans',sans-serif",
 } as const;
 
 /* ── Hub links ───────────────────────────────────────────────────────────── */
@@ -60,27 +61,27 @@ function fmtAgo(ts: number) {
 function Label({ index, title, sub }: { index: string; title: string; sub: string }) {
   return (
     <div style={{
-      height: 34, flexShrink: 0,
+      height: 36, flexShrink: 0,
       display: "flex", alignItems: "center", gap: 10,
       padding: "0 16px",
       background: T.sub,
       borderBottom: `1px solid ${T.rim}`,
     }}>
       <span style={{
-        fontFamily: T.mono, fontSize: 8, color: T.muted,
+        fontFamily: T.mono, fontSize: 9, color: T.muted,
         letterSpacing: "0.1em", fontWeight: 700,
       }}>
         {index}
       </span>
       <span style={{ width: 1, height: 12, background: T.rim, flexShrink: 0 }} />
       <span style={{
-        fontFamily: T.mono, fontSize: 10, fontWeight: 700,
+        fontFamily: T.mono, fontSize: 11, fontWeight: 700,
         color: T.primary, letterSpacing: "0.1em",
       }}>
         {title}
       </span>
       <span style={{
-        fontFamily: T.ui, fontSize: 10,
+        fontFamily: T.ui, fontSize: 11,
         color: T.muted,
       }}>
         {sub}
@@ -102,21 +103,20 @@ function HubItem({ Icon, label, href }: typeof HUB[number]) {
         display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center",
         gap: 5, padding: "0 18px",
-        background: "none",
+        background: hov ? T.blueDim : "none",
         border: "none",
         borderRight: `1px solid ${T.rim}`,
         cursor: "pointer",
         height: "100%",
         transition: "background 130ms",
-        ...(hov ? { background: T.blueDim } : {}),
       }}
     >
       <Icon
-        size={14} strokeWidth={1.4}
+        size={15} strokeWidth={1.4}
         style={{ color: hov ? T.blue : T.muted, transition: "color 130ms" }}
       />
       <span style={{
-        fontFamily: T.mono, fontSize: 8, letterSpacing: "0.1em",
+        fontFamily: T.mono, fontSize: 9, letterSpacing: "0.1em",
         color: hov ? T.blue : T.muted,
         transition: "color 130ms", whiteSpace: "nowrap",
       }}>
@@ -156,7 +156,7 @@ export default function DashboardPage() {
     return (
       <div style={{
         height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        background: T.bg, fontFamily: T.mono, fontSize: 10,
+        background: T.bg, fontFamily: T.mono, fontSize: 12,
         color: T.muted, letterSpacing: "0.18em",
       }}>
         LOADING…
@@ -178,14 +178,15 @@ export default function DashboardPage() {
 
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
       <div style={{
-        height: 42, flexShrink: 0,
+        height: 44, flexShrink: 0,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 18px",
+        padding: "0 20px",
         background: T.panel,
         borderBottom: `1px solid ${T.rim}`,
+        boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
       }}>
         <span style={{
-          fontFamily: T.mono, fontSize: 11, fontWeight: 700,
+          fontFamily: T.mono, fontSize: 12, fontWeight: 700,
           color: T.blue, letterSpacing: "0.22em",
         }}>
           ⬡ ORDR TERMINAL
@@ -193,7 +194,7 @@ export default function DashboardPage() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{
-            fontFamily: T.mono, fontSize: 9,
+            fontFamily: T.mono, fontSize: 10,
             color: T.muted, letterSpacing: "0.06em",
           }}>
             {ago}
@@ -202,13 +203,13 @@ export default function DashboardPage() {
             onClick={refresh}
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              fontFamily: T.mono, fontSize: 9, letterSpacing: "0.1em",
+              fontFamily: T.mono, fontSize: 10, letterSpacing: "0.1em",
               color: T.secondary, background: "none",
               border: `1px solid ${T.soft}`,
               padding: "5px 12px", borderRadius: 2, cursor: "pointer",
             }}
           >
-            <RefreshCw size={10} strokeWidth={1.5} />
+            <RefreshCw size={11} strokeWidth={1.5} />
             REFRESH
           </button>
         </div>
@@ -279,20 +280,21 @@ export default function DashboardPage() {
 
       {/* ── Hub ──────────────────────────────────────────────────────────── */}
       <div style={{
-        height: 54, flexShrink: 0,
+        height: 56, flexShrink: 0,
         display: "flex", alignItems: "stretch",
         background: T.panel,
         borderTop: `1px solid ${T.rim}`,
         overflow: "hidden",
+        boxShadow: "0 -1px 3px rgba(15,23,42,0.04)",
       }}>
         {/* Hub label */}
         <div style={{
-          display: "flex", alignItems: "center", padding: "0 16px",
+          display: "flex", alignItems: "center", padding: "0 18px",
           borderRight: `1px solid ${T.rim}`,
           flexShrink: 0,
         }}>
           <span style={{
-            fontFamily: T.mono, fontSize: 8, letterSpacing: "0.2em",
+            fontFamily: T.mono, fontSize: 9, letterSpacing: "0.2em",
             color: T.muted, fontWeight: 700,
           }}>
             HUB

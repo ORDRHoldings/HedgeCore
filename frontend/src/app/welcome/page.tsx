@@ -6,24 +6,23 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { ArrowRight, Globe, Shield, Calculator, FileCheck } from "lucide-react";
 
-/* ── Design tokens — matches globals.css dark terminal theme ─────────────── */
+/* ── Design tokens — light alabaster palette ────────────────────────────── */
 const T = {
-  bg:       "#09090E",
-  panel:    "#0D1017",
-  sub:      "#111520",
-  rim:      "#1A1F30",
-  soft:     "#222A3F",
-  blue:     "#1C62F2",
-  blueDim:  "rgba(28,98,242,0.08)",
-  blueBdr:  "rgba(28,98,242,0.20)",
-  green:    "#00C896",
-  amber:    "#F0A830",
-  primary:  "#C8D4EA",
-  secondary:"#6A7A98",
-  muted:    "#3A4460",
-  mono:     "'IBM Plex Mono','JetBrains Mono',monospace",
-  ui:       "'IBM Plex Sans','Inter',sans-serif",
-  head:     "'Manrope','IBM Plex Sans',sans-serif",
+  bg:      "#F8FAFC",
+  panel:   "#FFFFFF",
+  sub:     "#F1F5F9",
+  rim:     "#E2E8F0",
+  soft:    "#CBD5E1",
+  rule:    "rgba(0,0,0,0.05)",
+  blue:    "#1C62F2",
+  blueDim: "rgba(28,98,242,0.06)",
+  blueBdr: "rgba(28,98,242,0.18)",
+  primary: "#0F172A",
+  secondary:"#334155",
+  muted:   "#94A3B8",
+  mono:    "'JetBrains Mono','IBM Plex Mono',monospace",
+  ui:      "'Inter','IBM Plex Sans',sans-serif",
+  head:    "'Manrope','Inter',sans-serif",
 } as const;
 
 const STEPS = [
@@ -81,7 +80,7 @@ export default function WelcomePage() {
     return (
       <div style={{
         height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        background: T.bg, fontFamily: T.mono, fontSize: 11,
+        background: T.bg, fontFamily: T.mono, fontSize: 12,
         color: T.muted, letterSpacing: "0.18em",
       }}>
         LOADING SESSION…
@@ -114,6 +113,7 @@ export default function WelcomePage() {
         border: `1px solid ${T.rim}`,
         borderRadius: 4,
         overflow: "hidden",
+        boxShadow: "0 4px 24px rgba(15,23,42,0.06), 0 1px 4px rgba(15,23,42,0.04)",
       }}>
 
         {/* Card header bar */}
@@ -125,20 +125,20 @@ export default function WelcomePage() {
           justifyContent: "space-between",
         }}>
           <span style={{
-            fontFamily: T.mono, fontSize: 11, fontWeight: 700,
+            fontFamily: T.mono, fontSize: 12, fontWeight: 700,
             color: T.blue, letterSpacing: "0.22em",
           }}>
             ⬡ ORDR
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{
-              width: 5, height: 5, borderRadius: "50%",
-              background: healthOk === null ? T.muted : healthOk ? T.green : T.amber,
+              width: 6, height: 6, borderRadius: "50%",
+              background: healthOk === null ? T.soft : healthOk ? T.blue : T.muted,
               display: "inline-block",
-              boxShadow: healthOk ? `0 0 6px ${T.green}60` : "none",
+              boxShadow: healthOk ? `0 0 6px rgba(28,98,242,0.4)` : "none",
             }} />
             <span style={{
-              fontFamily: T.mono, fontSize: 8, letterSpacing: "0.14em",
+              fontFamily: T.mono, fontSize: 10, letterSpacing: "0.14em",
               color: T.muted,
             }}>
               {healthOk === null ? "CHECKING" : healthOk ? "OPERATIONAL" : "DEGRADED"}
@@ -147,42 +147,42 @@ export default function WelcomePage() {
         </div>
 
         {/* Identity section */}
-        <div style={{ padding: "32px 28px 28px" }}>
+        <div style={{ padding: "32px 28px 24px" }}>
           <div style={{
-            fontFamily: T.mono, fontSize: 8,
+            fontFamily: T.mono, fontSize: 9,
             color: T.muted, letterSpacing: "0.18em", marginBottom: 10,
           }}>
             SESSION INITIALIZED
           </div>
 
           <div style={{
-            fontFamily: T.head, fontSize: 22, fontWeight: 700,
+            fontFamily: T.head, fontSize: 24, fontWeight: 700,
             color: T.primary, letterSpacing: "-0.01em",
-            lineHeight: 1.2, marginBottom: 12,
+            lineHeight: 1.2, marginBottom: 14,
           }}>
             Welcome back
-            {name ? `, ${name.split(" ")[0]}` : ""}
+            {name ? `, ${name.split(" ")[0].charAt(0) + name.split(" ")[0].slice(1).toLowerCase()}` : ""}
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{
-              fontFamily: T.mono, fontSize: 9, fontWeight: 600,
+              fontFamily: T.mono, fontSize: 10, fontWeight: 600,
               letterSpacing: "0.1em", color: T.blue,
               background: T.blueDim, border: `1px solid ${T.blueBdr}`,
-              padding: "2px 9px", borderRadius: 2,
+              padding: "3px 10px", borderRadius: 2,
             }}>
               {role}
             </span>
             {company && (
               <span style={{
-                fontFamily: T.mono, fontSize: 9, color: T.secondary,
+                fontFamily: T.mono, fontSize: 10, color: T.secondary,
                 letterSpacing: "0.06em",
               }}>
                 {company}
               </span>
             )}
             <span style={{
-              fontFamily: T.mono, fontSize: 9, color: T.muted,
+              fontFamily: T.mono, fontSize: 10, color: T.muted,
               letterSpacing: "0.06em",
             }}>
               {plan}
@@ -191,10 +191,10 @@ export default function WelcomePage() {
         </div>
 
         {/* Divider */}
-        <div style={{ height: 1, background: T.rim, margin: "0 0" }} />
+        <div style={{ height: 1, background: T.rim }} />
 
         {/* Workflow steps */}
-        <div style={{ padding: "8px 0" }}>
+        <div style={{ padding: "6px 0" }}>
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             const hov  = hovStep === i;
@@ -207,7 +207,7 @@ export default function WelcomePage() {
                   display: "flex",
                   alignItems: "center",
                   gap: 16,
-                  padding: "13px 28px",
+                  padding: "14px 28px",
                   background: hov ? T.blueDim : "transparent",
                   borderLeft: `2px solid ${hov ? T.blue : "transparent"}`,
                   transition: "all 120ms ease",
@@ -216,7 +216,7 @@ export default function WelcomePage() {
               >
                 {/* Step number */}
                 <span style={{
-                  fontFamily: T.mono, fontSize: 10, fontWeight: 700,
+                  fontFamily: T.mono, fontSize: 11, fontWeight: 700,
                   color: hov ? T.blue : T.muted, letterSpacing: "0.06em",
                   width: 20, flexShrink: 0, transition: "color 120ms",
                 }}>
@@ -225,7 +225,7 @@ export default function WelcomePage() {
 
                 {/* Icon */}
                 <Icon
-                  size={14}
+                  size={15}
                   strokeWidth={1.5}
                   style={{ color: hov ? T.blue : T.secondary, flexShrink: 0, transition: "color 120ms" }}
                 />
@@ -233,7 +233,7 @@ export default function WelcomePage() {
                 {/* Text */}
                 <div style={{ flex: 1 }}>
                   <span style={{
-                    fontFamily: T.mono, fontSize: 11, fontWeight: 700,
+                    fontFamily: T.mono, fontSize: 12, fontWeight: 700,
                     letterSpacing: "0.1em",
                     color: hov ? T.primary : T.secondary,
                     marginRight: 12, transition: "color 120ms",
@@ -241,7 +241,7 @@ export default function WelcomePage() {
                     {s.name}
                   </span>
                   <span style={{
-                    fontFamily: T.ui, fontSize: 11,
+                    fontFamily: T.ui, fontSize: 12,
                     color: T.muted, lineHeight: 1,
                   }}>
                     {s.note}
@@ -263,8 +263,8 @@ export default function WelcomePage() {
             onMouseLeave={() => setHovBtn(false)}
             style={{
               width: "100%",
-              height: 44,
-              fontFamily: T.mono, fontSize: 11, fontWeight: 700,
+              height: 46,
+              fontFamily: T.mono, fontSize: 12, fontWeight: 700,
               letterSpacing: "0.18em",
               color: "#fff",
               background: hovBtn ? "#1456D8" : T.blue,
@@ -272,10 +272,11 @@ export default function WelcomePage() {
               cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
               transition: "background 150ms ease",
+              boxShadow: hovBtn ? "0 4px 16px rgba(28,98,242,0.30)" : "none",
             }}
           >
             LAUNCH TERMINAL
-            <ArrowRight size={14} strokeWidth={2} />
+            <ArrowRight size={15} strokeWidth={2} />
           </button>
 
           <label style={{
@@ -286,10 +287,10 @@ export default function WelcomePage() {
               type="checkbox"
               checked={skipChecked}
               onChange={e => setSkipChecked(e.target.checked)}
-              style={{ accentColor: T.blue, width: 12, height: 12 }}
+              style={{ accentColor: T.blue, width: 13, height: 13 }}
             />
             <span style={{
-              fontFamily: T.mono, fontSize: 8,
+              fontFamily: T.mono, fontSize: 9,
               color: T.muted, letterSpacing: "0.1em",
             }}>
               {"DON'T SHOW THIS AGAIN"}
