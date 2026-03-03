@@ -59,7 +59,7 @@ async function fetchFinnhubForexRates(): Promise<Record<string, number> | null> 
   if (!FH_KEY) return null;
   try {
     const url = `${FH_BASE}/forex/rates?base=USD&token=${FH_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 60 } }); // 1-min ISR cache
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return null;
     const json = await res.json() as { base?: string; quote?: Record<string, number> };
     if (!json.quote || typeof json.quote !== 'object') return null;
@@ -74,7 +74,7 @@ async function fetchCMEQuote(symbol: string): Promise<number | null> {
   if (!FH_KEY) return null;
   try {
     const url = `${FH_BASE}/quote?symbol=${encodeURIComponent(symbol)}&token=${FH_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 60 } }); // 1-min cache
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return null;
     const json = await res.json() as { c?: number; pc?: number };
     // Use current price; fall back to previous close if market closed

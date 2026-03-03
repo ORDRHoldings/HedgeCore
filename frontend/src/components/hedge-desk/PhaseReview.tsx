@@ -3,41 +3,41 @@
 import { useState } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import type { PositionRow } from "@/api/positionClient";
-import DisclosurePanel from "./DisclosurePanel";
 import {
   CheckCircleIcon,
   AlertTriangleIcon,
   LoaderIcon,
   ChevronLeftIcon,
   ExternalLinkIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
+  ShieldCheckIcon,
+  CopyIcon,
 } from "lucide-react";
 import Link from "next/link";
-import AIHedgeIntelligence from "@/components/execution/AIHedgeIntelligence";
 
-// ─── Design tokens ──────────────────────────────────────────────────────────
+// ─── Bloomberg / BlackRock Terminal Palette ──────────────────────────────────
 
-const T = {
-  bgDeep:    "var(--bg-deep)",
-  bgPanel:   "var(--bg-panel)",
-  bgSub:     "var(--bg-sub)",
-  rim:       "var(--border-rim)",
-  soft:      "var(--border-soft)",
-  primary:   "var(--text-primary)",
-  secondary: "var(--text-secondary)",
-  tertiary:  "var(--text-tertiary)",
-  cyan:      "var(--accent-cyan)",
-  amber:     "var(--accent-amber)",
-  red:       "var(--accent-red, #E74C3C)",
-  green:     "var(--status-pass, #2ECC71)",
-  slate:     "#8A9AB5",
-  royal:     "#1C62F2",
+const D = {
+  bg:        "#09090E",
+  panel:     "#0D1017",
+  panelAlt:  "#111520",
+  panelMid:  "#141825",
+  border:    "#1A1F30",
+  borderMid: "#222A3F",
+  borderHi:  "#2D3554",
+  text:      "#C8D4EA",
+  sub:       "#6A7A98",
+  dim:       "#3A4460",
+  blue:      "#3B8EEA",
+  blueHi:    "#5BA3F5",
+  green:     "#00C896",
+  amber:     "#F0A830",
+  red:       "#FF4B6A",
+  slate:     "#7A8DAE",
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
 } as const;
 
-// ─── CME Contract Specifications ────────────────────────────────────────────
+// ─── CME Contract Specifications ─────────────────────────────────────────────
 
 interface CmeSpec {
   symbol:        string;
@@ -52,17 +52,17 @@ interface CmeSpec {
 }
 
 const CME_SPECS: Record<string, CmeSpec> = {
-  MXN: { symbol: "M6M", name: "Mexican Peso Futures",           contract_size: 500000,   currency: "MXN", margin_est: 1800, tick_size: 0.000025,  tick_value: 12.50, exchange: "CME", settle: "3rd Wednesday" },
-  EUR: { symbol: "6E",  name: "Euro FX Futures",                contract_size: 125000,   currency: "EUR", margin_est: 2200, tick_size: 0.00005,   tick_value: 6.25,  exchange: "CME", settle: "3rd Wednesday" },
-  GBP: { symbol: "6B",  name: "British Pound Futures",          contract_size: 62500,    currency: "GBP", margin_est: 1900, tick_size: 0.0001,    tick_value: 6.25,  exchange: "CME", settle: "3rd Wednesday" },
-  JPY: { symbol: "6J",  name: "Japanese Yen Futures",           contract_size: 12500000, currency: "JPY", margin_est: 2000, tick_size: 0.0000005, tick_value: 6.25,  exchange: "CME", settle: "3rd Wednesday" },
-  CAD: { symbol: "6C",  name: "Canadian Dollar Futures",        contract_size: 100000,   currency: "CAD", margin_est: 1500, tick_size: 0.00005,   tick_value: 5.00,  exchange: "CME", settle: "3rd Wednesday" },
-  CHF: { symbol: "6S",  name: "Swiss Franc Futures",            contract_size: 125000,   currency: "CHF", margin_est: 2100, tick_size: 0.0001,    tick_value: 12.50, exchange: "CME", settle: "3rd Wednesday" },
-  AUD: { symbol: "6A",  name: "Australian Dollar Futures",      contract_size: 100000,   currency: "AUD", margin_est: 1400, tick_size: 0.0001,    tick_value: 10.00, exchange: "CME", settle: "3rd Wednesday" },
-  NZD: { symbol: "6N",  name: "New Zealand Dollar Futures",     contract_size: 100000,   currency: "NZD", margin_est: 1300, tick_size: 0.0001,    tick_value: 10.00, exchange: "CME", settle: "3rd Wednesday" },
+  MXN: { symbol: "M6M", name: "Mexican Peso Futures",        contract_size: 500000,   currency: "MXN", margin_est: 1800, tick_size: 0.000025,  tick_value: 12.50, exchange: "CME", settle: "3rd Wednesday" },
+  EUR: { symbol: "6E",  name: "Euro FX Futures",             contract_size: 125000,   currency: "EUR", margin_est: 2200, tick_size: 0.00005,   tick_value: 6.25,  exchange: "CME", settle: "3rd Wednesday" },
+  GBP: { symbol: "6B",  name: "British Pound Futures",       contract_size: 62500,    currency: "GBP", margin_est: 1900, tick_size: 0.0001,    tick_value: 6.25,  exchange: "CME", settle: "3rd Wednesday" },
+  JPY: { symbol: "6J",  name: "Japanese Yen Futures",        contract_size: 12500000, currency: "JPY", margin_est: 2000, tick_size: 0.0000005, tick_value: 6.25,  exchange: "CME", settle: "3rd Wednesday" },
+  CAD: { symbol: "6C",  name: "Canadian Dollar Futures",     contract_size: 100000,   currency: "CAD", margin_est: 1500, tick_size: 0.00005,   tick_value: 5.00,  exchange: "CME", settle: "3rd Wednesday" },
+  CHF: { symbol: "6S",  name: "Swiss Franc Futures",         contract_size: 125000,   currency: "CHF", margin_est: 2100, tick_size: 0.0001,    tick_value: 12.50, exchange: "CME", settle: "3rd Wednesday" },
+  AUD: { symbol: "6A",  name: "Australian Dollar Futures",   contract_size: 100000,   currency: "AUD", margin_est: 1400, tick_size: 0.0001,    tick_value: 10.00, exchange: "CME", settle: "3rd Wednesday" },
+  NZD: { symbol: "6N",  name: "New Zealand Dollar Futures",  contract_size: 100000,   currency: "NZD", margin_est: 1300, tick_size: 0.0001,    tick_value: 10.00, exchange: "CME", settle: "3rd Wednesday" },
 };
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function _fmtN(n: number): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
@@ -78,66 +78,51 @@ function _fmtTick(n: number): string {
   return n.toString();
 }
 
-// ─── Shared sub-components ──────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Divider({ label }: { label: string }) {
+function SectionRule({ label }: { label: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "8px 0" }}>
-      <div style={{ flex: 1, height: 1, background: T.rim }} />
-      <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.18em", color: T.tertiary }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0" }}>
+      <div style={{ width: 3, height: 12, background: D.blue, borderRadius: 1, flexShrink: 0 }} />
+      <span style={{
+        fontFamily:    D.fontMono,
+        fontSize:      9,
+        fontWeight:    700,
+        letterSpacing: "0.20em",
+        color:         D.sub,
+        textTransform: "uppercase" as const,
+        whiteSpace:    "nowrap" as const,
+      }}>
         {label}
       </span>
-      <div style={{ flex: 1, height: 1, background: T.rim }} />
+      <div style={{ flex: 1, height: 1, background: D.border }} />
     </div>
   );
 }
 
-function Section({
-  title,
-  badge,
-  defaultOpen = true,
-  children,
-}: {
-  title: string;
-  badge?: React.ReactNode;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
+function MetaKV({ label, value, valueColor, mono = true }: {
+  label: string; value: React.ReactNode; valueColor?: string; mono?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div style={{ border: `1px solid ${T.rim}`, borderRadius: 4, overflow: "hidden" }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width:        "100%",
-          display:      "flex",
-          alignItems:   "center",
-          gap:           10,
-          padding:      "9px 14px",
-          background:    T.bgSub,
-          border:       "none",
-          borderBottom:  open ? `1px solid ${T.rim}` : "none",
-          cursor:       "pointer",
-          textAlign:    "left",
-        }}
-      >
-        <span style={{
-          fontFamily:    T.fontMono,
-          fontSize:       10,
-          fontWeight:     700,
-          letterSpacing: "0.14em",
-          color:          T.primary,
-          flex:           1,
-        }}>
-          {title}
-        </span>
-        {badge}
-        {open
-          ? <ChevronUpIcon size={13} color={T.tertiary} />
-          : <ChevronDownIcon size={13} color={T.tertiary} />
-        }
-      </button>
-      {open && <div style={{ background: T.bgPanel }}>{children}</div>}
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <span style={{
+        fontFamily:    D.fontMono,
+        fontSize:      10,
+        color:         D.dim,
+        letterSpacing: "0.10em",
+        minWidth:      76,
+        flexShrink:    0,
+      }}>
+        {label}
+      </span>
+      <span style={{
+        fontFamily: mono ? D.fontMono : D.fontUI,
+        fontSize:   12,
+        color:      valueColor ?? D.text,
+        letterSpacing: mono ? "0.02em" : undefined,
+      }}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -156,7 +141,7 @@ interface PhaseReviewProps {
   onBack:           () => void;
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PhaseReview({
   positions,
@@ -173,10 +158,11 @@ export default function PhaseReview({
   const [error, setError]             = useState<string | null>(null);
   const [submitted, setSubmitted]     = useState(false);
   const [proposalIds, setProposalIds] = useState<string[]>([]);
+  const [copied, setCopied]           = useState<"text" | "json" | null>(null);
 
   const isSolo = governanceMode === "solo";
 
-  // ── Engine output extraction ─────────────────────────────────────────────
+  // ── Engine output extraction ──────────────────────────────────────────────
 
   const _hp = (calcResult.hedge_plan ?? null) as null | {
     buckets: Array<{
@@ -235,20 +221,21 @@ export default function PhaseReview({
     : 0;
 
   const activeCurrencies = Array.from(new Set(positions.map(p => p.currency)));
+  const stressRows       = _sc.filter(t => t.sigma !== 0);
 
-  // ── Verdict colours ──────────────────────────────────────────────────────
+  // ── Verdict ───────────────────────────────────────────────────────────────
 
-  const verdictColor = riskVerdict === "REJECT"                   ? T.red
-    : riskVerdict === "APPROVE_WITH_CONDITIONS"                   ? T.amber
-    : riskVerdict === "UNAVAILABLE"                               ? T.amber
-    : T.green;
+  const verdictColor = riskVerdict === "REJECT"                     ? D.red
+    : riskVerdict === "APPROVE_WITH_CONDITIONS"                     ? D.amber
+    : riskVerdict === "UNAVAILABLE"                                 ? D.amber
+    : D.green;
 
-  const verdictLabel = riskVerdict === "APPROVE"                  ? "RISK GATE PASSED"
-    : riskVerdict === "APPROVE_WITH_CONDITIONS"                   ? "APPROVED WITH CONDITIONS"
-    : riskVerdict === "UNAVAILABLE"                               ? "RISK GATE UNAVAILABLE"
+  const verdictLabel = riskVerdict === "APPROVE"                    ? "RISK GATE: PASS"
+    : riskVerdict === "APPROVE_WITH_CONDITIONS"                     ? "RISK GATE: CONDITIONAL"
+    : riskVerdict === "UNAVAILABLE"                                 ? "RISK GATE: UNAVAILABLE"
     : riskVerdict;
 
-  // ── Business logic (unchanged) ────────────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────────────────────
 
   const buildProposals = () =>
     positions.map(p => {
@@ -299,52 +286,32 @@ export default function PhaseReview({
     }
   };
 
-  // ── Action bar handlers ───────────────────────────────────────────────────
-
-  const handleOpenIbkr = () => {
-    const primary = _activeBuckets[0];
-    if (!primary) return;
-    const SYMBOL_MAP: Record<string, string> = {
-      MXN: "M6M", EUR: "6E", GBP: "6B", JPY: "6J",
-      CAD: "6C",  CHF: "6S", AUD: "6A", NZD: "6N",
-    };
-    const sym  = SYMBOL_MAP[_primaryCcy] ?? "M6M";
-    const side = (primary.action_direction ?? "SELL_MXN_BUY_USD").startsWith("SELL") ? "SELL" : "BUY";
-    const spec = CME_SPECS[_primaryCcy];
-    const qty  = spec
-      ? Math.max(1, Math.ceil(Math.abs(primary.action_mxn) / spec.contract_size))
-      : Math.max(1, Math.round(Math.abs(primary.action_usd) / 62500));
-    const price = primary.forward_rate.toFixed(5);
-    window.open(
-      `ibkr://order?symbol=${sym}&secType=FUT&exchange=CME&side=${side}&quantity=${qty}&orderType=LMT&lmtPrice=${price}&currency=USD`,
-      "_self"
-    );
-  };
-
   const handleCopyText = () => {
     const lines = [
-      "ORDR TERMINAL — HEDGE EXECUTION TICKET",
-      `Run: ${(_re?.run_id ?? runId).slice(0, 12)}... | Engine: ${_re?.engine_version ?? "—"} | ${new Date().toISOString().slice(0, 16)} UTC`,
-      `Risk Verdict: ${riskVerdict} | Hash: ${riskDecisionHash.slice(0, 16) || "—"}`,
+      "ORDR TERMINAL — HEDGE EXECUTION PLAN",
+      `Run: ${(_re?.run_id ?? runId).slice(0, 12)}  Engine: ${_re?.engine_version ?? "—"}  ${new Date().toISOString().slice(0, 16)} UTC`,
+      `Risk: ${riskVerdict}  Hash: ${riskDecisionHash.slice(0, 16) || "—"}`,
       "",
       `POSITIONS (${positions.length})`,
-      ...positions.map(p => `  ${p.type} ${_fmtN(p.amount ?? 0)} ${p.currency}  entity: ${p.entity}  value: ${p.value_date}`),
+      ...positions.map(p => `  ${p.type} ${_fmtN(p.amount ?? 0)} ${p.currency}  ${p.entity}  ${p.value_date}`),
       "",
       "EXECUTION LEGS",
       ..._activeBuckets.map(b => {
         const dir  = (b.action_direction ?? "").startsWith("SELL") ? "SELL" : "BUY";
         const spec = CME_SPECS[_primaryCcy];
         const cts  = spec ? Math.ceil(Math.abs(b.action_mxn) / spec.contract_size) : "—";
-        return `  ${b.bucket}  ${dir}  rate: ${_fmtD(b.forward_rate)}  action: ${_fmtN(b.action_mxn)} ${_primaryCcy} (${_fmtU(b.action_usd)})  contracts: ${cts}  cost: ${_fmtU(b.friction_usd ?? 0)}`;
+        return `  ${b.bucket}  ${dir}  rate: ${_fmtD(b.forward_rate)}  ${_fmtN(b.action_mxn)} ${_primaryCcy}  ${_fmtU(b.action_usd)}  contracts: ${cts}`;
       }),
       "",
       "SUMMARY",
-      `  Coverage:   ${_coveragePct.toFixed(1)}%`,
-      `  Total USD:  ${_fmtU(_summary?.total_action_usd ?? 0)}`,
-      `  Total Cost: ${_fmtU(_summary?.total_friction_usd ?? 0)} (${_costBps.toFixed(1)} bps)`,
-      `  Residual:   ${_fmtN(_summary?.total_residual_mxn ?? 0)} ${_primaryCcy}`,
+      `  Coverage:  ${_coveragePct.toFixed(1)}%`,
+      `  Total USD: ${_fmtU(_summary?.total_action_usd ?? 0)}`,
+      `  Cost:      ${_fmtU(_summary?.total_friction_usd ?? 0)} (${_costBps.toFixed(1)} bps)`,
+      `  Residual:  ${_fmtN(_summary?.total_residual_mxn ?? 0)} ${_primaryCcy}`,
     ].join("\n");
     navigator.clipboard.writeText(lines).catch(() => {});
+    setCopied("text");
+    setTimeout(() => setCopied(null), 2000);
   };
 
   const handleCopyJson = () => {
@@ -358,14 +325,13 @@ export default function PhaseReview({
         const spec      = CME_SPECS[_primaryCcy];
         const contracts = spec ? Math.ceil(Math.abs(b.action_mxn) / spec.contract_size) : null;
         return {
-          settlement:     b.bucket,
-          direction:      b.action_direction ?? "SELL",
-          forward_rate:   b.forward_rate,
-          action_mxn:     b.action_mxn,
-          action_usd:     b.action_usd,
-          friction_usd:   b.friction_usd ?? 0,
+          settlement:   b.bucket,
+          direction:    b.action_direction ?? "SELL",
+          forward_rate: b.forward_rate,
+          action_mxn:   b.action_mxn,
+          action_usd:   b.action_usd,
+          friction_usd: b.friction_usd ?? 0,
           contracts,
-          margin_req_usd: spec && contracts !== null ? contracts * spec.margin_est : null,
         };
       }),
       summary:      _summary,
@@ -373,761 +339,791 @@ export default function PhaseReview({
       cost_bps:     _costBps,
     };
     navigator.clipboard.writeText(JSON.stringify(payload, null, 2)).catch(() => {});
+    setCopied("json");
+    setTimeout(() => setCopied(null), 2000);
   };
 
-  // ────────────────────────────────────────────────────────────────────────
+  // ── Derived totals for execution legs ────────────────────────────────────
+
+  const _spec = CME_SPECS[_primaryCcy];
+  const _totalContracts = _spec
+    ? _activeBuckets.reduce((acc, b) => acc + Math.ceil(Math.abs(b.action_mxn) / _spec.contract_size), 0)
+    : null;
+  const _totalMarginAll = _spec && _totalContracts !== null ? _totalContracts * _spec.margin_est : null;
+
+  // ─────────────────────────────────────────────────────────────────────────
   // RENDER
-  // ────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div style={{
       display:       "flex",
       flexDirection: "column",
-      gap:            16,
-      padding:       "20px 24px 104px",
+      gap:            20,
+      padding:       "0 0 120px",
       height:        "100%",
       overflowY:     "auto",
-      fontFamily:    T.fontUI,
+      background:    D.bg,
+      fontFamily:    D.fontUI,
     }}>
 
-      {/* Step header strip */}
+      {/* ── TOP IDENTITY BAR ─────────────────────────────────────────────── */}
       <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "10px 20px",
-        background: `color-mix(in srgb, var(--accent-cyan) 6%, transparent)`,
-        borderBottom: `1px solid ${T.rim}`,
-        flexShrink: 0,
-        position: "sticky",
-        top: 0,
-        zIndex: 5,
+        position:    "sticky",
+        top:          0,
+        zIndex:       20,
+        background:   D.panel,
+        borderBottom: `1px solid ${D.border}`,
+        display:      "flex",
+        alignItems:   "stretch",
+        gap:           0,
+        flexShrink:   0,
       }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: T.cyan }}>
-            STEP 4 OF 4 — REVIEW HEDGE PLAN
+        {/* Left — step label */}
+        <div style={{
+          borderRight: `1px solid ${D.border}`,
+          padding:     "0 20px",
+          display:     "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: 3,
+          minWidth: 220,
+        }}>
+          <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.18em" }}>
+            STEP 04 / 04
           </span>
-          <span style={{ fontFamily: T.fontUI, fontSize: 11, color: T.secondary }}>
-            {riskVerdict === "APPROVE" ? "Risk gate: PASS — " : ""}Review execution legs and submit for approval.
+          <span style={{ fontFamily: D.fontMono, fontSize: 12, fontWeight: 700, color: D.text, letterSpacing: "0.06em" }}>
+            REVIEW HEDGE PLAN
           </span>
         </div>
-        <div style={{ flex: 1 }} />
-        {!submitted && (
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            style={{
-              display: "flex", alignItems: "center", gap: 8,
-              height: 36, padding: "0 24px",
-              fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
-              color: "#ffffff",
-              background: submitting ? T.slate : "var(--accent-cyan)",
-              border: "none", borderRadius: 3,
-              cursor: submitting ? "not-allowed" : "pointer",
-              whiteSpace: "nowrap" as const,
-            }}
-          >
-            {submitting && <LoaderIcon size={12} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />}
-            {isSolo ? "APPROVE & SUBMIT" : "SUBMIT FOR CHECKER APPROVAL"}
-          </button>
-        )}
-        {submitted && (
-          <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.green, letterSpacing: "0.08em" }}>
-            ✓ SUBMITTED
-          </span>
-        )}
-      </div>
 
-      {/* Back nav */}
-      <button
-        onClick={onBack}
-        style={{
+        {/* Center — run metadata */}
+        <div style={{
+          flex:       1,
           display:    "flex",
           alignItems: "center",
-          gap:         4,
-          background: "none",
-          border:     "none",
-          cursor:     "pointer",
-          alignSelf:  "flex-start",
-          padding:     0,
-        }}
-      >
-        <ChevronLeftIcon size={14} color={T.slate} />
-        <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.slate, letterSpacing: "0.06em" }}>
-          BACK TO RISK
-        </span>
-      </button>
+          gap:         0,
+          overflowX:  "auto",
+        }}>
+          {[
+            { label: "RUN",     value: (_re?.run_id ?? runId).slice(0, 8).toUpperCase() + "…", color: D.blueHi },
+            { label: "AS-OF",   value: _re?.timestamp
+                ? new Date(_re.timestamp).toLocaleString("en-GB", {
+                    day: "2-digit", month: "short", year: "numeric",
+                    hour: "2-digit", minute: "2-digit", timeZone: "UTC",
+                  }) + " UTC"
+                : "—",
+              color: D.text },
+            { label: "ENGINE",  value: _re?.engine_version ?? "—", color: D.text },
+            { label: "POLICY",  value: _re?.policy_hash ? `${_re.policy_hash.slice(0, 10)}…` : "—", color: D.sub },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{
+              borderRight: `1px solid ${D.border}`,
+              padding:     "14px 20px",
+              display:     "flex",
+              flexDirection: "column",
+              gap:           3,
+              flexShrink:   0,
+            }}>
+              <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.14em" }}>{label}</span>
+              <span style={{ fontFamily: D.fontMono, fontSize: 12, color, letterSpacing: "0.03em" }}>{value}</span>
+            </div>
+          ))}
 
-      {/* Governance mode hint */}
-      <DisclosurePanel title="Review the hedge plan before approving." level="L1" defaultOpen>
-        <p style={{ fontFamily: T.fontUI, fontSize: 13, color: T.secondary, margin: 0, lineHeight: 1.6 }}>
-          {isSolo
-            ? "In Solo Mode, you are both maker and checker. Clicking APPROVE & SUBMIT will immediately approve and stage these positions for execution."
-            : "In Team Mode, your submission goes to the Staging queue for checker approval. You cannot self-approve in team governance."
-          }
-        </p>
-      </DisclosurePanel>
-
-      {/* Risk verdict badge */}
-      <div style={{
-        display:      "flex",
-        alignItems:   "center",
-        gap:           10,
-        padding:      "11px 16px",
-        background:   `color-mix(in srgb,${verdictColor} 8%,${T.bgPanel})`,
-        border:       `1px solid color-mix(in srgb,${verdictColor} 25%,transparent)`,
-        borderRadius:  4,
-      }}>
-        {riskVerdict === "APPROVE"
-          ? <CheckCircleIcon size={16} color={verdictColor} />
-          : <AlertTriangleIcon size={16} color={verdictColor} />
-        }
-        <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.09em", color: verdictColor }}>
-          {verdictLabel}
-        </span>
-      </div>
-
-      {/* AI Intelligence */}
-      <AIHedgeIntelligence
-        positions={positions}
-        calcResult={calcResult}
-        riskVerdict={riskVerdict}
-      />
-
-      {/* ══════════════════════════════════════════════════════════════════
-          SECTION 1 — AUDIT PROVENANCE
-      ══════════════════════════════════════════════════════════════════ */}
-      <Divider label="SECTION 1 · AUDIT PROVENANCE" />
-
-      <div style={{
-        background:          T.bgDeep,
-        border:              `1px solid ${T.rim}`,
-        borderRadius:         4,
-        padding:             "12px 16px",
-        display:             "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap:                 "8px 24px",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.tertiary, letterSpacing: "0.08em", minWidth: 72 }}>RUN ID</span>
-          <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.cyan }}>
-            {(_re?.run_id ?? runId).slice(0, 8)}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.tertiary, letterSpacing: "0.08em", minWidth: 72 }}>ENGINE</span>
-          <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.primary }}>
-            {_re?.engine_version ?? "—"}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.tertiary, letterSpacing: "0.08em", minWidth: 72 }}>AS-OF</span>
-          <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.primary }}>
-            {_re?.timestamp
-              ? new Date(_re.timestamp).toLocaleString("en-GB", {
-                  day: "2-digit", month: "short", year: "numeric",
-                  hour: "2-digit", minute: "2-digit", timeZone: "UTC",
-                }) + " UTC"
-              : "—"
-            }
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.tertiary, letterSpacing: "0.08em", minWidth: 72 }}>POLICY</span>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.slate }}>
-            {_re?.policy_hash ? `${_re.policy_hash.slice(0, 12)}…` : "—"}
-          </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, gridColumn: "1 / -1" }}>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.tertiary, letterSpacing: "0.08em", minWidth: 72 }}>HASH</span>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.slate, flex: 1 }}>
-            {_re?.inputs_hash
-              ? `${_re.inputs_hash.slice(0, 20)}…`
-              : riskDecisionHash
-              ? `${riskDecisionHash.slice(0, 20)}…`
-              : "—"}
-          </span>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, color: T.green, letterSpacing: "0.08em" }}>
-            ✓ VERIFIED
-          </span>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          SECTION 2 — HEDGE SUMMARY KPI CARDS
-      ══════════════════════════════════════════════════════════════════ */}
-      <Divider label="SECTION 2 · HEDGE SUMMARY" />
-
-      <Section title="HEDGE SUMMARY — KEY PERFORMANCE INDICATORS" defaultOpen>
-        {_summary ? (
+          {/* Hash + verified */}
           <div style={{
-            display:             "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap:                  1,
-            background:           T.rim,
+            borderRight: `1px solid ${D.border}`,
+            padding:     "14px 20px",
+            display:     "flex",
+            flexDirection: "column",
+            gap:           3,
+            flexShrink:   0,
           }}>
-            {([
-              {
-                label: "COVERAGE RATIO",
-                value: `${_coveragePct.toFixed(1)}%`,
-                color: _coveragePct >= 80 ? T.green : _coveragePct >= 50 ? T.amber : T.red,
-                sub:   _coveragePct >= 80 ? "TARGET MET" : _coveragePct >= 50 ? "PARTIAL" : "BELOW TARGET",
-              },
-              {
-                label: "TOTAL ACTION",
-                value: _fmtU(_summary.total_action_usd),
-                color: T.primary,
-                sub:   "USD EQUIVALENT",
-              },
-              {
-                label: "RESIDUAL EXPOSURE",
-                value: `${_fmtN(_summary.total_residual_mxn)} ${_primaryCcy}`,
-                color: _summary.total_residual_mxn > 0 ? T.amber : T.green,
-                sub:   _summary.total_residual_mxn > 0 ? "OPEN RISK REMAINS" : "FULLY COVERED",
-              },
-              {
-                label: "FRICTION COST",
-                value: _fmtU(_summary.total_friction_usd),
-                color: T.secondary,
-                sub:   "SPREAD + FEES",
-              },
-              {
-                label: "COST BPS",
-                value: `${_costBps.toFixed(1)} bps`,
-                color: T.secondary,
-                sub:   "OF NOTIONAL",
-              },
-              {
-                label: "HEDGE POSITION",
-                value: `${_fmtN(_summary.total_hedge_position_mxn)} ${_primaryCcy}`,
-                color: T.primary,
-                sub:   "TOTAL LOCKED",
-              },
-            ] as Array<{ label: string; value: string; color: string; sub: string }>).map(({ label, value, color, sub }) => (
-              <div
-                key={label}
-                style={{
-                  background:    T.bgPanel,
-                  padding:      "18px 16px",
-                  display:      "flex",
-                  flexDirection: "column",
-                  gap:            6,
-                }}
-              >
-                <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", color: T.tertiary, textTransform: "uppercase" as const }}>
-                  {label}
-                </span>
-                <span style={{ fontFamily: T.fontMono, fontSize: 28, fontWeight: 700, color, lineHeight: 1 }}>
-                  {value}
-                </span>
-                <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, letterSpacing: "0.06em" }}>
-                  {sub}
-                </span>
-              </div>
-            ))}
+            <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.14em" }}>HASH</span>
+            <span style={{ fontFamily: D.fontMono, fontSize: 12, color: D.sub }}>
+              {_re?.inputs_hash
+                ? `${_re.inputs_hash.slice(0, 16)}…`
+                : riskDecisionHash
+                ? `${riskDecisionHash.slice(0, 16)}…`
+                : "—"}
+            </span>
           </div>
-        ) : (
-          <div style={{ padding: "24px 16px", textAlign: "center" as const }}>
-            <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>No summary data available</span>
+          <div style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: 6 }}>
+            <ShieldCheckIcon size={12} color={D.green} />
+            <span style={{ fontFamily: D.fontMono, fontSize: 10, fontWeight: 700, color: D.green, letterSpacing: "0.10em" }}>
+              VERIFIED
+            </span>
           </div>
-        )}
-      </Section>
+        </div>
 
-      {/* ══════════════════════════════════════════════════════════════════
-          SECTION 3 — FUTURES CONTRACT SPECIFICATIONS
-      ══════════════════════════════════════════════════════════════════ */}
-      <Divider label="SECTION 3 · FUTURES CONTRACT SPECIFICATIONS" />
-
-      <Section
-        title="FUTURES CONTRACT SPECS"
-        badge={
-          <span style={{
-            fontFamily:    T.fontMono,
-            fontSize:       9,
-            fontWeight:     700,
-            letterSpacing: "0.12em",
-            color:         "#fff",
-            background:    "#1C62F2",
-            padding:       "2px 8px",
-            borderRadius:   2,
+        {/* Right — verdict + submit */}
+        <div style={{
+          borderLeft:  `1px solid ${D.border}`,
+          padding:     "0 20px",
+          display:     "flex",
+          alignItems:  "center",
+          gap:          16,
+          flexShrink:   0,
+        }}>
+          <div style={{
+            display:      "flex",
+            alignItems:   "center",
+            gap:           8,
+            padding:      "5px 12px",
+            background:   `color-mix(in srgb, ${verdictColor} 12%, ${D.panel})`,
+            border:       `1px solid color-mix(in srgb, ${verdictColor} 30%, transparent)`,
+            borderRadius:  2,
           }}>
-            CME GROUP
-          </span>
-        }
-        defaultOpen
-      >
-        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-          {activeCurrencies.length === 0 ? (
-            <div style={{ padding: 16, textAlign: "center" as const }}>
-              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>No active positions to display contract specs for.</span>
-            </div>
-          ) : activeCurrencies.map(ccy => {
-            const spec = CME_SPECS[ccy];
-
-            if (!spec) {
-              return (
-                <div key={ccy} style={{ padding: "12px 16px", border: `1px solid ${T.soft}`, borderRadius: 4, background: T.bgSub }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>
-                    {ccy} — No CME futures spec on record
-                  </span>
-                </div>
-              );
+            {riskVerdict === "APPROVE"
+              ? <CheckCircleIcon size={12} color={verdictColor} />
+              : <AlertTriangleIcon size={12} color={verdictColor} />
             }
-
-            const matchingBucket = _activeBuckets.find(
-              b => b.bucket.startsWith(ccy) || b.bucket === ccy
-            ) ?? _activeBuckets[0];
-
-            const contractsNeeded = matchingBucket
-              ? Math.ceil(Math.abs(matchingBucket.action_mxn) / spec.contract_size)
-              : 0;
-            const totalMargin   = contractsNeeded * spec.margin_est;
-            const notionalValue = matchingBucket
-              ? contractsNeeded * spec.contract_size * matchingBucket.forward_rate
-              : 0;
-
-            return (
-              <div key={ccy} style={{ border: `1px solid ${T.rim}`, borderRadius: 4, overflow: "hidden" }}>
-                {/* Card header */}
-                <div style={{
-                  display:        "flex",
-                  alignItems:     "center",
-                  justifyContent: "space-between",
-                  padding:        "10px 16px",
-                  background:      T.bgDeep,
-                  borderBottom:   `1px solid ${T.rim}`,
-                }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-                    <span style={{ fontFamily: T.fontMono, fontSize: 18, fontWeight: 700, color: T.cyan }}>
-                      {spec.symbol}
-                    </span>
-                    <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 600, color: T.primary }}>
-                      {spec.name.toUpperCase()}
-                    </span>
-                  </div>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, color: T.slate, letterSpacing: "0.1em" }}>
-                    {spec.exchange}
-                  </span>
-                </div>
-
-                {/* Spec grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: T.soft, borderBottom: `1px solid ${T.soft}` }}>
-                  {([
-                    { label: "CONTRACT SIZE", value: `${_fmtN(spec.contract_size)} ${spec.currency}` },
-                    { label: "TICK SIZE",     value: _fmtTick(spec.tick_size) },
-                    { label: "TICK VALUE",    value: `$${spec.tick_value.toFixed(2)}` },
-                    { label: "MARGIN EST",    value: _fmtU(spec.margin_est) },
-                    { label: "SETTLEMENT",    value: spec.settle },
-                    { label: "EXCHANGE",      value: spec.exchange },
-                  ] as Array<{ label: string; value: string }>).map(({ label, value }) => (
-                    <div key={label} style={{ background: T.bgPanel, padding: "10px 14px" }}>
-                      <div style={{ fontFamily: T.fontMono, fontSize: 11, color: T.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>
-                        {label}
-                      </div>
-                      <div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600, color: T.primary }}>
-                        {value}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Derived calculations */}
-                {contractsNeeded > 0 && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: T.soft }}>
-                    {([
-                      { label: "CONTRACTS NEEDED", value: contractsNeeded.toLocaleString("en-US"), color: T.cyan },
-                      { label: "TOTAL MARGIN REQ",  value: _fmtU(totalMargin),                      color: T.amber },
-                      { label: "NOTIONAL VALUE",    value: _fmtU(notionalValue),                    color: T.primary },
-                    ] as Array<{ label: string; value: string; color: string }>).map(({ label, value, color }) => (
-                      <div
-                        key={label}
-                        style={{ background: `color-mix(in srgb,${T.bgDeep} 60%,${T.bgPanel})`, padding: "10px 14px" }}
-                      >
-                        <div style={{ fontFamily: T.fontMono, fontSize: 11, color: T.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>
-                          {label}
-                        </div>
-                        <div style={{ fontFamily: T.fontMono, fontSize: 16, fontWeight: 700, color }}>
-                          {value}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </Section>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          SECTION 4 — EXECUTION LEGS TABLE
-      ══════════════════════════════════════════════════════════════════ */}
-      <Divider label="SECTION 4 · EXECUTION LEGS" />
-
-      {_activeBuckets.length > 0 && (
-        <Section title={`EXECUTION LEGS (${_activeBuckets.length})`} defaultOpen>
-          <div style={{ overflowX: "auto" }}>
-            {/* Header row */}
-            <div style={{
-              display:             "grid",
-              gridTemplateColumns: "110px 155px 100px 110px 140px 130px 120px 100px",
-              padding:             "7px 16px",
-              background:           T.bgSub,
-              borderBottom:        `1px solid ${T.soft}`,
-              minWidth:             980,
-            }}>
-              {([
-                { h: "SETTLEMENT", align: "left"  },
-                { h: "DIR",        align: "left"  },
-                { h: "CONTRACTS",  align: "right" },
-                { h: "FWD RATE",   align: "right" },
-                { h: "EXPOSURE",   align: "right" },
-                { h: "ACTION USD", align: "right" },
-                { h: "MARGIN REQ", align: "right" },
-                { h: "COST",       align: "right" },
-              ] as Array<{ h: string; align: "left" | "right" }>).map(({ h, align }) => (
-                <span key={h} style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", color: T.tertiary, textAlign: align }}>
-                  {h}
-                </span>
-              ))}
-            </div>
-
-            {/* Data rows */}
-            {_activeBuckets.map((b, i) => {
-              const dir       = b.action_direction ?? (b.action_mxn > 0 ? "SELL_CCY_BUY_USD" : "BUY_CCY_SELL_USD");
-              const isSell    = dir.startsWith("SELL");
-              const spec      = CME_SPECS[_primaryCcy];
-              const contracts = spec
-                ? Math.ceil(Math.abs(b.action_mxn) / spec.contract_size)
-                : Math.ceil(Math.abs(b.action_usd) / 62500);
-              const marginReq = spec ? contracts * spec.margin_est : 0;
-
-              return (
-                <div
-                  key={i}
-                  style={{
-                    display:             "grid",
-                    gridTemplateColumns: "110px 155px 100px 110px 140px 130px 120px 100px",
-                    padding:             "9px 16px",
-                    borderBottom:        `1px solid ${T.soft}`,
-                    alignItems:          "center",
-                    background:           i % 2 === 0 ? T.bgPanel : `color-mix(in srgb,${T.bgSub} 50%,${T.bgPanel})`,
-                    minWidth:             980,
-                  }}
-                >
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 600, color: T.cyan }}>
-                    {b.bucket}
-                  </span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: isSell ? T.red : T.green, letterSpacing: "0.05em" }}>
-                    {isSell ? "SELL / BUY USD" : "BUY / SELL USD"}
-                  </span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, color: T.primary, textAlign: "right" as const }}>
-                    {contracts.toLocaleString("en-US")}
-                  </span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, color: T.primary, textAlign: "right" as const }}>
-                    {_fmtD(b.forward_rate)}
-                  </span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, color: T.secondary, textAlign: "right" as const }}>
-                    {_fmtN(b.commercial_exposure_mxn ?? 0)}
-                  </span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, color: T.primary, textAlign: "right" as const }}>
-                    {_fmtU(b.action_usd)}
-                  </span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, color: T.amber, textAlign: "right" as const }}>
-                    {spec ? _fmtU(marginReq) : "—"}
-                  </span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, color: T.amber, textAlign: "right" as const }}>
-                    {_fmtU(b.friction_usd ?? 0)}
-                  </span>
-                </div>
-              );
-            })}
-
-            {/* Totals row */}
-            {_summary && (() => {
-              const spec = CME_SPECS[_primaryCcy];
-              const totalContracts = spec
-                ? _activeBuckets.reduce((acc, b) => acc + Math.ceil(Math.abs(b.action_mxn) / spec.contract_size), 0)
-                : null;
-              const totalMarginAll = spec && totalContracts !== null ? totalContracts * spec.margin_est : null;
-              return (
-                <div style={{
-                  display:             "grid",
-                  gridTemplateColumns: "110px 155px 100px 110px 140px 130px 120px 100px",
-                  padding:             "9px 16px",
-                  background:           T.bgSub,
-                  alignItems:          "center",
-                  borderTop:           `2px solid ${T.rim}`,
-                  minWidth:             980,
-                }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", color: T.tertiary }}>TOTAL</span>
-                  <span />
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: T.primary, textAlign: "right" as const }}>
-                    {totalContracts !== null ? totalContracts.toLocaleString("en-US") : "—"}
-                  </span>
-                  <span />
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: T.primary, textAlign: "right" as const }}>
-                    {_fmtN(_summary.total_commercial_exposure_mxn)}
-                  </span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: T.primary, textAlign: "right" as const }}>
-                    {_fmtU(_summary.total_action_usd)}
-                  </span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: T.amber, textAlign: "right" as const }}>
-                    {totalMarginAll !== null ? _fmtU(totalMarginAll) : "—"}
-                  </span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: T.amber, textAlign: "right" as const }}>
-                    {_fmtU(_summary.total_friction_usd)}
-                  </span>
-                </div>
-              );
-            })()}
-          </div>
-        </Section>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════
-          SECTION 5 — STRESS SCENARIOS
-      ══════════════════════════════════════════════════════════════════ */}
-      {_sc.filter(t => t.sigma !== 0).length > 0 && (
-        <>
-          <Divider label="SECTION 5 · STRESS SCENARIOS" />
-
-          <Section title="STRESS SCENARIOS — HEDGE BENEFIT ANALYSIS" defaultOpen={false}>
-            <div style={{ overflowX: "auto" }}>
-              <div style={{
-                display:             "grid",
-                gridTemplateColumns: "80px 130px 180px 180px 180px",
-                padding:             "7px 16px",
-                background:           T.bgSub,
-                borderBottom:        `1px solid ${T.soft}`,
-                minWidth:             750,
-              }}>
-                {([
-                  { h: "σ",             align: "right" },
-                  { h: "SHOCKED SPOT",  align: "right" },
-                  { h: "UNHEDGED P&L", align: "right" },
-                  { h: "HEDGED P&L",   align: "right" },
-                  { h: "HEDGE BENEFIT", align: "right" },
-                ] as Array<{ h: string; align: "right" }>).map(({ h, align }) => (
-                  <span key={h} style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", color: T.tertiary, textAlign: align }}>
-                    {h}
-                  </span>
-                ))}
-              </div>
-
-              {_sc.filter(t => t.sigma !== 0).map((t, i) => {
-                const benefitColor = t.total_hedge_benefit_usd > 0 ? T.green
-                  : t.total_hedge_benefit_usd < 0 ? T.red
-                  : T.tertiary;
-
-                return (
-                  <div
-                    key={t.sigma}
-                    style={{
-                      display:             "grid",
-                      gridTemplateColumns: "80px 130px 180px 180px 180px",
-                      padding:             "8px 16px",
-                      borderBottom:        `1px solid ${T.soft}`,
-                      alignItems:          "center",
-                      background:           i % 2 === 0 ? T.bgPanel : `color-mix(in srgb,${T.bgSub} 50%,${T.bgPanel})`,
-                      minWidth:             750,
-                    }}
-                  >
-                    <span style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: t.sigma < 0 ? T.red : T.green, textAlign: "right" as const }}>
-                      {t.sigma > 0 ? "+" : ""}{t.sigma}σ
-                    </span>
-                    <span style={{ fontFamily: T.fontMono, fontSize: 14, color: T.secondary, textAlign: "right" as const }}>
-                      {_fmtD(t.shocked_spot)}
-                    </span>
-                    <span style={{ fontFamily: T.fontMono, fontSize: 14, color: T.red, textAlign: "right" as const }}>
-                      {_fmtU(t.total_unhedged_usd)}
-                    </span>
-                    <span style={{ fontFamily: T.fontMono, fontSize: 14, color: T.amber, textAlign: "right" as const }}>
-                      {_fmtU(t.total_hedged_usd)}
-                    </span>
-                    <span style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: benefitColor, textAlign: "right" as const }}>
-                      {_fmtU(t.total_hedge_benefit_usd)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </Section>
-        </>
-      )}
-
-      {/* ── Positions reference table ─────────────────────────────────── */}
-      <Divider label="POSITIONS IN SCOPE" />
-
-      <div style={{ border: `1px solid ${T.rim}`, borderRadius: 4, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 110px 120px", padding: "7px 16px", background: T.bgSub, borderBottom: `1px solid ${T.soft}` }}>
-          {["ENTITY", "TYPE", "CURRENCY", "AMOUNT"].map(h => (
-            <span key={h} style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.10em", color: T.tertiary }}>
-              {h}
+            <span style={{ fontFamily: D.fontMono, fontSize: 10, fontWeight: 700, color: verdictColor, letterSpacing: "0.10em" }}>
+              {verdictLabel}
             </span>
-          ))}
-        </div>
-        <div style={{ maxHeight: 200, overflowY: "auto" }}>
-          {positions.map((p, i) => (
-            <div key={p.id} style={{
-              display:             "grid",
-              gridTemplateColumns: "1fr 80px 110px 120px",
-              padding:             "7px 16px",
-              borderBottom:        `1px solid ${T.soft}`,
-              background:           i % 2 === 0 ? T.bgPanel : `color-mix(in srgb,${T.bgSub} 50%,${T.bgPanel})`,
-            }}>
-              <span style={{ fontFamily: T.fontUI,   fontSize: 13, color: T.primary   }}>{p.entity}</span>
-              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary }}>{p.type}</span>
-              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.cyan      }}>{p.currency}</span>
-              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.primary   }}>{_fmtN(p.amount ?? 0)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Audit references (collapsible) ───────────────────────────── */}
-      <DisclosurePanel title="Audit References" level="L3">
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.tertiary }}>RUN ID</span>
-            <code style={{ fontFamily: T.fontMono, fontSize: 11, color: T.slate }}>{runId}</code>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-            <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.tertiary }}>RISK DECISION HASH</span>
-            <code style={{ fontFamily: T.fontMono, fontSize: 11, color: T.slate, wordBreak: "break-all", maxWidth: "70%" }}>
-              {riskDecisionHash || "—"}
-            </code>
-          </div>
-          {_re?.outputs_hash && (
-            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-              <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.tertiary }}>OUTPUTS HASH</span>
-              <code style={{ fontFamily: T.fontMono, fontSize: 11, color: T.slate, wordBreak: "break-all", maxWidth: "70%" }}>
-                {_re.outputs_hash}
-              </code>
-            </div>
-          )}
-        </div>
-      </DisclosurePanel>
-
-      {/* ── Error banner ─────────────────────────────────────────────── */}
-      {error && (
-        <div style={{
-          padding:      "11px 16px",
-          background:   `color-mix(in srgb,${T.red} 10%,transparent)`,
-          border:       `1px solid color-mix(in srgb,${T.red} 30%,transparent)`,
-          borderRadius:  4,
-        }}>
-          <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.red }}>{error}</span>
-        </div>
-      )}
-
-      {/* ── Submission state banners ─────────────────────────────────── */}
-      {submitted && !isSolo && (
-        <div style={{
-          padding:      "13px 16px",
-          background:   `color-mix(in srgb,${T.amber} 8%,${T.bgPanel})`,
-          border:       `1px solid color-mix(in srgb,${T.amber} 25%,transparent)`,
-          borderRadius:  4,
-          display:      "flex",
-          alignItems:   "center",
-          gap:           12,
-        }}>
-          <AlertTriangleIcon size={16} color={T.amber} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.amber, letterSpacing: "0.08em" }}>
-              PROPOSALS SUBMITTED — AWAITING CHECKER APPROVAL
-            </span>
-            <Link href="/staging" style={{ fontFamily: T.fontMono, fontSize: 11, color: T.cyan, display: "flex", alignItems: "center", gap: 4 }}>
-              VIEW STAGING QUEUE <ExternalLinkIcon size={10} color={T.cyan} />
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {submitted && isSolo && (
-        <div style={{
-          padding:      "11px 16px",
-          background:   `color-mix(in srgb,${T.green} 8%,${T.bgPanel})`,
-          border:       `1px solid color-mix(in srgb,${T.green} 25%,transparent)`,
-          borderRadius:  4,
-        }}>
-          <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.green, letterSpacing: "0.08em" }}>
-            SELF-APPROVED (SOLO MODE) — {proposalIds.length} PROPOSAL{proposalIds.length !== 1 ? "S" : ""} STAGED
-          </span>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════
-          STICKY ACTION BAR
-      ══════════════════════════════════════════════════════════════════ */}
-      <div style={{
-        position:       "sticky",
-        bottom:          0,
-        zIndex:          10,
-        background:     "var(--bg-panel)",
-        borderTop:      "2px solid var(--border-rim)",
-        padding:        "16px 24px",
-        display:        "flex",
-        alignItems:     "center",
-        justifyContent: "space-between",
-        gap:             16,
-        marginTop:       24,
-      }}>
-        {/* Left — back nav */}
-        <button
-          onClick={onBack}
-          style={{
-            height: 36, padding: "0 16px",
-            display: "flex", alignItems: "center", gap: 6,
-            background: "transparent", color: T.secondary,
-            border: `1px solid ${T.rim}`, borderRadius: 3,
-            fontFamily: T.fontMono, fontSize: 10, fontWeight: 600,
-            letterSpacing: "0.06em", cursor: "pointer",
-          }}
-        >
-          <ChevronLeftIcon size={12} color={T.secondary} />
-          BACK TO RISK
-        </button>
-
-        {/* Right — action group */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {_activeBuckets.length > 0 && (
-            <button
-              onClick={handleOpenIbkr}
-              title="Open prefilled order ticket in Interactive Brokers"
-              style={{
-                height: 36, padding: "0 14px",
-                display: "flex", alignItems: "center", gap: 6,
-                background: T.royal, color: "#fff",
-                border: "none", borderRadius: 3,
-                fontFamily: T.fontMono, fontSize: 10, fontWeight: 700,
-                letterSpacing: "0.06em", cursor: "pointer",
-              }}
-            >
-              <ExternalLinkIcon size={12} color="#fff" />
-              IBKR TICKET
-            </button>
-          )}
 
           {!submitted && (
             <button
               onClick={handleSubmit}
               disabled={submitting}
               style={{
-                display: "flex", alignItems: "center", gap: 10,
-                height: 48, padding: "0 36px",
-                fontFamily: T.fontMono, fontSize: 13, fontWeight: 700,
-                letterSpacing: "0.10em", color: "#ffffff",
-                background: submitting ? T.slate : "var(--accent-cyan)",
-                border: "none", borderRadius: 3,
-                cursor: submitting ? "not-allowed" : "pointer",
-                whiteSpace: "nowrap" as const,
-                boxShadow: submitting ? "none" : `0 0 0 1px color-mix(in srgb,var(--accent-cyan) 60%,transparent)`,
+                display:    "flex",
+                alignItems: "center",
+                gap:         8,
+                height:      36,
+                padding:    "0 20px",
+                background:  submitting ? D.dim : D.blue,
+                border:     "none",
+                borderRadius: 2,
+                fontFamily:  D.fontMono,
+                fontSize:    11,
+                fontWeight:  700,
+                letterSpacing: "0.08em",
+                color:       "#fff",
+                cursor:      submitting ? "not-allowed" : "pointer",
+                whiteSpace:  "nowrap" as const,
               }}
             >
-              {submitting && (
-                <LoaderIcon size={14} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />
+              {submitting && <LoaderIcon size={12} color="#fff" style={{ animation: "spin 1s linear infinite" }} />}
+              {isSolo ? "APPROVE & SUBMIT" : "SUBMIT FOR CHECKER APPROVAL"}
+            </button>
+          )}
+          {submitted && (
+            <span style={{ fontFamily: D.fontMono, fontSize: 10, fontWeight: 700, color: D.green, letterSpacing: "0.10em" }}>
+              ✓ SUBMITTED
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── BODY CONTENT ─────────────────────────────────────────────────── */}
+      <div style={{ padding: "0 28px", display: "flex", flexDirection: "column", gap: 24 }}>
+
+        {/* ── KPI METRICS BAND ──────────────────────────────────────────── */}
+        {_summary && (
+          <>
+            <SectionRule label="Performance Metrics" />
+            <div style={{
+              display:             "grid",
+              gridTemplateColumns: "repeat(5, 1fr)",
+              gap:                  1,
+              background:           D.border,
+              border:              `1px solid ${D.border}`,
+              borderRadius:         2,
+              overflow:            "hidden",
+            }}>
+              {([
+                {
+                  label: "COVERAGE RATIO",
+                  value: `${_coveragePct.toFixed(1)}%`,
+                  sub:   _coveragePct >= 80 ? "TARGET MET" : _coveragePct >= 50 ? "PARTIAL" : "BELOW TARGET",
+                  color: _coveragePct >= 80 ? D.green : _coveragePct >= 50 ? D.amber : D.red,
+                },
+                {
+                  label: "TOTAL ACTION",
+                  value: _fmtU(_summary.total_action_usd),
+                  sub:   "USD EQUIVALENT",
+                  color: D.text,
+                },
+                {
+                  label: "HEDGE POSITION",
+                  value: `${_fmtN(_summary.total_hedge_position_mxn)}`,
+                  sub:   `${_primaryCcy} LOCKED`,
+                  color: D.text,
+                },
+                {
+                  label: "RESIDUAL EXPOSURE",
+                  value: `${_fmtN(_summary.total_residual_mxn)}`,
+                  sub:   _summary.total_residual_mxn > 0 ? "OPEN RISK" : "FULLY COVERED",
+                  color: _summary.total_residual_mxn > 0 ? D.amber : D.green,
+                },
+                {
+                  label: "FRICTION COST",
+                  value: `${_costBps.toFixed(1)} bps`,
+                  sub:   _fmtU(_summary.total_friction_usd),
+                  color: D.sub,
+                },
+              ] as Array<{ label: string; value: string; sub: string; color: string }>).map(({ label, value, sub, color }) => (
+                <div key={label} style={{ background: D.panel, padding: "18px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.18em" }}>
+                    {label}
+                  </span>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 26, fontWeight: 700, color, lineHeight: 1 }}>
+                    {value}
+                  </span>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.sub, letterSpacing: "0.10em" }}>
+                    {sub}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ── EXECUTION LEGS ────────────────────────────────────────────── */}
+        {_activeBuckets.length > 0 && (
+          <>
+            <SectionRule label={`Execution Legs  ·  ${_activeBuckets.length} active`} />
+            <div style={{ border: `1px solid ${D.border}`, borderRadius: 2, overflow: "hidden" }}>
+
+              {/* Column headers */}
+              <div style={{
+                display:             "grid",
+                gridTemplateColumns: "120px 160px 90px 120px 150px 130px 120px 110px",
+                padding:             "8px 16px",
+                background:          D.panelMid,
+                borderBottom:        `1px solid ${D.border}`,
+                minWidth:             1020,
+              }}>
+                {([
+                  { h: "SETTLEMENT", align: "left"  },
+                  { h: "DIRECTION",  align: "left"  },
+                  { h: "CONTRACTS",  align: "right" },
+                  { h: "FWD RATE",   align: "right" },
+                  { h: "EXPOSURE",   align: "right" },
+                  { h: "ACTION USD", align: "right" },
+                  { h: "MARGIN REQ", align: "right" },
+                  { h: "COST",       align: "right" },
+                ] as Array<{ h: string; align: "left" | "right" }>).map(({ h, align }) => (
+                  <span key={h} style={{
+                    fontFamily:    D.fontMono,
+                    fontSize:      9,
+                    fontWeight:    700,
+                    letterSpacing: "0.16em",
+                    color:         D.dim,
+                    textAlign:     align,
+                  }}>
+                    {h}
+                  </span>
+                ))}
+              </div>
+
+              {/* Data rows */}
+              {_activeBuckets.map((b, i) => {
+                const dir       = b.action_direction ?? (b.action_mxn > 0 ? "SELL_CCY_BUY_USD" : "BUY_CCY_SELL_USD");
+                const isSell    = dir.startsWith("SELL");
+                const spec      = CME_SPECS[_primaryCcy];
+                const contracts = spec
+                  ? Math.ceil(Math.abs(b.action_mxn) / spec.contract_size)
+                  : Math.ceil(Math.abs(b.action_usd) / 62500);
+                const marginReq = spec ? contracts * spec.margin_est : 0;
+
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display:             "grid",
+                      gridTemplateColumns: "120px 160px 90px 120px 150px 130px 120px 110px",
+                      padding:             "10px 16px",
+                      borderBottom:        i < _activeBuckets.length - 1 ? `1px solid ${D.border}` : "none",
+                      alignItems:          "center",
+                      background:           i % 2 === 0 ? D.panel : D.panelAlt,
+                      minWidth:             1020,
+                    }}
+                  >
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 600, color: D.blueHi }}>
+                      {b.bucket}
+                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{
+                        display:      "inline-block",
+                        padding:      "1px 6px",
+                        background:   isSell
+                          ? `color-mix(in srgb, ${D.red} 15%, transparent)`
+                          : `color-mix(in srgb, ${D.green} 15%, transparent)`,
+                        border:       `1px solid color-mix(in srgb, ${isSell ? D.red : D.green} 35%, transparent)`,
+                        borderRadius:  1,
+                        fontFamily:    D.fontMono,
+                        fontSize:      10,
+                        fontWeight:    700,
+                        letterSpacing: "0.06em",
+                        color:         isSell ? D.red : D.green,
+                      }}>
+                        {isSell ? "SELL" : "BUY"}
+                      </span>
+                      <span style={{ fontFamily: D.fontMono, fontSize: 10, color: D.sub }}>
+                        {isSell ? "/ BUY USD" : "/ SELL USD"}
+                      </span>
+                    </div>
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.text, textAlign: "right" as const }}>
+                      {contracts.toLocaleString("en-US")}
+                    </span>
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.text, textAlign: "right" as const }}>
+                      {_fmtD(b.forward_rate)}
+                    </span>
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.sub, textAlign: "right" as const }}>
+                      {_fmtN(b.commercial_exposure_mxn ?? 0)}
+                    </span>
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.text, textAlign: "right" as const }}>
+                      {_fmtU(b.action_usd)}
+                    </span>
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.amber, textAlign: "right" as const }}>
+                      {spec ? _fmtU(marginReq) : "—"}
+                    </span>
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.sub, textAlign: "right" as const }}>
+                      {_fmtU(b.friction_usd ?? 0)}
+                    </span>
+                  </div>
+                );
+              })}
+
+              {/* Totals row */}
+              {_summary && (
+                <div style={{
+                  display:             "grid",
+                  gridTemplateColumns: "120px 160px 90px 120px 150px 130px 120px 110px",
+                  padding:             "9px 16px",
+                  background:          D.panelMid,
+                  alignItems:          "center",
+                  borderTop:           `2px solid ${D.borderMid}`,
+                  minWidth:             1020,
+                }}>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: D.dim }}>
+                    TOTAL
+                  </span>
+                  <span />
+                  <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: D.text, textAlign: "right" as const }}>
+                    {_totalContracts !== null ? _totalContracts.toLocaleString("en-US") : "—"}
+                  </span>
+                  <span />
+                  <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: D.text, textAlign: "right" as const }}>
+                    {_fmtN(_summary.total_commercial_exposure_mxn)}
+                  </span>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: D.text, textAlign: "right" as const }}>
+                    {_fmtU(_summary.total_action_usd)}
+                  </span>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: D.amber, textAlign: "right" as const }}>
+                    {_totalMarginAll !== null ? _fmtU(_totalMarginAll) : "—"}
+                  </span>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: D.sub, textAlign: "right" as const }}>
+                    {_fmtU(_summary.total_friction_usd)}
+                  </span>
+                </div>
               )}
+            </div>
+          </>
+        )}
+
+        {/* ── FUTURES CONTRACT SPECIFICATIONS ───────────────────────────── */}
+        {activeCurrencies.some(ccy => !!CME_SPECS[ccy]) && (
+          <>
+            <SectionRule label="Futures Contract Specifications  ·  CME Group" />
+            <div style={{ display: "flex", flexDirection: "column", gap: 1, background: D.border, border: `1px solid ${D.border}`, borderRadius: 2, overflow: "hidden" }}>
+              {activeCurrencies.filter(ccy => !!CME_SPECS[ccy]).map(ccy => {
+                const spec = CME_SPECS[ccy]!;
+                const matchingBucket = _activeBuckets.find(
+                  b => b.bucket.startsWith(ccy) || b.bucket === ccy
+                ) ?? _activeBuckets[0];
+                const contractsNeeded = matchingBucket
+                  ? Math.ceil(Math.abs(matchingBucket.action_mxn) / spec.contract_size)
+                  : 0;
+                const totalMargin   = contractsNeeded * spec.margin_est;
+                const notionalValue = matchingBucket
+                  ? contractsNeeded * spec.contract_size * matchingBucket.forward_rate
+                  : 0;
+
+                return (
+                  <div key={ccy} style={{ background: D.panel }}>
+                    {/* Instrument header */}
+                    <div style={{
+                      display:        "flex",
+                      alignItems:     "center",
+                      gap:             16,
+                      padding:        "10px 18px",
+                      borderBottom:   `1px solid ${D.border}`,
+                      background:     D.panelMid,
+                    }}>
+                      <span style={{ fontFamily: D.fontMono, fontSize: 18, fontWeight: 700, color: D.blueHi }}>
+                        {spec.symbol}
+                      </span>
+                      <span style={{ fontFamily: D.fontMono, fontSize: 11, fontWeight: 600, color: D.text, letterSpacing: "0.04em" }}>
+                        {spec.name.toUpperCase()}
+                      </span>
+                      <div style={{ flex: 1 }} />
+                      <span style={{
+                        fontFamily:    D.fontMono,
+                        fontSize:       9,
+                        fontWeight:     700,
+                        letterSpacing: "0.14em",
+                        color:          D.blue,
+                        padding:       "2px 8px",
+                        border:        `1px solid ${D.borderMid}`,
+                        borderRadius:   1,
+                      }}>
+                        {spec.exchange}
+                      </span>
+                    </div>
+
+                    {/* Spec grid */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 1, background: D.border }}>
+                      {([
+                        { label: "CONTRACT SIZE", value: `${_fmtN(spec.contract_size)} ${spec.currency}` },
+                        { label: "TICK SIZE",     value: _fmtTick(spec.tick_size) },
+                        { label: "TICK VALUE",    value: `$${spec.tick_value.toFixed(2)}` },
+                        { label: "MARGIN EST",    value: _fmtU(spec.margin_est) },
+                        { label: "SETTLEMENT",    value: spec.settle },
+                        { label: "EXCHANGE",      value: spec.exchange },
+                      ] as Array<{ label: string; value: string }>).map(({ label, value }) => (
+                        <div key={label} style={{ background: D.panel, padding: "12px 14px" }}>
+                          <div style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.14em", marginBottom: 6 }}>
+                            {label}
+                          </div>
+                          <div style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 600, color: D.text }}>
+                            {value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Derived row */}
+                    {contractsNeeded > 0 && (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, background: D.border, borderTop: `1px solid ${D.border}` }}>
+                        {([
+                          { label: "CONTRACTS NEEDED", value: contractsNeeded.toLocaleString("en-US"), color: D.blueHi },
+                          { label: "TOTAL MARGIN REQ",  value: _fmtU(totalMargin),                      color: D.amber },
+                          { label: "NOTIONAL VALUE",    value: _fmtU(notionalValue),                    color: D.text },
+                        ] as Array<{ label: string; value: string; color: string }>).map(({ label, value, color }) => (
+                          <div key={label} style={{ background: D.panelAlt, padding: "12px 14px" }}>
+                            <div style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.14em", marginBottom: 6 }}>
+                              {label}
+                            </div>
+                            <div style={{ fontFamily: D.fontMono, fontSize: 16, fontWeight: 700, color }}>
+                              {value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* ── STRESS SCENARIOS ──────────────────────────────────────────── */}
+        {stressRows.length > 0 && (
+          <>
+            <SectionRule label="Stress Scenarios  ·  Hedge Benefit Analysis" />
+            <div style={{ border: `1px solid ${D.border}`, borderRadius: 2, overflow: "hidden" }}>
+              <div style={{
+                display:             "grid",
+                gridTemplateColumns: "80px 140px 180px 180px 180px",
+                padding:             "8px 16px",
+                background:          D.panelMid,
+                borderBottom:        `1px solid ${D.border}`,
+                minWidth:             780,
+              }}>
+                {([
+                  { h: "σ",             align: "right" },
+                  { h: "SHOCKED SPOT",  align: "right" },
+                  { h: "UNHEDGED P&L",  align: "right" },
+                  { h: "HEDGED P&L",    align: "right" },
+                  { h: "HEDGE BENEFIT", align: "right" },
+                ] as Array<{ h: string; align: "right" }>).map(({ h, align }) => (
+                  <span key={h} style={{
+                    fontFamily: D.fontMono, fontSize: 9, fontWeight: 700,
+                    letterSpacing: "0.16em", color: D.dim, textAlign: align,
+                  }}>
+                    {h}
+                  </span>
+                ))}
+              </div>
+
+              {stressRows.map((t, i) => {
+                const bColor = t.total_hedge_benefit_usd > 0 ? D.green
+                  : t.total_hedge_benefit_usd < 0 ? D.red
+                  : D.sub;
+                return (
+                  <div
+                    key={t.sigma}
+                    style={{
+                      display:             "grid",
+                      gridTemplateColumns: "80px 140px 180px 180px 180px",
+                      padding:             "9px 16px",
+                      borderBottom:        i < stressRows.length - 1 ? `1px solid ${D.border}` : "none",
+                      alignItems:          "center",
+                      background:           i % 2 === 0 ? D.panel : D.panelAlt,
+                      minWidth:             780,
+                    }}
+                  >
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: t.sigma < 0 ? D.red : D.green, textAlign: "right" as const }}>
+                      {t.sigma > 0 ? "+" : ""}{t.sigma}σ
+                    </span>
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.sub, textAlign: "right" as const }}>
+                      {_fmtD(t.shocked_spot)}
+                    </span>
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.red, textAlign: "right" as const }}>
+                      {_fmtU(t.total_unhedged_usd)}
+                    </span>
+                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.amber, textAlign: "right" as const }}>
+                      {_fmtU(t.total_hedged_usd)}
+                    </span>
+                    <span style={{ fontFamily: D.fontMono, fontSize: 14, fontWeight: 700, color: bColor, textAlign: "right" as const }}>
+                      {_fmtU(t.total_hedge_benefit_usd)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* ── POSITIONS IN SCOPE ────────────────────────────────────────── */}
+        {positions.length > 0 && (
+          <>
+            <SectionRule label={`Positions in Scope  ·  ${positions.length} position${positions.length !== 1 ? "s" : ""}`} />
+            <div style={{ border: `1px solid ${D.border}`, borderRadius: 2, overflow: "hidden" }}>
+              <div style={{
+                display:             "grid",
+                gridTemplateColumns: "1fr 90px 110px 130px 160px",
+                padding:             "8px 16px",
+                background:          D.panelMid,
+                borderBottom:        `1px solid ${D.border}`,
+              }}>
+                {(["ENTITY", "TYPE", "CURRENCY", "AMOUNT", "VALUE DATE"] as string[]).map(h => (
+                  <span key={h} style={{ fontFamily: D.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: D.dim }}>
+                    {h}
+                  </span>
+                ))}
+              </div>
+              {positions.map((p, i) => (
+                <div key={p.id} style={{
+                  display:             "grid",
+                  gridTemplateColumns: "1fr 90px 110px 130px 160px",
+                  padding:             "9px 16px",
+                  borderBottom:        i < positions.length - 1 ? `1px solid ${D.border}` : "none",
+                  background:           i % 2 === 0 ? D.panel : D.panelAlt,
+                }}>
+                  <span style={{ fontFamily: D.fontUI,   fontSize: 13, color: D.text   }}>{p.entity}</span>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 11, color: D.sub    }}>{p.type}</span>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 12, color: D.blueHi }}>{p.currency}</span>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 12, color: D.text   }}>{_fmtN(p.amount ?? 0)}</span>
+                  <span style={{ fontFamily: D.fontMono, fontSize: 11, color: D.sub    }}>{p.value_date ?? "—"}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ── AUDIT REFERENCE (collapsible detail) ──────────────────────── */}
+        <SectionRule label="Audit Provenance" />
+        <div style={{
+          display:             "grid",
+          gridTemplateColumns: "repeat(2, 1fr)",
+          gap:                  1,
+          background:           D.border,
+          border:              `1px solid ${D.border}`,
+          borderRadius:         2,
+          overflow:            "hidden",
+        }}>
+          {([
+            { label: "RUN ID",              value: _re?.run_id ?? runId,                    full: true },
+            { label: "RISK DECISION HASH",  value: riskDecisionHash || "—",                 full: false },
+            { label: "INPUTS HASH",         value: _re?.inputs_hash ?? "—",                 full: false },
+            { label: "OUTPUTS HASH",        value: _re?.outputs_hash ?? "—",                full: false },
+          ] as Array<{ label: string; value: string; full: boolean }>).map(({ label, value, full }) => (
+            <div
+              key={label}
+              style={{
+                background:  D.panel,
+                padding:    "12px 16px",
+                gridColumn:  full ? "1 / -1" : undefined,
+              }}
+            >
+              <div style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.14em", marginBottom: 6 }}>
+                {label}
+              </div>
+              <code style={{ fontFamily: D.fontMono, fontSize: 11, color: D.sub, wordBreak: "break-all" as const }}>
+                {value}
+              </code>
+            </div>
+          ))}
+        </div>
+
+        {/* ── ERROR BANNER ──────────────────────────────────────────────── */}
+        {error && (
+          <div style={{
+            padding:     "12px 16px",
+            background:  `color-mix(in srgb, ${D.red} 10%, ${D.panel})`,
+            border:      `1px solid color-mix(in srgb, ${D.red} 35%, transparent)`,
+            borderRadius: 2,
+          }}>
+            <span style={{ fontFamily: D.fontMono, fontSize: 12, color: D.red }}>{error}</span>
+          </div>
+        )}
+
+        {/* ── POST-SUBMIT STATE ─────────────────────────────────────────── */}
+        {submitted && !isSolo && (
+          <div style={{
+            padding:     "14px 18px",
+            background:  `color-mix(in srgb, ${D.amber} 8%, ${D.panel})`,
+            border:      `1px solid color-mix(in srgb, ${D.amber} 25%, transparent)`,
+            borderRadius: 2,
+            display:     "flex",
+            alignItems:  "center",
+            gap:          14,
+          }}>
+            <AlertTriangleIcon size={14} color={D.amber} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontFamily: D.fontMono, fontSize: 11, fontWeight: 700, color: D.amber, letterSpacing: "0.08em" }}>
+                PROPOSALS SUBMITTED — AWAITING CHECKER APPROVAL
+              </span>
+              <Link href="/staging" style={{ fontFamily: D.fontMono, fontSize: 10, color: D.blue, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                VIEW STAGING QUEUE <ExternalLinkIcon size={10} color={D.blue} />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {submitted && isSolo && (
+          <div style={{
+            padding:     "12px 16px",
+            background:  `color-mix(in srgb, ${D.green} 8%, ${D.panel})`,
+            border:      `1px solid color-mix(in srgb, ${D.green} 25%, transparent)`,
+            borderRadius: 2,
+          }}>
+            <span style={{ fontFamily: D.fontMono, fontSize: 12, fontWeight: 700, color: D.green, letterSpacing: "0.08em" }}>
+              SELF-APPROVED (SOLO MODE) — {proposalIds.length} PROPOSAL{proposalIds.length !== 1 ? "S" : ""} STAGED
+            </span>
+          </div>
+        )}
+
+      </div>
+
+      {/* ── STICKY ACTION BAR ────────────────────────────────────────────── */}
+      <div style={{
+        position:       "sticky",
+        bottom:          0,
+        zIndex:          20,
+        background:      D.panel,
+        borderTop:      `1px solid ${D.borderMid}`,
+        padding:        "12px 28px",
+        display:        "flex",
+        alignItems:     "center",
+        justifyContent: "space-between",
+        gap:             16,
+        flexShrink:      0,
+      }}>
+        {/* Left */}
+        <button
+          onClick={onBack}
+          style={{
+            height:        34,
+            padding:      "0 14px",
+            display:      "flex",
+            alignItems:   "center",
+            gap:           6,
+            background:   "transparent",
+            border:       `1px solid ${D.border}`,
+            borderRadius:  2,
+            fontFamily:    D.fontMono,
+            fontSize:      10,
+            fontWeight:    600,
+            letterSpacing: "0.08em",
+            color:         D.sub,
+            cursor:        "pointer",
+          }}
+        >
+          <ChevronLeftIcon size={12} color={D.sub} />
+          BACK TO RISK
+        </button>
+
+        {/* Right — copy + submit */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={handleCopyText}
+            title="Copy execution plan as text"
+            style={{
+              height:        34,
+              padding:      "0 12px",
+              display:      "flex",
+              alignItems:   "center",
+              gap:           6,
+              background:   "transparent",
+              border:       `1px solid ${D.border}`,
+              borderRadius:  2,
+              fontFamily:    D.fontMono,
+              fontSize:      10,
+              fontWeight:    600,
+              letterSpacing: "0.08em",
+              color:         copied === "text" ? D.green : D.sub,
+              cursor:        "pointer",
+            }}
+          >
+            <CopyIcon size={11} />
+            {copied === "text" ? "COPIED" : "COPY TEXT"}
+          </button>
+
+          <button
+            onClick={handleCopyJson}
+            title="Copy execution payload as JSON"
+            style={{
+              height:        34,
+              padding:      "0 12px",
+              display:      "flex",
+              alignItems:   "center",
+              gap:           6,
+              background:   "transparent",
+              border:       `1px solid ${D.border}`,
+              borderRadius:  2,
+              fontFamily:    D.fontMono,
+              fontSize:      10,
+              fontWeight:    600,
+              letterSpacing: "0.08em",
+              color:         copied === "json" ? D.green : D.sub,
+              cursor:        "pointer",
+            }}
+          >
+            <CopyIcon size={11} />
+            {copied === "json" ? "COPIED" : "COPY JSON"}
+          </button>
+
+          {!submitted && (
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              style={{
+                display:    "flex",
+                alignItems: "center",
+                gap:         10,
+                height:      44,
+                padding:    "0 32px",
+                fontFamily:  D.fontMono,
+                fontSize:    12,
+                fontWeight:  700,
+                letterSpacing: "0.10em",
+                color:       "#fff",
+                background:   submitting ? D.dim : D.blue,
+                border:      "none",
+                borderRadius: 2,
+                cursor:       submitting ? "not-allowed" : "pointer",
+                whiteSpace:  "nowrap" as const,
+                boxShadow:   submitting ? "none" : `0 0 0 1px ${D.borderHi}`,
+              }}
+            >
+              {submitting && <LoaderIcon size={13} color="#fff" style={{ animation: "spin 1s linear infinite" }} />}
               {isSolo ? "APPROVE & SUBMIT PROPOSALS" : "SUBMIT FOR CHECKER APPROVAL"}
             </button>
           )}
