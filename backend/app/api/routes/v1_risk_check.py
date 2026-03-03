@@ -197,9 +197,66 @@ async def risk_check(
         "market_snapshot": request.market_snapshot,
     }
 
+    # --- Normalize hedge_plan from /v1/calculate response format ---
+    def _normalize_plan(raw: dict) -> dict:
+        """
+        Translate a /v1/calculate response into the decision_gate plan format.
+
+        /v1/calculate returns:
+          { run_id, hedge_plan: { buckets: [...], summary: {...} },
+            scenario_results: { totals: [...] }, ... }
+
+        decision_gate expects:
+          { sized_hedges: [{contracts: N}], costs: {total: float},
+            summary: { worst_case: {net_pnl_usd: float},
+                       hedge_effectiveness: {min: float} } }
+        """
+        # Already in gate format (no run_id key at top level)
+        if "run_id" not in raw and "sized_hedges" in raw:
+            return raw
+
+        # Full calculate response — extract inner hedge_plan
+        inner = raw.get("hedge_plan", raw)
+        scenario_results = raw.get("scenario_results", {})
+
+        # Build sized_hedges from buckets (one synthetic hedge per non-suppressed bucket)
+        buckets = inner.get("buckets", [])
+        sized_hedges = [
+            {"contracts": 1, "action_mxn": b.get("action_mxn", 0)}
+            for b in buckets
+            if not b.get("suppressed", False) and b.get("action_mxn", 0) != 0
+        ]
+
+        # Extract cost from hedge_plan summary
+        hp_summary = inner.get("summary", {})
+        friction_usd = float(hp_summary.get("total_friction_usd", 0.0) or 0.0)
+
+        # Extract worst case from scenario_results.totals (pick minimum hedged_usd)
+        totals = scenario_results.get("totals", [])
+        worst_net_pnl: Optional[float] = None
+        for t in totals:
+            hedged = t.get("hedged_usd")
+            if hedged is not None:
+                v = float(hedged)
+                if worst_net_pnl is None or v < worst_net_pnl:
+                    worst_net_pnl = v
+
+        return {
+            "sized_hedges": sized_hedges,
+            "costs": {"total": friction_usd},
+            "summary": {
+                "worst_case": {
+                    "net_pnl_usd": worst_net_pnl if worst_net_pnl is not None else 0.0,
+                    "scenario_id": None,
+                },
+                "hedge_effectiveness": {"min": None},
+            },
+            "rejections": {},
+        }
+
     # --- Call decision_gate ---
     if request.hedge_plan is not None:
-        plan = request.hedge_plan
+        plan = _normalize_plan(request.hedge_plan)
     else:
         plan = {
             "costs": {"total": 0.0},
