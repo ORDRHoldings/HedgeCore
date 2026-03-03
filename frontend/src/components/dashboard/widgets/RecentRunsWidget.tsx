@@ -280,8 +280,8 @@ export default function RecentRunsWidget({
                       </span>
                     </Td>
                     <Td>
-                      <button
-                        disabled
+                      <a
+                        href={`/run-viewer?id=${encodeURIComponent(run.id)}`}
                         style={{
                           fontFamily:   S.fontMono,
                           fontSize:     10,
@@ -290,14 +290,15 @@ export default function RecentRunsWidget({
                           border:       `1px solid ${S.border}`,
                           borderRadius: 3,
                           padding:      "1px 5px",
-                          cursor:       "not-allowed",
-                          opacity:      0.45,
+                          cursor:       "pointer",
+                          textDecoration: "none",
+                          display:      "inline-block",
                         }}
-                        title="Open run (coming soon)"
+                        title="Open run in viewer"
                         aria-label="Open run"
                       >
                         {"\u2192"}
-                      </button>
+                      </a>
                     </Td>
                   </tr>
                 );
