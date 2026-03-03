@@ -1803,8 +1803,7 @@ function ReportStudioInner() {
 
 // Suspense boundary required by Next.js App Router for useSearchParams()
 export default function ReportStudioPage() {
-  const _planAllowed = usePlanRedirect("professional");
-  if (!_planAllowed) return null;
+  // Reports available to all tiers including SMB
   return (
     <Suspense fallback={
       <div style={{ background: "#FAFAFA", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>

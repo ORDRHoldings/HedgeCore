@@ -45,6 +45,7 @@ const DEFAULT_POLICY = {
   hedge_ratio: 1.0,
   instrument: "FORWARD",
   max_notional_usd: 50000000,
+  allow_indicative_proxy: true,
 };
 
 function fmt(n: number, decimals = 4): string {
@@ -106,11 +107,30 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
 
       // 2. Build market snapshot
       const today = new Date().toISOString().split("T")[0];
+      const spot = (marketData["usdmxn"] ?? marketData["USDMXN"] ?? 19.5) as number;
+
+      // Generate forward point buckets for each trade's value_date month
+      // Uses flat curve (0 fwd points) as sensible default when no live data
+      const fwdPoints: Record<string, number> = {};
+      for (const p of positions) {
+        if (p.value_date) {
+          const bucket = String(p.value_date).slice(0, 7); // "YYYY-MM"
+          if (!fwdPoints[bucket]) fwdPoints[bucket] = 0;
+        }
+      }
+      // Also add current month and next 3 months for coverage
+      const now = new Date();
+      for (let i = 0; i < 4; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        if (!fwdPoints[key]) fwdPoints[key] = 0;
+      }
+
       const marketSnapshot: Record<string, unknown> = {
         as_of: today,
-        spot_usdmxn: marketData["usdmxn"] ?? marketData["USDMXN"] ?? 19.5,
-        forward_points_by_month: {},
-        provider_metadata: { source: "autofill" },
+        spot_usdmxn: spot,
+        forward_points_by_month: fwdPoints,
+        provider_metadata: { source: "autofill", data_class: "INDICATIVE" },
       };
 
       // 3. Build trades payload

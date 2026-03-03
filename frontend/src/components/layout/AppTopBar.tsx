@@ -279,7 +279,7 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Reports", href: "/reports", icon: Ic.reports, minTier: "professional" as PlanTier,
+    label: "Reports", href: "/reports", icon: Ic.reports,
     prefixes: ["/reports", "/results"],
     header: "Report Studio",
     items: [
@@ -337,7 +337,7 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Help", href: "/help", icon: Ic.help, minTier: "professional" as PlanTier,
+    label: "Help", href: "/help", icon: Ic.help,
     prefixes: ["/help"],
     header: "Support",
     items: [
