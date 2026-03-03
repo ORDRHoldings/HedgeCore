@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Activity } from "lucide-react";
 import { UserContext } from "@/lib/authContext";
 import EmptyState from "@/components/ui/EmptyState";
+import GuidedEmptyState from "@/components/ui/GuidedEmptyState";
 
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -278,13 +279,11 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
         )}
 
         {!loading && !forbidden && !error && filtered.length === 0 && (
-          <div style={{ padding: "8px 12px" }}>
-            <EmptyState
-              type="empty"
-              title="No recent activity"
-              message="Team actions will be logged here as users interact with the platform."
-            />
-          </div>
+          <GuidedEmptyState
+            icon={Activity}
+            title="Activity Feed Empty"
+            description="Team actions are logged here as your team works — positions, calculations, approvals, and audits."
+          />
         )}
 
         {!loading && !forbidden && !error && filtered.length > 0 && (

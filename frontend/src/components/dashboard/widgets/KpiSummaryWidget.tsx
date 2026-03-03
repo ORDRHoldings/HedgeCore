@@ -187,11 +187,40 @@ export default function KpiSummaryWidget({
         {data && !loading && !error && (
           <div
             style={{
-              display:             "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+              display:             "flex",
+              flexDirection:       "column",
               gap:                 8,
             }}
           >
+            {/* Setup banner when all KPIs are zero */}
+            {data.kpis.total_exposure_usd === 0 &&
+             data.kpis.active_proposals === 0 &&
+             data.kpis.pending_approvals === 0 && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "6px 10px",
+                background: "rgba(30,58,138,0.04)",
+                border: `1px solid rgba(30,58,138,0.12)`,
+                borderRadius: 3,
+              }}>
+                <span style={{
+                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 600,
+                  letterSpacing: "0.1em", color: S.accentCyan,
+                }}>
+                  SETUP REQUIRED
+                </span>
+                <span style={{
+                  fontFamily: S.fontUI, fontSize: 10, color: S.textTertiary,
+                }}>
+                  Register FX positions to populate these metrics
+                </span>
+              </div>
+            )}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+              gap: 8,
+            }}>
             <KpiTile
               label="Total Exposure"
               value={formatExposure(data.kpis.total_exposure_usd)}
@@ -231,6 +260,7 @@ export default function KpiSummaryWidget({
               value={data.kpis.team_size}
               deltaDirection="neutral"
             />
+            </div>
           </div>
         )}
       </div>

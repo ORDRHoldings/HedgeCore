@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { TrendingUp, X } from "lucide-react";
-import EmptyState from "@/components/ui/EmptyState";
+import GuidedEmptyState from "@/components/ui/GuidedEmptyState";
 import { UserContext } from "@/lib/authContext";
 import type { AppDispatch, RootState } from "@/lib/store";
 import { fetchExposureThunk } from "@/lib/store/slices/positionSlice";
@@ -123,17 +123,12 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
       {/* Body */}
       <div style={{ flex: 1, overflow: "auto" }}>
         {!hasData ? (
-          <div style={{ padding: 10 }}>
-            <EmptyState
-              type="empty"
-              title="No exposure data"
-              message="Enter positions to see your FX exposure summary."
-              action={{
-                label: "Enter Positions",
-                onClick: () => router.push("/input"),
-              }}
-            />
-          </div>
+          <GuidedEmptyState
+            icon={TrendingUp}
+            title="No FX Exposures Registered"
+            description="Register your currency positions to see exposure breakdown by currency pair."
+            cta={{ label: "OPEN POSITION DESK", onClick: () => router.push("/input") }}
+          />
         ) : (
           <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
             {/* Legend */}

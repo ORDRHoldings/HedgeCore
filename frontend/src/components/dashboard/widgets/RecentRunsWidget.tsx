@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { History, X } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
+import GuidedEmptyState from "@/components/ui/GuidedEmptyState";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
 const S = {
@@ -220,14 +221,11 @@ export default function RecentRunsWidget({
           <EmptyState type="error" message="Failed to load recent runs" />
         )}
         {!loading && !error && runs.length === 0 && (
-          <EmptyState
-            type="empty"
-            title="No calculations yet"
-            message="Run your first hedge calculation to see results here."
-            action={{
-              label: "Go to Input",
-              onClick: () => router.push("/input"),
-            }}
+          <GuidedEmptyState
+            icon={History}
+            title="No Calculation Runs Yet"
+            description="Your hedge calculation history will appear here. Start by registering positions and running a sandbox calculation."
+            cta={{ label: "OPEN HEDGE DESK", onClick: () => router.push("/input") }}
           />
         )}
         {!loading && !error && runs.length > 0 && (
