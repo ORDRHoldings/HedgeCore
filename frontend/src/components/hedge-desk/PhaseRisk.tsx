@@ -43,10 +43,18 @@ interface PhaseRiskProps {
 
 type RiskVerdict = "APPROVE" | "APPROVE_WITH_CONDITIONS" | "REJECT" | "UNAVAILABLE";
 
+type RiskItem = string | { code?: string; message?: string; severity?: string; details?: unknown };
+
+function riskItemText(r: RiskItem): string {
+  if (typeof r === "string") return r;
+  return r.message ?? r.code ?? JSON.stringify(r);
+}
+
 interface RiskResponse {
   verdict: RiskVerdict;
-  reasons?: string[];
-  conditions?: string[];
+  reasons?: RiskItem[];
+  conditions?: RiskItem[];
+  residual_risks?: RiskItem[];
   decision_hash?: string;
 }
 
@@ -221,7 +229,7 @@ export default function PhaseRisk({
             {riskData.reasons.map((r, i) => (
               <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                 <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary, marginTop: 2 }}>▸</span>
-                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>{r}</span>
+                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>{riskItemText(r)}</span>
               </div>
             ))}
           </div>
@@ -240,7 +248,7 @@ export default function PhaseRisk({
             {riskData.conditions.map((c, i) => (
               <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                 <AlertTriangleIcon size={12} color={HD.amber} style={{ marginTop: 2, flexShrink: 0 }} />
-                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>{c}</span>
+                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>{riskItemText(c)}</span>
               </div>
             ))}
           </div>
