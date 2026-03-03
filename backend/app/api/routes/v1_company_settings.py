@@ -140,9 +140,8 @@ async def update_company_settings(
     current_user: User         = Depends(get_current_user),
 ):
     """Update company settings. Requires company.edit_settings permission."""
-    has_perm = await rbac_service.user_has_permission(
-        session, current_user.id, "company.edit_settings"
-    )
+    perms = await rbac_service.get_permissions_by_user(session, current_user.id)
+    has_perm = "company.edit_settings" in perms
     if not has_perm and not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
