@@ -141,4 +141,8 @@ router.include_router(v1_reports_router)
 from app.api.routes.v1_calculate_multi import router as v1_calculate_multi_router
 router.include_router(v1_calculate_multi_router)
 
+# UI endpoints: onboarding summary + user UI preferences (owns /v1/ui)
+from app.api.routes.v1_ui import router as v1_ui_router
+router.include_router(v1_ui_router)
+
 __all__ = ["router"]

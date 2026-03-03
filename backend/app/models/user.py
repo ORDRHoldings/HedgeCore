@@ -46,7 +46,7 @@ from sqlalchemy import (
 
 )
 
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -258,6 +258,13 @@ class User(Base):
 
         doc="User account creation timestamp (UTC).",
 
+    )
+
+
+
+    ui_preferences: Mapped[Optional[dict]] = mapped_column(
+        JSONB, nullable=True, default=dict,
+        doc="User UI preference overrides (show_quickstart, etc.).",
     )
 
 
