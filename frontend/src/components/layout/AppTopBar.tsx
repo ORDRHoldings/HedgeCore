@@ -240,7 +240,7 @@ const NAV: NavSection[] = [
     header: "Exposure Management",
     items: [
       { label: "Position Desk",        desc: "Lifecycle control tower — status, policy, execute, reject", href: "/position-desk",          icon: Ic.table,     badge: "DESK",  badgeColor: S.cyan  },
-      { label: "Ingestion Desk",       desc: "Manual entry, CSV/XLSX import, connector hub",              href: "/input",                  icon: Ic.pen },
+      { label: "New Exposure",          desc: "Manual entry, CSV/XLSX import, connector hub",              href: "/input",                  icon: Ic.pen },
       { label: "Upload CSV / XLSX",    desc: "Bulk import — field schema, validation & audit",            href: "/upload-csv",             icon: Ic.upload,    badge: "BULK",  badgeColor: S.amber, minTier: "professional" as PlanTier },
       { label: "Connect Database",     desc: "SQL pull — Oracle, Postgres, MySQL",                        href: "/database-connection",    icon: Ic.db,        badge: "SQL",   badgeColor: S.cyan,  minTier: "professional" as PlanTier },
       { label: "ERP Integration",      desc: "SAP, Oracle, NetSuite, MS Dynamics connectors",             href: "/erp-integration",        icon: Ic.lightning, badge: "ERP",   badgeColor: S.amber, minTier: "professional" as PlanTier },
@@ -257,7 +257,7 @@ const NAV: NavSection[] = [
       { label: "Policy Desk",       desc: "Assign policies to positions — active, template, favorite, AI", href: "/policy-desk",       icon: Ic.table,  badge: "DESK",  badgeColor: S.cyan  },
       { label: "Policy Library",    desc: "Browse 60 institutional preset policies",        href: "/policies",          icon: Ic.book, minTier: "professional" as PlanTier },
       { label: "AI Policy Wizard",  desc: "Generate tailored policy from your risk profile",href: "/ai-policy-wizard",  icon: Ic.ai,     badge: "AI",    badgeColor: S.amber, minTier: "professional" as PlanTier },
-      { label: "My Saved Policies", desc: "User-scoped & branch-published policies",        href: "/saved-policies",    icon: Ic.shield, badge: "SAVED", badgeColor: S.cyan,  minTier: "professional" as PlanTier },
+      { label: "Policy Vault",       desc: "User-scoped & branch-published policies",        href: "/saved-policies",    icon: Ic.shield, badge: "SAVED", badgeColor: S.cyan,  minTier: "professional" as PlanTier },
     ],
   },
   {
@@ -287,7 +287,7 @@ const NAV: NavSection[] = [
       { label: "Preset Library",       desc: "Browse 35 board/treasury/risk/audit/compliance presets",          href: "/reports?view=library",   icon: Ic.book,       badge: "35",      badgeColor: S.cyan  },
       { label: "AI Report Builder",    desc: "Goal-driven AI composer — governed, no hallucinated data",        href: "/reports?view=builder",   icon: Ic.ai,         badge: "AI",      badgeColor: S.amber },
       { label: "Saved Reports",        desc: "Your saved, versioned, and scheduled reports",                    href: "/reports?view=saved",     icon: Ic.shield,     badge: "SAVED",   badgeColor: S.cyan  },
-      { label: "Hedge Plan Report",    desc: "Full hedge schedule with rationale — results view",               href: "/results",                icon: Ic.bar_chart },
+      { label: "Run Results",           desc: "Full hedge schedule with rationale — results view",               href: "/results",                icon: Ic.bar_chart },
       { label: "Committee Pack",       desc: "Print-ready IFRS 9 §B6.4 hedge effectiveness pack — PDF export", href: "/committee-pack",         icon: Ic.download,   badge: "PDF",     badgeColor: S.amber },
     ],
   },

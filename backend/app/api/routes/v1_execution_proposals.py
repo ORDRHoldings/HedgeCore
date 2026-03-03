@@ -72,6 +72,10 @@ from app.core.db import get_async_session
 
 from app.core.security import get_current_user, get_mfa_verified
 
+from app.core.ip_allowlist import enforce_execution_ip_allowlist
+
+from app.core.config import settings
+
 from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 
 from app.models.execution_proposal import ExecutionProposal
@@ -540,6 +544,8 @@ async def propose_execution(
 
     """
 
+    enforce_execution_ip_allowlist(request, settings)
+
     try:
 
         await _check_permission(session, current_user, "trades.edit")
@@ -831,6 +837,8 @@ async def approve_proposal(
 
     """
 
+    enforce_execution_ip_allowlist(request, settings)
+
     await _check_permission(session, current_user, "trades.execute")
 
     await _check_mfa_gate(session, current_user, mfa_verified)
@@ -1093,6 +1101,8 @@ async def execute_approved_proposal(
     Requires: trades.execute
 
     """
+
+    enforce_execution_ip_allowlist(request, settings)
 
     await _check_permission(session, current_user, "trades.execute")
 

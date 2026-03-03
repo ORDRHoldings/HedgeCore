@@ -261,6 +261,52 @@ class Settings(BaseSettings):
 
     REDIS_URL: Optional[str] = None
 
+    # ------------------------------------------------------------------
+
+    # IP Allowlist for Execution Actions
+
+    # Set EXECUTION_IP_ALLOWLIST_ENABLED=true and populate
+
+    # EXECUTION_IP_ALLOWLIST (comma-separated CIDRs or exact IPs) to
+
+    # restrict POST /v1/proposals, PATCH /v1/proposals/{id}/approve,
+
+    # and POST /v1/proposals/{id}/execute to specific IP ranges.
+
+    # Empty list = disabled (allow all IPs).
+
+    # Example: EXECUTION_IP_ALLOWLIST=10.0.0.0/8,192.168.1.100
+
+    # ------------------------------------------------------------------
+
+    EXECUTION_IP_ALLOWLIST_ENABLED: bool = False
+
+    EXECUTION_IP_ALLOWLIST: List[str] = []
+
+    @validator("EXECUTION_IP_ALLOWLIST", pre=True, always=True)
+
+    @classmethod
+
+    def parse_ip_allowlist(cls, v: object) -> List[str]:
+
+        """Accept comma-separated string or list."""
+
+        if isinstance(v, list):
+
+            return [str(e).strip() for e in v if str(e).strip()]
+
+        if isinstance(v, str):
+
+            v = v.strip()
+
+            if not v:
+
+                return []
+
+            return [e.strip() for e in v.split(",") if e.strip()]
+
+        return []
+
 
 
     # ------------------------------------------------------------------
