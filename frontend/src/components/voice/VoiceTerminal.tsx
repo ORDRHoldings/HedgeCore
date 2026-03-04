@@ -221,6 +221,9 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
       setStatus("error");
       setErrMsg(message);
       addLine("system", `Error: ${message}`);
+    } else if (type === "debug") {
+      // Temporary: show all unhandled OpenAI events so we can see what's arriving
+      addLine("system", `⟨OAI: ${msg.event_type}⟩`);
     }
   }
 

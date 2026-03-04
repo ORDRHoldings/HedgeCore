@@ -536,6 +536,14 @@ async def voice_realtime(
                             "message": error_detail.get("message", "OpenAI error"),
                         })
 
+                    # ── Debug: forward ALL other event types so client can see them ──
+                    else:
+                        logger.debug("OpenAI event (unhandled): %s", evt_type)
+                        await websocket.send_json({
+                            "type": "debug",
+                            "event_type": evt_type,
+                        })
+
             try:
                 await asyncio.gather(browser_to_openai(), openai_to_browser())
             except WebSocketDisconnect:
