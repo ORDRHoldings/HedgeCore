@@ -1,162 +1,166 @@
 """
-/v1/voice/realtime — WebSocket bridge: browser PCM16 audio ↔ OpenAI Realtime API.
+/v1/voice/realtime — WebSocket text chat powered by OpenAI Chat Completions.
 
-Protocol:
-  Browser → backend WS → OpenAI Realtime WS → HedgeCore API functions → OpenAI → backend → Browser
+OpenAI Realtime API requires a separate Realtime-tier subscription.
+This implementation uses Chat Completions (gpt-4o-mini) which works with
+any OpenAI API key and supports tool calling for HedgeCore functions.
 
 Auth:
-  WebSocket query param: ?token=<JWT>  (Bearer tokens can't be set in browser WS headers)
+  WebSocket query param: ?token=<JWT>  (browser WS API cannot send custom headers)
 
 Message types (browser → backend):
-  {"type": "audio_chunk", "data": "<base64 PCM16>"}
-  {"type": "text", "content": "..."}            -- text fallback
-  {"type": "interrupt"}                          -- cancel current response
+  {"type": "text", "content": "..."}
+  {"type": "audio_chunk", ...}         -- accepted but ignored (no Realtime tier)
+  {"type": "interrupt"}                -- accepted but ignored
   {"type": "end_session"}
 
 Message types (backend → browser):
-  {"type": "audio_chunk", "data": "<base64 PCM16>"}
   {"type": "transcript", "role": "user"|"assistant", "text": "..."}
   {"type": "function_call", "name": "...", "status": "calling"|"done"}
-  {"type": "error", "message": "..."}
   {"type": "session_ready"}
-  {"type": "input_audio_committed"}
+  {"type": "error", "message": "..."}
+  {"type": "debug", "event_type": "..."}
 """
 
 from __future__ import annotations
 
-import asyncio
-import base64
 import json
 import logging
+import os
 from typing import Any
 
 import httpx
 import jwt as pyjwt
-import websockets
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 from app.core.config import settings
-from app.core.db import get_async_session
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/voice", tags=["v1-voice"])
 
-# ── OpenAI Realtime API ───────────────────────────────────────────────────────
-_OPENAI_REALTIME_URL = (
-    "wss://api.openai.com/v1/realtime"
-    "?model=gpt-4o-realtime-preview"
-)
+# Internal base URL for calling HedgeCore from within the same process.
+# Uses PORT env var (Render sets this; default 8000 for local dev).
+_PORT = os.environ.get("PORT", "8000")
+_INTERNAL_BASE = f"http://127.0.0.1:{_PORT}/api"
 
+# ── System prompt ─────────────────────────────────────────────────────────────
 _SYSTEM_PROMPT = """\
-You are ORDR — the ORDR Terminal voice assistant. You are an institutional FX \
-treasury advisor speaking to corporate treasury managers.
+You are ORDR — the ORDR Terminal AI assistant for institutional FX treasury management.
 
-Personality: Calm, precise, and authoritative. Like a senior FX trader at a \
-top-tier bank. Never hedge your language — be direct with numbers. Never say \
-"um" or filler words.
+Personality: Calm, precise, authoritative. Like a senior FX trader at a top-tier bank.
+Be direct with numbers. Never hedge your language.
 
-When a user asks to hedge an exposure:
-1. Confirm the details: currency pair, amount, direction (payable/receivable), timeline.
-2. Call calculate_hedge with the appropriate parameters.
-3. Read back the result clearly: contracts, cost, coverage %, margin required.
+When a user asks about FX rates, positions, hedges, or portfolio data:
+1. Call the appropriate HedgeCore function to get live data.
+2. Present the result clearly and concisely.
+3. Always quote exact numbers from the API — never estimate.
+
+When asked to hedge an exposure:
+1. Confirm: currency pair, amount, direction (payable/receivable), value date.
+2. Call calculate_hedge with the parameters.
+3. Report: contracts, cost, coverage %, margin required, run ID.
 4. Ask if they want to create a governance proposal.
 
-When quoting numbers, speak them clearly:
-- "$500,000" → "five hundred thousand dollars"
-- "17.24" → "seventeen twenty-four"
-- "87%" → "eighty-seven percent"
-
-CRITICAL: All calculations use the HedgeCore engine. Never estimate or invent \
-numbers. If an API call fails, say so clearly.
-
-Keep responses concise — this is a voice interface. Maximum 3-4 sentences per \
-response unless the user asks for detail.
+Keep responses concise — maximum 3-4 sentences unless the user asks for detail.
+Always cite the source (API call) when quoting numbers.
 """
 
-# ── HedgeCore function definitions for OpenAI tool calling ───────────────────
-_TOOLS: list[dict] = [
+# ── Chat Completions tool definitions ─────────────────────────────────────────
+_CHAT_TOOLS: list[dict] = [
     {
         "type": "function",
-        "name": "calculate_hedge",
-        "description": (
-            "Calculate FX hedge recommendation for a currency exposure using the "
-            "HedgeCore engine. Returns contracts needed, total cost, coverage %, "
-            "margin required, and a run ID."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "pair": {
-                    "type": "string",
-                    "description": "Currency pair, e.g. USDMXN, EURUSD, GBPUSD",
+        "function": {
+            "name": "calculate_hedge",
+            "description": (
+                "Calculate FX hedge recommendation for a currency exposure using the "
+                "HedgeCore engine. Returns contracts needed, total cost, coverage %, "
+                "margin required, and a run ID."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pair": {
+                        "type": "string",
+                        "description": "Currency pair, e.g. USDMXN, EURUSD, GBPUSD",
+                    },
+                    "exposure_amount": {
+                        "type": "number",
+                        "description": "Exposure amount in the foreign currency",
+                    },
+                    "flow_type": {
+                        "type": "string",
+                        "enum": ["AP", "AR"],
+                        "description": "AP = payable (buying foreign currency), AR = receivable",
+                    },
+                    "value_date": {
+                        "type": "string",
+                        "description": "ISO date for the exposure, e.g. 2026-06-30",
+                    },
                 },
-                "exposure_amount": {
-                    "type": "number",
-                    "description": "Exposure amount in the foreign currency",
-                },
-                "flow_type": {
-                    "type": "string",
-                    "enum": ["AP", "AR"],
-                    "description": "AP = payable (buying foreign currency), AR = receivable",
-                },
-                "value_date": {
-                    "type": "string",
-                    "description": "ISO date for the exposure, e.g. 2026-06-30",
-                },
-            },
-            "required": ["pair", "exposure_amount", "flow_type"],
-        },
-    },
-    {
-        "type": "function",
-        "name": "get_spot_rate",
-        "description": "Get the current spot FX rate for a currency pair.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "pair": {
-                    "type": "string",
-                    "description": "Currency pair, e.g. USDMXN",
-                }
-            },
-            "required": ["pair"],
-        },
-    },
-    {
-        "type": "function",
-        "name": "list_positions",
-        "description": "List the current open FX positions and their hedge status.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "status_filter": {
-                    "type": "string",
-                    "enum": ["ALL", "NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE", "HEDGED"],
-                    "description": "Filter by execution status",
-                }
+                "required": ["pair", "exposure_amount", "flow_type"],
             },
         },
     },
     {
         "type": "function",
-        "name": "get_portfolio_summary",
-        "description": "Get portfolio KPIs: total exposure, coverage ratio, pending proposals, open alerts.",
-        "parameters": {"type": "object", "properties": {}},
+        "function": {
+            "name": "get_spot_rate",
+            "description": "Get the current spot FX rate for a currency pair.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pair": {
+                        "type": "string",
+                        "description": "Currency pair, e.g. USDMXN",
+                    }
+                },
+                "required": ["pair"],
+            },
+        },
     },
     {
         "type": "function",
-        "name": "list_policies",
-        "description": "List available hedge policy templates with their names and parameters.",
-        "parameters": {"type": "object", "properties": {}},
+        "function": {
+            "name": "list_positions",
+            "description": "List the current open FX positions and their hedge status.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status_filter": {
+                        "type": "string",
+                        "enum": ["ALL", "NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE", "HEDGED"],
+                        "description": "Filter by execution status",
+                    }
+                },
+            },
+        },
     },
     {
         "type": "function",
-        "name": "get_pending_approvals",
-        "description": "List execution proposals awaiting 4-eyes checker approval.",
-        "parameters": {"type": "object", "properties": {}},
+        "function": {
+            "name": "get_portfolio_summary",
+            "description": "Get portfolio KPIs: total exposure, coverage ratio, pending proposals, open alerts.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_policies",
+            "description": "List available hedge policy templates.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_pending_approvals",
+            "description": "List execution proposals awaiting 4-eyes checker approval.",
+            "parameters": {"type": "object", "properties": {}},
+        },
     },
 ]
 
@@ -164,9 +168,8 @@ _TOOLS: list[dict] = [
 # ── Token validation ──────────────────────────────────────────────────────────
 
 def _validate_token(token: str) -> dict | None:
-    """Decode and validate a JWT. Returns payload or None."""
     try:
-        payload = pyjwt.decode(
+        return pyjwt.decode(
             token,
             settings.JWT_SECRET,
             algorithms=[settings.JWT_ALGORITHM],
@@ -174,7 +177,6 @@ def _validate_token(token: str) -> dict | None:
             issuer=settings.TOKEN_ISSUER,
             options={"verify_exp": True},
         )
-        return payload
     except pyjwt.PyJWTError as exc:
         logger.warning("Voice WS: JWT validation failed: %s", exc)
         return None
@@ -182,60 +184,53 @@ def _validate_token(token: str) -> dict | None:
 
 # ── HedgeCore function executor ───────────────────────────────────────────────
 
-async def _call_hedgecore(
-    name: str,
-    args: dict,
-    token: str,
-    base_url: str,
-) -> dict:
-    """Execute a HedgeCore function call and return the result dict."""
+async def _call_hedgecore(name: str, args: dict, token: str) -> dict:
     headers = {"Authorization": f"Bearer {token}"}
     timeout = httpx.Timeout(15.0)
 
-    async with httpx.AsyncClient(base_url=base_url, headers=headers, timeout=timeout) as client:
+    async with httpx.AsyncClient(
+        base_url=_INTERNAL_BASE, headers=headers, timeout=timeout
+    ) as client:
 
         if name == "calculate_hedge":
-            # Build a minimal position + market snapshot for the engine
             pair = args.get("pair", "USDMXN")
             amount = float(args.get("exposure_amount", 0))
             flow_type = args.get("flow_type", "AP")
             value_date = args.get("value_date", "2026-12-31")
-
+            # Derive foreign currency from pair (e.g. USDMXN → MXN, EURUSD → EUR)
+            currency = pair[:3] if pair.endswith("USD") else pair[3:]
             payload = {
-                "trades": [
-                    {
-                        "record_id": "VOICE-001",
-                        "entity": "Voice Request",
-                        "flow_type": flow_type,
-                        "currency": pair.replace("USD", "").replace("USD", ""),
-                        "amount": amount,
-                        "value_date": value_date,
-                        "status": "CONFIRMED",
-                    }
-                ],
+                "trades": [{
+                    "record_id": "VOICE-001",
+                    "entity": "Voice Request",
+                    "flow_type": flow_type,
+                    "currency": currency,
+                    "amount": amount,
+                    "value_date": value_date,
+                    "status": "CONFIRMED",
+                }],
                 "market": {"USDMXN": 17.24},
                 "policy_instance_id": None,
             }
             try:
                 resp = await client.post("/v1/calculate", json=payload)
-                if resp.status_code == 200:
-                    return resp.json()
-                return {"error": f"Calculate failed: HTTP {resp.status_code}", "detail": resp.text[:200]}
+                return resp.json() if resp.status_code == 200 else {
+                    "error": f"HTTP {resp.status_code}", "detail": resp.text[:200]
+                }
             except Exception as exc:
                 return {"error": str(exc)}
 
         elif name == "get_spot_rate":
             pair = args.get("pair", "USDMXN")
             try:
-                resp = await client.get("/api/market/fx/rates")
+                resp = await client.get("/v1/market/fx/rates")
                 if resp.status_code == 200:
-                    data = resp.json()
-                    rates = data.get("rates", [])
+                    rates = resp.json().get("rates", [])
                     match = next((r for r in rates if r.get("symbol") == pair), None)
                     if match:
                         return {"pair": pair, "mid": match["mid"], "bid": match["bid"], "ask": match["ask"]}
-                    return {"error": f"Pair {pair} not found in market data"}
-                return {"error": f"Market data unavailable: HTTP {resp.status_code}"}
+                    return {"error": f"Pair {pair} not found"}
+                return {"error": f"HTTP {resp.status_code}"}
             except Exception as exc:
                 return {"error": str(exc)}
 
@@ -255,7 +250,7 @@ async def _call_hedgecore(
                                 "entity": p.get("entity", "—"),
                                 "currency": p.get("currency", "—"),
                                 "amount": p.get("amount", 0),
-                                "execution_status": p.get("execution_status", "—"),
+                                "status": p.get("execution_status", "—"),
                                 "value_date": p.get("value_date", "—"),
                             }
                             for p in positions[:10]
@@ -268,9 +263,7 @@ async def _call_hedgecore(
         elif name == "get_portfolio_summary":
             try:
                 resp = await client.get("/v1/dashboard/summary")
-                if resp.status_code == 200:
-                    return resp.json()
-                return {"error": f"HTTP {resp.status_code}"}
+                return resp.json() if resp.status_code == 200 else {"error": f"HTTP {resp.status_code}"}
             except Exception as exc:
                 return {"error": str(exc)}
 
@@ -283,12 +276,8 @@ async def _call_hedgecore(
                     return {
                         "count": len(templates),
                         "policies": [
-                            {
-                                "id": t.get("id", "")[:8],
-                                "name": t.get("name", "—"),
-                                "short_name": t.get("short_name", "—"),
-                                "description": t.get("description", "—"),
-                            }
+                            {"id": t.get("id", "")[:8], "name": t.get("name", "—"),
+                             "short_name": t.get("short_name", "—")}
                             for t in templates[:10]
                         ],
                     }
@@ -305,12 +294,9 @@ async def _call_hedgecore(
                     return {
                         "count": len(proposals),
                         "proposals": [
-                            {
-                                "id": p.get("id", "")[:8],
-                                "execution_ref": p.get("execution_ref", "—"),
-                                "proposed_by_email": p.get("proposed_by_email", "—"),
-                                "status": p.get("status", "—"),
-                            }
+                            {"id": p.get("id", "")[:8],
+                             "ref": p.get("execution_ref", "—"),
+                             "status": p.get("status", "—")}
                             for p in proposals[:10]
                         ],
                     }
@@ -321,6 +307,62 @@ async def _call_hedgecore(
     return {"error": f"Unknown function: {name}"}
 
 
+# ── Chat with tool-call loop ──────────────────────────────────────────────────
+
+async def _chat_with_tools(
+    client: AsyncOpenAI,
+    messages: list[ChatCompletionMessageParam],
+    token: str,
+    ws: WebSocket,
+) -> str:
+    """
+    Call OpenAI Chat Completions, handle tool calls, return final text reply.
+    Sends function_call status events to the browser WebSocket as it works.
+    """
+    for _round in range(6):  # max 5 tool-call rounds + 1 final
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            tools=_CHAT_TOOLS,
+            tool_choice="auto",
+            temperature=0.3,
+            max_tokens=512,
+        )
+        choice = response.choices[0]
+
+        if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
+            # Append assistant's tool-call request to history
+            messages.append(choice.message)  # type: ignore[arg-type]
+
+            for tc in choice.message.tool_calls:
+                fn_name = tc.function.name
+                try:
+                    args = json.loads(tc.function.arguments or "{}")
+                except json.JSONDecodeError:
+                    args = {}
+
+                # Notify browser
+                await ws.send_json({"type": "function_call", "name": fn_name, "status": "calling"})
+
+                result = await _call_hedgecore(fn_name, args, token)
+
+                await ws.send_json({"type": "function_call", "name": fn_name, "status": "done"})
+
+                # Append tool result to history
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": json.dumps(result),
+                })
+            # Loop again to get the follow-up response
+
+        else:
+            # Final text response
+            return (choice.message.content or "").strip() or "Ready to help with FX hedging."
+
+    return "I encountered an issue processing your request. Please try again."
+
+
 # ── WebSocket endpoint ────────────────────────────────────────────────────────
 
 @router.websocket("/realtime")
@@ -329,8 +371,7 @@ async def voice_realtime(
     token: str = Query(..., description="JWT access token"),
 ):
     """
-    WebSocket bridge: browser PCM16 ↔ OpenAI Realtime API.
-
+    WebSocket chat endpoint powered by OpenAI Chat Completions + tool calling.
     Connect: ws[s]://<host>/api/v1/voice/realtime?token=<JWT>
     """
     await websocket.accept()
@@ -339,7 +380,7 @@ async def voice_realtime(
     payload = _validate_token(token)
     if not payload:
         await websocket.send_json({"type": "error", "message": "Unauthorized — invalid token"})
-        await websocket.close(code=1008)
+        await websocket.close(code=1000)
         return
 
     if not getattr(settings, "OPENAI_API_KEY", ""):
@@ -347,256 +388,73 @@ async def voice_realtime(
             "type": "error",
             "message": "Voice assistant unavailable — OPENAI_API_KEY not configured",
         })
-        await websocket.close(code=1011)
+        await websocket.close(code=1000)
         return
 
-    # ── Derive internal API base URL ──────────────────────────────────────────
-    # Calls localhost so we don't go over the network for function calls
-    internal_base = "http://127.0.0.1:8000/api"
+    oai = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    messages: list[ChatCompletionMessageParam] = [
+        {"role": "system", "content": _SYSTEM_PROMPT}
+    ]
 
     logger.info("Voice session started for sub=%s", payload.get("sub", "?"))
+    await websocket.send_json({"type": "session_ready"})
 
     try:
-        async with websockets.connect(
-            _OPENAI_REALTIME_URL,
-            additional_headers={
-                "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-                "OpenAI-Beta": "realtime=v1",
-            },
-            ping_interval=20,
-            ping_timeout=10,
-        ) as openai_ws:
+        while True:
+            try:
+                msg = await websocket.receive_json()
+            except WebSocketDisconnect:
+                break
 
-            # ── Configure OpenAI session ──────────────────────────────────────
-            await openai_ws.send(json.dumps({
-                "type": "session.update",
-                "session": {
-                    "modalities": ["text", "audio"],
-                    "instructions": _SYSTEM_PROMPT,
-                    "voice": "ash",
-                    "input_audio_format": "pcm16",
-                    "output_audio_format": "pcm16",
-                    "input_audio_transcription": {"model": "whisper-1"},
-                    "turn_detection": {
-                        "type": "server_vad",
-                        "threshold": 0.5,
-                        "prefix_padding_ms": 300,
-                        "silence_duration_ms": 700,
-                    },
-                    "tools": _TOOLS,
-                    "tool_choice": "auto",
-                    "temperature": 0.7,
-                },
-            }))
+            msg_type = msg.get("type", "")
 
-            await websocket.send_json({"type": "session_ready"})
+            if msg_type == "end_session":
+                break
 
-            # Accumulate function call arguments (streamed in fragments)
-            _fn_calls: dict[str, dict] = {}
+            if msg_type == "interrupt":
+                continue  # nothing in-flight to cancel with Chat Completions
 
-            async def browser_to_openai() -> None:
-                """Forward browser messages → OpenAI."""
-                while True:
-                    try:
-                        msg = await websocket.receive_json()
-                    except WebSocketDisconnect:
-                        return
+            if msg_type == "audio_chunk":
+                continue  # Realtime audio not supported on this tier
 
-                    msg_type = msg.get("type", "")
+            if msg_type != "text":
+                continue
 
-                    if msg_type == "audio_chunk":
-                        # PCM16 audio chunk from browser mic
-                        await openai_ws.send(json.dumps({
-                            "type": "input_audio_buffer.append",
-                            "audio": msg["data"],
-                        }))
+            user_text = (msg.get("content") or "").strip()
+            if not user_text:
+                continue
 
-                    elif msg_type == "text":
-                        # Text fallback (keyboard input)
-                        await openai_ws.send(json.dumps({
-                            "type": "conversation.item.create",
-                            "item": {
-                                "type": "message",
-                                "role": "user",
-                                "content": [{"type": "input_text", "text": msg["content"]}],
-                            },
-                        }))
-                        await openai_ws.send(json.dumps({"type": "response.create"}))
+            # Echo user message back for the transcript
+            await websocket.send_json({
+                "type": "transcript",
+                "role": "user",
+                "text": user_text,
+            })
 
-                    elif msg_type == "interrupt":
-                        await openai_ws.send(json.dumps({"type": "response.cancel"}))
-
-                    elif msg_type == "end_session":
-                        return
-
-            async def openai_to_browser() -> None:
-                """Forward OpenAI events → browser, handle function calls."""
-                async for raw in openai_ws:
-                    try:
-                        evt = json.loads(raw)
-                    except json.JSONDecodeError:
-                        continue
-
-                    evt_type = evt.get("type", "")
-
-                    # ── Audio delta → stream to browser ───────────────────────
-                    if evt_type == "response.audio.delta":
-                        await websocket.send_json({
-                            "type": "audio_chunk",
-                            "data": evt.get("delta", ""),
-                        })
-
-                    # ── Transcript events ─────────────────────────────────────
-                    elif evt_type == "conversation.item.input_audio_transcription.completed":
-                        await websocket.send_json({
-                            "type": "transcript",
-                            "role": "user",
-                            "text": evt.get("transcript", ""),
-                        })
-
-                    elif evt_type == "response.audio_transcript.done":
-                        # Transcript of the audio response (when audio modality is used)
-                        text = evt.get("transcript", "")
-                        if text:
-                            await websocket.send_json({
-                                "type": "transcript",
-                                "role": "assistant",
-                                "text": text,
-                            })
-
-                    elif evt_type == "response.text.done":
-                        # Text-only transcript fallback (fires when model outputs text modality)
-                        text = evt.get("text", "")
-                        if text:
-                            await websocket.send_json({
-                                "type": "transcript",
-                                "role": "assistant",
-                                "text": text,
-                            })
-
-                    # ── Input audio committed (VAD detected silence) ───────────
-                    elif evt_type == "input_audio_buffer.committed":
-                        await websocket.send_json({"type": "input_audio_committed"})
-
-                    # ── Function call fragments ───────────────────────────────
-                    elif evt_type == "response.function_call_arguments.delta":
-                        call_id = evt.get("call_id", "")
-                        if call_id not in _fn_calls:
-                            _fn_calls[call_id] = {
-                                "name": evt.get("name", ""),
-                                "args_raw": "",
-                            }
-                        _fn_calls[call_id]["args_raw"] += evt.get("delta", "")
-
-                    elif evt_type == "response.function_call_arguments.done":
-                        call_id = evt.get("call_id", "")
-                        fn_name = evt.get("name", "") or _fn_calls.get(call_id, {}).get("name", "")
-                        args_raw = evt.get("arguments", "") or _fn_calls.get(call_id, {}).get("args_raw", "{}")
-
-                        await websocket.send_json({
-                            "type": "function_call",
-                            "name": fn_name,
-                            "status": "calling",
-                        })
-
-                        try:
-                            args = json.loads(args_raw) if args_raw.strip() else {}
-                        except json.JSONDecodeError:
-                            args = {}
-
-                        # Execute function against HedgeCore
-                        result = await _call_hedgecore(fn_name, args, token, internal_base)
-
-                        # Return result to OpenAI
-                        await openai_ws.send(json.dumps({
-                            "type": "conversation.item.create",
-                            "item": {
-                                "type": "function_call_output",
-                                "call_id": call_id,
-                                "output": json.dumps(result),
-                            },
-                        }))
-                        await openai_ws.send(json.dumps({"type": "response.create"}))
-
-                        await websocket.send_json({
-                            "type": "function_call",
-                            "name": fn_name,
-                            "status": "done",
-                        })
-
-                        # Cleanup
-                        _fn_calls.pop(call_id, None)
-
-                    # ── Error forwarding ──────────────────────────────────────
-                    elif evt_type == "error":
-                        error_detail = evt.get("error", {})
-                        logger.error("OpenAI Realtime error: %s", error_detail)
-                        await websocket.send_json({
-                            "type": "error",
-                            "message": error_detail.get("message", "OpenAI error"),
-                        })
-
-                    # ── response.done — reliable fallback for extracting output ──────
-                    elif evt_type == "response.done":
-                        # response.done always contains the full output.
-                        # Extract text/audio-transcript from it so we never miss a reply,
-                        # even if intermediate transcript events were empty or missing.
-                        resp = evt.get("response", {})
-                        status = resp.get("status", "unknown")
-                        seen_texts: set[str] = set()
-                        for item in resp.get("output", []):
-                            if item.get("type") != "message":
-                                continue
-                            for part in item.get("content", []):
-                                text = (
-                                    part.get("text", "")          # text modality
-                                    or part.get("transcript", "") # audio modality
-                                ).strip()
-                                if text and text not in seen_texts:
-                                    seen_texts.add(text)
-                                    await websocket.send_json({
-                                        "type": "transcript",
-                                        "role": "assistant",
-                                        "text": text,
-                                    })
-                        if status not in ("completed",):
-                            logger.warning("OpenAI response status: %s", status)
-                            await websocket.send_json({
-                                "type": "debug",
-                                "event_type": f"response.done[status={status}]",
-                            })
-                        else:
-                            await websocket.send_json({
-                                "type": "debug",
-                                "event_type": f"response.done[ok, {len(seen_texts)} parts]",
-                            })
-
-                    # ── Debug: forward ALL other event types so client can see them ──
-                    else:
-                        logger.debug("OpenAI event (unhandled): %s", evt_type)
-                        await websocket.send_json({
-                            "type": "debug",
-                            "event_type": evt_type,
-                        })
+            messages.append({"role": "user", "content": user_text})
 
             try:
-                await asyncio.gather(browser_to_openai(), openai_to_browser())
-            except WebSocketDisconnect:
-                pass
+                reply = await _chat_with_tools(oai, messages, token, websocket)
             except Exception as exc:
-                logger.exception("Voice session error: %s", exc)
-                try:
-                    await websocket.send_json({"type": "error", "message": str(exc)})
-                except Exception:
-                    pass
+                logger.exception("Chat Completions error: %s", exc)
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"AI error: {exc}",
+                })
+                continue
+
+            messages.append({"role": "assistant", "content": reply})
+
+            await websocket.send_json({
+                "type": "transcript",
+                "role": "assistant",
+                "text": reply,
+            })
 
     except Exception as exc:
-        logger.exception("Failed to connect to OpenAI Realtime: %s", exc)
+        logger.exception("Voice session error: %s", exc)
         try:
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Voice service unavailable: {exc}",
-            })
+            await websocket.send_json({"type": "error", "message": str(exc)})
         except Exception:
             pass
     finally:
