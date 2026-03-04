@@ -261,8 +261,10 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
       setStatus("listening");
       addLine("system", "Microphone active — speak now");
     } catch (err) {
-      setErrMsg(`Microphone error: ${err instanceof Error ? err.message : String(err)}`);
-      setStatus("error");
+      // Mic failure does NOT kill the session — text input remains usable.
+      const reason = err instanceof Error ? err.message : String(err);
+      addLine("system", `Microphone unavailable: ${reason} — use text input below`);
+      // Stay at "ready" so text input stays enabled
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
