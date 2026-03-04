@@ -166,11 +166,14 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
     const wsOrigin = httpOrigin.replace(/^https/, "wss").replace(/^http/, "ws");
     const url = `${wsOrigin}/api/v1/voice/realtime?token=${encodeURIComponent(token)}`;
 
+    // Show URL in transcript so connection issues are immediately visible
+    addLine("system", `WS → ${wsOrigin}/api/v1/voice/realtime`);
+
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      addLine("system", "Voice session opened");
+      addLine("system", "Handshake OK — awaiting session");
     };
 
     ws.onmessage = (evt) => {
@@ -182,13 +185,12 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
 
     ws.onerror = () => {
       setStatus("error");
-      setErrMsg("Connection error — is the backend running?");
-      addLine("system", "Connection error");
+      setErrMsg("WebSocket error — check DevTools Network → WS tab for details");
+      addLine("system", "ws.onerror fired (transport error or server rejected upgrade)");
     };
 
-    // Use statusRef (not status) to avoid stale closure — onerror sets "error"
-    // but the closure over `status` would still see the old value.
-    ws.onclose = () => {
+    ws.onclose = (evt) => {
+      addLine("system", `WS closed: code=${evt.code} reason=${evt.reason || "none"}`);
       if (statusRef.current !== "error") setStatus("idle");
       wsRef.current = null;
       stopMic();
