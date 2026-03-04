@@ -349,7 +349,7 @@ async def voice_realtime(
         await websocket.close(code=1000)
         return
 
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not anthropic_key:
         await websocket.send_json({
             "type": "error",
@@ -359,7 +359,7 @@ async def voice_realtime(
         return
 
     messages: list[dict] = []
-    logger.info("Voice session started for sub=%s", payload.get("sub", "?"))
+    logger.info("Voice session started for sub=%s model=%s", payload.get("sub", "?"), _MODEL)
     await websocket.send_json({"type": "session_ready"})
 
     try:
@@ -393,6 +393,11 @@ async def voice_realtime(
             except Exception as exc:
                 logger.exception("Chat error: %s", exc)
                 await websocket.send_json({"type": "error", "message": f"AI error: {exc}"})
+                continue
+
+            # If _chat_with_tools returned an error string, surface it as error type
+            if reply.startswith("API error") or reply.startswith("I couldn't"):
+                await websocket.send_json({"type": "error", "message": reply})
                 continue
 
             messages.append({"role": "assistant", "content": reply})
