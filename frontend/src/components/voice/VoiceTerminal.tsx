@@ -96,10 +96,15 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const streamRef      = useRef<MediaStream | null>(null);
   const transcriptEnd  = useRef<HTMLDivElement | null>(null);
+  // Mirror of status for use inside WS closures (avoids stale state capture)
+  const statusRef      = useRef<Status>("idle");
 
   // Audio playback queue — must be Float32Array<ArrayBuffer> for copyToChannel
   const playQueueRef   = useRef<Float32Array<ArrayBuffer>[]>([]);
   const playingRef     = useRef(false);
+
+  // ── Keep statusRef in sync so WS closures always see current status ─────
+  useEffect(() => { statusRef.current = status; }, [status]);
 
   // ── Scroll transcript to bottom ──────────────────────────────────────────
   useEffect(() => {
@@ -146,6 +151,14 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
     setErrMsg(null);
     addLine("system", "Connecting to ORDR Voice...");
 
+    // Initialize AudioContext on connect so text responses can play audio.
+    // Must happen inside a user-gesture callback — openPanel satisfies this.
+    if (!audioCtxRef.current) {
+      try {
+        audioCtxRef.current = new AudioContext({ sampleRate: 24_000 });
+      } catch { /* non-fatal — audio will be silent */ }
+    }
+
     // Derive WebSocket URL — strip trailing /api from NEXT_PUBLIC_API_URL
     // (that var already contains /api, so we must not double it)
     const httpOrigin = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api")
@@ -173,8 +186,10 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
       addLine("system", "Connection error");
     };
 
+    // Use statusRef (not status) to avoid stale closure — onerror sets "error"
+    // but the closure over `status` would still see the old value.
     ws.onclose = () => {
-      if (status !== "error") setStatus("idle");
+      if (statusRef.current !== "error") setStatus("idle");
       wsRef.current = null;
       stopMic();
     };
@@ -461,17 +476,30 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
               </div>
             )}
 
-            {/* Error */}
+            {/* Error + Reconnect */}
             {errMsg && (
               <div style={{
-                display: "flex", alignItems: "flex-start", gap: 6,
+                display: "flex", flexDirection: "column", gap: 6,
                 padding: "8px 10px",
                 background: "rgba(239,68,68,0.06)",
                 border: "1px solid rgba(239,68,68,0.20)",
                 borderRadius: 4,
               }}>
-                <AlertCircleIcon size={12} color={T.red} style={{ flexShrink: 0, marginTop: 1 }} />
-                <span style={{ fontFamily: T.ui, fontSize: 12, color: T.red }}>{errMsg}</span>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                  <AlertCircleIcon size={12} color={T.red} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span style={{ fontFamily: T.ui, fontSize: 12, color: T.red }}>{errMsg}</span>
+                </div>
+                <button
+                  onClick={() => { setErrMsg(null); setTranscript([]); connect(); }}
+                  style={{
+                    alignSelf: "flex-start",
+                    fontFamily: T.mono, fontSize: 10, letterSpacing: "0.1em",
+                    background: T.red, color: "#fff", border: "none",
+                    borderRadius: 3, padding: "4px 10px", cursor: "pointer",
+                  }}
+                >
+                  RECONNECT
+                </button>
               </div>
             )}
 

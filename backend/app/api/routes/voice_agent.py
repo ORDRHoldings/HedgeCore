@@ -455,11 +455,24 @@ async def voice_realtime(
                         })
 
                     elif evt_type == "response.audio_transcript.done":
-                        await websocket.send_json({
-                            "type": "transcript",
-                            "role": "assistant",
-                            "text": evt.get("transcript", ""),
-                        })
+                        # Transcript of the audio response (when audio modality is used)
+                        text = evt.get("transcript", "")
+                        if text:
+                            await websocket.send_json({
+                                "type": "transcript",
+                                "role": "assistant",
+                                "text": text,
+                            })
+
+                    elif evt_type == "response.text.done":
+                        # Text-only transcript fallback (fires when model outputs text modality)
+                        text = evt.get("text", "")
+                        if text:
+                            await websocket.send_json({
+                                "type": "transcript",
+                                "role": "assistant",
+                                "text": text,
+                            })
 
                     # ── Input audio committed (VAD detected silence) ───────────
                     elif evt_type == "input_audio_buffer.committed":
