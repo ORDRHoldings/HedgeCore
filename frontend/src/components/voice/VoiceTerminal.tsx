@@ -1,26 +1,25 @@
 "use client";
 
 /**
- * VoiceTerminal — Floating voice assistant powered by OpenAI Realtime API.
+ * VoiceTerminal — Floating voice assistant powered by Claude (Anthropic Messages API).
  *
- * Audio pipeline:
- *   Mic → AudioContext (24kHz) → AudioWorklet → Int16 → base64
- *      → WebSocket → backend → OpenAI Realtime API
- *      → PCM16 audio → WebSocket → base64 → Int16 → Float32
- *      → AudioContext → Speaker
+ * Voice pipeline (browser-native, no API keys required):
+ *   Mic → SpeechRecognition (Web Speech API, Chrome/Edge) → text
+ *      → WebSocket → backend → Claude claude-sonnet-4-6
+ *      → text transcript → SpeechSynthesis (browser TTS) → speaker
  *
+ * Text input is always available as a fallback (and on Firefox/Safari).
  * Mounted globally in RootLayout. Rendered only for authenticated users.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MicIcon, MicOffIcon, XIcon, Volume2Icon, AlertCircleIcon, LoaderIcon } from "lucide-react";
+import { MicIcon, MicOffIcon, XIcon, Volume2Icon, AlertCircleIcon, LoaderIcon, VolumeXIcon } from "lucide-react";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
   bg:      "#FFFFFF",
   sub:     "#F1F5F9",
   rim:     "#E2E8F0",
-  soft:    "#CBD5E1",
   blue:    "#1C62F2",
   blueDim: "rgba(28,98,242,0.08)",
   blueBdr: "rgba(28,98,242,0.20)",
@@ -34,7 +33,7 @@ const T = {
 } as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Status = "idle" | "connecting" | "ready" | "listening" | "speaking" | "error";
+type Status = "idle" | "connecting" | "ready" | "listening" | "thinking" | "speaking" | "error";
 
 interface TranscriptLine {
   id:   number;
@@ -49,32 +48,15 @@ interface FnEvent {
 
 let _lineId = 0;
 
-// ── Audio helpers ─────────────────────────────────────────────────────────────
-function int16ToFloat32(buffer: ArrayBuffer): Float32Array<ArrayBuffer> {
-  const view = new Int16Array(buffer);
-  // Allocate explicitly as Float32Array<ArrayBuffer> (required by copyToChannel)
-  const out  = new Float32Array(new ArrayBuffer(view.length * 4));
-  for (let i = 0; i < view.length; i++) {
-    out[i] = view[i] / (view[i] < 0 ? 32768 : 32767);
-  }
-  return out;
-}
+// ── Speech Recognition shim ───────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SpeechRecognitionCtor = new () => any;
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let bin = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    bin += String.fromCharCode(bytes[i]);
-  }
-  return btoa(bin);
-}
-
-function base64ToArrayBuffer(b64: string): ArrayBuffer {
-  const bin  = atob(b64);
-  const buf  = new ArrayBuffer(bin.length);
-  const view = new Uint8Array(buf);
-  for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
-  return buf;
+function getSpeechRecognition(): SpeechRecognitionCtor | null {
+  if (typeof window === "undefined") return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = window as any;
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -90,21 +72,19 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
   const [fn,         setFn]         = useState<FnEvent | null>(null);
   const [errMsg,     setErrMsg]     = useState<string | null>(null);
   const [textInput,  setTextInput]  = useState("");
+  const [voiceOn,    setVoiceOn]    = useState(true); // TTS toggle
 
   const wsRef          = useRef<WebSocket | null>(null);
-  const audioCtxRef    = useRef<AudioContext | null>(null);
-  const workletNodeRef = useRef<AudioWorkletNode | null>(null);
-  const streamRef      = useRef<MediaStream | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
   const transcriptEnd  = useRef<HTMLDivElement | null>(null);
   // Mirror of status for use inside WS closures (avoids stale state capture)
   const statusRef      = useRef<Status>("idle");
+  const voiceOnRef     = useRef(true);
 
-  // Audio playback queue — must be Float32Array<ArrayBuffer> for copyToChannel
-  const playQueueRef   = useRef<Float32Array<ArrayBuffer>[]>([]);
-  const playingRef     = useRef(false);
-
-  // ── Keep statusRef in sync so WS closures always see current status ─────
-  useEffect(() => { statusRef.current = status; }, [status]);
+  // ── Keep refs in sync ────────────────────────────────────────────────────
+  useEffect(() => { statusRef.current = status; },  [status]);
+  useEffect(() => { voiceOnRef.current = voiceOn; }, [voiceOn]);
 
   // ── Scroll transcript to bottom ──────────────────────────────────────────
   useEffect(() => {
@@ -117,31 +97,42 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── PCM16 audio playback ──────────────────────────────────────────────────
-  const schedulePlayback = useCallback((samples: Float32Array<ArrayBuffer>) => {
-    playQueueRef.current.push(samples);
-    if (!playingRef.current) drainQueue();
-  }, []);
+  function addLine(role: TranscriptLine["role"], text: string) {
+    setTranscript(prev => [...prev, { id: ++_lineId, role, text }]);
+  }
 
-  function drainQueue() {
-    if (!audioCtxRef.current || playQueueRef.current.length === 0) {
-      playingRef.current = false;
-      return;
+  // ── Text-to-speech ────────────────────────────────────────────────────────
+  function speakText(text: string) {
+    if (!voiceOnRef.current || typeof window === "undefined" || !window.speechSynthesis) return;
+    // Cancel any in-progress speech
+    window.speechSynthesis.cancel();
+
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate = 0.95;
+    utt.pitch = 1.0;
+    // Prefer a natural English voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v =>
+      v.lang.startsWith("en") && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Samantha"))
+    ) ?? voices.find(v => v.lang.startsWith("en")) ?? null;
+    if (preferred) utt.voice = preferred;
+
+    utt.onstart = () => setStatus("speaking");
+    utt.onend   = () => {
+      if (statusRef.current === "speaking") setStatus("ready");
+    };
+    utt.onerror = () => {
+      if (statusRef.current === "speaking") setStatus("ready");
+    };
+
+    window.speechSynthesis.speak(utt);
+  }
+
+  function stopSpeaking() {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
     }
-    playingRef.current = true;
-    const ctx    = audioCtxRef.current;
-    const chunk  = playQueueRef.current.shift()!;
-    const buf    = ctx.createBuffer(1, chunk.length, 24_000);
-    buf.copyToChannel(chunk, 0);
-    const src    = ctx.createBufferSource();
-    src.buffer   = buf;
-    src.connect(ctx.destination);
-    src.onended  = drainQueue;
-    src.start();
-    setStatus("speaking");
-    if (playQueueRef.current.length === 0) {
-      src.onended = () => { playingRef.current = false; setStatus("ready"); };
-    }
+    if (statusRef.current === "speaking") setStatus("ready");
   }
 
   // ── Connect WebSocket ─────────────────────────────────────────────────────
@@ -149,25 +140,13 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
     if (wsRef.current) return;
     setStatus("connecting");
     setErrMsg(null);
-    addLine("system", "Connecting to ORDR Voice...");
-
-    // Initialize AudioContext on connect so text responses can play audio.
-    // Must happen inside a user-gesture callback — openPanel satisfies this.
-    if (!audioCtxRef.current) {
-      try {
-        audioCtxRef.current = new AudioContext({ sampleRate: 24_000 });
-      } catch { /* non-fatal — audio will be silent */ }
-    }
+    addLine("system", "Connecting to ORDR Voice…");
 
     // Derive WebSocket URL — strip trailing /api from NEXT_PUBLIC_API_URL
-    // (that var already contains /api, so we must not double it)
     const httpOrigin = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api")
       .replace(/\/api\/?$/, "");
     const wsOrigin = httpOrigin.replace(/^https/, "wss").replace(/^http/, "ws");
     const url = `${wsOrigin}/api/v1/voice/realtime?token=${encodeURIComponent(token)}`;
-
-    // Show URL in transcript so connection issues are immediately visible
-    addLine("system", `WS → ${wsOrigin}/api/v1/voice/realtime`);
 
     const ws = new WebSocket(url);
     wsRef.current = ws;
@@ -185,15 +164,14 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
 
     ws.onerror = () => {
       setStatus("error");
-      setErrMsg("WebSocket error — check DevTools Network → WS tab for details");
-      addLine("system", "ws.onerror fired (transport error or server rejected upgrade)");
+      setErrMsg("Connection failed — check that the backend is running");
     };
 
     ws.onclose = (evt) => {
-      addLine("system", `WS closed: code=${evt.code} reason=${evt.reason || "none"}`);
+      addLine("system", `WS closed: code=${evt.code}`);
       if (statusRef.current !== "error") setStatus("idle");
       wsRef.current = null;
-      stopMic();
+      stopRecognition();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -204,105 +182,116 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
     if (type === "session_ready") {
       setStatus("ready");
       addLine("system", "ORDR Voice ready — speak or type below");
-    } else if (type === "audio_chunk") {
-      const samples = int16ToFloat32(base64ToArrayBuffer(msg.data as string));
-      schedulePlayback(samples);
     } else if (type === "transcript") {
       const role = msg.role as "user" | "assistant";
-      const text = msg.text as string;
-      if (text?.trim()) addLine(role, text.trim());
+      const text = (msg.text as string)?.trim();
+      if (!text) return;
+      if (role === "assistant") {
+        setStatus("speaking");
+        addLine("assistant", text);
+        speakText(text);
+      } else {
+        addLine("user", text);
+      }
     } else if (type === "function_call") {
       setFn({ name: msg.name as string, status: msg.status as "calling" | "done" });
       if (msg.status === "done") setTimeout(() => setFn(null), 1500);
-    } else if (type === "input_audio_committed") {
-      setStatus("ready"); // VAD detected silence — model is processing
+      // While Claude is fetching data, show "thinking"
+      if (msg.status === "calling") setStatus("thinking");
     } else if (type === "error") {
       const message = msg.message as string;
       setStatus("error");
       setErrMsg(message);
       addLine("system", `Error: ${message}`);
-    } else if (type === "debug") {
-      // Temporary: show all unhandled OpenAI events so we can see what's arriving
-      addLine("system", `⟨OAI: ${msg.event_type}⟩`);
     }
   }
 
-  function addLine(role: TranscriptLine["role"], text: string) {
-    setTranscript(prev => [...prev, { id: ++_lineId, role, text }]);
-  }
-
-  // ── Start microphone ──────────────────────────────────────────────────────
-  const startMic = useCallback(async () => {
+  // ── SpeechRecognition mic ─────────────────────────────────────────────────
+  const startRecognition = useCallback(() => {
+    const SpeechRec = getSpeechRecognition();
+    if (!SpeechRec) {
+      addLine("system", "Speech recognition not supported in this browser — use text input");
+      return;
+    }
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 24_000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
-      });
-      streamRef.current = stream;
 
-      const ctx = new AudioContext({ sampleRate: 24_000 });
-      audioCtxRef.current = ctx;
+    // Stop any ongoing speech when user starts talking
+    stopSpeaking();
 
-      await ctx.audioWorklet.addModule("/pcm16-processor.js");
+    const rec = new SpeechRec();
+    rec.lang = "en-US";
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
 
-      const source = ctx.createMediaStreamSource(stream);
-      const node   = new AudioWorkletNode(ctx, "pcm16-processor");
-      workletNodeRef.current = node;
-
-      node.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({
-            type: "audio_chunk",
-            data: arrayBufferToBase64(e.data),
-          }));
-        }
-      };
-
-      source.connect(node);
-      // Note: don't connect node to destination (no mic monitoring)
-
+    rec.onstart = () => {
       setStatus("listening");
-      addLine("system", "Microphone active — speak now");
-    } catch (err) {
-      // Mic failure does NOT kill the session — text input remains usable.
-      const reason = err instanceof Error ? err.message : String(err);
-      addLine("system", `Microphone unavailable: ${reason} — use text input below`);
-      // Stay at "ready" so text input stays enabled
-    }
+      addLine("system", "Listening…");
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (evt: any) => {
+      const text = evt.results[0]?.[0]?.transcript?.trim();
+      if (!text) return;
+      // Send to backend — transcript will echo back via server message
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "text", content: text }));
+        addLine("user", text);
+      }
+      setStatus("thinking");
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onerror = (evt: any) => {
+      if (evt.error === "no-speech") {
+        addLine("system", "No speech detected — tap mic and try again");
+      } else if (evt.error === "not-allowed" || evt.error === "permission-denied") {
+        addLine("system", "Microphone permission denied — use text input below");
+      } else {
+        addLine("system", `Mic error: ${evt.error}`);
+      }
+      if (statusRef.current === "listening") setStatus("ready");
+    };
+
+    rec.onend = () => {
+      recognitionRef.current = null;
+      if (statusRef.current === "listening") setStatus("ready");
+    };
+
+    recognitionRef.current = rec;
+    rec.start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function stopMic() {
-    workletNodeRef.current?.port.postMessage("stop");
-    workletNodeRef.current?.disconnect();
-    workletNodeRef.current = null;
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
-    if (status === "listening") setStatus("ready");
+  function stopRecognition() {
+    recognitionRef.current?.stop();
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    if (statusRef.current === "listening") setStatus("ready");
   }
 
   function disconnect() {
-    stopMic();
-    audioCtxRef.current?.close();
-    audioCtxRef.current = null;
+    stopRecognition();
+    stopSpeaking();
     wsRef.current?.close();
     wsRef.current = null;
-    playQueueRef.current = [];
-    playingRef.current = false;
     setStatus("idle");
   }
 
   // ── Toggle mic ───────────────────────────────────────────────────────────
   const toggleMic = useCallback(() => {
     if (status === "listening") {
-      stopMic();
+      stopRecognition();
     } else if (status === "ready") {
-      startMic();
+      startRecognition();
+    } else if (status === "speaking") {
+      stopSpeaking();
+      startRecognition();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, startMic]);
+  }, [status, startRecognition]);
 
-  // ── Open panel ───────────────────────────────────────────────────────────
+  // ── Open / close panel ───────────────────────────────────────────────────
   const openPanel = useCallback(() => {
     setOpen(true);
     if (!wsRef.current) connect();
@@ -319,23 +308,42 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
 
   // ── Send text message ─────────────────────────────────────────────────────
   const sendText = useCallback(() => {
-    if (!textInput.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    wsRef.current.send(JSON.stringify({ type: "text", content: textInput.trim() }));
-    addLine("user", textInput.trim());
+    const text = textInput.trim();
+    if (!text || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    // Interrupt any ongoing speech
+    stopSpeaking();
+    wsRef.current.send(JSON.stringify({ type: "text", content: text }));
+    addLine("user", text);
     setTextInput("");
+    setStatus("thinking");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textInput]);
 
-  // ── Status indicator color ────────────────────────────────────────────────
+  // ── Derived UI ────────────────────────────────────────────────────────────
   const dotColor =
     status === "error"      ? T.red   :
     status === "listening"  ? T.green :
     status === "speaking"   ? T.blue  :
+    status === "thinking"   ? T.amber :
     status === "ready"      ? T.green :
     status === "connecting" ? T.amber :
     T.muted;
 
-  const dotPulse = status === "listening" || status === "speaking";
+  const dotPulse = status === "listening" || status === "speaking" || status === "thinking";
+
+  const micEnabled = status === "ready" || status === "listening" || status === "speaking";
+  const inputEnabled = status === "ready" || status === "listening" || status === "thinking";
+
+  const statusLabel =
+    status === "idle"       ? "Click ↗ to open"          :
+    status === "connecting" ? "Connecting…"               :
+    status === "ready"      ? "Tap mic or type below"     :
+    status === "listening"  ? "Listening… tap to stop"    :
+    status === "thinking"   ? "ORDR is thinking…"         :
+    status === "speaking"   ? "ORDR is speaking…"         :
+                              "Error — check connection";
+
+  const hasSpeechRec = !!getSpeechRecognition();
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -387,7 +395,6 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
               <div style={{
                 width: 7, height: 7, borderRadius: "50%",
                 background: dotColor,
-                boxShadow: dotPulse ? `0 0 0 0 ${dotColor}` : "none",
                 animation: dotPulse ? "voice-pulse 1.2s ease-out infinite" : "none",
               }} />
               <span style={{
@@ -403,16 +410,34 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                 {status.toUpperCase()}
               </span>
             </div>
-            <button
-              onClick={closePanel}
-              aria-label="Close voice assistant"
-              style={{
-                background: "none", border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", padding: 2,
-              }}
-            >
-              <XIcon size={14} color={T.muted} />
-            </button>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {/* TTS toggle */}
+              <button
+                onClick={() => { stopSpeaking(); setVoiceOn(v => !v); }}
+                aria-label={voiceOn ? "Mute voice" : "Unmute voice"}
+                title={voiceOn ? "Mute spoken replies" : "Enable spoken replies"}
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  display: "flex", alignItems: "center", padding: 2, opacity: 0.6,
+                }}
+              >
+                {voiceOn
+                  ? <Volume2Icon size={13} color={T.blue} />
+                  : <VolumeXIcon size={13} color={T.muted} />
+                }
+              </button>
+              <button
+                onClick={closePanel}
+                aria-label="Close voice assistant"
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  display: "flex", alignItems: "center", padding: 2,
+                }}
+              >
+                <XIcon size={14} color={T.muted} />
+              </button>
+            </div>
           </div>
 
           {/* Transcript */}
@@ -463,8 +488,8 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
               </div>
             ))}
 
-            {/* Function call indicator */}
-            {fn && (
+            {/* Thinking / function-call indicator */}
+            {(fn || status === "thinking") && (
               <div style={{
                 alignSelf: "center",
                 display: "flex", alignItems: "center", gap: 6,
@@ -473,12 +498,15 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                 border: `1px solid ${T.blueBdr}`,
                 borderRadius: 10,
               }}>
-                {fn.status === "calling"
-                  ? <LoaderIcon size={10} color={T.blue} style={{ animation: "spin 1s linear infinite" }} />
-                  : <Volume2Icon size={10} color={T.blue} />
+                {fn?.status === "done"
+                  ? <Volume2Icon size={10} color={T.blue} />
+                  : <LoaderIcon size={10} color={T.blue} style={{ animation: "spin 1s linear infinite" }} />
                 }
                 <span style={{ fontFamily: T.mono, fontSize: 9, color: T.blue, letterSpacing: "0.1em" }}>
-                  {fn.status === "calling" ? `Calling ${fn.name}…` : `${fn.name} done`}
+                  {fn
+                    ? (fn.status === "calling" ? `Calling ${fn.name}…` : `${fn.name} done`)
+                    : "ORDR is thinking…"
+                  }
                 </span>
               </div>
             )}
@@ -523,17 +551,18 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <button
                 onClick={toggleMic}
-                disabled={status !== "ready" && status !== "listening"}
+                disabled={!micEnabled}
                 aria-label={status === "listening" ? "Stop microphone" : "Start microphone"}
+                title={!hasSpeechRec ? "Speech recognition not supported in this browser" : undefined}
                 style={{
                   width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
                   background: status === "listening"
                     ? "rgba(239,68,68,0.10)"
                     : T.blueDim,
                   border: `1px solid ${status === "listening" ? "rgba(239,68,68,0.30)" : T.blueBdr}`,
-                  cursor: (status === "ready" || status === "listening") ? "pointer" : "default",
+                  cursor: micEnabled ? "pointer" : "default",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  opacity: (status === "ready" || status === "listening") ? 1 : 0.4,
+                  opacity: micEnabled ? 1 : 0.4,
                   transition: "all 150ms",
                 }}
               >
@@ -546,12 +575,7 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                 fontFamily: T.mono, fontSize: 10, color: T.muted,
                 letterSpacing: "0.08em", flex: 1,
               }}>
-                {status === "idle"       ? "Click ↗ to open"        :
-                 status === "connecting" ? "Connecting…"             :
-                 status === "ready"      ? "Tap mic or type below"   :
-                 status === "listening"  ? "Listening… tap to stop"  :
-                 status === "speaking"   ? "ORDR is speaking…"       :
-                                          "Error — check connection" }
+                {statusLabel}
               </span>
             </div>
 
@@ -562,38 +586,49 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                 onChange={e => setTextInput(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") sendText(); }}
                 placeholder="Type a message…"
-                disabled={status !== "ready" && status !== "listening"}
+                disabled={!inputEnabled}
                 style={{
                   flex: 1, fontFamily: T.mono, fontSize: 12, color: T.primary,
                   background: T.sub, border: `1px solid ${T.rim}`,
                   borderRadius: 3, padding: "7px 10px", outline: "none",
                   minWidth: 0,
+                  opacity: inputEnabled ? 1 : 0.5,
                 }}
               />
               <button
                 onClick={sendText}
-                disabled={!textInput.trim() || (status !== "ready" && status !== "listening")}
+                disabled={!textInput.trim() || !inputEnabled}
                 style={{
                   fontFamily: T.mono, fontSize: 11, fontWeight: 700,
                   letterSpacing: "0.08em",
                   color: "#fff", background: T.blue,
                   border: "none", borderRadius: 3,
                   padding: "7px 12px", cursor: "pointer",
-                  opacity: (!textInput.trim() || (status !== "ready" && status !== "listening")) ? 0.4 : 1,
+                  opacity: (!textInput.trim() || !inputEnabled) ? 0.4 : 1,
                   transition: "opacity 120ms",
                 }}
               >
                 SEND
               </button>
             </div>
+
+            {/* Browser hint */}
+            {!hasSpeechRec && status === "ready" && (
+              <p style={{
+                margin: "6px 0 0", fontFamily: T.mono, fontSize: 9,
+                color: T.muted, letterSpacing: "0.06em",
+              }}>
+                Voice input requires Chrome or Edge. Text input works in all browsers.
+              </p>
+            )}
           </div>
         </div>
       )}
 
-      {/* Pulse animation */}
+      {/* Animations */}
       <style>{`
         @keyframes voice-pulse {
-          0%   { box-shadow: 0 0 0 0 currentColor; }
+          0%   { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
           70%  { box-shadow: 0 0 0 6px transparent; }
           100% { box-shadow: 0 0 0 0 transparent; }
         }
