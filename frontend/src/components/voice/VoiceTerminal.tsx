@@ -146,13 +146,12 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
     setErrMsg(null);
     addLine("system", "Connecting to ORDR Voice...");
 
-    // Derive WebSocket URL from current page origin
-    const apiBase = process.env.NEXT_PUBLIC_API_URL
-      ?? (typeof window !== "undefined"
-          ? window.location.origin.replace("3000", "8000")
-          : "http://localhost:8000");
-    const wsBase = apiBase.replace(/^https/, "wss").replace(/^http/, "ws");
-    const url    = `${wsBase}/api/v1/voice/realtime?token=${encodeURIComponent(token)}`;
+    // Derive WebSocket URL — strip trailing /api from NEXT_PUBLIC_API_URL
+    // (that var already contains /api, so we must not double it)
+    const httpOrigin = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api")
+      .replace(/\/api\/?$/, "");
+    const wsOrigin = httpOrigin.replace(/^https/, "wss").replace(/^http/, "ws");
+    const url = `${wsOrigin}/api/v1/voice/realtime?token=${encodeURIComponent(token)}`;
 
     const ws = new WebSocket(url);
     wsRef.current = ws;
