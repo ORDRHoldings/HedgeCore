@@ -41,7 +41,8 @@ router = APIRouter(prefix="/v1/voice", tags=["v1-voice"])
 
 _ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 _ANTHROPIC_VERSION = "2023-06-01"
-_MODEL = "claude-sonnet-4-6"
+# Use VOICE_CLAUDE_MODEL env var to override (e.g. claude-sonnet-4-6 when on a newer tier)
+_MODEL = os.environ.get("VOICE_CLAUDE_MODEL", "claude-3-5-sonnet-20241022")
 
 # Internal HedgeCore base — uses PORT env var (Render sets this; default 8000 locally)
 _PORT = os.environ.get("PORT", "8000")
@@ -276,9 +277,15 @@ async def _chat_with_tools(
             resp = await client.post(_ANTHROPIC_API_URL, headers=headers, json=body)
 
             if resp.status_code != 200:
-                error_text = resp.text[:300]
+                error_text = resp.text[:400]
                 logger.error("Anthropic API error %s: %s", resp.status_code, error_text)
-                return f"AI service error ({resp.status_code}). Please try again."
+                # Extract human-readable message from Anthropic error JSON
+                try:
+                    err_json = resp.json()
+                    detail = err_json.get("error", {}).get("message", error_text)
+                except Exception:
+                    detail = error_text
+                return f"API error {resp.status_code}: {detail[:200]}"
 
             data = resp.json()
             stop_reason = data.get("stop_reason", "")
