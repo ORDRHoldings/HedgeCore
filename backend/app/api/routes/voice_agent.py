@@ -47,7 +47,7 @@ router = APIRouter(prefix="/v1/voice", tags=["v1-voice"])
 # ── OpenAI Realtime API ───────────────────────────────────────────────────────
 _OPENAI_REALTIME_URL = (
     "wss://api.openai.com/v1/realtime"
-    "?model=gpt-4o-realtime-preview-2024-12-17"
+    "?model=gpt-4o-realtime-preview"
 )
 
 _SYSTEM_PROMPT = """\
@@ -535,6 +535,41 @@ async def voice_realtime(
                             "type": "error",
                             "message": error_detail.get("message", "OpenAI error"),
                         })
+
+                    # ── response.done — reliable fallback for extracting output ──────
+                    elif evt_type == "response.done":
+                        # response.done always contains the full output.
+                        # Extract text/audio-transcript from it so we never miss a reply,
+                        # even if intermediate transcript events were empty or missing.
+                        resp = evt.get("response", {})
+                        status = resp.get("status", "unknown")
+                        seen_texts: set[str] = set()
+                        for item in resp.get("output", []):
+                            if item.get("type") != "message":
+                                continue
+                            for part in item.get("content", []):
+                                text = (
+                                    part.get("text", "")          # text modality
+                                    or part.get("transcript", "") # audio modality
+                                ).strip()
+                                if text and text not in seen_texts:
+                                    seen_texts.add(text)
+                                    await websocket.send_json({
+                                        "type": "transcript",
+                                        "role": "assistant",
+                                        "text": text,
+                                    })
+                        if status not in ("completed",):
+                            logger.warning("OpenAI response status: %s", status)
+                            await websocket.send_json({
+                                "type": "debug",
+                                "event_type": f"response.done[status={status}]",
+                            })
+                        else:
+                            await websocket.send_json({
+                                "type": "debug",
+                                "event_type": f"response.done[ok, {len(seen_texts)} parts]",
+                            })
 
                     # ── Debug: forward ALL other event types so client can see them ──
                     else:
