@@ -1,0 +1,47 @@
+# docker-compose.openclaw.yml
+# Add OpenClaw Gateway sidecar alongside the existing HedgeCore stack.
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.openclaw.yml up
+#
+# Or standalone (if HedgeCore backend already running on host):
+#   docker-compose -f docker-compose.openclaw.yml up
+
+version: "3.8"
+
+services:
+  openclaw-gateway:
+    image: ghcr.io/openclaw/openclaw:latest
+    container_name: hedgecore-openclaw
+    restart: unless-stopped
+    ports:
+      - "18789:18789"    # WebChat + WebSocket gateway
+    volumes:
+      - ./openclaw-workspace:/workspace
+      - ./openclaw.json:/app/openclaw.json:ro
+    environment:
+      # Required
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}        # For voice (gpt-4o-realtime)
+      # Optional channel integrations
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-}
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL:-}
+      # HedgeCore backend connection
+      - HEDGECORE_BASE_URL=http://hedgecore-backend:8000/api
+      # Gateway config
+      - OPENCLAW_PORT=18789
+      - OPENCLAW_CONFIG=/app/openclaw.json
+      - NODE_ENV=production
+    depends_on:
+      - hedgecore-backend
+    networks:
+      - hedgecore-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18789/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  hedgecore-net:
+    external: true   # Assumes your main docker-compose defines this network

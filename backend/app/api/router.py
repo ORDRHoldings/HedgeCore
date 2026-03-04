@@ -149,4 +149,8 @@ router.include_router(v1_ui_router)
 from app.api.routes.v1_admin_reset import router as v1_admin_reset_router
 router.include_router(v1_admin_reset_router)
 
+# Voice Agent — OpenAI Realtime bridge (owns /v1/voice)
+from app.api.routes.voice_agent import router as voice_agent_router
+router.include_router(voice_agent_router)
+
 __all__ = ["router"]

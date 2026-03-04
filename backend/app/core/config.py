@@ -310,6 +310,13 @@ class Settings(BaseSettings):
 
 
     # ------------------------------------------------------------------
+    # AI / Voice Layer
+    # ------------------------------------------------------------------
+    # Set to enable POST /v1/voice/realtime (OpenAI Realtime API bridge).
+    # Leave empty to disable voice gracefully (endpoint returns 503).
+    OPENAI_API_KEY: str = ""
+
+    # ------------------------------------------------------------------
 
     # ? API Key / Service Token Settings
 

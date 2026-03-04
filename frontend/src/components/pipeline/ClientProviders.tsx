@@ -25,12 +25,19 @@ import type { ReactNode } from "react";
 import { Provider } from "react-redux";
 import { usePathname } from "next/navigation";
 import { store } from "../../lib/store";
-import { AuthProvider } from "../../lib/authContext";
+import { AuthProvider, useAuth } from "../../lib/authContext";
 import { HedgeProvider } from "../../lib/hedgeContext";
 import AppTopBar from "../layout/AppTopBar";
 import SystemBar from "./SystemBar";
 import StaleSnapshotBanner from "./StaleSnapshotBanner";
 import SessionLoader from "./SessionLoader";
+import dynamic from "next/dynamic";
+
+// Dynamic import — voice terminal uses browser APIs (AudioContext, WebSocket)
+const VoiceTerminal = dynamic(() => import("../voice/VoiceTerminal"), { ssr: false });
+
+// Auth pages where the voice assistant should NOT appear
+const AUTH_PREFIXES = ["/auth", "/login", "/register"];
 
 // Routes that get the pipeline context strip (SystemBar only)
 const PIPELINE_PREFIXES = [
@@ -39,6 +46,14 @@ const PIPELINE_PREFIXES = [
   "/currency-fx",
   "/input",
 ];
+
+function VoiceShell() {
+  const { isAuthenticated, token } = useAuth();
+  const pathname = usePathname() ?? "";
+  const isAuthPage = AUTH_PREFIXES.some(p => pathname.startsWith(p));
+  if (!isAuthenticated || !token || isAuthPage) return null;
+  return <VoiceTerminal token={token} />;
+}
 
 function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
@@ -56,6 +71,7 @@ function Shell({ children }: { children: ReactNode }) {
         </>
       )}
       <main className="flex-1 min-h-0">{children}</main>
+      <VoiceShell />
     </div>
   );
 }

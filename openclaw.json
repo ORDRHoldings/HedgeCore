@@ -1,0 +1,106 @@
+{
+  "version": "1.0",
+  "workspace": "./openclaw-workspace",
+  "agents": {
+    "defaults": {
+      "model": "claude-sonnet-4-6",
+      "provider": "anthropic",
+      "temperature": 0.3
+    },
+    "treasury": {
+      "workspace": "./openclaw-workspace/workspaces/treasury",
+      "model": "claude-sonnet-4-6",
+      "skills": ["hedgecore-treasury", "hedgecore-market"],
+      "description": "FX Treasury Analyst — hedge calculation and policy selection"
+    },
+    "risk": {
+      "workspace": "./openclaw-workspace/workspaces/risk",
+      "model": "claude-sonnet-4-6",
+      "skills": ["hedgecore-risk", "hedgecore-market"],
+      "description": "Risk Officer — portfolio VaR, concentration limits, stress tests"
+    },
+    "compliance": {
+      "workspace": "./openclaw-workspace/workspaces/compliance",
+      "model": "claude-sonnet-4-6",
+      "skills": ["hedgecore-compliance"],
+      "description": "Compliance Officer — 4-eyes governance, audit trail, hash chain"
+    },
+    "market": {
+      "workspace": "./openclaw-workspace/workspaces/market",
+      "model": "claude-sonnet-4-6",
+      "skills": ["hedgecore-market"],
+      "description": "Market Data Monitor — live FX rates, spread analysis"
+    },
+    "execution": {
+      "workspace": "./openclaw-workspace/workspaces/execution",
+      "model": "claude-sonnet-4-6",
+      "skills": ["hedgecore-execution", "hedgecore-market"],
+      "description": "Execution Agent — CME order lifecycle, fill recording"
+    },
+    "reports": {
+      "workspace": "./openclaw-workspace/workspaces/reports",
+      "model": "claude-sonnet-4-6",
+      "skills": ["hedgecore-reports"],
+      "description": "Reporting Agent — portfolio summaries, board packs, IFRS 9"
+    },
+    "orchestrator": {
+      "workspace": "./openclaw-workspace/workspaces/orchestrator",
+      "model": "claude-sonnet-4-6",
+      "skills": [
+        "hedgecore-orchestrator",
+        "hedgecore-treasury",
+        "hedgecore-risk",
+        "hedgecore-compliance",
+        "hedgecore-market",
+        "hedgecore-execution",
+        "hedgecore-reports"
+      ],
+      "description": "Master orchestrator — full hedge lifecycle coordination"
+    }
+  },
+  "channels": {
+    "slack": {
+      "enabled": false,
+      "token": "${SLACK_BOT_TOKEN}",
+      "channels": {
+        "#fx-treasury": { "agent": "treasury" },
+        "#fx-risk": { "agent": "risk" },
+        "#fx-compliance": { "agent": "compliance" },
+        "#fx-execution": { "agent": "execution" },
+        "#fx-alerts": { "agent": "risk" }
+      }
+    },
+    "teams": {
+      "enabled": false,
+      "webhook_url": "${TEAMS_WEBHOOK_URL}"
+    },
+    "webchat": {
+      "enabled": true,
+      "port": 18789,
+      "default_agent": "orchestrator",
+      "title": "ORDR Terminal Assistant",
+      "theme": "light"
+    }
+  },
+  "backend": {
+    "hedgecore": {
+      "base_url": "http://hedgecore-backend:8000/api",
+      "auth_header": "Authorization",
+      "auth_scheme": "Bearer",
+      "timeout_seconds": 30
+    }
+  },
+  "voice": {
+    "enabled": true,
+    "provider": "openai-realtime",
+    "model": "gpt-4o-realtime-preview-2024-12-17",
+    "voice": "ash",
+    "websocket_endpoint": "/api/v1/voice/realtime",
+    "stt_model": "whisper-1",
+    "turn_detection": {
+      "type": "server_vad",
+      "threshold": 0.5,
+      "silence_duration_ms": 700
+    }
+  }
+}
