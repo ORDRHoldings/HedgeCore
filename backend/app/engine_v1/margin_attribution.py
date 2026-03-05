@@ -76,7 +76,7 @@ def compute_margin_attribution(
         except (ValueError, ImportError):
             pass
 
-    liq_by_bucket = {l.get("bucket"): l for l in liquidity_scores}
+    liq_by_bucket = {item.get("bucket"): item for item in liquidity_scores}
 
     total_initial = 0.0
     total_maintenance = 0.0

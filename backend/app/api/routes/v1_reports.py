@@ -408,7 +408,7 @@ async def _fetch_positions(session: AsyncSession, position_ids: list, company_id
         select(Position)
         .where(
             Position.company_id == company_id,
-            Position.id.in_([_p for _p in position_ids]),
+            Position.id.in_(list(position_ids)),
         )
         .order_by(Position.record_id)
     )

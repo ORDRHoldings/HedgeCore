@@ -121,7 +121,7 @@ def _stable_hash(obj: Any) -> str:
 
 def _is_finite(x: Any) -> bool:
     try:
-        return isinstance(x, (int, float)) and math.isfinite(float(x))
+        return isinstance(x, int | float) and math.isfinite(float(x))
     except Exception:
         return False
 

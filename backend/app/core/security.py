@@ -497,7 +497,7 @@ def _parse_api_key(raw: str) -> tuple[str, str]:
 
 
 
-async def verify_api_key(raw_api_key: str, db: AsyncSession) -> app.models.api_key.ApiKey:
+async def verify_api_key(raw_api_key: str, db: AsyncSession) -> Any:
 
     """
 

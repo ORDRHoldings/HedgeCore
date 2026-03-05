@@ -90,8 +90,8 @@ async def get_seed_status(
     # Count existing system templates
     result = await session.execute(
         select(func.count()).where(
-            PolicyTemplate.is_system == True,
-            PolicyTemplate.company_id == None,
+            PolicyTemplate.is_system,
+            PolicyTemplate.company_id is None,
         )
     )
     count = result.scalar_one() or 0
@@ -99,8 +99,8 @@ async def get_seed_status(
     # Find which short_names are missing
     existing_result = await session.execute(
         select(PolicyTemplate.short_name).where(
-            PolicyTemplate.is_system == True,
-            PolicyTemplate.company_id == None,
+            PolicyTemplate.is_system,
+            PolicyTemplate.company_id is None,
         )
     )
     existing_short_names = {row[0] for row in existing_result.all()}

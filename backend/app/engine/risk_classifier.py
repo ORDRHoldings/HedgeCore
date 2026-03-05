@@ -100,9 +100,9 @@ def _normalize_for_hash(x: Any) -> Any:
 
     if isinstance(x, Mapping):
         items = ((str(k), _normalize_for_hash(v)) for k, v in x.items())
-        return {k: v for k, v in sorted(items, key=lambda kv: kv[0])}
+        return dict(sorted(items, key=lambda kv: kv[0]))
 
-    if isinstance(x, (list, tuple)):
+    if isinstance(x, list | tuple):
         return [_normalize_for_hash(v) for v in x]
 
     if isinstance(x, set):

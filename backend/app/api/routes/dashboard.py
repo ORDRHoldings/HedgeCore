@@ -160,7 +160,7 @@ async def dashboard_summary(
             select(func.sum(Position.amount))
             .where(Position.company_id == user.company_id)
             .where(Position.execution_status.notin_(["HEDGED", "REJECTED"]))
-            .where(Position.is_active == True)
+            .where(Position.is_active)
         )
         if not has_all_branches and user.branch_id:
             exposure_q = exposure_q.where(Position.branch_id == user.branch_id)
@@ -171,13 +171,13 @@ async def dashboard_summary(
             select(func.count())
             .where(Position.company_id == user.company_id)
             .where(Position.execution_status == "HEDGED")
-            .where(Position.is_active == True)
+            .where(Position.is_active)
         )
         total_pos_q = (
             select(func.count())
             .where(Position.company_id == user.company_id)
             .where(Position.execution_status != "REJECTED")
-            .where(Position.is_active == True)
+            .where(Position.is_active)
         )
         hedged_count = (await db.execute(hedged_q)).scalar() or 0
         total_pos_count = (await db.execute(total_pos_q)).scalar() or 0
@@ -188,7 +188,7 @@ async def dashboard_summary(
             select(func.count())
             .select_from(User)
             .where(User.company_id == user.company_id)
-            .where(User.is_active == True)
+            .where(User.is_active)
         )
         if not has_all_branches and user.branch_id:
             team_q = team_q.where(User.branch_id == user.branch_id)
@@ -437,7 +437,7 @@ async def branch_comparison(
     permissions = await rbac_service.get_permissions_by_user(db, user.id)
     has_all = "reports.view_all_branches" in permissions or user.is_superuser
 
-    branch_q = select(Branch).where(Branch.company_id == user.company_id, Branch.is_active == True)
+    branch_q = select(Branch).where(Branch.company_id == user.company_id, Branch.is_active)
     if not has_all and user.branch_id:
         branch_q = branch_q.where(Branch.id == user.branch_id)
     branches = list((await db.execute(branch_q)).scalars().all())
@@ -450,7 +450,7 @@ async def branch_comparison(
             select(func.coalesce(func.sum(Position.amount), 0))
             .where(Position.company_id == user.company_id)
             .where(Position.branch_id == branch_id)
-            .where(Position.is_active == True)
+            .where(Position.is_active)
             .where(Position.execution_status.notin_(["HEDGED", "REJECTED"]))
         )
         total_exposure = float((await db.execute(exposure_q)).scalar() or 0)
@@ -460,7 +460,7 @@ async def branch_comparison(
             .where(Position.company_id == user.company_id)
             .where(Position.branch_id == branch_id)
             .where(Position.execution_status == "HEDGED")
-            .where(Position.is_active == True)
+            .where(Position.is_active)
         )
         hedged_amount = float((await db.execute(hedged_q)).scalar() or 0)
 

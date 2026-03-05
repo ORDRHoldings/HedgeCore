@@ -145,8 +145,6 @@ def compute_nav_attribution(
                     else:
                         # Priority 3: pair-specific daily vol proxy from registry
                         try:
-                            import math
-
                             from app.engine_v1.pair_registry import get_pair_meta
                             meta = get_pair_meta(pair_key)
                             # Daily vol ≈ annual vol proxy × 10 = conservative daily move

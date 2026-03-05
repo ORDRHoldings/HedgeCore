@@ -14,7 +14,7 @@ import json
 import logging
 import logging.handlers
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.config import settings
 
@@ -24,7 +24,7 @@ class _JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict = {
-            "ts": datetime.now(tz=timezone.utc).isoformat(),
+            "ts": datetime.now(tz=UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "msg": record.getMessage(),

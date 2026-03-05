@@ -256,7 +256,7 @@ async def _seed_policy_templates():
         for tmpl in _POLICY_PRESETS_SEED:
             existing = await session.execute(
                 select(PolicyTemplate).where(
-                    PolicyTemplate.is_system == True,
+                    PolicyTemplate.is_system,
                     PolicyTemplate.short_name == tmpl["short_name"],
                 )
             )

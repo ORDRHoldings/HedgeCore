@@ -614,7 +614,7 @@ def select_strategies(
 
         c1 = list(merged[sid].get("candidate_instrument_ids", []))
         c2 = list(s.get("candidate_instrument_ids", []))
-        cands = sorted(set([_as_str(x) for x in (c1 + c2) if _as_str(x)]))
+        cands = sorted({_as_str(x) for x in (c1 + c2) if _as_str(x)})
 
         merged[sid]["required_axes_any"] = axes
         merged[sid]["candidate_instrument_ids"] = cands[:max_cands]

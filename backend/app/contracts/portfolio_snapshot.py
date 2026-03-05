@@ -95,8 +95,8 @@ def _non_empty_str(v: Any, *, field_name: str) -> str:
 
 def _tuple_strs(v: Any) -> tuple[str, ...]:
     if v is None:
-        return tuple()
-    if not isinstance(v, (list, tuple)):
+        return ()
+    if not isinstance(v, list | tuple):
         raise ValueError("Expected list/tuple of strings")
     out: list[str] = []
     for item in v:

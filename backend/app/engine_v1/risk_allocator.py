@@ -231,7 +231,7 @@ def _build_candidates(
 
     margin_by_bucket = {m.get("bucket"): m for m in margin_positions}
 
-    liquidity_by_bucket = {l.get("bucket"): l for l in liquidity_estimates}
+    liquidity_by_bucket = {item.get("bucket"): item for item in liquidity_estimates}
 
 
 

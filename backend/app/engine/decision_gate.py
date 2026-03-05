@@ -51,7 +51,7 @@ def _now_ms() -> int:
 
 def _is_finite_number(x: Any) -> bool:
     try:
-        return isinstance(x, (int, float)) and math.isfinite(float(x))
+        return isinstance(x, int | float) and math.isfinite(float(x))
     except Exception:
         return False
 
@@ -348,9 +348,9 @@ def decision_gate(
 
     # minimal input object for trace seeding
     input_obj = {
-        "policy_keys": sorted(list(pol.keys())),
-        "plan_keys": sorted(list(plan.keys())) if isinstance(plan, Mapping) else [],
-        "payload_keys": sorted(list(payload.keys())) if isinstance(payload, Mapping) else [],
+        "policy_keys": sorted(pol.keys()),
+        "plan_keys": sorted(plan.keys()) if isinstance(plan, Mapping) else [],
+        "payload_keys": sorted(payload.keys()) if isinstance(payload, Mapping) else [],
     }
     trace = _build_trace_seed(policy=pol, input_obj=input_obj)
 

@@ -23,6 +23,10 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 from sqlalchemy import (
     Boolean,

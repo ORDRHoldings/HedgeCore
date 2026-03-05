@@ -106,8 +106,8 @@ def _mandate_allowed(inst: Any, mandate_allow: Sequence[str], mandate_prohibit: 
     inst_allow = set(inst.mandates.allow or ())
     inst_prohibit = set(inst.mandates.prohibit or ())
 
-    allow_set = set(_as_str(x) for x in mandate_allow if _as_str(x))
-    prohibit_set = set(_as_str(x) for x in mandate_prohibit if _as_str(x))
+    allow_set = {_as_str(x) for x in mandate_allow if _as_str(x)}
+    prohibit_set = {_as_str(x) for x in mandate_prohibit if _as_str(x)}
 
     if prohibit_set and (prohibit_set & (inst_allow | inst_prohibit)):
         return False
@@ -144,7 +144,7 @@ def _axes_allowed(inst: Any, required_axes_any: Sequence[str]) -> bool:
 
 def _rank_instruments(instances: Sequence[Any]) -> list[Any]:
     return sorted(
-        list(instances),
+        instances,
         key=lambda x: (-float(x.liquidity.liquidity_score), _as_str(x.instrument_id)),
     )
 

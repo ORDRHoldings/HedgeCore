@@ -68,7 +68,7 @@ async def list_positions(
         select(Position)
         .where(
             _scope_clause(user, all_branches),
-            Position.is_active == True,
+            Position.is_active,
         )
         .order_by(Position.created_at.desc())
     )
@@ -95,7 +95,7 @@ async def create_position(
         select(Position).where(
             Position.company_id == user.company_id,
             Position.record_id == data.record_id,
-            Position.is_active == True,
+            Position.is_active,
         )
     )
     if existing.scalars().first():
@@ -165,7 +165,7 @@ async def get_exposure_aggregation(
         )
         .where(
             _scope_clause(user, all_branches),
-            Position.is_active == True,
+            Position.is_active,
         )
         .group_by(Position.currency, Position.status)
     )

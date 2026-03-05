@@ -35,7 +35,7 @@ def _now_ms() -> int:
 
 def _is_finite_number(x: Any) -> bool:
     try:
-        return isinstance(x, (int, float)) and math.isfinite(float(x))
+        return isinstance(x, int | float) and math.isfinite(float(x))
     except Exception:
         return False
 
@@ -231,14 +231,14 @@ def compute_costs(payload: Mapping[str, Any], *, policy: Mapping[str, Any] | Non
 
     input_obj = {
         "sized_hedges": sized_hedges,
-        "instrument_meta_keys": sorted(list(instrument_meta.keys())),
-        "market_keys": {"prices": sorted(list(prices.keys()))},
+        "instrument_meta_keys": sorted(instrument_meta.keys()),
+        "market_keys": {"prices": sorted(prices.keys())},
         "assumption_keys": {
-            "spreads_bps": sorted(list(spreads_bps.keys())),
-            "fees_per_contract": sorted(list(fees_per_contract.keys())),
-            "margin_rate": sorted(list(margin_rate.keys())),
-            "funding_rate_annual": sorted(list(funding_rate_annual.keys())),
-            "option_premium_per_contract": sorted(list(option_premium_per_contract.keys())),
+            "spreads_bps": sorted(spreads_bps.keys()),
+            "fees_per_contract": sorted(fees_per_contract.keys()),
+            "margin_rate": sorted(margin_rate.keys()),
+            "funding_rate_annual": sorted(funding_rate_annual.keys()),
+            "option_premium_per_contract": sorted(option_premium_per_contract.keys()),
             "holding_period_days": holding_period_days,
         },
     }

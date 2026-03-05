@@ -38,7 +38,7 @@ def _clamp_int(value: int, lo: int, hi: int) -> int:
 
 def _is_finite_number(x: Any) -> bool:
     try:
-        return isinstance(x, (int, float)) and math.isfinite(float(x))
+        return isinstance(x, int | float) and math.isfinite(float(x))
     except Exception:
         return False
 
@@ -286,9 +286,9 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Mapping[str, Any] | None 
         # include full spec fingerprint to ensure margin param changes are trace-visible
         "instrument_specs_fingerprint": _stable_hash(instrument_specs_in),
         "market_keys": {
-            "prices": sorted(list(prices.keys())),
-            "option_deltas": sorted(list(option_deltas.keys())),
-            "sensitivities": sorted(list(sensitivities.keys())),
+            "prices": sorted(prices.keys()),
+            "option_deltas": sorted(option_deltas.keys()),
+            "sensitivities": sorted(sensitivities.keys()),
         },
     }
 

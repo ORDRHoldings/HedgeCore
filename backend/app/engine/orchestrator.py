@@ -108,7 +108,7 @@ def run_engine(envelope: Mapping[str, Any]) -> dict[str, Any]:
         "policy_hash": policy_hash,
         "input_fingerprint": _stable_hash(
             {
-                "payload_keys": sorted(list(payload.keys())),
+                "payload_keys": sorted(payload.keys()),
                 "has_market_snapshot": market_snapshot is not None,
                 "has_policy_bundle": policy_bundle is not None,
             }

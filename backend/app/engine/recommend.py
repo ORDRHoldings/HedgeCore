@@ -233,10 +233,10 @@ def _summarize_results(*, costs: Mapping[str, Any], scenarios: Mapping[str, Any]
             eff = net.get("hedge_effectiveness")
 
             # IMPORTANT: bool is a subclass of int -> exclude it explicitly
-            if isinstance(eff, (int, float)) and not isinstance(eff, bool):
+            if isinstance(eff, int | float) and not isinstance(eff, bool):
                 eff_values.append(float(eff))
 
-            if isinstance(pnl, (int, float)) and not isinstance(pnl, bool):
+            if isinstance(pnl, int | float) and not isinstance(pnl, bool):
                 fp = float(pnl)
                 if worst_net_pnl is None or fp < worst_net_pnl:
                     worst_net_pnl = fp
@@ -364,8 +364,8 @@ def recommend(payload: Mapping[str, Any], *, policy: Mapping[str, Any] | None = 
     # --- Trace seed (minimal, deterministic input descriptor) ---
     try:
         input_obj = {
-            "keys": sorted(list(payload.keys())),
-            "market_keys": sorted(list((payload.get("market", {}) or {}).keys()))
+            "keys": sorted(payload.keys()),
+            "market_keys": sorted((payload.get("market", {}) or {}).keys())
             if isinstance(payload.get("market", {}), Mapping)
             else [],
             "has_positions": bool(("positions" in payload) or ("exposure_input" in payload)),

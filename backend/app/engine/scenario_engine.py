@@ -83,7 +83,7 @@ def _is_finite_number(x: Any) -> bool:
 
     try:
 
-        return isinstance(x, (int, float)) and math.isfinite(float(x))
+        return isinstance(x, int | float) and math.isfinite(float(x))
 
     except Exception:
 

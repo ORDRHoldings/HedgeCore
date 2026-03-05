@@ -70,7 +70,7 @@ async def list_templates(
 
     q = select(PolicyTemplate).where(
 
-        (PolicyTemplate.company_id == None) |        # system templates
+        (PolicyTemplate.company_id is None) |        # system templates
 
         (PolicyTemplate.company_id == user.company_id)  # company templates
 
@@ -136,29 +136,29 @@ async def create_template(
 
     """Create a company-specific policy template."""
 
-    kwargs: dict = dict(
+    kwargs: dict = {
 
-        company_id=user.company_id,
+        "company_id": user.company_id,
 
-        name=name,
+        "name": name,
 
-        short_name=short_name,
+        "short_name": short_name,
 
-        description=description,
+        "description": description,
 
-        risk_posture=risk_posture,
+        "risk_posture": risk_posture,
 
-        category=category,
+        "category": category,
 
-        config=config,
+        "config": config,
 
-        version=1,
+        "version": 1,
 
-        is_system=False,
+        "is_system": False,
 
-        created_by=user.id,
+        "created_by": user.id,
 
-    )
+    }
 
     if status is not None:
 
@@ -214,7 +214,7 @@ async def get_active_instance(
 
         PolicyInstance.branch_id == user.branch_id,
 
-        PolicyInstance.is_active == True,
+        PolicyInstance.is_active,
 
     ).order_by(PolicyInstance.activated_at.desc()).limit(1)
 

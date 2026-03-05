@@ -354,7 +354,7 @@ def build_waterfall(
 
         for rule_id, weight in weight_overrides.items():
 
-            if rule_id in effective_weights and isinstance(weight, (int, float)) and 0 <= weight <= 100:
+            if rule_id in effective_weights and isinstance(weight, int | float) and 0 <= weight <= 100:
 
                 effective_weights[rule_id] = int(weight)
 
