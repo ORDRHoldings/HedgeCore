@@ -202,6 +202,10 @@ class Settings(BaseSettings):
 
         "https://ordr-terminal.vercel.app",
 
+        "https://ordr-terminal-v2.vercel.app",
+
+        "http://localhost:3001",
+
     ]
 
     CORS_ALLOW_CREDENTIALS: bool = True
