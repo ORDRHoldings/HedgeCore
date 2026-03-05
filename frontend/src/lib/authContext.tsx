@@ -5,15 +5,12 @@
  *
  * Authentication context for HedgeCalc / ORDR Terminal.
  *
- * JWT auth — POST /auth/login → JWT tokens, GET /auth/me → user context.
- * Supports silent token refresh (25-min schedule for 30-min tokens).
+ * Token storage strategy (XSS-hardened):
+ *   access_token  — in-memory React state only (cleared on tab close)
+ *   refresh_token — httpOnly cookie set by backend (JS cannot read)
  *
- * Usage:
- *   <AuthProvider>
- *     <App />
- *   </AuthProvider>
- *
- *   const { user, isAuthenticated, login, logout, hasPermission } = useAuth();
+ * Refresh flow: POST /auth/refresh with credentials:'include'
+ * (browser sends rt httpOnly cookie automatically — no token in JS body)
  */
 
 import {
@@ -25,30 +22,9 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import Cookies from "js-cookie";
 import { store } from "./store";
 import { setAuthState } from "./store/slices/authSlice";
 import { API_BASE } from "@/lib/api/apiBase";
-
-const ACCESS_TOKEN_KEY = "access_token";
-const REFRESH_TOKEN_KEY = "refresh_token";
-
-// ── Token expiry helpers ───────────────────────────────────────────────────────
-function _parseJwtExp(token: string): number | null {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return typeof payload.exp === "number" ? payload.exp : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Returns true if the token is expired or will expire within the next 60 seconds. */
-function _isTokenExpired(token: string): boolean {
-  const exp = _parseJwtExp(token);
-  if (exp === null) return true;
-  return Date.now() / 1000 >= exp - 60;
-}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type PlanTier = "lite" | "smb" | "professional" | "enterprise";
@@ -96,10 +72,8 @@ const AuthContext = createContext<AuthContextType>({
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return Cookies.get(ACCESS_TOKEN_KEY) ?? null;
-  });
+  // access_token lives only in memory — never persisted to JS-readable storage
+  const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<UserContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -118,7 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.ok) return null;
       const data = await res.json();
       // Ensure plan_tier always has a default — use most restrictive tier
-      // so feature gating is backend-driven, not client-assumed
       if (!data.plan_tier) data.plan_tier = "lite";
       return data;
     } catch {
@@ -127,25 +100,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Refresh token flow (deduplicated) ──
+  // refresh_token is in httpOnly cookie — browser sends it automatically via credentials:'include'
   const refreshTokens = useCallback(async (): Promise<string | null> => {
     // Return in-flight promise if one already exists (prevents race conditions)
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
-
-    const refreshToken = Cookies.get(REFRESH_TOKEN_KEY);
-    if (!refreshToken) return null;
 
     const promise = (async (): Promise<string | null> => {
       try {
         const res = await fetch(`${API_BASE}/auth/refresh`, {
           method: "POST",
+          credentials: "include",   // sends httpOnly rt cookie
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken }),
+          body: JSON.stringify({}), // no refresh_token in body (cookie-first)
         });
         if (!res.ok) return null;
 
         const data = await res.json();
-        Cookies.set(ACCESS_TOKEN_KEY, data.access_token, { sameSite: "Strict" });
-        Cookies.set(REFRESH_TOKEN_KEY, data.refresh_token, { sameSite: "Strict" });
         return data.access_token as string;
       } catch {
         return null;
@@ -161,12 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Schedule silent refresh (5 minutes before 30-min expiry) ──
   const scheduleRefresh = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    // Refresh 5 minutes before expiry (25 min)
     refreshTimerRef.current = setTimeout(async () => {
       const newToken = await refreshTokens();
       if (newToken) {
         setToken(newToken);
-        // Re-fetch user context after token refresh to keep Redux mirror fresh
         const me = await fetchMe(newToken);
         if (me) setUser(me);
         store.dispatch(setAuthState({ token: newToken, user: me ?? null }));
@@ -176,35 +144,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshTokens, fetchMe]);
 
   // ── Initialize session on mount ──
+  // Since access_token is in-memory only, attempt a silent refresh on mount.
+  // The backend will use the httpOnly rt cookie if present.
   useEffect(() => {
     const init = async () => {
-      // Try stored access token — check expiry locally before making a round-trip
-      const storedToken = Cookies.get(ACCESS_TOKEN_KEY);
-      if (storedToken && !_isTokenExpired(storedToken)) {
-        const me = await fetchMe(storedToken);
+      const newToken = await refreshTokens();
+      if (newToken) {
+        const me = await fetchMe(newToken);
         if (me) {
-          setToken(storedToken);
+          setToken(newToken);
           setUser(me);
-          store.dispatch(setAuthState({ token: storedToken, user: me }));
+          store.dispatch(setAuthState({ token: newToken, user: me }));
           scheduleRefresh();
           setIsLoading(false);
           return;
-        }
-      }
-
-      // Access token missing or expired — try refresh
-      if (storedToken || Cookies.get(REFRESH_TOKEN_KEY)) {
-        const newToken = await refreshTokens();
-        if (newToken) {
-          const me2 = await fetchMe(newToken);
-          if (me2) {
-            setToken(newToken);
-            setUser(me2);
-            store.dispatch(setAuthState({ token: newToken, user: me2 }));
-            scheduleRefresh();
-            setIsLoading(false);
-            return;
-          }
         }
       }
 
@@ -229,7 +182,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       username: string,
       password: string,
     ): Promise<{ success: boolean; error?: string }> => {
-      // Real JWT login (username field is treated as email by backend OAuth2 form)
       try {
         const formData = new URLSearchParams();
         formData.append("username", username);
@@ -243,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           res = await fetch(`${API_BASE}/auth/login`, {
             method: "POST",
+            credentials: "include",  // receive httpOnly rt cookie from response
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: formData.toString(),
             signal: controller.signal,
@@ -260,11 +213,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const data = await res.json();
-        Cookies.set(ACCESS_TOKEN_KEY, data.access_token, { sameSite: "Strict" });
-        Cookies.set(REFRESH_TOKEN_KEY, data.refresh_token, { sameSite: "Strict" });
+        // access_token stored in memory only — not in any JS-readable cookie
         setToken(data.access_token);
 
-        // Fetch user context
         const me = await fetchMe(data.access_token);
         if (me) {
           setUser(me);
@@ -289,22 +240,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Logout ──
   const logout = useCallback(() => {
-    // Fire-and-forget backend logout
-    const accessToken = Cookies.get(ACCESS_TOKEN_KEY);
-    if (accessToken) {
+    if (token) {
       fetch(`${API_BASE}/auth/logout`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
+        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` },
       }).catch(() => {});
     }
 
-    Cookies.remove(ACCESS_TOKEN_KEY);
-    Cookies.remove(REFRESH_TOKEN_KEY);
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     setToken(null);
     setUser(null);
     store.dispatch(setAuthState({ token: null, user: null }));
-  }, []);
+  }, [token]);
 
   // ── Permission helpers ──
   const hasPermission = useCallback(

@@ -36,10 +36,14 @@ class LoginRequest(BaseModel):
 
 
 class TokenRefreshRequest(BaseModel):
-    """Schema for token refresh requests."""
-    refresh_token: constr(min_length=1) = Field(
-        ...,
-        description="Valid (unrevoked) refresh token string.",
+    """Schema for token refresh requests.
+
+    refresh_token may be omitted when the client sends credentials via
+    the httpOnly ``rt`` cookie (preferred — XSS-safe flow).
+    """
+    refresh_token: str | None = Field(
+        default=None,
+        description="Valid (unrevoked) refresh token string. Omit to use httpOnly cookie.",
     )
 
 

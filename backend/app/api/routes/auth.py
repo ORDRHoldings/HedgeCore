@@ -401,6 +401,16 @@ async def login(
             path="/",
             max_age=7 * 24 * 60 * 60,  # 7 days — matches refresh token lifetime
         )
+        # httpOnly refresh-token cookie (XSS-safe — JS cannot read this)
+        response.set_cookie(
+            key="rt",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="strict",
+            path="/api/v1/auth/refresh",
+            max_age=7 * 24 * 60 * 60,
+        )
         return response
 
 
@@ -427,17 +437,20 @@ async def login(
 
 @router.post("/refresh", response_model=TokenPair)
 
-async def refresh_tokens(request: Request, body: TokenRefreshRequest, db: AsyncSession = Depends(get_session)) -> TokenPair:
+async def refresh_tokens(request: Request, body: TokenRefreshRequest, db: AsyncSession = Depends(get_session)) -> JSONResponse:
 
     ip = request.client.host if request.client else None
 
     ua = request.headers.get("user-agent")
 
-
+    # Cookie-first: prefer httpOnly rt cookie (XSS-safe); fall back to body for legacy clients
+    raw_refresh = request.cookies.get("rt") or (body.refresh_token if body.refresh_token else None)
+    if not raw_refresh:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token provided")
 
     try:
 
-        payload = decode_token(body.refresh_token, expected_type="refresh")
+        payload = decode_token(raw_refresh, expected_type="refresh")
 
         jti, sub = payload.get("jti"), payload.get("sub")
 
@@ -463,7 +476,19 @@ async def refresh_tokens(request: Request, body: TokenRefreshRequest, db: AsyncS
 
         await rt_crud.create(db, jti=new_jti, user_id=user_id, expires_at=new_exp, ip=ip, user_agent=ua)
 
-        return TokenPair(access_token=access_token, refresh_token=new_refresh, token_type="bearer")
+        token_pair = TokenPair(access_token=access_token, refresh_token=new_refresh, token_type="bearer")
+        response = JSONResponse(content=token_pair.model_dump())
+        # Re-issue httpOnly rt cookie on each rotation
+        response.set_cookie(
+            key="rt",
+            value=new_refresh,
+            httponly=True,
+            secure=True,
+            samesite="strict",
+            path="/api/v1/auth/refresh",
+            max_age=7 * 24 * 60 * 60,
+        )
+        return response
 
 
 
