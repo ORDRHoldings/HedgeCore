@@ -4,7 +4,7 @@
  * Audit Lab — upload CSV + configure period + run analysis.
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -58,6 +58,14 @@ function Input({ value, onChange, type = "text", placeholder }: {
 type Phase = "upload" | "run" | "done";
 
 export default function AuditLabUploadPage() {
+  return (
+    <Suspense>
+      <AuditLabUploadPageInner />
+    </Suspense>
+  );
+}
+
+function AuditLabUploadPageInner() {
   const { token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
