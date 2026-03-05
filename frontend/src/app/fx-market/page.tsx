@@ -74,7 +74,7 @@ interface FinnhubQuote {
 
 type QuoteMap = Record<string, FinnhubQuote | null>;
 
-const FINNHUB_KEY = process.env.NEXT_PUBLIC_FINNHUB_API_KEY ?? "";
+// Finnhub calls are proxied through /api/market/finnhub — key stays server-side
 
 // ---------------------------------------------------------------------------
 // Utility helpers
@@ -125,15 +125,9 @@ function useUtcClock(): string {
 // Data fetching
 // ---------------------------------------------------------------------------
 async function fetchAllQuotes(): Promise<QuoteMap> {
-  if (!FINNHUB_KEY) {
-    const empty: QuoteMap = {};
-    MAJOR_PAIRS.forEach((p) => { empty[p.finnhub] = null; });
-    return empty;
-  }
-
   const results = await Promise.allSettled(
     MAJOR_PAIRS.map(async (pair) => {
-      const url = `https://finnhub.io/api/v1/quote?symbol=${pair.finnhub}&token=${FINNHUB_KEY}`;
+      const url = `/api/market/finnhub?symbol=${encodeURIComponent(pair.finnhub)}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as FinnhubQuote;
@@ -353,7 +347,7 @@ export default function FxMarketPage() {
     changeColor = abs >= 0 ? S.green : S.red;
   }
 
-  const hasKey         = Boolean(FINNHUB_KEY);
+  const hasKey         = true; // Key is server-side via /api/market/finnhub proxy
   const lastFetchLabel = lastFetch
     ? lastFetch.toUTCString().slice(17, 25) + " UTC"
     : null;

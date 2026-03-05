@@ -26,6 +26,7 @@ import jwt
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.db import get_session
 from app.core.security import decode_token
@@ -59,7 +60,15 @@ async def _load_active_user(db: AsyncSession, user_id: UUID) -> User:
     Raises:
         HTTPException(401): if user is missing or inactive.
     """
-    res = await db.execute(select(User).where(User.id == user_id))
+    res = await db.execute(
+        select(User)
+        .where(User.id == user_id)
+        .options(
+            selectinload(User.company),
+            selectinload(User.branch),
+            selectinload(User.department),
+        )
+    )
     user = res.scalars().first()
     if not user or not user.is_active:
         raise HTTPException(

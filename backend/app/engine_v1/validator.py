@@ -345,11 +345,18 @@ def _validate_market(
                     )
                 )
 
-    # V-022: market data quality gate — warn if rates are indicative/fallback.
-    # The engine accepts INDICATIVE_FALLBACK for sandbox/demo workflows but flags
-    # it so production governance pipelines can block or escalate.
+    # V-022: market data quality gate — hard kill switch in production.
+    import os as _os
     data_class: str | None = (market.provider_metadata or {}).get("data_class")
     if data_class == "INDICATIVE_FALLBACK":
+        _env = _os.getenv("ENV", "development").lower()
+        _allow_override = _os.getenv("ALLOW_INDICATIVE_FALLBACK", "").lower() in ("1", "true", "yes")
+        if _env == "production" and not _allow_override:
+            raise RuntimeError(
+                "FATAL: Indicative fallback data detected in production environment. "
+                "Hedge calculations require live market data. "
+                "Set ALLOW_INDICATIVE_FALLBACK=true to override (NOT RECOMMENDED)."
+            )
         errors.append(
             ValidationErrorDetail(
                 code="V-022",

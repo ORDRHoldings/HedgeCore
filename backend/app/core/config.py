@@ -410,9 +410,21 @@ class Settings(BaseSettings):
 
     def validate_secret(cls, v: str) -> str:
 
-        if len(v) < 16:
+        if len(v) < 32:
 
-            raise ValueError("JWT_SECRET must be at least 16 characters long.")
+            raise ValueError("JWT_SECRET must be at least 32 characters long.")
+
+        env = os.getenv("ENV", "development").lower()
+
+        if env == "production" and (v.startswith("dev_") or "hedgecalc" in v.lower()):
+
+            raise ValueError(
+
+                "Production JWT_SECRET must not be a development default. "
+
+                "Generate with: python3 -c \"import secrets; print(secrets.token_urlsafe(64))\""
+
+            )
 
         return v
 

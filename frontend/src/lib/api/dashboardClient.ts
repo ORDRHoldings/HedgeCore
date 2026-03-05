@@ -15,8 +15,16 @@
  *   3. "/api"  (local dev — next.config.js rewrite handles proxying)
  */
 
+import Cookies from "js-cookie";
 import { API_BASE } from "@/lib/api/apiBase";
 export { API_BASE };
+
+/** Read CSRF token from double-submit cookie (set by /auth/login). */
+function getCsrfToken(): string {
+  return Cookies.get("csrf_token") ?? "";
+}
+
+const CSRF_SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
 
 /**
  * Authenticated fetch for dashboard endpoints.
@@ -36,12 +44,19 @@ export async function dashboardFetch(
   token: string,
   options?: RequestInit,
 ): Promise<Response> {
+  const method = (options?.method ?? "GET").toUpperCase();
+  const csrfHeaders: Record<string, string> = {};
+  if (!CSRF_SAFE_METHODS.has(method)) {
+    csrfHeaders["X-CSRF-Token"] = getCsrfToken();
+  }
+
   const url = `${API_BASE}${path}`;
   return fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
+      ...csrfHeaders,
       ...(options?.headers ?? {}),
     },
   });

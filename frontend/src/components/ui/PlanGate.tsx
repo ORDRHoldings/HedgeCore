@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { useAuth, type PlanTier } from "@/lib/authContext";
 
 const TIER_RANK: Record<PlanTier, number> = {
+  lite: -1,
   smb: 0,
   professional: 1,
   enterprise: 2,

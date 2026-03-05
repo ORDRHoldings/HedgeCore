@@ -51,7 +51,7 @@ function _isTokenExpired(token: string): boolean {
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-export type PlanTier = "smb" | "professional" | "enterprise";
+export type PlanTier = "lite" | "smb" | "professional" | "enterprise";
 
 export interface UserContext {
   id: string;
@@ -117,8 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (!res.ok) return null;
       const data = await res.json();
-      // Ensure plan_tier always has a default
-      if (!data.plan_tier) data.plan_tier = "enterprise";
+      // Ensure plan_tier always has a default — use most restrictive tier
+      // so feature gating is backend-driven, not client-assumed
+      if (!data.plan_tier) data.plan_tier = "lite";
       return data;
     } catch {
       return null;

@@ -33,6 +33,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 
+from fastapi.responses import JSONResponse
+
 from app.core.security import (
 
     hash_password,
@@ -48,6 +50,8 @@ from app.core.security import (
     get_session_duration_for_roles,
 
 )
+
+from app.middleware.csrf import generate_csrf_token
 
 from app.crud import refresh_token as rt_crud
 
@@ -417,7 +421,20 @@ async def login(
             except Exception:
                 logger.warning("Failed to emit high-privilege login audit event", exc_info=True)
 
-        return TokenPair(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
+        token_pair = TokenPair(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
+        # Set CSRF double-submit cookie on successful login
+        csrf_token = generate_csrf_token()
+        response = JSONResponse(content=token_pair.model_dump())
+        response.set_cookie(
+            key="csrf_token",
+            value=csrf_token,
+            httponly=False,   # Must be readable by JS to send as X-CSRF-Token header
+            secure=True,
+            samesite="strict",
+            path="/",
+            max_age=7 * 24 * 60 * 60,  # 7 days — matches refresh token lifetime
+        )
+        return response
 
 
 

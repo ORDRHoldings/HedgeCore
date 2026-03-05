@@ -60,7 +60,7 @@ from app.middleware.rate_limit import RateLimitMiddleware
 
 from app.middleware.api_key_auth import APIKeyAuthMiddleware
 
-# from app.middleware.csrf import CSRFMiddleware  # SEC-06: disabled until fully wired
+from app.middleware.csrf import CSRFMiddleware  # SEC-06: now enabled
 
 
 
@@ -1423,10 +1423,7 @@ app.add_middleware(
 
 app.add_middleware(APIKeyAuthMiddleware)
 
-# SEC-06: CSRF double-submit cookie protection — DISABLED until token-issuing
-# and frontend X-CSRF-Token header injection are fully wired.
-# JWT Bearer + SameSite=Strict cookies provide primary CSRF defence.
-# app.add_middleware(CSRFMiddleware)
+app.add_middleware(CSRFMiddleware)  # SEC-06: double-submit cookie CSRF protection
 
 
 # CORS outermost -- added last so it runs first (intercepts OPTIONS preflight)
