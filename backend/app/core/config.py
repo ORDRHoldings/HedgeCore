@@ -123,7 +123,7 @@ class Settings(BaseSettings):
 
     # ------------------------------------------------------------------
 
-    APP_NAME: str = "HedgeCalc API"
+    APP_NAME: str = "ORDR Terminal API"
 
     ENV: str = os.getenv("ENV", "dev").strip().lower()
 

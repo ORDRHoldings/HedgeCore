@@ -1540,7 +1540,7 @@ def custom_openapi() -> dict[str, Any]:
 
         version="1.0.0",
 
-        description="SynexFund HedgeCalc API",
+        description="ORDR Terminal API",
 
         routes=app.routes,
 

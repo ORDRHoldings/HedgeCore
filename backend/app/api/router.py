@@ -46,14 +46,14 @@ router = APIRouter()
 def swagger_docs():
     return get_swagger_ui_html(
         openapi_url="/api/openapi.json",
-        title="HedgeCalc API - Swagger UI",
+        title="ORDR Terminal API - Swagger UI",
     )
 
 @router.get("/redoc", include_in_schema=False)
 def redoc_docs():
     return get_redoc_html(
         openapi_url="/api/openapi.json",
-        title="HedgeCalc API - ReDoc",
+        title="ORDR Terminal API - ReDoc",
     )
 
 # ---------------------------------------------------------------------
