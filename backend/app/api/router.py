@@ -174,4 +174,9 @@ from app.api.routes.v1_decision_desk import router as v1_decision_desk_router
 
 router.include_router(v1_decision_desk_router)
 
+# Passwordless auth — email OTP for Free-tier users (owns /auth/passwordless)
+from app.api.routes.auth_passwordless import router as auth_passwordless_router
+
+router.include_router(auth_passwordless_router)
+
 __all__ = ["router"]
