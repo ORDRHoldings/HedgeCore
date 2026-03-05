@@ -358,6 +358,14 @@ SEED_PERMISSIONS: list[tuple[str, str, str, str]] = [
 
     ("system.schema.read", "system", "schema.read", "Read full schema readiness diagnostics via /system/schema-health"),
 
+    # Audit Lab
+    ("audit.upload", "audit", "upload", "Upload FX transaction dataset for Audit Lab analysis"),
+    ("audit.run", "audit", "run", "Execute Audit Lab analysis run on uploaded dataset"),
+
+    # Decision Desk
+    ("decisions.run", "decisions", "run", "Create Decision Desk run (generate hedge proposals)"),
+    ("decisions.view", "decisions", "view", "View Decision Desk runs and proposals"),
+
 ]
 
 
@@ -394,6 +402,9 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "users.view",
 
         "audit.view_own", "audit.view_branch",
+        "audit.upload", "audit.run",
+
+        "decisions.run", "decisions.view",
 
         "overrides.override_subordinate",
 

@@ -78,6 +78,16 @@ const Ic: Record<string, React.ReactNode> = {
       <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2.5"/>
     </svg>
   ),
+  microscope: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/>
+    </svg>
+  ),
+  target: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+    </svg>
+  ),
   // Sub-item icons
   pen: (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -289,6 +299,23 @@ const NAV: NavSection[] = [
       { label: "Saved Reports",        desc: "Your saved, versioned, and scheduled reports",                    href: "/reports?view=saved",     icon: Ic.shield,     badge: "SAVED",   badgeColor: S.cyan  },
       { label: "Run Results",           desc: "Full hedge schedule with rationale — results view",               href: "/results",                icon: Ic.bar_chart },
       { label: "Committee Pack",       desc: "Print-ready IFRS 9 §B6.4 hedge effectiveness pack — PDF export", href: "/committee-pack",         icon: Ic.download,   badge: "PDF",     badgeColor: S.amber },
+    ],
+  },
+  {
+    label: "Audit Lab", href: "/audit-lab", icon: Ic.microscope,
+    prefixes: ["/audit-lab"],
+    header: "05 · AUDIT LAB",
+    items: [
+      { label: "Audit Lab",          desc: "Upload historic FX transactions — quantify markup, fees, unhedged variance", href: "/audit-lab",        icon: Ic.microscope, badge: "NEW", badgeColor: S.cyan },
+      { label: "Upload Dataset",     desc: "CSV upload with period selector and parse preview",                         href: "/audit-lab/upload", icon: Ic.upload },
+    ],
+  },
+  {
+    label: "Decision Desk", href: "/decision-desk", icon: Ic.target,
+    prefixes: ["/decision-desk"],
+    header: "06 · DECISION DESK",
+    items: [
+      { label: "Decision Desk",      desc: "Select exposures + policy → ranked hedge actions + IBKR packets", href: "/decision-desk",        icon: Ic.target,   badge: "NEW", badgeColor: S.amber },
     ],
   },
   {
