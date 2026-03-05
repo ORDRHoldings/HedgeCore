@@ -589,6 +589,47 @@ async def create_audit_run(
     }
 
 
+# ── Endpoint: List runs ────────────────────────────────────────────────────────
+
+@router.get("/runs")
+async def list_audit_runs(
+    limit: int = Query(50, ge=1, le=200),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+) -> list[dict]:
+    company_id = str(current_user.company_id)
+
+    rows = await session.execute(
+        text(
+            "SELECT r.id, r.dataset_id, r.methodology_version, "
+            "r.run_hash, r.inputs_hash, r.outputs_hash, r.status, r.created_at, "
+            "rp.report_json "
+            "FROM audit_runs r "
+            "LEFT JOIN audit_reports rp ON rp.run_id = r.id "
+            "WHERE r.company_id = :cid "
+            "ORDER BY r.created_at DESC "
+            "LIMIT :lim"
+        ),
+        {"cid": company_id, "lim": limit},
+    )
+    result = []
+    for row in rows.fetchall():
+        report = row.report_json if isinstance(row.report_json, dict) else {}
+        summary = report.get("summary", {})
+        result.append({
+            "run_id": str(row.id),
+            "dataset_id": str(row.dataset_id),
+            "methodology_version": row.methodology_version,
+            "run_hash": row.run_hash,
+            "inputs_hash": row.inputs_hash,
+            "outputs_hash": row.outputs_hash,
+            "status": row.status,
+            "markup_total_usd": float(summary.get("total_markup_usd", 0.0)),
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        })
+    return result
+
+
 # ── Endpoint: Get run ──────────────────────────────────────────────────────────
 
 @router.get("/runs/{run_id}")

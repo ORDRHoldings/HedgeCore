@@ -63,6 +63,7 @@ async def list_positions(
     status: str | None = None,
     currency: str | None = None,
     flow_type: str | None = None,
+    execution_status: str | None = None,
 ) -> list[Position]:
     q = (
         select(Position)
@@ -74,6 +75,8 @@ async def list_positions(
     )
     if status:
         q = q.where(Position.status == status.upper())
+    if execution_status:
+        q = q.where(Position.execution_status == execution_status.upper())
     if currency:
         q = q.where(Position.currency == currency.upper())
     if flow_type:

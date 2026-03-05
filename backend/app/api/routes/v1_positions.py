@@ -290,11 +290,17 @@ async def import_positions_csv(
 
 async def list_positions(
 
-    status:    str | None = Query(default=None, description="CONFIRMED or FORECAST"),
+    status:           str | None = Query(default=None, description="CONFIRMED or FORECAST"),
 
-    currency:  str | None = Query(default=None, description="ISO 4217 code"),
+    execution_status: str | None = Query(default=None, description="NEW, POLICY_ASSIGNED, READY_TO_EXECUTE, HEDGED, REJECTED"),
 
-    flow_type: str | None = Query(default=None, description="AR or AP"),
+    currency:         str | None = Query(default=None, description="ISO 4217 code"),
+
+    flow_type:        str | None = Query(default=None, description="AR or AP"),
+
+    page:             int        = Query(default=1, ge=1),
+
+    size:             int        = Query(default=100, ge=1, le=500),
 
     session:   AsyncSession  = Depends(get_async_session),
 
@@ -308,11 +314,12 @@ async def list_positions(
 
     items = await position_service.list_positions(
 
-        session, current_user, all_branches, status, currency, flow_type
+        session, current_user, all_branches, status, currency, flow_type,
+        execution_status=execution_status,
 
     )
 
-    return {"items": items, "total": len(items)}
+    return {"items": items, "total": len(items), "page": page, "size": size, "pages": max(1, -(-len(items) // size))}
 
 
 

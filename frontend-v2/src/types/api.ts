@@ -50,9 +50,14 @@ export interface Position {
   flow_type: "AR" | "AP";
   value_date: string | null;
   description: string | null;
-  status: PositionStatus;
+  /** Data type: CONFIRMED | FORECAST */
+  status: string;
+  /** Lifecycle state: NEW | POLICY_ASSIGNED | READY_TO_EXECUTE | HEDGED | REJECTED */
+  execution_status: PositionStatus;
   policy_instance_id: string | null;
+  last_run_id: string | null;
   hedge_amount: number | null;
+  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
 }

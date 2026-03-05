@@ -318,7 +318,7 @@ function HedgePlanContent() {
   const positionsQ = useQuery<PaginatedResponse<Position>>({
     queryKey: ["positions-ready"],
     queryFn: () =>
-      api.get<PaginatedResponse<Position>>("/v1/positions?status=READY_TO_EXECUTE&size=100"),
+      api.get<PaginatedResponse<Position>>("/v1/positions?execution_status=READY_TO_EXECUTE&size=100"),
   });
 
   const pastRunsQ = useQuery<DecisionRunList[]>({

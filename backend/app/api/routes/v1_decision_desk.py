@@ -434,15 +434,20 @@ async def list_decision_runs(
     limit: int = Query(default=50, ge=1, le=200),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-) -> dict:
+) -> list[dict]:
     await _require(session, current_user, "decisions.view")
     company_id = str(current_user.company_id)
 
     rows = await session.execute(
         text(
-            "SELECT id, run_hash, methodology_version, status, created_at "
-            "FROM decision_runs WHERE company_id = :cid "
-            "ORDER BY created_at DESC LIMIT :lim"
+            "SELECT r.id, r.run_hash, r.methodology_version, r.status, r.created_at, "
+            "COUNT(p.id) AS proposal_count, "
+            "MODE() WITHIN GROUP (ORDER BY p.action) AS verdict "
+            "FROM decision_runs r "
+            "LEFT JOIN decision_proposals p ON p.decision_run_id = r.id "
+            "WHERE r.company_id = :cid "
+            "GROUP BY r.id "
+            "ORDER BY r.created_at DESC LIMIT :lim"
         ),
         {"cid": company_id, "lim": limit},
     )
@@ -453,7 +458,9 @@ async def list_decision_runs(
             "run_hash": r.run_hash,
             "methodology_version": r.methodology_version,
             "status": r.status,
+            "proposal_count": int(r.proposal_count or 0),
+            "verdict": r.verdict or "NO_ACTION",
             "created_at": r.created_at.isoformat() if r.created_at else None,
         })
 
-    return {"items": items, "total": len(items)}
+    return items

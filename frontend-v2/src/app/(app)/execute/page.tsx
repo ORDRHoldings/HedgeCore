@@ -1118,7 +1118,7 @@ function ExecuteContent() {
 
   const positionsQ = useQuery<{ items: Position[]; total: number }>({
     queryKey: ["positions-ready"],
-    queryFn: () => api.get<{ items: Position[]; total: number }>("/v1/positions?status=READY_TO_EXECUTE"),
+    queryFn: () => api.get<{ items: Position[]; total: number }>("/v1/positions?execution_status=READY_TO_EXECUTE"),
     enabled: !!token,
   });
 

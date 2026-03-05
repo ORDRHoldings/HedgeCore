@@ -343,7 +343,7 @@ function PositionDetail({ position, onClose }: { position: Position; onClose: ()
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
       {/* Status + badge */}
       <div style={{ marginBottom: 20 }}>
-        <StatusBadge status={position.status} />
+        <StatusBadge status={position.execution_status} />
       </div>
 
       {/* Detail rows */}
@@ -389,7 +389,7 @@ function PositionDetail({ position, onClose }: { position: Position; onClose: ()
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {position.status === "NEW" && (
+          {position.execution_status === "NEW" && (
             <button
               type="button"
               onClick={() => handleLifecycle("assign-policy")}
@@ -412,7 +412,7 @@ function PositionDetail({ position, onClose }: { position: Position; onClose: ()
             </button>
           )}
 
-          {position.status === "POLICY_ASSIGNED" && (
+          {position.execution_status === "POLICY_ASSIGNED" && (
             <button
               type="button"
               onClick={() => handleLifecycle("ready")}
@@ -435,7 +435,7 @@ function PositionDetail({ position, onClose }: { position: Position; onClose: ()
             </button>
           )}
 
-          {position.status === "READY_TO_EXECUTE" && (
+          {position.execution_status === "READY_TO_EXECUTE" && (
             <button
               type="button"
               onClick={() => handleLifecycle("execute")}
@@ -458,7 +458,7 @@ function PositionDetail({ position, onClose }: { position: Position; onClose: ()
             </button>
           )}
 
-          {!["HEDGED", "REJECTED"].includes(position.status) && (
+          {!["HEDGED", "REJECTED"].includes(position.execution_status) && (
             <div>
               {!showReject ? (
                 <button
@@ -718,7 +718,7 @@ function ExposuresContent() {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("size", String(PAGE_SIZE));
-    if (statusFilter) params.set("status", statusFilter);
+    if (statusFilter) params.set("execution_status", statusFilter);
     if (currencyFilter) params.set("currency", currencyFilter.toUpperCase());
     if (flowFilter) params.set("flow_type", flowFilter);
     return params.toString();
@@ -735,9 +735,9 @@ function ExposuresContent() {
 
   // Summary stats
   const totalExposureUSD = positions.reduce((acc, p) => acc + (p.amount_usd ?? 0), 0);
-  const hedgedCount = positions.filter((p) => p.status === "HEDGED").length;
+  const hedgedCount = positions.filter((p) => p.execution_status === "HEDGED").length;
   const pendingCount = positions.filter(
-    (p) => p.status === "POLICY_ASSIGNED" || p.status === "READY_TO_EXECUTE"
+    (p) => p.execution_status === "POLICY_ASSIGNED" || p.execution_status === "READY_TO_EXECUTE"
   ).length;
 
   const selectedPosition = positionId ? positions.find((p) => p.id === positionId) : null;
@@ -1034,7 +1034,7 @@ function ExposuresContent() {
                 </span>
               </div>
               <div style={{ padding: "12px 14px" }}>
-                <StatusBadge status={pos.status} />
+                <StatusBadge status={pos.execution_status} />
               </div>
               <div style={{ padding: "12px 14px", fontFamily: S.fontMono, fontSize: 11, color: S.textTertiary }}>
                 {fmtDate(pos.value_date)}
