@@ -18,6 +18,13 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  // Do not auto-start dev server — run `npm run dev` separately
-  webServer: undefined,
+  // Auto-start server in CI; in local dev, start manually with `npm run dev`
+  webServer: process.env.CI
+    ? {
+        command: "npx next start",
+        url: "http://localhost:3000",
+        reuseExistingServer: false,
+        timeout: 60_000,
+      }
+    : undefined,
 });
