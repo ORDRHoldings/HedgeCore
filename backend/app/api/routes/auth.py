@@ -11,7 +11,14 @@ HedgeCalc Authentication API - Phase V (Final Stable Build)
 
 
 import logging
+import os
 from uuid import UUID
+
+# Cookie security flags — env-aware so local dev works over HTTP
+_IS_PRODUCTION = os.getenv("ENV", "dev").strip().lower() == "production"
+_RT_COOKIE_SECURE = _IS_PRODUCTION           # False on localhost (HTTP), True in prod (HTTPS)
+_RT_COOKIE_SAMESITE = "strict" if _IS_PRODUCTION else "lax"
+_RT_COOKIE_PATH = "/api/auth/refresh"        # Full path matching the refresh endpoint mount
 
 import fastapi.security as fastapi_security
 import jwt
@@ -396,8 +403,8 @@ async def login(
             key="csrf_token",
             value=csrf_token,
             httponly=False,   # Must be readable by JS to send as X-CSRF-Token header
-            secure=True,
-            samesite="strict",
+            secure=_RT_COOKIE_SECURE,
+            samesite=_RT_COOKIE_SAMESITE,
             path="/",
             max_age=7 * 24 * 60 * 60,  # 7 days — matches refresh token lifetime
         )
@@ -406,9 +413,9 @@ async def login(
             key="rt",
             value=refresh_token,
             httponly=True,
-            secure=True,
-            samesite="strict",
-            path="/api/v1/auth/refresh",
+            secure=_RT_COOKIE_SECURE,
+            samesite=_RT_COOKIE_SAMESITE,
+            path=_RT_COOKIE_PATH,
             max_age=7 * 24 * 60 * 60,
         )
         return response
@@ -483,9 +490,9 @@ async def refresh_tokens(request: Request, body: TokenRefreshRequest, db: AsyncS
             key="rt",
             value=new_refresh,
             httponly=True,
-            secure=True,
-            samesite="strict",
-            path="/api/v1/auth/refresh",
+            secure=_RT_COOKIE_SECURE,
+            samesite=_RT_COOKIE_SAMESITE,
+            path=_RT_COOKIE_PATH,
             max_age=7 * 24 * 60 * 60,
         )
         return response
@@ -665,7 +672,16 @@ async def logout(request: Request, db: AsyncSession = Depends(get_session)) -> d
 
         await rt_crud.revoke_all_for_user(db, user_id=user_id)
 
-        return {"detail": "Logged out successfully"}
+        response = JSONResponse(content={"detail": "Logged out successfully"})
+        # Clear httpOnly rt cookie on logout
+        response.delete_cookie(
+            key="rt",
+            path=_RT_COOKIE_PATH,
+            httponly=True,
+            secure=_RT_COOKIE_SECURE,
+            samesite=_RT_COOKIE_SAMESITE,
+        )
+        return response
 
 
 
