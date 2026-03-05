@@ -19,6 +19,15 @@ curl https://hedgecore.onrender.com/health
 # Expected: {"status": "ok", ...}
 ```
 
+### 1.1.1 Required Backend Environment Variables
+
+| Variable | Notes |
+|----------|-------|
+| `DATABASE_URL` | `postgresql+asyncpg://...` — Render DB URL |
+| `JWT_SECRET` | `openssl rand -hex 64` — ≥32 chars, no placeholder patterns |
+| `ENV` | `production` — enables security hardening |
+| `CORS_ALLOW_ORIGINS` | Comma-separated frontend origins — **no wildcard `*`**. Required for httpOnly cookies. Example: `https://ordr-terminal.vercel.app,https://app.ordrterminal.com` |
+
 ### 1.2 Frontend Deploy (Vercel)
 Vercel auto-deploys on push to `master`. Check:
 - https://vercel.com/dashboard → hedgecore project

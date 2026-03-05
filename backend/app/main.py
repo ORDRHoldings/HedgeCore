@@ -1186,6 +1186,9 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
 
 async def lifespan(app: FastAPI):
 
+    from app.core.secret_validator import validate_production_secrets
+    validate_production_secrets()
+
     await init_engine()
 
     rebuild_all_schemas()
@@ -1403,6 +1406,8 @@ app.add_middleware(
     allow_methods=settings.CORS_ALLOW_METHODS,
 
     allow_headers=settings.CORS_ALLOW_HEADERS,
+
+    expose_headers=settings.CORS_EXPOSE_HEADERS,
 
 )
 

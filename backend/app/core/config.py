@@ -206,9 +206,24 @@ class Settings(BaseSettings):
 
     CORS_ALLOW_CREDENTIALS: bool = True
 
-    CORS_ALLOW_METHODS: list[str] = ["*"]
+    # Explicit methods/headers required when allow_credentials=True
+    # (wildcard "*" is incompatible with credentials in some browsers)
+    CORS_ALLOW_METHODS: list[str] = [
+        "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
+    ]
 
-    CORS_ALLOW_HEADERS: list[str] = ["*"]
+    CORS_ALLOW_HEADERS: list[str] = [
+        "Authorization",
+        "Content-Type",
+        "X-API-Key",
+        "X-CSRF-Token",
+        "X-Request-ID",
+    ]
+
+    CORS_EXPOSE_HEADERS: list[str] = [
+        "X-Request-ID",
+        "X-RateLimit-Remaining",
+    ]
 
 
 
