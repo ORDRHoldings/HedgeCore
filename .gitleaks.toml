@@ -1,0 +1,51 @@
+# .gitleaks.toml — ORDR Terminal secret detection config
+# Used by the gitleaks pre-commit hook for ongoing protection.
+
+title = "ORDR Terminal Gitleaks Config"
+
+[allowlist]
+description = "Files that may legitimately mention secret patterns"
+paths = [
+    '''.env\.example''',
+    '''\.gitleaks\.toml''',
+    '''docs/ops/runbook\.md''',
+    '''scripts/scrub-git-secrets\.sh''',
+]
+
+[[rules]]
+id = "openai-api-key"
+description = "OpenAI API Key"
+regex = '''sk-[a-zA-Z0-9]{20,}'''
+tags = ["key", "openai"]
+[rules.allowlist]
+paths = ['''.env\.example''', '''docs/''']
+
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API Key"
+regex = '''sk-ant-[a-zA-Z0-9\-_]{20,}'''
+tags = ["key", "anthropic"]
+
+[[rules]]
+id = "generic-api-key-assignment"
+description = "Generic API key in assignment"
+regex = '''(?i)(api_key|apikey|api-key)\s*[:=]\s*['"]?[a-zA-Z0-9_\-]{20,}['"]?'''
+tags = ["key"]
+[rules.allowlist]
+paths = ['''.env\.example''', '''docs/''', '''tests/''']
+
+[[rules]]
+id = "jwt-secret-weak"
+description = "Weak or placeholder JWT secret"
+regex = '''(?i)jwt_secret\s*[:=]\s*['"]?(dev_|test_|example|changeme|placeholder|change_me)[^'"]*['"]?'''
+tags = ["secret"]
+[rules.allowlist]
+paths = ['''.env\.example''', '''tests/''']
+
+[[rules]]
+id = "postgres-dsn-with-password"
+description = "PostgreSQL DSN containing a password"
+regex = '''postgresql[+a-z]*://[^:]+:([^@\s]{4,})@'''
+tags = ["secret", "database"]
+[rules.allowlist]
+paths = ['''.env\.example''', '''docs/''', '''tests/''']
