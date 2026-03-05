@@ -140,7 +140,7 @@ def compute_factor_covariance(
     post_weights = (
         {f: net_exposures.get(f, 0.0) / total_net for f in factors}
         if total_net > 0
-        else {f: 0.0 for f in factors}
+        else dict.fromkeys(factors, 0.0)
     )
 
     # Compute variances
@@ -247,7 +247,7 @@ def load_covariance_from_provider(
     factors: list[str],
     provider: str = "static",
     market: dict | None = None,
-) -> "dict[str, dict[str, float]] | None":
+) -> dict[str, dict[str, float]] | None:
     """Hook for live covariance feed integration (FIX-03).
 
     Provider implementations:

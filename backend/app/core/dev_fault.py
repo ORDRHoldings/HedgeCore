@@ -25,7 +25,6 @@ X-Forwarded-For:
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from fastapi import Request
 
@@ -59,7 +58,7 @@ _DEV_ENVS: frozenset[str] = frozenset({
 # Public guard function
 # ---------------------------------------------------------------------------
 
-def is_dev_fault_allowed(request: Optional[Request]) -> bool:
+def is_dev_fault_allowed(request: Request | None) -> bool:
     """
     Return True iff all three conditions hold:
       1. ALLOW_DEV_FAULT_INJECTION=true
@@ -126,7 +125,7 @@ def is_dev_fault_allowed(request: Optional[Request]) -> bool:
 # Convenience raiser (for policy routes)
 # ---------------------------------------------------------------------------
 
-def raise_if_dev_fault(request: Optional[Request], code: Optional[int]) -> None:
+def raise_if_dev_fault(request: Request | None, code: int | None) -> None:
     """
     Raise HTTPException(code) if fault injection is allowed and code is set.
     Otherwise does nothing — callers see normal behaviour.

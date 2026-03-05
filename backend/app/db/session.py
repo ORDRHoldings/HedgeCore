@@ -16,12 +16,14 @@ Environment:
 """
 
 from __future__ import annotations
-import logging
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from app.core.config import settings
 
 # ---------------------------------------------------------------------------

@@ -5,8 +5,8 @@ import hashlib
 import json
 import math
 import time
-from typing import Any, Dict, List, Mapping, Optional, Tuple
-
+from collections.abc import Mapping
+from typing import Any
 
 ENGINE_NAME = "cost_engine"
 ENGINE_VERSION = "1.0.0"
@@ -74,7 +74,7 @@ REASON_UNSUPPORTED_COST_MODEL = "unsupported_cost_model"
 REASON_INVALID_CONTRACTS = "invalid_contracts"
 
 
-def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "engine": {"name": ENGINE_NAME, "version": ENGINE_VERSION},
         "methodology": {"cost_methodology": COST_METHODOLOGY},
@@ -83,7 +83,7 @@ def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]
     }
 
 
-def _pick_price_key(instrument_id: str, asset_class: str, market_prices: Mapping[str, Any]) -> Tuple[Optional[str], Optional[float]]:
+def _pick_price_key(instrument_id: str, asset_class: str, market_prices: Mapping[str, Any]) -> tuple[str | None, float | None]:
     """
     Deterministic pricing key selection:
       - futures/perp: price by instrument_id
@@ -103,7 +103,7 @@ def _pick_price_key(instrument_id: str, asset_class: str, market_prices: Mapping
     return None, None
 
 
-def compute_costs(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+def compute_costs(payload: Mapping[str, Any], *, policy: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """
     Cost & Carry Engine
 
@@ -166,7 +166,7 @@ def compute_costs(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, A
     """
     t0 = time.perf_counter()
 
-    pol: Dict[str, Any] = {
+    pol: dict[str, Any] = {
         # default holding period for carry normalization
         "default_holding_period_days": 21,
         # annual financing rate for posting margin (cash opportunity cost), if not specified per instrument
@@ -243,11 +243,11 @@ def compute_costs(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, A
         },
     }
 
-    trace: Dict[str, Any] = _build_trace_seed(policy=pol, input_obj=input_obj)
-    steps: List[Dict[str, Any]] = []
+    trace: dict[str, Any] = _build_trace_seed(policy=pol, input_obj=input_obj)
+    steps: list[dict[str, Any]] = []
 
-    rejected: List[Dict[str, Any]] = []
-    breakdown: List[Dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    breakdown: list[dict[str, Any]] = []
 
     one_time_spread = 0.0
     one_time_fees = 0.0
@@ -270,7 +270,7 @@ def compute_costs(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, A
         instrument_id = str(row.get("instrument_id", "")).strip()
         contracts = row.get("contracts", None)
 
-        step: Dict[str, Any] = {"i": i, "strategy_id": strategy_id, "instrument_id": instrument_id, "status": None}
+        step: dict[str, Any] = {"i": i, "strategy_id": strategy_id, "instrument_id": instrument_id, "status": None}
 
         if not instrument_id:
             rejected.append({"strategy_id": strategy_id or None, "instrument_id": None, "reason": REASON_BAD_INPUT, "details": {"missing_instrument_id": True}})

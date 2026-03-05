@@ -25,26 +25,15 @@ the exact policy governing the calculation is provable for audit/replay.
 
 
 import hashlib
-
 import json as _json
-
 import logging
-
 import uuid
-
 from collections import defaultdict
-
 from time import time as _time
-
-
 
 _log = logging.getLogger(__name__)
 
-from datetime import datetime, timezone
-
-from typing import Optional
-
-
+from datetime import UTC, datetime
 
 # Per-user rate limiter for POST /v1/calculate (10 req/min)
 
@@ -74,6 +63,7 @@ def _check_calc_rate(user_id: str) -> bool:
 
 # SEC-04: Distributed rate limiter (Redis-backed with in-memory fallback)
 import os as _os
+
 from app.core.rate_limiter import RateLimiter as _RateLimiter
 
 _distributed_rate_limiter = _RateLimiter(
@@ -82,59 +72,38 @@ _distributed_rate_limiter = _RateLimiter(
     window_seconds=int(_CALC_RATE_WINDOW),
 )
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from app.core.schema_state import require_schema_ready
-
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ValidationError
-
 from sqlalchemy import select
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
 from app.core.db import get_async_session
+from app.core.schema_state import require_schema_ready
 from app.core.security import get_current_user
+from app.engine_v1.audit import build_run_envelope, build_trace_lite
+from app.engine_v1.kernel import compute_hedge_plan
+from app.engine_v1.normalizer import normalize_hedges, normalize_trades
+from app.engine_v1.scenarios import compute_scenarios
+from app.engine_v1.validator import validate_all
+from app.models.calculation_run import CalculationRun
+from app.models.position import Position
+from app.models.user import User
+from app.schemas_v1.hedges import HedgeRow
+from app.schemas_v1.market import MarketSnapshot
+from app.schemas_v1.policy import PolicyConfig
+from app.schemas_v1.results import (
+    CalculateRequest,
+    CalculateResponse,
+    TraceEvent,
+)
+from app.schemas_v1.trades import TradeRow
 from app.services import rbac_service
 from app.services.market_snapshot_service import (
     create_or_get as _snapshot_create_or_get,
+)
+from app.services.market_snapshot_service import (
     get_by_id as _snapshot_get_by_id,
 )
-from app.engine_v1.audit import build_run_envelope, build_trace_lite
-
-from app.engine_v1.kernel import compute_hedge_plan
-
-from app.engine_v1.normalizer import normalize_hedges, normalize_trades
-
-from app.engine_v1.scenarios import compute_scenarios
-
-from app.engine_v1.validator import validate_all
-
-from app.models.calculation_run import CalculationRun
-
-from app.models.position import Position
-
-from app.models.user import User
-
-from app.schemas_v1.hedges import HedgeRow
-
-from app.schemas_v1.market import MarketSnapshot
-
-from app.schemas_v1.policy import PolicyConfig
-
-from app.schemas_v1.results import (
-
-    CalculateRequest,
-
-    CalculateResponse,
-
-    TraceEvent,
-
-)
-
-from app.schemas_v1.trades import TradeRow
-
-
 
 router = APIRouter(prefix="/v1", tags=["v1-calculate"])
 
@@ -195,7 +164,7 @@ class RunListResponse(BaseModel):
 
 async def _resolve_position_ids(
     session: AsyncSession,
-    user: Optional[User],
+    user: User | None,
     trades: list[TradeRow],
 ) -> list[str]:
     """Resolve trade record_ids to Position UUIDs for the run's position_ids field."""
@@ -220,7 +189,7 @@ async def _persist_run(
 
     response: CalculateResponse,
 
-    user: Optional[User],
+    user: User | None,
 
     trades: list[TradeRow],
 
@@ -242,11 +211,8 @@ async def _persist_run(
 
     """
 
-    from app.services.policy_service import get_active_instance
-
     from app.services.policy_revision_service import get_latest_revision
-
-    from app.models.policy_revision import compute_policy_hash
+    from app.services.policy_service import get_active_instance
 
 
 
@@ -256,9 +222,9 @@ async def _persist_run(
 
     # Resolve active policy revision for this user (non-fatal)
 
-    pinned_revision_id: Optional[str] = None
+    pinned_revision_id: str | None = None
 
-    pinned_policy_hash: Optional[str] = None
+    pinned_policy_hash: str | None = None
 
     if user:
 
@@ -440,7 +406,7 @@ async def calculate(
         trace_events.append(
             TraceEvent(
                 step="MARKET_SNAPSHOT_LOAD",
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 detail=f"Loaded market snapshot {request.market_snapshot_id[:12]}... hash={_snap.market_snapshot_hash[:16]}... provider={_snap.provider}",
             )
         )
@@ -478,7 +444,7 @@ async def calculate(
 
     trace_events.append(
 
-        TraceEvent(step="PARSE", timestamp=datetime.now(timezone.utc), detail="Input parsing complete.")
+        TraceEvent(step="PARSE", timestamp=datetime.now(UTC), detail="Input parsing complete.")
 
     )
 
@@ -494,7 +460,7 @@ async def calculate(
 
             step="VALIDATE",
 
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
 
             detail=f"Validation {report.status}. Errors: {len(report.errors)}, Warnings: {len(report.warnings)}.",
 
@@ -528,7 +494,7 @@ async def calculate(
 
             step="NORMALIZE",
 
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
 
             detail=f"Normalized {len(trades_df)} trades, {len(hedges_df)} hedges.",
 
@@ -550,7 +516,7 @@ async def calculate(
 
             step="KERNEL",
 
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
 
             detail=f"Hedge plan computed: {len(hedge_plan.buckets)} buckets.",
 
@@ -570,7 +536,7 @@ async def calculate(
 
             step="SCENARIO",
 
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
 
             detail=f"Scenarios computed: {len(scenario_results.sigmas)} shocks x {len(hedge_plan.buckets)} buckets.",
 
@@ -618,7 +584,7 @@ async def calculate(
 
             step="AUDIT",
 
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
 
             detail=f"RunEnvelope built. inputs_hash={run_envelope.inputs_hash[:16]}... run_hash={run_envelope.run_hash[:16]}...",
 
@@ -640,7 +606,7 @@ async def calculate(
 
             step="MARKET_SOURCE",
 
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
 
             detail=f"Market data: source=client, snapshot_hash={_market_hash[:16]}..., spot_count={len(market_raw.get('rates', market_raw.get('spots', {})) or {})}"
 
@@ -702,7 +668,9 @@ async def calculate(
 
     try:
 
-        from app.models.audit_event import AuditEvent as _AuditEvent, build_audit_event as _build_audit_event, GENESIS_HASH as _GENESIS_HASH
+        from app.models.audit_event import GENESIS_HASH as _GENESIS_HASH
+        from app.models.audit_event import AuditEvent as _AuditEvent
+        from app.models.audit_event import build_audit_event as _build_audit_event
 
         # Resolve previous hash for chain (per-tenant)
 
@@ -1027,8 +995,9 @@ async def calculate_extended(
 
     # Factor covariance
     try:
-        from app.engine_v1.factor_covariance import build_factor_covariance_matrix
         import pandas as pd
+
+        from app.engine_v1.factor_covariance import build_factor_covariance_matrix
         ccy_list = [t.get("currency", "MXN") for t in (request_data.trades or [])]
         if ccy_list:
             cov = build_factor_covariance_matrix(pd.Index(set(ccy_list)))

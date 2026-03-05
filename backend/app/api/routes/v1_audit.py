@@ -32,18 +32,8 @@ that can be verified end-to-end by compliance officers or external auditors.
 
 from __future__ import annotations
 
-
-
-import hashlib
-
-import json
-
 import logging
-
-from datetime import datetime, timezone
-
-from typing import Optional
-
+from datetime import UTC, datetime
 from uuid import UUID
 
 logger = logging.getLogger(__name__)
@@ -51,26 +41,14 @@ logger = logging.getLogger(__name__)
 
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-
 from pydantic import BaseModel
-
 from sqlalchemy import select
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
 from app.core.db import get_async_session
-
 from app.core.security import get_current_user
-
-from app.models.audit_event import AuditEvent, GENESIS_HASH, build_audit_event, compute_event_hash
-
+from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event, compute_event_hash
 from app.models.user import User
-
-from app.services import rbac_service
-
-
 
 router = APIRouter(prefix="/v1/audit", tags=["v1-audit"])
 
@@ -88,9 +66,9 @@ class AuditEventCreate(BaseModel):
 
     description: str
 
-    entity_type: Optional[str] = None
+    entity_type: str | None = None
 
-    entity_id:   Optional[str] = None
+    entity_id:   str | None = None
 
     payload:     dict          = {}
 
@@ -102,21 +80,21 @@ class AuditEventResponse(BaseModel):
 
     id:              str
 
-    company_id:      Optional[str] = None
+    company_id:      str | None = None
 
-    actor_id:        Optional[str] = None
+    actor_id:        str | None = None
 
-    actor_email:     Optional[str] = None
+    actor_email:     str | None = None
 
-    actor_role:      Optional[str] = None
+    actor_role:      str | None = None
 
     event_type:      str
 
     description:     str
 
-    entity_type:     Optional[str] = None
+    entity_type:     str | None = None
 
-    entity_id:       Optional[str] = None
+    entity_id:       str | None = None
 
     payload:         dict
 
@@ -124,7 +102,7 @@ class AuditEventResponse(BaseModel):
 
     prev_event_hash: str
 
-    ip_address:      Optional[str] = None
+    ip_address:      str | None = None
 
     created_at:      str
 
@@ -144,11 +122,11 @@ class AuditListResponse(BaseModel):
 
 class ChainIntegrityReport(BaseModel):
 
-    tenant_id:       Optional[str]
+    tenant_id:       str | None
 
     events_checked:  int
 
-    broken_at:       Optional[str]       # event_id where chain breaks (null = intact)
+    broken_at:       str | None       # event_id where chain breaks (null = intact)
 
     is_intact:       bool
 
@@ -300,17 +278,17 @@ async def write_audit_event(
 
 async def list_audit_events(
 
-    event_type:  Optional[str]  = Query(default=None, description="Filter by event_type"),
+    event_type:  str | None  = Query(default=None, description="Filter by event_type"),
 
-    entity_type: Optional[str]  = Query(default=None, description="Filter by entity_type"),
+    entity_type: str | None  = Query(default=None, description="Filter by entity_type"),
 
-    entity_id:   Optional[str]  = Query(default=None, description="Filter by entity_id"),
+    entity_id:   str | None  = Query(default=None, description="Filter by entity_id"),
 
-    actor_id:    Optional[str]  = Query(default=None, description="Filter by actor UUID"),
+    actor_id:    str | None  = Query(default=None, description="Filter by actor UUID"),
 
-    from_ts:     Optional[str]  = Query(default=None, description="ISO timestamp lower bound"),
+    from_ts:     str | None  = Query(default=None, description="ISO timestamp lower bound"),
 
-    to_ts:       Optional[str]  = Query(default=None, description="ISO timestamp upper bound"),
+    to_ts:       str | None  = Query(default=None, description="ISO timestamp upper bound"),
 
     limit:       int             = Query(default=100, le=500, ge=1),
 
@@ -543,7 +521,7 @@ async def verify_audit_chain(
 
             is_intact       = broken_at is None,
 
-            verified_at     = datetime.now(timezone.utc).isoformat(),
+            verified_at     = datetime.now(UTC).isoformat(),
 
         )
     except Exception as exc:

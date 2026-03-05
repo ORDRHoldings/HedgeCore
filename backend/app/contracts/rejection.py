@@ -21,14 +21,14 @@ Binding doctrine:
 - Audit-safe: messages must be human-safe and avoid secrets.
 """
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, FrozenSet, Iterable, Mapping, Optional, Tuple
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.contracts.trace_bundle import StageName, RejectionCode, Rejection, ResidualRiskVector
-
+from app.contracts.trace_bundle import Rejection, RejectionCode, ResidualRiskVector, StageName
 
 # ---------------------------
 # Severity (committee semantics)
@@ -63,7 +63,7 @@ class RejectionSpec(BaseModel):
         min_length=1,
     )
 
-    permitted_stages: FrozenSet[StageName] = Field(
+    permitted_stages: frozenset[StageName] = Field(
         ...,
         description="Stages allowed to emit this rejection code.",
     )
@@ -79,7 +79,7 @@ class RejectionSpec(BaseModel):
     )
 
     @staticmethod
-    def _fs(values: Iterable[StageName]) -> FrozenSet[StageName]:
+    def _fs(values: Iterable[StageName]) -> frozenset[StageName]:
         return frozenset(values)
 
 
@@ -96,7 +96,7 @@ class RejectionValidationError(Exception):
 # Canonical registry (v1)
 # ---------------------------
 
-def _fs(*stages: StageName) -> FrozenSet[StageName]:
+def _fs(*stages: StageName) -> frozenset[StageName]:
     return frozenset(stages)
 
 
@@ -172,14 +172,14 @@ REJECTION_REGISTRY: Mapping[RejectionCode, RejectionSpec] = {
 # Deterministic ordering
 # ---------------------------
 
-def rejection_sort_key(r: Rejection) -> Tuple[int, str, str]:
+def rejection_sort_key(r: Rejection) -> tuple[int, str, str]:
     """
     Deterministic ordering for output lists.
     (1) stage order by StageName enum declaration
     (2) code lexical
     (3) message lexical (stable tiebreak)
     """
-    stage_order: Dict[str, int] = {s.value: i for i, s in enumerate(StageName)}
+    stage_order: dict[str, int] = {s.value: i for i, s in enumerate(StageName)}
     return (stage_order.get(r.stage.value, 10_000), r.code.value, (r.message or ""))
 
 
@@ -236,9 +236,9 @@ def make_rejection(
     *,
     code: RejectionCode,
     stage: StageName,
-    message: Optional[str] = None,
-    details: Optional[Dict[str, Any]] = None,
-    residual_risk: Optional[ResidualRiskVector] = None,
+    message: str | None = None,
+    details: dict[str, Any] | None = None,
+    residual_risk: ResidualRiskVector | None = None,
 ) -> Rejection:
     """
     Safe factory:

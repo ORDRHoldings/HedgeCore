@@ -15,16 +15,13 @@ from __future__ import annotations
 import hashlib
 import json as _json
 import uuid as _uuid
-
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.market_snapshot import MarketSnapshot
 from app.models.user import User
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Hash contract (public — used by tests and endpoints)
@@ -89,9 +86,9 @@ async def create_or_get(
         try:
             as_of_dt = datetime.fromisoformat(str(raw_as_of).replace("Z", "+00:00"))
         except (ValueError, TypeError):
-            as_of_dt = datetime.now(timezone.utc)
+            as_of_dt = datetime.now(UTC)
     if as_of_dt.tzinfo is None:
-        as_of_dt = as_of_dt.replace(tzinfo=timezone.utc)
+        as_of_dt = as_of_dt.replace(tzinfo=UTC)
 
     # 5. Insert new row
     row = MarketSnapshot(
@@ -101,7 +98,7 @@ async def create_or_get(
         provider              = provider,
         data_class            = data_class,
         as_of                 = as_of_dt,
-        fetched_at            = datetime.now(timezone.utc),
+        fetched_at            = datetime.now(UTC),
         primary_currency      = primary_ccy,
         spot_rate             = spot,
         payload               = payload,
@@ -128,7 +125,7 @@ async def get_by_id(
     session: AsyncSession,
     snapshot_id: _uuid.UUID,
     company_id: _uuid.UUID,
-) -> Optional[MarketSnapshot]:
+) -> MarketSnapshot | None:
     """Load snapshot by UUID, scoped to company. Returns None if not found."""
     row = await session.get(MarketSnapshot, snapshot_id)
     if not row:
@@ -142,7 +139,7 @@ async def _find_by_hash(
     session: AsyncSession,
     company_id: _uuid.UUID,
     snapshot_hash: str,
-) -> Optional[MarketSnapshot]:
+) -> MarketSnapshot | None:
     q = (
         select(MarketSnapshot)
         .where(

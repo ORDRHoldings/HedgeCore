@@ -4,10 +4,10 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from typing import Any, Dict, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from backend.app.engine.recommend import recommend
-
 
 ENGINE_NAME = "orchestrator"
 ENGINE_VERSION = "1.0.0"
@@ -44,7 +44,7 @@ def _now_ms() -> int:
 # ---------------------------------------------------------------------
 # Public entrypoint
 # ---------------------------------------------------------------------
-def run_engine(envelope: Mapping[str, Any]) -> Dict[str, Any]:
+def run_engine(envelope: Mapping[str, Any]) -> dict[str, Any]:
     """
     HedgeCalc v1 Orchestrator -- SINGLE ENTRYPOINT
 
@@ -101,7 +101,7 @@ def run_engine(envelope: Mapping[str, Any]) -> Dict[str, Any]:
     # -------------------------
     # Build orchestrator trace
     # -------------------------
-    trace: Dict[str, Any] = {
+    trace: dict[str, Any] = {
         "engine": {"name": ENGINE_NAME, "version": ENGINE_VERSION},
         "run_id": run_id,
         "snapshot_hash": snapshot_hash,
@@ -167,10 +167,10 @@ def run_engine(envelope: Mapping[str, Any]) -> Dict[str, Any]:
 def _reject(
     *,
     reason: str,
-    details: Dict[str, Any],
+    details: dict[str, Any],
     started_at: float,
-    trace: Dict[str, Any] | None = None,
-) -> Dict[str, Any]:
+    trace: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     duration_ms = int((time.perf_counter() - started_at) * 1000)
 
     base_trace = trace or {

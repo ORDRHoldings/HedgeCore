@@ -23,8 +23,7 @@ Usage
 No engine logic lives here.
 """
 
-from typing import Any, Dict, List, Literal, Optional, TypedDict
-
+from typing import Any, Literal, TypedDict
 
 # -----------------------------
 # Common primitives
@@ -47,46 +46,46 @@ AssetClass = Literal["futures", "options", "etf", "perp", "fx", "crypto_spot"]
 # Stage payloads (read-only)
 # -----------------------------
 class ExposureStage(TypedDict, total=False):
-    exposures: Dict[str, float]
-    meta: Dict[str, Any]
+    exposures: dict[str, float]
+    meta: dict[str, Any]
 
 
 class RiskClassifierStage(TypedDict, total=False):
     dominant_risk: RiskCode
     confidence: float
-    normalized: Dict[RiskCode, float]
-    meta: Dict[str, Any]
+    normalized: dict[RiskCode, float]
+    meta: dict[str, Any]
 
 
 class StrategySelectorStage(TypedDict, total=False):
-    strategies: List[Dict[str, Any]]
-    rejected: List[Dict[str, Any]]
-    meta: Dict[str, Any]
+    strategies: list[dict[str, Any]]
+    rejected: list[dict[str, Any]]
+    meta: dict[str, Any]
 
 
 class InstrumentMapperStage(TypedDict, total=False):
-    mapped_instruments: List[Dict[str, Any]]
-    rejected: List[Dict[str, Any]]
-    meta: Dict[str, Any]
+    mapped_instruments: list[dict[str, Any]]
+    rejected: list[dict[str, Any]]
+    meta: dict[str, Any]
 
 
 class HedgeSizerStage(TypedDict, total=False):
-    sized_hedges: List[Dict[str, Any]]
-    rejected: List[Dict[str, Any]]
-    meta: Dict[str, Any]
+    sized_hedges: list[dict[str, Any]]
+    rejected: list[dict[str, Any]]
+    meta: dict[str, Any]
 
 
 class CostEngineStage(TypedDict, total=False):
-    costs: Dict[str, Any]
-    breakdown: List[Dict[str, Any]]
-    rejected: List[Dict[str, Any]]
-    meta: Dict[str, Any]
+    costs: dict[str, Any]
+    breakdown: list[dict[str, Any]]
+    rejected: list[dict[str, Any]]
+    meta: dict[str, Any]
 
 
 class ScenarioEngineStage(TypedDict, total=False):
-    results: List[Dict[str, Any]]
-    rejected: List[Dict[str, Any]]
-    meta: Dict[str, Any]
+    results: list[dict[str, Any]]
+    rejected: list[dict[str, Any]]
+    meta: dict[str, Any]
 
 
 # -----------------------------
@@ -99,26 +98,26 @@ class HedgeRow(TypedDict, total=False):
     contracts: float
     notional_usd: float
     cost_model: str
-    constraints: Dict[str, Any]
+    constraints: dict[str, Any]
 
 
 class RejectionsByStage(TypedDict):
-    instrument_mapper: List[Dict[str, Any]]
-    hedge_sizer: List[Dict[str, Any]]
-    cost_engine: List[Dict[str, Any]]
-    scenario_engine: List[Dict[str, Any]]
+    instrument_mapper: list[dict[str, Any]]
+    hedge_sizer: list[dict[str, Any]]
+    cost_engine: list[dict[str, Any]]
+    scenario_engine: list[dict[str, Any]]
 
 
 class PlanSummary(TypedDict):
     total_cost_usd: float
-    cost_per_1k_hedged: Optional[float]
+    cost_per_1k_hedged: float | None
     scenarios_evaluated: int
-    avg_hedge_effectiveness: Optional[float]
-    worst_case_pnl_usd: Optional[float]
+    avg_hedge_effectiveness: float | None
+    worst_case_pnl_usd: float | None
 
 
 class FinalPlan(TypedDict):
-    hedges: List[HedgeRow]
+    hedges: list[HedgeRow]
     rejections: RejectionsByStage
     summary: PlanSummary
 
@@ -127,10 +126,10 @@ class FinalPlan(TypedDict):
 # Orchestration metadata
 # -----------------------------
 class DecisionTrace(TypedDict, total=False):
-    engine: Dict[str, Any]
-    stages: Dict[str, Any]
-    fingerprints: Dict[str, str]
-    timestamps: Dict[str, int]
+    engine: dict[str, Any]
+    stages: dict[str, Any]
+    fingerprints: dict[str, str]
+    timestamps: dict[str, int]
 
 
 class RecommendMeta(TypedDict):
@@ -157,8 +156,8 @@ class RecommendResponseV1(TypedDict):
     meta: RecommendMeta
 
     # Optional blocks
-    stages: Optional[Dict[str, Any]]
-    plan: Optional[FinalPlan]
+    stages: dict[str, Any] | None
+    plan: FinalPlan | None
 
 
 # -----------------------------
@@ -172,14 +171,14 @@ class RecommendRequestV1(TypedDict, total=False):
     Missing inputs are allowed; engine will reject deterministically.
     """
 
-    positions: Optional[Any]
-    exposure_input: Optional[Dict[str, Any]]
-    market: Dict[str, Any]
-    instrument_specs: Dict[str, Any]
-    instrument_meta: Dict[str, Any]
-    assumptions: Dict[str, Any]
-    scenarios: List[Dict[str, Any]]
-    policy: Dict[str, Any]
+    positions: Any | None
+    exposure_input: dict[str, Any] | None
+    market: dict[str, Any]
+    instrument_specs: dict[str, Any]
+    instrument_meta: dict[str, Any]
+    assumptions: dict[str, Any]
+    scenarios: list[dict[str, Any]]
+    policy: dict[str, Any]
 
 
 __all__ = [

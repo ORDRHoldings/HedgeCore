@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,8 +9,8 @@ from app.core.db import get_async_session
 from app.models.api_key import ApiKey
 from app.schemas.api_keys import (
     ApiKeyCreateRequest,
-    ApiKeyResponse,
     ApiKeyListResponse,
+    ApiKeyResponse,
 )
 from app.services.api_keys import (
     create_api_key,
@@ -61,7 +60,7 @@ async def list_api_keys_endpoint(
     _: ApiKey = Depends(validate_api_key),
 ):
     result = await session.execute(ApiKey.__table__.select())
-    keys: List[ApiKey] = result.scalars().all()
+    keys: list[ApiKey] = result.scalars().all()
     return ApiKeyListResponse.from_models(keys)
 
 

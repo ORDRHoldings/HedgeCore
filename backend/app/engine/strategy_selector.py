@@ -42,19 +42,20 @@ import hashlib
 import json
 import math
 import time
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any
 
+from app.contracts.instrument_catalog import InstrumentCatalog, InstrumentType
 from app.contracts.run_envelope import hash_canonical
 from app.contracts.trace_bundle import (
-    StageName,
-    RejectionCode,
+    Disclosure,
     DisclosureCode,
     Rejection,
-    Disclosure,
+    RejectionCode,
+    StageName,
     TraceStep,
 )
-from app.contracts.instrument_catalog import InstrumentCatalog, InstrumentType
 
 try:
     # Preferred: canonical taxonomy singleton (if present)
@@ -108,7 +109,7 @@ def _as_str(x: Any) -> str:
     return str(x).strip()
 
 
-def _as_list(x: Any) -> List[Any]:
+def _as_list(x: Any) -> list[Any]:
     return x if isinstance(x, list) else []
 
 
@@ -123,7 +124,7 @@ def _clamp01(x: float) -> float:
 # -----------------------------
 # Canonical axis registry helpers
 # -----------------------------
-_CANONICAL_AXES: Tuple[str, ...] = (
+_CANONICAL_AXES: tuple[str, ...] = (
     "R1_DELTA",
     "R2_VEGA",
     "R3_GAMMA",
@@ -135,7 +136,7 @@ _CANONICAL_AXES: Tuple[str, ...] = (
 )
 
 
-def _canonical_axis_set() -> Tuple[str, ...]:
+def _canonical_axis_set() -> tuple[str, ...]:
     """
     Prefer the runtime taxonomy singleton if it exists; otherwise fall back to the
     frozen v1 list embedded here (still deterministic).
@@ -144,7 +145,7 @@ def _canonical_axis_set() -> Tuple[str, ...]:
         if CANONICAL_TAXONOMY is not None:
             axes = getattr(CANONICAL_TAXONOMY, "axes", None)
             if isinstance(axes, list) and axes:
-                out: List[str] = []
+                out: list[str] = []
                 for a in axes:
                     aid = getattr(a, "id", None)
                     if aid:
@@ -163,7 +164,7 @@ def _validate_axis_id(axis_id: str, axis_set: Sequence[str]) -> bool:
 
 # Back-compat aliases: accept older/non-canonical incoming IDs and map explicitly.
 # Any alias mapping emits a disclosure.
-_AXIS_ALIASES: Dict[str, str] = {
+_AXIS_ALIASES: dict[str, str] = {
     # Legacy / earlier drafts
     "R2_GAMMA": "R3_GAMMA",
     "R3_VEGA": "R2_VEGA",
@@ -173,7 +174,7 @@ _AXIS_ALIASES: Dict[str, str] = {
 }
 
 
-def _normalize_axis_id(raw: str, axis_set: Sequence[str]) -> Tuple[str, Optional[str]]:
+def _normalize_axis_id(raw: str, axis_set: Sequence[str]) -> tuple[str, str | None]:
     """
     Returns (canonical_axis_id, alias_used_from) where alias_used_from is the original
     non-canonical ID if an alias mapping was applied.
@@ -198,15 +199,15 @@ def _normalize_axis_id(raw: str, axis_set: Sequence[str]) -> Tuple[str, Optional
 @dataclass(frozen=True, slots=True)
 class StrategyDef:
     strategy_id: str
-    covers_axes: Tuple[str, ...]
-    prefer_types: Tuple[InstrumentType, ...]
+    covers_axes: tuple[str, ...]
+    prefer_types: tuple[InstrumentType, ...]
     allow_multiple: bool
     max_instruments: int
     complexity: int
     notes: str
 
 
-STRATEGY_CATALOG: Tuple[StrategyDef, ...] = (
+STRATEGY_CATALOG: tuple[StrategyDef, ...] = (
     StrategyDef(
         strategy_id="index_futures",
         covers_axes=("R1_DELTA",),
@@ -272,13 +273,13 @@ STRATEGY_CATALOG: Tuple[StrategyDef, ...] = (
     ),
 )
 
-_STRATEGY_BY_ID: Dict[str, StrategyDef] = {s.strategy_id: s for s in STRATEGY_CATALOG}
+_STRATEGY_BY_ID: dict[str, StrategyDef] = {s.strategy_id: s for s in STRATEGY_CATALOG}
 
 
 # -----------------------------
 # Rejection helpers
 # -----------------------------
-def _make_rejection(code: RejectionCode, message: str, details: Optional[Dict[str, Any]] = None) -> Rejection:
+def _make_rejection(code: RejectionCode, message: str, details: dict[str, Any] | None = None) -> Rejection:
     return Rejection(
         code=code,
         message=message.strip(),
@@ -288,7 +289,7 @@ def _make_rejection(code: RejectionCode, message: str, details: Optional[Dict[st
     )
 
 
-def _make_disclosure(code: DisclosureCode, message: str, details: Optional[Dict[str, Any]] = None) -> Disclosure:
+def _make_disclosure(code: DisclosureCode, message: str, details: dict[str, Any] | None = None) -> Disclosure:
     return Disclosure(
         code=code,
         message=message.strip(),
@@ -300,14 +301,14 @@ def _make_disclosure(code: DisclosureCode, message: str, details: Optional[Dict[
 # -----------------------------
 # Candidate selection (catalog-driven)
 # -----------------------------
-def _rank_candidate_ids(catalog: InstrumentCatalog, ids: Sequence[str]) -> List[str]:
+def _rank_candidate_ids(catalog: InstrumentCatalog, ids: Sequence[str]) -> list[str]:
     """
     Deterministic ranking:
     1) higher liquidity_score (0..1)
     2) stable tiebreaker: instrument_id lexicographic
     """
     inst_by_id = {i.instrument_id: i for i in catalog.instruments}
-    ranked: List[Tuple[float, str]] = []
+    ranked: list[tuple[float, str]] = []
     for iid in ids:
         inst = inst_by_id.get(iid)
         if inst is None:
@@ -317,15 +318,15 @@ def _rank_candidate_ids(catalog: InstrumentCatalog, ids: Sequence[str]) -> List[
     return [iid for _, iid in ranked]
 
 
-def _candidate_ids_for_strategy(catalog: InstrumentCatalog, strat: StrategyDef) -> List[str]:
+def _candidate_ids_for_strategy(catalog: InstrumentCatalog, strat: StrategyDef) -> list[str]:
     """
     Candidate list is derived from catalog metadata alone:
     - Instrument must declare eligibility for at least one covered axis (eligible_axes)
     - Instrument type should match prefer_types if possible; if none match, fall back to any eligible type
     """
     covered = set(strat.covers_axes)
-    preferred_ids: List[str] = []
-    fallback_ids: List[str] = []
+    preferred_ids: list[str] = []
+    fallback_ids: list[str] = []
     prefer_types = set(strat.prefer_types)
 
     for inst in catalog.instruments:
@@ -352,7 +353,7 @@ def _build_trace_step(
     decisions: Sequence[str],
     rejections: Sequence[Rejection],
     disclosures: Sequence[Disclosure],
-    notes: Optional[Sequence[str]] = None,
+    notes: Sequence[str] | None = None,
 ) -> TraceStep:
     input_hash = hash_canonical(stage_input)
     output_hash = hash_canonical(stage_output)
@@ -374,9 +375,9 @@ def _build_trace_step(
 def select_strategies(
     payload: Mapping[str, Any],
     *,
-    policy: Optional[Mapping[str, Any]] = None,
-    instrument_catalog: Optional[Mapping[str, Any]] = None,
-) -> Dict[str, Any]:
+    policy: Mapping[str, Any] | None = None,
+    instrument_catalog: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Deterministically select hedge strategies from classified risks, and emit
     axis-explicit instrument candidates derived from InstrumentCatalog.
@@ -397,7 +398,7 @@ def select_strategies(
     """
     t0 = time.perf_counter()
 
-    pol: Dict[str, Any] = {
+    pol: dict[str, Any] = {
         "min_risk_score": 0.15,
         "max_strategy_complexity": 3,
         "max_output_strategies": 6,
@@ -426,8 +427,8 @@ def select_strategies(
 
     # Parse catalog snapshot (required for candidate emission)
     cat_src = instrument_catalog or payload.get("instrument_catalog")
-    catalog: Optional[InstrumentCatalog] = None
-    catalog_error: Optional[str] = None
+    catalog: InstrumentCatalog | None = None
+    catalog_error: str | None = None
 
     if isinstance(cat_src, dict):
         try:
@@ -476,13 +477,13 @@ def select_strategies(
     if not isinstance(risks, list):
         risks = []
 
-    selected: List[Dict[str, Any]] = []
-    rejections: List[Rejection] = []
-    disclosures: List[Disclosure] = []
-    decisions: List[str] = []
+    selected: list[dict[str, Any]] = []
+    rejections: list[Rejection] = []
+    disclosures: list[Disclosure] = []
+    decisions: list[str] = []
 
-    material_axes: List[str] = []
-    normalized_axes: List[str] = []
+    material_axes: list[str] = []
+    normalized_axes: list[str] = []
 
     for r in risks:
         if not isinstance(r, dict):
@@ -597,7 +598,7 @@ def select_strategies(
             decisions.append(f"{axis}:select:{strat.strategy_id}:cands={len(inst_ids)}")
 
     # Deduplicate strategies deterministically by strategy_id, merging axes/candidates
-    merged: Dict[str, Dict[str, Any]] = {}
+    merged: dict[str, dict[str, Any]] = {}
     for s in selected:
         sid = _as_str(s.get("strategy_id"))
         if not sid:

@@ -2,21 +2,12 @@
 
 from __future__ import annotations
 
-
-
 import hashlib
-
 import json
-
 import math
-
 import time
-
-from typing import Any, Dict, List, Mapping, Optional
-
-
-
-
+from collections.abc import Mapping
+from typing import Any
 
 ENGINE_NAME = "scenario_engine"
 
@@ -154,7 +145,7 @@ def _is_effectively_zero(x: float, eps: float) -> bool:
 
 
 
-def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> dict[str, Any]:
 
     return {
 
@@ -212,7 +203,7 @@ def _scenario_id_from_obj(s: Mapping[str, Any], idx: int) -> str:
 
 
 
-def run_scenarios(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+def run_scenarios(payload: Mapping[str, Any], *, policy: Mapping[str, Any] | None = None) -> dict[str, Any]:
 
     """
 
@@ -236,7 +227,7 @@ def run_scenarios(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, A
 
 
 
-    pol: Dict[str, Any] = {
+    pol: dict[str, Any] = {
 
         "max_scenarios": 50,
 
@@ -328,11 +319,11 @@ def run_scenarios(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, A
 
     trace = _build_trace_seed(policy=pol, input_obj=input_obj)
 
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
 
-    rejected: List[Dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
 
-    trace_steps: List[Dict[str, Any]] = []
+    trace_steps: list[dict[str, Any]] = []
 
 
 
@@ -346,7 +337,7 @@ def run_scenarios(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, A
 
     # Normalize hedges deterministically (and reject invalid contracts)
 
-    hedges: List[Dict[str, Any]] = []
+    hedges: list[dict[str, Any]] = []
 
     for hi, h in enumerate(sized_hedges):
 
@@ -492,7 +483,7 @@ def run_scenarios(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, A
 
         hedge_pnl = 0.0
 
-        hedge_rows: List[Dict[str, Any]] = []
+        hedge_rows: list[dict[str, Any]] = []
 
 
 

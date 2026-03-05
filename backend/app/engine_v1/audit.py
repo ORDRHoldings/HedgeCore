@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.engine_v1.hasher import sha256_of_dict, sha256_of_list
-from app.schemas_v1.results import RunEnvelope, TraceLite, TraceEvent
+from app.schemas_v1.results import RunEnvelope, TraceEvent, TraceLite
 
 
 def build_run_envelope(
@@ -48,7 +48,7 @@ def build_run_envelope(
     meta = snapshot_meta or {}
     return RunEnvelope(
         run_id=run_id,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         engine_version="2.0.0" if pair != "USDMXN" else "1.0.0",
         inputs_hash=inputs_hash,
         outputs_hash=outputs_hash,

@@ -18,8 +18,9 @@ HARD RULES:
 - deterministic serialization
 """
 
-from typing import Dict, List, Optional, Literal, Any
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 # -------------------------------------------------------------------
 # JSONValue (Non-recursive, OpenAPI-safe)
@@ -46,9 +47,9 @@ class StrictModel(BaseModel):
 # Market Inputs
 # -------------------------------------------------------------------
 class MarketInput(StrictModel):
-    prices: Dict[str, float]
-    option_deltas: Optional[Dict[str, float]] = None
-    sensitivities: Optional[Dict[str, Dict[str, float]]] = None
+    prices: dict[str, float]
+    option_deltas: dict[str, float] | None = None
+    sensitivities: dict[str, dict[str, float]] | None = None
 
 
 # -------------------------------------------------------------------
@@ -76,14 +77,14 @@ class ScenarioShock(StrictModel):
         ...,
         description="Equity price move as decimal (e.g. -0.05 = -5%)",
     )
-    vol_move_pct: Optional[float] = Field(
+    vol_move_pct: float | None = Field(
         default=0.0,
         description="Volatility move as decimal (optional)",
     )
 
 
 class Scenario(StrictModel):
-    scenario_id: Optional[str] = None
+    scenario_id: str | None = None
     shocks: ScenarioShock
 
 
@@ -95,14 +96,14 @@ class HedgeRequest(StrictModel):
     Canonical hedge request envelope.
     """
 
-    positions: List[Position]
-    instrument_meta: Dict[str, InstrumentMeta]
+    positions: list[Position]
+    instrument_meta: dict[str, InstrumentMeta]
     market: MarketInput
-    scenarios: List[Scenario]
+    scenarios: list[Scenario]
 
     # Explicit JSON sections (bounded)
-    assumptions: Optional[Dict[str, JSONValue]] = None
-    policy: Optional[Dict[str, JSONValue]] = None
+    assumptions: dict[str, JSONValue] | None = None
+    policy: dict[str, JSONValue] | None = None
 
 
 # -------------------------------------------------------------------
@@ -110,19 +111,19 @@ class HedgeRequest(StrictModel):
 # -------------------------------------------------------------------
 class WorstCaseValue(StrictModel):
     kind: Literal["number", "text"]
-    number: Optional[float] = None
-    text: Optional[str] = None
+    number: float | None = None
+    text: str | None = None
 
 
 class HedgeSummary(StrictModel):
     cost_total_usd: float
-    holding_period_days: Optional[int] = None
-    hedge_effectiveness: Dict[str, Optional[float]]
-    worst_case: Dict[str, WorstCaseValue]
+    holding_period_days: int | None = None
+    hedge_effectiveness: dict[str, float | None]
+    worst_case: dict[str, WorstCaseValue]
 
 
 class HedgeMeta(StrictModel):
-    decision_trace: Dict[str, JSONValue]
+    decision_trace: dict[str, JSONValue]
     duration_ms: int
 
 
@@ -131,8 +132,8 @@ class HedgeResponse(StrictModel):
     summary: HedgeSummary
     meta: HedgeMeta
 
-    stages: Optional[Dict[str, JSONValue]] = None
-    plan: Optional[Dict[str, JSONValue]] = None
+    stages: dict[str, JSONValue] | None = None
+    plan: dict[str, JSONValue] | None = None
 
 
 __all__ = [

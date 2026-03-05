@@ -6,8 +6,8 @@ import importlib
 import inspect
 import json
 import time
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
-
+from collections.abc import Callable, Mapping
+from typing import Any
 
 ENGINE_NAME = "recommend"
 ENGINE_VERSION = "1.0.3"
@@ -53,7 +53,7 @@ def _now_ms() -> int:
 # ---------------------------------------------------------------------
 # Deterministic callable resolution
 # ---------------------------------------------------------------------
-def _resolve_callable(module_name: str, candidates: Tuple[str, ...]) -> Callable[..., Any]:
+def _resolve_callable(module_name: str, candidates: tuple[str, ...]) -> Callable[..., Any]:
     """
     Deterministic, audit-safe callable resolver.
     Candidate order is authoritative and stable.
@@ -66,7 +66,7 @@ def _resolve_callable(module_name: str, candidates: Tuple[str, ...]) -> Callable
     raise AttributeError(f"{module_name}: none of {candidates} found")
 
 
-def _call_stage(fn: Callable[..., Any], inp: Any, policy: Dict[str, Any]) -> Any:
+def _call_stage(fn: Callable[..., Any], inp: Any, policy: dict[str, Any]) -> Any:
     """
     Deterministically invoke stage with or without policy depending on signature.
     """
@@ -79,7 +79,7 @@ def _call_stage(fn: Callable[..., Any], inp: Any, policy: Dict[str, Any]) -> Any
 # ---------------------------------------------------------------------
 # Trace helpers
 # ---------------------------------------------------------------------
-def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "engine": {"name": ENGINE_NAME, "version": ENGINE_VERSION},
         "policy": dict(policy),
@@ -91,12 +91,12 @@ def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]
     }
 
 
-def _safe_stage(stages_policy: Dict[str, Any], stage_key: str) -> Dict[str, Any]:
+def _safe_stage(stages_policy: dict[str, Any], stage_key: str) -> dict[str, Any]:
     v = stages_policy.get(stage_key, {})
     return dict(v) if isinstance(v, dict) else {}
 
 
-def _stage_failure(stage: str, err: Exception) -> Dict[str, Any]:
+def _stage_failure(stage: str, err: Exception) -> dict[str, Any]:
     """
     Deterministic failure envelope.
     IMPORTANT: does not include exception text/tracebacks (non-deterministic).
@@ -112,18 +112,18 @@ def _stage_failure(stage: str, err: Exception) -> Dict[str, Any]:
 
 def _run_stage(
     *,
-    trace: Dict[str, Any],
+    trace: dict[str, Any],
     stage: str,
     fn: Callable[..., Any],
     inp: Any,
-    stage_policy: Dict[str, Any],
+    stage_policy: dict[str, Any],
 ) -> Any:
     """
     Run one stage with:
       - deterministic input/output fingerprints
       - explicit stage failure envelope on exception
     """
-    stage_rec: Dict[str, Any] = {
+    stage_rec: dict[str, Any] = {
         "stage": stage,
         "input_fingerprint": _stable_hash(inp),
     }
@@ -141,7 +141,7 @@ def _run_stage(
         raise
 
 
-def _last_stage_failure(trace: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
+def _last_stage_failure(trace: Mapping[str, Any]) -> dict[str, Any] | None:
     stages = trace.get("stages")
     if not isinstance(stages, list) or not stages:
         return None
@@ -152,12 +152,12 @@ def _last_stage_failure(trace: Mapping[str, Any]) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _trace_sanitized_for_fingerprint(trace: Mapping[str, Any], *, plan_id: Optional[str]) -> Dict[str, Any]:
+def _trace_sanitized_for_fingerprint(trace: Mapping[str, Any], *, plan_id: str | None) -> dict[str, Any]:
     """
     Deterministic trace view used only for hashing (trace_fingerprint).
     Strips ephemeral values.
     """
-    out: Dict[str, Any] = {
+    out: dict[str, Any] = {
         "engine": trace.get("engine"),
         "policy": trace.get("policy"),
         "input_fingerprint": trace.get("input_fingerprint"),
@@ -172,7 +172,7 @@ def _trace_sanitized_for_fingerprint(trace: Mapping[str, Any], *, plan_id: Optio
     return out
 
 
-def _safe_trace_fingerprint(trace: Dict[str, Any], *, plan_id: Optional[str]) -> str:
+def _safe_trace_fingerprint(trace: dict[str, Any], *, plan_id: str | None) -> str:
     """
     Fail-safe trace fingerprint setter to prevent double-fault crashes.
 
@@ -195,7 +195,7 @@ def _safe_trace_fingerprint(trace: Dict[str, Any], *, plan_id: Optional[str]) ->
         return "UNAVAILABLE"
 
 
-def _attach_trace_fingerprint_and_timestamps(*, trace: Dict[str, Any], plan_id: Optional[str], duration_ms: int) -> None:
+def _attach_trace_fingerprint_and_timestamps(*, trace: dict[str, Any], plan_id: str | None, duration_ms: int) -> None:
     trace["trace_fingerprint"] = _safe_trace_fingerprint(trace, plan_id=plan_id)
     trace["timestamps"] = {"generated_at_ms": _now_ms(), "duration_ms": int(duration_ms)}
 
@@ -203,7 +203,7 @@ def _attach_trace_fingerprint_and_timestamps(*, trace: Dict[str, Any], plan_id: 
 # ---------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------
-def _summarize_results(*, costs: Mapping[str, Any], scenarios: Mapping[str, Any]) -> Dict[str, Any]:
+def _summarize_results(*, costs: Mapping[str, Any], scenarios: Mapping[str, Any]) -> dict[str, Any]:
     cost_total = 0.0
     holding_days = None
 
@@ -216,9 +216,9 @@ def _summarize_results(*, costs: Mapping[str, Any], scenarios: Mapping[str, Any]
                 cost_total = 0.0
             holding_days = c.get("holding_period_days")
 
-    eff_values: List[float] = []
-    worst_net_pnl: Optional[float] = None
-    worst_scenario_id: Optional[str] = None
+    eff_values: list[float] = []
+    worst_net_pnl: float | None = None
+    worst_scenario_id: str | None = None
 
     results = scenarios.get("results", []) if isinstance(scenarios, dict) else []
     if isinstance(results, list):
@@ -262,7 +262,7 @@ def _summarize_results(*, costs: Mapping[str, Any], scenarios: Mapping[str, Any]
 # ---------------------------------------------------------------------
 # Main Orchestrator
 # ---------------------------------------------------------------------
-def recommend(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+def recommend(payload: Mapping[str, Any], *, policy: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """
     HedgeCalc Engine Orchestrator (Deterministic v1)
 
@@ -292,7 +292,7 @@ def recommend(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any]]
     # -------------------------
     # Deterministic policy merge
     # -------------------------
-    pol: Dict[str, Any] = {
+    pol: dict[str, Any] = {
         "stages": {
             "exposure": {},
             "risk_classifier": {},
@@ -324,7 +324,7 @@ def recommend(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any]]
                 pass
 
     # --- Overrides explicitly ignored in v1 ---
-    ignored_overrides: List[str] = []
+    ignored_overrides: list[str] = []
     try:
         if "overrides" in payload:
             ov = payload.get("overrides")
@@ -649,7 +649,7 @@ def recommend(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any]]
         trace["trace_fingerprint"] = _safe_trace_fingerprint(trace, plan_id=plan_id)
         trace["timestamps"] = {"generated_at_ms": _now_ms(), "duration_ms": duration_ms}
 
-        out: Dict[str, Any] = {
+        out: dict[str, Any] = {
             "plan_id": plan_id,
             "summary": summary,
             "meta": {"decision_trace": trace, "duration_ms": duration_ms},

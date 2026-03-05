@@ -10,8 +10,7 @@ import csv
 import hashlib
 import io
 import uuid as _uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,8 +57,8 @@ async def create_run(
     session: AsyncSession,
     user: User,
     connector_type: str,
-    filename: Optional[str] = None,
-    file_hash: Optional[str] = None,
+    filename: str | None = None,
+    file_hash: str | None = None,
 ) -> ConnectorRun:
     """Start a ConnectorRun audit record (status=RUNNING)."""
     run = ConnectorRun(
@@ -80,9 +79,9 @@ async def record_error(
     session: AsyncSession,
     run_id: _uuid.UUID,
     error_message: str,
-    row_number: Optional[int] = None,
-    field_name: Optional[str] = None,
-    raw_data: Optional[dict] = None,
+    row_number: int | None = None,
+    field_name: str | None = None,
+    raw_data: dict | None = None,
 ) -> None:
     """Append a per-row error to a ConnectorRun."""
     err = ConnectorRunError(
@@ -107,7 +106,7 @@ async def complete_run(
     run.total_rows = total_rows
     run.created_ok = created_ok
     run.error_count = error_count
-    run.completed_at = datetime.now(timezone.utc)
+    run.completed_at = datetime.now(UTC)
     await session.commit()
     await session.refresh(run)
     return run
@@ -277,7 +276,7 @@ async def import_excel_audited(
 
     except ImportError:
         run.status = "FAILED"
-        run.completed_at = datetime.now(timezone.utc)
+        run.completed_at = datetime.now(UTC)
         await record_error(
             session, run.id, "openpyxl is not installed on this server."
         )

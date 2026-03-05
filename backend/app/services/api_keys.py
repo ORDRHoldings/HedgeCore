@@ -12,14 +12,14 @@ import hmac
 import logging
 import secrets
 import uuid
-from datetime import datetime, timezone
-from typing import Iterable, Optional, Tuple, Union
+from collections.abc import Iterable
+from datetime import UTC, datetime
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from sqlalchemy import select, update, cast, String
+from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Request, HTTPException, status, Depends
 
 from app.core.config import settings
 from app.core.db import get_async_session
@@ -42,7 +42,7 @@ ph = PasswordHasher(
 # Helpers
 # ---------------------------------------------------------------------
 
-def generate_key_pair() -> Tuple[str, str]:
+def generate_key_pair() -> tuple[str, str]:
     key_id = secrets.token_urlsafe(16)
     secret = secrets.token_urlsafe(32)
     return key_id, secret
@@ -79,11 +79,11 @@ def verify_secret_hash(secret: str, stored_hash: str) -> bool:
 async def create_api_key(
     session: AsyncSession,
     *,
-    name: Optional[str],
-    scopes: Optional[list[str]],
-    owner_user_id: Optional[uuid.UUID],
-    expires_at: Optional[datetime],
-) -> Tuple[ApiKey, str]:
+    name: str | None,
+    scopes: list[str] | None,
+    owner_user_id: uuid.UUID | None,
+    expires_at: datetime | None,
+) -> tuple[ApiKey, str]:
 
     key_id, secret = generate_key_pair()
 
@@ -107,7 +107,7 @@ async def create_api_key(
 async def rotate_api_key(
     session: AsyncSession,
     key_id: str,
-) -> Optional[Tuple[ApiKey, str]]:
+) -> tuple[ApiKey, str] | None:
     """Revoke the existing key and issue a new one with identical metadata.
 
     Returns ``(new_api_key, new_full_token)`` on success, ``None`` if the
@@ -140,7 +140,7 @@ async def rotate_api_key(
     return new_key, new_token
 
 
-async def revoke_api_key(session: AsyncSession, key_id: str) -> Optional[ApiKey]:
+async def revoke_api_key(session: AsyncSession, key_id: str) -> ApiKey | None:
 
     stmt = select(ApiKey).where(ApiKey.key_id == key_id)
     res = await session.execute(stmt)
@@ -161,9 +161,9 @@ async def revoke_api_key(session: AsyncSession, key_id: str) -> Optional[ApiKey]
 
 async def verify_api_key_header(
     session: AsyncSession,
-    header_value: Optional[str],
-    required_scopes: Optional[Iterable[str]] = None,
-) -> Optional[ApiKey]:
+    header_value: str | None,
+    required_scopes: Iterable[str] | None = None,
+) -> ApiKey | None:
 
     if not header_value or not header_value.startswith("HK_live_"):
         return None
@@ -194,7 +194,7 @@ async def verify_api_key_header(
     await session.execute(
         update(ApiKey)
         .where(ApiKey.id == api_key.id)
-        .values(last_used_at=datetime.now(timezone.utc))
+        .values(last_used_at=datetime.now(UTC))
     )
     await session.commit()
 
@@ -208,7 +208,7 @@ async def verify_api_key_header(
 async def validate_api_key(
     request: Request,
     session: AsyncSession = Depends(get_async_session),
-    required_scopes: Optional[Iterable[str]] = None,
+    required_scopes: Iterable[str] | None = None,
 ) -> ApiKey:
 
     header_value = request.headers.get("Authorization")

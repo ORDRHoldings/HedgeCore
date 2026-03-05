@@ -27,10 +27,11 @@ Each event carries:
 import hashlib
 import json
 import uuid as _uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, Index, String, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.core.db import Base
 
@@ -138,7 +139,7 @@ def build_audit_event(
     Factory: build a new AuditEvent row, computing the tamper-evident hash.
     Call session.add(event) and session.commit() after.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     event_hash = compute_event_hash(
         event_type=event_type,
         actor_id=str(actor_id) if actor_id else None,

@@ -24,20 +24,10 @@ Lifecycle schemas (Phase 0 regulated backbone):
 
 from __future__ import annotations
 
-
-
 from datetime import datetime
-
-from typing import Optional
-
 from uuid import UUID
 
-
-
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-
-
-
 
 
 class PositionCreate(BaseModel):
@@ -68,7 +58,7 @@ class PositionCreate(BaseModel):
 
                                        pattern=r"^(CONFIRMED|FORECAST)$")
 
-    description: Optional[str] = Field(default=None, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
 
 
 
@@ -88,19 +78,19 @@ class PositionUpdate(BaseModel):
 
     """Partial update -- all fields optional. Only provided fields are changed."""
 
-    entity:      Optional[str]   = Field(default=None, min_length=1, max_length=255)
+    entity:      str | None   = Field(default=None, min_length=1, max_length=255)
 
-    flow_type:   Optional[str]   = Field(default=None, pattern=r"^(AR|AP)$")
+    flow_type:   str | None   = Field(default=None, pattern=r"^(AR|AP)$")
 
-    currency:    Optional[str]   = Field(default=None, min_length=3, max_length=3)
+    currency:    str | None   = Field(default=None, min_length=3, max_length=3)
 
-    amount:      Optional[float] = Field(default=None, gt=0)
+    amount:      float | None = Field(default=None, gt=0)
 
-    value_date:  Optional[str]   = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    value_date:  str | None   = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 
-    status:      Optional[str]   = Field(default=None, pattern=r"^(CONFIRMED|FORECAST)$")
+    status:      str | None   = Field(default=None, pattern=r"^(CONFIRMED|FORECAST)$")
 
-    description: Optional[str]   = Field(default=None, max_length=512)
+    description: str | None   = Field(default=None, max_length=512)
 
 
 
@@ -108,7 +98,7 @@ class PositionUpdate(BaseModel):
 
     @classmethod
 
-    def currency_uppercase(cls, v: Optional[str]) -> Optional[str]:
+    def currency_uppercase(cls, v: str | None) -> str | None:
 
         return v.upper() if v else v
 
@@ -167,7 +157,7 @@ class ReadyToExecuteRequest(BaseModel):
 
     )
 
-    hedge_amount: Optional[float] = Field(
+    hedge_amount: float | None = Field(
 
         default=None, gt=0,
 
@@ -175,7 +165,7 @@ class ReadyToExecuteRequest(BaseModel):
 
     )
 
-    hedge_rate: Optional[float] = Field(
+    hedge_rate: float | None = Field(
 
         default=None, gt=0,
 
@@ -199,7 +189,7 @@ class ExecutePositionRequest(BaseModel):
 
     )
 
-    hedge_amount: Optional[float] = Field(
+    hedge_amount: float | None = Field(
 
         default=None, gt=0,
 
@@ -207,7 +197,7 @@ class ExecutePositionRequest(BaseModel):
 
     )
 
-    hedge_rate: Optional[float] = Field(
+    hedge_rate: float | None = Field(
 
         default=None, gt=0,
 
@@ -249,7 +239,7 @@ class PositionResponse(BaseModel):
 
     company_id:  UUID
 
-    branch_id:   Optional[UUID]  = None
+    branch_id:   UUID | None  = None
 
     created_by:  UUID
 
@@ -267,7 +257,7 @@ class PositionResponse(BaseModel):
 
     status:      str
 
-    description: Optional[str]   = None
+    description: str | None   = None
 
     is_active:   bool
 
@@ -281,19 +271,19 @@ class PositionResponse(BaseModel):
 
     execution_status: str        = "NEW"
 
-    policy_id:        Optional[UUID]    = None
+    policy_id:        UUID | None    = None
 
-    last_run_id:      Optional[str]     = None
+    last_run_id:      str | None     = None
 
-    executed_at:      Optional[datetime] = None
+    executed_at:      datetime | None = None
 
-    execution_ref:    Optional[str]     = None
+    execution_ref:    str | None     = None
 
-    hedge_amount:     Optional[float]   = None
+    hedge_amount:     float | None   = None
 
-    hedge_rate:       Optional[float]   = None
+    hedge_rate:       float | None   = None
 
-    rejection_reason: Optional[str]     = None
+    rejection_reason: str | None     = None
 
 
 

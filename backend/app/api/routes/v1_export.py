@@ -30,47 +30,24 @@ Sprint 1.5: GET /v1/export/committee-pack/{run_id}
 
 from __future__ import annotations
 
-
-
 import logging
 
-from typing import Optional
-
-
-
 from fastapi import APIRouter, Depends, HTTPException, Query
-
 from fastapi.responses import Response
-
 from sqlalchemy import select
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
-from app.core.db import get_async_session
-
-from app.core.security import get_current_user, get_current_user_optional
-
-from app.exports_v1.excel_builder import render_bank_pack_xlsx
-
-from app.exports_v1.pdf_builder import render_bank_pack_pdf
-
-from app.exports_v1.zip_builder import build_audit_zip
-
 from app.api.routes.v1_calculate import get_run
-
+from app.core.db import get_async_session
+from app.core.security import get_current_user
+from app.exports_v1.excel_builder import render_bank_pack_xlsx
+from app.exports_v1.pdf_builder import render_bank_pack_pdf
+from app.exports_v1.zip_builder import build_audit_zip
 from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
-
 from app.models.calculation_run import CalculationRun
-
 from app.models.policy_revision import PolicyRevision
-
 from app.models.user import User
-
 from app.services import rbac_service
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -403,7 +380,7 @@ async def get_committee_pack(
 
     # ?? 2. Optionally fetch pinned PolicyRevision ??????????????????????????????
 
-    policy_revision_data: Optional[dict] = None
+    policy_revision_data: dict | None = None
 
     if run_row.policy_revision_id:
 

@@ -12,10 +12,10 @@ The _run_store dict in v1_calculate.py is kept as a fast in-process cache
 
 WORM semantics: this table is append-only. Rows are never updated or deleted.
 """
-import uuid as _uuid
 
-from sqlalchemy import Column, DateTime, Index, Integer, String, Text, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy import Column, DateTime, Index, Integer, String, text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.core.db import Base
 

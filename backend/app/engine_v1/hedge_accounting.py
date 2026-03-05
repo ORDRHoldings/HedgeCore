@@ -12,7 +12,6 @@ Pure computation — no I/O, no state.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -26,10 +25,10 @@ class EffectivenessResult:
     is_effective: bool
     """True if ratio falls within [0.80, 1.25]."""
 
-    regression_r_squared: Optional[float]
+    regression_r_squared: float | None
     """R² from regression test (None if dollar-offset method used)."""
 
-    regression_slope: Optional[float]
+    regression_slope: float | None
     """Regression slope β (None if dollar-offset method used)."""
 
     method: str
@@ -122,7 +121,7 @@ def assess_hedge_effectiveness_regression(
     x_mean = sum(x) / n
     y_mean = sum(y) / n
 
-    ss_xy = sum((xi - x_mean) * (yi - y_mean) for xi, yi in zip(x, y))
+    ss_xy = sum((xi - x_mean) * (yi - y_mean) for xi, yi in zip(x, y, strict=False))
     ss_xx = sum((xi - x_mean) ** 2 for xi in x)
     ss_yy = sum((yi - y_mean) ** 2 for yi in y)
 

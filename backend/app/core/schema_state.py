@@ -32,13 +32,12 @@ Attack-surface hardening:
 from __future__ import annotations
 
 import time as _time
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Advisory lock key (single source of truth)
@@ -148,7 +147,7 @@ async def run_readiness_checks(engine: AsyncEngine) -> dict[str, Any]:
         checks                dict[str, bool] — per-check results
         checked_at            ISO-8601 UTC timestamp
     """
-    checked_at = datetime.now(timezone.utc).isoformat()
+    checked_at = datetime.now(UTC).isoformat()
 
     # ── SQLite shortcut (dev / unit-test mode) ────────────────────────────────
     if "sqlite" in str(engine.url).lower():

@@ -21,20 +21,18 @@ Security Notes:
 from __future__ import annotations
 
 import logging
-from datetime import datetime
-from typing import Optional
-
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
-    String,
-    Integer,
     Boolean,
     DateTime,
-    func,
     ForeignKey,
-    UniqueConstraint,
     Index,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import (
@@ -63,10 +61,10 @@ class Role(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # Role name is unique; service layer should normalize to lowercase.
     name: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
-    description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    description: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Company-scoped roles (NULL = system-wide role)
-    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    company_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True),
         ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=True,
@@ -146,7 +144,7 @@ class UserRole(Base):
     role: Mapped[Role] = relationship("Role", back_populates="user_roles")
     # Create a lightweight reverse collection on User without editing the User model now.
     # This requires the User mapper to be configured in the registry.
-    user: Mapped["User"] = relationship(
+    user: Mapped[User] = relationship(
         "User",
         backref="user_roles",
         passive_deletes=True,

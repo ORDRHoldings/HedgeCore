@@ -6,7 +6,7 @@ Same inputs always produce identical outputs.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pandas as pd
 
@@ -89,7 +89,7 @@ def compute_hedge_plan(
             trace_events.append(
                 TraceEvent(
                     step="KERNEL",
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                     detail=f"Bucket {bucket}: action suppressed (filtered_small_notional). "
                     f"USD equiv {usd_equiv:,.2f} < min {min_trade:,.2f}",
                     data={
@@ -153,12 +153,12 @@ def compute_hedge_plan(
 # ──────────────────────────────────────────────────────────────────────────────
 
 def compute_hedge_plan_multi(
-    trades_df: "pd.DataFrame",
-    hedges_df: "pd.DataFrame",
-    market: "MarketSnapshot",
-    policy: "PolicyConfig",
+    trades_df: pd.DataFrame,
+    hedges_df: pd.DataFrame,
+    market: MarketSnapshot,
+    policy: PolicyConfig,
     pair: str = "USDMXN",
-) -> "tuple[HedgePlan, list[TraceEvent]]":
+) -> tuple[HedgePlan, list[TraceEvent]]:
     """Multi-currency kernel wrapper.
 
     Routes to the correct spot/forward data based on currency pair.

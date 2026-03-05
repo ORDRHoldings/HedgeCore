@@ -14,15 +14,14 @@ Key Improvements:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
-    Integer,
-    String,
     DateTime,
-    SmallInteger,
     ForeignKey,
     Index,
+    Integer,
+    SmallInteger,
+    String,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -51,15 +50,15 @@ class AuditLog(Base):
         doc="Correlation ID (x-request-id header).",
     )
 
-    user_id: Mapped[Optional[int]] = mapped_column(
+    user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
         doc="Authenticated user ID (nullable for anonymous calls).",
     )
 
-    ip: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    user_agent: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
     method: Mapped[str] = mapped_column(String(8), nullable=False)
     path: Mapped[str] = mapped_column(String(512), nullable=False)

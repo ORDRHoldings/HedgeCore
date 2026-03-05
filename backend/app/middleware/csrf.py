@@ -21,12 +21,11 @@ from __future__ import annotations
 
 import os
 import secrets
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-
 
 # Paths that bypass CSRF validation (unauthenticated or token-issuing)
 _CSRF_EXEMPT_PREFIXES = (

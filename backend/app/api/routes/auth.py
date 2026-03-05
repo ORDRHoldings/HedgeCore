@@ -11,71 +11,37 @@ HedgeCalc Authentication API - Phase V (Final Stable Build)
 
 
 import logging
-
-from typing import Optional
-
 from uuid import UUID
 
-
-
-import jwt
-
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-
 import fastapi.security as fastapi_security
-
+import jwt
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-
-
 from app.core.db import get_session
-
-from fastapi.responses import JSONResponse
-
 from app.core.security import (
-
-    hash_password,
-
-    verify_password,
-
     create_access_token,
-
     create_refresh_token,
-
     decode_token,
-
     get_session_duration_for_roles,
-
+    hash_password,
+    verify_password,
 )
-
-from app.middleware.csrf import generate_csrf_token
-
 from app.crud import refresh_token as rt_crud
-
-from app.models.user import User
-
-from app.schemas.auth import RegisterRequest, TokenPair, TokenRefreshRequest
-
-from app.schemas.user import UserPublic, UserMeResponse, CompanyBrief, BranchBrief, DepartmentBrief
-
-from app.services import rbac_service
-
+from app.middleware.csrf import generate_csrf_token
 from app.models.auth_audit_log import (
-
-    record_auth_event,
-
-    AuthEventType,
-
     AuthEventStatus,
-
+    AuthEventType,
     AuthReasonCode,
-
+    record_auth_event,
 )
-
-
+from app.models.user import User
+from app.schemas.auth import RegisterRequest, TokenPair, TokenRefreshRequest
+from app.schemas.user import BranchBrief, CompanyBrief, DepartmentBrief, UserMeResponse, UserPublic
+from app.services import rbac_service
 
 try:
 
@@ -151,7 +117,7 @@ async def _get_user_or_401(db: AsyncSession, user_id: UUID) -> User:
 
     )
 
-    user: Optional[User] = res.scalars().first()
+    user: User | None = res.scalars().first()
 
     if not user or not user.is_active:
 
@@ -335,7 +301,7 @@ async def login(
 
         res = await db.execute(select(User).where(User.email == email))
 
-        user: Optional[User] = res.scalars().first()
+        user: User | None = res.scalars().first()
 
 
 
@@ -393,8 +359,9 @@ async def login(
         # Emit SYSTEM audit event for high-privilege logins with shortened session
         if session_minutes < 30:
             try:
-                from app.models.audit_event import AuditEvent, GENESIS_HASH, build_audit_event
                 from sqlalchemy import select as _sa_select
+
+                from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
                 _q = (
                     _sa_select(AuditEvent.event_hash)
                     .where(AuditEvent.company_id == user.company_id)

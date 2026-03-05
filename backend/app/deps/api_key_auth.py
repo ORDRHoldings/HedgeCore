@@ -16,12 +16,13 @@ Adds:
 from __future__ import annotations
 
 import logging
+
 from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
-from app.services.api_keys import verify_api_key_header
 from app.models.api_key import ApiKey
+from app.services.api_keys import verify_api_key_header
 
 logger = logging.getLogger(__name__)
 

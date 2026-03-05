@@ -5,14 +5,13 @@ from __future__ import annotations
 
 import logging
 import uuid as _uuid
-from typing import Optional
 
-from sqlalchemy import and_, delete, select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.policy_favorite import PolicyFavorite
 from app.models.policy import PolicyTemplate
+from app.models.policy_favorite import PolicyFavorite
 from app.models.user import User
 from app.services import policy_service
 
@@ -23,7 +22,7 @@ async def add_favorite(
     session: AsyncSession,
     user: User,
     template_id: _uuid.UUID,
-    notes: Optional[str] = None,
+    notes: str | None = None,
 ) -> PolicyFavorite:
     """
     Add a policy template to the user's favorites.

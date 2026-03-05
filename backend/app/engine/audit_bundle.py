@@ -43,8 +43,8 @@ Notes on JSON Canonicalization
 import hashlib
 import json
 import time
-from typing import Any, Dict, List, Mapping, Optional, Tuple
-
+from collections.abc import Mapping
+from typing import Any
 
 ENGINE_NAME = "audit_bundle"
 ENGINE_VERSION = "1.0.0"
@@ -82,19 +82,19 @@ def _is_mapping(x: Any) -> bool:
     return isinstance(x, Mapping)
 
 
-def _as_dict(x: Any, *, name: str) -> Dict[str, Any]:
+def _as_dict(x: Any, *, name: str) -> dict[str, Any]:
     if not isinstance(x, dict):
         raise TypeError(f"{name} must be a dict")
     return x
 
 
-def _as_list(x: Any, *, name: str) -> List[Any]:
+def _as_list(x: Any, *, name: str) -> list[Any]:
     if not isinstance(x, list):
         raise TypeError(f"{name} must be a list")
     return x
 
 
-def _maybe_dict(x: Any) -> Optional[Dict[str, Any]]:
+def _maybe_dict(x: Any) -> dict[str, Any] | None:
     return x if isinstance(x, dict) else None
 
 
@@ -134,7 +134,7 @@ def _strip_timestamps(obj: Any) -> Any:
     }
 
     if isinstance(obj, dict):
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         for k, v in obj.items():
             if k in TS_KEYS:
                 continue
@@ -160,7 +160,7 @@ REASON_MISSING_TRACE = "missing_trace"
 # -----------------------------
 # Build seed
 # -----------------------------
-def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "engine": {"name": ENGINE_NAME, "version": ENGINE_VERSION},
         "policy": dict(policy),
@@ -172,7 +172,7 @@ def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]
 # -----------------------------
 # Public API
 # -----------------------------
-def build_audit_bundle(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+def build_audit_bundle(payload: Mapping[str, Any], *, policy: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """
     Build an immutable AuditBundle.
 
@@ -208,7 +208,7 @@ def build_audit_bundle(payload: Mapping[str, Any], *, policy: Optional[Mapping[s
     """
     t0 = time.perf_counter()
 
-    pol: Dict[str, Any] = {
+    pol: dict[str, Any] = {
         # Enforce that decision_gate decision_hash must be present
         "require_decision_hash": True,
         # Enforce that policy_bundle must have policy_hash or trace_fingerprint
@@ -277,14 +277,14 @@ def build_audit_bundle(payload: Mapping[str, Any], *, policy: Optional[Mapping[s
         )
 
     # Stage traces cap (deterministic)
-    traces_in: List[Any] = stage_traces if isinstance(stage_traces, list) else []
+    traces_in: list[Any] = stage_traces if isinstance(stage_traces, list) else []
     max_traces = int(pol.get("max_stage_traces", 50)) if isinstance(pol.get("max_stage_traces"), int) else 50
     if max_traces < 1:
         max_traces = 1
     traces_in = traces_in[:max_traces]
 
     # Normalize trace entries
-    norm_traces: List[Dict[str, Any]] = []
+    norm_traces: list[dict[str, Any]] = []
     for i, tr in enumerate(traces_in):
         if not isinstance(tr, dict):
             continue
@@ -315,8 +315,8 @@ def build_audit_bundle(payload: Mapping[str, Any], *, policy: Optional[Mapping[s
         )
 
     # Plan inclusion policy
-    plan_included: Optional[Dict[str, Any]] = None
-    plan_fp: Optional[str] = None
+    plan_included: dict[str, Any] | None = None
+    plan_fp: str | None = None
     if isinstance(plan_obj, dict):
         plan_use = _strip_timestamps(plan_obj) if bool(pol["strip_timestamps_in_hash_domain"]) else plan_obj
         plan_fp = _stable_hash(plan_use)
@@ -337,7 +337,7 @@ def build_audit_bundle(payload: Mapping[str, Any], *, policy: Optional[Mapping[s
     decision_use = _strip_timestamps(decision) if bool(pol["strip_timestamps_in_hash_domain"]) else decision
     policy_use = _strip_timestamps(policy_bundle) if bool(pol["strip_timestamps_in_hash_domain"]) else policy_bundle
 
-    bundle_core: Dict[str, Any] = {
+    bundle_core: dict[str, Any] = {
         "engine": {"name": ENGINE_NAME, "version": ENGINE_VERSION},
         "plan_id": plan_id_s,
         "plan_fingerprint": plan_fp,
@@ -396,7 +396,7 @@ def build_audit_bundle(payload: Mapping[str, Any], *, policy: Optional[Mapping[s
     }
 
 
-def _reject(t0: float, pol: Mapping[str, Any], *, reason: str, details: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def _reject(t0: float, pol: Mapping[str, Any], *, reason: str, details: dict[str, Any] | None = None) -> dict[str, Any]:
     duration_ms = int((time.perf_counter() - t0) * 1000)
     input_obj = {"reason": reason, "details": details or {}}
     trace = _build_trace_seed(policy=dict(pol), input_obj=input_obj)

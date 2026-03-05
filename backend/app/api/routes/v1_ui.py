@@ -4,21 +4,20 @@ Tenant-safe, RBAC-gated, deterministic.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.core.security import get_current_user
-from app.models.user import User
-from app.models.position import Position
-from app.models.policy import PolicyInstance
 from app.models.calculation_run import CalculationRun
 from app.models.execution_proposal import ExecutionProposal
+from app.models.policy import PolicyInstance
+from app.models.position import Position
+from app.models.user import User
 
 router = APIRouter(prefix="/v1/ui", tags=["ui"])
 
@@ -30,24 +29,24 @@ router = APIRouter(prefix="/v1/ui", tags=["ui"])
 class OnboardingSummaryResponse(BaseModel):
     exposures_open_count: int
     policy_assigned: bool
-    policy_id: Optional[str]
-    last_run_id: Optional[str]
-    last_run_at: Optional[str]
+    policy_id: str | None
+    last_run_id: str | None
+    last_run_at: str | None
     pending_proposals_count: int
     pending_approvals_count: int
-    net_notional_base: Optional[str]
-    net_notional_amount: Optional[float]
-    last_run_estimated_cost: Optional[float]
+    net_notional_base: str | None
+    net_notional_amount: float | None
+    last_run_estimated_cost: float | None
     risk_gate_status: str  # "online" | "offline" | "unknown"
 
 
 class UiPrefsResponse(BaseModel):
     show_quickstart: bool
-    quickstart_dismissed_at: Optional[str]
+    quickstart_dismissed_at: str | None
 
 
 class UiPrefsUpdate(BaseModel):
-    show_quickstart: Optional[bool] = None
+    show_quickstart: bool | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -70,18 +69,18 @@ def build_safe_summary_defaults() -> dict:
     }
 
 
-def get_show_quickstart_from_prefs(prefs: Optional[dict]) -> bool:
+def get_show_quickstart_from_prefs(prefs: dict | None) -> bool:
     if not prefs:
         return True
     return bool(prefs.get("show_quickstart", True))
 
 
-def apply_prefs_update(existing: dict, *, show_quickstart: Optional[bool] = None) -> dict:
+def apply_prefs_update(existing: dict, *, show_quickstart: bool | None = None) -> dict:
     prefs = dict(existing)
     if show_quickstart is not None:
         prefs["show_quickstart"] = show_quickstart
         if not show_quickstart:
-            prefs["quickstart_dismissed_at"] = datetime.now(timezone.utc).isoformat()
+            prefs["quickstart_dismissed_at"] = datetime.now(UTC).isoformat()
     return prefs
 
 
@@ -210,7 +209,7 @@ async def get_onboarding_summary(
 
     # Non-blocking audit event
     try:
-        from app.models.audit_event import AuditEvent, build_audit_event, GENESIS_HASH
+        from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 
         _prev_q = (
             select(AuditEvent.event_hash)

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Request, HTTPException
-from typing import Dict, Any
-import time
-import uuid
 import hashlib
 import json
 import logging
+import time
+import uuid
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Request
 
 router = APIRouter(prefix="/engine", tags=["Hedge Engine"])
 
@@ -19,7 +20,7 @@ def _hash_payload(payload: Any) -> str:
         return "hash_error"
 
 
-def _audit_log(event: Dict[str, Any]) -> None:
+def _audit_log(event: dict[str, Any]) -> None:
     """
     Immutable-style audit log.
     Append-only semantics enforced by convention.
@@ -28,12 +29,12 @@ def _audit_log(event: Dict[str, Any]) -> None:
 
 
 @router.get("/health")
-async def engine_health() -> Dict[str, str]:
+async def engine_health() -> dict[str, str]:
     return {"status": "ok", "component": "hedge-engine"}
 
 
 @router.get("/catalog")
-async def get_catalog() -> Dict[str, Any]:
+async def get_catalog() -> dict[str, Any]:
     """
     Returns hedge strategies and instrument catalog.
     v1: static placeholder, deterministic.
@@ -58,7 +59,7 @@ async def get_catalog() -> Dict[str, Any]:
 
 
 @router.post("/simulate")
-async def simulate_engine(request: Request) -> Dict[str, Any]:
+async def simulate_engine(request: Request) -> dict[str, Any]:
     start = time.time()
     request_id = str(uuid.uuid4())
 
@@ -90,13 +91,13 @@ async def simulate_engine(request: Request) -> Dict[str, Any]:
             "result": result
         }
 
-    except Exception as e:
+    except Exception:
         logger.exception("Simulation error")
         raise HTTPException(status_code=500, detail="Engine simulation failed")
 
 
 @router.post("/recommend")
-async def recommend_hedge(request: Request) -> Dict[str, Any]:
+async def recommend_hedge(request: Request) -> dict[str, Any]:
     start = time.time()
     request_id = str(uuid.uuid4())
 

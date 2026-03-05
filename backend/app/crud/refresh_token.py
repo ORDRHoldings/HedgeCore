@@ -11,8 +11,7 @@ Enhancements:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -32,8 +31,8 @@ async def create(
     jti: str,
     user_id: UUID,
     expires_at: datetime,
-    ip: Optional[str],
-    user_agent: Optional[str],
+    ip: str | None,
+    user_agent: str | None,
 ) -> RefreshToken:
     """
     Persist a new refresh token record (UUID-safe) and enforce single-session policy.
@@ -71,7 +70,7 @@ async def create(
 # -------------------------------------------------------------------
 # ? Get by JTI
 # -------------------------------------------------------------------
-async def get_by_jti(db: AsyncSession, *, jti: str) -> Optional[RefreshToken]:
+async def get_by_jti(db: AsyncSession, *, jti: str) -> RefreshToken | None:
     res = await db.execute(select(RefreshToken).where(RefreshToken.jti == jti))
     token = res.scalars().first()
     logger.debug("RefreshToken:get_by_jti jti=%s found=%s", jti, bool(token))
@@ -134,7 +133,7 @@ async def is_valid_for_refresh(db: AsyncSession, *, jti: str) -> bool:
     if token.revoked:
         logger.debug("RefreshToken:is_valid jti=%s -> False (revoked)", jti)
         return False
-    if token.expires_at <= datetime.now(timezone.utc):
+    if token.expires_at <= datetime.now(UTC):
         logger.debug("RefreshToken:is_valid jti=%s -> False (expired)", jti)
         return False
     logger.debug("RefreshToken:is_valid jti=%s -> True", jti)

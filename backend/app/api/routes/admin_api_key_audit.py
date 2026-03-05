@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, func, select
@@ -26,8 +25,8 @@ from app.core.db import get_async_session
 from app.deps.jwt_auth import get_current_admin_user
 from app.models.api_key_audit import ApiKeyAuditLog
 from app.schemas.api_key_audit import (
-    ApiKeyAuditLogPublic,
     ApiKeyAuditLogListResponse,
+    ApiKeyAuditLogPublic,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,12 +57,12 @@ async def list_api_key_audit_logs(
     admin_user=Depends(get_current_admin_user),
     limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
     offset: int = Query(0, ge=0),
-    api_key_id: Optional[str] = None,
-    user_id: Optional[str] = None,
-    path: Optional[str] = None,
-    status_code: Optional[int] = None,
-    created_from: Optional[datetime] = None,
-    created_to: Optional[datetime] = None,
+    api_key_id: str | None = None,
+    user_id: str | None = None,
+    path: str | None = None,
+    status_code: int | None = None,
+    created_from: datetime | None = None,
+    created_to: datetime | None = None,
 ):
     """
     Return API key audit logs with pagination and filters.

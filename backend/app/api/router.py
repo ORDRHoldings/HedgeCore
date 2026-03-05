@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 app/api/router.py
 
@@ -12,29 +11,31 @@ CANONICAL RULE:
 """
 
 from fastapi import APIRouter
-from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
+
+from app.api.routes.admin_api_keys import router as admin_api_keys_router
+from app.api.routes.admin_roles import router as admin_roles_router
 
 # Import feature routers (feature routers OWN their prefixes)
 from app.api.routes.auth import router as auth_router
-from app.api.routes.admin_api_keys import router as admin_api_keys_router
-from app.api.routes.system import router as system_router
-from app.api.routes.hedge import router as hedge_router
-from app.api.routes.v1_calculate import router as v1_calculate_router
-from app.api.routes.v1_upload import router as v1_upload_router
-from app.api.routes.v1_export import router as v1_export_router
-from app.api.routes.v1_pipeline import router as v1_pipeline_router
-from app.api.routes.organization import router as organization_router
-from app.api.routes.admin_roles import router as admin_roles_router
-from app.api.routes.seed import router as seed_router
 from app.api.routes.dashboard import router as dashboard_router
-from app.api.routes.v1_positions import router as v1_positions_router
-from app.api.routes.v1_policies import router as v1_policies_router
-from app.api.routes.v1_connectors import router as v1_connectors_router
+from app.api.routes.hedge import router as hedge_router
+from app.api.routes.market import router as market_router
+from app.api.routes.organization import router as organization_router
+from app.api.routes.seed import router as seed_router
+from app.api.routes.system import router as system_router
 from app.api.routes.v1_audit import router as v1_audit_router
+from app.api.routes.v1_calculate import router as v1_calculate_router
+from app.api.routes.v1_connectors import router as v1_connectors_router
+
 # Phase 1 ? Institutional governance
 from app.api.routes.v1_execution_proposals import router as v1_proposals_router
+from app.api.routes.v1_export import router as v1_export_router
+from app.api.routes.v1_pipeline import router as v1_pipeline_router
+from app.api.routes.v1_policies import router as v1_policies_router
 from app.api.routes.v1_policy_revisions import router as v1_policy_revisions_router
-from app.api.routes.market import router as market_router
+from app.api.routes.v1_positions import router as v1_positions_router
+from app.api.routes.v1_upload import router as v1_upload_router
 
 router = APIRouter()
 
@@ -115,42 +116,52 @@ router.include_router(v1_policy_revisions_router)
 
 # L-11 MFA (owns /v1/mfa)
 from app.api.routes.v1_mfa import router as v1_mfa_router
+
 router.include_router(v1_mfa_router)
 
 # Support Ticketing (owns /v1/support)
 from app.api.routes.v1_support import router as v1_support_router
+
 router.include_router(v1_support_router)
 
 # Risk Check (owns /v1/risk-check)
 from app.api.routes.v1_risk_check import router as v1_risk_check_router
+
 router.include_router(v1_risk_check_router)
 
 # Market Snapshot WORM store (owns /v1/market-snapshots)
 from app.api.routes.v1_market_snapshots import router as v1_market_snapshots_router
+
 router.include_router(v1_market_snapshots_router)
 
 # Company governance settings (owns /v1/company)
 from app.api.routes.v1_company_settings import router as v1_company_settings_router
+
 router.include_router(v1_company_settings_router)
 
 # RPT-04 + RPT-06: Report persistence & scheduling (owns /v1/reports)
 from app.api.routes.v1_reports import router as v1_reports_router
+
 router.include_router(v1_reports_router)
 
 # Multi-currency calculate endpoint (owns /v1/calculate/multi)
 from app.api.routes.v1_calculate_multi import router as v1_calculate_multi_router
+
 router.include_router(v1_calculate_multi_router)
 
 # UI endpoints: onboarding summary + user UI preferences (owns /v1/ui)
 from app.api.routes.v1_ui import router as v1_ui_router
+
 router.include_router(v1_ui_router)
 
 # Admin demo-data reset + MXN001 SMB auto-seed (owns /v1/admin/reset)
 from app.api.routes.v1_admin_reset import router as v1_admin_reset_router
+
 router.include_router(v1_admin_reset_router)
 
 # Voice Agent — OpenAI Realtime bridge (owns /v1/voice)
 from app.api.routes.voice_agent import router as voice_agent_router
+
 router.include_router(voice_agent_router)
 
 __all__ = ["router"]

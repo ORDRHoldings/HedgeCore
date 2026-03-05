@@ -5,8 +5,11 @@ ConnectorRun: Audit artifact per import execution.
 ConnectorRunError: Per-row errors within a run.
 """
 import uuid as _uuid
-from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String, Text, text
-from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
+
+from sqlalchemy import Column, DateTime, Index, Integer, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+
 from app.core.db import Base
 
 

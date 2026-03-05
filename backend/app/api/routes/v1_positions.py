@@ -44,65 +44,33 @@ Illegal lifecycle transitions return 409 Conflict with a structured error body.
 
 from __future__ import annotations
 
-
-
 import csv
-
 import io
-
 import logging
-
-from typing import Optional
-
 from uuid import UUID
 
-
-
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
-
+from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
 from app.core.db import get_async_session
-
 from app.core.security import get_current_user
-
 from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
-
 from app.models.user import User
-
 from app.schemas_v1.positions import (
-
     AssignPolicyRequest,
-
     BulkAssignPolicyRequest,
-
     BulkAssignResult,
-
     ExecutePositionRequest,
-
     ExposureAggregation,
-
     PositionCreate,
-
     PositionListResponse,
-
     PositionResponse,
-
     PositionUpdate,
-
     ReadyToExecuteRequest,
-
     RejectPositionRequest,
-
 )
-
 from app.services import position_service, rbac_service
-
-from sqlalchemy import select as sa_select
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -322,11 +290,11 @@ async def import_positions_csv(
 
 async def list_positions(
 
-    status:    Optional[str] = Query(default=None, description="CONFIRMED or FORECAST"),
+    status:    str | None = Query(default=None, description="CONFIRMED or FORECAST"),
 
-    currency:  Optional[str] = Query(default=None, description="ISO 4217 code"),
+    currency:  str | None = Query(default=None, description="ISO 4217 code"),
 
-    flow_type: Optional[str] = Query(default=None, description="AR or AP"),
+    flow_type: str | None = Query(default=None, description="AR or AP"),
 
     session:   AsyncSession  = Depends(get_async_session),
 

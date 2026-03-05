@@ -7,21 +7,21 @@ for Windows event loops, pytest, and FastAPI lifespan.
 """
 
 from __future__ import annotations
+
+import asyncio
 import logging
 import time
 import uuid
-import asyncio
-from datetime import datetime, timezone
-from typing import Optional, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp, Message
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.db import async_session_maker
 from app.models.audit_log import AuditLog
-from app.core.config import settings
 
 logger = logging.getLogger("hedgecalc.audit")
 
@@ -30,10 +30,10 @@ logger = logging.getLogger("hedgecalc.audit")
 # Utility helpers
 # ---------------------------------------------------------------------
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
-def _extract_user_id_from_auth(authorization: Optional[str]) -> Optional[int]:
+def _extract_user_id_from_auth(authorization: str | None) -> int | None:
     """Decode JWT and extract user_id (sub) if valid."""
     if not authorization or " " not in authorization:
         return None

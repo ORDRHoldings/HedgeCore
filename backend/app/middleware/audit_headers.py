@@ -5,7 +5,8 @@ import hashlib
 import json
 import time
 import uuid
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from typing import Any
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -24,7 +25,7 @@ def _now_ms() -> int:
     return int(time.time() * 1000)
 
 
-def _get_first_header(request: Request, name: str) -> Optional[str]:
+def _get_first_header(request: Request, name: str) -> str | None:
     v = request.headers.get(name)
     if v is None:
         return None
@@ -98,7 +99,7 @@ class AuditHeadersMiddleware(BaseHTTPMiddleware):
 
         # Metadata-only fingerprint (no bodies)
         if self._include_fingerprint:
-            meta: Dict[str, Any] = {
+            meta: dict[str, Any] = {
                 "v": "1",
                 "request_id": request_id,
                 "idempotency_key": idempotency_key,

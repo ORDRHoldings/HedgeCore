@@ -22,14 +22,13 @@ Security:
 from __future__ import annotations
 
 import logging
-from typing import List, Optional
 
-from sqlalchemy import select, update, delete, and_
+from sqlalchemy import and_, delete, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.rbac import Role, UserRole
 from app.models.permission import Permission, RolePermission
+from app.models.rbac import Role, UserRole
 from app.models.user import User
 from app.schemas.rbac import RoleCreate, RoleUpdate
 
@@ -71,14 +70,14 @@ async def create_role(session: AsyncSession, role_data: RoleCreate) -> Role:
         raise
 
 
-async def list_roles(session: AsyncSession) -> List[Role]:
+async def list_roles(session: AsyncSession) -> list[Role]:
     """Return all roles."""
     stmt = select(Role).order_by(Role.name)
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
-async def update_role(session: AsyncSession, role_id: int, update_data: RoleUpdate) -> Optional[Role]:
+async def update_role(session: AsyncSession, role_id: int, update_data: RoleUpdate) -> Role | None:
     """Update role description."""
     stmt = (
         update(Role)
@@ -169,7 +168,7 @@ async def remove_role_from_user(session: AsyncSession, user_id: int, role_name: 
         return False
 
 
-async def get_roles_by_user(session: AsyncSession, user_id) -> List[str]:
+async def get_roles_by_user(session: AsyncSession, user_id) -> list[str]:
     """Return a list of role names assigned to a user."""
     stmt = (
         select(Role.name)
@@ -186,7 +185,7 @@ async def get_roles_by_user(session: AsyncSession, user_id) -> List[str]:
 # ---------------------------------------------------------------------
 # Permission Queries
 # ---------------------------------------------------------------------
-async def get_permissions_by_user(session: AsyncSession, user_id) -> List[str]:
+async def get_permissions_by_user(session: AsyncSession, user_id) -> list[str]:
     """
     Return all permission codenames granted to a user via their roles.
     Joins: UserRole -> Role -> RolePermission -> Permission
@@ -206,7 +205,7 @@ async def get_permissions_by_user(session: AsyncSession, user_id) -> List[str]:
     return perms
 
 
-async def get_user_hierarchy_level(session: AsyncSession, user_id) -> Optional[int]:
+async def get_user_hierarchy_level(session: AsyncSession, user_id) -> int | None:
     """
     Return the lowest (most privileged) hierarchy_level across all roles
     assigned to a user. Returns None if user has no roles.
@@ -224,7 +223,7 @@ async def get_user_hierarchy_level(session: AsyncSession, user_id) -> Optional[i
     return level
 
 
-async def get_permissions_by_role(session: AsyncSession, role_id: int) -> List[str]:
+async def get_permissions_by_role(session: AsyncSession, role_id: int) -> list[str]:
     """Return all permission codenames for a given role."""
     stmt = (
         select(Permission.codename)

@@ -13,16 +13,15 @@ Changes:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
-    String,
     Index,
+    String,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -65,7 +64,7 @@ class RefreshToken(Base):
         doc="True when rotated or logged out; prevents reuse.",
     )
 
-    replaced_by_jti: Mapped[Optional[str]] = mapped_column(
+    replaced_by_jti: Mapped[str | None] = mapped_column(
         String(64),
         nullable=True,
         doc="If rotated, JTI of the new token that replaced this one.",
@@ -75,17 +74,17 @@ class RefreshToken(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         doc="UTC timestamp when this token record was created.",
     )
 
-    created_ip: Mapped[Optional[str]] = mapped_column(
+    created_ip: Mapped[str | None] = mapped_column(
         String(64),
         nullable=True,
         doc="Client IP at token creation.",
     )
 
-    created_user_agent: Mapped[Optional[str]] = mapped_column(
+    created_user_agent: Mapped[str | None] = mapped_column(
         String(256),
         nullable=True,
         doc="User-Agent string at token creation.",

@@ -18,13 +18,13 @@ INSTITUTIONAL NOTES
   and disclosed (TraceBundle).
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.contracts.run_envelope import _is_sha256_hex, hash_canonical
-
 
 # ============================================================
 # Canonical axis identifiers (frozen)
@@ -53,7 +53,7 @@ class RiskAxisSpec:
     description: str
     hedgeable: bool
     typical_units: str
-    examples: Tuple[str, ...]
+    examples: tuple[str, ...]
 
 
 # ============================================================
@@ -76,7 +76,7 @@ class RiskTaxonomy(BaseModel):
     schema_version: str = Field(default=RISK_TAXONOMY_SCHEMA_VERSION, description="Schema version (bump only on semantics)")
     taxonomy_name: str = Field(default="HedgeCalc R1-R8", description="Human-readable taxonomy name")
 
-    axes: List[Dict[str, Any]] = Field(..., description="Canonical axis table, ordered R1..R8")
+    axes: list[dict[str, Any]] = Field(..., description="Canonical axis table, ordered R1..R8")
 
     taxonomy_hash: str = Field(
         default="",
@@ -93,12 +93,12 @@ class RiskTaxonomy(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _validate_axes_shape_and_order(self) -> "RiskTaxonomy":
+    def _validate_axes_shape_and_order(self) -> RiskTaxonomy:
         if not isinstance(self.axes, list) or len(self.axes) != 8:
             raise ValueError("RiskTaxonomy.axes must be a list of exactly 8 axis records (R1..R8)")
 
         expected = risk_axis_order()
-        got: List[str] = []
+        got: list[str] = []
         for i, rec in enumerate(self.axes):
             if not isinstance(rec, dict):
                 raise ValueError(f"RiskTaxonomy.axes[{i}] must be an object/dict")
@@ -121,7 +121,7 @@ class RiskTaxonomy(BaseModel):
 
         return self
 
-    def to_canonical_dict(self) -> Dict[str, Any]:
+    def to_canonical_dict(self) -> dict[str, Any]:
         d = self.model_dump(mode="json")
         d.pop("taxonomy_hash", None)
         return d
@@ -129,7 +129,7 @@ class RiskTaxonomy(BaseModel):
     def compute_taxonomy_hash(self) -> str:
         return hash_canonical(self.to_canonical_dict())
 
-    def finalize(self) -> "RiskTaxonomy":
+    def finalize(self) -> RiskTaxonomy:
         """
         Deterministically seal the taxonomy:
         - Ensure stable axis ordering (R1..R8)
@@ -147,7 +147,7 @@ class RiskTaxonomy(BaseModel):
 # Frozen table (v1)
 # ============================================================
 
-_RISK_AXIS_TABLE: Tuple[RiskAxisSpec, ...] = (
+_RISK_AXIS_TABLE: tuple[RiskAxisSpec, ...] = (
     RiskAxisSpec(
         axis=RiskAxis.R1,
         name="Directional / Delta",
@@ -290,7 +290,7 @@ _RISK_AXIS_TABLE: Tuple[RiskAxisSpec, ...] = (
 # Public API (used across contracts + engine)
 # ============================================================
 
-def risk_axis_order() -> Tuple[str, ...]:
+def risk_axis_order() -> tuple[str, ...]:
     """Deterministic axis ordering (frozen)."""
     return tuple(a.axis for a in _RISK_AXIS_TABLE)
 
@@ -324,7 +324,7 @@ def get_risk_taxonomy(*, finalize: bool = True) -> RiskTaxonomy:
 
     If finalize=True (default), taxonomy_hash is computed deterministically.
     """
-    axes: List[Dict[str, Any]] = [
+    axes: list[dict[str, Any]] = [
         {
             "axis": a.axis,
             "name": a.name,

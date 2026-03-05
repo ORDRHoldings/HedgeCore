@@ -25,12 +25,8 @@ Centralized environment configuration using pydantic-settings.
 import logging
 import os
 
-from typing import List, Optional
-
-from pydantic import AnyHttpUrl, validator
-
+from pydantic import validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # SEC-01: Secret resolution with Vault / AWS SM / env fallback
@@ -69,8 +65,9 @@ def _resolve_secret(env_key: str, vault_path: str | None = None) -> str:
     aws_secret_name = _os.getenv("AWS_SECRET_NAME")
     if aws_secret_name and not vault_addr:
         try:
-            import boto3  # type: ignore[import]
             import json as _json
+
+            import boto3  # type: ignore[import]
             sm_client = boto3.client(
                 "secretsmanager",
                 region_name=_os.getenv("AWS_REGION", "us-east-1"),
@@ -173,13 +170,13 @@ class Settings(BaseSettings):
 
 
 
-    DATABASE_URL: Optional[str] = None
+    DATABASE_URL: str | None = None
 
-    ASYNC_DATABASE_URL: Optional[str] = None
+    ASYNC_DATABASE_URL: str | None = None
 
-    TEST_DATABASE_URL: Optional[str] = None
+    TEST_DATABASE_URL: str | None = None
 
-    TEST_ASYNC_DATABASE_URL: Optional[str] = None
+    TEST_ASYNC_DATABASE_URL: str | None = None
 
 
 
@@ -195,7 +192,7 @@ class Settings(BaseSettings):
 
     # ------------------------------------------------------------------
 
-    CORS_ALLOW_ORIGINS: List[str] = [
+    CORS_ALLOW_ORIGINS: list[str] = [
 
         "http://localhost:3000",
 
@@ -209,9 +206,9 @@ class Settings(BaseSettings):
 
     CORS_ALLOW_CREDENTIALS: bool = True
 
-    CORS_ALLOW_METHODS: List[str] = ["*"]
+    CORS_ALLOW_METHODS: list[str] = ["*"]
 
-    CORS_ALLOW_HEADERS: List[str] = ["*"]
+    CORS_ALLOW_HEADERS: list[str] = ["*"]
 
 
 
@@ -219,7 +216,7 @@ class Settings(BaseSettings):
 
     @classmethod
 
-    def parse_cors_origins(cls, v: object) -> List[str]:
+    def parse_cors_origins(cls, v: object) -> list[str]:
 
         """Accept JSON array string, comma-separated string, or list."""
 
@@ -259,7 +256,7 @@ class Settings(BaseSettings):
 
     # Optional Redis URL for multi-node rate limiting (e.g. redis://localhost:6379/0)
 
-    REDIS_URL: Optional[str] = None
+    REDIS_URL: str | None = None
 
     # ------------------------------------------------------------------
 
@@ -281,13 +278,13 @@ class Settings(BaseSettings):
 
     EXECUTION_IP_ALLOWLIST_ENABLED: bool = False
 
-    EXECUTION_IP_ALLOWLIST: List[str] = []
+    EXECUTION_IP_ALLOWLIST: list[str] = []
 
     @validator("EXECUTION_IP_ALLOWLIST", pre=True, always=True)
 
     @classmethod
 
-    def parse_ip_allowlist(cls, v: object) -> List[str]:
+    def parse_ip_allowlist(cls, v: object) -> list[str]:
 
         """Accept comma-separated string or list."""
 

@@ -35,14 +35,15 @@ INSTITUTIONAL HARDENING (added in this revision):
 - Optional helper methods for lookup without mutating catalog
 """
 
+from collections.abc import Sequence
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.contracts.run_envelope import _is_sha256_hex, hash_canonical, utcnow
 from app.contracts.risk_taxonomy import validate_axis
+from app.contracts.run_envelope import _is_sha256_hex, hash_canonical, utcnow
 
 # ============================================================
 # Enums (frozen semantics for v1)
@@ -92,7 +93,7 @@ class QuoteConvention(str, Enum):
 # ============================================================
 
 
-def _finite_float(v: Any, *, field_name: str, allow_none: bool = False) -> Optional[float]:
+def _finite_float(v: Any, *, field_name: str, allow_none: bool = False) -> float | None:
     if v is None:
         if allow_none:
             return None
@@ -114,12 +115,12 @@ def _non_empty_str(v: Any, *, field_name: str) -> str:
     return s
 
 
-def _tuple_strs(v: Any) -> Tuple[str, ...]:
+def _tuple_strs(v: Any) -> tuple[str, ...]:
     if v is None:
         return tuple()
     if not isinstance(v, (list, tuple)):
         raise ValueError("Expected list/tuple of strings")
-    out: List[str] = []
+    out: list[str] = []
     for item in v:
         if item is None:
             continue
@@ -130,12 +131,12 @@ def _tuple_strs(v: Any) -> Tuple[str, ...]:
     return tuple(sorted(set(out)))
 
 
-def _sorted_unique_axes(v: Any) -> Tuple[str, ...]:
+def _sorted_unique_axes(v: Any) -> tuple[str, ...]:
     if v is None:
         return tuple()
     if not isinstance(v, (list, tuple)):
         raise ValueError("eligible_axes must be list/tuple of axis ids")
-    out: List[str] = []
+    out: list[str] = []
     for a in v:
         if a is None:
             continue
@@ -159,9 +160,9 @@ class TradingHours(BaseModel):
     """
 
     timezone: str = Field(default="UTC")
-    regular: Optional[str] = Field(default=None, description="Human-readable regular hours")
-    extended: Optional[str] = Field(default=None, description="Human-readable extended hours")
-    notes: Optional[str] = Field(default=None)
+    regular: str | None = Field(default=None, description="Human-readable regular hours")
+    extended: str | None = Field(default=None, description="Human-readable extended hours")
+    notes: str | None = Field(default=None)
 
     @field_validator("timezone", mode="before")
     @classmethod
@@ -205,14 +206,14 @@ class LiquidityMetrics(BaseModel):
     Values may be None if unavailable, but liquidity_score must be provided (0..1).
     """
 
-    avg_daily_volume: Optional[float] = Field(default=None, description="ADV (units depend on instrument)")
-    open_interest: Optional[float] = Field(default=None, description="Open interest (contracts)")
+    avg_daily_volume: float | None = Field(default=None, description="ADV (units depend on instrument)")
+    open_interest: float | None = Field(default=None, description="Open interest (contracts)")
     liquidity_score: float = Field(default=0.0, description="Normalized liquidity score in [0,1]")
-    as_of: Optional[str] = Field(default=None, description="ISO timestamp string for when liquidity was measured")
+    as_of: str | None = Field(default=None, description="ISO timestamp string for when liquidity was measured")
 
     @field_validator("avg_daily_volume", "open_interest", mode="before")
     @classmethod
-    def _finite_optional(cls, v: Any, info: Any) -> Optional[float]:
+    def _finite_optional(cls, v: Any, info: Any) -> float | None:
         return _finite_float(v, field_name=str(info.field_name), allow_none=True)
 
     @field_validator("liquidity_score", mode="before")
@@ -226,7 +227,7 @@ class LiquidityMetrics(BaseModel):
 
     @field_validator("as_of", mode="before")
     @classmethod
-    def _as_of(cls, v: Any) -> Optional[str]:
+    def _as_of(cls, v: Any) -> str | None:
         if v is None:
             return None
         s = str(v).strip()
@@ -243,7 +244,7 @@ class SlippageModelParams(BaseModel):
     half_spread_bps: float = Field(default=0.0, ge=0.0)
     impact_bps_per_1pct_adv: float = Field(default=0.0, ge=0.0)
     fixed_fee_per_contract: float = Field(default=0.0, ge=0.0)
-    notes: Optional[str] = Field(default=None)
+    notes: str | None = Field(default=None)
 
     @field_validator("model_id", mode="before")
     @classmethod
@@ -264,7 +265,7 @@ class SlippageModelParams(BaseModel):
 
     @field_validator("notes", mode="before")
     @classmethod
-    def _notes(cls, v: Any) -> Optional[str]:
+    def _notes(cls, v: Any) -> str | None:
         if v is None:
             return None
         s = str(v).strip()
@@ -279,12 +280,12 @@ class MandateTags(BaseModel):
     - Stored as sorted, unique tuples for deterministic behavior.
     """
 
-    allow: Tuple[str, ...] = Field(default_factory=tuple)
-    prohibit: Tuple[str, ...] = Field(default_factory=tuple)
+    allow: tuple[str, ...] = Field(default_factory=tuple)
+    prohibit: tuple[str, ...] = Field(default_factory=tuple)
 
     @field_validator("allow", "prohibit", mode="before")
     @classmethod
-    def _tuple_strs_validator(cls, v: Any) -> Tuple[str, ...]:
+    def _tuple_strs_validator(cls, v: Any) -> tuple[str, ...]:
         return _tuple_strs(v)
 
 
@@ -307,13 +308,13 @@ class Instrument(BaseModel):
     exchange: Exchange = Field(default=Exchange.OTHER)
     instrument_type: InstrumentType = Field(default=InstrumentType.OTHER)
 
-    name: Optional[str] = Field(default=None)
-    description: Optional[str] = Field(default=None)
+    name: str | None = Field(default=None)
+    description: str | None = Field(default=None)
 
-    contract: Optional[ContractSpecs] = Field(default=None, description="Required for futures/options sizing")
-    trading_hours: Optional[TradingHours] = Field(default=None)
+    contract: ContractSpecs | None = Field(default=None, description="Required for futures/options sizing")
+    trading_hours: TradingHours | None = Field(default=None)
 
-    eligible_axes: Tuple[str, ...] = Field(
+    eligible_axes: tuple[str, ...] = Field(
         default_factory=tuple,
         description="Which R axes this instrument is eligible to hedge (R1..R8 ids)",
     )
@@ -324,7 +325,7 @@ class Instrument(BaseModel):
 
     # Optional metadata for disclosures
     is_proxy: bool = Field(default=False, description="True if instrument is a proxy for another risk")
-    proxy_for: Optional[str] = Field(default=None, description="Optional description of what it proxies")
+    proxy_for: str | None = Field(default=None, description="Optional description of what it proxies")
 
     @field_validator("instrument_id", mode="before")
     @classmethod
@@ -339,7 +340,7 @@ class Instrument(BaseModel):
 
     @field_validator("name", "description", "proxy_for", mode="before")
     @classmethod
-    def _optional_str(cls, v: Any) -> Optional[str]:
+    def _optional_str(cls, v: Any) -> str | None:
         if v is None:
             return None
         s = str(v).strip()
@@ -347,11 +348,11 @@ class Instrument(BaseModel):
 
     @field_validator("eligible_axes", mode="before")
     @classmethod
-    def _validate_axes(cls, v: Any) -> Tuple[str, ...]:
+    def _validate_axes(cls, v: Any) -> tuple[str, ...]:
         return _sorted_unique_axes(v)
 
     @model_validator(mode="after")
-    def _validate_proxy(self) -> "Instrument":
+    def _validate_proxy(self) -> Instrument:
         # Proxy hygiene: if marked proxy, proxy_for should be present (not strictly required,
         # but strongly recommended to prevent silent ambiguity).
         if bool(self.is_proxy) and not (self.proxy_for and self.proxy_for.strip()):
@@ -387,7 +388,7 @@ class InstrumentCatalog(BaseModel):
         description="UTC timestamp string (metadata only; excluded from catalog_hash)",
     )
 
-    instruments: List[Instrument] = Field(default_factory=list, description="Ordered list of instruments")
+    instruments: list[Instrument] = Field(default_factory=list, description="Ordered list of instruments")
 
     catalog_hash: str = Field(default="", description="Computed by finalize() if empty")
 
@@ -401,10 +402,10 @@ class InstrumentCatalog(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _validate_uniqueness(self) -> "InstrumentCatalog":
+    def _validate_uniqueness(self) -> InstrumentCatalog:
         # Enforce uniqueness for institutional safety (catalog must be internally consistent).
         seen: set[str] = set()
-        dups: List[str] = []
+        dups: list[str] = []
         for inst in self.instruments:
             iid = inst.instrument_id
             if iid in seen:
@@ -414,7 +415,7 @@ class InstrumentCatalog(BaseModel):
             raise ValueError(f"Duplicate instrument_id(s) in catalog: {sorted(set(dups))}")
         return self
 
-    def to_canonical_dict(self) -> Dict[str, Any]:
+    def to_canonical_dict(self) -> dict[str, Any]:
         d = self.model_dump(mode="json")
         d.pop("catalog_hash", None)
         d.pop("created_at", None)  # never hash timestamps
@@ -423,7 +424,7 @@ class InstrumentCatalog(BaseModel):
     def compute_catalog_hash(self) -> str:
         return hash_canonical(self.to_canonical_dict())
 
-    def finalize(self) -> "InstrumentCatalog":
+    def finalize(self) -> InstrumentCatalog:
         """
         Deterministically normalize and seal catalog integrity.
         - Sort instruments by instrument_id
@@ -434,7 +435,7 @@ class InstrumentCatalog(BaseModel):
         ch = candidate.catalog_hash or candidate.compute_catalog_hash()
         return candidate.model_copy(update={"catalog_hash": ch})
 
-    def index_by_id(self) -> Dict[str, Instrument]:
+    def index_by_id(self) -> dict[str, Instrument]:
         """
         Convenience accessor for orchestrators/stages.
         NOTE: This does not mutate the catalog and does not affect determinism.

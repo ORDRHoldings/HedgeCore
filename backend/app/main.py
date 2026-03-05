@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-
-
 """
 
 app/main.py
@@ -15,60 +13,28 @@ CANONICAL, INSTITUTIONAL, NGINX-SAFE
 
 
 import logging
-
 import traceback
-
+from contextlib import asynccontextmanager
 from typing import Any
 
-from contextlib import asynccontextmanager
-
-
-
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, Request, Response
-
 from fastapi.middleware.cors import CORSMiddleware
-
-from fastapi.responses import JSONResponse, HTMLResponse
-
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
-
-from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
-
-
-
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.middleware.gzip import GZipMiddleware
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
-from apscheduler.triggers.cron import CronTrigger
-
-
-
 from app.core.config import settings
-
+from app.core.db import async_session_maker, init_engine, shutdown_engine
 from app.core.logging_config import configure_logging
-
-from app.core.db import init_engine, shutdown_engine, async_session_maker
-
 from app.core.schema_loader import rebuild_all_schemas
-
-
-
-from app.middleware.audit_headers import AuditHeadersMiddleware
-
-from app.middleware.rate_limit import RateLimitMiddleware
-
 from app.middleware.api_key_auth import APIKeyAuthMiddleware
-
+from app.middleware.audit_headers import AuditHeadersMiddleware
 from app.middleware.csrf import CSRFMiddleware  # SEC-06: now enabled
-
-
-
+from app.middleware.rate_limit import RateLimitMiddleware
 from app.tasks.audit_cleanup import cleanup_audit_tables
-
-
-
-
 
 # -------------------------------------------------------------------
 
@@ -166,15 +132,13 @@ async def _seed_permissions():
 
     from sqlalchemy import select
 
-    from app.models.rbac import Role
-
     from app.models.permission import (
-
-        Permission, RolePermission,
-
-        SEED_PERMISSIONS, DEFAULT_ROLE_PERMISSIONS,
-
+        DEFAULT_ROLE_PERMISSIONS,
+        SEED_PERMISSIONS,
+        Permission,
+        RolePermission,
     )
+    from app.models.rbac import Role
 
 
 
@@ -284,8 +248,9 @@ async def _seed_policy_templates():
     Safe to run on every startup -- idempotent (short_name keyed).
     """
     from sqlalchemy import select
-    from app.models.policy import PolicyTemplate
+
     from app.api.routes.seed import _POLICY_PRESETS_SEED
+    from app.models.policy import PolicyTemplate
 
     async with async_session_maker() as session:
         for tmpl in _POLICY_PRESETS_SEED:
@@ -320,10 +285,11 @@ async def _sync_seed_users():
     Deduplicate users table and resync demo user passwords on every startup.
     Safe to run repeatedly -- idempotent.
     """
-    from sqlalchemy import select, delete, func, text
-    from app.models.user import User
+    from sqlalchemy import select, text
+
     from app.api.routes.seed import EMPLOYEES
     from app.core.security import hash_password
+    from app.models.user import User
     async with async_session_maker() as session:
         # Step 1a: deduplicate users table (keep row with smallest id for each email)
         try:
@@ -368,15 +334,13 @@ async def _ensure_tables():
 
     """Create any missing tables (non-destructive -- skips existing)."""
 
+    # Import all model modules to register with Base.metadata
+    import importlib
+    from pathlib import Path
+
     from sqlalchemy import text
 
-    from app.core.db import async_engine, Base
-
-    # Import all model modules to register with Base.metadata
-
-    import importlib
-
-    from pathlib import Path
+    from app.core.db import async_engine
 
     models_dir = Path(__file__).parent / "models"
 
@@ -1240,8 +1204,8 @@ async def lifespan(app: FastAPI):
 
     # ── Schema readiness check + fail-closed state ────────────────────────────
     try:
-        from app.core.schema_state import run_readiness_checks, set_schema_ready
         from app.core.db import async_engine as _eng
+        from app.core.schema_state import run_readiness_checks, set_schema_ready
         _readiness = await run_readiness_checks(_eng)
         set_schema_ready(_readiness["schema_ready"])
         if _readiness["schema_ready"]:
@@ -1500,10 +1464,7 @@ async def security_headers(request: Request, call_next):
 # -------------------------------------------------------------------
 
 from app.api.router import router as api_router
-
 from app.routes.engine import router as engine_router
-
-
 
 app.include_router(api_router, prefix="/api")
 

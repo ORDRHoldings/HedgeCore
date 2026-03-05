@@ -5,9 +5,9 @@ import hashlib
 import json
 import math
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, List, Mapping, Optional, Tuple
-
+from typing import Any
 
 ENGINE_NAME = "hedge_sizer"
 ENGINE_VERSION = "1.0.1"  # adds deterministic margin utilization estimate
@@ -122,10 +122,10 @@ class InstrumentSpec:
     instrument_id: str
     asset_class: str  # futures | options | etf | perp | ...
     contract_multiplier: float
-    constraints: Dict[str, Any]
+    constraints: dict[str, Any]
 
 
-def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "engine": {"name": ENGINE_NAME, "version": ENGINE_VERSION},
         "policy": dict(policy),
@@ -133,7 +133,7 @@ def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]
     }
 
 
-def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+def size_hedges(payload: Mapping[str, Any], *, policy: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """
     Hedge Sizing Engine
 
@@ -219,7 +219,7 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any
     """
     t0 = time.perf_counter()
 
-    pol: Dict[str, Any] = {
+    pol: dict[str, Any] = {
         # which exposures to target for sizing by default
         "primary_objective": "delta_neutral",  # delta_neutral | vega_target
         # rounding for contract counts
@@ -292,11 +292,11 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any
         },
     }
 
-    trace: Dict[str, Any] = _build_trace_seed(policy=pol, input_obj=input_obj)
-    trace_steps: List[Dict[str, Any]] = []
+    trace: dict[str, Any] = _build_trace_seed(policy=pol, input_obj=input_obj)
+    trace_steps: list[dict[str, Any]] = []
 
-    sized: List[Dict[str, Any]] = []
-    rejected: List[Dict[str, Any]] = []
+    sized: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
     total_estimated_margin_usd = 0.0
 
     # basic exposure existence
@@ -331,7 +331,7 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any
     require_margin_model = bool(pol.get("require_margin_model_when_sized", True))
 
     # helper: build InstrumentSpec from input dict
-    def _get_spec(instrument_id: str) -> Optional[InstrumentSpec]:
+    def _get_spec(instrument_id: str) -> InstrumentSpec | None:
         spec = instrument_specs_in.get(instrument_id)
         if not isinstance(spec, dict):
             return None
@@ -349,7 +349,7 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any
             constraints=dict(constraints),
         )
 
-    def _merge_constraints(mapped_row: Mapping[str, Any], spec: InstrumentSpec) -> Dict[str, Any]:
+    def _merge_constraints(mapped_row: Mapping[str, Any], spec: InstrumentSpec) -> dict[str, Any]:
         """
         Deterministic constraint merge:
           - Start from spec.constraints
@@ -363,7 +363,7 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any
                 out[k] = v
         return out
 
-    def _apply_caps(n: int, constraints: Mapping[str, Any]) -> Tuple[int, Dict[str, Any]]:
+    def _apply_caps(n: int, constraints: Mapping[str, Any]) -> tuple[int, dict[str, Any]]:
         gmin = _as_int(pol["global_min_contract"], 0)
         gmax = _as_int(pol["global_max_contract"], 500)
         gmax = _clamp_int(gmax, 1, 100000)
@@ -398,7 +398,7 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any
         # delta-dollar per contract = option_delta * underlying_price * multiplier
         return float(option_delta) * float(underlying_price) * float(multiplier)
 
-    def _vega_usd_per_contract_from_market(instrument_id: str) -> Optional[float]:
+    def _vega_usd_per_contract_from_market(instrument_id: str) -> float | None:
         s = sensitivities.get(instrument_id)
         if not isinstance(s, dict):
             return None
@@ -408,7 +408,7 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any
         return None
 
     # margin model resolution (deterministic precedence)
-    def _resolve_margin_model(constraints: Mapping[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    def _resolve_margin_model(constraints: Mapping[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
         """
         Returns (margin_model_used, error_reason_detail).
 
@@ -433,7 +433,7 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any
 
         return (None, "no_supported_margin_fields_present")
 
-    def _estimate_margin_usd(*, contracts: int, notional_usd: float, margin_model: Dict[str, Any]) -> float:
+    def _estimate_margin_usd(*, contracts: int, notional_usd: float, margin_model: dict[str, Any]) -> float:
         c = abs(int(contracts))
         if c == 0:
             return 0.0
@@ -462,7 +462,7 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any
         instrument_id = str(row.get("instrument_id", "")).strip()
         asset_class_row = str(row.get("asset_class", "")).strip()
 
-        step: Dict[str, Any] = {
+        step: dict[str, Any] = {
             "i": i,
             "strategy_id": strategy_id,
             "instrument_id": instrument_id,
@@ -493,9 +493,9 @@ def size_hedges(payload: Mapping[str, Any], *, policy: Optional[Mapping[str, Any
         vega_driven = strategy_id in tuple(pol["vega_driven_strategies"])
 
         sizing_method: str
-        contracts_float: Optional[float] = None
-        sensitivity_used: Optional[float] = None
-        inputs_used: Dict[str, Any] = {"contract_multiplier": spec.contract_multiplier, "asset_class": spec.asset_class}
+        contracts_float: float | None = None
+        sensitivity_used: float | None = None
+        inputs_used: dict[str, Any] = {"contract_multiplier": spec.contract_multiplier, "asset_class": spec.asset_class}
 
         if vega_driven:
             sizing_method = "vega_target"

@@ -28,38 +28,20 @@ Seed data is loaded in main.py lifespan.
 
 from __future__ import annotations
 
-
-
 from datetime import datetime
 
-
-
 from sqlalchemy import (
-
-    String,
-
-    Integer,
-
     DateTime,
-
     ForeignKey,
-
-    UniqueConstraint,
-
     Index,
-
+    Integer,
+    String,
+    UniqueConstraint,
     func,
-
 )
-
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-
-
 from app.core.db import Base
-
-
-
 
 
 class Permission(Base):
@@ -126,7 +108,7 @@ class Permission(Base):
 
     # Relationships
 
-    role_permissions: Mapped[list["RolePermission"]] = relationship(
+    role_permissions: Mapped[list[RolePermission]] = relationship(
 
         "RolePermission",
 
@@ -200,7 +182,7 @@ class RolePermission(Base):
 
     role = relationship("Role", backref="role_permissions")
 
-    permission: Mapped["Permission"] = relationship(
+    permission: Mapped[Permission] = relationship(
 
         "Permission", back_populates="role_permissions",
 

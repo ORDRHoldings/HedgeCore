@@ -15,19 +15,18 @@ Design:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import (
-    String,
     Boolean,
     DateTime,
-    Text,
     ForeignKey,
-    UniqueConstraint,
     Index,
+    String,
+    UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
@@ -55,17 +54,17 @@ class Company(Base):
         doc="URL-safe unique identifier (e.g. 'acme-corp').",
     )
 
-    domain: Mapped[Optional[str]] = mapped_column(
+    domain: Mapped[str | None] = mapped_column(
         String(255), nullable=True,
         doc="Primary email domain for auto-association (e.g. 'acme.com').",
     )
 
-    logo_url: Mapped[Optional[str]] = mapped_column(
+    logo_url: Mapped[str | None] = mapped_column(
         String(512), nullable=True,
         doc="URL to company logo asset.",
     )
 
-    settings: Mapped[Optional[dict]] = mapped_column(
+    settings: Mapped[dict | None] = mapped_column(
         JSONB, nullable=True, default=dict,
         doc="Company-level configuration (default policy, currency, timezone).",
     )
@@ -78,11 +77,11 @@ class Company(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
     )
 
     # Relationships
-    branches: Mapped[list["Branch"]] = relationship(
+    branches: Mapped[list[Branch]] = relationship(
         "Branch",
         back_populates="company",
         cascade="all, delete-orphan",
@@ -121,12 +120,12 @@ class Branch(Base):
         doc="Short unique code within company (e.g. 'MXC').",
     )
 
-    region: Mapped[Optional[str]] = mapped_column(
+    region: Mapped[str | None] = mapped_column(
         String(128), nullable=True,
         doc="Geographic region (e.g. 'LATAM', 'EMEA').",
     )
 
-    timezone: Mapped[Optional[str]] = mapped_column(
+    timezone: Mapped[str | None] = mapped_column(
         String(64), nullable=True, default="UTC",
         doc="Branch timezone (IANA format).",
     )
@@ -138,12 +137,12 @@ class Branch(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
     )
 
     # Relationships
-    company: Mapped["Company"] = relationship("Company", back_populates="branches")
-    departments: Mapped[list["Department"]] = relationship(
+    company: Mapped[Company] = relationship("Company", back_populates="branches")
+    departments: Mapped[list[Department]] = relationship(
         "Department",
         back_populates="branch",
         cascade="all, delete-orphan",
@@ -190,11 +189,11 @@ class Department(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
     )
 
     # Relationships
-    branch: Mapped["Branch"] = relationship("Branch", back_populates="departments")
+    branch: Mapped[Branch] = relationship("Branch", back_populates="departments")
 
     __table_args__ = (
         UniqueConstraint("branch_id", "code", name="uq_department_branch_code"),

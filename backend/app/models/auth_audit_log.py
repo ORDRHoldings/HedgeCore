@@ -8,17 +8,18 @@ from __future__ import annotations
 
 import enum
 import logging
-from typing import Optional
 
 from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Index,
     Integer,
     String,
-    DateTime,
-    Enum as SAEnum,
-    ForeignKey,
     Text,
-    Index,
     func,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -67,7 +68,7 @@ class AuthAuditLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    user_id: Mapped[Optional[int]] = mapped_column(
+    user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
@@ -78,18 +79,18 @@ class AuthAuditLog(Base):
         SAEnum(AuthEventStatus, name="auth_event_status"), nullable=False
     )
 
-    reason_code: Mapped[Optional[AuthReasonCode]] = mapped_column(
+    reason_code: Mapped[AuthReasonCode | None] = mapped_column(
         SAEnum(AuthReasonCode, name="auth_reason_code"), nullable=True
     )
 
-    request_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
-    route: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    method: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
-    ip_address: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    route: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    method: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    created_at: Mapped[Optional["DateTime"]] = mapped_column(
+    created_at: Mapped[DateTime | None] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
 
@@ -114,16 +115,16 @@ class AuthAuditLog(Base):
 async def record_auth_event(
     db_session,
     /,
-    event_type: Optional[AuthEventType] = None,
-    status: Optional[AuthEventStatus] = None,
-    reason_code: Optional[AuthReasonCode] = None,
-    user_id: Optional[int] = None,
-    request_id: Optional[str] = None,
-    route: Optional[str] = None,
-    method: Optional[str] = None,
-    ip_address: Optional[str] = None,
-    user_agent: Optional[str] = None,
-    message: Optional[str] = None,
+    event_type: AuthEventType | None = None,
+    status: AuthEventStatus | None = None,
+    reason_code: AuthReasonCode | None = None,
+    user_id: int | None = None,
+    request_id: str | None = None,
+    route: str | None = None,
+    method: str | None = None,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+    message: str | None = None,
 ) -> None:
     """
     Persist a structured authentication audit event.

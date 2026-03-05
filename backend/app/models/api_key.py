@@ -14,20 +14,24 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, Optional
+from collections.abc import Iterable
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
-    Enum as SAEnum,
     ForeignKey,
     Index,
     String,
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, ARRAY
+from sqlalchemy import (
+    Enum as SAEnum,
+)
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from app.core.db import Base
@@ -68,9 +72,9 @@ class ApiKey(Base):
     )
 
     key_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
-    name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     secret_hash: Mapped[str] = mapped_column(Text, nullable=False)
-    scopes: Mapped[Optional[list[str]]] = mapped_column(ARRAY(Text), nullable=True)
+    scopes: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
 
     # ? Enum ensures lowercase-safe persistence
     status: Mapped[str] = mapped_column(
@@ -84,7 +88,7 @@ class ApiKey(Base):
         server_default=ApiKeyStatus.ACTIVE.value,
     )
 
-    owner_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL", name="fk_api_keys_owner_user_id_users"),
         nullable=True,
@@ -93,8 +97,8 @@ class ApiKey(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # -----------------------------------------------------------------
     # Validation Hook: Normalizing ENUM values to lowercase
@@ -116,23 +120,23 @@ class ApiKey(Base):
         """Check if the API key is active and not expired."""
         if str(self.status).lower() != "active":
             return False
-        if self.expires_at and datetime.now(timezone.utc) >= self.expires_at:
+        if self.expires_at and datetime.now(UTC) >= self.expires_at:
             return False
         return True
 
     @property
     def is_expired(self) -> bool:
         """Check if the API key has expired."""
-        return bool(self.expires_at and datetime.now(timezone.utc) >= self.expires_at)
+        return bool(self.expires_at and datetime.now(UTC) >= self.expires_at)
 
     # -----------------------------------------------------------------
     # Helper Methods
     # -----------------------------------------------------------------
     def update_last_used(self) -> None:
         """Update the last used timestamp of the API key."""
-        self.last_used_at = datetime.now(timezone.utc)
+        self.last_used_at = datetime.now(UTC)
 
-    def to_public_dict(self) -> Dict[str, Any]:
+    def to_public_dict(self) -> dict[str, Any]:
         """Return a public-safe representation of the API key."""
         return {
             "id": str(self.id),

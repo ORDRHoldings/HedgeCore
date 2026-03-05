@@ -20,42 +20,22 @@ Fully UUID-based user entity compatible with all dependent models:
 
 from __future__ import annotations
 
-
-
 import uuid
-
-from datetime import datetime, timezone
-
-from typing import Optional
-
-
+from datetime import UTC, datetime
 
 from sqlalchemy import (
-
-    String,
-
     Boolean,
-
-    Integer,
-
     DateTime,
-
     ForeignKey,
-
     Index,
-
+    Integer,
+    String,
 )
-
-from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
-
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-
-
 from app.core.db import Base
-
-
-
 
 
 class User(Base):
@@ -122,7 +102,7 @@ class User(Base):
 
 
 
-    full_name: Mapped[Optional[str]] = mapped_column(
+    full_name: Mapped[str | None] = mapped_column(
 
         String(255),
 
@@ -140,7 +120,7 @@ class User(Base):
 
     # ----------------------------------------------------------
 
-    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    company_id: Mapped[uuid.UUID | None] = mapped_column(
 
         PGUUID(as_uuid=True),
 
@@ -156,7 +136,7 @@ class User(Base):
 
 
 
-    branch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    branch_id: Mapped[uuid.UUID | None] = mapped_column(
 
         PGUUID(as_uuid=True),
 
@@ -172,7 +152,7 @@ class User(Base):
 
 
 
-    department_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    department_id: Mapped[uuid.UUID | None] = mapped_column(
 
         PGUUID(as_uuid=True),
 
@@ -188,7 +168,7 @@ class User(Base):
 
 
 
-    job_title: Mapped[Optional[str]] = mapped_column(
+    job_title: Mapped[str | None] = mapped_column(
 
         String(128),
 
@@ -254,7 +234,7 @@ class User(Base):
 
         nullable=False,
 
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
 
         doc="User account creation timestamp (UTC).",
 
@@ -262,7 +242,7 @@ class User(Base):
 
 
 
-    ui_preferences: Mapped[Optional[dict]] = mapped_column(
+    ui_preferences: Mapped[dict | None] = mapped_column(
         JSONB, nullable=True, default=dict,
         doc="User UI preference overrides (show_quickstart, etc.).",
     )

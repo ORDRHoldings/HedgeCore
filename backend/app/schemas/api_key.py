@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field, constr
+
 from app.models.api_key import ApiKeyStatus
 
 
@@ -27,13 +27,13 @@ class ApiKeyBase(BaseModel):
     """Shared read-only structure (never includes secret)."""
 
     key_id: str = Field(..., description="Public identifier for this key.")
-    name: Optional[str] = Field(None, description="Human-readable label for the API key.")
-    scopes: List[str] = Field(default_factory=list, description="List of allowed scopes.")
+    name: str | None = Field(None, description="Human-readable label for the API key.")
+    scopes: list[str] = Field(default_factory=list, description="List of allowed scopes.")
     status: ApiKeyStatus = Field(..., description="Status of the API key (active or revoked).")
-    owner_user_id: Optional[uuid.UUID] = Field(None, description="User ID of owner (if any).")
-    created_at: Optional[datetime] = Field(None, description="Creation timestamp.")
-    last_used_at: Optional[datetime] = Field(None, description="Last use timestamp.")
-    expires_at: Optional[datetime] = Field(None, description="Expiration timestamp, if set.")
+    owner_user_id: uuid.UUID | None = Field(None, description="User ID of owner (if any).")
+    created_at: datetime | None = Field(None, description="Creation timestamp.")
+    last_used_at: datetime | None = Field(None, description="Last use timestamp.")
+    expires_at: datetime | None = Field(None, description="Expiration timestamp, if set.")
 
 
 # -------------------------------------------------------------------------
@@ -42,20 +42,20 @@ class ApiKeyBase(BaseModel):
 class ApiKeyCreateRequest(BaseModel):
     """Admin request to create a new API key."""
 
-    name: Optional[str] = Field(None, description="Human label (e.g., 'MarketData Service').")
-    scopes: List[str] = Field(
+    name: str | None = Field(None, description="Human label (e.g., 'MarketData Service').")
+    scopes: list[str] = Field(
         default_factory=list,
         description="List of allowed scopes (e.g., ['read:quotes', 'write:orders']).",
     )
-    owner_user_id: Optional[uuid.UUID] = Field(None, description="Optional user who owns this key.")
-    expires_at: Optional[datetime] = Field(None, description="Optional expiration timestamp.")
+    owner_user_id: uuid.UUID | None = Field(None, description="Optional user who owns this key.")
+    expires_at: datetime | None = Field(None, description="Optional expiration timestamp.")
 
 
 class ApiKeyRotateRequest(BaseModel):
     """Request schema for rotation. May optionally change expiry or label."""
 
-    name: Optional[str] = Field(None, description="Optional new name/label.")
-    expires_at: Optional[datetime] = Field(None, description="Optional new expiry date.")
+    name: str | None = Field(None, description="Optional new name/label.")
+    expires_at: datetime | None = Field(None, description="Optional new expiry date.")
 
 
 # -------------------------------------------------------------------------
@@ -66,13 +66,13 @@ class ApiKeyPublic(BaseModel):
 
     id: uuid.UUID = Field(..., description="Internal UUID identifier.")
     key_id: str = Field(..., description="Short identifier for this key.")
-    name: Optional[str] = Field(None, description="Human-readable label.")
-    scopes: List[str] = Field(default_factory=list, description="Allowed scopes.")
+    name: str | None = Field(None, description="Human-readable label.")
+    scopes: list[str] = Field(default_factory=list, description="Allowed scopes.")
     status: ApiKeyStatus = Field(..., description="Lifecycle status.")
-    owner_user_id: Optional[uuid.UUID] = Field(None, description="User owner ID, if set.")
+    owner_user_id: uuid.UUID | None = Field(None, description="User owner ID, if set.")
     created_at: datetime = Field(..., description="Creation timestamp.")
-    last_used_at: Optional[datetime] = Field(None, description="Last used timestamp.")
-    expires_at: Optional[datetime] = Field(None, description="Expiration timestamp.")
+    last_used_at: datetime | None = Field(None, description="Last used timestamp.")
+    expires_at: datetime | None = Field(None, description="Expiration timestamp.")
 
     model_config = {"from_attributes": True}
 
@@ -85,7 +85,7 @@ class ApiKeySecretResponse(BaseModel):
 
     key_id: str = Field(..., description="Public identifier portion of the key.")
     token: str = Field(..., description="Full API key string (returned once only). Example: HK_live_abcd1234.xyzSecretValue")
-    expires_at: Optional[datetime] = Field(None, description="Expiration timestamp if applicable.")
+    expires_at: datetime | None = Field(None, description="Expiration timestamp if applicable.")
 
 
 # -------------------------------------------------------------------------
@@ -95,7 +95,7 @@ class ApiKeyListResponse(BaseModel):
     """Paginated or bulk list of API keys for admin UI."""
 
     total: int = Field(..., description="Total number of keys in system (filtered).")
-    items: List[ApiKeyPublic] = Field(..., description="List of API keys.")
+    items: list[ApiKeyPublic] = Field(..., description="List of API keys.")
 
 
 # -------------------------------------------------------------------------

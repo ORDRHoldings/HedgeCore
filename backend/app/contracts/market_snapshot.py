@@ -25,13 +25,12 @@ NON-GOALS:
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.contracts.run_envelope import _is_sha256_hex, hash_canonical, utcnow
-
 
 # ============================================================
 # Helpers (deterministic, audit-safe)
@@ -54,7 +53,7 @@ def _non_empty_str(v: Any, *, field_name: str) -> str:
     return s
 
 
-def _optional_str(v: Any) -> Optional[str]:
+def _optional_str(v: Any) -> str | None:
     if v is None:
         return None
     s = str(v).strip()
@@ -80,8 +79,8 @@ class MarketPrice(BaseModel):
     instrument_id: str = Field(..., description="Instrument id matching InstrumentCatalog.instrument_id")
     price: float = Field(..., description="Spot or reference price used by engine stages")
     currency: str = Field(default="USD", description="Informational currency code (no conversion performed)")
-    source: Optional[str] = Field(default=None, description="Snapshot source label (vendor/file/venue)")
-    as_of: Optional[str] = Field(default=None, description="ISO timestamp string for the price record (optional)")
+    source: str | None = Field(default=None, description="Snapshot source label (vendor/file/venue)")
+    as_of: str | None = Field(default=None, description="ISO timestamp string for the price record (optional)")
 
     @field_validator("instrument_id", mode="before")
     @classmethod
@@ -101,7 +100,7 @@ class MarketPrice(BaseModel):
 
     @field_validator("source", "as_of", mode="before")
     @classmethod
-    def _meta(cls, v: Any) -> Optional[str]:
+    def _meta(cls, v: Any) -> str | None:
         return _optional_str(v)
 
 
@@ -126,7 +125,7 @@ class MarketSnapshot(BaseModel):
     snapshot_id: UUID = Field(default_factory=uuid4, description="Unique snapshot identifier")
     created_at: datetime = Field(default_factory=utcnow, description="UTC timestamp (metadata only; excluded from hash)")
 
-    prices: List[MarketPrice] = Field(default_factory=list, description="List of instrument prices")
+    prices: list[MarketPrice] = Field(default_factory=list, description="List of instrument prices")
 
     snapshot_hash: str = Field(default="", description="Computed by finalize() if empty")
 
@@ -144,9 +143,9 @@ class MarketSnapshot(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _validate_uniqueness(self) -> "MarketSnapshot":
+    def _validate_uniqueness(self) -> MarketSnapshot:
         seen: set[str] = set()
-        dups: List[str] = []
+        dups: list[str] = []
         for p in self.prices:
             iid = p.instrument_id
             if iid in seen:
@@ -160,7 +159,7 @@ class MarketSnapshot(BaseModel):
     # Hashing / sealing
     # --------------------
 
-    def to_canonical_dict(self) -> Dict[str, Any]:
+    def to_canonical_dict(self) -> dict[str, Any]:
         """
         Canonical dict used for hashing.
         Excludes snapshot_hash and created_at (timestamps are never hashed).
@@ -173,7 +172,7 @@ class MarketSnapshot(BaseModel):
     def compute_snapshot_hash(self) -> str:
         return hash_canonical(self.to_canonical_dict())
 
-    def finalize(self) -> "MarketSnapshot":
+    def finalize(self) -> MarketSnapshot:
         """
         Deterministically seal snapshot:
         - sort prices by instrument_id
@@ -188,7 +187,7 @@ class MarketSnapshot(BaseModel):
     # Convenience accessors
     # --------------------
 
-    def index_by_id(self) -> Dict[str, MarketPrice]:
+    def index_by_id(self) -> dict[str, MarketPrice]:
         """Deterministic lookup map. Does not mutate snapshot."""
         return {p.instrument_id: p for p in self.prices}
 
@@ -197,7 +196,7 @@ class MarketSnapshot(BaseModel):
 # Convenience builder
 # ============================================================
 
-def build_market_snapshot(prices: List[MarketPrice]) -> MarketSnapshot:
+def build_market_snapshot(prices: list[MarketPrice]) -> MarketSnapshot:
     """Convenience constructor for callers (sealed + hashed)."""
     snap = MarketSnapshot(prices=prices)
     return snap.finalize()

@@ -9,6 +9,7 @@ HedgeCalc - Celery Application (Canonical, Docker-Safe)
 """
 
 import os
+
 from celery import Celery
 from kombu import Queue
 

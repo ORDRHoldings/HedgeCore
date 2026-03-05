@@ -28,34 +28,19 @@ an audit_event row. This is the regulated backbone -- not feature work.
 
 import uuid as _uuid
 
-
-
 from sqlalchemy import (
-    select,
-
     Boolean,
-
     Column,
-
     DateTime,
-
     Index,
-
     Numeric,
-
     String,
-
+    select,
     text,
-
 )
-
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
-
-
 from app.core.db import Base
-
-
 
 # Valid execution_status values -- enforced in service layer + DB CHECK
 

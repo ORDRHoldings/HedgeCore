@@ -14,8 +14,8 @@ Tenant isolation is enforced via current_user.company_id.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import List, Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -42,7 +42,7 @@ class TicketCreate(BaseModel):
     description: str
     severity: Literal["S0", "S1", "S2", "S3", "S4"]
     category: str
-    diagnostics_bundle: Optional[dict] = None
+    diagnostics_bundle: dict | None = None
 
 
 class CommentCreate(BaseModel):
@@ -52,10 +52,10 @@ class CommentCreate(BaseModel):
 class TicketEventOut(BaseModel):
     id: UUID
     event_type: str
-    old_status: Optional[str]
-    new_status: Optional[str]
-    comment: Optional[str]
-    actor_email: Optional[str]
+    old_status: str | None
+    new_status: str | None
+    comment: str | None
+    actor_email: str | None
     created_at: datetime
 
     class Config:
@@ -70,12 +70,12 @@ class TicketOut(BaseModel):
     severity: str
     category: str
     status: str
-    submitted_by_email: Optional[str]
+    submitted_by_email: str | None
     created_at: datetime
     updated_at: datetime
-    resolved_at: Optional[datetime]
-    resolution_notes: Optional[str]
-    events: List[TicketEventOut] = []
+    resolved_at: datetime | None
+    resolution_notes: str | None
+    events: list[TicketEventOut] = []
 
     class Config:
         from_attributes = True
@@ -129,7 +129,7 @@ async def _get_ticket(
     return ticket
 
 
-async def _load_events(session: AsyncSession, ticket_id: UUID) -> List[TicketEvent]:
+async def _load_events(session: AsyncSession, ticket_id: UUID) -> list[TicketEvent]:
     result = await session.execute(
         select(TicketEvent)
         .where(TicketEvent.ticket_id == ticket_id)
@@ -138,7 +138,7 @@ async def _load_events(session: AsyncSession, ticket_id: UUID) -> List[TicketEve
     return list(result.scalars().all())
 
 
-def _ticket_to_out(ticket: SupportTicket, events: List[TicketEvent]) -> TicketOut:
+def _ticket_to_out(ticket: SupportTicket, events: list[TicketEvent]) -> TicketOut:
     return TicketOut(
         id=ticket.id,
         ticket_ref=ticket.ticket_ref,
@@ -224,14 +224,14 @@ async def create_ticket(
 # GET /v1/support/tickets  -- list tickets for company
 # ---------------------------------------------------------------------------
 
-@router.get("/tickets", response_model=List[TicketOut])
+@router.get("/tickets", response_model=list[TicketOut])
 async def list_tickets(
-    status: Optional[str] = Query(None, description="Filter by status: OPEN, IN_PROGRESS, RESOLVED, CLOSED"),
+    status: str | None = Query(None, description="Filter by status: OPEN, IN_PROGRESS, RESOLVED, CLOSED"),
     limit: int = Query(20, ge=1, le=200),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
-) -> List[TicketOut]:
+) -> list[TicketOut]:
     async with session.begin():
         q = select(SupportTicket).where(
             SupportTicket.company_id == current_user.company_id
@@ -296,7 +296,7 @@ async def add_comment(
         session.add(event)
 
         # Touch updated_at
-        ticket.updated_at = datetime.now(timezone.utc)
+        ticket.updated_at = datetime.now(UTC)
 
     async with session.begin():
         ticket = await _get_ticket(session, ticket_id, current_user.company_id)

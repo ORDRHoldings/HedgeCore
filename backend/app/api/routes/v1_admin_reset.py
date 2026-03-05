@@ -14,8 +14,8 @@ Users / RBAC / Company rows are NEVER touched.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
@@ -24,12 +24,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.core.security import get_current_user, hash_password
-from app.models.audit_event import AuditEvent, build_audit_event, GENESIS_HASH
+from app.models.audit_event import GENESIS_HASH, build_audit_event
 from app.models.organization import Branch, Company, Department
+from app.models.permission import SEED_PERMISSIONS, Permission, RolePermission
 from app.models.rbac import Role, UserRole
 from app.models.user import User
-
-from app.models.permission import Permission, RolePermission, SEED_PERMISSIONS
 
 router = APIRouter(prefix="/v1/admin/reset", tags=["admin-reset"])
 
@@ -124,7 +123,7 @@ class ResetTarget(BaseModel):
 
 
 class ResetRequest(BaseModel):
-    targets: List[ResetTarget]
+    targets: list[ResetTarget]
     confirm: str  # must equal "RESET"
 
 
@@ -136,13 +135,13 @@ class TableCounts(BaseModel):
 class TenantResetResult(BaseModel):
     tenant_slug: str
     tenant_id: str
-    tables_cleared: Dict[str, int]
+    tables_cleared: dict[str, int]
 
 
 class ResetResponse(BaseModel):
     reset: bool
-    targets: List[TenantResetResult]
-    audit_event_ids: List[str]
+    targets: list[TenantResetResult]
+    audit_event_ids: list[str]
 
 
 # ---------------------------------------------------------------------------
@@ -235,13 +234,13 @@ async def _reset_tenant(
     session: AsyncSession,
     company: Company,
     current_user: User,
-) -> tuple[Dict[str, int], str]:
+) -> tuple[dict[str, int], str]:
     """
     Delete all business data for *company* in FK-safe order.
     Returns (counts_dict, audit_event_id).
     """
     company_id_str = str(company.id)
-    counts: Dict[str, int] = {}
+    counts: dict[str, int] = {}
 
     async with session.begin_nested():
         for label, sql in _DELETE_STEPS:
@@ -264,7 +263,7 @@ async def _reset_tenant(
             "tenant_id": company_id_str,
             "tables_cleared": counts,
             "triggered_by": current_user.email,
-            "triggered_at": datetime.now(timezone.utc).isoformat(),
+            "triggered_at": datetime.now(UTC).isoformat(),
         },
         prev_event_hash=GENESIS_HASH,
         company_id=company.id,
@@ -471,7 +470,7 @@ _TRUNCATE_TABLES = [
 
 class SeedResponse(BaseModel):
     ok: bool
-    companies: List[Dict[str, Any]]
+    companies: list[dict[str, Any]]
 
 
 @router.post(
@@ -554,7 +553,7 @@ async def seed_companies(
         await db.flush()
 
         # Roles for this company
-        role_map: Dict[str, Role] = {}
+        role_map: dict[str, Role] = {}
         for name, description, level, is_sys in _SEED_ROLES:
             role = Role(
                 name=name, description=description,

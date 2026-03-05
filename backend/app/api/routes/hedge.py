@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
 
 from app.api.schemas.hedge import HedgeRequest
-from app.engine.recommend import recommend
-from app.engine.decision_gate import decision_gate
 from app.engine.audit_bundle import build_audit_bundle
-
+from app.engine.decision_gate import decision_gate
+from app.engine.recommend import recommend
 
 ROUTER_TAG = "hedge"
 router = APIRouter(prefix="/hedge", tags=[ROUTER_TAG])
@@ -23,7 +22,7 @@ router = APIRouter(prefix="/hedge", tags=[ROUTER_TAG])
 def _reject(
     *,
     reason: str,
-    details: Optional[Mapping[str, Any]] = None,
+    details: Mapping[str, Any] | None = None,
     status_code: int = 400,
 ) -> JSONResponse:
     return JSONResponse(

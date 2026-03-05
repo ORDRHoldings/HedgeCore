@@ -14,12 +14,20 @@ Uniqueness contract: UNIQUE(company_id, market_snapshot_hash)
 
 from __future__ import annotations
 
-from datetime import datetime
 import uuid as _uuid
+from datetime import datetime
 
 from sqlalchemy import (
-    UUID, String, Text, Boolean, DateTime, Float, ForeignKey,
-    UniqueConstraint, Index, func,
+    UUID,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column

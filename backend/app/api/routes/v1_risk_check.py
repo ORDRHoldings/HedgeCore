@@ -13,8 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_async_session
 from app.core.security import get_current_user
 from app.engine.decision_gate import decision_gate
-from app.models.audit_event import AuditEvent, build_audit_event, GENESIS_HASH
+from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 from app.models.position import Position
 from app.models.user import User
 from app.services import rbac_service
@@ -45,10 +44,10 @@ router = APIRouter(prefix="/v1", tags=["v1-risk-check"])
 
 
 class RiskCheckRequest(BaseModel):
-    policy_instance_id: Optional[UUID] = None
+    policy_instance_id: UUID | None = None
     position_ids: list[UUID] = Field(..., min_length=1, max_length=50)
     market_snapshot: dict
-    hedge_plan: Optional[dict] = None
+    hedge_plan: dict | None = None
 
 
 class RiskCheckResponse(BaseModel):
@@ -57,10 +56,10 @@ class RiskCheckResponse(BaseModel):
     conditions: list[dict]
     residual_risks: list[dict]
     decision_hash: str
-    inputs_used: Optional[dict] = None
+    inputs_used: dict | None = None
     checked_at: str  # ISO timestamp
-    policy_revision_id: Optional[str] = None
-    policy_hash: Optional[str] = None
+    policy_revision_id: str | None = None
+    policy_hash: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -153,11 +152,11 @@ async def risk_check(
             )
 
     # --- Resolve active policy revision ---
-    from app.services.policy_revision_service import get_latest_revision
     from app.services import policy_service as _pol_svc
+    from app.services.policy_revision_service import get_latest_revision
 
-    pinned_revision_id: Optional[str] = None
-    pinned_policy_hash: Optional[str] = None
+    pinned_revision_id: str | None = None
+    pinned_policy_hash: str | None = None
 
     # If policy_instance_id not provided, derive from positions or active policy
     resolved_policy_id = request.policy_instance_id
@@ -233,7 +232,7 @@ async def risk_check(
 
         # Extract worst case from scenario_results.totals (pick minimum hedged_usd)
         totals = scenario_results.get("totals", [])
-        worst_net_pnl: Optional[float] = None
+        worst_net_pnl: float | None = None
         for t in totals:
             hedged = t.get("hedged_usd")
             if hedged is not None:
@@ -244,7 +243,7 @@ async def risk_check(
         # Compute hedge effectiveness ratio from hedge plan summary
         total_exposure = float(hp_summary.get("total_commercial_exposure_mxn", 0.0) or 0.0)
         total_hedge    = float(hp_summary.get("total_hedge_position_mxn", 0.0) or 0.0)
-        eff_ratio: Optional[float] = (
+        eff_ratio: float | None = (
             abs(total_hedge / total_exposure) if total_exposure != 0 else 1.0
         )
 
@@ -277,7 +276,7 @@ async def risk_check(
 
     result = decision_gate(payload=payload, plan=plan, policy={})
 
-    checked_at = datetime.now(timezone.utc).isoformat()
+    checked_at = datetime.now(UTC).isoformat()
 
     # --- Compute endpoint-level decision_hash ---
     # SHA-256 of canonical_json({verdict, reasons, conditions, checked_at})

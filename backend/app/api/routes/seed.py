@@ -16,43 +16,21 @@ POST /api/v1/seed/company
 
 from __future__ import annotations
 
-
-
 import logging
-
 import uuid
 
-from typing import List
-
-
-
-from fastapi import APIRouter, Depends, HTTPException, Header
-
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import select, text
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
-from app.core.db import get_session
-
 from app.core.config import settings
-
-from app.core.security import get_current_user
-
-from app.core.security import hash_password
-
-from app.models.user import User
-
-from app.models.rbac import Role, UserRole
-
-from app.models.organization import Company, Branch, Department
-
-from app.models.permission import Permission, RolePermission, SEED_PERMISSIONS
-
+from app.core.db import get_session
+from app.core.security import get_current_user, hash_password
+from app.models.organization import Branch, Company, Department
+from app.models.permission import SEED_PERMISSIONS, Permission, RolePermission
 from app.models.policy import PolicyTemplate
-
-
+from app.models.rbac import Role, UserRole
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -1148,8 +1126,8 @@ async def fix_smb_permissions(
     if not getattr(current_user, "is_superuser", False):
         raise HTTPException(status_code=403, detail="Superuser only")
 
-    from app.models.rbac import Role
     from app.models.permission import Permission, RolePermission
+    from app.models.rbac import Role
 
     role = (await db.execute(
         select(Role).where(Role.name == "senior_analyst")

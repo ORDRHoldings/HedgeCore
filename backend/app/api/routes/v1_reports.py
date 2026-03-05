@@ -30,19 +30,19 @@ from __future__ import annotations
 import csv
 import io
 import logging
-from datetime import datetime, timezone
-from typing import Any, List, Literal, Optional
+from datetime import UTC, datetime
+from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
 from app.core.security import get_current_user
-from app.models.audit_event import AuditEvent, build_audit_event, GENESIS_HASH
+from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 from app.models.calculation_run import CalculationRun
 from app.models.position import Position
 from app.models.report_schedule import ReportSchedule
@@ -166,7 +166,7 @@ async def save_report(
     return report
 
 
-@router.get("/saved", response_model=List[SavedReportOut])
+@router.get("/saved", response_model=list[SavedReportOut])
 async def list_saved_reports(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
@@ -227,14 +227,14 @@ class ScheduleCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     frequency: FrequencyEnum
     report_type: ReportTypeEnum
-    recipients: List[str] = Field(default_factory=list, description="List of recipient email addresses")
+    recipients: list[str] = Field(default_factory=list, description="List of recipient email addresses")
 
 
 class ScheduleUpdateRequest(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    frequency: Optional[FrequencyEnum] = None
-    recipients: Optional[List[str]] = None
-    is_active: Optional[bool] = None
+    name: str | None = Field(None, min_length=1, max_length=255)
+    frequency: FrequencyEnum | None = None
+    recipients: list[str] | None = None
+    is_active: bool | None = None
 
 
 class ScheduleOut(BaseModel):
@@ -243,8 +243,8 @@ class ScheduleOut(BaseModel):
     frequency: str
     report_type: str
     recipients: Any  # list[str] stored as JSONB
-    last_run_at: Optional[datetime]
-    next_run_at: Optional[datetime]
+    last_run_at: datetime | None
+    next_run_at: datetime | None
     is_active: bool
     created_at: datetime
 
@@ -301,7 +301,7 @@ async def create_schedule(
     )
 
 
-@router.get("/schedules", response_model=List[ScheduleOut])
+@router.get("/schedules", response_model=list[ScheduleOut])
 async def list_schedules(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
@@ -520,7 +520,7 @@ async def download_excel(
     writer.writerow([])
     writer.writerow(["SUMMARY"])
     writer.writerow(["Run ID", run_id])
-    writer.writerow(["Generated At", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")])
+    writer.writerow(["Generated At", datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")])
     writer.writerow(["Trade Count", run.trade_count])
     writer.writerow(["Hedge Count", run.hedge_count])
     writer.writerow(["Run Hash", run.run_hash])
@@ -568,7 +568,7 @@ async def download_pdf(
         if pid:
             bucket_by_pos[str(pid)] = b
 
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     lines: list[str] = []
 
     lines += [
@@ -673,7 +673,7 @@ async def download_bank_pdf(
     hedge_plan = (run.run_envelope or {}).get("hedge_plan") or {}
     buckets: list[dict] = hedge_plan.get("buckets", [])
 
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     lines: list[str] = []
 
     lines += [

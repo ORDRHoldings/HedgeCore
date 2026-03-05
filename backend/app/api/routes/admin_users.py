@@ -10,30 +10,29 @@ Ensures full OpenAPI stability by:
 """
 
 from __future__ import annotations
+
 import logging
 from uuid import UUID
-from typing import Dict, List
 
 from fastapi import (
     APIRouter,
+    Body,
     Depends,
     HTTPException,
+    Path,
     Query,
     Request,
-    Body,
-    Path,
     status,
 )
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from pydantic import BaseModel, Field
 
 from app.core.authz import require_roles
 from app.core.security import get_current_user
 from app.db.session import get_session
-from app.models.user import User
 from app.models.rbac import Role, UserRole
+from app.models.user import User
 from app.schemas import admin as admin_schemas
 from app.schemas.admin import (
     AssignRoleRequest,
@@ -43,6 +42,7 @@ from app.schemas.admin import (
 )
 from app.services import rbac_service
 
+
 # ---------------------------------------------------------------------
 # ? Local response models to produce stable, rich OpenAPI
 # ---------------------------------------------------------------------
@@ -50,10 +50,10 @@ class UserListItem(BaseModel):
     id: UUID = Field(..., description="User UUID")
     email: str = Field(..., description="User email")
     is_active: bool = Field(..., description="Active status")
-    roles: List[str] = Field(default_factory=list, description="Assigned role names")
+    roles: list[str] = Field(default_factory=list, description="Assigned role names")
 
 class PaginatedUsersResponse(BaseModel):
-    items: List[UserListItem]
+    items: list[UserListItem]
     total: int
     page: int
     size: int
@@ -105,7 +105,7 @@ def _clamp_pagination(page: int, size: int, max_size: int = 100) -> tuple[int, i
     return page, size
 
 
-async def _get_roles_map(session: AsyncSession, user_ids: List[UUID]) -> Dict[UUID, List[str]]:
+async def _get_roles_map(session: AsyncSession, user_ids: list[UUID]) -> dict[UUID, list[str]]:
     """Return {user_id: [role_name, ...]} for a batch of user UUIDs."""
     if not user_ids:
         return {}
@@ -118,7 +118,7 @@ async def _get_roles_map(session: AsyncSession, user_ids: List[UUID]) -> Dict[UU
     )
     rows = (await session.execute(stmt)).all()
 
-    mapping: Dict[UUID, List[str]] = {}
+    mapping: dict[UUID, list[str]] = {}
     for uid, role_name in rows:
         mapping.setdefault(uid, []).append(role_name)
     return mapping
@@ -275,7 +275,7 @@ async def remove_role(
 # ---------------------------------------------------------------------
 @router.get(
     "/roles",
-    response_model=List[RoleResponse],
+    response_model=list[RoleResponse],
     status_code=status.HTTP_200_OK,
     summary="List roles",
     description="Lists all roles for administrative tools. Admin-only.",

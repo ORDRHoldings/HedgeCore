@@ -13,7 +13,6 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # Conservative institutional estimate
 DEFAULT_IMPACT_FACTOR = 0.1
 

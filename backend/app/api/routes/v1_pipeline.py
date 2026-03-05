@@ -14,43 +14,25 @@ Mutation endpoints enforce inline permission checks via rbac_service.
 
 
 
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
 
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
 from app.core.db import get_async_session
-
-from app.core.security import get_current_user
 from app.core.schema_state import require_schema_ready
-
+from app.core.security import get_current_user
 from app.models.user import User
-
 from app.schemas_v1.pipeline import (
-
     AuthorizeRequest,
-
     CreateProposalRequest,
-
     LedgerListResponse,
-
     ProposalListResponse,
-
     SandboxCalculateRequest,
-
     StagingListResponse,
-
     SubmitToStagingRequest,
-
     TimelineResponse,
-
 )
-
-from app.services import pipeline_service, rbac_service, pipeline_db
-
-
+from app.services import pipeline_db, pipeline_service, rbac_service
 
 router = APIRouter(prefix="/v1/pipeline", tags=["v1-pipeline"])
 
@@ -327,7 +309,7 @@ async def submit_to_staging(
 async def list_staging(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
-    status: Optional[str] = Query(default=None),
+    status: str | None = Query(default=None),
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ):

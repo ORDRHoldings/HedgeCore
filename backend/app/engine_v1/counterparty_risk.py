@@ -5,9 +5,9 @@ RPT-07: Counterparty FX exposure and PFE (Potential Future Exposure) model.
 Provides per-counterparty exposure aggregation and PFE at 97.5% confidence.
 """
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Optional
+
 import math
+from dataclasses import dataclass, field
 
 
 @dataclass

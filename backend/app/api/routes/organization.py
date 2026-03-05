@@ -8,27 +8,25 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.authz import require_permission
 from app.core.db import get_session
 from app.core.security import get_current_user
-from app.core.authz import require_permission
-from app.models.organization import Company, Branch, Department
+from app.models.organization import Branch, Company, Department
 from app.schemas.organization import (
-    CompanyOut,
-    CompanyCreate,
-    CompanyUpdate,
-    CompanyWithBranches,
-    BranchOut,
     BranchCreate,
+    BranchOut,
     BranchUpdate,
     BranchWithDepartments,
-    DepartmentOut,
+    CompanyOut,
+    CompanyUpdate,
+    CompanyWithBranches,
     DepartmentCreate,
-    DepartmentUpdate,
+    DepartmentOut,
 )
 
 logger = logging.getLogger(__name__)

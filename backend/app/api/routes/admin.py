@@ -5,9 +5,8 @@ HedgeCalc - Phase VI
 Admin Routes for API Keys & Integration Tokens Management
 """
 
-from datetime import datetime
 import uuid
-from typing import List
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -18,8 +17,8 @@ from app.db.session import get_session
 from app.models.api_key import ApiKey
 from app.schemas.api_key import (
     ApiKeyCreateRequest,
-    ApiKeyRotateRequest,
     ApiKeyPublic,
+    ApiKeyRotateRequest,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -115,7 +114,7 @@ async def rotate_api_key(
     return ApiKeyPublic.model_validate(api_key)
 
 
-@router.get("/api-keys", response_model=List[ApiKeyPublic])
+@router.get("/api-keys", response_model=list[ApiKeyPublic])
 async def list_api_keys(
     db: AsyncSession = Depends(get_session),
     _: object = Depends(require_superuser),

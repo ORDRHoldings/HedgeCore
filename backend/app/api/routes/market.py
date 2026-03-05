@@ -2,10 +2,10 @@
 Market Data Routes - Yahoo Finance Integration
 Provides real-time market data for ETFs and indices
 """
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
-import yfinance as yf
 from datetime import datetime
+
+import yfinance as yf
+from fastapi import APIRouter, HTTPException
 
 router = APIRouter(prefix="/v1/market", tags=["market"])
 

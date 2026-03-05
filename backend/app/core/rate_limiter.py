@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
 
 _log = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ class RateLimiter:
 
     def __init__(
         self,
-        redis_url: Optional[str] = None,
+        redis_url: str | None = None,
         max_requests: int = 10,
         window_seconds: int = 60,
     ) -> None:

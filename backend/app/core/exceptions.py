@@ -13,7 +13,6 @@ Stable error codes (never change — clients may key on them):
 from __future__ import annotations
 
 import uuid as _uuid
-from typing import Optional
 
 
 class HedgeCalcError(Exception):
@@ -41,7 +40,7 @@ class ActivationConflictError(HedgeCalcError):
     def __init__(
         self,
         company_id: _uuid.UUID,
-        branch_id: Optional[_uuid.UUID] = None,
+        branch_id: _uuid.UUID | None = None,
     ) -> None:
         self.company_id = company_id
         self.branch_id = branch_id

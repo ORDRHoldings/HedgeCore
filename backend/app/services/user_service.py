@@ -9,13 +9,14 @@ Provides:
 """
 
 from __future__ import annotations
+
 import logging
-from typing import Optional
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
 from app.core.security import hash_password, verify_password
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class UserService:
     """Encapsulates all user-related DB operations."""
 
     @staticmethod
-    async def get_by_email(db: AsyncSession, email: str) -> Optional[User]:
+    async def get_by_email(db: AsyncSession, email: str) -> User | None:
         stmt = select(User).where(User.email == email)
         result = await db.execute(stmt)
         return result.scalars().first()
@@ -44,7 +45,7 @@ class UserService:
         return user
 
     @staticmethod
-    async def authenticate(db: AsyncSession, email: str, password: str) -> Optional[User]:
+    async def authenticate(db: AsyncSession, email: str, password: str) -> User | None:
         user = await UserService.get_by_email(db, email)
         if not user:
             return None

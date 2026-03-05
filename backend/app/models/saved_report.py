@@ -13,8 +13,9 @@ frontend saves a new row rather than overwriting, but the ORM allows it).
 
 import uuid as _uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy import Column, DateTime, Index, Integer, String, text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.core.db import Base
 

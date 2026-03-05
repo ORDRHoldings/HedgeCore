@@ -6,20 +6,11 @@ Pydantic v2 schemas for Policy templates and activation instances.
 
 from __future__ import annotations
 
-
-
 from datetime import datetime
-
-from typing import Any, Optional
-
+from typing import Any
 from uuid import UUID
 
-
-
 from pydantic import BaseModel, ConfigDict, Field
-
-
-
 
 
 class PolicyConfigSchema(BaseModel):
@@ -48,13 +39,13 @@ class PolicyTemplateResponse(BaseModel):
 
     id:          UUID
 
-    company_id:  Optional[UUID]  = None      # None -> system template
+    company_id:  UUID | None  = None      # None -> system template
 
     name:        str
 
     short_name:  str
 
-    description: Optional[str]  = None
+    description: str | None  = None
 
     risk_posture: str
 
@@ -67,10 +58,10 @@ class PolicyTemplateResponse(BaseModel):
     is_system:   bool
 
     created_at:  datetime
-    created_by:  Optional[UUID] = None
-    updated_by:  Optional[UUID] = None
-    updated_at:  Optional[datetime] = None
-    status:      Optional[str] = None
+    created_by:  UUID | None = None
+    updated_by:  UUID | None = None
+    updated_at:  datetime | None = None
+    status:      str | None = None
 
 
 class PolicyInstanceResponse(BaseModel):
@@ -83,7 +74,7 @@ class PolicyInstanceResponse(BaseModel):
 
     company_id:   UUID
 
-    branch_id:    Optional[UUID] = None
+    branch_id:    UUID | None = None
 
     template_id:  UUID
 
@@ -95,7 +86,7 @@ class PolicyInstanceResponse(BaseModel):
 
     # Denormalized for convenience -- filled in by route handler
 
-    template:     Optional[PolicyTemplateResponse] = None
+    template:     PolicyTemplateResponse | None = None
 
 
 
@@ -115,7 +106,7 @@ class CreateTemplateRequest(BaseModel):
 
     short_name:  str   = Field(..., min_length=1, max_length=16)
 
-    description: Optional[str] = Field(default=None)
+    description: str | None = Field(default=None)
 
     risk_posture: str  = Field(..., pattern=r"^(CONSERVATIVE|MODERATE|AGGRESSIVE)$")
 
@@ -124,7 +115,7 @@ class CreateTemplateRequest(BaseModel):
     config:      PolicyConfigSchema
 
     # SEC-POLICY-1: status is optional; ACTIVE/APPROVED require policy.activate permission
-    status: Optional[str] = Field(
+    status: str | None = Field(
         default=None,
         pattern=r"^(DRAFT|REVIEW|APPROVED|ACTIVE|ARCHIVED)$",
         description="Template lifecycle status. ACTIVE/APPROVED require policy.activate permission.",
@@ -133,25 +124,25 @@ class CreateTemplateRequest(BaseModel):
 
 
 class UpdateTemplateRequest(BaseModel):
-    name:         Optional[str]               = Field(default=None, min_length=1, max_length=255)
-    short_name:   Optional[str]               = Field(default=None, min_length=1, max_length=16)
-    description:  Optional[str]               = Field(default=None)
-    risk_posture: Optional[str]               = Field(default=None, pattern=r"^(CONSERVATIVE|MODERATE|AGGRESSIVE)$")
-    category:     Optional[str]               = Field(default=None, pattern=r"^(CORPORATE|FINANCIAL|SOVEREIGN|SECTOR)$")
-    config:       Optional[PolicyConfigSchema] = Field(default=None)
+    name:         str | None               = Field(default=None, min_length=1, max_length=255)
+    short_name:   str | None               = Field(default=None, min_length=1, max_length=16)
+    description:  str | None               = Field(default=None)
+    risk_posture: str | None               = Field(default=None, pattern=r"^(CONSERVATIVE|MODERATE|AGGRESSIVE)$")
+    category:     str | None               = Field(default=None, pattern=r"^(CORPORATE|FINANCIAL|SOVEREIGN|SECTOR)$")
+    config:       PolicyConfigSchema | None = Field(default=None)
 
 class PolicyFavoriteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id:          UUID
     user_id:     UUID
     template_id: UUID
-    notes:       Optional[str] = None
+    notes:       str | None = None
     created_at:  datetime
-    template:    Optional[PolicyTemplateResponse] = None
+    template:    PolicyTemplateResponse | None = None
 
 
 class AddFavoriteRequest(BaseModel):
-    notes: Optional[str] = Field(default=None)
+    notes: str | None = Field(default=None)
 
 
 class PolicyExportResponse(BaseModel):
@@ -164,8 +155,8 @@ class PolicyExportResponse(BaseModel):
 
 class ImportTemplateRequest(BaseModel):
     export_blob:          dict = Field(...)
-    name_override:        Optional[str] = Field(default=None, max_length=255)
-    short_name_override:  Optional[str] = Field(default=None, max_length=16)
+    name_override:        str | None = Field(default=None, max_length=255)
+    short_name_override:  str | None = Field(default=None, max_length=16)
 
 
 class PolicyAuditEventResponse(BaseModel):
@@ -173,7 +164,7 @@ class PolicyAuditEventResponse(BaseModel):
     event_type:  str
     description: str
     payload:     dict
-    actor_email: Optional[str] = None
+    actor_email: str | None = None
     created_at:  datetime
 
 

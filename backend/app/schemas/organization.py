@@ -4,10 +4,11 @@ Pydantic schemas for Organization hierarchy (Company, Branch, Department).
 """
 
 from __future__ import annotations
-from typing import Optional, List
+
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------------------------------------------------------------------
@@ -16,9 +17,9 @@ from pydantic import BaseModel, Field, ConfigDict
 class CompanyBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     slug: str = Field(..., min_length=1, max_length=64, pattern=r"^[a-z0-9\-]+$")
-    domain: Optional[str] = Field(default=None, max_length=255)
-    logo_url: Optional[str] = Field(default=None, max_length=512)
-    settings: Optional[dict] = Field(default_factory=dict)
+    domain: str | None = Field(default=None, max_length=255)
+    logo_url: str | None = Field(default=None, max_length=512)
+    settings: dict | None = Field(default_factory=dict)
 
 
 class CompanyCreate(CompanyBase):
@@ -26,10 +27,10 @@ class CompanyCreate(CompanyBase):
 
 
 class CompanyUpdate(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
-    domain: Optional[str] = Field(default=None, max_length=255)
-    logo_url: Optional[str] = Field(default=None, max_length=512)
-    settings: Optional[dict] = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    domain: str | None = Field(default=None, max_length=255)
+    logo_url: str | None = Field(default=None, max_length=512)
+    settings: dict | None = None
 
 
 class CompanyOut(CompanyBase):
@@ -45,8 +46,8 @@ class CompanyOut(CompanyBase):
 class BranchBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     code: str = Field(..., min_length=1, max_length=32, pattern=r"^[A-Z0-9\-]+$")
-    region: Optional[str] = Field(default=None, max_length=128)
-    timezone: Optional[str] = Field(default="UTC", max_length=64)
+    region: str | None = Field(default=None, max_length=128)
+    timezone: str | None = Field(default="UTC", max_length=64)
 
 
 class BranchCreate(BranchBase):
@@ -54,10 +55,10 @@ class BranchCreate(BranchBase):
 
 
 class BranchUpdate(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
-    region: Optional[str] = Field(default=None, max_length=128)
-    timezone: Optional[str] = Field(default=None, max_length=64)
-    is_active: Optional[bool] = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    region: str | None = Field(default=None, max_length=128)
+    timezone: str | None = Field(default=None, max_length=64)
+    is_active: bool | None = None
 
 
 class BranchOut(BranchBase):
@@ -81,7 +82,7 @@ class DepartmentCreate(DepartmentBase):
 
 
 class DepartmentUpdate(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 class DepartmentOut(DepartmentBase):
@@ -95,8 +96,8 @@ class DepartmentOut(DepartmentBase):
 # Nested responses
 # ---------------------------------------------------------------------
 class BranchWithDepartments(BranchOut):
-    departments: List[DepartmentOut] = Field(default_factory=list)
+    departments: list[DepartmentOut] = Field(default_factory=list)
 
 
 class CompanyWithBranches(CompanyOut):
-    branches: List[BranchWithDepartments] = Field(default_factory=list)
+    branches: list[BranchWithDepartments] = Field(default_factory=list)

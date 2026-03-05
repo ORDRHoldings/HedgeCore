@@ -33,14 +33,14 @@ Non-goals:
 - Margin / broker requirements
 """
 
+from collections.abc import Sequence
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.contracts.run_envelope import _is_sha256_hex, hash_canonical, utcnow
-
 
 # ============================================================
 # Enums (frozen v1 semantics)
@@ -72,7 +72,7 @@ class OptionRight(str, Enum):
 # Helpers (internal; deterministic + audit-safe)
 # ============================================================
 
-def _finite_float(v: Any, *, field_name: str, allow_none: bool = False) -> Optional[float]:
+def _finite_float(v: Any, *, field_name: str, allow_none: bool = False) -> float | None:
     if v is None:
         if allow_none:
             return None
@@ -93,12 +93,12 @@ def _non_empty_str(v: Any, *, field_name: str) -> str:
     return s
 
 
-def _tuple_strs(v: Any) -> Tuple[str, ...]:
+def _tuple_strs(v: Any) -> tuple[str, ...]:
     if v is None:
         return tuple()
     if not isinstance(v, (list, tuple)):
         raise ValueError("Expected list/tuple of strings")
-    out: List[str] = []
+    out: list[str] = []
     for item in v:
         if item is None:
             continue
@@ -113,7 +113,7 @@ def _upper_currency(v: Any) -> str:
     return s or "USD"
 
 
-def _normalize_side(quantity: float, side: Optional[PositionSide]) -> Tuple[float, PositionSide]:
+def _normalize_side(quantity: float, side: PositionSide | None) -> tuple[float, PositionSide]:
     """
     Deterministic normalization:
     - If side is provided, quantity is coerced to absolute value and side is trusted.
@@ -147,22 +147,22 @@ class Position(BaseModel):
     instrument_id: str = Field(..., description="InstrumentCatalog.instrument_id reference (required)")
 
     asset_class: AssetClass = Field(default=AssetClass.OTHER, description="Optional classification hint (non-binding)")
-    symbol_hint: Optional[str] = Field(default=None, description="Optional symbol hint for UI (non-binding)")
+    symbol_hint: str | None = Field(default=None, description="Optional symbol hint for UI (non-binding)")
 
     quantity: float = Field(..., description="Position size (units depend on instrument). Must be finite.")
-    side: Optional[PositionSide] = Field(
+    side: PositionSide | None = Field(
         default=None,
         description="If omitted, side is inferred from sign(quantity). If provided, quantity is treated as absolute.",
     )
 
     # Optional governance metadata (non-binding)
-    tags: Tuple[str, ...] = Field(default_factory=tuple, description="Sorted unique position tags for gating/reporting")
-    cost_basis: Optional[float] = Field(default=None, description="Optional cost basis (per unit); not used for pricing")
+    tags: tuple[str, ...] = Field(default_factory=tuple, description="Sorted unique position tags for gating/reporting")
+    cost_basis: float | None = Field(default=None, description="Optional cost basis (per unit); not used for pricing")
 
     # Optional option metadata (NOT used for pricing here; for audit/reference only)
-    option_right: Optional[OptionRight] = Field(default=None)
-    option_strike: Optional[float] = Field(default=None, description="Strike (if applicable)")
-    option_expiry: Optional[str] = Field(default=None, description="Expiry date/time string (ISO recommended)")
+    option_right: OptionRight | None = Field(default=None)
+    option_strike: float | None = Field(default=None, description="Strike (if applicable)")
+    option_expiry: str | None = Field(default=None, description="Expiry date/time string (ISO recommended)")
 
     @field_validator("instrument_id", mode="before")
     @classmethod
@@ -171,7 +171,7 @@ class Position(BaseModel):
 
     @field_validator("symbol_hint", "option_expiry", mode="before")
     @classmethod
-    def _opt_str(cls, v: Any) -> Optional[str]:
+    def _opt_str(cls, v: Any) -> str | None:
         if v is None:
             return None
         s = str(v).strip()
@@ -187,16 +187,16 @@ class Position(BaseModel):
 
     @field_validator("cost_basis", "option_strike", mode="before")
     @classmethod
-    def _finite_optional(cls, v: Any, info: Any) -> Optional[float]:
+    def _finite_optional(cls, v: Any, info: Any) -> float | None:
         return _finite_float(v, field_name=str(info.field_name), allow_none=True)
 
     @field_validator("tags", mode="before")
     @classmethod
-    def _tags(cls, v: Any) -> Tuple[str, ...]:
+    def _tags(cls, v: Any) -> tuple[str, ...]:
         return _tuple_strs(v)
 
     @model_validator(mode="after")
-    def _normalize(self) -> "Position":
+    def _normalize(self) -> Position:
         q, s = _normalize_side(float(self.quantity), self.side)
         # Normalize fields deterministically
         return self.model_copy(update={"quantity": float(q), "side": s})
@@ -230,9 +230,9 @@ class PortfolioSnapshot(BaseModel):
     )
 
     base_currency: str = Field(default="USD", description="Base reporting currency")
-    aum: Optional[float] = Field(default=None, description="Optional AUM metadata (base_currency units)")
+    aum: float | None = Field(default=None, description="Optional AUM metadata (base_currency units)")
 
-    positions: List[Position] = Field(default_factory=list, description="Ordered list of positions")
+    positions: list[Position] = Field(default_factory=list, description="Ordered list of positions")
 
     portfolio_hash: str = Field(default="", description="Computed by finalize() if empty")
 
@@ -243,7 +243,7 @@ class PortfolioSnapshot(BaseModel):
 
     @field_validator("aum", mode="before")
     @classmethod
-    def _aum(cls, v: Any) -> Optional[float]:
+    def _aum(cls, v: Any) -> float | None:
         return _finite_float(v, field_name="aum", allow_none=True)
 
     @field_validator("portfolio_hash", mode="before")
@@ -256,11 +256,11 @@ class PortfolioSnapshot(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _validate_positions(self) -> "PortfolioSnapshot":
+    def _validate_positions(self) -> PortfolioSnapshot:
         # Institutional safety: do not allow empty instrument_id; Position already enforces.
         # Enforce uniqueness of position_id (and optionally instrument_id duplicates allowed).
         seen: set[str] = set()
-        dups: List[str] = []
+        dups: list[str] = []
         for p in self.positions:
             pid = str(p.position_id)
             if pid in seen:
@@ -270,7 +270,7 @@ class PortfolioSnapshot(BaseModel):
             raise ValueError(f"Duplicate position_id(s) in portfolio snapshot: {sorted(set(dups))}")
         return self
 
-    def to_canonical_dict(self) -> Dict[str, Any]:
+    def to_canonical_dict(self) -> dict[str, Any]:
         d = self.model_dump(mode="json")
         d.pop("portfolio_hash", None)
         d.pop("created_at", None)  # never hash timestamps
@@ -279,7 +279,7 @@ class PortfolioSnapshot(BaseModel):
     def compute_portfolio_hash(self) -> str:
         return hash_canonical(self.to_canonical_dict())
 
-    def finalize(self) -> "PortfolioSnapshot":
+    def finalize(self) -> PortfolioSnapshot:
         """
         Deterministically normalize and seal snapshot integrity:
         - Sort positions by (instrument_id, position_id)
@@ -290,12 +290,12 @@ class PortfolioSnapshot(BaseModel):
         ph = candidate.portfolio_hash or candidate.compute_portfolio_hash()
         return candidate.model_copy(update={"portfolio_hash": ph})
 
-    def index_by_instrument_id(self) -> Dict[str, List[Position]]:
+    def index_by_instrument_id(self) -> dict[str, list[Position]]:
         """
         Convenience accessor for exposure engine.
         NOTE: This does not mutate the snapshot and does not affect determinism.
         """
-        out: Dict[str, List[Position]] = {}
+        out: dict[str, list[Position]] = {}
         for p in self.positions:
             out.setdefault(p.instrument_id, []).append(p)
         return out
@@ -304,7 +304,7 @@ class PortfolioSnapshot(BaseModel):
 def build_portfolio_snapshot(
     *,
     base_currency: str = "USD",
-    aum: Optional[float] = None,
+    aum: float | None = None,
     positions: Sequence[Position],
 ) -> PortfolioSnapshot:
     """

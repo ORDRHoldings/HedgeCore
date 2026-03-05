@@ -32,35 +32,18 @@ Permissions:
 
 from __future__ import annotations
 
-
-
 import logging
-
 from uuid import UUID
 
-from typing import Optional
-
-
-
 from fastapi import APIRouter, Depends, HTTPException
-
 from pydantic import BaseModel, ConfigDict
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
 from app.core.db import get_async_session
-
 from app.core.security import get_current_user
-
 from app.models.user import User
-
-from app.services import rbac_service
-
 from app.services import policy_revision_service as pr_service
-
-
+from app.services import rbac_service
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +73,7 @@ class PolicyRevisionResponse(BaseModel):
 
     company_id:         UUID
 
-    branch_id:          Optional[UUID]   = None
+    branch_id:          UUID | None   = None
 
     revision:           int
 
@@ -100,11 +83,11 @@ class PolicyRevisionResponse(BaseModel):
 
     created_by:         UUID
 
-    created_by_email:   Optional[str]    = None
+    created_by_email:   str | None    = None
 
-    change_reason:      Optional[str]    = None
+    change_reason:      str | None    = None
 
-    prev_revision_id:   Optional[UUID]   = None
+    prev_revision_id:   UUID | None   = None
 
     created_at:         str
 
@@ -116,7 +99,7 @@ class PolicyRevisionResponse(BaseModel):
 
     @classmethod
 
-    def from_orm_safe(cls, r) -> "PolicyRevisionResponse":
+    def from_orm_safe(cls, r) -> PolicyRevisionResponse:
 
         return cls(
 

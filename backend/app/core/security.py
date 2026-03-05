@@ -36,41 +36,22 @@ Phase VIII Add-on (API Keys):
 
 from __future__ import annotations
 
-
-
 import logging
-
 import uuid
-
+from datetime import UTC, datetime, timedelta
+from typing import Any, Literal
 from uuid import UUID
 
-from datetime import datetime, timedelta, timezone
-
-from typing import Any, Dict, Literal, Optional, Tuple
-
-
-
 import bcrypt
-
 import jwt
-
-from jwt import ExpiredSignatureError, DecodeError, InvalidTokenError
-
 from fastapi import Depends, HTTPException, Request, status
-
 from fastapi.security import OAuth2PasswordBearer
-
+from jwt import DecodeError, ExpiredSignatureError, InvalidTokenError
 from sqlalchemy import select
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-
-
 from app.core.config import settings
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +65,7 @@ logger = logging.getLogger(__name__)
 
 def _now_utc() -> datetime:
 
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 
@@ -167,7 +148,7 @@ def get_session_duration_for_roles(role_names: list[str]) -> int:
 
 # -------------------------------------------------------------------
 
-def _encode_jwt(payload: Dict[str, Any], expires_in_minutes: int) -> str:
+def _encode_jwt(payload: dict[str, Any], expires_in_minutes: int) -> str:
 
     """
 
@@ -217,7 +198,7 @@ def _encode_jwt(payload: Dict[str, Any], expires_in_minutes: int) -> str:
 
 
 
-def _decode_jwt(token: str) -> Dict[str, Any]:
+def _decode_jwt(token: str) -> dict[str, Any]:
 
     """Decode JWT safely with explicit error handling for malformed or corrupted tokens."""
 
@@ -275,17 +256,17 @@ def _build_claims(
 
     sub: str,
 
-    email: Optional[str],
+    email: str | None,
 
     token_type: Literal["access", "refresh"],
 
-    token_version: Optional[int] = None,
+    token_version: int | None = None,
 
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
 
     jti = uuid.uuid4().hex
 
-    claims: Dict[str, Any] = {
+    claims: dict[str, Any] = {
 
         "sub": sub,  # UUID string
 
@@ -313,10 +294,10 @@ def _build_claims(
 
 def create_access_token(
     sub: str | UUID,
-    email: Optional[str] = None,
-    token_version: Optional[int] = None,
+    email: str | None = None,
+    token_version: int | None = None,
     mfa_verified: bool = False,
-    expires_minutes: Optional[int] = None,
+    expires_minutes: int | None = None,
 ) -> str:
 
     """Mint short-lived access token (UUID-safe, includes 'nbf').
@@ -346,11 +327,11 @@ def create_refresh_token(
 
     sub: str | UUID,
 
-    email: Optional[str] = None,
+    email: str | None = None,
 
-    token_version: Optional[int] = None,
+    token_version: int | None = None,
 
-) -> Tuple[str, str, datetime]:
+) -> tuple[str, str, datetime]:
 
     """Mint long-lived refresh token (returns token, jti, expiry)."""
 
@@ -398,7 +379,7 @@ def create_refresh_token(
 
 # -------------------------------------------------------------------
 
-def decode_token(token: str, expected_type: Literal["access", "refresh"]) -> Dict[str, Any]:
+def decode_token(token: str, expected_type: Literal["access", "refresh"]) -> dict[str, Any]:
 
     payload = _decode_jwt(token)
 
@@ -422,7 +403,7 @@ def decode_token(token: str, expected_type: Literal["access", "refresh"]) -> Dic
 
 # -------------------------------------------------------------------
 
-def create_token_pair(sub: str | UUID, email: str, token_version: int = 1) -> Tuple[str, str]:
+def create_token_pair(sub: str | UUID, email: str, token_version: int = 1) -> tuple[str, str]:
 
     access = create_access_token(sub=sub, email=email, token_version=token_version)
 
@@ -442,7 +423,7 @@ def create_token_pair(sub: str | UUID, email: str, token_version: int = 1) -> Tu
 
 # -------------------------------------------------------------------
 
-def decode_and_validate(token: str, expected_type: str) -> Dict[str, Any]:
+def decode_and_validate(token: str, expected_type: str) -> dict[str, Any]:
 
     return decode_token(token, expected_type=expected_type)  # type: ignore[arg-type]
 
@@ -474,7 +455,7 @@ def _redact_key_id(key_id: str) -> str:
 
 
 
-def _parse_api_key(raw: str) -> Tuple[str, str]:
+def _parse_api_key(raw: str) -> tuple[str, str]:
 
     """
 
@@ -516,7 +497,7 @@ def _parse_api_key(raw: str) -> Tuple[str, str]:
 
 
 
-async def verify_api_key(raw_api_key: str, db: AsyncSession) -> "app.models.api_key.ApiKey":
+async def verify_api_key(raw_api_key: str, db: AsyncSession) -> app.models.api_key.ApiKey:
 
     """
 
@@ -596,7 +577,7 @@ async def verify_api_key(raw_api_key: str, db: AsyncSession) -> "app.models.api_
 
         if isinstance(expires_at, datetime) and expires_at.tzinfo is None:
 
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
+            expires_at = expires_at.replace(tzinfo=UTC)
 
 
 
@@ -726,7 +707,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     """
 
     from app.core.db import get_session
-
     from app.models.user import User
 
 
@@ -850,7 +830,6 @@ async def get_current_user_optional(token: str | None = Depends(oauth2_scheme_op
     try:
 
         from app.core.db import get_session
-
         from app.models.user import User as _User
 
         payload = decode_token(token, expected_type="access")

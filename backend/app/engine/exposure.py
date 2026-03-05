@@ -26,8 +26,9 @@ import json
 import logging
 import math
 import time
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Literal, Mapping, Optional, Tuple
+from typing import Any, Literal
 
 logger = logging.getLogger("hedgecalc.engine.exposure")
 
@@ -68,36 +69,36 @@ class Position:
     symbol: str
     qty: float
 
-    price: Optional[float] = None
+    price: float | None = None
 
     # option fields
-    underlying_price: Optional[float] = None
-    strike: Optional[float] = None
-    days_to_expiry: Optional[float] = None
-    implied_vol: Optional[float] = None
-    option_type: Optional[OptionType] = None
+    underlying_price: float | None = None
+    strike: float | None = None
+    days_to_expiry: float | None = None
+    implied_vol: float | None = None
+    option_type: OptionType | None = None
     contract_multiplier: float = 100.0
     risk_free_rate: float = 0.02
 
     # optional caller-provided greeks
-    delta: Optional[float] = None
-    gamma: Optional[float] = None
-    vega: Optional[float] = None
-    theta: Optional[float] = None
+    delta: float | None = None
+    gamma: float | None = None
+    vega: float | None = None
+    theta: float | None = None
 
-    meta: Optional[Dict[str, Any]] = None
+    meta: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
 class StageTrace:
     stage: str
-    engine: Dict[str, str]
+    engine: dict[str, str]
     input_hash: str
     output_hash: str
     duration_ms: int
-    decisions: List[Dict[str, Any]]
-    disclosures: List[str]
-    rejections: List[Dict[str, Any]]
+    decisions: list[dict[str, Any]]
+    disclosures: list[str]
+    rejections: list[dict[str, Any]]
 
 
 # -----------------------------
@@ -150,7 +151,7 @@ def _norm_cdf(x: float) -> float:
 # -----------------------------
 # Black-Scholes Greeks (pure)
 # -----------------------------
-def _bs_d1_d2(S: float, K: float, T: float, r: float, sigma: float) -> Tuple[float, float]:
+def _bs_d1_d2(S: float, K: float, T: float, r: float, sigma: float) -> tuple[float, float]:
     if S <= 0 or K <= 0 or T <= 0 or sigma <= 0:
         raise ValidationError("Invalid BS inputs (S,K,T,sigma must be > 0)")
     vsqrt = sigma * math.sqrt(T)
@@ -167,7 +168,7 @@ def bs_greeks(
     r: float,
     sigma: float,
     option_type: OptionType,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     d1, d2 = _bs_d1_d2(S, K, T_years, r, sigma)
 
     Nd1 = _norm_cdf(d1)
@@ -189,7 +190,7 @@ def bs_greeks(
 # -----------------------------
 # Normalization
 # -----------------------------
-def normalize_position(raw: Dict[str, Any]) -> Position:
+def normalize_position(raw: dict[str, Any]) -> Position:
     """
     Normalize a raw position dict to internal Position.
 
@@ -244,7 +245,7 @@ def normalize_position(raw: Dict[str, Any]) -> Position:
 # -----------------------------
 # Payload extraction (RunEnvelope-friendly)
 # -----------------------------
-def _extract_positions(payload: Any) -> List[Dict[str, Any]]:
+def _extract_positions(payload: Any) -> list[dict[str, Any]]:
     """
     Deterministically extract positions list from common RunEnvelope-like shapes.
 
@@ -274,7 +275,7 @@ def _extract_positions(payload: Any) -> List[Dict[str, Any]]:
     raise ValidationError("compute_exposure expects a payload containing a positions list")
 
 
-def _extract_policy(payload: Any, explicit_policy: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
+def _extract_policy(payload: Any, explicit_policy: Mapping[str, Any] | None) -> Mapping[str, Any]:
     """
     Exposure does not enforce full PolicyBundle semantics, but may honor explicit flags.
 
@@ -301,12 +302,12 @@ def _extract_policy(payload: Any, explicit_policy: Optional[Mapping[str, Any]]) 
 # Exposure computation (core)
 # -----------------------------
 def compute_portfolio_exposure(
-    positions: Iterable[Dict[str, Any]],
+    positions: Iterable[dict[str, Any]],
     *,
-    request_id: Optional[str] = None,
-    user_id: Optional[str] = None,
-    policy: Optional[Mapping[str, Any]] = None,
-) -> Dict[str, Any]:
+    request_id: str | None = None,
+    user_id: str | None = None,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Compute deterministic exposure proxies for a portfolio.
 
@@ -382,7 +383,7 @@ def compute_portfolio_exposure(
     vega_usd = 0.0
     theta_usd = 0.0
 
-    decisions: List[Dict[str, Any]] = []
+    decisions: list[dict[str, Any]] = []
     usable_count = 0
 
     for idx, raw in enumerate(raw_positions):
@@ -493,7 +494,7 @@ def compute_portfolio_exposure(
         "theta_usd is approximated as per-day from BS theta/365 when BS fallback is used",
     ]
 
-    rejections: List[Dict[str, Any]] = []
+    rejections: list[dict[str, Any]] = []
     if usable_count == 0:
         rejections.append({"code": REJECT_ALL_POSITIONS_INVALID, "reason": "No usable positions after validation/fallback rules"})
 
@@ -556,7 +557,7 @@ def compute_portfolio_exposure(
     return output
 
 
-def compute_exposure(payload: Any, *, policy: Optional[Mapping[str, Any]] = None) -> Dict[str, Any]:
+def compute_exposure(payload: Any, *, policy: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """
     Contract-friendly wrapper.
 

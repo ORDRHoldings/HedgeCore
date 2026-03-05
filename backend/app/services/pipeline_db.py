@@ -7,17 +7,17 @@ Sandbox runs remain in-memory (ephemeral simulations).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 
-from sqlalchemy import func, select, update as sa_update
+from sqlalchemy import func, select
+from sqlalchemy import update as sa_update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.proposal import Proposal as ProposalORM
-from app.models.staging import StagingArtifact as StagingORM, Approval as ApprovalORM
 from app.models.ledger import LedgerEntry as LedgerORM
-
+from app.models.proposal import Proposal as ProposalORM
+from app.models.staging import Approval as ApprovalORM
+from app.models.staging import StagingArtifact as StagingORM
 from app.schemas_v1.pipeline import (
     ApprovalRecord,
     AuthorizationStatus,
@@ -27,10 +27,8 @@ from app.schemas_v1.pipeline import (
     ProposalStatus,
     ProvenanceChain,
     StagedArtifact,
-    TimelineEvent,
     WaterfallResult,
 )
-
 
 # ---------------------------------------------------------------------------
 # Proposal CRUD

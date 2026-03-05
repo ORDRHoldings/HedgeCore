@@ -22,37 +22,19 @@ Sprint 1.0 -- Policy Version Pinning:
 
 from __future__ import annotations
 
-
-
-import hashlib
-import json
 import logging
-
 import uuid as _uuid
+from datetime import UTC, datetime
 
-from datetime import datetime, timezone
-from typing import Optional
-
-
-
-from sqlalchemy import and_, desc, select
-
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
 from app.core.exceptions import ActivationConflictError
+from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 from app.models.policy import PolicyInstance, PolicyTemplate
-
 from app.models.user import User
-
-from app.models.audit_event import AuditEvent, build_audit_event, GENESIS_HASH
-
 from app.services import policy_revision_service as pr_service
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +95,7 @@ async def get_template(
 
     user: User,
 
-) -> Optional[PolicyTemplate]:
+) -> PolicyTemplate | None:
 
     """Fetch a template accessible to this user (system or company-specific)."""
 
@@ -140,7 +122,7 @@ async def create_template(
 
     short_name: str,
 
-    description: Optional[str],
+    description: str | None,
 
     risk_posture: str,
 
@@ -148,7 +130,7 @@ async def create_template(
 
     config: dict,
 
-    status: Optional[str] = None,  # SEC-POLICY-1: explicit status; defaults to model default
+    status: str | None = None,  # SEC-POLICY-1: explicit status; defaults to model default
 
 ) -> PolicyTemplate:
 
@@ -222,7 +204,7 @@ async def get_active_instance(
 
     user: User,
 
-) -> Optional[PolicyInstance]:
+) -> PolicyInstance | None:
 
     """Return the currently active PolicyInstance for this company+branch, or None."""
 
@@ -249,7 +231,7 @@ async def activate_policy(
 
     template_id: _uuid.UUID,
 
-    change_reason: Optional[str] = None,
+    change_reason: str | None = None,
 
 ) -> PolicyInstance:
 
@@ -440,7 +422,7 @@ async def update_template(
             setattr(tmpl, field, value)
     tmpl.version = (tmpl.version or 1) + 1
     tmpl.updated_by = user.id
-    tmpl.updated_at = datetime.now(timezone.utc)
+    tmpl.updated_at = datetime.now(UTC)
     await session.commit()
     await session.refresh(tmpl)
 

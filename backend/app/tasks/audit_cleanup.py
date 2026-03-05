@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from sqlalchemy import delete, select
@@ -40,7 +40,7 @@ async def cleanup_audit_tables() -> None:
     """
     Entry point to prune expired rows from both audit tables.
     """
-    cutoff = datetime.now(timezone.utc) - RETENTION_DELTA
+    cutoff = datetime.now(UTC) - RETENTION_DELTA
     log.info("? Starting audit cleanup (cutoff UTC=%s)", cutoff.isoformat())
 
     async for session in get_session():
@@ -126,7 +126,7 @@ async def start_audit_cleanup_scheduler():
     Wire via asyncio.create_task(...) in app startup if desired.
     """
     while True:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         next_midnight = (now + timedelta(days=1)).replace(
             hour=0, minute=0, second=0, microsecond=0
         )

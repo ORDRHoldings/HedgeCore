@@ -12,7 +12,8 @@ would be maintained by a Celery beat task in a future phase.
 import uuid as _uuid
 
 from sqlalchemy import Boolean, Column, DateTime, Index, String, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.core.db import Base
 

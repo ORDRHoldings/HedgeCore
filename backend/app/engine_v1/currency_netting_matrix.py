@@ -13,7 +13,6 @@ Pure computational -- reduces capital usage where possible.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass
@@ -66,7 +65,7 @@ class TriangulationCheck:
     pair_2: str
     synthetic_pair: str
     synthetic_rate: float
-    market_rate: "float | None"
+    market_rate: float | None
     deviation_pct: float
     status: str  # "OK", "WARNING", "SUSPECT"
 
@@ -93,7 +92,7 @@ class NettingResult:
     total_savings_usd: float = 0.0
     netting_efficiency_pct: float = 0.0
     redundant_legs_eliminated: int = 0
-    triangulation_checks: "list[TriangulationCheck]" = field(default_factory=list)  # FIX-10
+    triangulation_checks: list[TriangulationCheck] = field(default_factory=list)  # FIX-10
     triangulation_warnings: int = 0  # FIX-10
 
     def to_dict(self) -> dict:
@@ -232,10 +231,10 @@ def compute_currency_netting(
     )
 
 def validate_netting_triangulation(
-    netting_pairs: "list[NettingPair]",
+    netting_pairs: list[NettingPair],
     fx_rates: dict[str, float],
     tolerance_pct: float = 0.5,
-) -> "list[TriangulationCheck]":
+) -> list[TriangulationCheck]:
     """Validate synthetic cross rates against market rates (FIX-10).
 
     Parameters

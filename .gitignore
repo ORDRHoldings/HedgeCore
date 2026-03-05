@@ -51,3 +51,4 @@ htmlcov/
 docker-compose.override.yml
 .vercel
 backend/tests/test_e2e_render.py
+tsconfig.tsbuildinfo

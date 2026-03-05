@@ -23,13 +23,12 @@ NON-GOALS
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator
-
 
 # ===========================
 # Canonical utilities
@@ -37,7 +36,7 @@ from pydantic import BaseModel, Field, field_validator
 
 def utcnow() -> datetime:
     """Timezone-aware UTC timestamp."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _json_default(obj: Any) -> Any:
@@ -49,7 +48,7 @@ def _json_default(obj: Any) -> Any:
     This exists only to preserve replayability for edge metadata.
     """
     if isinstance(obj, datetime):
-        return obj.astimezone(timezone.utc).isoformat()
+        return obj.astimezone(UTC).isoformat()
     if isinstance(obj, UUID):
         return str(obj)
     return str(obj)
@@ -118,9 +117,9 @@ class CapabilityPack(str, Enum):
 
 class CorrelationIds(BaseModel):
     """Cross-system correlation identifiers (optional, audit-safe)."""
-    request_id: Optional[str] = Field(default=None)
-    traceparent: Optional[str] = Field(default=None)
-    session_id: Optional[str] = Field(default=None)
+    request_id: str | None = Field(default=None)
+    traceparent: str | None = Field(default=None)
+    session_id: str | None = Field(default=None)
 
 
 class InputDigest(BaseModel):
@@ -132,7 +131,7 @@ class InputDigest(BaseModel):
     portfolio_snapshot_hash: str
     market_snapshot_hash: str
     policy_bundle_hash: str
-    scenario_set_hash: Optional[str] = None
+    scenario_set_hash: str | None = None
 
     @field_validator(
         "portfolio_snapshot_hash",
@@ -155,10 +154,10 @@ class OutputDigest(BaseModel):
     Output artifact digests.
     Filled incrementally by orchestrator.
     """
-    hedge_plan_hash: Optional[str] = None
-    trace_bundle_hash: Optional[str] = None
-    rejections_hash: Optional[str] = None
-    disclosures_hash: Optional[str] = None
+    hedge_plan_hash: str | None = None
+    trace_bundle_hash: str | None = None
+    rejections_hash: str | None = None
+    disclosures_hash: str | None = None
 
     @field_validator(
         "hedge_plan_hash",
@@ -197,12 +196,12 @@ class RunEnvelope(BaseModel):
 
     # Tenancy / actor
     tenant_id: str
-    actor_user_id: Optional[str] = None
-    api_key_id: Optional[str] = None
+    actor_user_id: str | None = None
+    api_key_id: str | None = None
 
     # Request context (best-effort, non-sensitive)
-    client_ip: Optional[str] = None
-    user_agent: Optional[str] = None
+    client_ip: str | None = None
+    user_agent: str | None = None
     correlation: CorrelationIds = Field(default_factory=CorrelationIds)
 
     # Engine identity
@@ -223,17 +222,17 @@ class RunEnvelope(BaseModel):
     outputs: OutputDigest = Field(default_factory=OutputDigest)
 
     # Capability packs
-    packs_enabled: List[CapabilityPack] = Field(default_factory=list)
-    pack_artifacts: Dict[str, str] = Field(default_factory=dict)
+    packs_enabled: list[CapabilityPack] = Field(default_factory=list)
+    pack_artifacts: dict[str, str] = Field(default_factory=dict)
 
     # Determinism
     determinism_key: str = Field(default="")
     run_hash: str = Field(default="")
     is_replay: bool = Field(default=False)
-    replay_of_run_id: Optional[UUID] = None
+    replay_of_run_id: UUID | None = None
 
     # Audit-safe notes
-    warnings: List[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
     # -----------------------
     # Validators
@@ -248,7 +247,7 @@ class RunEnvelope(BaseModel):
 
     @field_validator("pack_artifacts")
     @classmethod
-    def _validate_pack_artifacts(cls, v: Any) -> Dict[str, str]:
+    def _validate_pack_artifacts(cls, v: Any) -> dict[str, str]:
         if v is None:
             return {}
         if not isinstance(v, dict):
@@ -273,7 +272,7 @@ class RunEnvelope(BaseModel):
     # Hashing / determinism
     # -----------------------
 
-    def to_canonical_dict(self) -> Dict[str, Any]:
+    def to_canonical_dict(self) -> dict[str, Any]:
         """
         Canonical dict for hashing.
 
@@ -300,7 +299,7 @@ class RunEnvelope(BaseModel):
         """Hash of the envelope itself (excluding run_hash)."""
         return hash_canonical(self.to_canonical_dict())
 
-    def finalize(self) -> "RunEnvelope":
+    def finalize(self) -> RunEnvelope:
         """
         Return a finalized envelope with:
         - determinism_key
@@ -330,18 +329,18 @@ class RunEnvelopeSeed:
     taxonomy_hash: str
     inputs: InputDigest
 
-    actor_user_id: Optional[str] = None
-    api_key_id: Optional[str] = None
-    client_ip: Optional[str] = None
-    user_agent: Optional[str] = None
-    correlation: Optional[CorrelationIds] = None
+    actor_user_id: str | None = None
+    api_key_id: str | None = None
+    client_ip: str | None = None
+    user_agent: str | None = None
+    correlation: CorrelationIds | None = None
 
     engine_version: str = "unknown"
     engine_build: str = "unknown"
     environment: str = "unknown"
 
-    packs_enabled: Optional[List[CapabilityPack]] = None
-    pack_artifacts: Optional[Dict[str, str]] = None
+    packs_enabled: list[CapabilityPack] | None = None
+    pack_artifacts: dict[str, str] | None = None
 
 
 def build_run_envelope(seed: RunEnvelopeSeed) -> RunEnvelope:

@@ -13,7 +13,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-
 # Demo defaults
 DEFAULT_EQUITY_VOL = 0.20
 DEFAULT_CREDIT_VOL = 0.08

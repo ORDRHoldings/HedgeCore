@@ -14,18 +14,11 @@ PolicyInstance -- a template activated for a specific company+branch. Only one i
 
 import uuid as _uuid
 
-
-
 from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String, Text, text
-
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
-
-
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.core.db import Base
-
-
-
 
 
 class PolicyTemplate(Base):

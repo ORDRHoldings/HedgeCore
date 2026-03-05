@@ -55,15 +55,13 @@ AUDIT CONTRACT:
 from __future__ import annotations
 
 import uuid as _uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.execution_proposal import (
     ExecutionProposal,
-    PROPOSAL_TRANSITIONS,
     _assert_proposal_transition,
     compute_approval_hash,
     compute_proposal_hash,
@@ -71,7 +69,6 @@ from app.models.execution_proposal import (
 from app.models.position import Position
 from app.models.user import User
 from app.schemas_v1.positions import ExecutePositionRequest
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -93,7 +90,7 @@ async def get_active_proposal_for_position(
     session: AsyncSession,
     position_id: _uuid.UUID,
     company_id: _uuid.UUID,
-) -> Optional[ExecutionProposal]:
+) -> ExecutionProposal | None:
     """Return the active (PROPOSED or APPROVED) proposal for a position, if any."""
     q = (
         select(ExecutionProposal)
@@ -130,7 +127,7 @@ async def list_proposals_for_position(
 async def list_pending_proposals(
     session: AsyncSession,
     company_id: _uuid.UUID,
-    branch_id: Optional[_uuid.UUID],
+    branch_id: _uuid.UUID | None,
     all_branches: bool,
 ) -> list[ExecutionProposal]:
     """
@@ -158,13 +155,13 @@ async def propose_execution(
     user: User,
     position_id: _uuid.UUID,
     execution_ref: str,
-    hedge_amount: Optional[float],
-    hedge_rate: Optional[float],
-    run_id: Optional[str],
-    policy_revision_id: Optional[str],
-    notes: Optional[str],
-    risk_decision_hash: Optional[str] = None,
-    risk_verdict: Optional[str] = None,
+    hedge_amount: float | None,
+    hedge_rate: float | None,
+    run_id: str | None,
+    policy_revision_id: str | None,
+    notes: str | None,
+    risk_decision_hash: str | None = None,
+    risk_verdict: str | None = None,
 ) -> ExecutionProposal:
     """
     Maker creates an execution proposal for a position.
@@ -208,7 +205,7 @@ async def propose_execution(
         "policy_revision_id": policy_revision_id,
         "notes":              notes,
         "proposed_by":        str(user.id),
-        "proposed_at":        datetime.now(timezone.utc).isoformat(),
+        "proposed_at":        datetime.now(UTC).isoformat(),
         "risk_decision_hash": risk_decision_hash,
         "risk_verdict":       risk_verdict,
     }
@@ -220,7 +217,7 @@ async def propose_execution(
         status             = "PROPOSED",
         proposed_by        = user.id,
         proposed_by_email  = user.email,
-        proposed_at        = datetime.now(timezone.utc),
+        proposed_at        = datetime.now(UTC),
         proposal_payload   = payload,
         proposal_hash      = compute_proposal_hash(payload),
         execution_ref      = execution_ref,
@@ -238,7 +235,7 @@ async def approve_proposal(
     *,
     user: User,
     proposal_id: _uuid.UUID,
-    approval_notes: Optional[str] = None,
+    approval_notes: str | None = None,
 ) -> ExecutionProposal:
     """
     Checker approves a PROPOSED proposal -> APPROVED.
@@ -254,7 +251,7 @@ async def approve_proposal(
             "You cannot approve your own execution proposal."
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     proposal.approved_by       = user.id
     proposal.approved_by_email = user.email
     proposal.approved_at       = now
@@ -276,7 +273,7 @@ async def approve_proposal_solo(
     *,
     user: User,
     proposal_id: _uuid.UUID,
-    approval_notes: Optional[str] = None,
+    approval_notes: str | None = None,
 ) -> ExecutionProposal:
     """
     Solo governance mode: self-approval (bypasses SoD check).
@@ -289,7 +286,7 @@ async def approve_proposal_solo(
 
     # NOTE: SoD check intentionally omitted — solo mode explicitly permits self-approval.
     notes = approval_notes or "Solo governance mode: self-approved by proposer"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     proposal.approved_by       = user.id
     proposal.approved_by_email = user.email
     proposal.approved_at       = now
@@ -328,7 +325,7 @@ async def reject_proposal(
 
     proposal.approved_by       = user.id
     proposal.approved_by_email = user.email
-    proposal.approved_at       = datetime.now(timezone.utc)
+    proposal.approved_at       = datetime.now(UTC)
     proposal.rejection_reason  = reason
     proposal.status            = "REJECTED"
     await session.commit()
@@ -341,7 +338,7 @@ async def withdraw_proposal(
     *,
     user: User,
     proposal_id: _uuid.UUID,
-    reason: Optional[str] = None,
+    reason: str | None = None,
 ) -> ExecutionProposal:
     """
     Maker withdraws their own PROPOSED or APPROVED proposal -> WITHDRAWN.
@@ -377,7 +374,6 @@ async def execute_approved_proposal(
     Returns the updated (proposal, position) tuple.
     """
     from app.services import position_service
-    from app.schemas_v1.positions import ExecutePositionRequest
 
     proposal = await _get_proposal(session, proposal_id, user.company_id)
     _assert_proposal_transition(proposal.status, "EXECUTED", proposal_id)
@@ -415,7 +411,7 @@ async def execute_approved_proposal(
 
     # Mark proposal EXECUTED
     proposal.execution_ref = execution_ref
-    proposal.executed_at   = datetime.now(timezone.utc)
+    proposal.executed_at   = datetime.now(UTC)
     proposal.status        = "EXECUTED"
     await session.commit()
     await session.refresh(proposal)

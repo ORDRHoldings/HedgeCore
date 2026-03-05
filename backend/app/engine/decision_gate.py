@@ -5,9 +5,9 @@ import hashlib
 import json
 import math
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, List, Mapping, Optional, Tuple
-
+from typing import Any
 
 ENGINE_NAME = "decision_gate"
 ENGINE_VERSION = "1.0.0"
@@ -106,24 +106,24 @@ class GateReason:
     code: str
     severity: str  # HARD | SOFT
     message: str
-    details: Dict[str, Any]
+    details: dict[str, Any]
 
 
 @dataclass(frozen=True, slots=True)
 class GateCondition:
     code: str
     message: str
-    details: Dict[str, Any]
+    details: dict[str, Any]
 
 
 @dataclass(frozen=True, slots=True)
 class GateResidualRisk:
     code: str
     message: str
-    details: Dict[str, Any]
+    details: dict[str, Any]
 
 
-def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "engine": {"name": ENGINE_NAME, "version": ENGINE_VERSION},
         "policy": dict(policy),
@@ -133,7 +133,7 @@ def _build_trace_seed(*, policy: Mapping[str, Any], input_obj: Mapping[str, Any]
     }
 
 
-def _policy_defaults() -> Dict[str, Any]:
+def _policy_defaults() -> dict[str, Any]:
     """
     Canonical gating defaults. These are conservative institutional rails.
 
@@ -172,7 +172,7 @@ def _policy_defaults() -> Dict[str, Any]:
     }
 
 
-def _merge_policy(user_policy: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
+def _merge_policy(user_policy: Mapping[str, Any] | None) -> dict[str, Any]:
     pol = _policy_defaults()
     if isinstance(user_policy, Mapping):
         for k, v in user_policy.items():
@@ -192,18 +192,18 @@ def _merge_policy(user_policy: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
     return pol
 
 
-def _extract_rejections(plan: Mapping[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+def _extract_rejections(plan: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]]:
     r = plan.get("rejections", {}) if isinstance(plan, Mapping) else {}
     if not isinstance(r, Mapping):
         return {"instrument_mapper": [], "hedge_sizer": [], "cost_engine": [], "scenario_engine": []}
-    out: Dict[str, List[Dict[str, Any]]] = {}
+    out: dict[str, list[dict[str, Any]]] = {}
     for k in ("instrument_mapper", "hedge_sizer", "cost_engine", "scenario_engine"):
         v = r.get(k, [])
         out[k] = v if isinstance(v, list) else []
     return out
 
 
-def _count_rejected_legs(rejections: Mapping[str, List[Dict[str, Any]]]) -> int:
+def _count_rejected_legs(rejections: Mapping[str, list[dict[str, Any]]]) -> int:
     # Count unique instrument rejections deterministically (by instrument_id when present)
     seen = set()
     n = 0
@@ -220,12 +220,12 @@ def _count_rejected_legs(rejections: Mapping[str, List[Dict[str, Any]]]) -> int:
     return n
 
 
-def _extract_sized_hedges(plan: Mapping[str, Any]) -> List[Dict[str, Any]]:
+def _extract_sized_hedges(plan: Mapping[str, Any]) -> list[dict[str, Any]]:
     v = plan.get("sized_hedges", [])
     return v if isinstance(v, list) else []
 
 
-def _has_nonzero_hedges(sized: List[Dict[str, Any]]) -> bool:
+def _has_nonzero_hedges(sized: list[dict[str, Any]]) -> bool:
     for h in sized:
         if not isinstance(h, Mapping):
             continue
@@ -235,7 +235,7 @@ def _has_nonzero_hedges(sized: List[Dict[str, Any]]) -> bool:
     return False
 
 
-def _extract_cost_total_usd(plan: Mapping[str, Any]) -> Optional[float]:
+def _extract_cost_total_usd(plan: Mapping[str, Any]) -> float | None:
     costs = plan.get("costs")
     if isinstance(costs, Mapping):
         total = costs.get("total")
@@ -254,7 +254,7 @@ def _extract_summary(plan: Mapping[str, Any]) -> Mapping[str, Any]:
     return s if isinstance(s, Mapping) else {}
 
 
-def _extract_worst_case(plan: Mapping[str, Any]) -> Tuple[Optional[str], Optional[float]]:
+def _extract_worst_case(plan: Mapping[str, Any]) -> tuple[str | None, float | None]:
     summary = _extract_summary(plan)
     wc = summary.get("worst_case", {})
     if not isinstance(wc, Mapping):
@@ -266,7 +266,7 @@ def _extract_worst_case(plan: Mapping[str, Any]) -> Tuple[Optional[str], Optiona
     return sid_s, pnl_f
 
 
-def _extract_effectiveness_min(plan: Mapping[str, Any]) -> Optional[float]:
+def _extract_effectiveness_min(plan: Mapping[str, Any]) -> float | None:
     summary = _extract_summary(plan)
     he = summary.get("hedge_effectiveness", {})
     if not isinstance(he, Mapping):
@@ -275,7 +275,7 @@ def _extract_effectiveness_min(plan: Mapping[str, Any]) -> Optional[float]:
     return float(v) if _is_finite_number(v) else None
 
 
-def _extract_portfolio_notional(payload: Mapping[str, Any]) -> Optional[float]:
+def _extract_portfolio_notional(payload: Mapping[str, Any]) -> float | None:
     """
     Optional notional for bps-based cost gating.
     This is NOT computed from positions in the gate (decision-only).
@@ -295,7 +295,7 @@ def _extract_portfolio_notional(payload: Mapping[str, Any]) -> Optional[float]:
     return None
 
 
-def _extract_material_risks(payload: Mapping[str, Any]) -> List[Dict[str, Any]]:
+def _extract_material_risks(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
     """
     Optional: if risk classifier output is passed into the gate payload, use it to detect residual risks.
     The gate never invents risk; it only reads explicit outputs.
@@ -317,8 +317,8 @@ def decision_gate(
     payload: Mapping[str, Any],
     *,
     plan: Mapping[str, Any],
-    policy: Optional[Mapping[str, Any]] = None,
-) -> Dict[str, Any]:
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Decision Gate (Institutional, Deterministic)
 
@@ -354,9 +354,9 @@ def decision_gate(
     }
     trace = _build_trace_seed(policy=pol, input_obj=input_obj)
 
-    reasons: List[GateReason] = []
-    conditions: List[GateCondition] = []
-    residuals: List[GateResidualRisk] = []
+    reasons: list[GateReason] = []
+    conditions: list[GateCondition] = []
+    residuals: list[GateResidualRisk] = []
 
     # -------------------------
     # Required inputs validation
@@ -513,7 +513,7 @@ def decision_gate(
     material_risks = _extract_material_risks(payload) if isinstance(payload, Mapping) else []
     if material_risks:
         thr = float(pol["material_risk_score_threshold"])
-        unhedged: List[Dict[str, Any]] = []
+        unhedged: list[dict[str, Any]] = []
         for r in material_risks:
             score = _as_float(r.get("score", r.get("risk_score", 0.0)), 0.0)
             rid = _as_str(r.get("risk_id", r.get("id", "")), "")
@@ -588,7 +588,7 @@ def decision_gate(
     trace["trace_fingerprint"] = trace_fingerprint
     trace["timestamps"] = {"generated_at_ms": _now_ms(), "duration_ms": duration_ms}
 
-    out: Dict[str, Any] = {
+    out: dict[str, Any] = {
         "verdict": verdict,
         "reasons": reasons_obj,
         "conditions": conditions_obj,

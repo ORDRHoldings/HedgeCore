@@ -76,31 +76,25 @@ LINEAGE:
 
 from __future__ import annotations
 
-
-
 import hashlib
-
 import json
-
 import uuid as _uuid
-
-from datetime import datetime, timezone
-
-
+from datetime import datetime
 
 from sqlalchemy import (
-
-    Boolean, CheckConstraint, Column, DateTime, Index, String, Text, text,
-
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Index,
+    String,
+    Text,
+    text,
 )
-
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
-
-
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.core.db import Base
-
-
 
 # Valid proposal statuses
 

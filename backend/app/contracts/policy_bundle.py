@@ -26,14 +26,14 @@ Scope (v1):
 This file is a CONTRACT. It must remain portable and cross-language friendly.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.contracts.run_envelope import _is_sha256_hex, hash_canonical, utcnow
-
 
 # ============================================================
 # Constants
@@ -47,7 +47,7 @@ POLICY_SCHEMA_VERSION = "v1"
 # Helpers (deterministic, audit-safe)
 # ============================================================
 
-def _finite_float(v: Any, *, field_name: str, allow_none: bool = False) -> Optional[float]:
+def _finite_float(v: Any, *, field_name: str, allow_none: bool = False) -> float | None:
     if v is None:
         return None if allow_none else 0.0
     try:
@@ -59,7 +59,7 @@ def _finite_float(v: Any, *, field_name: str, allow_none: bool = False) -> Optio
     return float(fv)
 
 
-def _finite_ge0(v: Any, *, field_name: str, allow_none: bool = False) -> Optional[float]:
+def _finite_ge0(v: Any, *, field_name: str, allow_none: bool = False) -> float | None:
     fv = _finite_float(v, field_name=field_name, allow_none=allow_none)
     if fv is None:
         return None
@@ -78,12 +78,12 @@ def _finite_in_0_1(v: Any, *, field_name: str, default: float) -> float:
     return float(fv)
 
 
-def _tuple_strs(v: Any, *, field_name: str) -> Tuple[str, ...]:
+def _tuple_strs(v: Any, *, field_name: str) -> tuple[str, ...]:
     if v is None:
         return tuple()
     if not isinstance(v, (list, tuple)):
         raise ValueError(f"{field_name} must be list/tuple of strings")
-    out: List[str] = []
+    out: list[str] = []
     for item in v:
         if item is None:
             continue
@@ -94,7 +94,7 @@ def _tuple_strs(v: Any, *, field_name: str) -> Tuple[str, ...]:
     return tuple(sorted(set(out)))
 
 
-def _optional_non_empty_str(v: Any) -> Optional[str]:
+def _optional_non_empty_str(v: Any) -> str | None:
     if v is None:
         return None
     s = str(v).strip()
@@ -114,16 +114,16 @@ class MandatePolicy(BaseModel):
     - prohibit: instruments MUST NOT match any prohibit tag
     """
 
-    allow: Tuple[str, ...] = Field(default_factory=tuple)
-    prohibit: Tuple[str, ...] = Field(default_factory=tuple)
+    allow: tuple[str, ...] = Field(default_factory=tuple)
+    prohibit: tuple[str, ...] = Field(default_factory=tuple)
 
     @field_validator("allow", "prohibit", mode="before")
     @classmethod
-    def _validate_tuple_strs(cls, v: Any, info: Any) -> Tuple[str, ...]:
+    def _validate_tuple_strs(cls, v: Any, info: Any) -> tuple[str, ...]:
         return _tuple_strs(v, field_name=str(info.field_name))
 
     @model_validator(mode="after")
-    def _validate_no_overlap(self) -> "MandatePolicy":
+    def _validate_no_overlap(self) -> MandatePolicy:
         # Institutional hygiene: a tag cannot be both allowed and prohibited.
         overlap = set(self.allow) & set(self.prohibit)
         if overlap:
@@ -141,8 +141,8 @@ class LiquidityPolicy(BaseModel):
     """
 
     min_liquidity_score: float = Field(default=0.30, description="Minimum normalized liquidity score [0..1]")
-    min_avg_daily_volume: Optional[float] = Field(default=None, description="Optional ADV floor")
-    min_open_interest: Optional[float] = Field(default=None, description="Optional open interest floor")
+    min_avg_daily_volume: float | None = Field(default=None, description="Optional ADV floor")
+    min_open_interest: float | None = Field(default=None, description="Optional open interest floor")
 
     @field_validator("min_liquidity_score", mode="before")
     @classmethod
@@ -151,12 +151,12 @@ class LiquidityPolicy(BaseModel):
 
     @field_validator("min_avg_daily_volume", mode="before")
     @classmethod
-    def _adv(cls, v: Any) -> Optional[float]:
+    def _adv(cls, v: Any) -> float | None:
         return _finite_ge0(v, field_name="min_avg_daily_volume", allow_none=True)
 
     @field_validator("min_open_interest", mode="before")
     @classmethod
-    def _oi(cls, v: Any) -> Optional[float]:
+    def _oi(cls, v: Any) -> float | None:
         return _finite_ge0(v, field_name="min_open_interest", allow_none=True)
 
 
@@ -188,8 +188,8 @@ class CostGovernancePolicy(BaseModel):
     max_slippage_bps: float = Field(default=10.0, ge=0.0, description="Max slippage component (bps) allowed")
     max_fee_bps: float = Field(default=10.0, ge=0.0, description="Max fees component (bps) allowed")
 
-    max_contracts: Optional[int] = Field(default=None, description="Optional hard cap on contracts")
-    max_notional_usd: Optional[float] = Field(default=None, description="Optional hard cap on notional")
+    max_contracts: int | None = Field(default=None, description="Optional hard cap on contracts")
+    max_notional_usd: float | None = Field(default=None, description="Optional hard cap on notional")
 
     @field_validator("max_total_cost_bps", "max_slippage_bps", "max_fee_bps", mode="before")
     @classmethod
@@ -200,7 +200,7 @@ class CostGovernancePolicy(BaseModel):
 
     @field_validator("max_contracts", mode="before")
     @classmethod
-    def _optional_int_cap(cls, v: Any) -> Optional[int]:
+    def _optional_int_cap(cls, v: Any) -> int | None:
         if v is None:
             return None
         try:
@@ -213,7 +213,7 @@ class CostGovernancePolicy(BaseModel):
 
     @field_validator("max_notional_usd", mode="before")
     @classmethod
-    def _optional_notional(cls, v: Any) -> Optional[float]:
+    def _optional_notional(cls, v: Any) -> float | None:
         fv = _finite_float(v, field_name="max_notional_usd", allow_none=True)
         if fv is None:
             return None
@@ -232,7 +232,7 @@ class ScenarioPolicy(BaseModel):
 
     enabled: bool = Field(default=True)
 
-    enabled_families: Tuple[str, ...] = Field(
+    enabled_families: tuple[str, ...] = Field(
         default_factory=lambda: (
             "equity_gap",
             "vol_spike",
@@ -247,7 +247,7 @@ class ScenarioPolicy(BaseModel):
 
     @field_validator("enabled_families", mode="before")
     @classmethod
-    def _families(cls, v: Any) -> Tuple[str, ...]:
+    def _families(cls, v: Any) -> tuple[str, ...]:
         # If omitted: preserve default families (do not silently empty).
         if v is None:
             return (
@@ -318,7 +318,7 @@ class PolicyBundle(BaseModel):
             raise ValueError("policy_hash must be a SHA-256 hex digest")
         return v
 
-    def to_canonical_dict(self) -> Dict[str, Any]:
+    def to_canonical_dict(self) -> dict[str, Any]:
         d = self.model_dump(mode="json")
         d.pop("policy_hash", None)
         d.pop("created_at", None)  # never hash timestamps
@@ -327,7 +327,7 @@ class PolicyBundle(BaseModel):
     def compute_policy_hash(self) -> str:
         return hash_canonical(self.to_canonical_dict())
 
-    def finalize(self) -> "PolicyBundle":
+    def finalize(self) -> PolicyBundle:
         """
         Deterministically seal PolicyBundle by computing policy_hash if missing.
         Intentionally pure: callers should not mutate policies in-place.
@@ -343,11 +343,11 @@ class PolicyBundle(BaseModel):
 @dataclass(frozen=True)
 class PolicyBundleSeed:
     taxonomy_hash: str
-    mandate: Optional[Mapping[str, Any]] = None
-    liquidity: Optional[Mapping[str, Any]] = None
-    strategy: Optional[Mapping[str, Any]] = None
-    cost: Optional[Mapping[str, Any]] = None
-    scenario: Optional[Mapping[str, Any]] = None
+    mandate: Mapping[str, Any] | None = None
+    liquidity: Mapping[str, Any] | None = None
+    strategy: Mapping[str, Any] | None = None
+    cost: Mapping[str, Any] | None = None
+    scenario: Mapping[str, Any] | None = None
 
 
 def build_policy_bundle(seed: PolicyBundleSeed) -> PolicyBundle:

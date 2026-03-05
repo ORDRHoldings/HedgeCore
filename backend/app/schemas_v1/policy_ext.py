@@ -10,12 +10,7 @@ All new fields are Optional with defaults -- fully backward compatible with v1 P
 
 from pydantic import Field
 
-
-
 from app.schemas_v1.policy import PolicyConfig
-
-
-
 
 
 class ExtendedPolicyConfig(PolicyConfig):

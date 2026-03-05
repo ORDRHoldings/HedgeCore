@@ -10,14 +10,14 @@ instead of the legacy MXN-only [10, 30] band.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.schemas_v1.errors import Severity, ValidationErrorDetail
 from app.schemas_v1.hedges import HedgeRow
 from app.schemas_v1.market import MarketSnapshot
 from app.schemas_v1.policy import PolicyConfig
 from app.schemas_v1.results import ValidationReport
-from app.schemas_v1.trades import TradeRow, FUTURES_CURRENCIES
+from app.schemas_v1.trades import FUTURES_CURRENCIES, TradeRow
 
 BUCKET_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 
@@ -376,8 +376,8 @@ def _validate_market(
     _MAX_SNAPSHOT_AGE_HOURS = 24
     as_of_aware = market.as_of
     if as_of_aware.tzinfo is None:
-        as_of_aware = as_of_aware.replace(tzinfo=timezone.utc)
-    snapshot_age = datetime.now(timezone.utc) - as_of_aware
+        as_of_aware = as_of_aware.replace(tzinfo=UTC)
+    snapshot_age = datetime.now(UTC) - as_of_aware
     if snapshot_age > timedelta(hours=_MAX_SNAPSHOT_AGE_HOURS):
         hours_old = snapshot_age.total_seconds() / 3600.0
         errors.append(

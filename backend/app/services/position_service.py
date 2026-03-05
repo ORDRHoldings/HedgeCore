@@ -17,9 +17,7 @@ the updated Position so the caller can emit an audit event.
 from __future__ import annotations
 
 import uuid as _uuid
-from datetime import datetime, timezone
-from typing import Optional
-from uuid import UUID
+from datetime import UTC, datetime
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +32,6 @@ from app.schemas_v1.positions import (
     ReadyToExecuteRequest,
     RejectPositionRequest,
 )
-
 
 # ---------------------------------------------------------------------------
 # Scope helpers
@@ -63,9 +60,9 @@ async def list_positions(
     session: AsyncSession,
     user: User,
     all_branches: bool,
-    status: Optional[str] = None,
-    currency: Optional[str] = None,
-    flow_type: Optional[str] = None,
+    status: str | None = None,
+    currency: str | None = None,
+    flow_type: str | None = None,
 ) -> list[Position]:
     q = (
         select(Position)
@@ -267,8 +264,9 @@ async def assign_policy(
     version-pinning requirement: "which exact policy revision governed this
     position?" is answerable even after subsequent policy changes.
     """
-    from app.services import policy_revision_service as pr_service
     import logging
+
+    from app.services import policy_revision_service as pr_service
     _log = logging.getLogger(__name__)
 
     pos = await _get_in_scope(session, user, position_id, all_branches)
@@ -337,7 +335,7 @@ async def execute_position(
     pos = await _get_in_scope(session, user, position_id, all_branches)
     _assert_transition(pos.execution_status, "HEDGED", position_id)
     pos.execution_ref    = data.execution_ref
-    pos.executed_at      = datetime.now(timezone.utc)
+    pos.executed_at      = datetime.now(UTC)
     pos.execution_status = "HEDGED"
     if data.hedge_amount is not None:
         pos.hedge_amount = data.hedge_amount  # type: ignore[assignment]

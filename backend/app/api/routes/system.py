@@ -5,14 +5,13 @@ Internal system routes for validation and diagnostics.
 API-key protected unless explicitly public.
 """
 
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import text
 
-from app.deps.api_key_auth import get_api_key_principal as require_api_key
 from app.core.db import async_engine
 from app.core.schema_state import is_schema_ready, run_readiness_checks_cached
+from app.deps.api_key_auth import get_api_key_principal as require_api_key
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -42,7 +41,7 @@ async def whoami_api_key(api_key=Depends(require_api_key)):
 
 @router.get("/schema-health", include_in_schema=True)
 async def schema_health_endpoint(
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
 ):
     """Schema readiness check — verifies WORM store, critical indexes, and triggers.
 

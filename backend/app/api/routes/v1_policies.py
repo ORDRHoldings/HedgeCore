@@ -24,15 +24,16 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid as _uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
-from app.core.security import get_current_user
 from app.core.dev_fault import raise_if_dev_fault
+from app.core.exceptions import ActivationConflictError
+from app.core.security import get_current_user
 from app.models.audit_event import AuditEvent
 from app.models.policy import PolicyTemplate
 from app.models.user import User
@@ -48,7 +49,6 @@ from app.schemas_v1.policies import (
     PolicyTemplateResponse,
     UpdateTemplateRequest,
 )
-from app.core.exceptions import ActivationConflictError
 from app.services import policy_favorites_service, policy_service, rbac_service
 
 router = APIRouter(prefix="/v1/policies", tags=["v1-policies"])
@@ -327,7 +327,7 @@ async def export_template(
 
     export_blob = {
         "export_version": "1.0",
-        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "exported_at": datetime.now(UTC).isoformat(),
         "checksum": checksum,
         "template": template_dict,
     }

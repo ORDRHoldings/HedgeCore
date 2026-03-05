@@ -39,10 +39,11 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid as _uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, Index, Integer, String, Text, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.core.db import Base
 
@@ -157,5 +158,5 @@ def build_policy_revision(
         created_by_email    = created_by_email,
         change_reason       = change_reason,
         prev_revision_id    = prev_revision_id,
-        created_at          = datetime.now(timezone.utc),
+        created_at          = datetime.now(UTC),
     )

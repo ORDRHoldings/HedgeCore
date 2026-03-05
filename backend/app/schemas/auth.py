@@ -8,10 +8,9 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, EmailStr, constr
+from pydantic import BaseModel, EmailStr, Field, constr
 
 # Reuse the canonical public user schema (UUID id)
-from app.schemas.user import UserPublic
 
 
 # -------------------------------------------------------------------

@@ -26,9 +26,8 @@ DIFF CONTRACT:
 from __future__ import annotations
 
 import uuid as _uuid
-from typing import Optional
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.policy_revision import (
@@ -36,8 +35,6 @@ from app.models.policy_revision import (
     build_policy_revision,
     compute_policy_hash,
 )
-from app.models.user import User
-
 
 # ---------------------------------------------------------------------------
 # Create revision
@@ -49,11 +46,11 @@ async def create_revision(
     policy_instance_id: _uuid.UUID,
     template_id: _uuid.UUID,
     company_id: _uuid.UUID,
-    branch_id: Optional[_uuid.UUID],
+    branch_id: _uuid.UUID | None,
     canonical_policy: dict,
     created_by: _uuid.UUID,
-    created_by_email: Optional[str],
-    change_reason: Optional[str],
+    created_by_email: str | None,
+    change_reason: str | None,
 ) -> PolicyRevision:
     """
     Create a new PolicyRevision for a policy instance activation.
@@ -98,7 +95,7 @@ async def get_revision(
     session: AsyncSession,
     revision_id: _uuid.UUID,
     company_id: _uuid.UUID,
-) -> Optional[PolicyRevision]:
+) -> PolicyRevision | None:
     """Fetch a revision, scoped to the caller's company."""
     rev = await session.get(PolicyRevision, revision_id)
     if not rev or rev.company_id != company_id:
@@ -109,7 +106,7 @@ async def get_revision(
 async def get_latest_revision(
     session: AsyncSession,
     policy_instance_id: _uuid.UUID,
-) -> Optional[PolicyRevision]:
+) -> PolicyRevision | None:
     """Return the most recent revision for a policy instance."""
     q = (
         select(PolicyRevision)
@@ -224,7 +221,7 @@ async def get_diff(
     revision_a_id: _uuid.UUID,
     revision_b_id: _uuid.UUID,
     company_id: _uuid.UUID,
-) -> Optional[dict]:
+) -> dict | None:
     """
     Compute and return a structured diff between two revision IDs.
     Returns None if either revision is not found or not accessible.

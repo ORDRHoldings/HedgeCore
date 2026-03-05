@@ -9,10 +9,12 @@ Fixes:
 """
 
 from __future__ import annotations
+
 import importlib
+import inspect
 import logging
 import pkgutil
-import inspect
+
 from pydantic import BaseModel
 
 _logger = logging.getLogger("hedgecalc.schema_loader")

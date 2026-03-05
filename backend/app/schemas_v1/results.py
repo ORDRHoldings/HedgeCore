@@ -4,7 +4,6 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.schemas_v1.errors import ValidationErrorDetail
-from app.schemas_v1.policy import PolicyConfig
 
 
 class ValidationReport(BaseModel):

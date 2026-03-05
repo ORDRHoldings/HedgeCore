@@ -44,53 +44,27 @@ SoD rules:
 
 from __future__ import annotations
 
-
-
 import hashlib
-
 import json
-
 import logging
-
-from datetime import datetime, timezone
-
+from datetime import UTC, datetime
 from uuid import UUID
 
-from typing import Optional
-
-
-
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
-
+from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
-from app.core.db import get_async_session
-
-from app.core.security import get_current_user, get_mfa_verified
-
-from app.core.ip_allowlist import enforce_execution_ip_allowlist
-
 from app.core.config import settings
-
+from app.core.db import get_async_session
+from app.core.ip_allowlist import enforce_execution_ip_allowlist
+from app.core.security import get_current_user, get_mfa_verified
 from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
-
 from app.models.execution_proposal import ExecutionProposal
-
 from app.models.user import User
-
 from app.models.user_mfa import UserMFA
-
-from app.services import rbac_service
-
 from app.services import execution_proposal_service as ep_service
-
-from sqlalchemy import select as sa_select
-
-
+from app.services import rbac_service
 
 logger = logging.getLogger(__name__)
 
@@ -116,19 +90,19 @@ class ProposeExecutionRequest(BaseModel):
 
     execution_ref:      str   = Field(..., min_length=1, max_length=128)
 
-    hedge_amount:       Optional[float] = Field(default=None, gt=0)
+    hedge_amount:       float | None = Field(default=None, gt=0)
 
-    hedge_rate:         Optional[float] = Field(default=None, gt=0)
+    hedge_rate:         float | None = Field(default=None, gt=0)
 
-    run_id:             Optional[str]   = Field(default=None, max_length=64)
+    run_id:             str | None   = Field(default=None, max_length=64)
 
-    policy_revision_id: Optional[str]   = Field(default=None, max_length=64)
+    policy_revision_id: str | None   = Field(default=None, max_length=64)
 
-    notes:              Optional[str]   = Field(default=None, max_length=1024)
+    notes:              str | None   = Field(default=None, max_length=1024)
 
-    risk_decision_hash: Optional[str]   = Field(default=None, max_length=64)
+    risk_decision_hash: str | None   = Field(default=None, max_length=64)
 
-    risk_verdict:       Optional[str]   = Field(default=None, max_length=32)
+    risk_verdict:       str | None   = Field(default=None, max_length=32)
 
 
 
@@ -136,7 +110,7 @@ class ProposeExecutionRequest(BaseModel):
 
 class ApproveProposalRequest(BaseModel):
 
-    approval_notes: Optional[str] = Field(default=None, max_length=1024)
+    approval_notes: str | None = Field(default=None, max_length=1024)
 
 
 
@@ -152,14 +126,14 @@ class RejectProposalRequest(BaseModel):
 
 class WithdrawProposalRequest(BaseModel):
 
-    reason: Optional[str] = Field(default=None, max_length=512)
+    reason: str | None = Field(default=None, max_length=512)
 
 
 
 
 class SecondApproveRequest(BaseModel):
 
-    notes: Optional[str] = Field(default=None, max_length=1024)
+    notes: str | None = Field(default=None, max_length=1024)
 
 
 
@@ -173,67 +147,67 @@ class ProposalResponse(BaseModel):
 
     company_id:         UUID
 
-    branch_id:          Optional[UUID]  = None
+    branch_id:          UUID | None  = None
 
     status:             str
 
     proposed_by:        UUID
 
-    proposed_by_email:  Optional[str]   = None
+    proposed_by_email:  str | None   = None
 
     proposed_at:        str
 
     proposal_hash:      str
 
-    approved_by:        Optional[UUID]  = None
+    approved_by:        UUID | None  = None
 
-    approved_by_email:  Optional[str]   = None
+    approved_by_email:  str | None   = None
 
-    approved_at:        Optional[str]   = None
+    approved_at:        str | None   = None
 
-    approval_notes:     Optional[str]   = None
+    approval_notes:     str | None   = None
 
-    approval_hash:      Optional[str]   = None
+    approval_hash:      str | None   = None
 
-    execution_ref:      Optional[str]   = None
+    execution_ref:      str | None   = None
 
-    executed_at:        Optional[str]   = None
+    executed_at:        str | None   = None
 
-    rejection_reason:   Optional[str]   = None
+    rejection_reason:   str | None   = None
 
     created_at:         str
 
     # L-12 dual-key fields
     second_approver_required: bool             = False
 
-    second_approver_id:       Optional[UUID]   = None
+    second_approver_id:       UUID | None   = None
 
-    second_approver_email:    Optional[str]    = None
+    second_approver_email:    str | None    = None
 
-    second_approved_at:       Optional[str]    = None
+    second_approved_at:       str | None    = None
 
-    second_approval_notes:    Optional[str]    = None
+    second_approval_notes:    str | None    = None
 
-    second_approval_hash:     Optional[str]    = None
+    second_approval_hash:     str | None    = None
 
-    risk_decision_hash:       Optional[str]    = None
+    risk_decision_hash:       str | None    = None
 
-    risk_verdict:             Optional[str]    = None
+    risk_verdict:             str | None    = None
 
-    actual_fill_rate:         Optional[float]  = None
+    actual_fill_rate:         float | None  = None
 
-    actual_fill_notional:     Optional[float]  = None
+    actual_fill_notional:     float | None  = None
 
-    slippage_bps:             Optional[float]  = None
+    slippage_bps:             float | None  = None
 
-    fill_timestamp:           Optional[str]    = None
+    fill_timestamp:           str | None    = None
 
-    fill_hash:                Optional[str]    = None
+    fill_hash:                str | None    = None
 
     # From proposal_payload JSONB
-    hedge_amount:             Optional[float]  = None
+    hedge_amount:             float | None  = None
 
-    hedge_rate:               Optional[float]  = None
+    hedge_rate:               float | None  = None
 
 
 
@@ -243,7 +217,7 @@ class ProposalResponse(BaseModel):
 
     @classmethod
 
-    def from_orm_safe(cls, p: ExecutionProposal) -> "ProposalResponse":
+    def from_orm_safe(cls, p: ExecutionProposal) -> ProposalResponse:
 
         return cls(
 
@@ -599,7 +573,7 @@ async def propose_execution(
 
         raise HTTPException(status_code=422, detail=str(e))
 
-    except Exception as e:
+    except Exception:
 
         logger.error("propose_execution unhandled exception", exc_info=True)
 
@@ -608,11 +582,9 @@ async def propose_execution(
     # L-12: check dual-key threshold against active policy (non-fatal)
     try:
 
-        from app.services import policy_service as _pol_svc
-
-        from app.services import policy_revision_service as _pr_svc
-
         from app.schemas_v1.policy import PolicyConfig as _PolicyConfig
+        from app.services import policy_revision_service as _pr_svc
+        from app.services import policy_service as _pol_svc
 
         _instance = await _pol_svc.get_active_instance(session, current_user)
 
@@ -685,7 +657,7 @@ async def propose_execution(
 
 async def list_proposals(
 
-    status:       Optional[str] = None,
+    status:       str | None = None,
 
     limit:        int           = 200,
 
@@ -859,8 +831,9 @@ async def approve_proposal(
     await _check_mfa_gate(session, current_user, mfa_verified)
 
     # Resolve governance_mode from company settings
-    from app.models.organization import Company
     from sqlalchemy import select as _sel
+
+    from app.models.organization import Company
     _co = (await session.execute(_sel(Company).where(Company.id == current_user.company_id))).scalar_one_or_none()
     _gov_mode = ((_co.settings or {}).get("governance_mode", "solo")) if _co else "solo"
 
@@ -1096,11 +1069,11 @@ class ExecuteWithFillRequest(BaseModel):
     Hedge Desk solo-mode flow where the operator fills and records in one step.
     """
 
-    fill_price:    Optional[float] = Field(default=None, gt=0, description="Actual fill price (e.g. 19.2340)")
-    fill_notional: Optional[float] = Field(default=None, gt=0, description="Actual notional filled")
-    fill_currency: Optional[str]   = Field(default=None, max_length=8, description="Fill currency (e.g. 'MXN')")
-    fill_timestamp: Optional[str]  = Field(default=None, description="ISO 8601 fill timestamp")
-    fill_notes:    Optional[str]   = Field(default=None, max_length=512)
+    fill_price:    float | None = Field(default=None, gt=0, description="Actual fill price (e.g. 19.2340)")
+    fill_notional: float | None = Field(default=None, gt=0, description="Actual notional filled")
+    fill_currency: str | None   = Field(default=None, max_length=8, description="Fill currency (e.g. 'MXN')")
+    fill_timestamp: str | None  = Field(default=None, description="ISO 8601 fill timestamp")
+    fill_notes:    str | None   = Field(default=None, max_length=512)
 
 
 @router.post("/{proposal_id}/execute", response_model=ProposalResponse)
@@ -1111,7 +1084,7 @@ async def execute_approved_proposal(
 
     request:      Request,
 
-    data:         Optional[ExecuteWithFillRequest] = None,
+    data:         ExecuteWithFillRequest | None = None,
 
     session:      AsyncSession = Depends(get_async_session),
 
@@ -1222,7 +1195,7 @@ async def execute_approved_proposal(
 
         proposed_rate = proposal.proposal_payload.get("hedge_rate") if proposal.proposal_payload else None
 
-        slippage_bps: Optional[float] = None
+        slippage_bps: float | None = None
 
         if proposed_rate and proposed_rate > 0:
 
@@ -1242,7 +1215,7 @@ async def execute_approved_proposal(
 
             "fill_currency":  data.fill_currency,
 
-            "fill_timestamp": data.fill_timestamp or datetime.now(timezone.utc).isoformat(),
+            "fill_timestamp": data.fill_timestamp or datetime.now(UTC).isoformat(),
 
             "slippage_bps":   slippage_bps,
 
@@ -1379,7 +1352,7 @@ async def second_approve_proposal(
 
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     proposal.second_approver_id    = current_user.id
 
@@ -1738,13 +1711,13 @@ class FillReportRequest(BaseModel):
 
     fill_timestamp:   str   = Field(..., description="ISO 8601 datetime")
 
-    slippage_bps:     Optional[float] = None
+    slippage_bps:     float | None = None
 
     submission_mode:  str   = Field(default="MANUAL", max_length=32)
 
-    counterparty:     Optional[str] = Field(default=None, max_length=128)
+    counterparty:     str | None = Field(default=None, max_length=128)
 
-    confirmation_ref: Optional[str] = Field(default=None, max_length=128)
+    confirmation_ref: str | None = Field(default=None, max_length=128)
 
 
 
@@ -1810,7 +1783,8 @@ async def report_fill(
 
 
 
-    import hashlib, json as _json
+    import hashlib
+    import json as _json
 
     def _canon(obj: dict) -> str:
 

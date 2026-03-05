@@ -9,7 +9,6 @@ No secrets, no hashes, no tokens.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
@@ -20,10 +19,10 @@ class ApiKeyAuditBase(BaseModel):
         ...,
         description="Audit event type (used, denied, revoked, rotated, expired)",
     )
-    ip_address: Optional[str] = Field(None, description="Client IP address")
-    user_agent: Optional[str] = Field(None, description="HTTP user agent")
-    request_path: Optional[str] = Field(None, description="API endpoint path")
-    request_method: Optional[str] = Field(None, description="HTTP method")
+    ip_address: str | None = Field(None, description="Client IP address")
+    user_agent: str | None = Field(None, description="HTTP user agent")
+    request_path: str | None = Field(None, description="API endpoint path")
+    request_method: str | None = Field(None, description="HTTP method")
     created_at: datetime = Field(..., description="Event timestamp (UTC)")
 
 
@@ -38,4 +37,4 @@ class ApiKeyAuditLogPublic(ApiKeyAuditBase):
 
 class ApiKeyAuditLogListResponse(BaseModel):
     total: int = Field(..., description="Total audit records")
-    items: List[ApiKeyAuditLogPublic]
+    items: list[ApiKeyAuditLogPublic]

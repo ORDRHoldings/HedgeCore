@@ -36,16 +36,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Tuple
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field, constr, validator
-
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, insert
 
 # --- Settings ---------------------------------------------------------------
 
@@ -68,7 +66,7 @@ except Exception:
 
 try:
     # python-jose
-    from jose import jwt, JWTError  # type: ignore
+    from jose import JWTError, jwt  # type: ignore
 
     def _jwt_decode(token: str) -> dict:
         return jwt.decode(
@@ -104,8 +102,8 @@ except Exception:  # pragma: no cover
 # --- DB/session & models ----------------------------------------------------
 
 from app.db.session import get_db  # must yield AsyncSession
-from app.models.user import User
 from app.models.refresh_token import RefreshToken
+from app.models.user import User
 
 # --- Router -----------------------------------------------------------------
 
@@ -151,7 +149,7 @@ log = logging.getLogger("hedgecalc.auth")
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _new_jti() -> str:
@@ -172,7 +170,7 @@ def _verify_password(raw: str, hashed: str) -> bool:
         return False
 
 
-def _make_access_claims(*, sub: str, email: Optional[str], jti: Optional[str] = None) -> dict:
+def _make_access_claims(*, sub: str, email: str | None, jti: str | None = None) -> dict:
     now = _now()
     exp = now + timedelta(minutes=int(settings.JWT_ACCESS_TTL_MIN))
     return {
@@ -188,7 +186,7 @@ def _make_access_claims(*, sub: str, email: Optional[str], jti: Optional[str] = 
     }
 
 
-def _make_refresh_claims(*, sub: str, email: Optional[str], jti: Optional[str] = None) -> dict:
+def _make_refresh_claims(*, sub: str, email: str | None, jti: str | None = None) -> dict:
     now = _now()
     exp = now + timedelta(days=int(settings.JWT_REFRESH_TTL_DAYS))
     return {
@@ -267,7 +265,7 @@ async def _revoke_other_active_refresh_tokens(
 
 async def _validate_db_refresh_token(
     db: AsyncSession, *, user_id: int, jti: str
-) -> Optional[RefreshToken]:
+) -> RefreshToken | None:
     res = await db.execute(
         select(RefreshToken).where(RefreshToken.user_id == user_id, RefreshToken.jti == jti)
     )
@@ -278,15 +276,15 @@ async def _validate_db_refresh_token(
         return None
     exp_at: datetime = getattr(row, "expires_at", _now())
     if exp_at.tzinfo is None:
-        exp_at = exp_at.replace(tzinfo=timezone.utc)
+        exp_at = exp_at.replace(tzinfo=UTC)
     if exp_at <= _now():
         return None
     return row
 
 
 def _extract_bearer_token(
-    credentials: Optional[HTTPAuthorizationCredentials],
-) -> Optional[str]:
+    credentials: HTTPAuthorizationCredentials | None,
+) -> str | None:
     if credentials is None:
         return None
     if credentials.scheme.lower() != "bearer":
@@ -313,7 +311,7 @@ async def register_user(
     payload: RegisterRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    x_request_id: Optional[str] = Header(None, convert_underscores=False),
+    x_request_id: str | None = Header(None, convert_underscores=False),
 ):
     """
     Creates a new user and returns a fresh TokenPair (access + refresh).
@@ -337,7 +335,7 @@ async def register_user(
     # Issue tokens and persist refresh
     tp = await _issue_token_pair_for_user(new_user)
     claims = _jwt_decode(tp.refresh_token)
-    new_exp = datetime.fromtimestamp(claims["exp"], tz=timezone.utc)
+    new_exp = datetime.fromtimestamp(claims["exp"], tz=UTC)
     await _persist_new_refresh_token(db, user_id=new_user.id, jti=claims["jti"], expires_at=new_exp)
 
     # Enforce single-session (only the just-created token active)
@@ -357,7 +355,7 @@ async def login_user(
     payload: LoginRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    x_request_id: Optional[str] = Header(None, convert_underscores=False),
+    x_request_id: str | None = Header(None, convert_underscores=False),
 ):
     """
     Authenticates a user and returns TokenPair.
@@ -368,7 +366,7 @@ async def login_user(
     rid = x_request_id or request.headers.get("x-request-id") or _new_jti()
 
     res = await db.execute(select(User).where(User.email == payload.email))
-    user: Optional[User] = res.scalars().first()
+    user: User | None = res.scalars().first()
     if (not user) or (not _verify_password(payload.password, user.hashed_password)):
         # Uniform 401 to avoid user enumeration / timing info
         log.warning("login.invalid_credentials", extra={"rid": rid, "route": "/auth/login"})
@@ -383,7 +381,7 @@ async def login_user(
 
     # Persist refresh & enforce single-session
     claims = _jwt_decode(tp.refresh_token)
-    new_exp = datetime.fromtimestamp(claims["exp"], tz=timezone.utc)
+    new_exp = datetime.fromtimestamp(claims["exp"], tz=UTC)
     await _persist_new_refresh_token(db, user_id=user.id, jti=claims["jti"], expires_at=new_exp)
     await _revoke_other_active_refresh_tokens(db, user_id=user.id, except_jti=claims["jti"])
 
@@ -401,7 +399,7 @@ async def refresh_tokens(
     payload: RefreshRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    x_request_id: Optional[str] = Header(None, convert_underscores=False),
+    x_request_id: str | None = Header(None, convert_underscores=False),
 ):
     """
     Accepts a refresh token (JSON body) and returns a new access token and a rotated refresh token.
@@ -440,7 +438,7 @@ async def refresh_tokens(
 
     # Load user
     res_user = await db.execute(select(User).where(User.id == int(sub)))
-    user: Optional[User] = res_user.scalars().first()
+    user: User | None = res_user.scalars().first()
     if not user:
         log.warning("refresh.user_not_found", extra={"rid": rid, "sub": sub})
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
@@ -457,7 +455,7 @@ async def refresh_tokens(
     new_refresh_claims = _make_refresh_claims(sub=str(user.id), email=getattr(user, "email", None))
     new_refresh_token = _jwt_encode(new_refresh_claims)
     new_jti = new_refresh_claims["jti"]
-    new_exp = datetime.fromtimestamp(new_refresh_claims["exp"], tz=timezone.utc)
+    new_exp = datetime.fromtimestamp(new_refresh_claims["exp"], tz=UTC)
 
     await _persist_rotated_refresh_token(
         db,
@@ -498,9 +496,9 @@ async def refresh_tokens(
 @router.get("/me", response_model=UserOut, status_code=status.HTTP_200_OK)
 async def get_me(
     request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
     db: AsyncSession = Depends(get_db),
-    x_request_id: Optional[str] = Header(None, convert_underscores=False),
+    x_request_id: str | None = Header(None, convert_underscores=False),
 ):
     """
     Returns current user profile. Requires a valid ACCESS token in the Authorization header.
@@ -529,7 +527,7 @@ async def get_me(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token claims")
 
     res = await db.execute(select(User).where(User.id == int(sub)))
-    user: Optional[User] = res.scalars().first()
+    user: User | None = res.scalars().first()
     if not user:
         log.warning("me.user_not_found", extra={"rid": rid, "uid": sub})
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")

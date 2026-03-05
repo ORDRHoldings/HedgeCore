@@ -11,7 +11,7 @@ Future-ready for: blockchain publish, external auditor export.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -68,7 +68,7 @@ def build_daily_anchor(
         Anchor hash record ready for storage.
     """
     if anchor_date is None:
-        anchor_date = datetime.now(timezone.utc)
+        anchor_date = datetime.now(UTC)
 
     root_hashes = [
         entry.get("root_hash", "")
@@ -82,7 +82,7 @@ def build_daily_anchor(
         "anchor_date": anchor_date.isoformat(),
         "merkle_root": merkle_root,
         "entry_count": len(root_hashes),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
     }
 
 

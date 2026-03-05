@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import time
-from typing import Callable, Dict, Optional
+from collections.abc import Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response, JSONResponse
+from starlette.responses import JSONResponse, Response
 
 
 def _now_ms() -> int:
@@ -20,12 +20,12 @@ def _stable_hash(value: str) -> str:
 class APIKeyRecord:
     __slots__ = ("key_hash", "scopes", "active", "created_at_ms", "last_used_at_ms")
 
-    def __init__(self, *, key_hash: str, scopes: Optional[list[str]] = None) -> None:
+    def __init__(self, *, key_hash: str, scopes: list[str] | None = None) -> None:
         self.key_hash = key_hash
         self.scopes = scopes or ["engine:recommend"]
         self.active = True
         self.created_at_ms = _now_ms()
-        self.last_used_at_ms: Optional[int] = None
+        self.last_used_at_ms: int | None = None
 
 
 class APIKeyAuthMiddleware(BaseHTTPMiddleware):
@@ -85,7 +85,7 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             "/api/v1/voice/",
         )
 
-        self._keys: Dict[str, APIKeyRecord] = {}
+        self._keys: dict[str, APIKeyRecord] = {}
 
         # DEV bootstrap key (works immediately in prod too)
         bootstrap_key = "HC_DEV_KEY_001"
@@ -100,11 +100,11 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             return True
         return any(path.startswith(p) for p in self.public_prefixes)
 
-    def _extract_key(self, request: Request) -> Optional[str]:
+    def _extract_key(self, request: Request) -> str | None:
         raw = request.headers.get(self.header_name)
         return raw.strip() if raw else None
 
-    def _authorize(self, raw_key: str) -> Optional[APIKeyRecord]:
+    def _authorize(self, raw_key: str) -> APIKeyRecord | None:
         key_hash = _stable_hash(raw_key)
         rec = self._keys.get(key_hash)
         if not rec or not rec.active:

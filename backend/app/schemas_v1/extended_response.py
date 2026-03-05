@@ -12,7 +12,7 @@ by the new /v1/calculate/extended endpoint.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -23,7 +23,7 @@ class ExtendedCalculateResponse(BaseModel):
     base: Any
     """Identical to the standard CalculateResponse from /v1/calculate."""
 
-    extended: dict[str, Optional[Any]] = {}
+    extended: dict[str, Any | None] = {}
     """Per-module outputs. Key = module name, value = result or None if module failed.
 
     Expected keys (None when module could not run):

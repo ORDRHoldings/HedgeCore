@@ -14,8 +14,7 @@ governance_mode values:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
@@ -37,14 +36,14 @@ router = APIRouter(prefix="/v1/company", tags=["v1-company"])
 # ---------------------------------------------------------------------------
 
 class PolicyLimitsPayload(BaseModel):
-    confirmed_hedge_ratio: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    forecast_hedge_ratio: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    min_trade_size_usd: Optional[float] = Field(default=None, ge=10_000)
-    max_single_trade_usd: Optional[float] = Field(default=None, ge=100_000)
-    cooling_off_hours: Optional[int] = Field(default=None, ge=0, le=168)
-    spread_bps: Optional[int] = Field(default=None, ge=0, le=500)
-    required_approvals: Optional[int] = Field(default=None, ge=1, le=10)
-    integrity_threshold: Optional[int] = Field(default=None, ge=0, le=100)
+    confirmed_hedge_ratio: float | None = Field(default=None, ge=0.0, le=1.0)
+    forecast_hedge_ratio: float | None = Field(default=None, ge=0.0, le=1.0)
+    min_trade_size_usd: float | None = Field(default=None, ge=10_000)
+    max_single_trade_usd: float | None = Field(default=None, ge=100_000)
+    cooling_off_hours: int | None = Field(default=None, ge=0, le=168)
+    spread_bps: int | None = Field(default=None, ge=0, le=500)
+    required_approvals: int | None = Field(default=None, ge=1, le=10)
+    integrity_threshold: int | None = Field(default=None, ge=0, le=100)
 
 
 _VALID_PRODUCTS = {"NDF", "FWD", "FUTURES"}
@@ -52,22 +51,22 @@ _VALID_STRESS_SIGMAS = {0.08, 0.15, 0.22}
 
 
 class ExecutionSettingsPayload(BaseModel):
-    default_product: Optional[str] = Field(default=None)
-    stress_sigma: Optional[float] = Field(default=None)
-    max_friction_bps: Optional[int] = Field(default=None, ge=0, le=500)
-    auto_submit_below_usd: Optional[float] = Field(default=None, ge=0)
-    counterparty_limit_usd: Optional[float] = Field(default=None, ge=0)
+    default_product: str | None = Field(default=None)
+    stress_sigma: float | None = Field(default=None)
+    max_friction_bps: int | None = Field(default=None, ge=0, le=500)
+    auto_submit_below_usd: float | None = Field(default=None, ge=0)
+    counterparty_limit_usd: float | None = Field(default=None, ge=0)
 
     @field_validator("default_product")
     @classmethod
-    def validate_default_product(cls, v: Optional[str]) -> Optional[str]:
+    def validate_default_product(cls, v: str | None) -> str | None:
         if v is not None and v not in _VALID_PRODUCTS:
             raise ValueError(f"default_product must be one of {sorted(_VALID_PRODUCTS)}")
         return v
 
     @field_validator("stress_sigma")
     @classmethod
-    def validate_stress_sigma(cls, v: Optional[float]) -> Optional[float]:
+    def validate_stress_sigma(cls, v: float | None) -> float | None:
         if v is not None and v not in _VALID_STRESS_SIGMAS:
             raise ValueError(f"stress_sigma must be one of {sorted(_VALID_STRESS_SIGMAS)}")
         return v
@@ -81,20 +80,20 @@ class CompanySettingsResponse(BaseModel):
     governance_mode: str = "team"
     name: str
     slug: str
-    policy_limits: Optional[dict] = None
-    execution_settings: Optional[dict] = None
-    last_modified_at: Optional[str] = None
-    last_modified_by: Optional[str] = None
+    policy_limits: dict | None = None
+    execution_settings: dict | None = None
+    last_modified_at: str | None = None
+    last_modified_by: str | None = None
 
 
 class UpdateCompanySettingsRequest(BaseModel):
-    governance_mode: Optional[str] = Field(
+    governance_mode: str | None = Field(
         default=None,
         pattern="^(solo|team)$",
         description="'solo' allows self-approval; 'team' enforces 4-eyes (default).",
     )
-    policy_limits: Optional[PolicyLimitsPayload] = None
-    execution_settings: Optional[ExecutionSettingsPayload] = None
+    policy_limits: PolicyLimitsPayload | None = None
+    execution_settings: ExecutionSettingsPayload | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -171,7 +170,7 @@ async def update_company_settings(
         settings["execution_settings"] = existing
         changed_fields.append("execution_settings")
 
-    settings["last_modified_at"] = datetime.now(timezone.utc).isoformat()
+    settings["last_modified_at"] = datetime.now(UTC).isoformat()
     settings["last_modified_by"] = current_user.email
 
     from sqlalchemy.orm import attributes

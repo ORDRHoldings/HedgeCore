@@ -32,19 +32,20 @@ OUTPUT (stage-local)
 import hashlib
 import json
 import time
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from app.contracts.instrument_catalog import InstrumentCatalog, InstrumentType
 from app.contracts.policy_bundle import PolicyBundle
+from app.contracts.run_envelope import hash_canonical
 from app.contracts.trace_bundle import (
-    StageName,
-    RejectionCode,
+    Disclosure,
     DisclosureCode,
     Rejection,
-    Disclosure,
+    RejectionCode,
+    StageName,
     TraceStep,
 )
-from app.contracts.run_envelope import hash_canonical
 
 ENGINE_NAME = "instrument_mapper"
 ENGINE_VERSION = "1.5.1"  # PATCH: stricter fail-closed semantics + deterministic trace parity
@@ -80,7 +81,7 @@ def _as_str(x: Any) -> str:
     return str(x).strip()
 
 
-def _as_list(x: Any) -> List[Any]:
+def _as_list(x: Any) -> list[Any]:
     return x if isinstance(x, list) else []
 
 
@@ -141,14 +142,14 @@ def _axes_allowed(inst: Any, required_axes_any: Sequence[str]) -> bool:
     return any(a in eligible for a in req)
 
 
-def _rank_instruments(instances: Sequence[Any]) -> List[Any]:
+def _rank_instruments(instances: Sequence[Any]) -> list[Any]:
     return sorted(
         list(instances),
         key=lambda x: (-float(x.liquidity.liquidity_score), _as_str(x.instrument_id)),
     )
 
 
-def _make_rejection(code: RejectionCode, message: str, details: Optional[Dict[str, Any]] = None) -> Rejection:
+def _make_rejection(code: RejectionCode, message: str, details: dict[str, Any] | None = None) -> Rejection:
     return Rejection(
         code=code,
         message=message.strip(),
@@ -158,7 +159,7 @@ def _make_rejection(code: RejectionCode, message: str, details: Optional[Dict[st
     )
 
 
-def _make_disclosure(code: DisclosureCode, message: str, details: Optional[Dict[str, Any]] = None) -> Disclosure:
+def _make_disclosure(code: DisclosureCode, message: str, details: dict[str, Any] | None = None) -> Disclosure:
     return Disclosure(
         code=code,
         message=message.strip(),
@@ -173,11 +174,11 @@ def _make_disclosure(code: DisclosureCode, message: str, details: Optional[Dict[
 def map_instruments(
     payload: Mapping[str, Any],
     *,
-    policy: Optional[Mapping[str, Any]] = None,
-    instrument_catalog: Optional[Mapping[str, Any]] = None,
-    mandate_allow: Optional[Sequence[str]] = None,
-    mandate_prohibit: Optional[Sequence[str]] = None,
-) -> Dict[str, Any]:
+    policy: Mapping[str, Any] | None = None,
+    instrument_catalog: Mapping[str, Any] | None = None,
+    mandate_allow: Sequence[str] | None = None,
+    mandate_prohibit: Sequence[str] | None = None,
+) -> dict[str, Any]:
     """
     Deterministically map strategies -> eligible instruments using InstrumentCatalog + PolicyBundle.
     """
@@ -247,10 +248,10 @@ def map_instruments(
     if not isinstance(strategies, list):
         strategies = []
 
-    mapped: List[Dict[str, Any]] = []
-    rejections: List[Rejection] = []
-    disclosures: List[Disclosure] = []
-    decisions: List[str] = []
+    mapped: list[dict[str, Any]] = []
+    rejections: list[Rejection] = []
+    disclosures: list[Disclosure] = []
+    decisions: list[str] = []
 
     mandate_allow = list(mandate_allow or [])
     mandate_prohibit = list(mandate_prohibit or [])
@@ -308,7 +309,7 @@ def map_instruments(
             decisions.append(f"{strategy_id}:reject:candidates_not_in_catalog")
             continue
 
-        gated: List[Any] = []
+        gated: list[Any] = []
         for inst in resolved:
             if not _axes_allowed(inst, required_axes_any):
                 continue
@@ -417,12 +418,12 @@ def _build_trace_step(
 
 
 def _final_response(
-    mapped: List[Dict[str, Any]],
-    rejections: List[Rejection],
-    disclosures: List[Disclosure],
+    mapped: list[dict[str, Any]],
+    rejections: list[Rejection],
+    disclosures: list[Disclosure],
     duration_ms: int,
     step: TraceStep,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     return {
         "mapped_instruments": mapped,
         "rejected": [r.model_dump(mode="json") for r in rejections],

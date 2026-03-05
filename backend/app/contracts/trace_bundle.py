@@ -28,13 +28,12 @@ Notes:
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.contracts.run_envelope import hash_canonical, utcnow, _is_sha256_hex
-
+from app.contracts.run_envelope import _is_sha256_hex, hash_canonical, utcnow
 
 # ---------------------------
 # Enums (frozen v1)
@@ -120,8 +119,8 @@ class Rejection(BaseModel):
     code: RejectionCode
     message: str
     stage: StageName
-    details: Optional[Dict[str, Any]] = Field(default=None, description="Code-specific details (audit-safe)")
-    residual_risk: Optional[ResidualRiskVector] = Field(default=None, description="Residual R-vector at rejection")
+    details: dict[str, Any] | None = Field(default=None, description="Code-specific details (audit-safe)")
+    residual_risk: ResidualRiskVector | None = Field(default=None, description="Residual R-vector at rejection")
 
     @field_validator("message")
     @classmethod
@@ -136,7 +135,7 @@ class Disclosure(BaseModel):
     code: DisclosureCode
     message: str
     stage: StageName
-    details: Optional[Dict[str, Any]] = Field(default=None, description="Code-specific details (audit-safe)")
+    details: dict[str, Any] | None = Field(default=None, description="Code-specific details (audit-safe)")
 
     @field_validator("message")
     @classmethod
@@ -158,19 +157,19 @@ class TraceStep(BaseModel):
     stage: StageName
 
     input_hash: str = Field(..., description="Hash of stage input canonical JSON")
-    output_hash: Optional[str] = Field(default=None, description="Hash of stage output canonical JSON (if any)")
+    output_hash: str | None = Field(default=None, description="Hash of stage output canonical JSON (if any)")
 
     duration_ms: int = Field(..., ge=0, description="Stage execution duration in milliseconds")
 
-    decisions: List[str] = Field(
+    decisions: list[str] = Field(
         default_factory=list,
         description="Short stable decision strings, e.g., 'selected_strategy:collar_v1'",
     )
 
-    rejections: List[Rejection] = Field(default_factory=list, description="Rejections emitted by this stage")
-    disclosures: List[Disclosure] = Field(default_factory=list, description="Disclosures emitted by this stage")
+    rejections: list[Rejection] = Field(default_factory=list, description="Rejections emitted by this stage")
+    disclosures: list[Disclosure] = Field(default_factory=list, description="Disclosures emitted by this stage")
 
-    notes: List[str] = Field(default_factory=list, description="Audit-safe notes; avoid secrets")
+    notes: list[str] = Field(default_factory=list, description="Audit-safe notes; avoid secrets")
 
     @field_validator("input_hash", "output_hash", mode="before")
     @classmethod
@@ -188,7 +187,7 @@ class TraceStep(BaseModel):
             return []
         if not isinstance(v, list):
             raise ValueError("Expected list")
-        out: List[str] = []
+        out: list[str] = []
         for item in v:
             if item is None:
                 continue
@@ -213,13 +212,13 @@ class TraceBundle(BaseModel):
     run_id: UUID = Field(..., description="Associated run_id from RunEnvelope")
     created_at: datetime = Field(default_factory=utcnow, description="UTC timestamp when bundle was created")
 
-    steps: List[TraceStep] = Field(default_factory=list, description="Ordered stage-by-stage traces")
+    steps: list[TraceStep] = Field(default_factory=list, description="Ordered stage-by-stage traces")
 
-    all_rejections: List[Rejection] = Field(
+    all_rejections: list[Rejection] = Field(
         default_factory=list,
         description="Aggregated, deterministically ordered unique rejections",
     )
-    all_disclosures: List[Disclosure] = Field(
+    all_disclosures: list[Disclosure] = Field(
         default_factory=list,
         description="Aggregated, deterministically ordered unique disclosures",
     )
@@ -238,7 +237,7 @@ class TraceBundle(BaseModel):
             raise ValueError("Expected SHA-256 hex digest")
         return v
 
-    def to_canonical_dict(self) -> Dict[str, Any]:
+    def to_canonical_dict(self) -> dict[str, Any]:
         """
         Canonical dict used for hashing. Excludes `bundle_hash` so the hash is self-contained.
         """
@@ -250,14 +249,14 @@ class TraceBundle(BaseModel):
         return hash_canonical(self.to_canonical_dict())
 
     @staticmethod
-    def _dedupe_rejections(steps: List[TraceStep]) -> List[Rejection]:
+    def _dedupe_rejections(steps: list[TraceStep]) -> list[Rejection]:
         """
         Deduplicate rejections deterministically.
         Key: (code, stage). Keep the LAST occurrence (later stages override earlier detail).
         Output order: StageName order (as enum values appear in this file) then code string.
         """
-        order_stage: Dict[str, int] = {s.value: i for i, s in enumerate(StageName)}
-        idx: Dict[Tuple[str, str], Rejection] = {}
+        order_stage: dict[str, int] = {s.value: i for i, s in enumerate(StageName)}
+        idx: dict[tuple[str, str], Rejection] = {}
         for step in steps:
             for r in step.rejections:
                 idx[(r.code.value, r.stage.value)] = r
@@ -267,14 +266,14 @@ class TraceBundle(BaseModel):
         return out
 
     @staticmethod
-    def _dedupe_disclosures(steps: List[TraceStep]) -> List[Disclosure]:
+    def _dedupe_disclosures(steps: list[TraceStep]) -> list[Disclosure]:
         """
         Deduplicate disclosures deterministically.
         Key: (code, stage). Keep the LAST occurrence.
         Output order: StageName order then code string.
         """
-        order_stage: Dict[str, int] = {s.value: i for i, s in enumerate(StageName)}
-        idx: Dict[Tuple[str, str], Disclosure] = {}
+        order_stage: dict[str, int] = {s.value: i for i, s in enumerate(StageName)}
+        idx: dict[tuple[str, str], Disclosure] = {}
         for step in steps:
             for d in step.disclosures:
                 idx[(d.code.value, d.stage.value)] = d
@@ -283,7 +282,7 @@ class TraceBundle(BaseModel):
         out.sort(key=lambda d: (order_stage.get(d.stage.value, 10_000), d.code.value))
         return out
 
-    def finalize(self) -> "TraceBundle":
+    def finalize(self) -> TraceBundle:
         """
         Return a bundle with:
         - aggregated/deduped `all_rejections` and `all_disclosures`
@@ -312,7 +311,7 @@ class TraceBundle(BaseModel):
 @dataclass(frozen=True)
 class TraceBundleSeed:
     run_id: UUID
-    steps: List[TraceStep]
+    steps: list[TraceStep]
 
 
 def build_trace_bundle(seed: TraceBundleSeed) -> TraceBundle:

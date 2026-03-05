@@ -13,9 +13,8 @@ Purpose:
 
 from __future__ import annotations
 
-import time
 import logging
-from typing import Optional, Tuple
+import time
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -29,7 +28,7 @@ logger = logging.getLogger("api.audit")
 # ----------------------------------------------------------------------
 # ? Extraction helper (observer-only, zero auth coupling)
 # ----------------------------------------------------------------------
-def _extract_api_key_context(request: Request) -> Tuple[Optional[str], Optional[str]]:
+def _extract_api_key_context(request: Request) -> tuple[str | None, str | None]:
     """
     Extract API-key context from request.state if present.
 

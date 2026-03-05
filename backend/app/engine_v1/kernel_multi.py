@@ -20,7 +20,7 @@ New generalizations vs legacy kernel:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pandas as pd
 
@@ -140,7 +140,7 @@ def compute_hedge_plan_generic(
             trace_events.append(
                 TraceEvent(
                     step="KERNEL_MULTI",
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                     detail=(
                         f"Bucket {bucket} [{pair}]: action suppressed "
                         f"(filtered_small_notional). "

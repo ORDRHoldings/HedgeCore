@@ -21,12 +21,11 @@ Security:
 from __future__ import annotations
 
 import logging
-from functools import wraps
-from typing import List, Callable, Awaitable, Optional
 import uuid
+from collections.abc import Awaitable, Callable
+from functools import wraps
 
 from fastapi import Depends, HTTPException, Request, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_current_user
@@ -43,7 +42,7 @@ async def get_current_user_roles(
     request: Request,
     session: AsyncSession = Depends(get_session),
     current_user=Depends(get_current_user),
-) -> List[str]:
+) -> list[str]:
     """
     Retrieve roles for the authenticated user and attach them to request.state.
     Cached within request to avoid redundant DB calls.
@@ -67,7 +66,7 @@ async def get_current_user_permissions(
     request: Request,
     session: AsyncSession = Depends(get_session),
     current_user=Depends(get_current_user),
-) -> List[str]:
+) -> list[str]:
     """
     Retrieve permission codenames for the authenticated user.
     Cached within request to avoid redundant DB calls.
@@ -231,10 +230,10 @@ class DataScope:
     def __init__(
         self,
         user_id: uuid.UUID,
-        company_id: Optional[uuid.UUID],
-        branch_id: Optional[uuid.UUID],
+        company_id: uuid.UUID | None,
+        branch_id: uuid.UUID | None,
         all_branches: bool,
-        permissions: List[str],
+        permissions: list[str],
     ):
         self.user_id = user_id
         self.company_id = company_id
@@ -250,7 +249,7 @@ class DataScope:
         request: Request,
         session: AsyncSession = Depends(get_session),
         current_user=Depends(get_current_user),
-    ) -> "DataScope":
+    ) -> DataScope:
         """FastAPI dependency that resolves the current user's data scope."""
         if not current_user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")

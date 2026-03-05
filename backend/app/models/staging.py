@@ -10,28 +10,14 @@ Staging Artifact + Approval ORM Models -- Governance review layer.
 
 from __future__ import annotations
 
-
-
 import uuid
+from datetime import UTC, datetime
 
-from datetime import datetime, timezone
-
-
-
-from typing import Optional
-
-from sqlalchemy import String, Float, Integer, DateTime, Text, ForeignKey, UniqueConstraint
-
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-
-
 from app.core.db import Base
-
-
-
 
 
 class StagingArtifact(Base):
@@ -92,7 +78,7 @@ class StagingArtifact(Base):
 
         nullable=False,
 
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
 
     )
 
@@ -127,7 +113,7 @@ class StagingArtifact(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     # Tenant isolation: scopes artifact to a single company
-    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    company_id: Mapped[uuid.UUID | None] = mapped_column(
         PGUUID(as_uuid=True), nullable=True, index=True
     )
 
@@ -241,7 +227,7 @@ class Approval(Base):
 
         nullable=False,
 
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
 
     )
 

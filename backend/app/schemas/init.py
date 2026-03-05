@@ -1,7 +1,7 @@
 # Re-export schemas for convenience
 
-from .user import UserPublic
 from .auth import RegisterRequest, TokenPair, TokenRefreshRequest
+from .user import UserPublic
 
 __all__ = [
     "UserPublic",

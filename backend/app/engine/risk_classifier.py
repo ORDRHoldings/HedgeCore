@@ -41,9 +41,9 @@ import hashlib
 import json
 import math
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping, Optional
-
+from typing import Any
 
 ENGINE_NAME = "risk_classifier"
 ENGINE_VERSION = "1.1.0"  # CONTRACT-ALIGNED: trace-first + stable rejection codes
@@ -151,11 +151,11 @@ def _clamp01(x: float) -> float:
 @dataclass(frozen=True)
 class StageTrace:
     stage: str
-    engine: Dict[str, str]
+    engine: dict[str, str]
     input_hash: str
     output_hash: str
     duration_ms: int
-    decisions: Dict[str, Any]
+    decisions: dict[str, Any]
     disclosures: list
     rejections: list
 
@@ -163,7 +163,7 @@ class StageTrace:
 # ---------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------
-def classify_risk(exposure: Dict[str, Any]) -> Dict[str, Any]:
+def classify_risk(exposure: dict[str, Any]) -> dict[str, Any]:
     """
     Classify portfolio exposure into HedgeCalc risk buckets.
 
@@ -237,7 +237,7 @@ def classify_risk(exposure: Dict[str, Any]) -> Dict[str, Any]:
             rejections=rejections,
         )
         return {
-            "risk_vector": {k: 0.0 for k in RISK_BUCKETS},
+            "risk_vector": dict.fromkeys(RISK_BUCKETS, 0.0),
             "dominant_risk": None,
             "confidence": 0.0,
             "stage_trace": stage_trace.__dict__,
@@ -258,7 +258,7 @@ def classify_risk(exposure: Dict[str, Any]) -> Dict[str, Any]:
     base_sum = r1 + r2 + r3
     r4 = _clamp01(1.0 - base_sum)
 
-    scores: Dict[str, float] = {
+    scores: dict[str, float] = {
         "R1_DELTA": float(r1),
         "R2_VEGA": float(r2),
         "R3_GAMMA": float(r3),

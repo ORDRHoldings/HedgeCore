@@ -13,129 +13,64 @@ Proposals, staging artifacts, and ledger entries are persisted to PostgreSQL.
 
 
 import hashlib
-
 import uuid
-
-from datetime import datetime, timezone
-
-
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
-
-
-from app.engine_v1.audit import build_run_envelope, build_trace_lite
-
-from app.engine_v1.capital_adequacy import assess_capital_adequacy
-
-from app.engine_v1.concentration_limits import check_concentration_limits
-
-from app.engine_v1.currency_netting_matrix import compute_currency_netting
-
-from app.engine_v1.deterministic_rounding import round_freeze_artifact
-
-from app.engine_v1.factor_covariance import compute_factor_covariance
-
-from app.engine_v1.fx_forward_validator import validate_forward_consistency
-
-from app.engine_v1.fx_roll_engine import generate_roll_ladder
-
-from app.engine_v1.fx_tensor import compute_exposure_tensor
-
-from app.engine_v1.hasher import sha256_of_dict
-from app.models.audit_event import build_audit_event, GENESIS_HASH
-
-from app.engine_v1.hedge_bands import check_hedge_bands
-
-from app.engine_v1.kernel import compute_hedge_plan
-
-from app.engine_v1.liquidity_model import estimate_slippage
-
-from app.engine_v1.liquidity_regime import classify_liquidity_regime
-
-from app.engine_v1.margin_attribution import compute_margin_attribution
-
-from app.engine_v1.margin_model import compute_margin
-
-from app.engine_v1.nav_attribution_engine import compute_nav_attribution
-
-from app.engine_v1.normalizer import normalize_hedges, normalize_trades
-
-from app.engine_v1.risk_allocator import allocate_hedges
-
-from app.engine_v1.scenarios import compute_scenarios
-
-from app.engine_v1.scenarios_ext import apply_extended_scenarios
-
-from app.engine_v1.transaction_cost_model import compute_transaction_costs
-
-from app.engine_v1.validator import validate_all
-
-from app.engine_v1.waterfall import build_waterfall
-
-from app.engine_v1.worst_case_selector import select_worst_case
-
-from app.schemas_v1.hedges import HedgeRow
-
-from app.schemas_v1.market import MarketSnapshot
-
-from app.schemas_v1.pipeline import (
-
-    ApprovalAction,
-
-    ApprovalRecord,
-
-    AuthorizationStatus,
-
-    AuthorizeRequest,
-
-    FreezeArtifact,
-
-    LedgerEntry,
-
-    Proposal,
-
-    ProposalStatus,
-
-    ProvenanceChain,
-
-    ReplayResult,
-
-    SandboxCalculateRequest,
-
-    StagedArtifact,
-
-    SubmitToStagingRequest,
-
-    TimelineEvent,
-
-    WaterfallResult,
-
-)
-
-from app.schemas_v1.policy import PolicyConfig
-
-from app.schemas_v1.results import (
-
-    CalculateResponse,
-
-    TraceEvent,
-
-)
-
-from app.schemas_v1.trades import TradeRow
-
-
-
-from app.services import pipeline_db
-
-
+from datetime import UTC, datetime
 
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
-
+from app.engine_v1.audit import build_run_envelope, build_trace_lite
+from app.engine_v1.capital_adequacy import assess_capital_adequacy
+from app.engine_v1.concentration_limits import check_concentration_limits
+from app.engine_v1.currency_netting_matrix import compute_currency_netting
+from app.engine_v1.deterministic_rounding import round_freeze_artifact
+from app.engine_v1.factor_covariance import compute_factor_covariance
+from app.engine_v1.fx_forward_validator import validate_forward_consistency
+from app.engine_v1.fx_roll_engine import generate_roll_ladder
+from app.engine_v1.fx_tensor import compute_exposure_tensor
+from app.engine_v1.hasher import sha256_of_dict
+from app.engine_v1.hedge_bands import check_hedge_bands
+from app.engine_v1.kernel import compute_hedge_plan
+from app.engine_v1.liquidity_model import estimate_slippage
+from app.engine_v1.liquidity_regime import classify_liquidity_regime
+from app.engine_v1.margin_attribution import compute_margin_attribution
+from app.engine_v1.margin_model import compute_margin
+from app.engine_v1.nav_attribution_engine import compute_nav_attribution
+from app.engine_v1.normalizer import normalize_hedges, normalize_trades
+from app.engine_v1.risk_allocator import allocate_hedges
+from app.engine_v1.scenarios import compute_scenarios
+from app.engine_v1.scenarios_ext import apply_extended_scenarios
+from app.engine_v1.transaction_cost_model import compute_transaction_costs
+from app.engine_v1.validator import validate_all
+from app.engine_v1.waterfall import build_waterfall
+from app.engine_v1.worst_case_selector import select_worst_case
+from app.models.audit_event import GENESIS_HASH, build_audit_event
+from app.schemas_v1.hedges import HedgeRow
+from app.schemas_v1.market import MarketSnapshot
+from app.schemas_v1.pipeline import (
+    ApprovalAction,
+    ApprovalRecord,
+    AuthorizationStatus,
+    AuthorizeRequest,
+    FreezeArtifact,
+    LedgerEntry,
+    Proposal,
+    ProposalStatus,
+    ProvenanceChain,
+    ReplayResult,
+    SandboxCalculateRequest,
+    StagedArtifact,
+    SubmitToStagingRequest,
+    TimelineEvent,
+    WaterfallResult,
+)
+from app.schemas_v1.policy import PolicyConfig
+from app.schemas_v1.results import (
+    CalculateResponse,
+    TraceEvent,
+)
+from app.schemas_v1.trades import TradeRow
+from app.services import pipeline_db
 
 # ---------------------------------------------------------------------------
 
@@ -162,7 +97,6 @@ async def _emit_pipeline_event(
     payload: dict,
 ) -> None:
     """Persist a pipeline lifecycle event to the WORM audit_events table."""
-    from app.models.audit_event import AuditEvent
     try:
         import uuid as _uuid
         actor_uuid = _uuid.UUID(actor_id) if actor_id else None
@@ -197,7 +131,7 @@ def _gen_id(prefix: str) -> str:
 
 def _now() -> datetime:
 
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 
@@ -790,9 +724,9 @@ def sandbox_calculate_multi(
         return sandbox_calculate(user_id, request)
 
     # Multi-currency kernel modules (from Prompt 1)
-    from app.engine_v1.pair_registry import get_pair_meta
     from app.engine_v1.kernel_multi import compute_hedge_plan_multi
-    from app.engine_v1.normalizer_multi import normalize_trades_multi, normalize_hedges_multi
+    from app.engine_v1.normalizer_multi import normalize_hedges_multi, normalize_trades_multi
+    from app.engine_v1.pair_registry import get_pair_meta
     from app.engine_v1.scenarios_multi import compute_scenarios_multi
     from app.schemas_v1.hedges import MultiCurrencyHedgeRow
     from app.schemas_v1.market import MarketSnapshot
@@ -1007,7 +941,7 @@ def sandbox_calculate_multi(
     # Build legacy-compatible CalculateResponse
     response = None
     if hedge_plan and scenario_results:
-        from app.schemas_v1.results import CalculateResponse, ScenarioResults
+        from app.schemas_v1.results import CalculateResponse
         try:
             legacy_plan = hedge_plan.to_legacy_plan() if hasattr(hedge_plan, "to_legacy_plan") else hedge_plan
             legacy_scenarios = scenario_results

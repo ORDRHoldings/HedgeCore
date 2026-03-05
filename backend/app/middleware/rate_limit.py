@@ -1,13 +1,13 @@
 # backend/app/middleware/rate_limit.py
 from __future__ import annotations
 
-import time
 import logging
-from typing import Callable, Dict, Optional
+import time
+from collections.abc import Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response, JSONResponse
+from starlette.responses import JSONResponse, Response
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class TokenBucket:
             return True
         return False
 
-    def snapshot(self) -> Dict[str, float]:
+    def snapshot(self) -> dict[str, float]:
         return {
             "capacity": self.capacity,
             "tokens": round(self.tokens, 6),
@@ -141,11 +141,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         app,
         *,
         requests_per_minute: int = 60,
-        burst_capacity: Optional[int] = None,
+        burst_capacity: int | None = None,
         header_api_key: str = "X-API-Key",
         header_request_id: str = "X-Request-Id",
         include_headers: bool = True,
-        redis_url: Optional[str] = None,
+        redis_url: str | None = None,
     ) -> None:
         super().__init__(app)
         self.capacity = float(burst_capacity or requests_per_minute)
@@ -155,7 +155,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.include_headers = bool(include_headers)
 
         # Attempt to connect to Redis if URL provided
-        self._redis_bucket: Optional[_RedisTokenBucket] = None
+        self._redis_bucket: _RedisTokenBucket | None = None
         if redis_url:
             try:
                 import redis as _redis
@@ -169,7 +169,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 )
 
         # In-memory fallback buckets
-        self._buckets: Dict[str, TokenBucket] = {}
+        self._buckets: dict[str, TokenBucket] = {}
 
     def _resolve_key(self, request: Request) -> str:
         api_key = request.headers.get(self.header_api_key)

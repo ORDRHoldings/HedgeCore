@@ -12,21 +12,11 @@ Production readiness requires external data feeds -- module logic remains unchan
 
 from __future__ import annotations
 
-
-
-from datetime import datetime, timezone
-
-
+from datetime import UTC, datetime
 
 from app.schemas_v1.market_ext import ExtendedMarketSnapshot
-
+from app.schemas_v1.policy import CostAssumptions, HedgeRatios
 from app.schemas_v1.policy_ext import ExtendedPolicyConfig
-
-from app.schemas_v1.policy import HedgeRatios, CostAssumptions
-
-
-
-
 
 # ---------------------------------------------------------------------------
 
@@ -39,7 +29,7 @@ from app.schemas_v1.policy import HedgeRatios, CostAssumptions
 def demo_market_snapshot() -> ExtendedMarketSnapshot:
     """Full 26-pair institutional market snapshot."""
     return ExtendedMarketSnapshot(
-        as_of=datetime.now(timezone.utc),
+        as_of=datetime.now(UTC),
         spot_usdmxn=17.15,
         forward_points_by_month={
             "2025-07": 0.325,

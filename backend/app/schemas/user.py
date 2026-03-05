@@ -1,7 +1,8 @@
-from uuid import UUID
 from datetime import datetime
-from typing import Optional, List, Literal
-from pydantic import BaseModel, EmailStr, ConfigDict, Field
+from typing import Literal
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 # ── Plan tiers ─────────────────────────────────────────────────────────────────
 PlanTier = Literal["smb", "professional", "enterprise"]
@@ -49,21 +50,21 @@ class UserMeResponse(BaseModel):
 
     id: UUID
     email: str  # str (not EmailStr) — allows non-RFC-5321 usernames like 'demo'
-    full_name: Optional[str] = None
-    job_title: Optional[str] = None
+    full_name: str | None = None
+    job_title: str | None = None
     is_active: bool
     is_superuser: bool
     created_at: datetime
 
     # Organization context
-    company: Optional[CompanyBrief] = None
-    branch: Optional[BranchBrief] = None
-    department: Optional[DepartmentBrief] = None
+    company: CompanyBrief | None = None
+    branch: BranchBrief | None = None
+    department: DepartmentBrief | None = None
 
     # RBAC
-    roles: List[str] = Field(default_factory=list)
-    permissions: List[str] = Field(default_factory=list)
-    hierarchy_level: Optional[int] = None
+    roles: list[str] = Field(default_factory=list)
+    permissions: list[str] = Field(default_factory=list)
+    hierarchy_level: int | None = None
 
     # Plan tier (from company.settings)
     plan_tier: PlanTier = "enterprise"

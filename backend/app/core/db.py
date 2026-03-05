@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import os
 import logging
-from typing import AsyncGenerator
+import os
+from collections.abc import AsyncGenerator
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -12,7 +13,6 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
-from sqlalchemy import text
 
 logger = logging.getLogger("hedgecalc.db")
 

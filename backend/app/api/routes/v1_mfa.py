@@ -13,8 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import secrets
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 import pyotp
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -23,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
-from app.core.security import create_access_token, decode_token, get_current_user
+from app.core.security import create_access_token, get_current_user
 from app.models.user import User
 from app.models.user_mfa import UserMFA
 
@@ -54,7 +53,7 @@ class MFAVerifyResponse(BaseModel):
 
 class MFAStatusResponse(BaseModel):
     is_enabled: bool
-    enrolled_at: Optional[str] = None
+    enrolled_at: str | None = None
 
 
 class MFAMessageResponse(BaseModel):
@@ -67,10 +66,10 @@ class MFAMessageResponse(BaseModel):
 
 
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
-async def _get_or_none(session: AsyncSession, user_id) -> Optional[UserMFA]:
+async def _get_or_none(session: AsyncSession, user_id) -> UserMFA | None:
     """Return the UserMFA row for this user, or None."""
     result = await session.execute(
         select(UserMFA).where(UserMFA.user_id == user_id)

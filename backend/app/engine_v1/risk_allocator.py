@@ -20,13 +20,8 @@ passes through all hedge recommendations unchanged (v1 behavior preserved).
 
 from __future__ import annotations
 
-
-
 from dataclasses import dataclass, field
-
 from typing import Any
-
-
 
 try:
 

@@ -10,12 +10,7 @@ All new fields are Optional with defaults -- fully backward compatible with v1 M
 
 from pydantic import Field
 
-
-
 from app.schemas_v1.market import MarketSnapshot
-
-
-
 
 
 class ExtendedMarketSnapshot(MarketSnapshot):

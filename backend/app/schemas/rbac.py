@@ -15,10 +15,11 @@ Notes:
 """
 
 from __future__ import annotations
-from typing import Optional, List
-from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+
 import logging
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------------------------------------------------------------------
@@ -27,7 +28,7 @@ import logging
 class RoleBase(BaseModel):
     """Base properties shared by role schemas."""
     name: str = Field(..., min_length=2, max_length=64, description="Unique role name (e.g., admin, manager, user)")
-    description: Optional[str] = Field(default=None, max_length=255, description="Human-friendly role description")
+    description: str | None = Field(default=None, max_length=255, description="Human-friendly role description")
 
 
 class RoleCreate(RoleBase):
@@ -37,7 +38,7 @@ class RoleCreate(RoleBase):
 
 class RoleUpdate(BaseModel):
     """Payload to update a role (admin-only)."""
-    description: Optional[str] = Field(default=None, max_length=255, description="Updated description (optional)")
+    description: str | None = Field(default=None, max_length=255, description="Updated description (optional)")
 
 
 class RoleOut(BaseModel):
@@ -45,7 +46,7 @@ class RoleOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -84,12 +85,12 @@ class UserWithRoles(BaseModel):
     id: int
     email: str
     is_active: bool
-    roles: List[str] = Field(default_factory=list, description="List of role names assigned to the user")
+    roles: list[str] = Field(default_factory=list, description="List of role names assigned to the user")
 
 
 class PaginatedUsersResponse(BaseModel):
     """Standard paginated response for /admin/users."""
-    items: List[UserWithRoles]
+    items: list[UserWithRoles]
     total: int = Field(..., ge=0)
     page: int = Field(..., ge=1)
     size: int = Field(..., ge=1)
@@ -101,7 +102,7 @@ class PaginatedUsersResponse(BaseModel):
 # ---------------------------------------------------------------------
 class RolesListResponse(BaseModel):
     """Simple list wrapper for returning all roles."""
-    items: List[RoleOut]
+    items: list[RoleOut]
 
 
 # ---------------------------------------------------------------------
