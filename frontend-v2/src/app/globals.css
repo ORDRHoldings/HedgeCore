@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* ── Core Backgrounds ── */
+    --bg-deep:   #F8FAFC;
+    --bg-sub:    #F1F5F9;
+    --bg-panel:  #FFFFFF;
+
+    /* ── Borders ── */
+    --border-rim:  #E2E8F0;
+    --border-soft: #CBD5E1;
+
+    /* ── Semantic Colors ── */
+    --accent-cyan:   #1C62F2;
+    --accent-indigo: #4F46E5;
+    --accent-amber:  #D97706;
+    --accent-red:    #DC2626;
+    --accent-green:  #059669;
+
+    /* ── Status ── */
+    --status-pass:    #059669;
+    --status-fail:    #DC2626;
+    --status-warn:    #D97706;
+    --status-pending: #94A3B8;
+
+    /* ── Typography ── */
+    --text-primary:   #0F172A;
+    --text-secondary: #334155;
+    --text-tertiary:  #94A3B8;
+
+    /* ── Fonts ── */
+    --font-heading:       'Manrope', sans-serif;
+    --font-ui:            'Inter', sans-serif;
+    --font-mono:          'JetBrains Mono', monospace;
+    --font-terminal:      'IBM Plex Sans', var(--font-ui);
+    --font-terminal-mono: 'IBM Plex Mono', var(--font-mono);
+
+    /* ── Spacing ── */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+
+    /* ── Terminal Dimensions ── */
+    --terminal-topbar-height:        56px;
+    --terminal-leftrail-collapsed:   72px;
+    --terminal-leftrail-expanded:    272px;
+
+    /* ── Pipeline State ── */
+    --state-sandbox-bg:     #F1F5F9;
+    --state-sandbox-border: #94A3B8;
+    --state-staging-bg:     #FFFBEB;
+    --state-staging-border: #D97706;
+    --state-ledger-bg:      #EFF6FF;
+    --state-ledger-border:  #1C62F2;
+
+    /* ── Z-Index ── */
+    --z-drawer:    50;
+    --z-backdrop:  40;
+    --z-banner:    30;
+    --z-nav:       20;
+    --z-systembar: 10;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-terminal);
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 14px;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body { height: 100%; }
+  h1, h2, h3, h4 { font-family: var(--font-heading); margin: 0; }
+}
+
+/* ── Utility ── */
+.mono { font-family: var(--font-terminal-mono) !important; }
+
+.label-xs {
+  font-family: var(--font-terminal-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* ── Table base ── */
+.table-v2 {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.table-v2 thead th {
+  font-family: var(--font-terminal-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--bg-deep);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-rim);
+  text-align: left;
+  white-space: nowrap;
+}
+.table-v2 tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-rim);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+.table-v2 tbody tr:last-child td { border-bottom: none; }
+.table-v2 tbody tr:hover td { background: var(--bg-sub); cursor: pointer; }
+
+/* ── Admin rail accent ── */
+.admin-rail-accent { border-left: 2px solid var(--accent-red); }
+
+/* ── Radar pulse (admin war room) ── */
+@keyframes radar-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(28, 98, 242, 0.4); }
+  70%  { box-shadow: 0 0 0 8px rgba(28, 98, 242, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(28, 98, 242, 0); }
+}
+.radar-pulse { animation: radar-pulse 2s infinite; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 150ms ease-out; }
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
