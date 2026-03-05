@@ -134,7 +134,54 @@ If you need to "undo" a ledger entry, create a reversal entry — never delete.
 
 ---
 
-## 7. Emergency Contacts
+## 7. Git History Scrub (Exposed Secrets)
+
+If a secret (API key, JWT secret, password) is accidentally committed to git history,
+**rotate the secret immediately** — assume it is compromised regardless of history scrub status.
+
+### 7.1 Detect Exposure
+```bash
+# Find all commits that contain a secret value
+git log --all -S "THE_SECRET_VALUE" --oneline
+# or
+git grep "THE_SECRET_VALUE" $(git rev-list --all)
+```
+
+### 7.2 Scrub with git-filter-repo (recommended)
+```bash
+# Install
+pip install git-filter-repo
+
+# Replace the secret string with a placeholder in all history
+git filter-repo --replace-text <(echo "THE_SECRET_VALUE==>***REDACTED***")
+
+# Verify it's gone
+git log --all -S "THE_SECRET_VALUE" --oneline   # should return nothing
+```
+
+### 7.3 Force-push Scrubbed History
+⚠️ This rewrites all branch history — coordinate with all contributors first.
+```bash
+git push origin --force --all
+git push origin --force --tags
+```
+
+### 7.4 Post-Scrub Checklist
+- [ ] Secret already rotated (done BEFORE scrub)
+- [ ] All contributors have re-cloned or run `git fetch --all && git reset --hard origin/master`
+- [ ] GitHub: Contact support to purge cached views of old commits
+- [ ] Render/Vercel: Verify new secret is deployed and working
+- [ ] Run `git log --all -S "THE_SECRET_VALUE"` — must return empty
+- [ ] Update `.gitignore` and `.pre-commit-config.yaml` to prevent recurrence
+
+### 7.5 Prevention
+- `backend/.env` and `frontend/.env.local` are in `.gitignore`
+- `.pre-commit-config.yaml` includes `detect-private-key` hook
+- Never commit real secrets — use placeholder in `.env.example` files
+
+---
+
+## 8. Emergency Contacts
 
 - **Render support**: support@render.com
 - **Vercel support**: vercel.com/support
