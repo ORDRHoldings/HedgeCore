@@ -1,6 +1,10 @@
 # Secrets — NEVER commit
 .env
+.env.*
+!.env.example
 backend/.env
+backend/.env.*
+!backend/.env.example
 *.pem
 *.key
 
@@ -20,10 +24,10 @@ venv/
 *.bak*
 *.jsonl
 
-# Generated engine outputs
-backend/engine/*.pdf
-backend/engine/*.xlsx
-backend/engine/*.json
+# Generated engine outputs (archived POC)
+_archive/engine_poc/*.pdf
+_archive/engine_poc/*.xlsx
+_archive/engine_poc/*.json
 
 # OS junk
 .DS_Store
