@@ -16,6 +16,7 @@
 
 import type { GeoIntelligence, RiskRegime } from "./types";
 import type { FinnhubNewsItem } from "./transforms";
+import { logger } from "@/lib/logger";
 
 const FH_KEY  = process.env.FINNHUB_API_KEY ?? "";
 const ANT_KEY = process.env.ANTHROPIC_API_KEY ?? "";
@@ -189,7 +190,7 @@ Score calibration:
       }
 
       const parsed = JSON.parse(match[0]) as ClaudeGeoResponse;
-      console.log(`[geo-intel] Claude ${model} succeeded, geo_risk_score=${parsed.geo_risk_score}`);
+      logger.info({ event: "geo_intel_claude_success", model, geo_risk_score: parsed.geo_risk_score });
       return parsed;
     } catch (err) {
       console.error(`[geo-intel] Claude ${model} exception: ${String(err)}`);

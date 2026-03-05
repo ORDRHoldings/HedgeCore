@@ -20,6 +20,13 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
+  {
+    // Disallow raw console.* — use @/lib/logger for server routes
+    rules: {
+      "no-console": ["warn", { allow: ["error", "warn"] }],
+    },
+    ignores: ["src/lib/logger.ts"],
+  },
 ];
 
 export default eslintConfig;

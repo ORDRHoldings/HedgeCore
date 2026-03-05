@@ -7,6 +7,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 // ─── In-memory cache ──────────────────────────────────────────────────────────
 const TTL_MS = 300_000; // 5 min
@@ -181,15 +182,7 @@ export async function GET() {
     _cache = { data: macroData, ts: now };
   }
 
-  console.log(
-    JSON.stringify({
-      ts: now,
-      endpoint: "/api/market/macro",
-      liveCount,
-      cached: false,
-      status: 200,
-    }),
-  );
+  logger.info({ endpoint: "/api/market/macro", liveCount, cached: false, status: 200 });
 
   const resp = NextResponse.json({
     macroData,

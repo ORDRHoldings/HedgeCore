@@ -14,6 +14,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import {
   riskPulseCache,
   geoIntelCache,
@@ -180,7 +181,7 @@ Be specific. Reference actual values. If geo risk is elevated, lead with geopoli
       if (!match) { console.error(`[insight] Claude ${model} non-JSON: ${text.slice(0, 200)}`); return null; }
 
       const parsed = JSON.parse(match[0]) as { summary: string; rationale: string; watchlist: string[] };
-      console.log(`[insight] Claude ${model} succeeded`);
+      logger.info({ event: "insight_claude_success", model });
       return { summary: parsed.summary ?? "", rationale: parsed.rationale ?? "", watchlist: (parsed.watchlist ?? []).slice(0, 3), ai_assisted: true, generatedAt: Date.now() };
     } catch (err) {
       console.error(`[insight] Claude ${model} exception: ${String(err)}`);
@@ -199,7 +200,7 @@ export async function GET() {
   const cachedInsight = riskInsightCache.get(INSIGHT_KEY);
 
   if (cachedSnap && cachedGeo && cachedInsight) {
-    console.log(JSON.stringify({ ts, endpoint: "/api/market/risk-pulse", cached: true, status: 200 }));
+    logger.info({ endpoint: "/api/market/risk-pulse", cached: true, status: 200 });
     return NextResponse.json({ snapshot: cachedSnap, geo: cachedGeo, insight: cachedInsight, cachedAt: ts });
   }
 
@@ -285,12 +286,12 @@ export async function GET() {
   })();
 
   const duration_ms = Date.now() - t0;
-  console.log(JSON.stringify({
-    ts, endpoint: "/api/market/risk-pulse", duration_ms, cached: false, status: 200,
+  logger.info({
+    endpoint: "/api/market/risk-pulse", duration_ms, cached: false, status: 200,
     score: snapshot.score, regime: snapshot.regime, quality,
     geo_score: geoIntel.geo_risk_score, geo_source: geoIntel.source,
     insight_ai: insight.ai_assisted,
-  }));
+  });
 
   return NextResponse.json({ snapshot, geo: geoIntel, insight, cachedAt: ts });
 }

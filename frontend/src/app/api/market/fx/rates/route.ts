@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fxRateCache } from "@/lib/market/cache";
 import { buildFxRates, buildFallbackRates } from "@/lib/market/transforms";
+import { logger } from "@/lib/logger";
 
 // Primary: exchangerate-api.com (free, no key, ~170 currencies, updated hourly)
 const ERA_URL    = "https://api.exchangerate-api.com/v4/latest/USD";
@@ -12,7 +13,7 @@ export async function GET() {
 
   const cached = fxRateCache.get(CACHE_KEY);
   if (cached) {
-    console.log(JSON.stringify({ ts, endpoint: "/api/market/fx/rates", duration_ms: 0, cached: true, status: 200 }));
+    logger.info({ endpoint: "/api/market/fx/rates", duration_ms: 0, cached: true, status: 200 });
     return NextResponse.json({ rates: cached, cachedAt: ts, source: "cache" });
   }
 
@@ -28,12 +29,12 @@ export async function GET() {
     fxRateCache.set(CACHE_KEY, rates, TTL_MS);
 
     const duration_ms = Date.now() - t0;
-    console.log(JSON.stringify({ ts, endpoint: "/api/market/fx/rates", duration_ms, cached: false, status: 200, source: "live" }));
+    logger.info({ endpoint: "/api/market/fx/rates", duration_ms, cached: false, status: 200, source: "live" });
     return NextResponse.json({ rates, cachedAt: ts, source: "live" });
   } catch (err) {
     const duration_ms = Date.now() - t0;
     const rates = buildFallbackRates();
-    console.log(JSON.stringify({ ts, endpoint: "/api/market/fx/rates", duration_ms, cached: false, status: 200, source: "fallback", error: String(err) }));
+    logger.info({ endpoint: "/api/market/fx/rates", duration_ms, cached: false, status: 200, source: "fallback", error: String(err) });
     return NextResponse.json({ rates, cachedAt: ts, source: "fallback" });
   }
 }

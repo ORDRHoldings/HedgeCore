@@ -6,6 +6,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 // ─── In-memory cache ──────────────────────────────────────────────────────────
 const TTL_MS = 60_000; // 60 s
@@ -101,15 +102,7 @@ export async function GET() {
   }
 
   const source = liveCount > 0 ? "yahoo_finance" : "fallback";
-  console.log(
-    JSON.stringify({
-      ts: now,
-      endpoint: "/api/market/fx/change",
-      liveCount,
-      cached: false,
-      status: 200,
-    }),
-  );
+  logger.info({ endpoint: "/api/market/fx/change", liveCount, cached: false, status: 200 });
 
   const resp = NextResponse.json({ changes, source, cachedAt: now, liveCount });
   resp.headers.set(
