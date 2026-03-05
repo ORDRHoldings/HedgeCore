@@ -10,23 +10,22 @@ No static fallback data -- empty tables return zeros or empty lists.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.security import decode_token, get_current_user
+from app.core.security import decode_token
 from app.models.calculation_run import CalculationRun
 from app.models.execution_proposal import ExecutionProposal
 from app.models.ledger import LedgerEntry
 from app.models.organization import Branch
 from app.models.position import Position
-from app.models.proposal import Proposal
 from app.models.staging import StagingArtifact
 from app.models.user import User
 from app.services import rbac_service
@@ -111,7 +110,7 @@ def _scoped_user_ids(user: User, all_branches: bool):
 async def dashboard_summary(
     request: Request,
     db: AsyncSession = Depends(get_session),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Returns KPIs and context scoped to the current user's authority:
     - If user has reports.view_all_branches: company-wide aggregates
@@ -226,7 +225,7 @@ async def dashboard_summary(
 async def recent_runs(
     request: Request,
     db: AsyncSession = Depends(get_session),
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Returns last 10 proposals for the current user.
     Empty list when no proposals exist.
@@ -298,7 +297,7 @@ async def recent_runs(
 async def pending_approvals(
     request: Request,
     db: AsyncSession = Depends(get_session),
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Returns staging artifacts awaiting approval, scoped to user's company/branch.
     Requires permission: pipeline.approve
@@ -356,7 +355,7 @@ async def pending_approvals(
 async def team_activity(
     request: Request,
     db: AsyncSession = Depends(get_session),
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Returns last 20 audit events scoped to user's branch or company-wide.
     Requires permission: audit.view_branch or audit.view_all
@@ -429,7 +428,7 @@ async def team_activity(
 async def branch_comparison(
     request: Request,
     db: AsyncSession = Depends(get_session),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Per-branch exposure, coverage and proposal summary for the caller's company.
     Superusers / reports.view_all_branches users see all branches; others see their own.
@@ -508,7 +507,7 @@ async def branch_comparison(
 async def pipeline_status(
     request: Request,
     db: AsyncSession = Depends(get_session),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Tri-state pipeline counts (Sandbox → Staging → Ledger) for the caller's company.
     """
@@ -573,3 +572,177 @@ async def pipeline_status(
         },
     }
 
+
+
+# ---------------------------------------------------------------------------
+# Endpoint 7: Aggregate - summary + recent-runs + pending-approvals in one call
+# ---------------------------------------------------------------------------
+
+@router.get("/aggregate", tags=["dashboard"])
+async def dashboard_aggregate(
+    request: Request,
+    db: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """
+    Returns summary KPIs, recent runs, and pending approvals in a single response.
+    Runs sub-queries concurrently. Falls back gracefully on partial failure.
+    """
+    user = await _resolve_user(request, db)
+
+    async def _summary() -> dict[str, Any]:
+        try:
+            permissions = await rbac_service.get_permissions_by_user(db, user.id)
+            has_all_branches = "reports.view_all_branches" in permissions or user.is_superuser
+            roles = await rbac_service.get_roles_by_user(db, user.id)
+            hierarchy_level = await rbac_service.get_user_hierarchy_level(db, user.id)
+            branch_code = _get_branch_code(user)
+            try:
+                branch_name = getattr(user.branch, "name", None) or branch_code
+            except Exception:
+                branch_name = branch_code
+            user_ids_sq = _scoped_user_ids(user, has_all_branches)
+            active_q = (
+                select(func.count()).select_from(ExecutionProposal)
+                .where(ExecutionProposal.proposed_by.in_(user_ids_sq))
+                .where(ExecutionProposal.status.in_(["PROPOSED", "APPROVED"]))
+            )
+            pending_q = (
+                select(func.count()).select_from(ExecutionProposal)
+                .where(ExecutionProposal.company_id == user.company_id)
+                .where(ExecutionProposal.status == "PROPOSED")
+            )
+            exposure_q = (
+                select(func.sum(Position.amount))
+                .where(Position.company_id == user.company_id)
+                .where(Position.execution_status.notin_(["HEDGED", "REJECTED"]))
+                .where(Position.is_active == True)  # noqa: E712
+            )
+            if not has_all_branches and user.branch_id:
+                exposure_q = exposure_q.where(Position.branch_id == user.branch_id)
+            hedged_q = (
+                select(func.count())
+                .where(Position.company_id == user.company_id)
+                .where(Position.execution_status == "HEDGED")
+                .where(Position.is_active == True)  # noqa: E712
+            )
+            total_pos_q = (
+                select(func.count())
+                .where(Position.company_id == user.company_id)
+                .where(Position.execution_status != "REJECTED")
+                .where(Position.is_active == True)  # noqa: E712
+            )
+            r_active, r_pending, r_exposure, r_hedged, r_total_pos = await asyncio.gather(
+                db.execute(active_q),
+                db.execute(pending_q),
+                db.execute(exposure_q),
+                db.execute(hedged_q),
+                db.execute(total_pos_q),
+            )
+            hedged_c = r_hedged.scalar() or 0
+            total_pos_c = r_total_pos.scalar() or 0
+            coverage_pct = round(hedged_c / total_pos_c * 100, 1) if total_pos_c > 0 else 0.0
+            return {
+                "branch_name": branch_name if not has_all_branches else "All Branches",
+                "company_name": (getattr(user.company, "name", None) if user.company else None) or "--",
+                "role": roles[0] if roles else "--",
+                "hierarchy_level": hierarchy_level,
+                "is_company_wide": has_all_branches,
+                "branch_currency": _get_branch_currency(user),
+                "kpis": {
+                    "active_proposals": r_active.scalar() or 0,
+                    "pending_approvals": r_pending.scalar() or 0,
+                    "total_exposure_usd": round(float(r_exposure.scalar() or 0.0), 2),
+                    "hedge_coverage_pct": coverage_pct,
+                    "open_alerts": 0,
+                },
+            }
+        except Exception as exc:
+            logger.error("aggregate/_summary failed: %s", exc, exc_info=True)
+            return {}
+
+    async def _recent_runs() -> list[dict[str, Any]]:
+        try:
+            q = (
+                select(CalculationRun)
+                .where(CalculationRun.company_id == user.company_id)
+                .where(CalculationRun.user_id == user.id)
+                .order_by(CalculationRun.created_at.desc())
+                .limit(10)
+            )
+            runs_db = list((await db.execute(q)).scalars().all())
+            all_pos_ids: list[UUID] = []
+            for r in runs_db:
+                if isinstance(r.position_ids, list):
+                    for pid in r.position_ids:
+                        try:
+                            all_pos_ids.append(UUID(str(pid)))
+                        except Exception:
+                            pass
+            pos_map: dict[str, Any] = {}
+            if all_pos_ids:
+                pos_rows = list((await db.execute(
+                    select(Position).where(Position.id.in_(all_pos_ids))
+                )).scalars().all())
+                pos_map = {str(p.id): p for p in pos_rows}
+            result = []
+            for r in runs_db:
+                pos_ids = r.position_ids if isinstance(r.position_ids, list) else []
+                positions = [pos_map[str(pid)] for pid in pos_ids if str(pid) in pos_map]
+                ccys = list(dict.fromkeys(p.currency for p in positions if p.currency))
+                result.append({
+                    "id": str(r.id),
+                    "created_at": r.created_at.isoformat() if r.created_at else None,
+                    "status": "COMPLETE",
+                    "currency_pair": f"{ccys[0]}/USD" if ccys else None,
+                    "notional": sum(float(p.amount) for p in positions if p.amount) or None,
+                    "hedge_ratio": round(r.hedge_count / r.trade_count, 2) if r.trade_count else None,
+                    "trade_count": r.trade_count,
+                    "hedge_count": r.hedge_count,
+                })
+            return result
+        except Exception as exc:
+            logger.error("aggregate/_recent_runs failed: %s", exc, exc_info=True)
+            return []
+
+    async def _pending_approvals() -> list[dict[str, Any]]:
+        try:
+            permissions = await rbac_service.get_permissions_by_user(db, user.id)
+            if "pipeline.approve" not in permissions and not user.is_superuser:
+                return []
+            has_all_branches = "reports.view_all_branches" in permissions or user.is_superuser
+            q = (
+                select(ExecutionProposal)
+                .where(ExecutionProposal.company_id == user.company_id)
+                .where(ExecutionProposal.status == "PROPOSED")
+                .order_by(ExecutionProposal.proposed_at.desc())
+                .limit(20)
+            )
+            if not has_all_branches and user.branch_id:
+                q = q.where(ExecutionProposal.branch_id == user.branch_id)
+            proposals = list((await db.execute(q)).scalars().all())
+            return [
+                {
+                    "id": str(p.id),
+                    "position_id": str(p.position_id),
+                    "proposed_by": str(p.proposed_by),
+                    "proposed_by_email": p.proposed_by_email or "",
+                    "proposed_at": p.proposed_at.isoformat() if p.proposed_at else None,
+                    "execution_ref": p.execution_ref or "",
+                    "risk_verdict": p.risk_verdict or "",
+                    "status": p.status,
+                }
+                for p in proposals
+            ]
+        except Exception as exc:
+            logger.error("aggregate/_pending_approvals failed: %s", exc, exc_info=True)
+            return []
+
+    summary, runs, approvals = await asyncio.gather(
+        _summary(), _recent_runs(), _pending_approvals()
+    )
+
+    return {
+        "summary": summary,
+        "recent_runs": runs,
+        "pending_approvals": approvals,
+    }

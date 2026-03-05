@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 // build: 2026-02-18T17:00Z — force cache bust
+const withBundleAnalyzer = require("@next/bundle-analyzer")({
+  enabled: process.env.ANALYZE === "true",
+});
+
 const nextConfig = {
   eslint: {
     // Pre-existing lint issues in source — do not block build
@@ -31,4 +35,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);
