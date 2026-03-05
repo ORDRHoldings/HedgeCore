@@ -164,4 +164,14 @@ from app.api.routes.voice_agent import router as voice_agent_router
 
 router.include_router(voice_agent_router)
 
+# Audit Lab — FX transaction audit (owns /v1/audit-lab)
+from app.api.routes.v1_audit_lab import router as v1_audit_lab_router
+
+router.include_router(v1_audit_lab_router)
+
+# Decision Desk — hedge action generation (owns /v1/decisions)
+from app.api.routes.v1_decision_desk import router as v1_decision_desk_router
+
+router.include_router(v1_decision_desk_router)
+
 __all__ = ["router"]

@@ -1132,6 +1132,281 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
         END 11751
         """,
 
+        # ══════════════════════════════════════════════════════════════════════
+        # Audit Lab — WORM tables (append-only, no UPDATE/DELETE)
+        # ══════════════════════════════════════════════════════════════════════
+
+        """CREATE TABLE IF NOT EXISTS audit_datasets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    source_filename TEXT NOT NULL,
+    source_hash TEXT NOT NULL,
+    row_count INTEGER NOT NULL,
+    currency_pairs JSONB,
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(company_id, source_hash))""",
+        "CREATE INDEX IF NOT EXISTS ix_audit_datasets_company ON audit_datasets(company_id, created_at)",
+
+        """CREATE TABLE IF NOT EXISTS audit_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dataset_id UUID NOT NULL REFERENCES audit_datasets(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL,
+    row_index INTEGER NOT NULL,
+    trade_date DATE,
+    value_date DATE,
+    currency_sold TEXT,
+    currency_bought TEXT,
+    amount_sold NUMERIC,
+    amount_bought NUMERIC,
+    effective_rate NUMERIC,
+    counterparty TEXT,
+    fee_amount NUMERIC,
+    fee_currency TEXT,
+    reference TEXT,
+    row_hash TEXT NOT NULL,
+    parse_warnings JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_audit_transactions_dataset ON audit_transactions(dataset_id)",
+        "CREATE INDEX IF NOT EXISTS ix_audit_transactions_company ON audit_transactions(company_id)",
+
+        """CREATE TABLE IF NOT EXISTS audit_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    dataset_id UUID NOT NULL REFERENCES audit_datasets(id),
+    methodology_version TEXT NOT NULL,
+    benchmark_config JSONB NOT NULL,
+    run_hash TEXT NOT NULL,
+    inputs_hash TEXT NOT NULL,
+    outputs_hash TEXT NOT NULL,
+    trace_bundle JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'COMPLETED',
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_audit_runs_company ON audit_runs(company_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS ix_audit_runs_dataset ON audit_runs(dataset_id)",
+
+        """CREATE TABLE IF NOT EXISTS audit_findings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID NOT NULL REFERENCES audit_runs(id),
+    company_id UUID NOT NULL,
+    finding_type TEXT NOT NULL,
+    currency_pair TEXT,
+    counterparty TEXT,
+    amount_usd NUMERIC NOT NULL,
+    amount_local NUMERIC,
+    local_currency TEXT,
+    severity TEXT NOT NULL,
+    narrative TEXT NOT NULL,
+    evidence JSONB NOT NULL DEFAULT '[]',
+    finding_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_audit_findings_run ON audit_findings(run_id)",
+        "CREATE INDEX IF NOT EXISTS ix_audit_findings_company ON audit_findings(company_id, created_at)",
+
+        """CREATE TABLE IF NOT EXISTS audit_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID NOT NULL REFERENCES audit_runs(id),
+    company_id UUID NOT NULL,
+    report_json JSONB NOT NULL,
+    report_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_audit_reports_run ON audit_reports(run_id)",
+
+        # WORM triggers for all 5 audit lab tables
+        """CREATE OR REPLACE FUNCTION audit_datasets_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_datasets is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_audit_datasets_no_update
+    BEFORE UPDATE ON audit_datasets
+    FOR EACH ROW EXECUTE FUNCTION audit_datasets_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_audit_datasets_no_delete
+    BEFORE DELETE ON audit_datasets
+    FOR EACH ROW EXECUTE FUNCTION audit_datasets_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
+        """CREATE OR REPLACE FUNCTION audit_transactions_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_transactions is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_audit_transactions_no_update
+    BEFORE UPDATE ON audit_transactions
+    FOR EACH ROW EXECUTE FUNCTION audit_transactions_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_audit_transactions_no_delete
+    BEFORE DELETE ON audit_transactions
+    FOR EACH ROW EXECUTE FUNCTION audit_transactions_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
+        """CREATE OR REPLACE FUNCTION audit_runs_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_runs is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_audit_runs_no_update
+    BEFORE UPDATE ON audit_runs
+    FOR EACH ROW EXECUTE FUNCTION audit_runs_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_audit_runs_no_delete
+    BEFORE DELETE ON audit_runs
+    FOR EACH ROW EXECUTE FUNCTION audit_runs_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
+        """CREATE OR REPLACE FUNCTION audit_findings_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_findings is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_audit_findings_no_update
+    BEFORE UPDATE ON audit_findings
+    FOR EACH ROW EXECUTE FUNCTION audit_findings_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_audit_findings_no_delete
+    BEFORE DELETE ON audit_findings
+    FOR EACH ROW EXECUTE FUNCTION audit_findings_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
+        """CREATE OR REPLACE FUNCTION audit_reports_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_reports is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_audit_reports_no_update
+    BEFORE UPDATE ON audit_reports
+    FOR EACH ROW EXECUTE FUNCTION audit_reports_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_audit_reports_no_delete
+    BEFORE DELETE ON audit_reports
+    FOR EACH ROW EXECUTE FUNCTION audit_reports_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
+        # ══════════════════════════════════════════════════════════════════════
+        # Decision Desk — WORM tables
+        # ══════════════════════════════════════════════════════════════════════
+
+        """CREATE TABLE IF NOT EXISTS decision_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    position_ids JSONB NOT NULL DEFAULT '[]',
+    policy_revision_id UUID,
+    market_snapshot_id UUID,
+    run_hash TEXT NOT NULL,
+    inputs_hash TEXT NOT NULL,
+    outputs_hash TEXT NOT NULL,
+    trace_bundle JSONB NOT NULL,
+    methodology_version TEXT NOT NULL DEFAULT '1.0.0',
+    status TEXT NOT NULL DEFAULT 'COMPLETED',
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_decision_runs_company ON decision_runs(company_id, created_at)",
+
+        """CREATE TABLE IF NOT EXISTS decision_proposals (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    decision_run_id UUID NOT NULL REFERENCES decision_runs(id),
+    company_id UUID NOT NULL,
+    rank INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    currency_pair TEXT NOT NULL,
+    instrument TEXT NOT NULL,
+    side TEXT NOT NULL,
+    notional_amount NUMERIC NOT NULL,
+    notional_currency TEXT NOT NULL,
+    hedge_ratio_pct NUMERIC NOT NULL,
+    residual_exposure NUMERIC NOT NULL,
+    cost_estimate_usd NUMERIC,
+    margin_proxy_usd NUMERIC,
+    rationale TEXT NOT NULL,
+    schedule JSONB,
+    proposal_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_decision_proposals_run ON decision_proposals(decision_run_id)",
+        "CREATE INDEX IF NOT EXISTS ix_decision_proposals_company ON decision_proposals(company_id)",
+
+        """CREATE TABLE IF NOT EXISTS execution_packets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    decision_run_id UUID NOT NULL REFERENCES decision_runs(id),
+    proposal_id UUID NOT NULL REFERENCES decision_proposals(id),
+    company_id UUID NOT NULL,
+    packet_json JSONB NOT NULL,
+    ibkr_payload JSONB,
+    ticket_text TEXT,
+    packet_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_execution_packets_run ON execution_packets(decision_run_id)",
+
+        # WORM triggers for all 3 decision desk tables
+        """CREATE OR REPLACE FUNCTION decision_runs_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'decision_runs is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_decision_runs_no_update
+    BEFORE UPDATE ON decision_runs
+    FOR EACH ROW EXECUTE FUNCTION decision_runs_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_decision_runs_no_delete
+    BEFORE DELETE ON decision_runs
+    FOR EACH ROW EXECUTE FUNCTION decision_runs_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
+        """CREATE OR REPLACE FUNCTION decision_proposals_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'decision_proposals is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_decision_proposals_no_update
+    BEFORE UPDATE ON decision_proposals
+    FOR EACH ROW EXECUTE FUNCTION decision_proposals_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_decision_proposals_no_delete
+    BEFORE DELETE ON decision_proposals
+    FOR EACH ROW EXECUTE FUNCTION decision_proposals_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
+        """CREATE OR REPLACE FUNCTION execution_packets_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'execution_packets is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_execution_packets_no_update
+    BEFORE UPDATE ON execution_packets
+    FOR EACH ROW EXECUTE FUNCTION execution_packets_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_execution_packets_no_delete
+    BEFORE DELETE ON execution_packets
+    FOR EACH ROW EXECUTE FUNCTION execution_packets_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
     ]
 
     # ── Advisory lock: serialise DDL across concurrent instances ────────────────
