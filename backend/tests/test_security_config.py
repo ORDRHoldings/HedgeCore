@@ -16,11 +16,11 @@ class TestSecretResolution:
 
     def test_env_fallback_works(self, monkeypatch):
         """Existing env var loading still works (backward compat)."""
-        monkeypatch.setenv("JWT_SECRET", "test_secret_abc_xyz_1234567890")
+        monkeypatch.setenv("JWT_SECRET", "test_secret_abc_xyz_1234567890_xx")
         import importlib
         import app.core.config as cfg_module
         importlib.reload(cfg_module)
-        assert cfg_module._resolve_secret("JWT_SECRET") == "test_secret_abc_xyz_1234567890"
+        assert cfg_module._resolve_secret("JWT_SECRET") == "test_secret_abc_xyz_1234567890_xx"
 
     def test_missing_in_dev_returns_empty(self, monkeypatch):
         """Missing key in dev mode returns empty string (no raise)."""
