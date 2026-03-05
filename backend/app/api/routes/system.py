@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import text
 
-from app.api.deps import require_api_key
+from app.deps.api_key_auth import get_api_key_principal as require_api_key
 from app.core.db import async_engine
 from app.core.schema_state import is_schema_ready, run_readiness_checks_cached
 

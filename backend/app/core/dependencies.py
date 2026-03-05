@@ -147,3 +147,12 @@ async def get_current_user(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Server error",
         )
+
+
+async def require_superuser(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Dependency: requires is_superuser=True. 403 otherwise."""
+    if not getattr(current_user, "is_superuser", False):
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    return current_user
