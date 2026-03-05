@@ -3,12 +3,14 @@
 import { useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth/store";
+import { useUIStore } from "@/lib/ui/store";
 import Sidebar from "@/components/layout/Sidebar";
 import VoiceTerminal from "@/components/voice/VoiceTerminal";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { token, user, isLoading } = useAuthStore();
+  const { sidebarWidth } = useUIStore();
 
   useEffect(() => {
     if (!isLoading && !user && !token) {
@@ -48,30 +50,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      {/* Fixed Sidebar */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: 272,
-          height: "100vh",
-          zIndex: 50,
-          overflowY: "auto",
-        }}
-      >
-        <Sidebar />
-      </div>
+      {/* Sidebar is self-positioned fixed — no wrapper needed */}
+      <Sidebar />
 
-      {/* Main scrollable content area */}
+      {/* Main scrollable content area tracks sidebar width */}
       <main
         style={{
-          marginLeft: 272,
+          marginLeft: sidebarWidth,
           padding: "32px 40px",
           minHeight: "100vh",
           background: "var(--bg-deep)",
           flex: 1,
           overflowX: "hidden",
+          transition: "margin-left 200ms ease",
         }}
       >
         <Suspense fallback={null}>{children}</Suspense>

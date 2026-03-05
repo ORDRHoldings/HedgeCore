@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useUIStore } from "@/lib/ui/store";
 import {
   Home,
   Microscope,
@@ -102,7 +103,7 @@ const BOTTOM_NAV: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
-  const [collapsed, setCollapsed] = useState(false);
+  const { sidebarCollapsed: collapsed, setSidebarCollapsed } = useUIStore();
   const [lockedHover, setLockedHover] = useState<string | null>(null);
 
   const tierLabel = user ? TIER_LABELS[user.plan_tier] : "FREE";
@@ -299,7 +300,7 @@ export function Sidebar() {
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 14, fontWeight: 800, color: "var(--accent-cyan)" }}>O</div>
         )}
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => setSidebarCollapsed(!collapsed)}
           style={{
             background: "none",
             border: "1px solid var(--border-rim)",
