@@ -26,10 +26,7 @@ import AnchorTab from "../../../components/ledger/AnchorTab";
 
 export default function LedgerDetailPage() {
   const params = useParams<{ ledger_id: string }>();
-  if (!params || !params.ledger_id) {
-    return <div className="text-center py-20 text-[var(--text-secondary)]">Loading...</div>;
-  }
-  const ledger_id = params.ledger_id;
+  const ledger_id = params?.ledger_id ?? "";
   const dispatch = useDispatch<AppDispatch>();
   const { token } = useAuth();
   const {
@@ -53,6 +50,10 @@ export default function LedgerDetailPage() {
     if (!ledger_id || !token) return;
     dispatch(replayLedgerThunk({ request: { ledger_id }, token }));
   }, [dispatch, ledger_id, token]);
+
+  if (!params || !params.ledger_id) {
+    return <div className="text-center py-20 text-[var(--text-secondary)]">Loading...</div>;
+  }
 
   if (ledgerLoading || !currentLedger) {
     return (

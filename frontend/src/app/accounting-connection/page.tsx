@@ -303,6 +303,12 @@ export default function AccountingConnectionPage() {
       });
   }, [token, selectedSystem]);
 
+  // ── Field mapping helpers (must be before early return) ──────────────────
+  const updateMappingRow = useCallback((id: string, field: keyof FieldMapping, value: string) => {
+    setFieldMappings(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+    setMappingSaved(false);
+  }, []);
+
   if (!isAuthenticated) return null;
 
   // ── Connect handler (OAuth popup) ────────────────────────────────────────
@@ -397,11 +403,6 @@ export default function AccountingConnectionPage() {
   }
 
   // ── Field mapping helpers ─────────────────────────────────────────────────
-  const updateMappingRow = useCallback((id: string, field: keyof FieldMapping, value: string) => {
-    setFieldMappings(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
-    setMappingSaved(false);
-  }, []);
-
   function addMappingRow() {
     setFieldMappings(prev => [...prev, makeEmptyRow()]);
     setMappingSaved(false);

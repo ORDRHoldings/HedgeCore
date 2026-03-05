@@ -6,8 +6,7 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 
 const nextConfig = {
   eslint: {
-    // Pre-existing lint issues in source — do not block build
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
     // Type checking already done via tsc --noEmit in CI
