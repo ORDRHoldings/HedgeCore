@@ -160,14 +160,39 @@ async def _call_hedgecore(name: str, args: dict, token: str) -> dict:
             amount = float(args.get("exposure_amount", 0))
             flow_type = args.get("flow_type", "AP")
             value_date = args.get("value_date", "2026-12-31")
-            currency = pair[:3] if pair.endswith("USD") else pair[3:]
+            # Foreign currency is the non-USD leg of the pair
+            if pair.endswith("USD"):
+                currency = pair[:3]
+            elif pair.startswith("USD"):
+                currency = pair[3:]
+            else:
+                currency = pair[:3]  # e.g. EURMXN → EUR
+
+            # Fetch live spot rates instead of using a hardcoded fallback
+            market: dict = {}
+            try:
+                rates_r = await c.get("/v1/market/fx/rates")
+                if rates_r.status_code == 200:
+                    rates_data = rates_r.json().get("rates", [])
+                    market = {
+                        r["symbol"]: r["mid"]
+                        for r in rates_data
+                        if "symbol" in r and "mid" in r
+                    }
+            except Exception:
+                pass
+            # Ensure the requested pair is present; fall back to stale value if missing
+            if pair not in market:
+                market[pair] = 17.24  # last-resort fallback — logged below
+                logger.warning("Voice calculate_hedge: live rate for %s unavailable, using fallback 17.24", pair)
+
             payload = {
                 "trades": [{
                     "record_id": "VOICE-001", "entity": "Voice Request",
                     "flow_type": flow_type, "currency": currency,
                     "amount": amount, "value_date": value_date, "status": "CONFIRMED",
                 }],
-                "market": {"USDMXN": 17.24},
+                "market": market,
                 "policy_instance_id": None,
             }
             try:
