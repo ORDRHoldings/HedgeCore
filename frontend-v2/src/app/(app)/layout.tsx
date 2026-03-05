@@ -4,6 +4,7 @@ import { useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth/store";
 import Sidebar from "@/components/layout/Sidebar";
+import VoiceTerminal from "@/components/voice/VoiceTerminal";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -75,6 +76,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <Suspense fallback={null}>{children}</Suspense>
       </main>
+      <VoiceTerminal />
     </div>
   );
 }
