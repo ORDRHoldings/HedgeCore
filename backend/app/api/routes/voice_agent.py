@@ -220,7 +220,8 @@ async def _call_hedgecore(name: str, args: dict, token: str) -> dict:
                 r = await c.get("/v1/positions", params=params)
                 if r.status_code == 200:
                     data = r.json()
-                    positions = data if isinstance(data, list) else data.get("positions", [])
+                    # GET /v1/positions returns {"items": [...], "total": N}
+                    positions = data if isinstance(data, list) else data.get("items", data.get("positions", []))
                     return {"count": len(positions), "positions": [
                         {"id": p.get("id", "")[:8], "entity": p.get("entity", "—"),
                          "currency": p.get("currency", "—"), "amount": p.get("amount", 0),
@@ -240,7 +241,7 @@ async def _call_hedgecore(name: str, args: dict, token: str) -> dict:
 
         elif name == "list_policies":
             try:
-                r = await c.get("/v1/policies")
+                r = await c.get("/v1/policies/templates")
                 if r.status_code == 200:
                     data = r.json()
                     templates = data if isinstance(data, list) else data.get("templates", [])
