@@ -28,9 +28,6 @@ export interface CurrencyTvSpec {
 // Currencies quoted as CCY/USD (price currency, 1 CCY > 1 USD)
 const PRICE_CCY = new Set(['EUR', 'GBP', 'AUD', 'NZD', 'CHF']);
 
-function pairLabel(ccy: string): string {
-  return PRICE_CCY.has(ccy) ? `${ccy}USD` : `USD${ccy}`;
-}
 
 /**
  * Per-currency TradingView + futures specifications.

@@ -483,7 +483,7 @@ export function exportHedgePlanCsv(result: CalculateResponse): void {
 
 export function exportHedgePlanExcel(result: CalculateResponse): void {
   const { hedge_plan, scenario_results, run_envelope } = result;
-  const { summary, buckets } = hedge_plan;
+  const { buckets } = hedge_plan;
 
   // Sheet 1: Coverage by bucket
   const rows: Record<string, string | number | boolean>[] = [];

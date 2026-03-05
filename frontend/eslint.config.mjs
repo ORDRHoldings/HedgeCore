@@ -4,6 +4,19 @@ import tsParser from "@typescript-eslint/parser";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 
 export default [
+  // Test files and E2E are excluded from tsconfig — skip them in ESLint too
+  {
+    ignores: [
+      "src/__tests__/**",
+      "src/tests/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/*.spec.tsx",
+      "e2e/**",
+    ],
+  },
+
   // Next.js recommended + core-web-vitals (native flat config — no FlatCompat needed)
   nextPlugin.flatConfig.recommended,
   nextPlugin.flatConfig.coreWebVitals,
@@ -26,7 +39,7 @@ export default [
       parserOptions: { project: "./tsconfig.json", tsconfigRootDir: import.meta.dirname },
     },
     rules: {
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "@typescript-eslint/no-explicit-any": "warn",
     },
   },

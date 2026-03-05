@@ -4,7 +4,6 @@ import type {
   ScenarioTotalResult,
   ScenarioBucketResult,
   PolicyConfig,
-  ValidationReport,
 } from '../api/types';
 import { fmtMXN, fmtUSD, fmtPct } from './formatters';
 
@@ -374,13 +373,13 @@ export function generateExecutiveNarrative(
   buckets: BucketResult[],
   summary: HedgePlanSummary,
   totals: ScenarioTotalResult[],
-  policy: PolicyConfig,
+  _policy: PolicyConfig,
 ): string[] {
   const lines: string[] = [];
   const totalExposure = Math.abs(summary.total_commercial_exposure_mxn);
   const coverage = bucketCoverageRatios(buckets);
   const concentration = concentrationAnalysis(buckets);
-  const kpis = scenarioKpis(totals, summary);
+  const _kpis = scenarioKpis(totals, summary);
   const activeBuckets = buckets.filter(b => !b.suppressed && Math.abs(b.action_mxn) > 0).length;
 
   // Line 1: Total exposure
