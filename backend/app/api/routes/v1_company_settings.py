@@ -23,10 +23,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
 from app.core.security import get_current_user
-from app.models.audit_event import build_audit_event
 from app.models.organization import Company
 from app.models.user import User
 from app.services import rbac_service
+from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/company", tags=["v1-company"])
 
@@ -188,23 +188,21 @@ async def update_company_settings(
 
     await session.commit()
 
-    audit_event = build_audit_event(
+    # PLAN-08: audit event — company settings updated (uses emit_audit for proper hash-chain linkage)
+    await emit_audit(
+        session=session,
+        user=current_user,
         event_type="SYSTEM",
         description=f"Company settings updated: {', '.join(changed_fields)}",
+        entity_type="company_settings",
+        entity_id=str(actor_company_id),
         payload={
             "changed_fields": changed_fields,
             "governance_mode": settings.get("governance_mode"),
             "policy_limits_snapshot": settings.get("policy_limits"),
             "execution_settings_snapshot": settings.get("execution_settings"),
         },
-        company_id=actor_company_id,
-        actor_id=actor_id,
-        actor_email=actor_email,
-        entity_type="company_settings",
-        entity_id=str(actor_company_id),
     )
-    session.add(audit_event)
-    await session.commit()
 
     return CompanySettingsResponse(
         governance_mode=settings.get("governance_mode", "team"),

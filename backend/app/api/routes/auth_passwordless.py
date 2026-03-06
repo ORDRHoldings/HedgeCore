@@ -16,21 +16,25 @@ import logging
 import os
 import random
 import string
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.db import get_session
-from app.core.security import create_access_token, create_refresh_token, get_session_duration_for_roles
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    get_session_duration_for_roles,
+)
 from app.middleware.csrf import generate_csrf_token
 from app.models.user import User
-from app.schemas.user import UserMeResponse, CompanyBrief, BranchBrief, DepartmentBrief, UserPublic
 from app.services import rbac_service
+from app.services.audit_emit import emit_audit
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +93,9 @@ async def _get_or_create_free_user(
         return user
 
     # Create minimal free-tier user (no company, no branch)
-    from app.core.security import hash_password
     import uuid
+
+    from app.core.security import hash_password
 
     new_user = User(
         id=uuid.uuid4(),
@@ -121,7 +126,7 @@ async def start_passwordless(
     """
     email = body.email.lower()
     code = _generate_otp()
-    expires_at = datetime.now(timezone.utc) + timedelta(seconds=OTP_TTL_SECONDS)
+    expires_at = datetime.now(UTC) + timedelta(seconds=OTP_TTL_SECONDS)
 
     _OTP_STORE[email] = {
         "code": code,
@@ -168,7 +173,7 @@ async def verify_passwordless(
             detail="Too many incorrect attempts. Please request a new code.",
         )
 
-    if datetime.now(timezone.utc) > entry["expires_at"]:
+    if datetime.now(UTC) > entry["expires_at"]:
         del _OTP_STORE[email]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -211,6 +216,17 @@ async def verify_passwordless(
     csrf_token = generate_csrf_token()
     from app.crud import refresh_token as rt_crud
     await rt_crud.create_refresh_token(db, user_id=user.id, token=refresh_token)
+
+    # PLAN-06: audit event — passwordless OTP verify (new or returning user)
+    await emit_audit(
+        session=db,
+        user=user,
+        event_type="SYSTEM",
+        description=f"Passwordless login: {user.email}",
+        entity_type="session",
+        entity_id=str(user.id),
+        payload={"email": user.email, "plan_tier": getattr(user, "plan_tier", "lite")},
+    )
 
     plan_tier = getattr(user, "plan_tier", "lite") or "lite"
 

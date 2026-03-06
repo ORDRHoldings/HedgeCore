@@ -35,6 +35,7 @@ from app.engine.audit_engine import (
 )
 from app.models.user import User
 from app.services import rbac_service
+from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/audit-lab", tags=["audit-lab"])
 
@@ -281,6 +282,25 @@ async def upload_audit_dataset(
         )
 
     await session.commit()
+
+    # PLAN-02a: audit event for dataset upload
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=(
+            f"Audit dataset uploaded: {len(rows)} rows, "
+            f"{len(currency_pairs)} pair(s): {', '.join(sorted(currency_pairs))}"
+        ),
+        entity_type="audit_dataset",
+        entity_id=dataset_id,
+        payload={
+            "row_count": len(rows),
+            "currency_pairs": sorted(currency_pairs),
+            "source_hash": source_hash,
+            "filename": file.filename or "upload.csv",
+        },
+    )
 
     return {
         "dataset_id": dataset_id,
@@ -574,6 +594,29 @@ async def create_audit_run(
     )
 
     await session.commit()
+
+    # PLAN-02b: audit event for audit run creation
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=(
+            f"Audit lab run completed: markup USD {result.total_markup_usd:,.2f}, "
+            f"fees USD {result.total_fees_usd:,.2f}, "
+            f"data quality {result.data_quality_score:.1f}%"
+        ),
+        entity_type="audit_run",
+        entity_id=run_id,
+        payload={
+            "run_hash": result.run_hash,
+            "dataset_id": dataset_id,
+            "methodology_version": result.methodology_version,
+            "total_markup_usd": result.total_markup_usd,
+            "total_fees_usd": result.total_fees_usd,
+            "total_loss_usd": result.total_loss_usd,
+            "data_quality_score": result.data_quality_score,
+        },
+    )
 
     return {
         "run_id": run_id,

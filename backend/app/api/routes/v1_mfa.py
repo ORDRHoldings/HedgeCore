@@ -25,6 +25,7 @@ from app.core.db import get_async_session
 from app.core.security import create_access_token, get_current_user
 from app.models.user import User
 from app.models.user_mfa import UserMFA
+from app.services.audit_emit import emit_audit
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +175,17 @@ async def mfa_activate(
 
     logger.info("MFA activated for user_id=%s", current_user.id)
 
+    # PLAN-03a: audit event — MFA activated
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SECURITY",
+        description=f"MFA activated for {current_user.email}",
+        entity_type="user_mfa",
+        entity_id=str(current_user.id),
+        payload={"email": current_user.email},
+    )
+
     return MFAMessageResponse(message="MFA activated successfully")
 
 
@@ -235,6 +247,17 @@ async def mfa_disable(
     await session.commit()
 
     logger.info("MFA disabled for user_id=%s", current_user.id)
+
+    # PLAN-03b: audit event — MFA disabled (security-critical)
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SECURITY",
+        description=f"MFA disabled for {current_user.email}",
+        entity_type="user_mfa",
+        entity_id=str(current_user.id),
+        payload={"email": current_user.email},
+    )
 
     return MFAMessageResponse(message="MFA disabled")
 

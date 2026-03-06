@@ -49,6 +49,7 @@ from app.models.user import User
 from app.schemas.auth import RegisterRequest, TokenPair, TokenRefreshRequest
 from app.schemas.user import BranchBrief, CompanyBrief, DepartmentBrief, UserMeResponse, UserPublic
 from app.services import rbac_service
+from app.services.audit_emit import emit_audit
 
 try:
 
@@ -218,6 +219,17 @@ async def register(request: Request, payload: RegisterRequest, db: AsyncSession 
 
             message="User registered successfully",
 
+        )
+
+        # PLAN-05a: audit event — user registered
+        await emit_audit(
+            session=db,
+            user=user,
+            event_type="SYSTEM",
+            description=f"User registered: {user.email}",
+            entity_type="user",
+            entity_id=str(user.id),
+            payload={"email": user.email, "ip": ip},
         )
 
         return UserPublic.model_validate(user, from_attributes=True)
@@ -394,6 +406,17 @@ async def login(
                 await db.commit()
             except Exception:
                 logger.warning("Failed to emit high-privilege login audit event", exc_info=True)
+
+        # PLAN-05b: audit event — all logins (regardless of privilege level)
+        await emit_audit(
+            session=db,
+            user=user,
+            event_type="SYSTEM",
+            description=f"User login: {user.email} (session={session_minutes}min)",
+            entity_type="session",
+            entity_id=str(user.id),
+            payload={"roles": role_names, "session_minutes": session_minutes, "ip": ip},
+        )
 
         token_pair = TokenPair(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
         # Set CSRF double-submit cookie on successful login
@@ -671,6 +694,21 @@ async def logout(request: Request, db: AsyncSession = Depends(get_session)) -> d
 
 
         await rt_crud.revoke_all_for_user(db, user_id=user_id)
+
+        # PLAN-05c: audit event — logout (fetch user for emit_audit)
+        try:
+            _logout_user = await _get_user_or_401(db, user_id)
+            await emit_audit(
+                session=db,
+                user=_logout_user,
+                event_type="SYSTEM",
+                description=f"User logout: {_logout_user.email}",
+                entity_type="session",
+                entity_id=str(user_id),
+                payload={"ip": ip},
+            )
+        except Exception:
+            logger.warning("Failed to emit logout audit event for user_id=%s", user_id)
 
         response = JSONResponse(content={"detail": "Logged out successfully"})
         # Clear httpOnly rt cookie on logout

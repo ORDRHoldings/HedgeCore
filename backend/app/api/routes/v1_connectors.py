@@ -25,6 +25,7 @@ from app.schemas_v1.connectors import (
     ConnectorRunResponse,
 )
 from app.services import connector_service, rbac_service
+from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/connectors", tags=["v1-connectors"])
 
@@ -106,6 +107,16 @@ async def import_csv(
     run = await connector_service.import_csv_audited(
         session, current_user, content, file.filename or "upload.csv"
     )
+    # PLAN-07a: audit event — CSV import completed
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="TRADE",
+        description=f"CSV import: {file.filename or 'upload.csv'} ({run.rows_ok} ok, {run.rows_error} errors)",
+        entity_type="connector_run",
+        entity_id=str(run.id),
+        payload={"filename": file.filename, "rows_ok": run.rows_ok, "rows_error": run.rows_error, "status": run.status},
+    )
     return run
 
 
@@ -123,5 +134,15 @@ async def import_excel(
     content = await file.read()
     run = await connector_service.import_excel_audited(
         session, current_user, content, file.filename or "upload.xlsx"
+    )
+    # PLAN-07b: audit event — Excel import completed
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="TRADE",
+        description=f"Excel import: {file.filename or 'upload.xlsx'} ({run.rows_ok} ok, {run.rows_error} errors)",
+        entity_type="connector_run",
+        entity_id=str(run.id),
+        payload={"filename": file.filename, "rows_ok": run.rows_ok, "rows_error": run.rows_error, "status": run.status},
     )
     return run

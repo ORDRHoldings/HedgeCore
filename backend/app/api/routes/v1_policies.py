@@ -50,6 +50,7 @@ from app.schemas_v1.policies import (
     UpdateTemplateRequest,
 )
 from app.services import policy_favorites_service, policy_service, rbac_service
+from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/policies", tags=["v1-policies"])
 
@@ -160,6 +161,16 @@ async def create_template(
         config=data.config.model_dump(),
         status=data.status,
     )
+    # PLAN-04a: audit — policy template created
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=f"Policy template created: '{data.name}' (risk_posture={data.risk_posture})",
+        entity_type="policy_template",
+        entity_id=str(tmpl.id),
+        payload={"name": data.name, "short_name": data.short_name, "risk_posture": data.risk_posture},
+    )
     return tmpl
 
 
@@ -215,6 +226,16 @@ async def import_template(
         category=template_dict.get("category", "CORPORATE"),
         config=config,
     )
+    # PLAN-04b: audit — policy template imported
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=f"Policy template imported: '{name}' (checksum verified)",
+        entity_type="policy_template",
+        entity_id=str(tmpl.id),
+        payload={"name": name, "source_checksum": stored_checksum},
+    )
     return tmpl
 
 
@@ -242,6 +263,16 @@ async def update_template(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    # PLAN-04c: audit — policy template updated
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=f"Policy template updated: '{tmpl.name}' v{tmpl.version}",
+        entity_type="policy_template",
+        entity_id=str(template_id),
+        payload={"name": tmpl.name, "version": tmpl.version, "fields_updated": list(updates.keys())},
+    )
     return tmpl
 
 
@@ -266,6 +297,16 @@ async def delete_template(
         detail = str(e)
         status = 422 if "active" in detail.lower() else 404
         raise HTTPException(status_code=status, detail=detail)
+    # PLAN-04d: audit — policy template deleted
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=f"Policy template deleted: {template_id}",
+        entity_type="policy_template",
+        entity_id=str(template_id),
+        payload={"template_id": str(template_id)},
+    )
 
 
 # 7. GET /templates/{template_id}/history
@@ -409,6 +450,17 @@ async def activate_policy(
     response = PolicyInstanceResponse.model_validate(instance)
     if tmpl:
         response.template = PolicyTemplateResponse.model_validate(tmpl)
+
+    # PLAN-04e: audit — policy activated
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=f"Policy activated: template {data.template_id}" + (f" '{tmpl.name}'" if tmpl else ""),
+        entity_type="policy_instance",
+        entity_id=str(instance.id),
+        payload={"template_id": str(data.template_id), "instance_id": str(instance.id)},
+    )
     return response
 
 
@@ -425,6 +477,16 @@ async def deactivate_policy(
     """
     await _check_permission(session, current_user, "policy.activate")
     await policy_service.deactivate_policy(session, current_user)
+    # PLAN-04f: audit — policy deactivated
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description="Policy deactivated for company/branch",
+        entity_type="policy_instance",
+        entity_id=str(current_user.company_id),
+        payload={"company_id": str(current_user.company_id), "branch_id": str(current_user.branch_id) if current_user.branch_id else None},
+    )
 
 
 # ---------------------------------------------------------------------------

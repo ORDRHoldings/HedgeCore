@@ -32,6 +32,7 @@ from app.engine.decision_engine import (
 )
 from app.models.user import User
 from app.services import rbac_service
+from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/decisions", tags=["decision-desk"])
 
@@ -295,6 +296,34 @@ async def create_decision_run(
         )
 
     await session.commit()
+
+    # PLAN-01: audit event for decision run creation
+    dominant_action = (
+        max(
+            set(p.action for p in result.proposals),
+            key=lambda a: [p.action for p in result.proposals].count(a),
+        )
+        if result.proposals
+        else "NO_ACTION"
+    )
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="SYSTEM",
+        description=(
+            f"Decision run created: {len(result.proposals)} proposal(s), "
+            f"dominant action {dominant_action}"
+        ),
+        entity_type="decision_run",
+        entity_id=run_id,
+        payload={
+            "run_hash": result.run_hash,
+            "proposal_count": len(result.proposals),
+            "dominant_action": dominant_action,
+            "total_hedge_usd": result.total_hedge_notional_usd,
+            "position_count": len(position_inputs),
+        },
+    )
 
     return {
         "run_id": run_id,
