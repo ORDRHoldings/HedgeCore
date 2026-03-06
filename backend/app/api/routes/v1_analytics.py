@@ -1,5 +1,5 @@
 """
-app/api/routes/v1_analytics.py
+app/api/routes/v1_analytics.py  # v2
 
 Portfolio risk analytics — derived from live positions/exposure data.
 
