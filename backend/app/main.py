@@ -1812,7 +1812,7 @@ app.openapi = custom_openapi
 
 def health():
 
-    return {"status": "ok", "service": settings.APP_NAME, "deploy": "e96c949"}
+    return {"status": "ok", "service": settings.APP_NAME}
 
 
 
