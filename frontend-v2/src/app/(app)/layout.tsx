@@ -57,12 +57,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main
         style={{
           marginLeft: sidebarWidth,
-          padding: "32px 40px",
+          padding: "24px 28px",
           minHeight: "100vh",
           background: "var(--bg-deep)",
           flex: 1,
           overflowX: "hidden",
-          transition: "margin-left 200ms ease",
+          transition: "margin-left 180ms ease",
         }}
       >
         <Suspense fallback={null}>{children}</Suspense>

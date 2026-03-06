@@ -14,6 +14,6 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   sidebarCollapsed: false,
-  sidebarWidth: 272,
-  setSidebarCollapsed: (v) => set({ sidebarCollapsed: v, sidebarWidth: v ? 72 : 272 }),
+  sidebarWidth: 232,
+  setSidebarCollapsed: (v) => set({ sidebarCollapsed: v, sidebarWidth: v ? 56 : 232 }),
 }));
