@@ -274,7 +274,16 @@ export default function PortfolioAnalyticsPage() {
 
   const { data, isLoading, isError, error } = useQuery<PortfolioData>({
     queryKey: ["analytics", "portfolio"],
-    queryFn: () => api.get<PortfolioData>("/v1/analytics/portfolio"),
+    queryFn: async () => {
+      const res = await fetch("/api/analytics/portfolio", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ detail: "Request failed" }));
+        throw new Error(body.detail ?? `HTTP ${res.status}`);
+      }
+      return res.json();
+    },
     enabled: !!token,
     staleTime: 30_000,
     retry: 2,

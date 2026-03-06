@@ -591,7 +591,16 @@ function ScenariosContent() {
 
   const { data, isLoading, error } = useQuery<ScenariosResponse>({
     queryKey: ["analytics-scenarios"],
-    queryFn: () => api.get<ScenariosResponse>("/v1/analytics/scenarios"),
+    queryFn: async () => {
+      const res = await fetch("/api/analytics/scenarios", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ detail: "Request failed" }));
+        throw new Error(body.detail ?? `HTTP ${res.status}`);
+      }
+      return res.json();
+    },
     enabled: !!token,
     staleTime: 5 * 60 * 1000,
     retry: 1,
