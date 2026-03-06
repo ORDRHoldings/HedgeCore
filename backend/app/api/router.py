@@ -180,3 +180,19 @@ from app.api.routes.auth_passwordless import router as auth_passwordless_router
 router.include_router(auth_passwordless_router)
 
 __all__ = ["router"]
+
+# Superuser admin — tenants (owns /v1/admin/tenants)
+from app.api.routes.v1_admin_tenants import router as v1_admin_tenants_router
+router.include_router(v1_admin_tenants_router)
+
+# Superuser admin — metrics + activity feed (owns /v1/admin/metrics, /v1/admin/activity)
+from app.api.routes.v1_admin_metrics import router as v1_admin_metrics_router
+router.include_router(v1_admin_metrics_router)
+
+# Superuser admin — system config (owns /v1/admin/config)
+from app.api.routes.v1_admin_config import router as v1_admin_config_router
+router.include_router(v1_admin_config_router)
+
+# Superuser admin — cross-tenant user management (owns /v1/admin/users)
+from app.api.routes.v1_admin_users import router as v1_admin_users_router
+router.include_router(v1_admin_users_router)

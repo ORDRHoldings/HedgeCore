@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/lib/auth/store";
+import { api } from "@/lib/api/client";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -108,6 +109,20 @@ export default function ConfigPage() {
   const [defaultTier, setDefaultTier] = useState("lite");
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const loadConfig = useCallback(async () => {
+    try {
+      const cfg = await api.get<{ feature_flags?: Record<string, boolean>; default_signup_tier?: string; maintenance_mode?: boolean }>("/v1/admin/config");
+      if (cfg.feature_flags) {
+        setFlags(DEFAULT_FLAGS.map((f) => ({ ...f, enabled: cfg.feature_flags![f.key] ?? f.enabled })));
+      }
+      if (cfg.default_signup_tier) setDefaultTier(cfg.default_signup_tier);
+      if (cfg.maintenance_mode !== undefined) setMaintenanceMode(cfg.maintenance_mode);
+    } catch { /* use defaults */ }
+  }, []);
+
+  useEffect(() => { loadConfig(); }, [loadConfig]);
 
   if (!user?.is_superuser) return <NotFound />;
 
@@ -115,32 +130,23 @@ export default function ConfigPage() {
     setFlags((prev) => prev.map((f) => f.key === key ? { ...f, enabled: val } : f));
   };
 
-  const handleSave = () => {
-    setToastVisible(true);
-    setTimeout(() => setToastVisible(false), 3000);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const flagMap: Record<string, boolean> = {};
+      flags.forEach((f) => { flagMap[f.key] = f.enabled; });
+      await api.fetch("/v1/admin/config", {
+        method: "PATCH",
+        body: JSON.stringify({ feature_flags: flagMap, default_signup_tier: defaultTier, maintenance_mode: maintenanceMode }),
+      });
+      setToastVisible(true);
+      setTimeout(() => setToastVisible(false), 3000);
+    } catch (e: unknown) { alert(e instanceof Error ? e.message : "Save failed"); }
+    finally { setSaving(false); }
   };
 
   return (
     <div style={{ padding: "28px 32px", minHeight: "calc(100vh - 92px)", background: S.bgDeep }}>
-      {/* DEMO DATA Banner */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 16px",
-          background: "#FFFBEB",
-          border: `1px solid ${S.accentAmber}`,
-          borderRadius: 5,
-          marginBottom: 20,
-        }}
-      >
-        <span style={{ color: S.accentAmber, fontSize: 14 }}>⚠</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.accentAmber, fontWeight: 600, letterSpacing: "0.04em" }}>
-          DEMO DATA — Configuration API not yet wired. Changes are UI-only and will not persist.
-        </span>
-      </div>
-
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
@@ -166,7 +172,7 @@ export default function ConfigPage() {
             cursor: "pointer",
           }}
         >
-          SAVE CHANGES
+          {saving ? "SAVING..." : "SAVE CHANGES"}
         </button>
       </div>
 

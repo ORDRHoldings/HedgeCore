@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth/store";
+import { api } from "@/lib/api/client";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -34,107 +36,87 @@ function NotFound() {
 interface Tenant {
   id: string;
   name: string;
-  tier: "ENTERPRISE" | "SMB" | "LITE" | "TRIAL";
-  users: number;
-  positions: number;
-  runs: number;
-  created: string;
-  status: "ACTIVE" | "SUSPENDED" | "TRIAL";
+  slug: string;
+  plan_tier: string;
+  is_active: boolean;
+  user_count: number;
+  position_count: number;
+  run_count: number;
+  created_at: string;
 }
 
-const MOCK_TENANTS: Tenant[] = [
-  { id: "t1", name: "DemoCo", tier: "SMB", users: 4, positions: 12, runs: 7, created: "2025-01-15", status: "ACTIVE" },
-  { id: "t2", name: "Apex Treasury", tier: "ENTERPRISE", users: 18, positions: 340, runs: 214, created: "2024-09-03", status: "ACTIVE" },
-  { id: "t3", name: "NordicFX Ltd", tier: "SMB", users: 7, positions: 55, runs: 38, created: "2024-11-20", status: "ACTIVE" },
-  { id: "t4", name: "SandboxCo", tier: "LITE", users: 1, positions: 0, runs: 0, created: "2026-02-01", status: "TRIAL" },
-  { id: "t5", name: "Meridian Capital", tier: "ENTERPRISE", users: 31, positions: 812, runs: 591, created: "2024-06-12", status: "ACTIVE" },
-  { id: "t6", name: "Volta FX", tier: "SMB", users: 5, positions: 28, runs: 12, created: "2025-08-19", status: "ACTIVE" },
-  { id: "t7", name: "TrialUser Inc", tier: "LITE", users: 2, positions: 3, runs: 1, created: "2026-01-28", status: "TRIAL" },
-  { id: "t8", name: "OldCorp", tier: "SMB", users: 0, positions: 0, runs: 0, created: "2024-03-07", status: "SUSPENDED" },
-];
-
 const TIER_STYLES: Record<string, { bg: string; color: string }> = {
-  ENTERPRISE: { bg: "#EFF6FF", color: "#1C62F2" },
-  SMB: { bg: "#D1FAE5", color: "#059669" },
-  LITE: { bg: "#F1F5F9", color: "#94A3B8" },
-  TRIAL: { bg: "#FFFBEB", color: "#D97706" },
+  enterprise: { bg: "#EFF6FF", color: "#1C62F2" },
+  smb: { bg: "#D1FAE5", color: "#059669" },
+  professional: { bg: "#D1FAE5", color: "#059669" },
+  lite: { bg: "#F1F5F9", color: "#94A3B8" },
 };
 
 function TierBadge({ tier }: { tier: string }) {
-  const cfg = TIER_STYLES[tier] ?? TIER_STYLES.LITE;
+  const cfg = TIER_STYLES[tier.toLowerCase()] ?? TIER_STYLES.lite;
   return (
-    <span
-      style={{
-        fontFamily: S.fontMono,
-        fontSize: 10,
-        fontWeight: 700,
-        letterSpacing: "0.06em",
-        padding: "2px 8px",
-        borderRadius: 3,
-        background: cfg.bg,
-        color: cfg.color,
-      }}
-    >
-      {tier}
+    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", padding: "2px 8px", borderRadius: 3, background: cfg.bg, color: cfg.color }}>
+      {tier.toUpperCase()}
     </span>
   );
 }
 
-function StatusDot({ status }: { status: string }) {
-  const color =
-    status === "ACTIVE" ? "#059669" : status === "TRIAL" ? "#D97706" : "#DC2626";
+function StatusDot({ active }: { active: boolean }) {
+  const color = active ? "#059669" : "#DC2626";
   return (
     <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, display: "inline-block" }} />
-      <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color }}>{status}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color }}>{active ? "ACTIVE" : "SUSPENDED"}</span>
     </span>
   );
 }
 
 export default function TenantsPage() {
   const { user } = useAuthStore();
+  const router = useRouter();
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<string>("ALL");
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", slug: "", tier: "SMB" });
+  const [createForm, setCreateForm] = useState({ name: "", slug: "", tier: "smb" });
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true); setApiError(null);
+      const data = await api.get<Tenant[]>("/v1/admin/tenants");
+      setTenants(data);
+    } catch (e: unknown) {
+      setApiError(e instanceof Error ? e.message : "Failed to load tenants");
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   if (!user?.is_superuser) return <NotFound />;
 
-  const filtered = MOCK_TENANTS.filter((t) => {
-    const matchSearch =
-      search === "" ||
-      t.name.toLowerCase().includes(search.toLowerCase());
-    const matchTier = tierFilter === "ALL" || t.tier === tierFilter;
+  const filtered = tenants.filter((t) => {
+    const matchSearch = search === "" || t.name.toLowerCase().includes(search.toLowerCase()) || t.slug.toLowerCase().includes(search.toLowerCase());
+    const matchTier = tierFilter === "ALL" || t.plan_tier.toUpperCase() === tierFilter;
     return matchSearch && matchTier;
   });
 
   const counts = {
-    LITE: MOCK_TENANTS.filter((t) => t.tier === "LITE").length,
-    SMB: MOCK_TENANTS.filter((t) => t.tier === "SMB").length,
-    ENTERPRISE: MOCK_TENANTS.filter((t) => t.tier === "ENTERPRISE").length,
-    TRIAL: MOCK_TENANTS.filter((t) => t.status === "TRIAL").length,
+    LITE: tenants.filter((t) => t.plan_tier === "lite").length,
+    SMB: tenants.filter((t) => ["smb", "professional"].includes(t.plan_tier)).length,
+    ENTERPRISE: tenants.filter((t) => t.plan_tier === "enterprise").length,
+    SUSPENDED: tenants.filter((t) => !t.is_active).length,
   };
 
   return (
     <div style={{ padding: "28px 32px", minHeight: "calc(100vh - 92px)", background: S.bgDeep }}>
-      {/* DEMO DATA Banner */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 16px",
-          background: "#FFFBEB",
-          border: `1px solid ${S.accentAmber}`,
-          borderRadius: 5,
-          marginBottom: 20,
-        }}
-      >
-        <span style={{ color: S.accentAmber, fontSize: 14 }}>⚠</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.accentAmber, fontWeight: 600, letterSpacing: "0.04em" }}>
-          DEMO DATA — Tenant management API not yet available. Displaying mock tenant records.
-        </span>
-      </div>
+      {apiError && (
+        <div style={{ display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:"#FEF2F2",border:`1px solid ${S.accentRed}`,borderRadius:5,marginBottom:20 }}>
+          <span style={{ fontFamily:S.fontMono,fontSize:11,color:S.accentRed }}>{apiError}</span>
+          <button onClick={load} style={{ background:"none",border:"none",color:S.accentCyan,cursor:"pointer",fontFamily:S.fontMono,fontSize:11 }}>Retry</button>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
@@ -237,36 +219,32 @@ export default function TenantsPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((t) => (
-              <tr key={t.id} style={{ borderBottom: `1px solid ${S.rim}` }}>
+            {loading && (
+              <tr><td colSpan={8} style={{ padding:"40px 16px",textAlign:"center",fontFamily:S.fontMono,fontSize:12,color:S.textTertiary }}>Loading tenants...</td></tr>
+            )}
+            {!loading && filtered.length === 0 && (
+              <tr><td colSpan={8} style={{ padding:"40px 16px",textAlign:"center",fontFamily:S.fontUI,fontSize:13,color:S.textTertiary }}>No tenants match the current filters.</td></tr>
+            )}
+            {!loading && filtered.map((t) => (
+              <tr key={t.id} style={{ borderBottom: `1px solid ${S.rim}`, cursor:"pointer" }}
+                onClick={() => router.push(`/admin/tenants/${t.id}`)}
+                onMouseEnter={e=>(e.currentTarget.style.background=S.bgSub)} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
                 <td style={{ padding: "11px 16px", fontFamily: S.fontMono, fontSize: 13, fontWeight: 600, color: S.textPrimary }}>
                   {t.name}
+                  <div style={{ fontFamily:S.fontMono,fontSize:10,color:S.textTertiary,marginTop:2 }}>{t.slug}</div>
                 </td>
                 <td style={{ padding: "11px 16px" }}>
-                  <TierBadge tier={t.tier} />
+                  <TierBadge tier={t.plan_tier} />
                 </td>
-                <td style={{ padding: "11px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>{t.users}</td>
-                <td style={{ padding: "11px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>{t.positions}</td>
-                <td style={{ padding: "11px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>{t.runs}</td>
-                <td style={{ padding: "11px 16px", fontFamily: S.fontMono, fontSize: 11, color: S.textTertiary }}>{t.created}</td>
+                <td style={{ padding: "11px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>{t.user_count}</td>
+                <td style={{ padding: "11px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>{t.position_count.toLocaleString()}</td>
+                <td style={{ padding: "11px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>{t.run_count}</td>
+                <td style={{ padding: "11px 16px", fontFamily: S.fontMono, fontSize: 11, color: S.textTertiary }}>{t.created_at?.slice(0,10)}</td>
                 <td style={{ padding: "11px 16px" }}>
-                  <StatusDot status={t.status} />
+                  <StatusDot active={t.is_active} />
                 </td>
                 <td style={{ padding: "11px 16px" }}>
-                  <button
-                    style={{
-                      fontFamily: S.fontMono,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: S.accentCyan,
-                      background: "transparent",
-                      border: `1px solid ${S.accentCyan}`,
-                      borderRadius: 4,
-                      padding: "3px 10px",
-                      cursor: "pointer",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
+                  <button style={{ fontFamily:S.fontMono,fontSize:10,fontWeight:700,color:S.accentCyan,background:"transparent",border:`1px solid ${S.accentCyan}`,borderRadius:4,padding:"3px 10px",cursor:"pointer",letterSpacing:"0.05em" }}>
                     MANAGE →
                   </button>
                 </td>
@@ -291,7 +269,7 @@ export default function TenantsPage() {
           { label: "LITE", count: counts.LITE },
           { label: "SMB", count: counts.SMB },
           { label: "ENTERPRISE", count: counts.ENTERPRISE },
-          { label: "TRIALS", count: counts.TRIAL },
+          { label: "SUSPENDED", count: counts.SUSPENDED },
         ].map((item) => (
           <div key={item.label} style={{ display: "flex", gap: 6, alignItems: "baseline" }}>
             <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: S.textTertiary }}>
@@ -303,7 +281,7 @@ export default function TenantsPage() {
           </div>
         ))}
         <div style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 11, color: S.textTertiary }}>
-          {MOCK_TENANTS.length} total tenants
+          {tenants.length} total tenants
         </div>
       </div>
 
@@ -415,35 +393,18 @@ export default function TenantsPage() {
                   <option>LITE</option>
                 </select>
               </div>
-              <div
-                style={{
-                  padding: "10px 14px",
-                  background: "#FFFBEB",
-                  border: `1px solid ${S.accentAmber}`,
-                  borderRadius: 5,
-                  fontFamily: S.fontMono,
-                  fontSize: 11,
-                  color: S.accentAmber,
-                }}
-              >
-                Company creation endpoint stubbed — not yet wired to backend.
-              </div>
               <button
-                style={{
-                  fontFamily: S.fontMono,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: "0.06em",
-                  color: S.bgPanel,
-                  background: S.accentRed,
-                  border: "none",
-                  borderRadius: 5,
-                  padding: "10px",
-                  cursor: "pointer",
-                  marginTop: 8,
+                onClick={async () => {
+                  try {
+                    await api.fetch("/v1/admin/tenants", { method:"POST", body: JSON.stringify({ name: createForm.name, slug: createForm.slug, plan_tier: createForm.tier.toLowerCase() }) });
+                    setShowCreate(false);
+                    setCreateForm({ name:"", slug:"", tier:"smb" });
+                    load();
+                  } catch (e:unknown) { alert(e instanceof Error ? e.message : "Create failed"); }
                 }}
+                style={{ fontFamily:S.fontMono,fontSize:12,fontWeight:700,letterSpacing:"0.06em",color:S.bgPanel,background:S.accentRed,border:"none",borderRadius:5,padding:"10px",cursor:"pointer",marginTop:8 }}
               >
-                CREATE COMPANY (STUB)
+                CREATE COMPANY
               </button>
             </div>
           </div>

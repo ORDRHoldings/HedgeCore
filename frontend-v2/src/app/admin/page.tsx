@@ -49,13 +49,7 @@ interface AuditEvent {
   hash?: string;
 }
 
-const MOCK_TENANTS = [
-  { name: "DemoCo", tier: "SMB", users: 4, positions: 12, status: "ACTIVE" },
-  { name: "Apex Treasury", tier: "ENTERPRISE", users: 18, positions: 340, status: "ACTIVE" },
-  { name: "NordicFX Ltd", tier: "SMB", users: 7, positions: 55, status: "ACTIVE" },
-  { name: "SandboxCo", tier: "LITE", users: 1, positions: 0, status: "TRIAL" },
-  { name: "Meridian Capital", tier: "ENTERPRISE", users: 31, positions: 812, status: "ACTIVE" },
-];
+interface TenantSummary { id: string; name: string; plan_tier: string; user_count: number; position_count: number; is_active: boolean; }
 
 function TierBadge({ tier }: { tier: string }) {
   const map: Record<string, { bg: string; color: string }> = {
@@ -121,19 +115,22 @@ export default function AdminWarRoom() {
   const { user } = useAuthStore();
   const [schemaHealth, setSchemaHealth] = useState<SchemaHealth | null>(null);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [tenants, setTenants] = useState<TenantSummary[]>([]);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const fetchData = useCallback(async () => {
     try {
-      const [health, events] = await Promise.allSettled([
+      const [health, events, tlist] = await Promise.allSettled([
         api.get<SchemaHealth>("/system/schema-health"),
-        api.get<{ items: AuditEvent[] } | AuditEvent[]>("/v1/audit?limit=20"),
+        api.get<{ items: AuditEvent[] } | AuditEvent[]>("/v1/admin/activity?limit=20"),
+        api.get<TenantSummary[]>("/v1/admin/tenants"),
       ]);
       if (health.status === "fulfilled") setSchemaHealth(health.value);
       if (events.status === "fulfilled") {
         const val = events.value;
         setAuditEvents(Array.isArray(val) ? val : (val as { items: AuditEvent[] }).items ?? []);
       }
+      if (tlist.status === "fulfilled") setTenants(tlist.value.slice(0, 5));
     } catch {
       // ignore
     }
@@ -264,34 +261,18 @@ export default function AdminWarRoom() {
               </tr>
             </thead>
             <tbody>
-              {MOCK_TENANTS.map((t) => (
-                <tr
-                  key={t.name}
-                  style={{ borderBottom: `1px solid ${S.rim}` }}
-                >
-                  <td style={{ padding: "9px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textPrimary, fontWeight: 600 }}>
-                    {t.name}
-                  </td>
+              {tenants.length === 0 && (
+                <tr><td colSpan={5} style={{ padding: "16px", fontFamily: S.fontMono, fontSize: 11, color: S.textTertiary, textAlign: "center" }}>Loading tenants...</td></tr>
+              )}
+              {tenants.map((t) => (
+                <tr key={t.id} style={{ borderBottom: `1px solid ${S.rim}` }}>
+                  <td style={{ padding: "9px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textPrimary, fontWeight: 600 }}>{t.name}</td>
+                  <td style={{ padding: "9px 16px" }}><TierBadge tier={t.plan_tier.toUpperCase()} /></td>
+                  <td style={{ padding: "9px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>{t.user_count}</td>
+                  <td style={{ padding: "9px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>{t.position_count}</td>
                   <td style={{ padding: "9px 16px" }}>
-                    <TierBadge tier={t.tier} />
-                  </td>
-                  <td style={{ padding: "9px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>
-                    {t.users}
-                  </td>
-                  <td style={{ padding: "9px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>
-                    {t.positions}
-                  </td>
-                  <td style={{ padding: "9px 16px" }}>
-                    <span
-                      style={{
-                        fontFamily: S.fontMono,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: t.status === "ACTIVE" ? S.statusPass : S.accentAmber,
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      {t.status}
+                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: t.is_active ? S.statusPass : S.accentAmber, letterSpacing: "0.06em" }}>
+                      {t.is_active ? "ACTIVE" : "SUSPENDED"}
                     </span>
                   </td>
                 </tr>

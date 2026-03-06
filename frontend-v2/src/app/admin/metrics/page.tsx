@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/lib/auth/store";
+import { api } from "@/lib/api/client";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -38,7 +39,7 @@ const KPI_DATA: Record<string, { signups: number; dau: number; conversions: numb
   "Last 90 days": { signups: 134, dau: 45, conversions: 23, mrr: "$14,200" },
 };
 
-const FUNNEL_STEPS = [
+const STATIC_FUNNEL_STEPS = [
   { label: "Signup", count: 134, pct: 100 },
   { label: "Upload Data", count: 89, pct: 66 },
   { label: "Audit Complete", count: 61, pct: 46 },
@@ -76,34 +77,60 @@ function KpiCard({ label, value, sub, color }: { label: string; value: string | 
   );
 }
 
+interface ApiMetrics {
+  period_days: number; total_users: number; signups_in_period: number;
+  active_users_in_period: number; total_companies: number; smb_companies: number;
+  enterprise_companies: number; free_users: number; calc_runs_in_period: number;
+  audit_runs_in_period: number; mrr_usd: number; conversions_in_period: number;
+}
+
+interface FunnelStep { label: string; count: number; pct: number; }
+interface ApiFunnel { period_days: number; steps: FunnelStep[]; }
+
 export default function MetricsPage() {
   const { user } = useAuthStore();
   const [period, setPeriod] = useState<typeof PERIODS[number]>("Last 30 days");
+  const [metrics, setMetrics] = useState<ApiMetrics | null>(null);
+  const [funnel, setFunnel] = useState<FunnelStep[] | null>(null);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
+
+  const periodDays = period === "Last 7 days" ? 7 : period === "Last 90 days" ? 90 : 30;
+
+  const load = useCallback(async () => {
+    try {
+      setLoadingMetrics(true);
+      const [m, f] = await Promise.all([
+        api.get<ApiMetrics>(`/v1/admin/metrics?days=${periodDays}`),
+        api.get<ApiFunnel>(`/v1/admin/metrics/funnel?days=${periodDays}`),
+      ]);
+      setMetrics(m);
+      setFunnel(f.steps);
+    } catch { /* falls back to mock data below */ }
+    finally { setLoadingMetrics(false); }
+  }, [periodDays]);
+
+  useEffect(() => { load(); }, [load]);
 
   if (!user?.is_superuser) return <NotFound />;
 
-  const kpi = KPI_DATA[period];
+  const funnelSteps = funnel ?? STATIC_FUNNEL_STEPS;
+
+  // Fall back to local mock if API not available
+  const kpi = metrics ? {
+    signups: metrics.signups_in_period,
+    dau: metrics.active_users_in_period,
+    conversions: metrics.conversions_in_period,
+    mrr: `$${metrics.mrr_usd.toLocaleString()}`,
+  } : KPI_DATA[period];
 
   return (
     <div style={{ padding: "28px 32px", minHeight: "calc(100vh - 92px)", background: S.bgDeep }}>
-      {/* DEMO DATA Banner */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 16px",
-          background: "#FFFBEB",
-          border: `1px solid ${S.accentAmber}`,
-          borderRadius: 5,
-          marginBottom: 20,
-        }}
-      >
-        <span style={{ color: S.accentAmber, fontSize: 14 }}>⚠</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.accentAmber, fontWeight: 600, letterSpacing: "0.04em" }}>
-          DEMO DATA — Metrics API not yet available. Displaying mock analytics data.
-        </span>
-      </div>
+      {loadingMetrics && <div style={{ padding:"10px 16px",marginBottom:20,fontFamily:S.fontMono,fontSize:11,color:S.textTertiary }}>Loading metrics...</div>}
+      {!loadingMetrics && !metrics && (
+        <div style={{ padding:"10px 16px",background:"#FFFBEB",border:`1px solid ${S.accentAmber}`,borderRadius:5,marginBottom:20,fontFamily:S.fontMono,fontSize:11,color:S.accentAmber }}>
+          Metrics API unavailable — showing estimated data
+        </div>
+      )}
 
       {/* Header + Period selector */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
@@ -156,8 +183,8 @@ export default function MetricsPage() {
             </span>
           </div>
           <div style={{ padding: "20px" }}>
-            {FUNNEL_STEPS.map((step, i) => (
-              <div key={step.label} style={{ marginBottom: i < FUNNEL_STEPS.length - 1 ? 16 : 0 }}>
+            {funnelSteps.map((step, i) => (
+              <div key={step.label} style={{ marginBottom: i < funnelSteps.length - 1 ? 16 : 0 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
                   <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.textSecondary, fontWeight: 600 }}>
                     {step.label}
@@ -178,7 +205,7 @@ export default function MetricsPage() {
                       width: `${step.pct}%`,
                       background: i === 0
                         ? S.accentCyan
-                        : i === FUNNEL_STEPS.length - 1
+                        : i === funnelSteps.length - 1
                         ? S.statusPass
                         : `rgba(28,98,242,${0.85 - i * 0.15})`,
                       borderRadius: 4,
@@ -186,9 +213,9 @@ export default function MetricsPage() {
                     }}
                   />
                 </div>
-                {i < FUNNEL_STEPS.length - 1 && (
+                {i < funnelSteps.length - 1 && (
                   <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.textTertiary, marginTop: 3, textAlign: "right" }}>
-                    ↓ {Math.round((FUNNEL_STEPS[i + 1].count / step.count) * 100)}% continue
+                    ↓ {Math.round((funnelSteps[i + 1].count / step.count) * 100)}% continue
                   </div>
                 )}
               </div>
