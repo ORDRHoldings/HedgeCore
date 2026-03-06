@@ -29,6 +29,7 @@ from app.api.routes.v1_calculate import router as v1_calculate_router
 from app.api.routes.v1_connectors import router as v1_connectors_router
 
 # Phase 1 ? Institutional governance
+from app.api.routes.v1_analytics import router as v1_analytics_router
 from app.api.routes.v1_execution_proposals import router as v1_proposals_router
 from app.api.routes.v1_export import router as v1_export_router
 from app.api.routes.v1_pipeline import router as v1_pipeline_router
@@ -98,6 +99,9 @@ router.include_router(v1_positions_router)
 
 # V1 Policy DB (owns /v1/policies)
 router.include_router(v1_policies_router)
+
+# V1 Analytics (owns /v1/analytics)
+router.include_router(v1_analytics_router)
 
 # Market Data (owns /v1/market)
 router.include_router(market_router)

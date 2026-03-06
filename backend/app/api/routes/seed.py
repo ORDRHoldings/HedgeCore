@@ -879,7 +879,7 @@ async def seed_company(
 
                 user = User(
 
-                    email=email, hashed_password=hash_password(pw),
+                    email=email, hashed_password=hash_password(pw, _skip_length_check=True),
 
                     full_name=full_name, job_title=job_title,
 
@@ -899,7 +899,7 @@ async def seed_company(
 
                 # Resync all fields including password so prod DB stays in sync
 
-                user.hashed_password = hash_password(pw)
+                user.hashed_password = hash_password(pw, _skip_length_check=True)
 
                 user.full_name = full_name
 
@@ -998,7 +998,7 @@ async def reset_seed_passwords(
             r = await db.execute(select(User).where(User.email == email))
             user = r.scalars().first()
             if user:
-                user.hashed_password = hash_password(pw)
+                user.hashed_password = hash_password(pw, _skip_length_check=True)
                 user.is_active = True
                 user.company_id = COMPANY_ID
                 user.branch_id = branch_id

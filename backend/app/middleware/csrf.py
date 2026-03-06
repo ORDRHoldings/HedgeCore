@@ -32,6 +32,7 @@ _CSRF_EXEMPT_PREFIXES = (
     "/api/auth/",       # Auth routes: /api/auth/login, /api/auth/refresh, etc.
     "/api/v1/auth/",    # Alias if auth ever moves under /v1
     "/auth/",           # Bare auth prefix
+    "/api/v1/seed/",    # Seed endpoints use X-API-Key auth, not browser sessions
     "/docs",
     "/openapi.json",
     "/redoc",

@@ -70,7 +70,7 @@ async def list_templates(
 
     q = select(PolicyTemplate).where(
 
-        (PolicyTemplate.company_id is None) |        # system templates
+        (PolicyTemplate.company_id.is_(None)) |        # system templates
 
         (PolicyTemplate.company_id == user.company_id)  # company templates
 
