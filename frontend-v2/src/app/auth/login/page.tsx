@@ -266,7 +266,7 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <label style={S.label}>Email</label>
+          <label style={S.label}>Email / Username</label>
           <div
             style={{
               ...S.inputWrapper,
@@ -275,14 +275,14 @@ export default function LoginPage() {
           >
             <input
               style={S.input}
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onFocus={() => setEmailFocused(true)}
               onBlur={() => setEmailFocused(false)}
-              placeholder="you@company.com"
+              placeholder="you@company.com or username"
               required
-              autoComplete="email"
+              autoComplete="username"
               autoFocus
             />
           </div>
