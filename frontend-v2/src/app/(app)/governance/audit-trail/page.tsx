@@ -69,13 +69,13 @@ function AuditTrailContent() {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
 
-  const eventsQ = useQuery<AuditEvent[]>({
+  const eventsQ = useQuery<{ items: AuditEvent[]; total: number }>({
     queryKey: ["audit-events"],
-    queryFn: () => api.get<AuditEvent[]>("/v1/audit?limit=100"),
+    queryFn: () => api.get<{ items: AuditEvent[]; total: number }>("/v1/audit?limit=100"),
     enabled: !!token,
   });
 
-  const events: AuditEvent[] = eventsQ.data ?? [];
+  const events: AuditEvent[] = eventsQ.data?.items ?? [];
 
   const eventTypes = useMemo(
     () => [...new Set(events.map((e) => e.event_type))].sort(),

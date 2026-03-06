@@ -491,7 +491,7 @@ function SmbDashboard({ isEnterprise }: { isEnterprise: boolean }) {
     queryFn: () => api.get<DashboardRun[]>("/v1/dashboard/recent-runs"),
   });
 
-  const chainQ = useQuery<{ is_intact: boolean; chain_length: number }>({
+  const chainQ = useQuery<{ is_intact: boolean; chain_length?: number; events_checked?: number }>({
     queryKey: ["audit-chain-status"],
     queryFn: () => api.get("/v1/audit/chain/verify"),
     enabled: isEnterprise,
@@ -644,7 +644,7 @@ function SmbDashboard({ isEnterprise }: { isEnterprise: boolean }) {
                   {chainQ.data.is_intact ? "INTACT" : "BROKEN"}
                 </span>
                 <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.textTertiary }}>
-                  · {chainQ.data.chain_length.toLocaleString()} events
+                  · {(chainQ.data.events_checked ?? chainQ.data.chain_length ?? 0).toLocaleString()} events
                 </span>
               </div>
             ) : (

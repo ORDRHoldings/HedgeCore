@@ -50,9 +50,9 @@ function StagingContent() {
   const { token } = useAuthStore();
   const qc = useQueryClient();
 
-  const stagingQ = useQuery<StagingItem[]>({
+  const stagingQ = useQuery<{ artifacts: StagingItem[]; total: number }>({
     queryKey: ["staging-queue"],
-    queryFn: () => api.get<StagingItem[]>("/v1/pipeline/staging"),
+    queryFn: () => api.get<{ artifacts: StagingItem[]; total: number }>("/v1/pipeline/staging"),
     enabled: !!token,
     refetchInterval: 30_000,
   });
@@ -65,7 +65,7 @@ function StagingContent() {
     },
   });
 
-  const items: StagingItem[] = stagingQ.data ?? [];
+  const items: StagingItem[] = stagingQ.data?.artifacts ?? [];
 
   return (
     <div style={{ fontFamily: S.fontUI }}>

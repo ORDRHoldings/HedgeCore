@@ -77,13 +77,13 @@ function StatusBadge({ status }: { status: string }) {
 function LedgerContent() {
   const { token } = useAuthStore();
 
-  const ledgerQ = useQuery<LedgerEntry[]>({
+  const ledgerQ = useQuery<{ entries: LedgerEntry[]; total: number }>({
     queryKey: ["ledger"],
-    queryFn: () => api.get<LedgerEntry[]>("/v1/pipeline/ledger"),
+    queryFn: () => api.get<{ entries: LedgerEntry[]; total: number }>("/v1/pipeline/ledger"),
     enabled: !!token,
   });
 
-  const entries: LedgerEntry[] = ledgerQ.data ?? [];
+  const entries: LedgerEntry[] = ledgerQ.data?.entries ?? [];
 
   return (
     <div style={{ fontFamily: S.fontUI }}>
