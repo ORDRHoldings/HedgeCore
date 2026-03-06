@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/auth/store";
-import api from "@/lib/api/client";
+import { api } from "@/lib/api/client";
 import PageHeader from "@/components/layout/PageHeader";
 import TierGateClient from "@/components/tier/TierGateClient";
 
@@ -274,10 +274,7 @@ export default function PortfolioAnalyticsPage() {
 
   const { data, isLoading, isError, error } = useQuery<PortfolioData>({
     queryKey: ["analytics", "portfolio"],
-    queryFn: async () => {
-      const res = await api.get("/v1/analytics/portfolio");
-      return res.data;
-    },
+    queryFn: () => api.get<PortfolioData>("/v1/analytics/portfolio"),
     enabled: !!token,
     staleTime: 30_000,
     retry: 2,

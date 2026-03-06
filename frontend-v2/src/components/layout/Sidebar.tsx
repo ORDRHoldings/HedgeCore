@@ -319,11 +319,11 @@ export function Sidebar() {
 
         {/* User row */}
         <div style={{
-          marginTop: 6,
+          marginTop: 4,
           padding: collapsed ? "7px 0" : "7px 10px",
           display: "flex", alignItems: "center", gap: 8,
           justifyContent: collapsed ? "center" : "flex-start",
-          borderTop: `1px solid ${N.border}`, marginTop: 4,
+          borderTop: `1px solid ${N.border}`,
         }}>
           <div style={{
             width: 26, height: 26, borderRadius: 3,

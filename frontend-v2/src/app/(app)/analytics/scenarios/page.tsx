@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/auth/store";
-import api from "@/lib/api/client";
+import { api } from "@/lib/api/client";
 import { PageHeader } from "@/components/layout/PageHeader";
 import TierGateClient from "@/components/tier/TierGateClient";
 
@@ -591,10 +591,7 @@ function ScenariosContent() {
 
   const { data, isLoading, error } = useQuery<ScenariosResponse>({
     queryKey: ["analytics-scenarios"],
-    queryFn: async () => {
-      const res = await api.get("/v1/analytics/scenarios");
-      return res.data;
-    },
+    queryFn: () => api.get<ScenariosResponse>("/v1/analytics/scenarios"),
     enabled: !!token,
     staleTime: 5 * 60 * 1000,
     retry: 1,
