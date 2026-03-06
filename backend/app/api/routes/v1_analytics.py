@@ -55,8 +55,8 @@ async def get_portfolio_analytics(
     """Portfolio risk analytics derived from live positions."""
     exposure_rows = await session.execute(text("""
         SELECT currency,
-               COALESCE(SUM(notional_usd) FILTER (WHERE status NOT IN ('REJECTED','CANCELLED')), 0) AS gross_usd,
-               COALESCE(SUM(notional_usd) FILTER (WHERE status IN ('HEDGED')), 0) AS hedged_usd,
+               COALESCE(SUM(amount) FILTER (WHERE status NOT IN ('REJECTED','CANCELLED')), 0) AS gross_usd,
+               COALESCE(SUM(COALESCE(hedge_amount, amount)) FILTER (WHERE status = 'HEDGED'), 0) AS hedged_usd,
                COUNT(*) FILTER (WHERE status NOT IN ('REJECTED','CANCELLED')) AS cnt
         FROM positions
         WHERE company_id = :cid
@@ -140,7 +140,7 @@ async def get_scenario_analysis(
     """Historical stress scenario P&L impact on unhedged exposure."""
     exposure_rows = await session.execute(text("""
         SELECT currency,
-               COALESCE(SUM(notional_usd) FILTER (WHERE status NOT IN ('REJECTED','CANCELLED','HEDGED')), 0) AS unhedged_usd
+               COALESCE(SUM(amount) FILTER (WHERE status NOT IN ('REJECTED','CANCELLED','HEDGED')), 0) AS unhedged_usd
         FROM positions
         WHERE company_id = :cid
         GROUP BY currency

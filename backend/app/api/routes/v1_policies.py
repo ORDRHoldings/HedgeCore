@@ -92,7 +92,7 @@ async def get_seed_status(
     result = await session.execute(
         select(func.count()).where(
             PolicyTemplate.is_system,
-            PolicyTemplate.company_id is None,
+            PolicyTemplate.company_id.is_(None),
         )
     )
     count = result.scalar_one() or 0
@@ -101,7 +101,7 @@ async def get_seed_status(
     existing_result = await session.execute(
         select(PolicyTemplate.short_name).where(
             PolicyTemplate.is_system,
-            PolicyTemplate.company_id is None,
+            PolicyTemplate.company_id.is_(None),
         )
     )
     existing_short_names = {row[0] for row in existing_result.all()}
