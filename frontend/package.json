@@ -8,7 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "e2e": "playwright test",
-    "e2e:report": "playwright show-report"
+    "e2e:report": "playwright show-report",
+    "render:validate": "pwsh -NoProfile -NonInteractive -File ../scripts/render/validate.ps1",
+    "render:services": "pwsh -NoProfile -NonInteractive -File ../scripts/render/list-services.ps1",
+    "render:deploy:api": "pwsh -NoProfile -NonInteractive -File ../scripts/render/deploy-api.ps1",
+    "render:deploy:preview": "pwsh -NoProfile -NonInteractive -File ../scripts/render/deploy-web.ps1 -Target api-preview",
+    "render:env-check": "pwsh -NoProfile -NonInteractive -File ../scripts/render/env-check.ps1"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.9.0",

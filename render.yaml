@@ -4,13 +4,16 @@
 # SETUP INSTRUCTIONS:
 # 1. In Render dashboard → New → Blueprint → connect this repo
 # 2. Create two "Env Groups" in Render:
-#    - hedgecore-secrets        (production DB + JWT_SECRET)
-#    - hedgecore-preview-secrets (preview DB + JWT_SECRET)
+#    - hedgecore-secrets          (production DB + JWT_SECRET + API keys)
+#    - hedgecore-preview-secrets  (preview DB + JWT_SECRET)
 # 3. Render will auto-create both services + both databases from this file
 #
 # WORKFLOW:
-#   dev branch  → hedgecore-preview service  (safe to break, separate DB)
-#   master branch → hedgecore service        (production, stable)
+#   master branch → hedgecore service       (production, stable)
+#   dev branch    → hedgecore-preview service (safe to break, separate DB)
+#
+# CLI AUTOMATION:
+#   See docs/ops/render-cli.md and scripts/render/ for scripted workflows.
 
 services:
   # ── Production Backend (master branch) ──────────────────────────────────────
@@ -22,12 +25,21 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     branch: master
     plan: free
-    healthCheckPath: /api/health
+    healthCheckPath: /health
+    # Only rebuild on backend changes — skip frontend/docs-only pushes
+    buildFilter:
+      paths:
+        - backend/**
+      ignoredPaths:
+        - frontend/**
+        - docs/**
+        - "*.md"
+        - scripts/**
     envVars:
       - key: ENV
         value: production
       - key: PYTHON_VERSION
-        value: "3.11"
+        value: "3.12"
       - key: JWT_SECRET
         fromGroup: hedgecore-secrets
       - key: DATABASE_URL
@@ -40,6 +52,10 @@ services:
         fromGroup: hedgecore-secrets
       - key: VOICE_CLAUDE_MODEL
         value: "claude-sonnet-4-6"
+      - key: FINNHUB_API_KEY
+        fromGroup: hedgecore-secrets
+      - key: ALLOW_INDICATIVE_FALLBACK
+        value: "false"
 
   # ── Preview Backend (dev branch) ────────────────────────────────────────────
   - type: web
@@ -50,12 +66,19 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     branch: dev
     plan: free
-    healthCheckPath: /api/health
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - backend/**
+      ignoredPaths:
+        - frontend/**
+        - docs/**
+        - "*.md"
     envVars:
       - key: ENV
         value: preview
       - key: PYTHON_VERSION
-        value: "3.11"
+        value: "3.12"
       - key: JWT_SECRET
         fromGroup: hedgecore-preview-secrets
       - key: DATABASE_URL
@@ -64,6 +87,8 @@ services:
         fromGroup: hedgecore-preview-secrets
       - key: CORS_ALLOW_ORIGINS
         value: '["http://localhost:3000","http://127.0.0.1:3000","https://hedgecore-git-dev-synexiun-projects.vercel.app"]'
+      - key: ALLOW_INDICATIVE_FALLBACK
+        value: "true"
 
 databases:
   # ── Production Database ──────────────────────────────────────────────────────
