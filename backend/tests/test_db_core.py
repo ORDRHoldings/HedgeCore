@@ -8,6 +8,8 @@ import pytest
 from sqlalchemy import text
 from app.core.db import async_engine, init_engine, shutdown_engine
 
+pytestmark = pytest.mark.requires_postgres
+
 
 @pytest.mark.asyncio
 async def test_database_connectivity():

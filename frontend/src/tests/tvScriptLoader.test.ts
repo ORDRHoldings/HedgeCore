@@ -465,7 +465,7 @@ async function runCurrencyContextTests() {
   function makeMarket(primary_currency?: string, currency_pair?: string) {
     return {
       as_of: '2025-01-01T00:00:00Z',
-      spot_usdmxn: 17.5,
+      spot_rate: 17.5,
       forward_points_by_month: {},
       provider_metadata: {
         ...(primary_currency ? { primary_currency } : {}),

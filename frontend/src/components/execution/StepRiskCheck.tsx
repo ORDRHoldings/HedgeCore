@@ -148,7 +148,7 @@ export default function StepRiskCheck({
           const marketSnapshot: Record<string, number> = {};
           if (calcResult?.market_snapshot && typeof calcResult.market_snapshot === 'object') {
             const ms = calcResult.market_snapshot as Record<string, unknown>;
-            const spot = ms.spot_usdmxn;
+            const spot = ms.spot_rate;
             if (typeof spot === 'number' && spot > 0) {
               const pCcy = (ms.provider_metadata as Record<string, unknown>)?.primary_currency;
               const ccy = typeof pCcy === 'string' ? pCcy : positions[0]?.currency ?? 'MXN';

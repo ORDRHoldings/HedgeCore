@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Printer } from "lucide-react";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { HEDGEWIKI_HELP } from "@/lib/helpContent";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -242,7 +243,7 @@ const ENTRIES: Record<EntryId, Entry> = {
   "hc-ladder": {
     id: "hc-ladder", title: "HedgeCore Hedge Ladder Generator", version: "v1.5", updated: "2026-02-01",
     category: "HEDGECORE ARCHITECTURE", status: "STABLE",
-    abstract: "The ladder generator converts the bucketed net exposure into execution-ready hedge instructions. For each bucket: (1) apply confirmed/forecast hedge ratio from policy; (2) compute target notional in USD (notional_mxn / spot_usdmxn × hedge_ratio); (3) round to nearest USD 10,000; (4) enforce min_trade_size_usd floor; (5) assign value_date as last business day of bucket month; (6) assign instrument type from policy.execution_product; (7) record forward rate = spot + forward_points. Output is a list of `HedgeRow` objects ready for trader review. The complete ladder is frozen into the SandboxResult for audit purposes.",
+    abstract: "The ladder generator converts the bucketed net exposure into execution-ready hedge instructions. For each bucket: (1) apply confirmed/forecast hedge ratio from policy; (2) compute target notional in USD (notional_mxn / spot_rate × hedge_ratio); (3) round to nearest USD 10,000; (4) enforce min_trade_size_usd floor; (5) assign value_date as last business day of bucket month; (6) assign instrument type from policy.execution_product; (7) record forward rate = spot + forward_points. Output is a list of `HedgeRow` objects ready for trader review. The complete ladder is frozen into the SandboxResult for audit purposes.",
     citations: ["HedgeCore API §HedgeRow", "HedgeCore API §SandboxResult", "IFRS 9.6.5.2 (hedging instrument — partial designation)"],
     linkedIds: ["hc-bucketing", "ndf", "hedge-ratio-policy"],
     hedgecoreField: "SandboxResult.hedge_ladder · HedgeRow",
@@ -378,6 +379,7 @@ function CitTag({ text }: { text: string }) {
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function HedgeWiki() {
+  const _planAllowed = usePlanRedirect("enterprise");
   const renderTs = useRenderTs();
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<CategoryId>("FX INSTRUMENTS");

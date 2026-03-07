@@ -34,7 +34,7 @@ from app.services.api_keys import (
 # ---------------------------------------------------------------------
 # ? Pytest configuration
 # ---------------------------------------------------------------------
-pytestmark = pytest.mark.asyncio
+pytestmark = [pytest.mark.asyncio, pytest.mark.requires_postgres]
 
 
 @pytest.fixture(scope="function")

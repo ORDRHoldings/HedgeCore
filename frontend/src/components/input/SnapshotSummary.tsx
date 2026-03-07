@@ -236,7 +236,7 @@ export default function SnapshotSummary({
                 </tr>
                 <tr>
                   <TD>Spot Rate</TD>
-                  <TD mono right>{market.spot_usdmxn > 0 ? market.spot_usdmxn.toFixed(4) : '--'}</TD>
+                  <TD mono right>{market.spot_rate > 0 ? market.spot_rate.toFixed(4) : '--'}</TD>
                   <TD muted>{ctx.pairLabel} · {String(market.provider_metadata?.source ?? 'manual')}</TD>
                 </tr>
                 <tr>
@@ -390,7 +390,7 @@ export default function SnapshotSummary({
                 { dt: 'Hedge Lines',   dd: `${hedges.length}`, mono: true },
                 { dt: 'Buckets',       dd: `${bucketKeys.length}`, mono: true },
                 { dt: 'Policy',        dd: policy.execution_product, mono: true },
-                { dt: `Spot ${ctx.pairLabel}`, dd: market.spot_usdmxn > 0 ? market.spot_usdmxn.toFixed(4) : '—', mono: true },
+                { dt: `Spot ${ctx.pairLabel}`, dd: market.spot_rate > 0 ? market.spot_rate.toFixed(4) : '—', mono: true },
                 { dt: 'Currency Pair', dd: ctx.pairLabel + (ctx.isMultiCcy ? ' + multi' : ''), mono: true },
                 { dt: 'Snap As-of',    dd: asOf, mono: true },
                 { dt: 'Snap Source',   dd: String(market.provider_metadata?.source ?? '—'), mono: false },

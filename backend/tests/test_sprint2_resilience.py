@@ -350,15 +350,16 @@ class TestRefreshDeduplication:
             source = f.read()
         assert "refreshPromiseRef" in source, "refreshPromiseRef not found in authContext.tsx"
 
-    def test_authcontext_has_is_token_expired(self):
-        """authContext.tsx must contain _isTokenExpired function."""
+    def test_authcontext_has_refresh_mechanism(self):
+        """authContext.tsx must have token refresh mechanism (timer-based or expiry-check)."""
         auth_context_path = os.path.join(
             PROJECT_ROOT, "frontend", "src", "lib", "authContext.tsx"
         )
         with open(auth_context_path, "r", encoding="utf-8") as f:
             source = f.read()
-        assert "_isTokenExpired" in source
-        assert "_parseJwtExp" in source
+        # Timer-based refresh replaced _isTokenExpired in hardening
+        assert "refreshTimerRef" in source or "_isTokenExpired" in source, \
+            "authContext must have either timer-based or expiry-check refresh"
 
     def test_authcontext_uses_apibase(self):
         """authContext.tsx must import from lib/api/apiBase, not define inline."""

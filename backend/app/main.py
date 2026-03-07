@@ -1355,6 +1355,66 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
         "CREATE INDEX IF NOT EXISTS ix_execution_packets_run ON execution_packets(decision_run_id)",
 
+        # ── Hedge Effectiveness tables ──────────────────────────────────
+        """CREATE TABLE IF NOT EXISTS hedge_effectiveness_datasets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    currency_pair VARCHAR(10),
+    hedge_type VARCHAR(32) NOT NULL DEFAULT 'cash_flow',
+    designation_date DATE,
+    source VARCHAR(32) NOT NULL DEFAULT 'manual',
+    period_count INTEGER NOT NULL,
+    data_json JSONB NOT NULL,
+    source_hash TEXT NOT NULL,
+    created_by UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_he_datasets_company ON hedge_effectiveness_datasets(company_id)",
+
+        """CREATE TABLE IF NOT EXISTS hedge_effectiveness_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL,
+    dataset_id UUID NOT NULL REFERENCES hedge_effectiveness_datasets(id),
+    methodology_version VARCHAR(16) NOT NULL,
+    standard VARCHAR(16) NOT NULL DEFAULT 'ASC_815',
+    method_requested VARCHAR(32) NOT NULL DEFAULT 'both',
+    dollar_offset_ratio NUMERIC,
+    dollar_offset_effective BOOLEAN,
+    regression_r_squared NUMERIC,
+    regression_slope NUMERIC,
+    regression_effective BOOLEAN,
+    regression_method VARCHAR(64),
+    overall_effective BOOLEAN NOT NULL,
+    run_hash TEXT NOT NULL,
+    inputs_hash TEXT NOT NULL,
+    outputs_hash TEXT NOT NULL,
+    report_json JSONB NOT NULL,
+    trace_bundle JSONB,
+    status VARCHAR(16) NOT NULL DEFAULT 'COMPLETED',
+    created_by UUID NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_he_runs_company ON hedge_effectiveness_runs(company_id)",
+        "CREATE INDEX IF NOT EXISTS ix_he_runs_dataset ON hedge_effectiveness_runs(dataset_id)",
+
+        # WORM trigger for hedge effectiveness runs
+        """CREATE OR REPLACE FUNCTION hedge_effectiveness_runs_worm()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'hedge_effectiveness_runs is WORM (append-only): % on row % is forbidden', TG_OP, OLD.id;
+END;
+$$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_he_runs_no_update
+    BEFORE UPDATE ON hedge_effectiveness_runs
+    FOR EACH ROW EXECUTE FUNCTION hedge_effectiveness_runs_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """DO $$ BEGIN
+  CREATE TRIGGER trg_he_runs_no_delete
+    BEFORE DELETE ON hedge_effectiveness_runs
+    FOR EACH ROW EXECUTE FUNCTION hedge_effectiveness_runs_worm();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+
         # WORM triggers for all 3 decision desk tables
         """CREATE OR REPLACE FUNCTION decision_runs_worm()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -1744,11 +1804,8 @@ async def security_headers(request: Request, call_next):
 # -------------------------------------------------------------------
 
 from app.api.router import router as api_router
-from app.routes.engine import router as engine_router
 
 app.include_router(api_router, prefix="/api")
-
-app.include_router(engine_router, prefix="/api")
 
 
 

@@ -275,8 +275,8 @@ class TestGovernanceNavAccessControlRemoved:
 
     def _read_nav_source(self) -> str:
         import pathlib
-        p = pathlib.Path(__file__).parents[2] / "frontend" / "src" / "components" / "layout" / "AppTopBar.tsx"
-        assert p.exists(), f"AppTopBar.tsx not found at {p}"
+        p = pathlib.Path(__file__).parents[2] / "frontend" / "src" / "components" / "layout" / "AppSidebar.tsx"
+        assert p.exists(), f"AppSidebar.tsx not found at {p}"
         return p.read_text(encoding="utf-8")
 
     def test_access_control_not_in_governance_items(self):
@@ -299,11 +299,11 @@ class TestGovernanceNavAccessControlRemoved:
         p = pathlib.Path(__file__).parents[2] / "frontend" / "src" / "app" / "access-control" / "page.tsx"
         assert p.exists(), "/access-control/page.tsx must still exist (route preserved)"
 
-    def test_admin_dashboard_todo_comment_present(self):
-        """A TODO comment for Admin Dashboard must be in AppTopBar near Governance nav."""
+    def test_governance_section_exists(self):
+        """Governance section header must exist in AppSidebar."""
         src = self._read_nav_source()
-        assert "TODO" in src and "Admin Dashboard" in src, \
-            "AppTopBar must contain TODO comment to move Access Control to Admin Dashboard"
+        assert "Compliance & Audit" in src, \
+            "AppSidebar must contain 'Compliance & Audit' header for governance section"
 
 
 # ---------------------------------------------------------------------------
@@ -315,7 +315,7 @@ class TestGovernanceNavItemsComplete:
 
     def _read_nav_source(self) -> str:
         import pathlib
-        p = pathlib.Path(__file__).parents[2] / "frontend" / "src" / "components" / "layout" / "AppTopBar.tsx"
+        p = pathlib.Path(__file__).parents[2] / "frontend" / "src" / "components" / "layout" / "AppSidebar.tsx"
         return p.read_text(encoding="utf-8")
 
     def test_all_expected_governance_hrefs_present(self):

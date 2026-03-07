@@ -13,6 +13,8 @@ from sqlalchemy import select
 from app.models.policy import PolicyTemplate
 from app.services import policy_service
 
+pytestmark = pytest.mark.requires_postgres
+
 
 @pytest.mark.asyncio
 async def test_list_templates_endpoint_returns_200(

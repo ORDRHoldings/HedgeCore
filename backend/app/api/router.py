@@ -183,6 +183,18 @@ from app.api.routes.auth_passwordless import router as auth_passwordless_router
 
 router.include_router(auth_passwordless_router)
 
+# Position Import (institutional CSV pipeline, owns /v1/positions/import)
+from app.api.routes.v1_position_import import router as v1_position_import_router
+router.include_router(v1_position_import_router)
+
+# Risk Analytics (margin, concentration, hedge effectiveness — owns /v1/risk)
+from app.api.routes.v1_risk_analytics import router as v1_risk_analytics_router
+router.include_router(v1_risk_analytics_router)
+
+# Hedge Effectiveness — IFRS 9 / ASC 815 testing (owns /v1/hedge-effectiveness)
+from app.api.routes.v1_hedge_effectiveness import router as v1_hedge_effectiveness_router
+router.include_router(v1_hedge_effectiveness_router)
+
 __all__ = ["router"]
 
 # Superuser admin — tenants (owns /v1/admin/tenants)
@@ -200,3 +212,7 @@ router.include_router(v1_admin_config_router)
 # Superuser admin — cross-tenant user management (owns /v1/admin/users)
 from app.api.routes.v1_admin_users import router as v1_admin_users_router
 router.include_router(v1_admin_users_router)
+
+# Superuser admin — monitoring dashboard (owns /v1/admin/monitor)
+from app.api.routes.v1_admin_monitor import router as v1_admin_monitor_router
+router.include_router(v1_admin_monitor_router)

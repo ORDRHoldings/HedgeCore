@@ -124,7 +124,7 @@ function computeAuditRules(
   const hedges = result?.frozen_inputs?.hedges as unknown[] | undefined ?? [];
   const policy = result?.frozen_inputs?.policy as Record<string, unknown> | undefined;
   const market = result?.frozen_inputs?.market as Record<string, unknown> | undefined;
-  const spotVal = (market?.spot_usdmxn as number) ?? spot;
+  const spotVal = (market?.spot_rate as number) ?? spot;
   const hasSpot = spotVal > 0;
   const hasTrades = trades.length > 0;
   const hasPolicy = !!policy;

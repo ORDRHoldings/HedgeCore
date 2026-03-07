@@ -59,7 +59,7 @@ export interface HedgeRow {
 
 export interface MarketSnapshot {
   as_of: string;
-  spot_usdmxn: number;
+  spot_rate: number;
   forward_points_by_month: Record<string, number>;
   provider_metadata: Record<string, unknown>;
 }

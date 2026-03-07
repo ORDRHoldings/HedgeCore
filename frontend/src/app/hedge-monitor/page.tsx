@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -148,6 +149,7 @@ function Section({ title, badge, badgeColor, children }: {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function HedgeMonitorPage() {
+  const _planAllowed = usePlanRedirect("professional");
   const router = useRouter();
   const { user, token } = useAuth();
 

@@ -269,7 +269,7 @@ def _validate_market(
 ) -> list[ValidationErrorDetail]:
     errors: list[ValidationErrorDetail] = []
 
-    spot = market.spot_usdmxn  # field name kept for schema compat; holds generic spot
+    spot = market.spot_rate
 
     # V-011: spot out of range (per-currency using USD-equivalent weighting)
     # Priority 1: use provider_metadata.primary_currency if explicitly set --
@@ -296,7 +296,7 @@ def _validate_market(
         errors.append(
             ValidationErrorDetail(
                 code="V-011",
-                field="market.spot_usdmxn",
+                field="market.spot_rate",
                 message=(
                     f"Spot for {dominant_ccy} must be in ({spot_min}..{spot_max}), "
                     f"got {spot}."

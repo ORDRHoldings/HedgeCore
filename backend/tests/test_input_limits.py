@@ -52,7 +52,7 @@ class TestInputSizeLimits:
             req = CalculateRequest(
                 trades=[{"flow_type": "AP", "currency": "MXN", "amount": 1000, "bucket": "2026-01", "status": "CONFIRMED"}],
                 hedges=[],
-                market={"spot_usdmxn": 17.5, "forward_points_by_month": {}},
+                market={"spot_rate": 17.5, "forward_points_by_month": {}},
                 policy={},
             )
         except ValidationError as e:

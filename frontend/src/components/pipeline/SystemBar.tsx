@@ -5,7 +5,7 @@
  *
  * Renders ONLY on execution-pipeline routes (via ClientProviders).
  * Shows pipeline metadata: engine version, run ID, snapshot hash, committee toggle.
- * No brand, no navigation, no identity — those live in AppTopBar.
+ * No brand, no navigation, no identity — those live in AppSidebar.
  */
 
 import { useSelector, useDispatch } from "react-redux";

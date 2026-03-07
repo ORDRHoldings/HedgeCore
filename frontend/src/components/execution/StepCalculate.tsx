@@ -347,7 +347,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
                       {pairLabel}:
                     </span>
                     <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, color: S.primary }}>
-                      {fmtDec.format(cr.market.spot_usdmxn)}
+                      {fmtDec.format(cr.market.spot_rate)}
                     </span>
                     <span style={{
                       fontFamily: S.fontMono, fontSize: 7, padding: "1px 4px",
@@ -571,7 +571,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
           {cr.positions.length} pos · {fmtNum.format(totalNotional)} {cr.currency}
         </span>
         <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
-          spot: {fmtDec.format(cr.market.spot_usdmxn)}
+          spot: {fmtDec.format(cr.market.spot_rate)}
         </span>
         <div style={{ flex: 1 }} />
 
@@ -807,7 +807,7 @@ function buildFallbackMarket(currency: string, valueDates: string[]): MarketSnap
 
   return {
     as_of: now.toISOString(),
-    spot_usdmxn: spot,
+    spot_rate: spot,
     forward_points_by_month: fwdPoints,
     provider_metadata: {
       source: "local_fallback",

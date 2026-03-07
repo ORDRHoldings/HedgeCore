@@ -39,6 +39,27 @@ for path in [PROJECT_ROOT, BACKEND_DIR, APP_DIR]:
 
 from app.main import app
 from app.core.db import async_engine, async_session_maker
+from app.core.security import create_access_token
+
+# ---------------------------------------------------------------------
+# Database Backend Detection
+# ---------------------------------------------------------------------
+_DB_URL = os.environ.get("DATABASE_URL", "")
+IS_SQLITE = "sqlite" in _DB_URL.lower() or not _DB_URL
+IS_POSTGRES = "postgres" in _DB_URL.lower()
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "requires_postgres: skip when not using PostgreSQL")
+
+
+def pytest_collection_modifyitems(config, items):
+    if IS_POSTGRES:
+        return
+    skip_pg = pytest.mark.skip(reason="Requires PostgreSQL (running SQLite)")
+    for item in items:
+        if "requires_postgres" in item.keywords:
+            item.add_marker(skip_pg)
 
 # ---------------------------------------------------------------------
 # Logging Configuration
@@ -103,6 +124,29 @@ async def client(db_session):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+
+# ---------------------------------------------------------------------
+# Auth Headers Fixture (synthetic JWT for tests without real DB login)
+# ---------------------------------------------------------------------
+DEMO_USER_ID = "11111111-2222-3333-4444-555555555555"
+DEMO_COMPANY_ID = "11111111-1111-1111-1111-111111111111"
+
+@pytest.fixture
+def auth_headers() -> dict:
+    """Provide synthetic JWT auth headers for integration tests.
+
+    Creates a valid JWT token using the app's own create_access_token(),
+    so middleware will accept it. The user may not exist in DB (SQLite),
+    so tests that hit DB-backed user lookups will still fail appropriately.
+    """
+    token = create_access_token(
+        sub=DEMO_USER_ID,
+        email="demo@test.com",
+    )
+    return {
+        "Authorization": f"Bearer {token}",
+        "X-API-Key": "HK_live_test_key_for_ci",
+    }
 
 # ---------------------------------------------------------------------
 # Final Global Engine Disposal - After All Tests

@@ -461,6 +461,9 @@ _TRUNCATE_TABLES = [
     "users","permissions","roles",
     "departments","branches","companies",
 ]
+# Pre-built SQL statements — static, no dynamic construction at runtime.
+_TRUNCATE_SQL = {t: 'TRUNCATE TABLE "%s" CASCADE' % t for t in _TRUNCATE_TABLES}
+_TRUNCATE_STMTS = {t: text(sql) for t, sql in _TRUNCATE_SQL.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -487,9 +490,10 @@ async def seed_companies(
     No auth required (bootstrap endpoint). Idempotent — safe to call repeatedly.
     """
     # ── 1. TRUNCATE all tables ────────────────────────────────────────────
+    # Table names from hardcoded _TRUNCATE_TABLES (no user input).
     for table in _TRUNCATE_TABLES:
         try:
-            await db.execute(text(f'TRUNCATE TABLE "{table}" CASCADE'))
+            await db.execute(_TRUNCATE_STMTS[table])
         except Exception:
             pass
 

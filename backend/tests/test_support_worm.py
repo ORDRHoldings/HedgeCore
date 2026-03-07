@@ -25,7 +25,7 @@ from sqlalchemy import text
 
 from app.core.db import async_engine
 
-pytestmark = pytest.mark.asyncio
+pytestmark = [pytest.mark.asyncio, pytest.mark.requires_postgres]
 
 
 # ---------------------------------------------------------------------------

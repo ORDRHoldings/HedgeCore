@@ -37,6 +37,13 @@ import type { BucketResult, ScenarioTotalResult } from "../../api/types";
 import HelpPanel from "../../components/layout/HelpPanel";
 import { PORTFOLIO_RISK_HELP } from "../../lib/helpContent";
 
+const RISK_API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"}/v1/risk`;
+
+function riskApiKey(): string {
+  if (typeof window !== "undefined") return localStorage.getItem("hc_api_key") ?? "HC_DEV_KEY_001";
+  return "HC_DEV_KEY_001";
+}
+
 // ── Hydration-safe timestamp ───────────────────────────────────────────────
 
 function useRenderTs(): string {
@@ -92,6 +99,87 @@ interface AttributionRow {
   factor:       string;
   contribution: number;
   pct:          number;
+}
+
+// ── Risk Summary types (from GET /v1/risk/summary/{run_id}) ──────────────
+
+interface MarginPositionData {
+  bucket: string;
+  instrument: string;
+  notional_usd: number;
+  initial_margin: number;
+  maintenance_margin: number;
+  stress_margin: number;
+  funding_cost: number;
+}
+
+interface MarginData {
+  positions: MarginPositionData[];
+  total_initial_margin: number;
+  total_maintenance_margin: number;
+  total_stress_margin: number;
+  total_funding_cost: number;
+  margin_budget_usd: number | null;
+  margin_utilization_pct: number;
+  budget_exceeded: boolean;
+}
+
+interface ConcentrationCheckData {
+  instrument: string;
+  notional_usd: number;
+  total_portfolio_usd: number;
+  concentration_pct: number;
+  limit_pct: number;
+  status: "OK" | "WARNING" | "BREACH";
+  excess_pct: number;
+}
+
+interface ConcentrationData {
+  checks: ConcentrationCheckData[];
+  has_warnings: boolean;
+  has_breaches: boolean;
+  max_concentration_pct: number;
+  breach_instruments: string[];
+}
+
+interface EffectivenessData {
+  dollar_offset_ratio: number;
+  is_effective: boolean;
+  regression_r_squared: number | null;
+  regression_slope: number | null;
+  method: string;
+}
+
+interface VaRResultData {
+  confidence: number;
+  hedged_var: number;
+  unhedged_var: number;
+  hedged_cvar: number;
+  unhedged_cvar: number;
+}
+
+interface MonteCarloData {
+  simulation_count: number;
+  seed: number | null;
+  var_results: VaRResultData[];
+  percentiles: Record<string, number>;
+  mean_hedged_pnl: number;
+  std_hedged_pnl: number;
+  mean_unhedged_pnl: number;
+  std_unhedged_pnl: number;
+  worst_hedged_pnl: number;
+  worst_unhedged_pnl: number;
+  best_hedged_pnl: number;
+  hedge_benefit_mean: number;
+  hedge_benefit_pct: number;
+}
+
+interface RiskSummaryData {
+  run_id: string;
+  margin: MarginData | null;
+  concentration: ConcentrationData | null;
+  hedge_effectiveness: EffectivenessData | null;
+  monte_carlo: MonteCarloData | null;
 }
 
 // ── Risk calculation from real data ───────────────────────────────────────
@@ -378,8 +466,11 @@ export default function PortfolioRisk() {
   const [exposure, setExposure]   = useState<ExposureAggregation[] | null>(null);
   const [loadErr, setLoadErr]     = useState<string | null>(null);
   const [loading, setLoading]     = useState(false);
+  const [riskSummary, setRiskSummary] = useState<RiskSummaryData | null>(null);
+  const [riskLoading, setRiskLoading] = useState(false);
+  const [riskError, setRiskError]     = useState<string | null>(null);
 
-  const tabs = ["R1–R8 Decomposition", "Position Ledger", "Risk Attribution", "Hedge Efficiency"];
+  const tabs = ["R1–R8 Decomposition", "Position Ledger", "Risk Attribution", "Hedge Efficiency", "Margin & VaR"];
 
   // ── Load positions from API ──────────────────────────────────────────────
   const loadPositions = useCallback(async () => {
@@ -399,9 +490,28 @@ export default function PortfolioRisk() {
     }
   }, []);
 
+  const loadRiskSummary = useCallback(async (rid: string) => {
+    setRiskLoading(true);
+    setRiskError(null);
+    try {
+      const res = await fetch(`${RISK_API}/summary/${rid}`, {
+        headers: { "X-API-Key": riskApiKey() },
+      });
+      if (!res.ok) throw new Error(`Risk summary failed: ${res.status}`);
+      setRiskSummary(await res.json());
+    } catch (e) {
+      setRiskError(e instanceof Error ? e.message : "Failed to load risk summary");
+    } finally {
+      setRiskLoading(false);
+    }
+  }, []);
+
+  const earlyRunId = result?.run_id ?? null;
   useEffect(() => {
     loadPositions();
   }, [loadPositions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (earlyRunId) loadRiskSummary(earlyRunId); }, [earlyRunId]);
 
   if (!_planAllowed) return null;
 
@@ -522,7 +632,7 @@ export default function PortfolioRisk() {
           }}>Portfolio Risk Analysis</div>
           <div style={{
             fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.07em", color: S.tertiary,
-          }}>R1–R8 DECOMPOSITION · HEDGE EFFECTIVENESS · VaR · ATTRIBUTION</div>
+          }}>R1–R8 VaR · HEDGE EFFECTIVENESS · ATTRIBUTION · SIMM MARGIN · CONCENTRATION</div>
         </div>
         <div style={{ flex: 1 }} />
 
@@ -1085,6 +1195,418 @@ export default function PortfolioRisk() {
           </div>
         )}
 
+        {/* ══ Margin & VaR ══ */}
+        {tab === "Margin & VaR" && (
+          <div style={{ padding: "20px 28px", overflow: "auto" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
+              <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Margin & Concentration Limits</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>
+                SIMM-style IM · Concentration · ASC 815/IFRS 9 ·{" "}
+                {riskSummary ? `RUN ${riskSummary.run_id.slice(0, 8).toUpperCase()}` : "no active run"}
+              </span>
+            </div>
+            <div style={{ height: 1, background: S.rim, marginBottom: 0 }} />
+
+            {riskLoading ? <LoadingPulse /> : riskError ? (
+              <div style={{ padding: "32px 0", textAlign: "center" as const }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail, marginBottom: 8 }}>
+                  RISK SUMMARY ERROR: {riskError}
+                </div>
+                {runId && (
+                  <button onClick={() => loadRiskSummary(runId)} style={{
+                    fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.fail,
+                    border: `1px solid ${S.fail}`, background: "transparent", padding: "2px 8px", cursor: "pointer",
+                  }}>Retry</button>
+                )}
+              </div>
+            ) : !riskSummary ? (
+              <div style={{ padding: "40px 0", textAlign: "center" as const }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber, marginBottom: 8 }}>
+                  No margin & limits data
+                </div>
+                <div style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary, marginBottom: 16 }}>
+                  Run the hedge engine to compute SIMM margin requirements, concentration limits, and hedge effectiveness.
+                </div>
+                <button onClick={() => router.push("/position-desk")} style={{
+                  fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.04em",
+                  color: S.bgDeep, background: S.cyan, border: "none",
+                  padding: "5px 14px", cursor: "pointer",
+                }}>RUN ENGINE →</button>
+              </div>
+            ) : (
+              <>
+                {/* ── SIMM MARGIN REQUIREMENTS ── */}
+                {riskSummary.margin && (
+                  <>
+                    <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginTop: 16, marginBottom: 8 }}>
+                      SIMM-STYLE MARGIN REQUIREMENTS
+                    </div>
+                    {riskSummary.margin.positions.length > 0 ? (
+                      <>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr>
+                              {["Bucket", "Instrument", "Notional USD", "Initial Margin", "Maintenance", "Stress Margin", "Funding Cost"].map(h => (
+                                <th key={h} style={{
+                                  padding: "6px 12px 6px 0", fontFamily: S.fontMono, fontSize: "0.6875rem",
+                                  letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
+                                  textAlign: "left", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
+                                }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {riskSummary.margin.positions.map((p, i) => (
+                              <tr key={i} style={{ borderBottom: `1px solid ${S.soft}` }}>
+                                <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 600, color: S.primary }}>{p.bucket}</td>
+                                <td style={{ padding: "9px 12px 9px 0" }}>
+                                  <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 5px", border: `1px solid ${S.cyan}`, color: S.cyan }}>{p.instrument}</span>
+                                </td>
+                                <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{fmtUSD(p.notional_usd)}</td>
+                                <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.amber, fontWeight: 600 }}>{fmtUSD(p.initial_margin)}</td>
+                                <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{fmtUSD(p.maintenance_margin)}</td>
+                                <td style={{ padding: "9px 12px 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail }}>{fmtUSD(p.stress_margin)}</td>
+                                <td style={{ padding: "9px 0 9px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>{fmtUSD(p.funding_cost)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+
+                        {/* Margin summary strip */}
+                        <div style={{ marginTop: 14, padding: "12px 14px", background: S.bgSub, border: `1px solid ${S.rim}`, display: "flex", gap: 20, flexWrap: "wrap" as const }}>
+                          {[
+                            { label: "TOTAL IM", value: fmtUSD(riskSummary.margin.total_initial_margin), color: S.amber },
+                            { label: "TOTAL MAINT", value: fmtUSD(riskSummary.margin.total_maintenance_margin), color: S.secondary },
+                            { label: "STRESS MARGIN", value: fmtUSD(riskSummary.margin.total_stress_margin), color: S.fail },
+                            { label: "FUNDING COST", value: fmtUSD(riskSummary.margin.total_funding_cost), color: S.tertiary },
+                            { label: "BUDGET", value: riskSummary.margin.margin_budget_usd ? fmtUSD(riskSummary.margin.margin_budget_usd) : "UNLIMITED", color: S.secondary },
+                            {
+                              label: "UTILIZATION",
+                              value: `${riskSummary.margin.margin_utilization_pct.toFixed(1)}%`,
+                              color: riskSummary.margin.budget_exceeded ? S.fail : riskSummary.margin.margin_utilization_pct > 75 ? S.amber : S.pass,
+                            },
+                          ].map(({ label, value, color }) => (
+                            <div key={label}>
+                              <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em" }}>{label}</div>
+                              <div style={{ fontFamily: S.fontMono, fontSize: "0.875rem", fontWeight: 700, color, lineHeight: 1.1 }}>{value}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {riskSummary.margin.budget_exceeded && (
+                          <div style={{
+                            marginTop: 8, padding: "8px 14px",
+                            background: "color-mix(in srgb, var(--accent-red,#B91C1C) 6%, transparent)",
+                            border: `1px solid ${S.fail}`, display: "flex", alignItems: "center", gap: 8,
+                          }}>
+                            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.fail, fontWeight: 700 }}>
+                              MARGIN BUDGET EXCEEDED
+                            </span>
+                            <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>
+                              Total IM ({fmtUSD(riskSummary.margin.total_initial_margin)}) exceeds budget ({fmtUSD(riskSummary.margin.margin_budget_usd ?? 0)}).
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{ padding: "16px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>No margin positions computed for this run.</div>
+                    )}
+                  </>
+                )}
+
+                {/* ── CONCENTRATION + EFFECTIVENESS (side by side) ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 24 }}>
+                  {/* Concentration */}
+                  <div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
+                      CONCENTRATION LIMITS
+                    </div>
+                    {riskSummary.concentration && riskSummary.concentration.checks.length > 0 ? (
+                      <>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr>
+                              {["Instrument", "Notional", "Conc %", "Limit", "Status"].map(h => (
+                                <th key={h} style={{
+                                  padding: "5px 10px 5px 0", fontFamily: S.fontMono, fontSize: "0.6875rem",
+                                  letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
+                                  textAlign: "left", borderBottom: `1px solid ${S.rim}`,
+                                }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {riskSummary.concentration.checks.map(c => {
+                              const sColor = c.status === "BREACH" ? S.fail : c.status === "WARNING" ? S.amber : S.pass;
+                              return (
+                                <tr key={c.instrument} style={{ borderBottom: `1px solid ${S.soft}` }}>
+                                  <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 600, color: S.primary }}>{c.instrument}</td>
+                                  <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>{fmtUSD(c.notional_usd)}</td>
+                                  <td style={{ padding: "8px 10px 8px 0" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                      <div style={{ width: 50, height: 4, background: S.soft, position: "relative" as const }}>
+                                        <div style={{
+                                          position: "absolute", left: 0, top: 0, height: "100%",
+                                          width: `${Math.min(c.concentration_pct * 100, 100)}%`,
+                                          background: sColor,
+                                        }} />
+                                      </div>
+                                      <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", color: sColor, fontWeight: 600 }}>
+                                        {(c.concentration_pct * 100).toFixed(1)}%
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>
+                                    {(c.limit_pct * 100).toFixed(0)}%
+                                  </td>
+                                  <td style={{ padding: "8px 0 8px 0" }}>
+                                    <span style={{
+                                      fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 5px",
+                                      border: `1px solid ${sColor}`, color: sColor,
+                                    }}>{c.status}</span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+
+                        <div style={{ marginTop: 10, padding: "10px 12px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
+                          {[
+                            {
+                              label: "MAX CONC",
+                              value: `${(riskSummary.concentration.max_concentration_pct * 100).toFixed(1)}%`,
+                              color: riskSummary.concentration.has_breaches ? S.fail : riskSummary.concentration.has_warnings ? S.amber : S.pass,
+                            },
+                            { label: "WARNINGS", value: riskSummary.concentration.has_warnings ? "YES" : "NONE", color: riskSummary.concentration.has_warnings ? S.amber : S.pass },
+                            {
+                              label: "BREACHES",
+                              value: riskSummary.concentration.breach_instruments.length > 0 ? riskSummary.concentration.breach_instruments.join(", ") : "NONE",
+                              color: riskSummary.concentration.has_breaches ? S.fail : S.pass,
+                            },
+                          ].map(({ label, value, color }) => (
+                            <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: `1px solid ${S.soft}` }}>
+                              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{label}</span>
+                              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 600, color }}>{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ padding: "16px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>No concentration data for this run.</div>
+                    )}
+                  </div>
+
+                  {/* Hedge Effectiveness (ASC 815) */}
+                  <div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
+                      ASC 815 / IFRS 9 HEDGE EFFECTIVENESS
+                    </div>
+                    {riskSummary.hedge_effectiveness ? (
+                      <div style={{ padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
+                        {/* Ratio gauge */}
+                        <div style={{ marginBottom: 16 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>Dollar-Offset Ratio</span>
+                            <span style={{
+                              fontFamily: S.fontMono, fontSize: "0.875rem", fontWeight: 700,
+                              color: riskSummary.hedge_effectiveness.is_effective ? S.pass : S.fail,
+                            }}>
+                              {riskSummary.hedge_effectiveness.dollar_offset_ratio.toFixed(4)}
+                            </span>
+                          </div>
+                          {/* Visual gauge: 0 — [0.80 effective band 1.25] — 2.0 */}
+                          <div style={{ position: "relative" as const, height: 20, background: S.soft, marginBottom: 4 }}>
+                            <div style={{
+                              position: "absolute", left: "40%", top: 0, bottom: 0,
+                              width: "22.5%",
+                              background: "color-mix(in srgb, var(--status-pass) 12%, transparent)",
+                              borderLeft: `1px solid ${S.pass}`, borderRight: `1px solid ${S.pass}`,
+                            }} />
+                            <div style={{
+                              position: "absolute",
+                              left: `${Math.min(Math.max((riskSummary.hedge_effectiveness.dollar_offset_ratio / 2.0) * 100, 0), 100)}%`,
+                              top: 0, width: 3, height: "100%",
+                              background: riskSummary.hedge_effectiveness.is_effective ? S.pass : S.fail,
+                              transform: "translateX(-50%)",
+                            }} />
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary }}>0.00</span>
+                            <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.pass }}>0.80</span>
+                            <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.pass }}>1.25</span>
+                            <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary }}>2.00</span>
+                          </div>
+                        </div>
+
+                        {/* Detail rows */}
+                        {[
+                          { label: "Method", value: riskSummary.hedge_effectiveness.method.replace(/_/g, " ").toUpperCase() },
+                          { label: "Ratio", value: riskSummary.hedge_effectiveness.dollar_offset_ratio.toFixed(4) },
+                          { label: "Effective Band", value: "0.80 – 1.25" },
+                          { label: "Status", value: riskSummary.hedge_effectiveness.is_effective ? "EFFECTIVE" : "INEFFECTIVE" },
+                          ...(riskSummary.hedge_effectiveness.regression_r_squared != null
+                            ? [
+                                { label: "R²", value: riskSummary.hedge_effectiveness.regression_r_squared.toFixed(4) },
+                                { label: "Slope (β)", value: riskSummary.hedge_effectiveness.regression_slope?.toFixed(4) ?? "—" },
+                              ]
+                            : []),
+                        ].map(({ label, value }) => (
+                          <div key={label} style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: 8, padding: "5px 0", borderBottom: `1px solid ${S.soft}` }}>
+                            <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary }}>{label}</span>
+                            <span style={{
+                              fontFamily: S.fontMono, fontSize: "0.6875rem",
+                              color: label === "Status" ? (riskSummary.hedge_effectiveness!.is_effective ? S.pass : S.fail) : S.secondary,
+                              fontWeight: label === "Status" ? 700 : 400,
+                            }}>
+                              {value}
+                            </span>
+                          </div>
+                        ))}
+
+                        <div style={{ marginTop: 12, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, lineHeight: 1.6 }}>
+                          Standard: ASC 815-20-35 / IFRS 9.B6.4.1<br />
+                          Test: Retrospective dollar-offset<br />
+                          Band: 80%–125% for hedge qualification
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ padding: "16px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary }}>No effectiveness data for this run.</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── MONTE CARLO VaR/CVaR ── */}
+                {riskSummary.monte_carlo && (
+                  <>
+                    <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginTop: 24, marginBottom: 8 }}>
+                      MONTE CARLO VaR / CVaR · {riskSummary.monte_carlo.simulation_count.toLocaleString()} SIMULATIONS · CHOLESKY-CORRELATED
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                      {/* VaR/CVaR table */}
+                      <div>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr>
+                              {["Confidence", "Hedged VaR", "Unhedged VaR", "Hedged CVaR", "Unhedged CVaR"].map(h => (
+                                <th key={h} style={{
+                                  padding: "5px 10px 5px 0", fontFamily: S.fontMono, fontSize: "0.6875rem",
+                                  letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
+                                  textAlign: "left", borderBottom: `1px solid ${S.rim}`,
+                                }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {riskSummary.monte_carlo.var_results.map(vr => (
+                              <tr key={vr.confidence} style={{ borderBottom: `1px solid ${S.soft}` }}>
+                                <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 600, color: S.primary }}>
+                                  {(vr.confidence * 100).toFixed(0)}%
+                                </td>
+                                <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.pass, fontWeight: 600 }}>
+                                  {fmtUSD(vr.hedged_var)}
+                                </td>
+                                <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail }}>
+                                  {fmtUSD(vr.unhedged_var)}
+                                </td>
+                                <td style={{ padding: "8px 10px 8px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.pass }}>
+                                  {fmtUSD(vr.hedged_cvar)}
+                                </td>
+                                <td style={{ padding: "8px 0 8px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.fail }}>
+                                  {fmtUSD(vr.unhedged_cvar)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+
+                        {/* Distribution summary */}
+                        <div style={{ marginTop: 10, padding: "10px 12px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
+                          {[
+                            { label: "MEAN P&L (HEDGED)", value: fmtUSD(riskSummary.monte_carlo.mean_hedged_pnl), color: S.pass },
+                            { label: "MEAN P&L (UNHEDGED)", value: fmtUSD(riskSummary.monte_carlo.mean_unhedged_pnl), color: S.fail },
+                            { label: "STD DEV (HEDGED)", value: fmtUSD(riskSummary.monte_carlo.std_hedged_pnl), color: S.secondary },
+                            { label: "STD DEV (UNHEDGED)", value: fmtUSD(riskSummary.monte_carlo.std_unhedged_pnl), color: S.secondary },
+                            { label: "WORST (HEDGED)", value: fmtUSD(riskSummary.monte_carlo.worst_hedged_pnl), color: S.amber },
+                            { label: "WORST (UNHEDGED)", value: fmtUSD(riskSummary.monte_carlo.worst_unhedged_pnl), color: S.fail },
+                          ].map(({ label, value, color }) => (
+                            <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: `1px solid ${S.soft}` }}>
+                              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{label}</span>
+                              <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", fontWeight: 600, color }}>{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Visual distribution bars (percentiles) */}
+                      <div>
+                        <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>
+                          P&L DISTRIBUTION (PERCENTILES)
+                        </div>
+                        <div style={{ padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
+                          {[1, 5, 10, 25, 50, 75, 90, 95, 99].map(p => {
+                            const hKey = `hedged_p${String(p).padStart(2, "0")}`;
+                            const uKey = `unhedged_p${String(p).padStart(2, "0")}`;
+                            const hVal = riskSummary.monte_carlo!.percentiles[hKey] ?? 0;
+                            const uVal = riskSummary.monte_carlo!.percentiles[uKey] ?? 0;
+                            const maxAbs = Math.max(
+                              Math.abs(riskSummary.monte_carlo!.worst_hedged_pnl),
+                              Math.abs(riskSummary.monte_carlo!.worst_unhedged_pnl),
+                              Math.abs(riskSummary.monte_carlo!.best_hedged_pnl),
+                              1,
+                            );
+                            const hPct = (hVal / maxAbs) * 50 + 50;
+                            const uPct = (uVal / maxAbs) * 50 + 50;
+                            return (
+                              <div key={p} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", borderBottom: `1px solid ${S.soft}` }}>
+                                <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, width: 24, textAlign: "right" as const }}>p{p}</span>
+                                <div style={{ flex: 1, height: 8, background: S.soft, position: "relative" as const }}>
+                                  <div style={{
+                                    position: "absolute", left: `${Math.min(Math.max(uPct, 0), 100)}%`,
+                                    top: 0, width: 2, height: "100%", background: S.fail, opacity: 0.6,
+                                  }} />
+                                  <div style={{
+                                    position: "absolute", left: `${Math.min(Math.max(hPct, 0), 100)}%`,
+                                    top: 0, width: 2, height: "100%", background: S.pass,
+                                  }} />
+                                  <div style={{ position: "absolute", left: "50%", top: 0, width: 1, height: "100%", background: S.rim }} />
+                                </div>
+                                <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.pass, width: 50, textAlign: "right" as const }}>
+                                  {fmtM(hVal)}
+                                </span>
+                                <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.fail, width: 50, textAlign: "right" as const }}>
+                                  {fmtM(uVal)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                              <div style={{ width: 8, height: 3, background: S.pass }} />
+                              <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary }}>Hedged</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                              <div style={{ width: 8, height: 3, background: S.fail, opacity: 0.6 }} />
+                              <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary }}>Unhedged</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ marginTop: 10, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, lineHeight: 1.6 }}>
+                          Method: Cholesky-correlated Normal<br />
+                          Covariance: Region-aware EM/G10 fallback<br />
+                          Horizon: 1-day · Seed: {riskSummary.monte_carlo.seed ?? "random"}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
       </div>
 
         {/* Help Panel */}
@@ -1103,6 +1625,12 @@ export default function PortfolioRisk() {
         <span>R1–R8 · VaR 99% · {isLive ? "LIVE" : "DEMO"}</span>
         <span style={{ color: S.rim }}>·</span>
         <span>IFRS 9 Effectiveness: {hedgeEfficiency.length > 0 ? (hedgeEfficiency.every(h => h.status === "PASS") ? "ALL PASS" : `${hedgeEfficiency.filter(h => h.status === "PASS").length}/${hedgeEfficiency.length} PASS`) : "PENDING"}</span>
+        {riskSummary?.margin && (
+          <>
+            <span style={{ color: S.rim }}>·</span>
+            <span>Margin IM: {fmtUSD(riskSummary.margin.total_initial_margin)} · Util: {riskSummary.margin.margin_utilization_pct.toFixed(0)}%</span>
+          </>
+        )}
         {runId && (
           <>
             <span style={{ color: S.rim }}>·</span>

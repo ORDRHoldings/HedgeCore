@@ -27,13 +27,13 @@ export default function MarketSnapshotPanel({ market, onChange, mode, trades = [
   const ctx = deriveCurrencyContext(trades, market);
   const [spotMin, spotMax] = ctx.spotRange;
   const spotOutOfRange =
-    market.spot_usdmxn > 0 && (market.spot_usdmxn < spotMin || market.spot_usdmxn > spotMax);
+    market.spot_rate > 0 && (market.spot_rate < spotMin || market.spot_rate > spotMax);
 
   const updateSpot = (v: string) => {
     const val = parseFloat(v);
     onChange({
       ...market,
-      spot_usdmxn: isNaN(val) ? 0 : val,
+      spot_rate: isNaN(val) ? 0 : val,
       provider_metadata: {
         ...market.provider_metadata,
         source: mode === 'DEMO' ? 'hedgecalc_demo_fixture' : 'manual_user_input',
@@ -141,13 +141,13 @@ export default function MarketSnapshotPanel({ market, onChange, mode, trades = [
             type="number"
             step="0.01"
             className={`${inputCls} ${spotOutOfRange ? 'border-[var(--accent-red)] ring-1 ring-[var(--accent-red)]/30' : ''}`}
-            value={market.spot_usdmxn || ''}
+            value={market.spot_rate || ''}
             onChange={(e) => updateSpot(e.target.value)}
           />
           {spotOutOfRange && (
             <FieldError error={`Spot ${ctx.pairLabel} must be between ${spotMin} and ${spotMax} (V-011)`} />
           )}
-          {!spotOutOfRange && market.spot_usdmxn > 0 && (
+          {!spotOutOfRange && market.spot_rate > 0 && (
             <p className="text-xs text-[var(--text-secondary)] mt-1">
               Valid range: {spotMin}–{spotMax}
             </p>
@@ -177,8 +177,8 @@ export default function MarketSnapshotPanel({ market, onChange, mode, trades = [
                       {typeof v === 'number' ? v.toFixed(4) : v}
                     </td>
                     <td className="px-4 py-2 text-right font-mono text-[var(--text-secondary)]">
-                      {market.spot_usdmxn > 0
-                        ? (market.spot_usdmxn + (typeof v === 'number' ? v : 0)).toFixed(4)
+                      {market.spot_rate > 0
+                        ? (market.spot_rate + (typeof v === 'number' ? v : 0)).toFixed(4)
                         : '—'}
                     </td>
                     <td className="px-4 py-2 text-right">

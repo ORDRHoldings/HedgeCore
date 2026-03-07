@@ -17,6 +17,7 @@ import {
 } from "../../api/connectorClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { IMPORT_HISTORY_HELP } from "@/lib/helpContent";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const S = {
@@ -881,6 +882,7 @@ function SkeletonTable() {
 // Main Page
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function ImportHistoryPage() {
+  const _planAllowed = usePlanRedirect("professional");
   const router = useRouter();
   const { token, isAuthenticated, isLoading: authLoading } = useAuth();
 

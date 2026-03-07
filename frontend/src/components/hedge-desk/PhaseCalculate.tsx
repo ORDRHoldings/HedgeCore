@@ -322,7 +322,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
           {marketLoading ? (
             <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.tertiary }}>Loading live rates from Finnhub...</span>
           ) : marketSnapshot ? (() => {
-            const spot = marketSnapshot.spot_usdmxn as number;
+            const spot = marketSnapshot.spot_rate as number;
             const meta = marketSnapshot.provider_metadata as Record<string, unknown> | undefined;
             const pair = (meta?.currency_pair ?? "USD/MXN") as string;
             const fwd = marketSnapshot.forward_points_by_month as Record<string, number> | undefined;

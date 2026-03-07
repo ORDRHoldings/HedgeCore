@@ -43,23 +43,6 @@ services:
     networks:
       - hedgecalc_backend
 
-  hedgecalc_celery_worker:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    container_name: hedgecalc_celery_worker
-    env_file: .env
-    user: "1000:1000"
-    command: >
-      celery -A app.core.celery_app.celery
-      worker
-      -l info
-      -Q high_priority,calc_queue
-    depends_on:
-      - hedgecalc_redis
-    networks:
-      - hedgecalc_backend
-
   hedgecalc_db:
     image: postgres:16-alpine
     container_name: hedgecalc_db

@@ -13,7 +13,7 @@
  *     HedgeProvider
  *       SessionLoader   ← dispatches loadSessionThunk on mount
  *       Shell           ← pathname-aware
- *         AppTopBar     ← persistent on ALL authenticated routes (self-hides on auth pages)
+ *         AppSidebar    ← persistent left rail on ALL authenticated routes (self-hides on auth pages)
  *         SystemBar     ← pipeline context strip (execution routes only)
  *         <main>{children}</main>
  *
@@ -27,7 +27,7 @@ import { usePathname } from "next/navigation";
 import { store } from "../../lib/store";
 import { AuthProvider, useAuth } from "../../lib/authContext";
 import { HedgeProvider } from "../../lib/hedgeContext";
-import AppTopBar from "../layout/AppTopBar";
+import AppSidebar from "../layout/AppSidebar";
 import SystemBar from "./SystemBar";
 import StaleSnapshotBanner from "./StaleSnapshotBanner";
 import SessionLoader from "./SessionLoader";
@@ -62,15 +62,17 @@ function Shell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen bg-[var(--bg-deep)] flex flex-col">
-      <AppTopBar />
-      {showPipelineChrome && (
-        <>
-          <SystemBar />
-          <StaleSnapshotBanner />
-        </>
-      )}
-      <main className="flex-1 min-h-0">{children}</main>
+    <div className="min-h-screen bg-[var(--bg-deep)] flex flex-row">
+      <AppSidebar />
+      <div className="flex-1 min-w-0 flex flex-col">
+        {showPipelineChrome && (
+          <>
+            <SystemBar />
+            <StaleSnapshotBanner />
+          </>
+        )}
+        <main className="flex-1 min-h-0 overflow-auto">{children}</main>
+      </div>
       <VoiceShell />
     </div>
   );

@@ -61,7 +61,7 @@ def compute_hedge_plan_generic(
 
     # Extract market data — support both legacy MarketSnapshot and MultiCurrencyMarketSnapshot
     if pair == "USDMXN":
-        spot = market.spot_usdmxn
+        spot = market.spot_rate
         fwd_points = market.forward_points_by_month
     else:
         pairs_attr = getattr(market, "pairs", None) or {}

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 class MarketSnapshot(BaseModel):
     as_of: datetime
-    spot_usdmxn: float = Field(..., gt=0)
+    spot_rate: float = Field(..., gt=0)
     forward_points_by_month: dict[str, float]
     provider_metadata: dict = Field(default_factory=dict)
 
@@ -23,7 +23,7 @@ class PairMarketData(BaseModel):
 class MultiCurrencyMarketSnapshot(MarketSnapshot):
     """Extended market snapshot supporting multiple currency pairs.
 
-    Backward compatible: spot_usdmxn and forward_points_by_month still work
+    Backward compatible: spot_rate and forward_points_by_month still work
     for the legacy USDMXN kernel path.
     """
     pairs: dict[str, "PairMarketData"] = Field(
@@ -33,7 +33,7 @@ class MultiCurrencyMarketSnapshot(MarketSnapshot):
 
     def get_spot(self, pair: str) -> float:
         if pair == "USDMXN":
-            return self.spot_usdmxn
+            return self.spot_rate
         pd_data = self.pairs.get(pair)
         if pd_data is None:
             raise ValueError(f"No market data for pair: {pair}")

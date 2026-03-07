@@ -257,7 +257,7 @@ export default function CurrencyFxPage() {
       }
 
       setMarketData({
-        spot:          market.spot_usdmxn as number,
+        spot:          market.spot_rate as number,
         forwardPoints: (market.forward_points_by_month as Record<string, number>) ?? {},
         isLive:        market.provider_metadata?.data_class === "LIVE",
         source:        market.provider_metadata?.source ?? "unknown",

@@ -143,7 +143,7 @@ def compute_exposure_tensor(
     for pair, pair_trades in pair_buckets.items():
         funding_ccy = pair[:3]
         asset_ccy = pair[3:]
-        fx_rate = fx_rates.get(pair, market.get("spot_usdmxn", 1.0))
+        fx_rate = fx_rates.get(pair, market.get("spot_rate", market.get("spot_usdmxn", 1.0)))
 
         gross = 0.0
         net = 0.0

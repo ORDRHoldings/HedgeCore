@@ -30,7 +30,7 @@ def demo_market_snapshot() -> ExtendedMarketSnapshot:
     """Full 26-pair institutional market snapshot."""
     return ExtendedMarketSnapshot(
         as_of=datetime.now(UTC),
-        spot_usdmxn=17.15,
+        spot_rate=17.15,
         forward_points_by_month={
             "2025-07": 0.325,
             "2025-08": 0.370,

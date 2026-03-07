@@ -6,7 +6,7 @@
  * Shows the institutional workflow:
  *   01 POSITION DESK → 02 POLICY DESK → 03 HEDGE DESK → 04 EXECUTION DESK
  *
- * Renders as a 36px sticky bar below AppTopBar.
+ * Renders as a 36px sticky bar below AppSidebar.
  * Active step gets cyan underline. Completed steps get green check.
  * Right side shows "NEXT: [STEP] →" CTA button.
  */

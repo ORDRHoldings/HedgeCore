@@ -15,7 +15,7 @@ def eurusd_market():
     from app.schemas_v1.market import MultiCurrencyMarketSnapshot, PairMarketData
     return MultiCurrencyMarketSnapshot(
         as_of=datetime(2026, 3, 1, tzinfo=timezone.utc),
-        spot_usdmxn=17.5,  # required by base class
+        spot_rate=17.5,  # required by base class
         forward_points_by_month={},
         pairs={
             "EURUSD": PairMarketData(

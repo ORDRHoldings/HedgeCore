@@ -182,7 +182,7 @@ def apply_extended_scenarios(
     if not scenarios:
         return ExtendedScenarioResult()
 
-    spot = market.get("spot_usdmxn", 17.15)
+    spot = market.get("spot_rate", market.get("spot_usdmxn", 17.15))
     impacts: list[ScenarioImpact] = []
     has_compound = False
 

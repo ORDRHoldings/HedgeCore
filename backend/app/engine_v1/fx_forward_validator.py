@@ -104,7 +104,7 @@ def validate_forward_consistency(
     ForwardValidationResult
     """
     if pair == "USDMXN":
-        spot = market.get("spot_usdmxn", 17.15)
+        spot = market.get("spot_rate", market.get("spot_usdmxn", 17.15))
     else:
         fx_rates = market.get("fx_rates", {})
         spot = fx_rates.get(pair, 0.0)

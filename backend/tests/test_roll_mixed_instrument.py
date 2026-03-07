@@ -11,7 +11,7 @@ class TestRollMixedInstrument:
         """USDBRL (NDF pair) forces instrument to NDF even if FWD requested."""
         from app.engine_v1.fx_roll_engine import generate_roll_ladder
         positions = [{"bucket": "2026-03", "notional_usd": 500_000, "instrument": "FWD"}]
-        market = {"forward_points_by_month": {}, "spot_usdmxn": 5.20}
+        market = {"forward_points_by_month": {}, "spot_rate": 5.20}
         policy = {"execution_product": "FWD", "cost_assumptions": {"spread_bps": 15.0}}
         result = generate_roll_ladder(positions, market, policy, pair="USDBRL")
         # USDBRL is NDF-only — all rolls should transition to NDF
@@ -42,7 +42,7 @@ class TestRollMixedInstrument:
         """USDMXN (deliverable) within normal tenor stays FWD."""
         from app.engine_v1.fx_roll_engine import generate_roll_ladder
         positions = [{"bucket": "2026-03", "notional_usd": 500_000, "instrument": "FWD"}]
-        market = {"forward_points_by_month": {}, "spot_usdmxn": 17.5}
+        market = {"forward_points_by_month": {}, "spot_rate": 17.5}
         policy = {"execution_product": "FWD", "cost_assumptions": {"spread_bps": 5.0}}
         result = generate_roll_ladder(positions, market, policy, pair="USDMXN")
         fwd_rolls = [r for r in result.rolls if r.instrument == "FWD"]

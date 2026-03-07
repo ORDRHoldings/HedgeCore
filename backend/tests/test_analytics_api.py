@@ -7,6 +7,8 @@ Validates response schema, data consistency, and VaR calculations.
 import pytest
 from httpx import AsyncClient
 
+pytestmark = pytest.mark.requires_postgres
+
 
 @pytest.mark.asyncio
 async def test_portfolio_analytics_requires_auth(client: AsyncClient):

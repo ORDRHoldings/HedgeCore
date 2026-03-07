@@ -985,82 +985,77 @@ async def calculate_extended(
     """Extended calculation: standard pipeline + all engine_v1 analytical modules.
 
     Identical auth, RBAC, and rate-limit guards as POST /v1/calculate.
-    All extended modules are non-fatal — failures are captured as None.
+    All extended modules are non-fatal -- failures are captured as None.
     """
-    # Reuse the standard calculate handler to get the base result
     base_result = await calculate(request_data, session, current_user, None)
 
-    # Run all extended engine_v1 modules (non-fatal wrappers)
+    # Extract plan buckets from the base result for extended modules
+    hedge_plan = base_result.hedge_plan
+    buckets_raw = [b.model_dump(mode="json") for b in hedge_plan.buckets] if hedge_plan else []
+    market_raw = request_data.market if isinstance(request_data.market, dict) else {}
+    policy_raw = request_data.policy if isinstance(request_data.policy, dict) else {}
+
     extended: dict = {}
+
+    # Margin model
+    try:
+        from app.engine_v1.margin_model import compute_margin
+        if buckets_raw:
+            margin_result = compute_margin(buckets_raw, market_raw, policy_raw)
+            extended["margin"] = margin_result.to_dict()
+        else:
+            extended["margin"] = None
+    except Exception as _e:
+        extended["margin"] = None
+        _log.warning("margin extended module failed: %s", _e)
+
+    # Concentration limits
+    try:
+        from app.engine_v1.concentration_limits import check_concentration_limits
+        if buckets_raw:
+            conc_result = check_concentration_limits(buckets_raw, policy_raw)
+            extended["concentration"] = conc_result.to_dict()
+        else:
+            extended["concentration"] = None
+    except Exception as _e:
+        extended["concentration"] = None
+        _log.warning("concentration extended module failed: %s", _e)
+
+    # Hedge effectiveness (dollar-offset on current run)
+    try:
+        from app.engine_v1.hedge_accounting import assess_hedge_effectiveness_dollar_offset
+        if buckets_raw:
+            hedged_changes = [b.get("commercial_exposure_mxn", 0.0) for b in buckets_raw]
+            instrument_changes = [b.get("hedge_position_mxn", 0.0) for b in buckets_raw]
+            eff_result = assess_hedge_effectiveness_dollar_offset(hedged_changes, instrument_changes)
+            extended["hedge_effectiveness"] = eff_result.to_dict()
+        else:
+            extended["hedge_effectiveness"] = None
+    except Exception as _e:
+        extended["hedge_effectiveness"] = None
+        _log.warning("hedge_effectiveness extended module failed: %s", _e)
 
     # Factor covariance
     try:
-        import pandas as pd
-
         from app.engine_v1.factor_covariance import build_factor_covariance_matrix
-        ccy_list = [t.get("currency", "MXN") for t in (request_data.trades or [])]
-        if ccy_list:
-            cov = build_factor_covariance_matrix(pd.Index(set(ccy_list)))
-            extended["factor_covariance"] = cov.to_dict() if hasattr(cov, "to_dict") else str(cov)
+        ccy_set = set()
+        for t in (request_data.trades or []):
+            ccy = t.get("currency", "MXN") if isinstance(t, dict) else getattr(t, "currency", "MXN")
+            ccy_set.add(ccy)
+        if ccy_set:
+            import pandas as pd
+            cov = build_factor_covariance_matrix(pd.Index(sorted(ccy_set)))
+            extended["factor_covariance"] = cov.to_dict() if hasattr(cov, "to_dict") else None
         else:
             extended["factor_covariance"] = None
     except Exception as _e:
         extended["factor_covariance"] = None
         _log.warning("factor_covariance extended module failed: %s", _e)
 
-    # Margin model
-    try:
-        from app.engine_v1.margin_model import compute_im_schedule
-        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
-        extended["margin"] = compute_im_schedule(plan) if plan else None
-    except Exception as _e:
-        extended["margin"] = None
-        _log.warning("margin extended module failed: %s", _e)
-
-    # Liquidity
-    try:
-        from app.engine_v1.liquidity_model import assess_liquidity
-        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
-        snapshot = request_data.market_snapshot if hasattr(request_data, "market_snapshot") else None
-        extended["liquidity"] = assess_liquidity(plan, snapshot) if plan and snapshot else None
-    except Exception as _e:
-        extended["liquidity"] = None
-        _log.warning("liquidity extended module failed: %s", _e)
-
-    # NAV attribution
-    try:
-        from app.engine_v1.nav_attribution_engine import compute_nav_attribution
-        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
-        snapshot = request_data.market_snapshot if hasattr(request_data, "market_snapshot") else None
-        extended["nav_attribution"] = compute_nav_attribution(plan, snapshot) if plan and snapshot else None
-    except Exception as _e:
-        extended["nav_attribution"] = None
-        _log.warning("nav_attribution extended module failed: %s", _e)
-
-    # Transaction cost analysis
-    try:
-        from app.engine_v1.transaction_cost_model import compute_tca
-        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
-        policy = request_data.policy_overrides if hasattr(request_data, "policy_overrides") else None
-        extended["tca"] = compute_tca(plan, policy) if plan else None
-    except Exception as _e:
-        extended["tca"] = None
-        _log.warning("tca extended module failed: %s", _e)
-
-    # FX rolls
-    try:
-        from app.engine_v1.fx_roll_engine import compute_roll_schedule
-        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
-        extended["rolls"] = compute_roll_schedule(plan) if plan else None
-    except Exception as _e:
-        extended["rolls"] = None
-        _log.warning("rolls extended module failed: %s", _e)
-
     # Capital adequacy
     try:
         from app.engine_v1.capital_adequacy import compute_capital_charges
-        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
-        extended["capital"] = compute_capital_charges(plan) if plan else None
+        extended["capital"] = compute_capital_charges(buckets_raw) if buckets_raw else None
     except Exception as _e:
         extended["capital"] = None
         _log.warning("capital extended module failed: %s", _e)
@@ -1068,8 +1063,7 @@ async def calculate_extended(
     # Waterfall
     try:
         from app.engine_v1.waterfall import compute_waterfall
-        plan = base_result.get("run_envelope", {}).get("hedge_plan") if isinstance(base_result, dict) else None
-        extended["waterfall"] = compute_waterfall(plan) if plan else None
+        extended["waterfall"] = compute_waterfall(buckets_raw) if buckets_raw else None
     except Exception as _e:
         extended["waterfall"] = None
         _log.warning("waterfall extended module failed: %s", _e)

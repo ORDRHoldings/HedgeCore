@@ -14,11 +14,11 @@ async def test_health_endpoint_returns_ok():
     """Ensure /health returns HTTP 200 and correct payload."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/health")
+        response = await client.get("/api/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
-        assert data["service"].lower() == "hedgecalc api"
+        assert "ordr" in data["service"].lower() or "hedgecalc" in data["service"].lower()
 
 
 @pytest.mark.asyncio
@@ -26,7 +26,7 @@ async def test_response_headers_and_middleware():
     """Validate middleware headers (CORS, GZip, Request-ID, Rate-Limit)."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/health")
+        response = await client.get("/api/health")
         # GZip or CORS headers presence
         assert any(
             h in response.headers

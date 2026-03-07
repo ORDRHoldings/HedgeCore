@@ -8,20 +8,16 @@ for Windows event loops, pytest, and FastAPI lifespan.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp, Message
 
 from app.core.config import settings
-from app.core.db import async_session_maker
-from app.models.audit_log import AuditLog
 
 logger = logging.getLogger("hedgecalc.audit")
 
@@ -29,10 +25,6 @@ logger = logging.getLogger("hedgecalc.audit")
 # ---------------------------------------------------------------------
 # Utility helpers
 # ---------------------------------------------------------------------
-def _now_iso() -> str:
-    return datetime.now(UTC).isoformat()
-
-
 def _extract_user_id_from_auth(authorization: str | None) -> int | None:
     """Decode JWT and extract user_id (sub) if valid."""
     if not authorization or " " not in authorization:
@@ -98,31 +90,6 @@ class AuditMiddleware(BaseHTTPMiddleware):
                     "duration_ms": duration_ms,
                 },
             )
-
-            # async-safe database write
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_closed():
-                    logger.debug("Audit skipped: event loop closed (pytest teardown).")
-                else:
-                    async with async_session_maker() as session:  # type: AsyncSession
-                        entry = AuditLog(
-                            request_id=request_id,
-                            user_id=user_id,
-                            ip=ip,
-                            user_agent=ua,
-                            method=method,
-                            path=path,
-                            status=status_code,
-                            duration_ms=duration_ms,
-                        )
-                        session.add(entry)
-                        await session.commit()
-            except RuntimeError as re:
-                # Handles 'no running event loop' or teardown during tests
-                logger.debug(f"Audit skipped due to runtime teardown: {re}")
-            except Exception as e:
-                logger.error("Audit log write failed", exc_info=e)
 
             # Always attach request ID to outgoing response
             if response is not None:

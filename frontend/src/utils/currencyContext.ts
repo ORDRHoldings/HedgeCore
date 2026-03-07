@@ -21,7 +21,7 @@ import type { TradeRow, MarketSnapshot } from '../api/types';
 const PRICE_CCY = new Set(['EUR', 'GBP', 'AUD', 'NZD', 'CHF']);
 
 /** Reasonable spot rate ranges per currency (vs USD, using the correct quotation).
- *  Used for client-side validation of market.spot_usdmxn field (which holds whatever
+ *  Used for client-side validation of market.spot_rate field (which holds whatever
  *  pair's spot was configured). Ranges are intentionally wide to allow for future volatility.
  */
 const SPOT_RANGES: Record<string, [number, number]> = {

@@ -36,7 +36,7 @@ os.environ.setdefault("ENV", "test")
 
 from app.core.security import create_access_token, create_refresh_token
 
-pytestmark = pytest.mark.asyncio
+pytestmark = [pytest.mark.asyncio, pytest.mark.requires_postgres]
 
 # ── Shared test data ───────────────────────────────────────────────────────────
 

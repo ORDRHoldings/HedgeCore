@@ -262,38 +262,27 @@ type RoleLayout = { widgetIds: string[]; grid: GridItem[] };
 
 const ROLE_LAYOUTS: Record<string, RoleLayout> = {
   admin: {
-    // ── Navigation-rail layout (rowHeight=44, margin=6 → ~694px total) ──
+    // ── Admin operational layout ──
     //
-    //  ┌────┬──────────────────────┬────────────┐  y=0
-    //  │    │   Risk Pulse         │ Market     │
-    //  │ C  │   (x=2, w=6, h=8)   │ Pulse      │
-    //  │ O  │                      │ (x=8, w=4, │
-    //  │ M  │                      │  h=4)      │
-    //  │ M  │                      ├────────────┤  y=4
-    //  │ A  │                      │ USD Radar  │
-    //  │ N  │                      │ (x=8, w=4, │
-    //  │ D  │                      │  h=4)      │
-    //  │    ├────────────┬─────────┴────────────┤  y=8
-    //  │ H  │ Geopolit.  │ Currency Intelligence │
-    //  │ U  │ (x=2, w=4, │ (x=6, w=6, h=5)      │
-    //  │ B  │  h=5)      │                      │
-    //  └────┴────────────┴──────────────────────┘  y=13
+    //  ┌────────────────────────────────────────┐  y=0
+    //  │   KPI Summary (w=12, h=3)              │
+    //  ├──────────────────┬─────────────────────┤  y=3
+    //  │  Exposure Summary │  FX Rates           │
+    //  │  (w=6, h=5)      │  (w=6, h=5)         │
+    //  ├──────────┬───────┴─────────────────────┤  y=8
+    //  │ Recent   │  Hedge Health │ Quick Actions│
+    //  │ Runs     │  (w=4, h=6)  │ (w=4, h=4)  │
+    //  │ (w=6,h=5)│              │              │
+    //  └──────────┴──────────┴──────────────────┘
     //
-    //  Rationale:
-    //  — Command Hub = ultra-narrow left rail (w=2, h=13) spanning full height
-    //    Acts as a persistent navigation sidebar, like a Bloomberg function bar
-    //  — Risk Pulse = dominant center oracle at w=6 — large score display
-    //  — Market Pulse + USD Radar stacked right (w=4) = live data side panel
-    //  — Geopolitical (w=4) + Currency Intel (w=6) split the floor asymmetrically
-    //
-    widgetIds: ["command_hub", "risk_pulse", "market_pulse", "usd_exposure_radar", "geopolitical", "currency_intel"],
+    widgetIds: ["kpi_summary", "exposure_summary", "fx_rates", "recent_runs", "hedge_health", "quick_actions"],
     grid: [
-      { i: "command_hub",        x: 0, y: 0, w: 2, h: 13 }, // left rail     — full-height nav sidebar
-      { i: "risk_pulse",         x: 2, y: 0, w: 6, h: 8  }, // center oracle — dominant score display
-      { i: "market_pulse",       x: 8, y: 0, w: 4, h: 4  }, // right top     — live tickers
-      { i: "usd_exposure_radar", x: 8, y: 4, w: 4, h: 4  }, // right bottom  — USD dynamics
-      { i: "geopolitical",       x: 2, y: 8, w: 4, h: 5  }, // floor center  — geo intel
-      { i: "currency_intel",     x: 6, y: 8, w: 6, h: 5  }, // floor right   — wide table
+      { i: "kpi_summary",      x: 0, y: 0, w: 12, h: 3 },
+      { i: "exposure_summary", x: 0, y: 3, w: 6,  h: 5 },
+      { i: "fx_rates",         x: 6, y: 3, w: 6,  h: 5 },
+      { i: "recent_runs",      x: 0, y: 8, w: 6,  h: 5 },
+      { i: "hedge_health",     x: 6, y: 8, w: 4,  h: 6 },
+      { i: "quick_actions",    x: 10, y: 8, w: 2, h: 4 },
     ],
   },
   ceo: {
@@ -329,12 +318,12 @@ const ROLE_LAYOUTS: Record<string, RoleLayout> = {
     ],
   },
   branch_manager: {
-    widgetIds: ["kpi_summary", "pending_approvals", "team_activity", "polisophic_mini", "recent_runs"],
+    widgetIds: ["kpi_summary", "pending_approvals", "team_activity", "exposure_summary", "recent_runs"],
     grid: [
       { i: "kpi_summary",       x: 0, y: 0,  w: 12, h: 3 },
       { i: "pending_approvals", x: 0, y: 3,  w: 6,  h: 5 },
       { i: "team_activity",     x: 6, y: 3,  w: 6,  h: 6 },
-      { i: "polisophic_mini",   x: 0, y: 8,  w: 6,  h: 5 },
+      { i: "exposure_summary",  x: 0, y: 8,  w: 6,  h: 5 },
       { i: "recent_runs",       x: 6, y: 9,  w: 6,  h: 5 },
     ],
   },
@@ -349,31 +338,31 @@ const ROLE_LAYOUTS: Record<string, RoleLayout> = {
     ],
   },
   senior_analyst: {
-    widgetIds: ["recent_runs", "exposure_summary", "fx_rates", "polisophic_mini", "pipeline_status", "quick_actions"],
+    widgetIds: ["recent_runs", "exposure_summary", "fx_rates", "hedge_health", "pipeline_status", "quick_actions"],
     grid: [
       { i: "recent_runs",      x: 0, y: 0,  w: 6,  h: 5 },
       { i: "exposure_summary", x: 6, y: 0,  w: 6,  h: 5 },
       { i: "fx_rates",         x: 0, y: 5,  w: 6,  h: 5 },
-      { i: "polisophic_mini",  x: 6, y: 5,  w: 6,  h: 5 },
+      { i: "hedge_health",     x: 6, y: 5,  w: 6,  h: 5 },
       { i: "pipeline_status",  x: 0, y: 10, w: 6,  h: 4 },
       { i: "quick_actions",    x: 6, y: 10, w: 6,  h: 4 },
     ],
   },
   risk_analyst: {
-    widgetIds: ["recent_runs", "polisophic_mini", "quick_actions", "exposure_summary"],
+    widgetIds: ["recent_runs", "hedge_health", "quick_actions", "exposure_summary"],
     grid: [
       { i: "recent_runs",      x: 0, y: 0, w: 7, h: 5 },
-      { i: "polisophic_mini",  x: 7, y: 0, w: 5, h: 5 },
+      { i: "hedge_health",     x: 7, y: 0, w: 5, h: 5 },
       { i: "quick_actions",    x: 0, y: 5, w: 4, h: 4 },
       { i: "exposure_summary", x: 4, y: 5, w: 8, h: 5 },
     ],
   },
   junior_analyst: {
-    widgetIds: ["recent_runs", "quick_actions", "polisophic_mini"],
+    widgetIds: ["recent_runs", "quick_actions", "fx_rates"],
     grid: [
-      { i: "recent_runs",     x: 0, y: 0, w: 7, h: 5 },
-      { i: "quick_actions",   x: 7, y: 0, w: 5, h: 4 },
-      { i: "polisophic_mini", x: 0, y: 5, w: 12, h: 5 },
+      { i: "recent_runs",   x: 0, y: 0, w: 7, h: 5 },
+      { i: "quick_actions",  x: 7, y: 0, w: 5, h: 4 },
+      { i: "fx_rates",       x: 0, y: 5, w: 12, h: 5 },
     ],
   },
   auditor: {
@@ -387,16 +376,16 @@ const ROLE_LAYOUTS: Record<string, RoleLayout> = {
   },
 };
 
-// Default fallback — same navigation-rail layout as admin
+// Default fallback — functional widgets that work at all plan tiers
 const DEFAULT_LAYOUT: RoleLayout = {
-  widgetIds: ["command_hub", "risk_pulse", "market_pulse", "usd_exposure_radar", "geopolitical", "currency_intel"],
+  widgetIds: ["kpi_summary", "exposure_summary", "fx_rates", "recent_runs", "quick_actions", "hedge_health"],
   grid: [
-    { i: "command_hub",        x: 0, y: 0, w: 2, h: 13 },
-    { i: "risk_pulse",         x: 2, y: 0, w: 6, h: 8  },
-    { i: "market_pulse",       x: 8, y: 0, w: 4, h: 4  },
-    { i: "usd_exposure_radar", x: 8, y: 4, w: 4, h: 4  },
-    { i: "geopolitical",       x: 2, y: 8, w: 4, h: 5  },
-    { i: "currency_intel",     x: 6, y: 8, w: 6, h: 5  },
+    { i: "kpi_summary",      x: 0, y: 0, w: 12, h: 3 },
+    { i: "exposure_summary", x: 0, y: 3, w: 6,  h: 5 },
+    { i: "fx_rates",         x: 6, y: 3, w: 6,  h: 5 },
+    { i: "recent_runs",      x: 0, y: 8, w: 6,  h: 5 },
+    { i: "quick_actions",    x: 6, y: 8, w: 4,  h: 4 },
+    { i: "hedge_health",     x: 10, y: 8, w: 2, h: 6 },
   ],
 };
 

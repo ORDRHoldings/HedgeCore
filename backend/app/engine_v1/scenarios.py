@@ -20,7 +20,7 @@ def compute_scenarios(
     buckets: list[BucketResult],
     market: MarketSnapshot,
 ) -> ScenarioResults:
-    spot = market.spot_usdmxn
+    spot = market.spot_rate
     per_bucket: list[ScenarioBucketResult] = []
     totals_map: dict[float, dict] = {
         s: {"unhedged": 0.0, "hedged": 0.0, "benefit": 0.0, "shocked_spot": 0.0}

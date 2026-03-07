@@ -3,7 +3,6 @@ app/tasks/audit_cleanup.py
 HedgeCalc - Phase II-B (Automated Audit Retention)
 
 Nightly-capable cleanup that prunes old audit data (>N days) from:
-  - audit_logs         (field: ts)
   - auth_audit_logs    (field: created_at)
 
 Uses the same AsyncSession factory as the rest of the app (get_session).
@@ -26,7 +25,6 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
-from app.models.audit_log import AuditLog
 from app.models.auth_audit_log import AuthAuditLog
 
 log = logging.getLogger(__name__)
@@ -45,14 +43,6 @@ async def cleanup_audit_tables() -> None:
 
     async for session in get_session():
         try:
-            deleted_audit = await _delete_old_records(
-                session=session,
-                model=AuditLog,
-                ts_attr="ts",
-                cutoff=cutoff,
-                name="audit_logs",
-            )
-
             deleted_auth = await _delete_old_records(
                 session=session,
                 model=AuthAuditLog,
@@ -62,8 +52,7 @@ async def cleanup_audit_tables() -> None:
             )
 
             log.info(
-                "? Audit cleanup complete | audit_logs=%d | auth_audit_logs=%d | cutoff=%s",
-                deleted_audit,
+                "Audit cleanup complete | auth_audit_logs=%d | cutoff=%s",
                 deleted_auth,
                 cutoff.isoformat(),
             )

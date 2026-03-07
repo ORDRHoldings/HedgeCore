@@ -59,7 +59,7 @@ async def create_or_get(
     exists, returns the existing row without inserting a duplicate (idempotent).
 
     payload must be a MarketSnapshot-compatible dict:
-        { as_of, spot_usdmxn, forward_points_by_month, provider_metadata }
+        { as_of, spot_rate, forward_points_by_month, provider_metadata }
     """
     # 1. Build canonical representation + hash
     canonical_json  = build_canonical_payload(payload)
@@ -75,7 +75,7 @@ async def create_or_get(
     provider        = str(provider_meta.get("source", "unknown"))
     data_class      = str(provider_meta.get("data_class", "INDICATIVE_FALLBACK"))
     primary_ccy     = str(provider_meta.get("primary_currency", "MXN"))
-    spot            = float(payload.get("spot_usdmxn", 0.0))
+    spot            = float(payload.get("spot_rate", payload.get("spot_usdmxn", 0.0)))
     is_synthetic    = data_class != "LIVE"
 
     # 4. Parse as_of

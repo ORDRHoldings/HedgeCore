@@ -22,7 +22,7 @@ def compute_hedge_plan(
     policy: PolicyConfig,
 ) -> tuple[HedgePlan, list[TraceEvent]]:
     trace_events: list[TraceEvent] = []
-    spot = market.spot_usdmxn
+    spot = market.spot_rate
     fwd_points = market.forward_points_by_month
     ratio_conf = policy.hedge_ratios.confirmed
     ratio_fore = policy.hedge_ratios.forecast
@@ -199,7 +199,7 @@ def compute_hedge_plan_multi(
         raise ValueError(f"Pair {pair!r} market data missing 'spot' field")
 
     pair_market = MarketSnapshot(
-        spot_usdmxn=pair_spot,
+        spot_rate=pair_spot,
         forward_points_by_month=pair_fwd or {},
     )
 

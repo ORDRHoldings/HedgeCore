@@ -877,7 +877,7 @@ export default function ReportsContainer({ result, baseCcy = "MXN", userId = "" 
         <ExecutiveSummaryPanel
           summary={summary} totals={scenario_results.totals} buckets={buckets}
           trades={[]} hedges={[]}
-          market={{ as_of: result.run_envelope.timestamp, spot_usdmxn: 0, forward_points_by_month: {}, provider_metadata: {} }}
+          market={{ as_of: result.run_envelope.timestamp, spot_rate: 0, forward_points_by_month: {}, provider_metadata: {} }}
           validationReport={validation_report} policy={policy}
         />
         <ExposureInsightsPanel buckets={buckets} />

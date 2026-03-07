@@ -55,6 +55,7 @@ class TestRtCookieSecurity:
         assert auth_module._RT_COOKIE_SAMESITE == "strict"
 
 
+@pytest.mark.requires_postgres
 class TestCorsConfig:
     """Verify CORS settings allow credentials with explicit origins."""
 

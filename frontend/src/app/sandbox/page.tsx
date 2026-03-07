@@ -42,7 +42,7 @@ const DEMO_REQUEST: CalculateRequest = {
   hedges: [],
   market: {
     as_of: today.toISOString().slice(0, 10),
-    spot_usdmxn: FALLBACK_SPOT_USDMXN,
+    spot_rate: FALLBACK_SPOT_USDMXN,
     forward_points_by_month: { [m1.slice(0, 7)]: 0.0220, [m2.slice(0, 7)]: 0.0440, [m3.slice(0, 7)]: 0.0660 },
     provider_metadata: { source: "DEMO", primary_currency: "MXN" },
   },
@@ -126,7 +126,7 @@ function useLiveSpot(primaryCurrency: string) {
       const res = await fetch(`/api/market-autofill?currency=${primaryCurrency}&buckets=2026-06`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as Record<string, unknown>;
-      const spot = (data.spot_usdmxn ?? data.spot ?? data.spot_rate) as number | undefined;
+      const spot = (data.spot_rate ?? data.spot ?? data.spot_rate) as number | undefined;
       if (spot && spot > 0) {
         setLiveSpot(spot);
         setLiveStatus("live");
@@ -319,7 +319,7 @@ function WidgetMode({ currency, notional, tab }: { currency: string; notional: n
   const { sandboxResult, sandboxLoading } = useSelector((s: RootState) => s.pipeline);
   const { liveSpot, liveStatus } = useLiveSpot(currency);
 
-  const spot = liveSpot ?? (sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined)?.spot_usdmxn as number ?? FALLBACK_SPOT_USDMXN;
+  const spot = liveSpot ?? (sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined)?.spot_rate as number ?? FALLBACK_SPOT_USDMXN;
 
   return (
     <div style={{
@@ -416,7 +416,7 @@ function SandboxPageInner() {
   const spot = useMemo(() => {
     if (liveSpot && liveSpot > 0) return liveSpot;
     const m = sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined;
-    return (m?.spot_usdmxn as number | undefined) ?? FALLBACK_SPOT_USDMXN;
+    return (m?.spot_rate as number | undefined) ?? FALLBACK_SPOT_USDMXN;
   }, [liveSpot, sandboxResult]);
 
   const notionalUSD = useMemo(() => {

@@ -248,21 +248,23 @@ def _find_benchmark(
     return min(candidates, key=lambda b: abs((b.as_of - trade_date).days))
 
 
+_CCY_PER_USD: set[str] = {"EUR", "GBP", "AUD", "NZD"}
+
+
 def _to_usd(amount: float, currency: str, benchmark_rate: float) -> float:
     """
     Convert amount in `currency` to USD using the benchmark mid rate.
-    Convention:
-      - If rate is USD/CCY (e.g. USD/MXN = 17.5): USD = amount / rate
-      - If rate is CCY/USD (e.g. EUR/USD = 1.085): USD = amount * rate
-    We use a simple heuristic: if rate > 2, assume USD/CCY; else CCY/USD.
+    Convention determined by explicit currency classification:
+      - CCY/USD pairs (EUR, GBP, AUD, NZD): USD = amount * rate
+      - USD/CCY pairs (all others: MXN, JPY, BRL, CHF, etc.): USD = amount / rate
     """
     if benchmark_rate <= 0:
         return 0.0
     if currency.upper() == "USD":
         return amount
-    if benchmark_rate > 2.0:
-        return amount / benchmark_rate
-    return amount * benchmark_rate
+    if currency.upper() in _CCY_PER_USD:
+        return amount * benchmark_rate
+    return amount / benchmark_rate
 
 
 # ── Section A: Markup computation ─────────────────────────────────────────────

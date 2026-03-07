@@ -48,7 +48,7 @@ export const CURRENCY_FX_HELP: HelpPanelConfig = {
       type:        "variables",
       variables: [
         {
-          name:        "spot_usdmxn",
+          name:        "spot_rate",
           type:        "number (4 d.p.)",
           description: "Current mid-market spot rate for the selected currency pair. For most EM currencies, this is USD per local unit (e.g., 18.4200 = 18.42 MXN per USD). For EUR/GBP/AUD/NZD/CHF, the convention is inverted.",
           example:     "18.4200",

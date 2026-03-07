@@ -13,7 +13,7 @@ class TestDurationAwareScenarios:
         short_durations = [{"notional_usd": 1_000_000, "duration_years": 0.083}]
         long_durations = [{"notional_usd": 1_000_000, "duration_years": 1.0}]
         policy = {"enabled_scenarios": ["regime_shift"]}
-        market = {"spot_usdmxn": 17.15}
+        market = {"spot_rate": 17.15}
 
         result_short = apply_extended_scenarios(
             2_000_000, 1_000_000, market, policy, 0,
@@ -55,6 +55,6 @@ class TestDurationAwareScenarios:
         from app.engine_v1.scenarios_ext import apply_extended_scenarios
         policy = {"enabled_scenarios": ["regime_shift"]}
         result = apply_extended_scenarios(
-            2_000_000, 1_000_000, {"spot_usdmxn": 17.15}, policy
+            2_000_000, 1_000_000, {"spot_rate": 17.15}, policy
         )
         assert result.scenario_count > 0

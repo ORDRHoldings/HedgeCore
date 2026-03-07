@@ -86,7 +86,7 @@ class MarketSnapshot(Base):
 
     payload: Mapped[dict] = mapped_column(
         JSONB, nullable=False,
-        doc="Full MarketSnapshot payload (spot_usdmxn, forward_points_by_month, provider_metadata).",
+        doc="Full MarketSnapshot payload (spot_rate, forward_points_by_month, provider_metadata).",
     )
 
     canonical_payload_json: Mapped[str] = mapped_column(

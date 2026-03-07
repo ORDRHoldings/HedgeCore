@@ -44,7 +44,7 @@ from backend.app.schemas_v1.errors import Severity
 def _live_market_payload(as_of: str | None = None) -> Dict[str, Any]:
     return {
         "as_of": as_of or "2026-02-28T12:00:00Z",
-        "spot_usdmxn": 20.25,
+        "spot_rate": 20.25,
         "forward_points_by_month": {
             "2026-03": 0.0972,
             "2026-04": 0.1944,
@@ -62,7 +62,7 @@ def _live_market_payload(as_of: str | None = None) -> Dict[str, Any]:
 def _indicative_market_payload() -> Dict[str, Any]:
     return {
         "as_of": "2026-02-28T12:00:00Z",
-        "spot_usdmxn": 18.97,
+        "spot_rate": 18.97,
         "forward_points_by_month": {
             "2026-03": 0.091,
             "2026-04": 0.182,
@@ -142,7 +142,7 @@ class TestHashContract:
         """Two payloads with different spot rates must have different hashes."""
         p1 = _live_market_payload()
         p2 = copy.deepcopy(p1)
-        p2["spot_usdmxn"] = p1["spot_usdmxn"] + 0.01
+        p2["spot_rate"] = p1["spot_rate"] + 0.01
         c1 = build_canonical_payload(p1)
         c2 = build_canonical_payload(p2)
         assert build_snapshot_hash(c1) != build_snapshot_hash(c2)
@@ -424,7 +424,7 @@ class TestHashServicePure:
         """LIVE and INDICATIVE payloads with same spot must have different hashes."""
         live = _live_market_payload()
         ind  = _indicative_market_payload()
-        ind["spot_usdmxn"] = live["spot_usdmxn"]  # same spot
+        ind["spot_rate"] = live["spot_rate"]  # same spot
         h_live = build_snapshot_hash(build_canonical_payload(live))
         h_ind  = build_snapshot_hash(build_canonical_payload(ind))
         assert h_live != h_ind  # data_class differs → different hash

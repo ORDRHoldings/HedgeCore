@@ -307,7 +307,7 @@ export default function ScenarioStressTester({
   const initialSpot = (() => {
     const marketSpot =
       (sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined)
-        ?.spot_usdmxn as number | undefined;
+        ?.spot_rate as number | undefined;
     return marketSpot ?? defaultSpot;
   })();
 

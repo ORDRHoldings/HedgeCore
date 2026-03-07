@@ -11,10 +11,7 @@ import RecentRunsWidget       from "@/components/dashboard/widgets/RecentRunsWid
 import PendingApprovalsWidget from "@/components/dashboard/widgets/PendingApprovalsWidget";
 import WidgetErrorBoundary    from "@/components/ui/WidgetErrorBoundary";
 
-import {
-  Layers, TrendingUp, Shield, FileText, BarChart2,
-  BookOpen, Settings, Clock, Activity, Users, RefreshCw,
-} from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 /* ── Tokens ──────────────────────────────────────────────────────────────── */
 const T = {
@@ -33,20 +30,6 @@ const T = {
   mono:      "'JetBrains Mono','IBM Plex Mono',monospace",
   ui:        "'Inter','IBM Plex Sans',sans-serif",
 } as const;
-
-/* ── Hub links ───────────────────────────────────────────────────────────── */
-const HUB = [
-  { Icon: Layers,     label: "POSITIONS",  href: "/position-desk"  },
-  { Icon: TrendingUp, label: "HEDGE DESK", href: "/hedge-desk"     },
-  { Icon: Shield,     label: "POLICY",     href: "/policy-desk"    },
-  { Icon: Clock,      label: "STAGING",    href: "/staging"        },
-  { Icon: BarChart2,  label: "REPORTS",    href: "/reports"        },
-  { Icon: FileText,   label: "AUDIT",      href: "/audit-trail"    },
-  { Icon: BookOpen,   label: "WIKI",       href: "/hedgewiki"      },
-  { Icon: Activity,   label: "RUNS",       href: "/run-viewer"     },
-  { Icon: Users,      label: "ACCESS",     href: "/access-control" },
-  { Icon: Settings,   label: "SETTINGS",   href: "/settings"       },
-] as const;
 
 /* ── Formatters ──────────────────────────────────────────────────────────── */
 function fmtAgo(ts: number) {
@@ -90,42 +73,6 @@ function Label({ index, title, sub }: { index: string; title: string; sub: strin
   );
 }
 
-/* ── HubItem ─────────────────────────────────────────────────────────────── */
-function HubItem({ Icon, label, href }: typeof HUB[number]) {
-  const router = useRouter();
-  const [hov, setHov] = useState(false);
-  return (
-    <button
-      onClick={() => router.push(href)}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        gap: 5, padding: "0 18px",
-        background: hov ? T.blueDim : "none",
-        border: "none",
-        borderRight: `1px solid ${T.rim}`,
-        cursor: "pointer",
-        height: "100%",
-        transition: "background 130ms",
-      }}
-    >
-      <Icon
-        size={15} strokeWidth={1.4}
-        style={{ color: hov ? T.blue : T.muted, transition: "color 130ms" }}
-      />
-      <span style={{
-        fontFamily: T.mono, fontSize: 15, letterSpacing: "0.1em",
-        color: hov ? T.blue : T.muted,
-        transition: "color 130ms", whiteSpace: "nowrap",
-      }}>
-        {label}
-      </span>
-    </button>
-  );
-}
-
 /* ── Page ────────────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const router = useRouter();
@@ -155,7 +102,7 @@ export default function DashboardPage() {
   if (!ready || isLoading) {
     return (
       <div style={{
-        height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
         background: T.bg, fontFamily: T.mono, fontSize: 14,
         color: T.muted, letterSpacing: "0.18em",
       }}>
@@ -169,32 +116,31 @@ export default function DashboardPage() {
 
   return (
     <div style={{
-      height: "100vh",
+      height: "100%",
       display: "flex",
       flexDirection: "column",
       background: T.bg,
       overflow: "hidden",
     }}>
 
-      {/* ── Top bar ──────────────────────────────────────────────────────── */}
+      {/* ── Context strip ──────────────────────────────────────────────── */}
       <div style={{
-        height: 44, flexShrink: 0,
+        height: 36, flexShrink: 0,
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 20px",
         background: T.panel,
         borderBottom: `1px solid ${T.rim}`,
-        boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
       }}>
         <span style={{
-          fontFamily: T.mono, fontSize: 14, fontWeight: 700,
-          color: T.blue, letterSpacing: "0.22em",
+          fontFamily: T.mono, fontSize: 11, fontWeight: 600,
+          color: T.muted, letterSpacing: "0.14em",
         }}>
-          ⬡ ORDR TERMINAL
+          DASHBOARD
         </span>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{
-            fontFamily: T.mono, fontSize: 14,
+            fontFamily: T.mono, fontSize: 11,
             color: T.muted, letterSpacing: "0.06em",
           }}>
             {ago}
@@ -202,14 +148,14 @@ export default function DashboardPage() {
           <button
             onClick={refresh}
             style={{
-              display: "flex", alignItems: "center", gap: 6,
-              fontFamily: T.mono, fontSize: 14, letterSpacing: "0.1em",
+              display: "flex", alignItems: "center", gap: 5,
+              fontFamily: T.mono, fontSize: 11, letterSpacing: "0.1em",
               color: T.secondary, background: "none",
               border: `1px solid ${T.soft}`,
-              padding: "5px 12px", borderRadius: 2, cursor: "pointer",
+              padding: "3px 10px", borderRadius: 2, cursor: "pointer",
             }}
           >
-            <RefreshCw size={11} strokeWidth={1.5} />
+            <RefreshCw size={10} strokeWidth={1.5} />
             REFRESH
           </button>
         </div>
@@ -277,39 +223,6 @@ export default function DashboardPage() {
         </div>
 
       </div>
-
-      {/* ── Hub ──────────────────────────────────────────────────────────── */}
-      <div style={{
-        height: 56, flexShrink: 0,
-        display: "flex", alignItems: "stretch",
-        background: T.panel,
-        borderTop: `1px solid ${T.rim}`,
-        overflow: "hidden",
-        boxShadow: "0 -1px 3px rgba(15,23,42,0.04)",
-      }}>
-        {/* Hub label */}
-        <div style={{
-          display: "flex", alignItems: "center", padding: "0 18px",
-          borderRight: `1px solid ${T.rim}`,
-          flexShrink: 0,
-        }}>
-          <span style={{
-            fontFamily: T.mono, fontSize: 15, letterSpacing: "0.2em",
-            color: T.muted, fontWeight: 700,
-          }}>
-            HUB
-          </span>
-        </div>
-
-        {/* Links */}
-        <div style={{
-          display: "flex", alignItems: "stretch",
-          flex: 1, overflow: "hidden",
-        }}>
-          {HUB.map(h => <HubItem key={h.href} {...h} />)}
-        </div>
-      </div>
-
     </div>
   );
 }

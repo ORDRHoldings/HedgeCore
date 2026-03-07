@@ -58,7 +58,7 @@ import { INPUT_HELP } from '../../lib/helpContent';
 
 const EMPTY_MARKET: MarketSnapshot = {
   as_of: new Date().toISOString().slice(0, 19) + 'Z',
-  spot_usdmxn: 0,
+  spot_rate: 0,
   forward_points_by_month: {},
   provider_metadata: { source: 'manual_user_input' },
 };
@@ -513,7 +513,7 @@ function InputPageInner() {
 
   const stepStatuses = useMemo(() => {
     const hasTrades   = trades.length > 0;
-    const marketValid = market.spot_usdmxn > 0;
+    const marketValid = market.spot_rate > 0;
     const fwdValid    = Object.keys(market.forward_points_by_month).length > 0;
     const realErrors  = validation.errors.filter(e => !AUTO_RESOLVED_CODES.has(e.code));
     const noErrors    = realErrors.length === 0;
@@ -524,7 +524,7 @@ function InputPageInner() {
       policy:        activePresetId ? 'complete' : 'partial',
       authorization: (hasTrades && noErrors) ? 'complete' : (hasTrades ? 'error' : 'pending'),
     } as Record<StepKey, 'complete' | 'partial' | 'error' | 'pending'>;
-  }, [trades.length, hedges.length, market.spot_usdmxn, market.forward_points_by_month, validation.errors, activePresetId]);
+  }, [trades.length, hedges.length, market.spot_rate, market.forward_points_by_month, validation.errors, activePresetId]);
 
   const tradeSummary = useMemo(() => ({
     totalMxn:  trades.reduce((s, t) => s + t.amount, 0),
@@ -544,11 +544,11 @@ function InputPageInner() {
       : [];
     return [
       { label: 'Exposure data',      met: trades.length > 0,           message: trades.length === 0 ? 'No positions loaded' : undefined },
-      { label: 'Market snapshot',    met: true,                        message: market.spot_usdmxn > 0 ? undefined : 'Auto-fetched on generate' },
+      { label: 'Market snapshot',    met: true,                        message: market.spot_rate > 0 ? undefined : 'Auto-fetched on generate' },
       { label: 'No blocking errors', met: nonMarketErrors.length === 0,
         message: nonMarketErrors.length > 0 ? `${nonMarketErrors.length} blocking exception${nonMarketErrors.length !== 1 ? 's' : ''}` : undefined },
     ];
-  }, [trades.length, market.spot_usdmxn, validation.errors]);
+  }, [trades.length, market.spot_rate, validation.errors]);
 
   const detectedCurrencies = useMemo(
     () => [...new Set(trades.map(t => t.currency))],
@@ -779,7 +779,7 @@ function InputPageInner() {
     setLoading(true); setBackendErrors([]); setBackendErrorMsg('');
     try {
       let activeMarket = market;
-      const needsFetch = opts?.forceMarketRefresh || activeMarket.spot_usdmxn === 0;
+      const needsFetch = opts?.forceMarketRefresh || activeMarket.spot_rate === 0;
       if (needsFetch && detectedCurrencies.length > 0) {
         try {
           const tradeValueDates = trades.map(t => t.value_date);

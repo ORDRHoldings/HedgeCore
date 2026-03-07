@@ -346,9 +346,10 @@ class TestNoLeak:
             f"Unexpected fault injection in: {routes_with_fault}"
         )
 
-    def test_only_verify_audit_chain_has_dev_chain_fail_param(self):
+    def test_no_dev_chain_fail_in_production_routes(self):
         """
-        Verify __dev_chain_fail appears ONLY in verify_audit_chain in v1_audit.
+        Verify __dev_chain_fail does NOT appear in any production route.
+        It should have been removed during hardening.
         """
         import inspect
         import app.api.routes.v1_audit as mod
@@ -357,6 +358,6 @@ class TestNoLeak:
             name for name, fn in inspect.getmembers(mod, inspect.isfunction)
             if "__dev_chain_fail" in inspect.signature(fn).parameters
         ]
-        assert routes_with_fail == ["verify_audit_chain"], (
-            f"Unexpected chain fail injection in: {routes_with_fail}"
+        assert routes_with_fail == [], (
+            f"Dev chain fail injection still present in: {routes_with_fail}"
         )

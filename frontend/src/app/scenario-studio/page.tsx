@@ -1,939 +1,1274 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useHedge } from "../../lib/hedgeContext";
-import HelpPanel from "../../components/layout/HelpPanel";
-import { SCENARIO_STUDIO_HELP } from "../../lib/helpContent";
-import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
+/**
+ * /scenario-studio — Monte Carlo Risk Simulation Studio
+ *
+ * Production-grade risk analytics page:
+ *   SIMULATION — Monte Carlo VaR/CVaR with interactive ECharts
+ *   STRESS     — 5 institutional stress scenarios (Vol Crush, Regime Shift, etc.)
+ *   VaR        — Percentile distribution table + confidence level analysis
+ *   RISK       — Factor covariance decomposition + risk contributions
+ */
 
-// ── Hydration-safe timestamp hook ─────────────────────────────────────────────
-function useRenderTs(): string {
-  const [renderTs, setRenderTs] = useState('');
-  useEffect(() => {
-    setRenderTs(new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC");
-  }, []);
-  return renderTs;
-}
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/lib/authContext";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
+import dynamic from "next/dynamic";
 
-// ─── style constants ─────────────────────────────────────────────────────────
+const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
+
+// ── Design Tokens ─────────────────────────────────────────────────────────
 const S = {
-  fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-  bgDeep:   "var(--bg-deep)",
-  bgPanel:  "var(--bg-panel)",
-  bgSub:    "var(--bg-sub)",
-  rim:      "var(--border-rim)",
-  soft:     "var(--border-soft)",
-  primary:  "var(--text-primary)",
-  secondary:"var(--text-secondary)",
-  tertiary: "var(--text-tertiary)",
-  cyan:     "var(--accent-cyan)",
-  amber:    "var(--accent-amber)",
-  pass:     "var(--status-pass)",
-  fail:     "var(--accent-red,#B91C1C)",
+  mono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  ui: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
+  deep: "var(--bg-deep)",
+  panel: "var(--bg-panel)",
+  sub: "var(--bg-sub)",
+  rim: "var(--border-rim)",
+  soft: "var(--border-soft)",
+  text1: "var(--text-primary)",
+  text2: "var(--text-secondary)",
+  text3: "var(--text-tertiary)",
+  cyan: "var(--accent-cyan)",
+  green: "var(--status-pass,#059669)",
+  red: "var(--accent-red,#DC2626)",
+  amber: "var(--accent-amber,#D97706)",
 } as const;
 
-// ─── tab types ────────────────────────────────────────────────────────────────
-type ScenarioTab = "library" | "shock" | "distribution" | "pathbuilder" | "audit";
+const HEX = {
+  cyan: "#1C62F2",
+  cyanLight: "#3B82F6",
+  green: "#059669",
+  greenLight: "#10B981",
+  greenBg: "#ECFDF5",
+  red: "#DC2626",
+  redLight: "#F87171",
+  redBg: "#FEF2F2",
+  amber: "#D97706",
+  amberLight: "#F59E0B",
+  indigo: "#6366F1",
+  text1: "#0F172A",
+  text2: "#334155",
+  text3: "#94A3B8",
+  border: "#E2E8F0",
+  bgSub: "#F1F5F9",
+} as const;
 
-const TABS: { key: ScenarioTab; label: string }[] = [
-  { key: "library",      label: "Scenario Library" },
-  { key: "shock",        label: "Shock Ladder" },
-  { key: "distribution", label: "P&L Distribution" },
-  { key: "pathbuilder",  label: "Path Builder" },
-  { key: "audit",        label: "Audit" },
-];
+type Tab = "simulation" | "stress" | "var" | "risk";
 
-// ─── primitives ──────────────────────────────────────────────────────────────
-
-function TopBar({ onBack }: { onBack: () => void }) {
-  const renderTs = useRenderTs();
-  return (
-    <header style={{
-      display: "flex", alignItems: "center", gap: 12, height: 44,
-      padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
-      flexShrink: 0,
-    }}>
-      <button onClick={onBack} style={{
-        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
-        background: "transparent", border: `1px solid ${S.rim}`,
-        padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
-      }}>← Home</button>
-      <span style={{ color: S.rim, userSelect: "none" }}>|</span>
-      <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary }}>
-        Scenario Studio
-      </span>
-      <span style={{
-        fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.08em",
-        color: S.secondary, padding: "1px 5px", border: `1px solid ${S.rim}`,
-      }}>SIMULATION · STRESS</span>
-      <div style={{ flex: 1 }} />
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
-        AS OF {renderTs}
-      </span>
-    </header>
-  );
-}
-
-function SectionLabel({ index, title, count }: { index: string; title: string; count?: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 10, paddingBottom: 8 }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>{index}</span>
-      <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>{title}</span>
-      {count && <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, marginLeft: "auto" }}>{count}</span>}
-    </div>
-  );
-}
-
-function Divider() {
-  return <div style={{ height: 1, background: S.rim, marginBottom: 14 }} />;
-}
-
-// ─── static scenario data ─────────────────────────────────────────────────────
-
-const SCENARIOS = [
-  {
-    id: "SCN-001",
-    name: "Fed Shock +150bps",
-    type: "MACRO",
-    method: "Deterministic",
-    status: "COMPLETE",
-    spotDelta: +4.82,
-    hedgePnL: -12_430_000,
-    netExposure: 284_200_000,
-    confidence: 99.1,
-    lastRun: "2026-02-17 09:14",
-  },
-  {
-    id: "SCN-002",
-    name: "MXN Devaluation 20%",
-    type: "EM STRESS",
-    method: "Historical",
-    status: "COMPLETE",
-    spotDelta: +20.00,
-    hedgePnL: -98_750_000,
-    netExposure: 284_200_000,
-    confidence: 97.3,
-    lastRun: "2026-02-17 09:14",
-  },
-  {
-    id: "SCN-003",
-    name: "Oil Collapse → MXN",
-    type: "COMMODITY",
-    method: "Monte Carlo",
-    status: "COMPLETE",
-    spotDelta: +8.14,
-    hedgePnL: -31_200_000,
-    netExposure: 284_200_000,
-    confidence: 95.0,
-    lastRun: "2026-02-17 09:13",
-  },
-  {
-    id: "SCN-004",
-    name: "Banxico Hold + USD Rally",
-    type: "RATES",
-    method: "Deterministic",
-    status: "COMPLETE",
-    spotDelta: +2.35,
-    hedgePnL: -4_820_000,
-    netExposure: 284_200_000,
-    confidence: 98.5,
-    lastRun: "2026-02-17 09:12",
-  },
-  {
-    id: "SCN-005",
-    name: "Global Risk-Off Q2",
-    type: "MACRO",
-    method: "Monte Carlo",
-    status: "RUNNING",
-    spotDelta: null,
-    hedgePnL: null,
-    netExposure: 284_200_000,
-    confidence: null,
-    lastRun: "2026-02-17 09:15",
-  },
-  {
-    id: "SCN-006",
-    name: "Custom Path: Gradual Appreciation",
-    type: "CUSTOM",
-    method: "Deterministic",
-    status: "DRAFT",
-    spotDelta: null,
-    hedgePnL: null,
-    netExposure: 284_200_000,
-    confidence: null,
-    lastRun: "—",
-  },
-];
-
-const SHOCK_LADDER = [
-  { shock: "-20%", usdmxn: 15.28, hedgePnL: +82_400_000, portfolioImpact: +124_000_000, netImpact: +41_600_000 },
-  { shock: "-15%", usdmxn: 16.20, hedgePnL: +58_900_000, portfolioImpact: +93_000_000,  netImpact: +34_100_000 },
-  { shock: "-10%", usdmxn: 17.11, hedgePnL: +34_800_000, portfolioImpact: +62_000_000,  netImpact: +27_200_000 },
-  { shock:  "-5%", usdmxn: 18.02, hedgePnL: +17_200_000, portfolioImpact: +31_000_000,  netImpact: +13_800_000 },
-  { shock:   "0%", usdmxn: 18.97, hedgePnL: 0,           portfolioImpact: 0,            netImpact: 0,           base: true },
-  { shock:  "+5%", usdmxn: 19.92, hedgePnL: -12_100_000, portfolioImpact: -31_000_000,  netImpact: -18_900_000 },
-  { shock: "+10%", usdmxn: 20.87, hedgePnL: -24_800_000, portfolioImpact: -62_000_000,  netImpact: -37_200_000 },
-  { shock: "+15%", usdmxn: 21.82, hedgePnL: -38_200_000, portfolioImpact: -93_000_000,  netImpact: -54_800_000 },
-  { shock: "+20%", usdmxn: 22.76, hedgePnL: -52_100_000, portfolioImpact: -124_000_000, netImpact: -71_900_000 },
-];
-
-const DISTRIBUTION = [
-  { percentile: "P1",  pnl: -84_000_000 },
-  { percentile: "P5",  pnl: -62_000_000 },
-  { percentile: "P10", pnl: -48_000_000 },
-  { percentile: "P25", pnl: -22_000_000 },
-  { percentile: "P50", pnl:   4_200_000 },
-  { percentile: "P75", pnl:  31_000_000 },
-  { percentile: "P90", pnl:  52_000_000 },
-  { percentile: "P95", pnl:  64_000_000 },
-  { percentile: "P99", pnl:  78_000_000 },
-];
-
-// Path builder: user-defined waypoints + simulated paths
-interface PathWaypoint {
-  month: string;
-  rate: number;
-}
-
-const DEFAULT_PATH: PathWaypoint[] = [
-  { month: "Feb", rate: 18.97 },
-  { month: "Mar", rate: 19.40 },
-  { month: "Apr", rate: 19.80 },
-  { month: "May", rate: 20.10 },
-  { month: "Jun", rate: 19.60 },
-  { month: "Jul", rate: 19.20 },
-  { month: "Aug", rate: 18.80 },
-  { month: "Sep", rate: 18.50 },
-  { month: "Oct", rate: 18.20 },
-  { month: "Nov", rate: 17.90 },
-  { month: "Dec", rate: 17.60 },
-  { month: "Jan", rate: 17.30 },
-];
-
-// Audit log for scenario runs
-interface ScenarioAuditEntry {
-  ts: string;
-  event: string;
-  actor: string;
-  detail: string;
-}
-
-// ─── formatters ───────────────────────────────────────────────────────────────
-
-function fmtM(n: number): string {
-  const abs = Math.abs(n);
-  const sign = n < 0 ? "−" : n > 0 ? "+" : "";
-  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(0)}K`;
-  return `${sign}${abs}`;
-}
-
-function fmtColor(n: number | null): string {
-  if (n === null) return S.tertiary;
-  return n >= 0 ? S.pass : S.fail;
-}
-
-// ─── bar chart (purely CSS) ────────────────────────────────────────────────
-
-function MiniBar({ value, max, negative }: { value: number; max: number; negative?: boolean }) {
-  const pct = Math.min(100, (Math.abs(value) / max) * 100);
-  const color = negative ? S.fail : S.pass;
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <div style={{ width: 80, height: 6, background: S.soft, position: "relative", flexShrink: 0 }}>
-        <div style={{ position: "absolute", left: 0, top: 0, width: `${pct}%`, height: "100%", background: color }} />
-      </div>
-    </div>
-  );
-}
-
-// ─── sparkline (SVG path) ─────────────────────────────────────────────────────
-
-function Sparkline() {
-  const pts = [2, 5, 8, 14, 22, 34, 48, 58, 52, 38, 24, 12, 7, 3, 1];
-  const max = Math.max(...pts);
-  const W = 120, H = 36;
-  const coords = pts.map((p, i) => `${(i / (pts.length - 1)) * W},${H - (p / max) * (H - 2)}`);
-  const path = `M ${coords.join(" L ")}`;
-  const fill = `M 0,${H} L ${coords.join(" L ")} L ${W},${H} Z`;
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
-      <defs>
-        <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--accent-cyan)" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="var(--accent-cyan)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={fill} fill="url(#spark-fill)" />
-      <path d={path} stroke="var(--accent-cyan)" strokeWidth="1.25" fill="none" />
-      <line x1={60} y1={0} x2={60} y2={H} stroke="var(--border-rim)" strokeWidth="0.75" strokeDasharray="2,2" />
-    </svg>
-  );
-}
-
-// ─── Path SVG chart ───────────────────────────────────────────────────────────
-
-function PathChart({ path }: { path: PathWaypoint[] }) {
-  const W = 480, H = 120, PAD = 32;
-  const rates = path.map(p => p.rate);
-  const min = Math.min(...rates) - 0.5;
-  const max = Math.max(...rates) + 0.5;
-  const toX = (i: number) => PAD + (i / (path.length - 1)) * (W - PAD * 2);
-  const toY = (r: number) => PAD + (1 - (r - min) / (max - min)) * (H - PAD * 2);
-  const pts = path.map((p, i) => `${toX(i)},${toY(p.rate)}`);
-  const linePath = `M ${pts.join(" L ")}`;
-  const fillPath = `M ${toX(0)},${H - PAD} L ${pts.join(" L ")} L ${toX(path.length - 1)},${H - PAD} Z`;
-
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: "block", width: "100%", height: "auto" }}>
-      <defs>
-        <linearGradient id="path-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--accent-cyan)" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="var(--accent-cyan)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {/* Grid lines */}
-      {[0, 0.25, 0.5, 0.75, 1].map(t => {
-        const y = PAD + t * (H - PAD * 2);
-        const r = max - t * (max - min);
-        return (
-          <g key={t}>
-            <line x1={PAD} y1={y} x2={W - PAD} y2={y} stroke="var(--border-soft)" strokeWidth="0.5" />
-            <text x={PAD - 4} y={y + 4} textAnchor="end" fill="var(--text-tertiary)" fontSize="7" fontFamily="IBM Plex Mono, monospace">
-              {r.toFixed(2)}
-            </text>
-          </g>
-        );
-      })}
-      {/* Fill */}
-      <path d={fillPath} fill="url(#path-fill)" />
-      {/* Line */}
-      <path d={linePath} stroke="var(--accent-cyan)" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
-      {/* Waypoints */}
-      {path.map((p, i) => (
-        <g key={i}>
-          <circle cx={toX(i)} cy={toY(p.rate)} r={3} fill="var(--bg-deep)" stroke="var(--accent-cyan)" strokeWidth="1.5" />
-          <text x={toX(i)} y={H - PAD + 14} textAnchor="middle" fill="var(--text-tertiary)" fontSize="7" fontFamily="IBM Plex Mono, monospace">
-            {p.month}
-          </text>
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-// ─── right rail (shared across tabs) ─────────────────────────────────────────
-
-function RightRail({ activeRunId }: { activeRunId: string | null }) {
-  return (
-    <aside style={{ padding: "20px 16px", background: S.bgSub, display: "flex", flexDirection: "column", gap: 0 }}>
-      <SectionLabel index="D" title="Run Parameters" />
-      <Divider />
-      <dl style={{ margin: 0, display: "flex", flexDirection: "column", gap: 0 }}>
-        {[
-          { dt: "Base Spot",     dd: "18.9720" },
-          { dt: "Volatility",    dd: "12.4% ann." },
-          { dt: "Horizon",       dd: "12 months" },
-          { dt: "Paths",         dd: "10,000" },
-          { dt: "Seed",          dd: "0xDEAD1234" },
-          { dt: "Correlation",   dd: "USD/Oil −0.62" },
-          { dt: "Rate Model",    dd: "Vasicek" },
-          { dt: "FX Model",      dd: "GBM + Jump" },
-          { dt: "Policy",        dd: "NDF-VANILLA" },
-        ].map(({ dt, dd }, i, arr) => (
-          <div key={dt} style={{
-            display: "grid", gridTemplateColumns: "1fr auto", gap: 8,
-            padding: "6px 0", borderBottom: i < arr.length - 1 ? `1px solid ${S.soft}` : "none",
-          }}>
-            <dt style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.tertiary, fontWeight: 400 }}>{dt}</dt>
-            <dd style={{ margin: 0, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary, textAlign: "right" as const }}>{dd}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div style={{ marginTop: 20, paddingTop: 14, borderTop: `1px solid ${S.rim}` }}>
-        <SectionLabel index="E" title="Audit Trace" />
-        <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, lineHeight: 1.8, letterSpacing: "0.03em" }}>
-          <div>RUN-ID: <span style={{ color: S.secondary }}>{activeRunId ? activeRunId.slice(0, 12) + "…" : "—"}</span></div>
-          <div>SEED: <span style={{ color: S.secondary }}>0xDEAD1234</span></div>
-          <div>ENGINE: <span style={{ color: S.secondary }}>1.0.0</span></div>
-          <div>METHOD: <span style={{ color: S.secondary }}>MC+DET</span></div>
-          <div>STATUS: <span style={{ color: S.pass }}>READ-ONLY</span></div>
-        </div>
-      </div>
-
-      {!activeRunId && (
-        <div style={{ marginTop: "auto", paddingTop: 16, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
-          No active hedge run. Load positions to connect live data.
-        </div>
-      )}
-    </aside>
-  );
-}
-
-// ─── TAB PANELS ──────────────────────────────────────────────────────────────
-
-// Tab 1: Scenario Library
-function TabLibrary({ maxPnL }: { maxPnL: number }) {
-  return (
-    <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", gap: 0, gridColumn: "1 / 3" }}>
-      <SectionLabel index="A" title="Scenario Library" count={`${SCENARIOS.length} scenarios`} />
-      <Divider />
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.6875rem" }}>
-        <thead>
-          <tr>
-            {["ID", "Scenario", "Method", "Spot Δ", "Hedge P&L", "Conf.", "Last Run", "Status"].map((h, i) => (
-              <th key={h} style={{
-                padding: "4px 8px 4px 0", fontFamily: S.fontMono,
-                fontSize: "0.6875rem", letterSpacing: "0.07em", textTransform: "uppercase",
-                color: S.tertiary, textAlign: i > 2 ? "right" : "left",
-                borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
-              }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {SCENARIOS.map((sc) => {
-            const statusColor =
-              sc.status === "COMPLETE" ? S.pass :
-              sc.status === "RUNNING"  ? S.cyan :
-              S.tertiary;
-            return (
-              <tr key={sc.id} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{sc.id}</td>
-                <td style={{ padding: "7px 8px 7px 0", maxWidth: 160 }}>
-                  <div style={{ fontWeight: 500, color: S.primary, fontSize: "0.6875rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sc.name}</div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em", marginTop: 1 }}>{sc.type}</div>
-                </td>
-                <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.secondary, whiteSpace: "nowrap" }}>{sc.method}</td>
-                <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: sc.spotDelta !== null ? (sc.spotDelta > 0 ? S.fail : S.pass) : S.tertiary }}>
-                  {sc.spotDelta !== null ? `+${sc.spotDelta.toFixed(2)}%` : "—"}
-                </td>
-                <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: fmtColor(sc.hedgePnL) }}>
-                  {sc.hedgePnL !== null ? fmtM(sc.hedgePnL) : "—"}
-                </td>
-                <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", textAlign: "right", color: S.secondary }}>
-                  {sc.confidence !== null ? `${sc.confidence}%` : "—"}
-                </td>
-                <td style={{ padding: "7px 8px 7px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, whiteSpace: "nowrap" }}>
-                  {sc.lastRun}
-                </td>
-                <td style={{ padding: "7px 0 7px 0", textAlign: "right" }}>
-                  <span style={{
-                    fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
-                    padding: "1px 4px", border: `1px solid ${statusColor}`, color: statusColor,
-                  }}>{sc.status}</span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {/* Summary bar */}
-      <div style={{
-        marginTop: 16, padding: "10px 12px", background: S.bgSub,
-        border: `1px solid ${S.rim}`, display: "flex", gap: 20,
-      }}>
-        {[
-          { label: "COMPLETE", value: SCENARIOS.filter(s => s.status === "COMPLETE").length, color: S.pass },
-          { label: "RUNNING",  value: SCENARIOS.filter(s => s.status === "RUNNING").length,  color: S.cyan },
-          { label: "DRAFT",    value: SCENARIOS.filter(s => s.status === "DRAFT").length,    color: S.tertiary },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>{label}</span>
-            <span style={{ fontFamily: S.fontMono, fontSize: "1.125rem", fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
-          </div>
-        ))}
-        <div style={{ flex: 1 }} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>WORST P&amp;L</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: "1.125rem", fontWeight: 700, color: S.fail, lineHeight: 1 }}>−98.8M</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>SCENARIO</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: "0.75rem", fontWeight: 600, color: S.secondary, lineHeight: 1 }}>SCN-002</span>
-        </div>
-      </div>
-      {/* suppress unused warning */}
-      <div style={{ display: "none" }}>{maxPnL}</div>
-    </div>
-  );
-}
-
-// Tab 2: Shock Ladder
-function TabShockLadder() {
-  return (
-    <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", gap: 0, gridColumn: "1 / 3" }}>
-      <SectionLabel index="B" title="USD/MXN Shock Ladder" count="base: 18.97" />
-      <Divider />
-
-      <div style={{ marginBottom: 16, padding: "8px 12px", background: S.bgSub, border: `1px solid ${S.rim}`, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
-        Instantaneous parallel shock to spot rate. Hedge P&L computed from existing NDF book against shocked exposure.
-      </div>
-
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.6875rem" }}>
-        <thead>
-          <tr>
-            {["Shock", "USD/MXN Rate", "Hedge P&L", "Exposure Impact", "Net P&L", "Δ vs Base"].map((h, i) => (
-              <th key={h} style={{
-                padding: "4px 8px 4px 0", fontFamily: S.fontMono,
-                fontSize: "0.6875rem", letterSpacing: "0.07em", textTransform: "uppercase",
-                color: S.tertiary, textAlign: i > 1 ? "right" : "left",
-                borderBottom: `1px solid ${S.rim}`,
-              }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {SHOCK_LADDER.map((row) => {
-            const isBase = (row as { base?: boolean }).base;
-            const deltaVsBase = isBase ? 0 : row.netImpact;
-            return (
-              <tr key={row.shock} style={{
-                borderBottom: `1px solid ${S.soft}`,
-                background: isBase ? `color-mix(in srgb, var(--accent-cyan) 4%, transparent)` : "transparent",
-              }}>
-                <td style={{ padding: "6px 8px 6px 0", fontFamily: S.fontMono, fontSize: "0.8125rem", fontWeight: isBase ? 700 : 400, color: isBase ? S.cyan : (row.shock.startsWith("+") ? S.fail : S.pass) }}>
-                  {row.shock}
-                </td>
-                <td style={{ padding: "6px 8px 6px 0", fontFamily: S.fontMono, fontSize: "0.75rem", color: S.secondary }}>
-                  {row.usdmxn.toFixed(2)}
-                </td>
-                <td style={{ padding: "6px 8px 6px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: fmtColor(row.hedgePnL) }}>
-                  {fmtM(row.hedgePnL)}
-                </td>
-                <td style={{ padding: "6px 8px 6px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: fmtColor(row.portfolioImpact) }}>
-                  {fmtM(row.portfolioImpact)}
-                </td>
-                <td style={{ padding: "6px 8px 6px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", fontWeight: 600, color: fmtColor(row.netImpact) }}>
-                  {fmtM(row.netImpact)}
-                </td>
-                <td style={{ padding: "6px 0 6px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: isBase ? S.tertiary : fmtColor(deltaVsBase) }}>
-                  {isBase ? "BASE" : fmtM(deltaVsBase)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {/* Key risk metrics */}
-      <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-        {[
-          { label: "Max Loss (−20% shock)", value: "−71.9M", color: S.fail },
-          { label: "Max Gain (+20% shock)", value: "+41.6M", color: S.pass },
-          { label: "Break-even Shock",      value: "±0%",    color: S.tertiary },
-          { label: "Hedge Offset at −20%",  value: "66.5%",  color: S.cyan },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ padding: "10px 12px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
-            <div style={{ fontFamily: S.fontMono, fontSize: "1.0rem", fontWeight: 700, color }}>{value}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Tab 3: P&L Distribution
-function TabDistribution({ maxPnL }: { maxPnL: number }) {
-  return (
-    <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", gap: 0, gridColumn: "1 / 3" }}>
-      <SectionLabel index="C" title="P&L Distribution (Monte Carlo — 10,000 paths)" />
-      <Divider />
-
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
-        {/* Percentile table */}
-        <div>
-          <table style={{ borderCollapse: "collapse", width: "100%" }}>
-            <thead>
-              <tr>
-                {["Percentile", "P&L", "Bar"].map((h, i) => (
-                  <th key={i} style={{
-                    padding: "3px 8px 3px 0", fontFamily: S.fontMono, fontSize: "0.6875rem",
-                    letterSpacing: "0.07em", textTransform: "uppercase", color: S.tertiary,
-                    textAlign: i === 1 ? "right" : "left", borderBottom: `1px solid ${S.rim}`,
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {DISTRIBUTION.map(d => (
-                <tr key={d.percentile} style={{ borderBottom: `1px solid ${S.soft}`, background: d.percentile === "P50" ? `color-mix(in srgb, var(--accent-cyan) 4%, transparent)` : "transparent" }}>
-                  <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: d.percentile === "P50" ? S.cyan : S.tertiary, fontWeight: d.percentile === "P50" ? 600 : 400 }}>{d.percentile}</td>
-                  <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: fmtColor(d.pnl), fontWeight: d.percentile === "P50" ? 600 : 400 }}>
-                    {fmtM(d.pnl)}
-                  </td>
-                  <td style={{ padding: "5px 0 5px 0" }}>
-                    <MiniBar value={d.pnl} max={maxPnL} negative={d.pnl < 0} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Shape + stats */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em", marginBottom: 8 }}>DISTRIBUTION SHAPE (10K PATHS)</div>
-            <div style={{ padding: "12px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
-              <Sparkline />
-              <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary }}>
-                <span>−84M</span>
-                <span style={{ color: S.cyan }}>μ +4.2M</span>
-                <span>+78M</span>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {[
-              { label: "VaR 99% (1yr)",    value: "−84.0M", color: S.fail },
-              { label: "CVaR 99% (1yr)",   value: "−97.2M", color: S.fail },
-              { label: "Expected P&L",     value: "+4.2M",  color: S.pass },
-              { label: "Std Deviation",    value: "38.4M",  color: S.secondary },
-              { label: "Skewness",         value: "+0.34",  color: S.secondary },
-              { label: "Kurtosis (excess)","value": "3.82", color: S.secondary },
-              { label: "Prob(Loss)",       value: "44.2%",  color: S.amber },
-              { label: "Prob(Gain>25M)",   value: "28.7%",  color: S.pass },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{ padding: "8px 10px", background: S.bgPanel, border: `1px solid ${S.rim}` }}>
-                <div style={{ fontFamily: S.fontUI, fontSize: "0.6875rem", color: S.tertiary, marginBottom: 2 }}>{label}</div>
-                <div style={{ fontFamily: S.fontMono, fontSize: "0.875rem", fontWeight: 700, color }}>{value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Tab 4: Path Builder
-function TabPathBuilder() {
-  const [path, setPath] = useState<PathWaypoint[]>(DEFAULT_PATH);
-  const [editIdx, setEditIdx] = useState<number | null>(null);
-  const [editVal, setEditVal] = useState("");
-
-  const totalHedgePnL = path.reduce((acc, p, i) => {
-    if (i === 0) return acc;
-    const delta = p.rate - path[0].rate;
-    return acc + (delta > 0 ? -delta * 1_000_000 : -delta * 800_000);
-  }, 0);
-
-  const handleEdit = (i: number) => {
-    setEditIdx(i);
-    setEditVal(path[i].rate.toFixed(2));
+interface RunSummary {
+  run_id?: string;
+  id?: string;
+  pair?: string;
+  currency_pair?: string;
+  created_at?: string;
+  run_envelope?: {
+    hedge_plan?: { buckets?: unknown[] };
+    market?: Record<string, unknown>;
+    policy?: Record<string, unknown>;
   };
-
-  const handleSave = (i: number) => {
-    const v = parseFloat(editVal);
-    if (!isNaN(v) && v > 5 && v < 50) {
-      const newPath = [...path];
-      newPath[i] = { ...newPath[i], rate: v };
-      setPath(newPath);
-    }
-    setEditIdx(null);
-  };
-
-  const resetPath = () => setPath(DEFAULT_PATH);
-
-  return (
-    <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", gap: 0, gridColumn: "1 / 3" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, paddingBottom: 8 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>P</span>
-        <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 600, color: S.primary }}>Custom Path Builder</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, marginLeft: "auto" }}>click rate to edit</span>
-        <button onClick={resetPath} style={{
-          fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
-          background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px",
-          cursor: "pointer", letterSpacing: "0.04em",
-        }}>RESET</button>
-      </div>
-      <Divider />
-
-      <div style={{ marginBottom: 20, padding: "8px 12px", background: S.bgSub, border: `1px solid ${S.rim}`, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
-        Build a deterministic rate path. Click any rate value to edit it. P&L impact is computed against the current hedge book.
-      </div>
-
-      {/* SVG path chart */}
-      <div style={{ marginBottom: 20 }}>
-        <PathChart path={path} />
-      </div>
-
-      {/* Waypoint table */}
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.6875rem" }}>
-        <thead>
-          <tr>
-            {["Month", "USD/MXN Rate", "Δ vs Base", "Est. Hedge P&L", ""].map((h, i) => (
-              <th key={i} style={{
-                padding: "4px 8px 4px 0", fontFamily: S.fontMono,
-                fontSize: "0.6875rem", letterSpacing: "0.07em", textTransform: "uppercase",
-                color: S.tertiary, textAlign: i > 1 ? "right" : "left",
-                borderBottom: `1px solid ${S.rim}`,
-              }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {path.map((wp, i) => {
-            const delta = wp.rate - DEFAULT_PATH[0].rate;
-            const estPnL = i === 0 ? 0 : (delta > 0 ? -delta * 1_000_000 : -delta * 800_000);
-            return (
-              <tr key={wp.month} style={{ borderBottom: `1px solid ${S.soft}`, background: i === 0 ? `color-mix(in srgb, var(--accent-cyan) 4%, transparent)` : "transparent" }}>
-                <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.6875rem", color: i === 0 ? S.cyan : S.secondary, fontWeight: i === 0 ? 600 : 400 }}>
-                  {wp.month} {i === 0 ? "(BASE)" : ""}
-                </td>
-                <td
-                  style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: S.primary, cursor: "pointer" }}
-                  onClick={() => handleEdit(i)}
-                >
-                  {editIdx === i ? (
-                    <input
-                      type="number"
-                      value={editVal}
-                      onChange={e => setEditVal(e.target.value)}
-                      onBlur={() => handleSave(i)}
-                      onKeyDown={e => { if (e.key === "Enter") handleSave(i); if (e.key === "Escape") setEditIdx(null); }}
-                      autoFocus
-                      step="0.01"
-                      style={{
-                        fontFamily: S.fontMono, fontSize: "0.75rem", color: S.primary,
-                        background: S.bgDeep, border: `1px solid ${S.cyan}`,
-                        width: 72, textAlign: "right", padding: "1px 4px", outline: "none",
-                      }}
-                    />
-                  ) : wp.rate.toFixed(2)}
-                </td>
-                <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: i === 0 ? S.tertiary : fmtColor(delta) }}>
-                  {i === 0 ? "—" : (delta >= 0 ? `+${delta.toFixed(2)}` : delta.toFixed(2))}
-                </td>
-                <td style={{ padding: "5px 8px 5px 0", fontFamily: S.fontMono, fontSize: "0.75rem", textAlign: "right", color: i === 0 ? S.tertiary : fmtColor(estPnL) }}>
-                  {i === 0 ? "—" : fmtM(estPnL)}
-                </td>
-                <td style={{ padding: "5px 0 5px 0", textAlign: "right" }}>
-                  {editIdx !== i && (
-                    <button onClick={() => handleEdit(i)} style={{
-                      fontFamily: S.fontMono, fontSize: "0.5625rem", color: S.tertiary,
-                      background: "transparent", border: `1px solid ${S.rim}`, padding: "1px 5px",
-                      cursor: "pointer",
-                    }}>EDIT</button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {/* Totals */}
-      <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-        {[
-          { label: "Cumulative Hedge P&L (path)",  value: fmtM(totalHedgePnL), color: fmtColor(totalHedgePnL) },
-          { label: "Terminal Rate",                  value: path[path.length - 1].rate.toFixed(2), color: S.secondary },
-          { label: "Path Trend",                     value: path[path.length - 1].rate < path[0].rate ? "↓ Appreciation" : "↑ Depreciation", color: path[path.length - 1].rate < path[0].rate ? S.pass : S.fail },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ padding: "10px 12px", background: S.bgSub, border: `1px solid ${S.rim}` }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.05em", marginBottom: 4 }}>{label}</div>
-            <div style={{ fontFamily: S.fontMono, fontSize: "0.9375rem", fontWeight: 700, color }}>{value}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
-// Tab 5: Audit
-function TabAudit({ runId }: { runId: string | null }) {
-  const [auditLog, setAuditLog] = useState<ScenarioAuditEntry[]>([]);
+interface VaRResult {
+  confidence: number;
+  hedged_var: number;
+  unhedged_var: number;
+  hedged_cvar: number;
+  unhedged_cvar: number;
+}
 
-  useEffect(() => {
-    // Build audit log from localStorage — scenarios run when hedge engine is triggered
-    const entries: ScenarioAuditEntry[] = [];
+interface MonteCarloResult {
+  simulation_count: number;
+  seed: number | null;
+  var_results: VaRResult[];
+  percentiles: Record<string, number>;
+  mean_hedged_pnl: number;
+  std_hedged_pnl: number;
+  mean_unhedged_pnl: number;
+  std_unhedged_pnl: number;
+  worst_hedged_pnl: number;
+  worst_unhedged_pnl: number;
+  best_hedged_pnl: number;
+  hedge_benefit_mean: number;
+  hedge_benefit_pct: number;
+}
 
-    // Pull from hedge run history in localStorage
+interface StressScenarioImpact {
+  scenario_name: string;
+  pre_hedge_loss_usd: number;
+  post_hedge_loss_usd: number;
+  hedge_effectiveness: number;
+  margin_impact_usd: number;
+  liquidity_impact_pct: number;
+  details: {
+    fx_shock?: number;
+    rate_shock_bps?: number;
+    vol_shock?: number;
+    margin_shock?: number;
+    adv_shock?: number;
+    family?: string;
+  };
+}
+
+interface StressResult {
+  scenarios: StressScenarioImpact[];
+  worst_case_scenario: string;
+  worst_case_loss_usd: number;
+  scenario_count: number;
+  compound_scenarios_included: boolean;
+}
+
+interface RiskContribution {
+  factor: string;
+  mctr: number;
+  weight: number;
+  pct_of_variance: number;
+}
+
+interface FactorCovResult {
+  pre_hedge_variance: number;
+  post_hedge_variance: number;
+  hedge_effectiveness_ratio: number;
+  risk_contributions: RiskContribution[];
+  portfolio_volatility: number;
+  diversification_ratio: number;
+}
+
+interface CompositeResult {
+  monte_carlo: MonteCarloResult | null;
+  stress_scenarios: StressResult | null;
+  factor_covariance: FactorCovResult | null;
+}
+
+function fmtUsd(v: number): string {
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(1)}K`;
+  return `${sign}$${abs.toFixed(0)}`;
+}
+
+function pct(v: number): string {
+  return `${(v * 100).toFixed(1)}%`;
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────
+export default function ScenarioStudioPage() {
+  const { token } = useAuth();
+  const [tab, setTab] = useState<Tab>("simulation");
+
+  // Run selection
+  const [runs, setRuns] = useState<RunSummary[]>([]);
+  const [selectedRunId, setSelectedRunId] = useState<string>("");
+  const [loadingRuns, setLoadingRuns] = useState(true);
+
+  // Simulation config
+  const [numSims, setNumSims] = useState(10000);
+  const [seed, setSeed] = useState<string>("42");
+  const [horizon, setHorizon] = useState(1);
+  const [confidenceLevels] = useState([0.90, 0.95, 0.99, 0.995]);
+
+  // Results
+  const [result, setResult] = useState<CompositeResult | null>(null);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load recent calculation runs
+  const loadRuns = useCallback(async () => {
+    if (!token) return;
+    setLoadingRuns(true);
     try {
-      const hedgeRaw = localStorage.getItem("ordr_last_run_meta");
-      if (hedgeRaw) {
-        const meta = JSON.parse(hedgeRaw) as { runId: string; ts: string; user: string };
-        entries.push({
-          ts: meta.ts,
-          event: "SCENARIO_RUN",
-          actor: meta.user || "system",
-          detail: `Hedge engine run triggered — scenarios refreshed. Run ${meta.runId.slice(0, 8)}`,
-        });
+      const res = await dashboardFetch("/v1/runs?limit=20", token);
+      if (res.ok) {
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : data.items || [];
+        setRuns(items);
+        if (items.length > 0) {
+          setSelectedRunId(items[0].run_id || items[0].id || "");
+        }
       }
-    } catch {/* ignore */}
+    } catch {
+      // silent
+    } finally {
+      setLoadingRuns(false);
+    }
+  }, [token]);
 
-    // Add static scenario events
-    SCENARIOS.filter(s => s.status === "COMPLETE").forEach((sc) => {
-      entries.push({
-        ts: sc.lastRun + " UTC",
-        event: "SCENARIO_COMPLETE",
-        actor: "engine",
-        detail: `${sc.id} · ${sc.name} — ${sc.method}`,
+  useEffect(() => { loadRuns(); }, [loadRuns]);
+
+  // Run composite analysis
+  const runAnalysis = async () => {
+    if (!token || !selectedRunId) return;
+    setRunning(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      // Load run data first
+      const runRes = await dashboardFetch(`/v1/risk/summary/${selectedRunId}`, token);
+      if (!runRes.ok) throw new Error(`Failed to load run: HTTP ${runRes.status}`);
+      const summary = await runRes.json();
+
+      // Use the Monte Carlo result from summary (already computed with seed=42)
+      // But run composite for custom parameters
+      const runDetailRes = await dashboardFetch(`/v1/runs/${selectedRunId}`, token);
+      if (!runDetailRes.ok) throw new Error(`Failed to load run detail`);
+      const runDetail = await runDetailRes.json();
+
+      const envelope = runDetail.run_envelope || {};
+      const buckets = envelope.hedge_plan?.buckets || [];
+      const market = envelope.market || {};
+      const policy = envelope.policy || {};
+
+      if (buckets.length === 0) {
+        throw new Error("Selected run has no hedge plan buckets. Run a calculation first.");
+      }
+
+      // Run composite analysis with custom parameters
+      const compositeRes = await dashboardFetch("/v1/risk/composite", token, {
+        method: "POST",
+        body: JSON.stringify({
+          hedge_actions: buckets,
+          market,
+          policy,
+          num_simulations: numSims,
+          seed: seed ? parseInt(seed) : null,
+          confidence_levels: confidenceLevels,
+          horizon_days: horizon,
+        }),
       });
-    });
-    SCENARIOS.filter(s => s.status === "RUNNING").forEach((sc) => {
-      entries.push({
-        ts: sc.lastRun + " UTC",
-        event: "SCENARIO_STARTED",
-        actor: "engine",
-        detail: `${sc.id} · ${sc.name} — Monte Carlo path generation in progress`,
+
+      if (!compositeRes.ok) {
+        const err = await compositeRes.json().catch(() => ({}));
+        throw new Error(err.detail || `Composite analysis failed: HTTP ${compositeRes.status}`);
+      }
+
+      const composite = await compositeRes.json();
+
+      // Merge summary data if composite missing pieces
+      setResult({
+        monte_carlo: composite.monte_carlo || summary.monte_carlo || null,
+        stress_scenarios: composite.stress_scenarios || summary.stress_scenarios || null,
+        factor_covariance: composite.factor_covariance || null,
       });
-    });
-
-    // Sort descending by ts
-    entries.sort((a, b) => b.ts.localeCompare(a.ts));
-    setAuditLog(entries);
-  }, [runId]);
-
-  const eventColors: Record<string, string> = {
-    SCENARIO_RUN:      S.cyan,
-    SCENARIO_COMPLETE: S.pass,
-    SCENARIO_STARTED:  S.amber,
-    SCENARIO_FAILED:   S.fail,
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Analysis failed");
+    } finally {
+      setRunning(false);
+    }
   };
 
-  return (
-    <div style={{ padding: "20px 24px", borderRight: `1px solid ${S.rim}`, display: "flex", flexDirection: "column", gap: 0, gridColumn: "1 / 3" }}>
-      <SectionLabel index="AU" title="Scenario Engine Audit Log" count={`${auditLog.length} events`} />
-      <Divider />
+  const TABS: { key: Tab; label: string; icon: string }[] = [
+    { key: "simulation", label: "MONTE CARLO", icon: "M13 10V3L4 14h7v7l9-11h-7z" },
+    { key: "stress", label: "STRESS SCENARIOS", icon: "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" },
+    { key: "var", label: "VaR / CVaR", icon: "M18 20V10M12 20V4M6 20v-6" },
+    { key: "risk", label: "RISK DECOMPOSITION", icon: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" },
+  ];
 
-      {auditLog.length === 0 ? (
-        <div style={{ padding: "32px 16px", textAlign: "center" }}>
-          <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", color: S.secondary, marginBottom: 6 }}>No scenario audit events recorded.</div>
-          <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>Run hedge engine to populate this log.</div>
-        </div>
-      ) : (
-        <div style={{ border: `1px solid ${S.rim}`, background: S.bgPanel }}>
-          {/* Header */}
-          <div style={{ display: "grid", gridTemplateColumns: "180px 160px 1fr", gap: 12, padding: "6px 16px", borderBottom: `1px solid ${S.rim}` }}>
-            {["TIMESTAMP", "EVENT", "DETAIL"].map(h => (
-              <span key={h} style={{ fontFamily: S.fontMono, fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>{h}</span>
-            ))}
+  const mc = result?.monte_carlo;
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", background: S.deep }}>
+      {/* Header */}
+      <div style={{ flexShrink: 0, background: S.panel, borderBottom: `1px solid ${S.rim}` }}>
+        <div style={{ padding: "20px 28px 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 6,
+              background: "rgba(28,98,242,0.06)", border: "1px solid rgba(28,98,242,0.12)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={HEX.cyan} strokeWidth="1.5">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </div>
+            <div>
+              <h1 style={{ fontFamily: S.mono, fontSize: 15, fontWeight: 700, color: S.text1, letterSpacing: "0.08em", margin: 0 }}>
+                SCENARIO STUDIO
+              </h1>
+              <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text3 }}>
+                Monte Carlo simulation, VaR/CVaR, stress testing, risk decomposition
+              </span>
+            </div>
+            <div style={{ flex: 1 }} />
+            <span style={{
+              fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+              padding: "4px 12px", borderRadius: 3,
+              background: "rgba(28,98,242,0.06)", color: HEX.cyan,
+              border: "1px solid rgba(28,98,242,0.12)",
+            }}>
+              CHOLESKY + REGION-AWARE VOL
+            </span>
           </div>
-          {auditLog.map((entry, i) => {
-            const color = eventColors[entry.event] ?? S.tertiary;
-            return (
-              <div key={i} style={{
-                display: "grid", gridTemplateColumns: "180px 160px 1fr", gap: 12, padding: "8px 16px",
-                borderBottom: i < auditLog.length - 1 ? `1px solid ${S.soft}` : "none",
+        </div>
+
+        {/* Config strip */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 16,
+          margin: "14px 28px 0", padding: "12px 16px",
+          background: S.sub, borderRadius: 6, border: `1px solid ${S.rim}`,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+              RUN
+            </label>
+            <select
+              value={selectedRunId}
+              onChange={(e) => setSelectedRunId(e.target.value)}
+              disabled={loadingRuns}
+              style={{
+                fontFamily: S.mono, fontSize: 11, padding: "4px 8px",
+                border: `1px solid ${S.rim}`, borderRadius: 3,
+                background: S.panel, color: S.text1, outline: "none",
+                minWidth: 200,
+              }}
+            >
+              {loadingRuns ? (
+                <option>Loading...</option>
+              ) : runs.length === 0 ? (
+                <option>No runs available</option>
+              ) : (
+                runs.map((r) => {
+                  const id = r.run_id || r.id || "";
+                  return (
+                    <option key={id} value={id}>
+                      {id.slice(0, 8)}... | {r.pair || r.currency_pair || "USDMXN"} | {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+                    </option>
+                  );
+                })
+              )}
+            </select>
+          </div>
+
+          <div style={{ width: 1, height: 20, background: S.rim }} />
+
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+              SIMULATIONS
+            </label>
+            <select
+              value={numSims}
+              onChange={(e) => setNumSims(parseInt(e.target.value))}
+              style={{
+                fontFamily: S.mono, fontSize: 11, padding: "4px 8px",
+                border: `1px solid ${S.rim}`, borderRadius: 3,
+                background: S.panel, color: S.text1, outline: "none",
+              }}
+            >
+              {[1000, 5000, 10000, 25000, 50000, 100000].map((n) => (
+                <option key={n} value={n}>{n.toLocaleString()}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+              HORIZON
+            </label>
+            <select
+              value={horizon}
+              onChange={(e) => setHorizon(parseInt(e.target.value))}
+              style={{
+                fontFamily: S.mono, fontSize: 11, padding: "4px 8px",
+                border: `1px solid ${S.rim}`, borderRadius: 3,
+                background: S.panel, color: S.text1, outline: "none",
+              }}
+            >
+              {[1, 5, 10, 20].map((d) => (
+                <option key={d} value={d}>{d}d</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+              SEED
+            </label>
+            <input
+              value={seed}
+              onChange={(e) => setSeed(e.target.value)}
+              placeholder="random"
+              style={{
+                fontFamily: S.mono, fontSize: 11, padding: "4px 8px",
+                border: `1px solid ${S.rim}`, borderRadius: 3,
+                background: S.panel, color: S.text1, outline: "none",
+                width: 60,
+              }}
+            />
+          </div>
+
+          <div style={{ flex: 1 }} />
+
+          <button
+            onClick={runAnalysis}
+            disabled={running || !selectedRunId || loadingRuns}
+            style={{
+              fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+              padding: "8px 24px", borderRadius: 4,
+              background: running ? S.sub : HEX.cyan, color: running ? S.text3 : "#fff",
+              border: "none", cursor: running || !selectedRunId ? "not-allowed" : "pointer",
+              boxShadow: running ? "none" : "0 2px 8px rgba(28,98,242,0.2)",
+              display: "flex", alignItems: "center", gap: 6,
+            }}
+          >
+            {running ? (
+              <>
+                <div style={{
+                  width: 12, height: 12, border: `2px solid ${S.text3}`, borderTopColor: S.cyan,
+                  borderRadius: "50%", animation: "spin 0.8s linear infinite",
+                }} />
+                RUNNING...
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                RUN ANALYSIS
+              </>
+            )}
+            <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+          </button>
+        </div>
+
+        {/* KPI strip (shown when results available) */}
+        {mc && (
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(5, 1fr)",
+            margin: "12px 28px 0", borderRadius: 6,
+            border: `1px solid ${S.rim}`, overflow: "hidden",
+          }}>
+            {[
+              { label: "VaR 99%", value: fmtUsd(mc.var_results.find(v => v.confidence === 0.99)?.hedged_var ?? 0), color: HEX.red },
+              { label: "CVaR 99%", value: fmtUsd(mc.var_results.find(v => v.confidence === 0.99)?.hedged_cvar ?? 0), color: HEX.red },
+              { label: "MEAN P&L", value: fmtUsd(mc.mean_hedged_pnl), color: mc.mean_hedged_pnl >= 0 ? HEX.green : HEX.red },
+              { label: "HEDGE BENEFIT", value: `${mc.hedge_benefit_pct.toFixed(1)}%`, color: HEX.green },
+              { label: "SIMULATIONS", value: mc.simulation_count.toLocaleString(), color: undefined },
+            ].map((kpi, i) => (
+              <div key={kpi.label} style={{
+                padding: "10px 14px", background: S.panel,
+                borderRight: i < 4 ? `1px solid ${S.rim}` : "none",
               }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.02em" }}>{entry.ts}</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.07em", color, border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`, padding: "1px 5px", alignSelf: "center", justifySelf: "start" }}>
-                  {entry.event}
-                </span>
-                <div>
-                  <span style={{ fontFamily: S.fontUI, fontSize: "0.75rem", color: S.secondary }}>{entry.detail}</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary, marginLeft: 8 }}>{entry.actor}</span>
+                <div style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 3 }}>
+                  {kpi.label}
+                </div>
+                <div style={{ fontFamily: S.mono, fontSize: 18, fontWeight: 700, color: kpi.color || S.text1 }}>
+                  {kpi.value}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {/* Integrity note */}
-      <div style={{ marginTop: 16, padding: "8px 12px", background: S.bgSub, border: `1px solid ${S.rim}`, fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em" }}>
-        Scenario audit entries are generated by the hedge engine at run time. Full governance trail available in the Audit Trail module.
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 0, padding: "12px 28px 0" }}>
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                fontFamily: S.mono, fontSize: 10, fontWeight: tab === t.key ? 700 : 500,
+                letterSpacing: "0.1em", color: tab === t.key ? HEX.cyan : S.text3,
+                padding: "8px 16px", background: "transparent", border: "none",
+                borderBottom: tab === t.key ? `2px solid ${HEX.cyan}` : "2px solid transparent",
+                cursor: "pointer", transition: "all 0.15s",
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d={t.icon} />
+              </svg>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflow: "auto", padding: 24 }}>
+        {error && (
+          <div style={{
+            padding: "10px 16px", marginBottom: 16, borderRadius: 4,
+            background: HEX.redBg, border: "1px solid rgba(220,38,38,0.2)",
+            fontFamily: S.ui, fontSize: 13, color: HEX.red,
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>
+            </svg>
+            {error}
+          </div>
+        )}
+
+        {!result ? (
+          <EmptyState />
+        ) : tab === "simulation" ? (
+          <SimulationTab mc={result.monte_carlo} />
+        ) : tab === "stress" ? (
+          <StressTab stress={result.stress_scenarios} />
+        ) : tab === "var" ? (
+          <VaRTab mc={result.monte_carlo} />
+        ) : (
+          <RiskTab fcov={result.factor_covariance} mc={result.monte_carlo} />
+        )}
       </div>
     </div>
   );
 }
 
-// ─── page ─────────────────────────────────────────────────────────────────────
+// ── Empty State ───────────────────────────────────────────────────────
+function EmptyState() {
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "center",
+      justifyContent: "center", gap: 16, padding: 80,
+    }}>
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={HEX.text3} strokeWidth="1" opacity="0.3">
+        <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+      </svg>
+      <div style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 600, color: S.text3, letterSpacing: "0.08em" }}>
+        SELECT A CALCULATION RUN AND CLICK RUN ANALYSIS
+      </div>
+      <p style={{ fontFamily: S.ui, fontSize: 12, color: S.text3, maxWidth: 400, textAlign: "center", lineHeight: 1.6 }}>
+        The engine will run Monte Carlo simulation with Cholesky-correlated FX shocks,
+        5 institutional stress scenarios, and factor covariance risk decomposition.
+      </p>
+    </div>
+  );
+}
 
-export default function ScenarioStudio() {
-  const _planAllowed = usePlanRedirect("professional");
-  const router = useRouter();
-  const { result } = useHedge();
-  const maxPnL = Math.max(...DISTRIBUTION.map(d => Math.abs(d.pnl)));
-  const [activeTab, setActiveTab] = useState<ScenarioTab>("library");
+// ═════════════════════════════════════════════════════════════════════════════
+// SIMULATION TAB — Monte Carlo Results
+// ═════════════════════════════════════════════════════════════════════════════
 
-  if (!_planAllowed) return null;
+function SimulationTab({ mc }: { mc: MonteCarloResult | null }) {
+  if (!mc) return <NoData label="Monte Carlo simulation not available" />;
 
-  const activeRunId = result?.run_id ?? null;
+  // Build percentile distribution for histogram
+  const pctKeys = [1, 5, 10, 25, 50, 75, 90, 95, 99];
+  const hedgedPcts = pctKeys.map((p) => mc.percentiles[`hedged_p${String(p).padStart(2, "0")}`] ?? 0);
+  const unhedgedPcts = pctKeys.map((p) => mc.percentiles[`unhedged_p${String(p).padStart(2, "0")}`] ?? 0);
 
   return (
-    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
-      <TopBar onBack={() => router.push("/")} />
-
-      {/* ── Sub-nav: tabs ── */}
+    <div style={{ maxWidth: 1200 }}>
+      {/* Distribution comparison chart */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 0,
-        background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
-        padding: "0 20px", height: 36, flexShrink: 0,
+        padding: "20px 24px", borderRadius: 6, marginBottom: 20,
+        background: S.panel, border: `1px solid ${S.rim}`,
       }}>
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+            P&L PERCENTILE DISTRIBUTION — HEDGED vs UNHEDGED
+          </span>
+          <div style={{ flex: 1 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ width: 10, height: 10, background: HEX.cyan, borderRadius: 2 }} />
+              <span style={{ fontFamily: S.mono, fontSize: 8, color: S.text3 }}>Hedged</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ width: 10, height: 10, background: HEX.text3, borderRadius: 2, opacity: 0.5 }} />
+              <span style={{ fontFamily: S.mono, fontSize: 8, color: S.text3 }}>Unhedged</span>
+            </div>
+          </div>
+        </div>
+        <PercentileChart hedged={hedgedPcts} unhedged={unhedgedPcts} labels={pctKeys.map(p => `P${p}`)} />
+      </div>
+
+      {/* Stats grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
+        {/* Hedged stats */}
+        <div style={{ padding: 20, borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
+          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.14em", marginBottom: 12 }}>
+            HEDGED PORTFOLIO
+          </div>
+          {[
+            { label: "Mean P&L", value: fmtUsd(mc.mean_hedged_pnl), color: mc.mean_hedged_pnl >= 0 ? HEX.green : HEX.red },
+            { label: "Std Dev", value: fmtUsd(mc.std_hedged_pnl) },
+            { label: "Worst Case", value: fmtUsd(mc.worst_hedged_pnl), color: HEX.red },
+            { label: "Best Case", value: fmtUsd(mc.best_hedged_pnl), color: HEX.green },
+          ].map((s) => (
+            <div key={s.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{s.label}</span>
+              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: s.color || S.text2 }}>{s.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Unhedged stats */}
+        <div style={{ padding: 20, borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
+          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 12 }}>
+            UNHEDGED PORTFOLIO
+          </div>
+          {[
+            { label: "Mean P&L", value: fmtUsd(mc.mean_unhedged_pnl), color: mc.mean_unhedged_pnl >= 0 ? HEX.green : HEX.red },
+            { label: "Std Dev", value: fmtUsd(mc.std_unhedged_pnl) },
+            { label: "Worst Case", value: fmtUsd(mc.worst_unhedged_pnl), color: HEX.red },
+          ].map((s) => (
+            <div key={s.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{s.label}</span>
+              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: s.color || S.text2 }}>{s.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Hedge benefit */}
+        <div style={{ padding: 20, borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
+          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.green, letterSpacing: "0.14em", marginBottom: 12 }}>
+            HEDGE BENEFIT
+          </div>
+          <div style={{ textAlign: "center", marginBottom: 12 }}>
+            <div style={{ fontFamily: S.mono, fontSize: 36, fontWeight: 800, color: HEX.green }}>
+              {mc.hedge_benefit_pct.toFixed(1)}%
+            </div>
+            <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 4 }}>
+              LOSS REDUCTION
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>Mean Benefit</span>
+            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: HEX.green }}>{fmtUsd(mc.hedge_benefit_mean)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>Simulations</span>
+            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.text2 }}>{mc.simulation_count.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Percentile Chart ──────────────────────────────────────────────────
+function PercentileChart({ hedged, unhedged, labels }: { hedged: number[]; unhedged: number[]; labels: string[] }) {
+  const option = {
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "axis" as const,
+      backgroundColor: "#FFFFFFEE",
+      borderColor: HEX.border,
+      borderWidth: 1,
+      textStyle: { color: HEX.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+    },
+    grid: { left: 56, right: 20, top: 20, bottom: 32, containLabel: false },
+    xAxis: {
+      type: "category" as const,
+      data: labels,
+      axisLabel: { color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace" },
+      axisLine: { lineStyle: { color: HEX.border } },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: "value" as const,
+      axisLabel: {
+        color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        formatter: (v: number) => Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}K` : v.toFixed(0),
+      },
+      splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.5 } },
+    },
+    series: [
+      {
+        name: "Hedged P&L",
+        type: "bar" as const,
+        data: hedged,
+        barMaxWidth: 24,
+        itemStyle: {
+          color: {
+            type: "linear" as const, x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: HEX.cyan },
+              { offset: 1, color: HEX.cyan + "66" },
+            ],
+          },
+          borderRadius: [3, 3, 0, 0],
+          shadowBlur: 4, shadowColor: "rgba(28,98,242,0.15)",
+        },
+      },
+      {
+        name: "Unhedged P&L",
+        type: "bar" as const,
+        data: unhedged,
+        barMaxWidth: 24,
+        itemStyle: {
+          color: HEX.text3 + "40",
+          borderRadius: [3, 3, 0, 0],
+        },
+      },
+    ],
+  };
+
+  return <ReactECharts option={option} style={{ height: 280, width: "100%" }} opts={{ renderer: "canvas" }} />;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// STRESS SCENARIOS TAB
+// ═════════════════════════════════════════════════════════════════════════════
+
+function StressTab({ stress }: { stress: StressResult | null }) {
+  if (!stress || stress.scenarios.length === 0) return <NoData label="Stress scenario results not available" />;
+
+  const scenarios = stress.scenarios;
+
+  return (
+    <div style={{ maxWidth: 1200 }}>
+      {/* Worst case banner */}
+      <div style={{
+        padding: "14px 20px", marginBottom: 20, borderRadius: 6,
+        background: HEX.redBg, border: "1px solid rgba(220,38,38,0.12)",
+        borderLeft: `3px solid ${HEX.red}`,
+        display: "flex", alignItems: "center", gap: 12,
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={HEX.red} strokeWidth="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <div>
+          <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.red, letterSpacing: "0.12em" }}>
+            WORST CASE: {stress.worst_case_scenario.toUpperCase()}
+          </span>
+          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: HEX.red, marginLeft: 12 }}>
+            {fmtUsd(stress.worst_case_loss_usd)}
+          </span>
+        </div>
+      </div>
+
+      {/* Waterfall chart */}
+      <div style={{
+        padding: "20px 24px", borderRadius: 6, marginBottom: 20,
+        background: S.panel, border: `1px solid ${S.rim}`,
+      }}>
+        <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+          STRESS SCENARIO IMPACT (POST-HEDGE LOSS)
+        </span>
+        <StressWaterfallChart scenarios={scenarios} />
+      </div>
+
+      {/* Scenario detail cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {scenarios.map((sc) => {
+          const isWorst = sc.scenario_name === stress.worst_case_scenario;
+          const isCompound = sc.details.family === "compound";
           return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                fontFamily: S.fontMono, fontSize: "0.75rem", letterSpacing: "0.04em",
-                padding: "0 14px", height: "100%", display: "flex", alignItems: "center",
-                color: isActive ? S.cyan : S.tertiary,
-                borderBottom: isActive ? `2px solid ${S.cyan}` : "2px solid transparent",
-                background: "transparent",
-                border: "none",
-                borderBottomStyle: "solid",
-                borderBottomWidth: 2,
-                borderBottomColor: isActive ? S.cyan : "transparent",
-                cursor: "pointer",
-                transition: "color 0.15s, border-color 0.15s",
-              }}
-            >{tab.label}</button>
+            <div key={sc.scenario_name} style={{
+              padding: 20, borderRadius: 6,
+              background: S.panel, border: `1px solid ${isWorst ? HEX.red + "40" : S.rim}`,
+              borderLeft: `3px solid ${isWorst ? HEX.red : isCompound ? HEX.amber : HEX.cyan}`,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text1 }}>
+                  {sc.scenario_name}
+                </span>
+                {isCompound && (
+                  <span style={{
+                    fontFamily: S.mono, fontSize: 7, fontWeight: 700, letterSpacing: "0.14em",
+                    padding: "2px 6px", borderRadius: 2, background: "rgba(217,119,6,0.08)", color: HEX.amber,
+                  }}>
+                    COMPOUND
+                  </span>
+                )}
+                {isWorst && (
+                  <span style={{
+                    fontFamily: S.mono, fontSize: 7, fontWeight: 700, letterSpacing: "0.14em",
+                    padding: "2px 6px", borderRadius: 2, background: HEX.redBg, color: HEX.red,
+                  }}>
+                    WORST CASE
+                  </span>
+                )}
+              </div>
+
+              {/* Shocks */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                {sc.details.fx_shock ? (
+                  <ShockPill label="FX" value={`${(sc.details.fx_shock * 100).toFixed(0)}%`} />
+                ) : null}
+                {sc.details.rate_shock_bps ? (
+                  <ShockPill label="RATES" value={`+${sc.details.rate_shock_bps}bps`} />
+                ) : null}
+                {sc.details.vol_shock ? (
+                  <ShockPill label="VOL" value={`${sc.details.vol_shock > 0 ? "+" : ""}${(sc.details.vol_shock * 100).toFixed(0)}%`} />
+                ) : null}
+                {sc.details.margin_shock ? (
+                  <ShockPill label="MARGIN" value={`+${(sc.details.margin_shock * 100).toFixed(0)}%`} />
+                ) : null}
+                {sc.details.adv_shock ? (
+                  <ShockPill label="ADV" value={`${(sc.details.adv_shock * 100).toFixed(0)}%`} />
+                ) : null}
+              </div>
+
+              {/* Impact metrics */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {[
+                  { label: "Pre-hedge loss", value: fmtUsd(sc.pre_hedge_loss_usd), color: HEX.red },
+                  { label: "Post-hedge loss", value: fmtUsd(sc.post_hedge_loss_usd), color: HEX.red },
+                  { label: "Effectiveness", value: pct(sc.hedge_effectiveness), color: HEX.green },
+                  { label: "Margin impact", value: fmtUsd(sc.margin_impact_usd) },
+                ].map((m) => (
+                  <div key={m.label}>
+                    <div style={{ fontFamily: S.mono, fontSize: 8, color: S.text3, letterSpacing: "0.1em", marginBottom: 2 }}>
+                      {m.label.toUpperCase()}
+                    </div>
+                    <div style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 700, color: m.color || S.text2 }}>
+                      {m.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           );
         })}
-        <div style={{ flex: 1 }} />
-        <span style={{
-          fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.06em",
-          color: S.tertiary, padding: "1px 6px", border: `1px solid ${S.rim}`,
-        }}>
-          ENGINE v1.0.0 · DETERMINISTIC
-        </span>
       </div>
+    </div>
+  );
+}
 
-      {/* ── Body: three-column layout + Help Panel ── */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 220px", flex: 1, minHeight: 0, overflow: "auto" }}>
+function ShockPill({ label, value }: { label: string; value: string }) {
+  return (
+    <span style={{
+      fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.08em",
+      padding: "2px 8px", borderRadius: 2, background: S.sub, color: S.text2,
+      border: `1px solid ${S.rim}`,
+    }}>
+      {label}: {value}
+    </span>
+  );
+}
 
-        {/* Main panel — active tab content */}
-        {activeTab === "library"      && <TabLibrary maxPnL={maxPnL} />}
-        {activeTab === "shock"        && <TabShockLadder />}
-        {activeTab === "distribution" && <TabDistribution maxPnL={maxPnL} />}
-        {activeTab === "pathbuilder"  && <TabPathBuilder />}
-        {activeTab === "audit"        && <TabAudit runId={activeRunId} />}
+// ── Stress Waterfall Chart ────────────────────────────────────────────
+function StressWaterfallChart({ scenarios }: { scenarios: StressScenarioImpact[] }) {
+  const labels = scenarios.map((s) => s.scenario_name);
+  const preLosses = scenarios.map((s) => Math.abs(s.pre_hedge_loss_usd));
+  const postLosses = scenarios.map((s) => Math.abs(s.post_hedge_loss_usd));
 
-        {/* Right rail */}
-        <RightRail activeRunId={activeRunId} />
-      </div>
-      <HelpPanel config={SCENARIO_STUDIO_HELP} storageKey="scenario-studio" />
-      </div>
+  const option = {
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "axis" as const,
+      backgroundColor: "#FFFFFFEE",
+      borderColor: HEX.border,
+      borderWidth: 1,
+      textStyle: { color: HEX.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      formatter: (params: Array<{ seriesName: string; value: number }>) => {
+        return params.map(p => `<b>${p.seriesName}</b>: ${fmtUsd(p.value)}`).join("<br/>");
+      },
+    },
+    grid: { left: 56, right: 20, top: 20, bottom: 50, containLabel: false },
+    xAxis: {
+      type: "category" as const,
+      data: labels,
+      axisLabel: { color: HEX.text3, fontSize: 8, fontFamily: "'IBM Plex Mono', monospace", rotate: 20 },
+      axisLine: { lineStyle: { color: HEX.border } },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: "value" as const,
+      axisLabel: {
+        color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        formatter: (v: number) => Math.abs(v) >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${(v / 1_000).toFixed(0)}K`,
+      },
+      splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.5 } },
+    },
+    series: [
+      {
+        name: "Pre-Hedge Loss",
+        type: "bar" as const,
+        data: preLosses,
+        barMaxWidth: 32,
+        itemStyle: {
+          color: HEX.text3 + "40",
+          borderRadius: [3, 3, 0, 0],
+        },
+      },
+      {
+        name: "Post-Hedge Loss",
+        type: "bar" as const,
+        data: postLosses,
+        barMaxWidth: 32,
+        itemStyle: {
+          color: {
+            type: "linear" as const, x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: HEX.red },
+              { offset: 1, color: HEX.red + "66" },
+            ],
+          },
+          borderRadius: [3, 3, 0, 0],
+          shadowBlur: 4, shadowColor: "rgba(220,38,38,0.15)",
+        },
+      },
+    ],
+  };
 
-      {/* Footer */}
-      <footer style={{
-        height: 32, display: "flex", alignItems: "center", gap: 8, padding: "0 20px",
-        borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
-        fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary,
-        letterSpacing: "0.04em", flexShrink: 0,
+  return <ReactECharts option={option} style={{ height: 260, width: "100%" }} opts={{ renderer: "canvas" }} />;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// VaR / CVaR TAB
+// ═════════════════════════════════════════════════════════════════════════════
+
+function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
+  if (!mc) return <NoData label="VaR/CVaR data not available" />;
+
+  const pctKeys = [1, 5, 10, 25, 50, 75, 90, 95, 99];
+
+  return (
+    <div style={{ maxWidth: 1100 }}>
+      {/* VaR/CVaR by confidence level */}
+      <div style={{
+        padding: 24, borderRadius: 6, marginBottom: 20,
+        background: S.panel, border: `1px solid ${S.rim}`,
       }}>
-        <span>ORDR Terminal · Scenario Studio</span>
-        <span style={{ color: S.rim }}>·</span>
-        <span>{TABS.find(t => t.key === activeTab)?.label}</span>
-        {activeRunId && (
-          <>
-            <span style={{ color: S.rim }}>·</span>
-            <span>RUN <span style={{ color: S.cyan }}>{activeRunId.slice(0, 8).toUpperCase()}</span></span>
-          </>
-        )}
-      </footer>
+        <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+          VALUE AT RISK BY CONFIDENCE LEVEL
+        </span>
+        <VaRConfidenceChart varResults={mc.var_results} />
+      </div>
+
+      {/* VaR table */}
+      <div style={{
+        padding: 24, borderRadius: 6, marginBottom: 20,
+        background: S.panel, border: `1px solid ${S.rim}`,
+      }}>
+        <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", display: "block", marginBottom: 14 }}>
+          CONFIDENCE LEVEL DETAIL
+        </span>
+        <div style={{
+          display: "grid", gridTemplateColumns: "100px 1fr 1fr 1fr 1fr",
+          gap: 8, padding: "8px 16px", background: S.sub, borderRadius: 4, marginBottom: 8,
+        }}>
+          {["CONFIDENCE", "HEDGED VaR", "UNHEDGED VaR", "HEDGED CVaR", "UNHEDGED CVaR"].map((h) => (
+            <span key={h} style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+              {h}
+            </span>
+          ))}
+        </div>
+        {mc.var_results.map((v) => (
+          <div key={v.confidence} style={{
+            display: "grid", gridTemplateColumns: "100px 1fr 1fr 1fr 1fr",
+            gap: 8, padding: "8px 16px", borderBottom: `1px solid ${S.soft}`,
+          }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text1 }}>
+              {(v.confidence * 100).toFixed(1)}%
+            </span>
+            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: HEX.cyan }}>
+              {fmtUsd(v.hedged_var)}
+            </span>
+            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>
+              {fmtUsd(v.unhedged_var)}
+            </span>
+            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: HEX.red }}>
+              {fmtUsd(v.hedged_cvar)}
+            </span>
+            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>
+              {fmtUsd(v.unhedged_cvar)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Percentile table */}
+      <div style={{
+        padding: 24, borderRadius: 6,
+        background: S.panel, border: `1px solid ${S.rim}`,
+      }}>
+        <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", display: "block", marginBottom: 14 }}>
+          P&L PERCENTILE DISTRIBUTION
+        </span>
+        <div style={{
+          display: "grid", gridTemplateColumns: "80px 1fr 1fr",
+          gap: 8, padding: "8px 16px", background: S.sub, borderRadius: 4, marginBottom: 8,
+        }}>
+          {["PERCENTILE", "HEDGED P&L", "UNHEDGED P&L"].map((h) => (
+            <span key={h} style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+              {h}
+            </span>
+          ))}
+        </div>
+        {pctKeys.map((p) => {
+          const hKey = `hedged_p${String(p).padStart(2, "0")}`;
+          const uKey = `unhedged_p${String(p).padStart(2, "0")}`;
+          const hVal = mc.percentiles[hKey] ?? 0;
+          const uVal = mc.percentiles[uKey] ?? 0;
+          return (
+            <div key={p} style={{
+              display: "grid", gridTemplateColumns: "80px 1fr 1fr",
+              gap: 8, padding: "6px 16px",
+              borderBottom: `1px solid ${S.soft}`,
+              background: p === 1 || p === 5 ? "rgba(220,38,38,0.02)" : p === 50 ? "rgba(28,98,242,0.02)" : "transparent",
+            }}>
+              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: p <= 5 ? HEX.red : p >= 95 ? HEX.green : S.text2 }}>
+                P{p}
+              </span>
+              <span style={{ fontFamily: S.mono, fontSize: 11, color: hVal < 0 ? HEX.red : HEX.green }}>
+                {fmtUsd(hVal)}
+              </span>
+              <span style={{ fontFamily: S.mono, fontSize: 11, color: uVal < 0 ? HEX.red : HEX.green }}>
+                {fmtUsd(uVal)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── VaR Confidence Chart ──────────────────────────────────────────────
+function VaRConfidenceChart({ varResults }: { varResults: VaRResult[] }) {
+  const sorted = [...varResults].sort((a, b) => a.confidence - b.confidence);
+  const labels = sorted.map(v => `${(v.confidence * 100).toFixed(1)}%`);
+
+  const option = {
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "axis" as const,
+      backgroundColor: "#FFFFFFEE",
+      borderColor: HEX.border,
+      borderWidth: 1,
+      textStyle: { color: HEX.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      formatter: (params: Array<{ seriesName: string; value: number }>) => {
+        return params.map(p => `<b>${p.seriesName}</b>: ${fmtUsd(p.value)}`).join("<br/>");
+      },
+    },
+    grid: { left: 56, right: 20, top: 24, bottom: 32, containLabel: false },
+    xAxis: {
+      type: "category" as const,
+      data: labels,
+      axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      axisLine: { lineStyle: { color: HEX.border } },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: "value" as const,
+      axisLabel: {
+        color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        formatter: (v: number) => Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}K` : v.toFixed(0),
+      },
+      splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.5 } },
+    },
+    series: [
+      {
+        name: "Hedged VaR",
+        type: "bar" as const,
+        data: sorted.map(v => Math.abs(v.hedged_var)),
+        barMaxWidth: 28,
+        itemStyle: {
+          color: { type: "linear" as const, x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: HEX.cyan }, { offset: 1, color: HEX.cyan + "66" }] },
+          borderRadius: [3, 3, 0, 0],
+        },
+      },
+      {
+        name: "Hedged CVaR",
+        type: "bar" as const,
+        data: sorted.map(v => Math.abs(v.hedged_cvar)),
+        barMaxWidth: 28,
+        itemStyle: {
+          color: { type: "linear" as const, x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: HEX.red }, { offset: 1, color: HEX.red + "66" }] },
+          borderRadius: [3, 3, 0, 0],
+        },
+      },
+    ],
+  };
+
+  return <ReactECharts option={option} style={{ height: 260, width: "100%" }} opts={{ renderer: "canvas" }} />;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// RISK DECOMPOSITION TAB
+// ═════════════════════════════════════════════════════════════════════════════
+
+function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloResult | null }) {
+  return (
+    <div style={{ maxWidth: 1100 }}>
+      {fcov ? (
+        <>
+          {/* Summary KPIs */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 20,
+          }}>
+            {[
+              { label: "PRE-HEDGE VOL", value: `${(Math.sqrt(fcov.pre_hedge_variance) * 100).toFixed(2)}%`, color: HEX.red },
+              { label: "POST-HEDGE VOL", value: `${(Math.sqrt(fcov.post_hedge_variance) * 100).toFixed(2)}%`, color: HEX.green },
+              { label: "HEDGE EFFECTIVENESS", value: pct(fcov.hedge_effectiveness_ratio), color: HEX.green },
+              { label: "DIVERSIFICATION", value: fcov.diversification_ratio.toFixed(2), color: HEX.cyan },
+            ].map((kpi) => (
+              <div key={kpi.label} style={{
+                padding: "16px 20px", borderRadius: 6,
+                background: S.panel, border: `1px solid ${S.rim}`,
+              }}>
+                <div style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 6 }}>
+                  {kpi.label}
+                </div>
+                <div style={{ fontFamily: S.mono, fontSize: 24, fontWeight: 800, color: kpi.color }}>
+                  {kpi.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Risk contribution chart */}
+          {fcov.risk_contributions.length > 0 && (
+            <div style={{
+              padding: "20px 24px", borderRadius: 6, marginBottom: 20,
+              background: S.panel, border: `1px solid ${S.rim}`,
+            }}>
+              <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+                MARGINAL CONTRIBUTION TO RISK (MCTR)
+              </span>
+              <RiskContributionChart contributions={fcov.risk_contributions} />
+            </div>
+          )}
+
+          {/* Contributions table */}
+          <div style={{
+            padding: 24, borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`,
+          }}>
+            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", display: "block", marginBottom: 14 }}>
+              FACTOR RISK DECOMPOSITION
+            </span>
+            <div style={{
+              display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr",
+              gap: 8, padding: "8px 16px", background: S.sub, borderRadius: 4, marginBottom: 8,
+            }}>
+              {["FACTOR", "WEIGHT", "MCTR", "% VARIANCE"].map((h) => (
+                <span key={h} style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+                  {h}
+                </span>
+              ))}
+            </div>
+            {fcov.risk_contributions.map((rc) => (
+              <div key={rc.factor} style={{
+                display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                gap: 8, padding: "8px 16px", borderBottom: `1px solid ${S.soft}`,
+              }}>
+                <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: HEX.cyan }}>
+                  {rc.factor}
+                </span>
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>
+                  {pct(rc.weight)}
+                </span>
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>
+                  {rc.mctr.toFixed(6)}
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{
+                    flex: 1, height: 6, borderRadius: 3, background: S.sub,
+                    overflow: "hidden",
+                  }}>
+                    <div style={{
+                      width: `${Math.min(rc.pct_of_variance * 100, 100)}%`,
+                      height: "100%", borderRadius: 3,
+                      background: HEX.cyan,
+                    }} />
+                  </div>
+                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2, minWidth: 36 }}>
+                    {pct(rc.pct_of_variance)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <NoData label="Factor covariance data not available" />
+      )}
+
+      {/* Monte Carlo summary at bottom */}
+      {mc && (
+        <div style={{
+          marginTop: 20, padding: "16px 20px", borderRadius: 6,
+          background: S.sub, border: `1px solid ${S.rim}`,
+          display: "flex", alignItems: "center", gap: 20,
+        }}>
+          <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+            MC STATS
+          </span>
+          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2 }}>
+            \u03BC(hedged) = {fmtUsd(mc.mean_hedged_pnl)}
+          </span>
+          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2 }}>
+            \u03C3(hedged) = {fmtUsd(mc.std_hedged_pnl)}
+          </span>
+          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2 }}>
+            \u03BC(unhedged) = {fmtUsd(mc.mean_unhedged_pnl)}
+          </span>
+          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2 }}>
+            \u03C3(unhedged) = {fmtUsd(mc.std_unhedged_pnl)}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Risk Contribution Chart ───────────────────────────────────────────
+function RiskContributionChart({ contributions }: { contributions: RiskContribution[] }) {
+  const option = {
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "axis" as const,
+      backgroundColor: "#FFFFFFEE",
+      borderColor: HEX.border,
+      borderWidth: 1,
+      textStyle: { color: HEX.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+    },
+    grid: { left: 80, right: 20, top: 20, bottom: 32, containLabel: false },
+    xAxis: {
+      type: "value" as const,
+      axisLabel: {
+        color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        formatter: (v: number) => `${(v * 100).toFixed(0)}%`,
+      },
+      max: 1,
+      splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.5 } },
+    },
+    yAxis: {
+      type: "category" as const,
+      data: contributions.map(c => c.factor),
+      axisLabel: { color: HEX.text2, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      axisLine: { show: false },
+      axisTick: { show: false },
+    },
+    series: [{
+      type: "bar" as const,
+      data: contributions.map(c => c.pct_of_variance),
+      barMaxWidth: 20,
+      itemStyle: {
+        color: {
+          type: "linear" as const, x: 0, y: 0, x2: 1, y2: 0,
+          colorStops: [
+            { offset: 0, color: HEX.cyan },
+            { offset: 1, color: HEX.indigo },
+          ],
+        },
+        borderRadius: [0, 3, 3, 0],
+        shadowBlur: 4, shadowColor: "rgba(28,98,242,0.15)",
+      },
+      label: {
+        show: true, position: "right" as const,
+        fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        color: HEX.text3,
+        formatter: (p: { value: number }) => `${(p.value * 100).toFixed(1)}%`,
+      },
+    }],
+  };
+
+  return <ReactECharts option={option} style={{ height: Math.max(150, contributions.length * 40), width: "100%" }} opts={{ renderer: "canvas" }} />;
+}
+
+// ── No Data State ─────────────────────────────────────────────────────
+function NoData({ label }: { label: string }) {
+  return (
+    <div style={{
+      padding: 60, textAlign: "center",
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+    }}>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={HEX.text3} strokeWidth="1.5" opacity="0.3">
+        <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+      </svg>
+      <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, letterSpacing: "0.08em" }}>
+        {label}
+      </span>
     </div>
   );
 }

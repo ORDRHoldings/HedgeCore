@@ -13,6 +13,7 @@ import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { ERP_INTEGRATION_HELP } from "@/lib/helpContent";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -208,6 +209,7 @@ const smallSelectStyle: React.CSSProperties = {
 // PAGE
 // =================================================================================
 export default function ERPIntegrationPage() {
+  const _planAllowed = usePlanRedirect("professional");
   const renderTs = useRenderTs();
   const { isAuthenticated, token } = useAuth();
   const router = useRouter();

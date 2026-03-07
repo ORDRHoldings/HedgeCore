@@ -582,6 +582,7 @@ export default function PositionDeskPage() {
         )}
         <div style={{ flex: 1 }} />
         <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{positions.length} positions</span>
+        <button onClick={() => router.push("/position-desk/import")} title="Bulk CSV Import" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, background: `color-mix(in srgb, ${S.amber} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em" }}>↑ IMPORT CSV</button>
         <button onClick={() => token && dispatch(listPositionsThunk({ token }))} title="Refresh (R)" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, background: "transparent", border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>↻ Refresh</button>
         <button
           onClick={() => router.push(pipelineNext.href)}

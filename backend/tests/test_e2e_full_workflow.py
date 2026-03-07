@@ -19,6 +19,8 @@ Workflow:
 import pytest
 from httpx import AsyncClient
 
+pytestmark = pytest.mark.requires_postgres
+
 
 # ── 1. Auth ────────────────────────────────────────────────────────────────
 

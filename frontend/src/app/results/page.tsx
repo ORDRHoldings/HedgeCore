@@ -112,7 +112,7 @@ export default function ResultsPage() {
   const policy   = lastInputs?.policy;
   const market   = lastInputs?.market;
   const asOf     = market?.as_of;
-  const spotRate = market?.spot_usdmxn;
+  const spotRate = market?.spot_rate;
   const runId    = result.run_id;
 
   return (

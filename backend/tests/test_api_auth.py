@@ -19,7 +19,7 @@ from app.main import app
 from app.models.user import User
 from sqlalchemy import select
 
-pytestmark = pytest.mark.asyncio
+pytestmark = [pytest.mark.asyncio, pytest.mark.requires_postgres]
 
 
 # -------------------------------------------------------------------

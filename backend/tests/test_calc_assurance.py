@@ -51,7 +51,7 @@ def _market(
         as_of = datetime.now(timezone.utc)
     return MarketSnapshot(
         as_of=as_of,
-        spot_usdmxn=spot,
+        spot_rate=spot,
         forward_points_by_month=fwd,
         provider_metadata={"data_class": data_class, "primary_currency": "MXN"},
     )
@@ -172,7 +172,7 @@ class TestFinnhubDataPath:
         hedges: list[HedgeRow] = []
         market = MarketSnapshot(
             as_of=datetime.now(timezone.utc),
-            spot_usdmxn=20.0,
+            spot_rate=20.0,
             forward_points_by_month={"2026-09": 0.40},
             provider_metadata={"primary_currency": "MXN"},  # no data_class key
         )
@@ -191,7 +191,7 @@ class TestFinnhubDataPath:
         }
         snap = MarketSnapshot(
             as_of=datetime.now(timezone.utc),
-            spot_usdmxn=20.35,
+            spot_rate=20.35,
             forward_points_by_month={"2026-09": 0.41},
             provider_metadata=meta,
         )
@@ -640,7 +640,7 @@ class TestValidatorNewCodes:
         """Completely missing data_class key must not trigger V-022."""
         market = MarketSnapshot(
             as_of=datetime.now(timezone.utc),
-            spot_usdmxn=20.0,
+            spot_rate=20.0,
             forward_points_by_month={"2026-09": 0.40},
             provider_metadata={},
         )
@@ -654,7 +654,7 @@ class TestValidatorNewCodes:
         stale_as_of = datetime.now(timezone.utc) - timedelta(hours=25)
         market = MarketSnapshot(
             as_of=stale_as_of,
-            spot_usdmxn=20.0,
+            spot_rate=20.0,
             forward_points_by_month={"2026-09": 0.40},
             provider_metadata={"data_class": "LIVE", "primary_currency": "MXN"},
         )
@@ -667,7 +667,7 @@ class TestValidatorNewCodes:
         fresh_as_of = datetime.now(timezone.utc) - timedelta(hours=1)
         market = MarketSnapshot(
             as_of=fresh_as_of,
-            spot_usdmxn=20.0,
+            spot_rate=20.0,
             forward_points_by_month={"2026-09": 0.40},
             provider_metadata={"data_class": "LIVE", "primary_currency": "MXN"},
         )
@@ -679,7 +679,7 @@ class TestValidatorNewCodes:
         stale_as_of = datetime.now(timezone.utc) - timedelta(hours=48)
         market = MarketSnapshot(
             as_of=stale_as_of,
-            spot_usdmxn=20.0,
+            spot_rate=20.0,
             forward_points_by_month={"2026-09": 0.40},
             provider_metadata={"data_class": "LIVE", "primary_currency": "MXN"},
         )
@@ -695,7 +695,7 @@ class TestValidatorNewCodes:
         stale_naive = datetime.utcnow() - timedelta(hours=30)  # naive UTC
         market = MarketSnapshot(
             as_of=stale_naive,
-            spot_usdmxn=20.0,
+            spot_rate=20.0,
             forward_points_by_month={"2026-09": 0.40},
             provider_metadata={"data_class": "LIVE", "primary_currency": "MXN"},
         )
@@ -709,7 +709,7 @@ class TestValidatorNewCodes:
         stale_as_of = datetime.now(timezone.utc) - timedelta(hours=30)
         market = MarketSnapshot(
             as_of=stale_as_of,
-            spot_usdmxn=20.0,
+            spot_rate=20.0,
             forward_points_by_month={"2026-09": 0.40},
             provider_metadata={"data_class": "INDICATIVE_FALLBACK", "primary_currency": "MXN"},
         )
@@ -998,7 +998,7 @@ class TestValidatorRegressionGuards:
         """V-011 must fire CRITICAL when spot is outside the MXN range (10–30)."""
         market = MarketSnapshot(
             as_of=datetime.now(timezone.utc),
-            spot_usdmxn=5.0,  # below MXN min
+            spot_rate=5.0,  # below MXN min
             forward_points_by_month={"2026-09": 0.10},
             provider_metadata={"primary_currency": "MXN", "data_class": "LIVE"},
         )
@@ -1009,7 +1009,7 @@ class TestValidatorRegressionGuards:
     def test_v012_empty_forward_points_critical(self) -> None:
         market = MarketSnapshot(
             as_of=datetime.now(timezone.utc),
-            spot_usdmxn=20.0,
+            spot_rate=20.0,
             forward_points_by_month={},
             provider_metadata={"primary_currency": "MXN", "data_class": "LIVE"},
         )
@@ -1028,7 +1028,7 @@ class TestValidatorRegressionGuards:
         """Forward points > 50% of spot must trigger V-021 CRITICAL."""
         market = MarketSnapshot(
             as_of=datetime.now(timezone.utc),
-            spot_usdmxn=20.0,
+            spot_rate=20.0,
             forward_points_by_month={"2026-09": 15.0},  # 15 > 10 (50% of 20)
             provider_metadata={"primary_currency": "MXN", "data_class": "LIVE"},
         )

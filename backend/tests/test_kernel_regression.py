@@ -20,7 +20,7 @@ def sample_market():
     from app.schemas_v1.market import MarketSnapshot
     return MarketSnapshot(
         as_of=datetime(2026, 3, 1, tzinfo=timezone.utc),
-        spot_usdmxn=17.5,
+        spot_rate=17.5,
         forward_points_by_month={"2026-01": 0.025, "2026-02": 0.05},
     )
 

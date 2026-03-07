@@ -76,7 +76,7 @@ export function buildDemoRequest(pairId: string): CalculateRequest {
     hedges: [],
     market: {
       as_of: today.toISOString().slice(0, 10),
-      spot_usdmxn: pairId === "USDMXN" ? spot : 18.97, // legacy field
+      spot_rate: pairId === "USDMXN" ? spot : 18.97, // legacy field
       forward_points_by_month: {
         [bk1]: pairId === "USDMXN" ? 0.0220 : fwdPts1,
         [bk2]: pairId === "USDMXN" ? 0.0440 : fwdPts2,

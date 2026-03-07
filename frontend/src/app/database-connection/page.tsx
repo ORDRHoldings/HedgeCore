@@ -5,6 +5,7 @@ import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { DATABASE_CONNECTION_HELP } from "@/lib/helpContent";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DbDriver = "PostgreSQL" | "MySQL" | "Microsoft SQL Server" | "Oracle" | "SAP HANA" | "Snowflake" | "Redshift";
@@ -143,6 +144,7 @@ const TRANSFORM_FUNCTIONS = [
 // Main Component
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function DatabaseConnectionPage() {
+  const _planAllowed = usePlanRedirect("professional");
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabView>("connection");

@@ -111,7 +111,7 @@ def compute_nav_attribution(
         # FX rate for this currency
         if base_currency == "USD":
             pair = f"USD{currency}" if currency != "USD" else ""
-            fx_rate = fx_rates.get(pair, market.get("spot_usdmxn", 1.0))
+            fx_rate = fx_rates.get(pair, market.get("spot_rate", market.get("spot_usdmxn", 1.0)))
         else:
             pair = f"{base_currency}{currency}"
             fx_rate = fx_rates.get(pair, 1.0)

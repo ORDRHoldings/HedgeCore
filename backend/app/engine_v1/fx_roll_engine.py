@@ -119,7 +119,7 @@ def generate_roll_ladder(
         'instrument' (FWD/NDF).
     market : dict
         MarketSnapshot or ExtendedMarketSnapshot as dict.
-        Uses 'forward_points_by_month', 'spot_usdmxn'.
+        Uses 'forward_points_by_month', 'spot_rate'.
     policy : dict
         PolicyConfig as dict. Uses 'cost_assumptions.spread_bps'.
     roll_horizon_months : int
@@ -132,7 +132,7 @@ def generate_roll_ladder(
     RollLadderResult
     """
     fwd_points = market.get("forward_points_by_month", {})
-    spot = market.get("spot_usdmxn", 17.15)
+    spot = market.get("spot_rate", market.get("spot_usdmxn", 17.15))
     spread_bps = policy.get("cost_assumptions", {}).get("spread_bps", 5.0)
     as_of = market.get("as_of", None)
 

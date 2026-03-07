@@ -54,7 +54,7 @@ def _make_market_with_fallback():
     from datetime import datetime, timezone
     return MarketSnapshot(
         as_of=datetime.now(tz=timezone.utc),
-        spot_usdmxn=17.5,
+        spot_rate=17.5,
         forward_points_by_month={"1": 0.001, "2": 0.002, "3": 0.003},
         provider_metadata={"data_class": "INDICATIVE_FALLBACK"},
     )

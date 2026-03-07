@@ -203,6 +203,7 @@ class TestDebugExceptionRemoved:
         # Should not have local traceback import inside function body
         assert "import traceback as _tb" not in source
 
+    @pytest.mark.requires_postgres
     @pytest.mark.asyncio
     async def test_propose_execution_returns_500_on_service_exception(self):
         """

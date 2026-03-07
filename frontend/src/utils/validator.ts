@@ -142,10 +142,10 @@ export function validateAll(
   // Replaces the single hardcoded SPOT_MIN/SPOT_MAX (10-30) that only applied to MXN.
   const ctx = deriveCurrencyContext(trades, market);
   const [spotMin, spotMax] = ctx.spotRange;
-  const spot = market.spot_usdmxn;
+  const spot = market.spot_rate;
 
   if (spot <= 0 || spot < spotMin || spot > spotMax) {
-    all.push(err('V-011', 'market.spot_usdmxn',
+    all.push(err('V-011', 'market.spot_rate',
       `Spot ${ctx.pairLabel} must be in (${spotMin}..${spotMax}), got ${spot}.`));
   }
 

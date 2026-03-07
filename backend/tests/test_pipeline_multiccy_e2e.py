@@ -47,7 +47,7 @@ def _market(pair: str = "USDMXN") -> dict:
     """Minimal market snapshot for the given pair."""
     base = {
         "as_of": "2026-03-01",
-        "spot_usdmxn": 17.15,
+        "spot_rate": 17.15,
         "forward_points_by_month": {
             "2026-04": -0.15,
             "2026-05": -0.30,

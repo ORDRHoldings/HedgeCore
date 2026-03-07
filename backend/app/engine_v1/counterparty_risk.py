@@ -22,6 +22,19 @@ class CounterpartyExposure:
     exposure_above_threshold: float  # max(0, net - threshold)
     concentration_pct: float      # % of total portfolio
 
+    def to_dict(self) -> dict:
+        return {
+            "counterparty_id": self.counterparty_id,
+            "counterparty_name": self.counterparty_name,
+            "gross_notional_usd": self.gross_notional_usd,
+            "net_notional_usd": self.net_notional_usd,
+            "pfe_97_5": self.pfe_97_5,
+            "mark_to_market": self.mark_to_market,
+            "isda_threshold": self.isda_threshold,
+            "exposure_above_threshold": self.exposure_above_threshold,
+            "concentration_pct": self.concentration_pct,
+        }
+
 
 @dataclass
 class CounterpartyRiskResult:
@@ -31,6 +44,16 @@ class CounterpartyRiskResult:
     total_pfe_usd: float = 0.0
     largest_cp_pct: float = 0.0   # Herfindahl-like concentration
     risk_level: str = "LOW"       # LOW | MEDIUM | HIGH | CRITICAL
+
+    def to_dict(self) -> dict:
+        return {
+            "exposures": [e.to_dict() for e in self.exposures],
+            "total_gross_usd": self.total_gross_usd,
+            "total_net_usd": self.total_net_usd,
+            "total_pfe_usd": self.total_pfe_usd,
+            "largest_cp_pct": self.largest_cp_pct,
+            "risk_level": self.risk_level,
+        }
 
 
 def compute_counterparty_exposure(

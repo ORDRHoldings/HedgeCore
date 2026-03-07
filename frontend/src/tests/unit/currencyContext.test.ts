@@ -41,21 +41,21 @@ function assertEqual<T>(actual: T, expected: T, description: string): void {
 
 const BASE_MARKET_MXN: MarketSnapshot = {
   as_of: '2026-02-17T12:00:00Z',
-  spot_usdmxn: 18.97,
+  spot_rate: 18.97,
   forward_points_by_month: { '2026-03': 0.048, '2026-04': 0.091 },
   provider_metadata: { source: 'test', currency_pair: 'USD/MXN' },
 };
 
 const BASE_MARKET_EUR: MarketSnapshot = {
   as_of: '2026-02-17T12:00:00Z',
-  spot_usdmxn: 1.085,
+  spot_rate: 1.085,
   forward_points_by_month: { '2026-03': -0.002, '2026-04': -0.004 },
   provider_metadata: { source: 'test', currency_pair: 'EUR/USD', primary_currency: 'EUR' },
 };
 
 const BASE_MARKET_JPY: MarketSnapshot = {
   as_of: '2026-02-17T12:00:00Z',
-  spot_usdmxn: 149.80,
+  spot_rate: 149.80,
   forward_points_by_month: { '2026-03': -0.200, '2026-04': -0.400 },
   provider_metadata: { source: 'test', currency_pair: 'USD/JPY', primary_currency: 'JPY' },
 };

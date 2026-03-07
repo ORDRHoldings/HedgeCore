@@ -47,7 +47,7 @@ _CURRENCY_FIELDS = {
 
 # Fields that are FX rates
 _FX_FIELDS = {
-    "spot_usdmxn", "fx_rate", "forward_points", "actual_forward",
+    "spot_rate", "fx_rate", "forward_points", "actual_forward",
     "theoretical_forward", "deviation",
 }
 

@@ -216,15 +216,23 @@ def _select_instrument(
     return policy.allowed_instruments[0] if policy.allowed_instruments else "FORWARD"
 
 
+_CCY_PER_USD: set[str] = {"EUR", "GBP", "AUD", "NZD"}
+
+
 def _spot_to_usd(amount_local: float, currency: str, spot_rate: float) -> float:
-    """Convert local currency amount to approximate USD."""
+    """Convert local currency amount to approximate USD.
+
+    Convention determined by explicit currency classification:
+      - CCY/USD pairs (EUR, GBP, AUD, NZD): USD = amount * rate
+      - USD/CCY pairs (all others: MXN, JPY, BRL, CHF, etc.): USD = amount / rate
+    """
     if currency.upper() == "USD":
         return amount_local
     if spot_rate <= 0:
         return 0.0
-    if spot_rate > 2.0:
-        return amount_local / spot_rate
-    return amount_local * spot_rate
+    if currency.upper() in _CCY_PER_USD:
+        return amount_local * spot_rate
+    return amount_local / spot_rate
 
 
 # ── Value date computation ─────────────────────────────────────────────────────

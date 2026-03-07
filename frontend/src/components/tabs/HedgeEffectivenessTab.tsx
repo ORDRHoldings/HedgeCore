@@ -406,7 +406,7 @@ export default function HedgeEffectivenessTab({
           <div>
             <div className="text-[9px] font-mono text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Market Data</div>
             <div className="space-y-0">
-              <Kv label="Spot Rate (USD/MXN)" value={market ? market.spot_usdmxn.toFixed(4) : '—'} color="var(--accent-cyan)" />
+              <Kv label="Spot Rate (USD/MXN)" value={market ? market.spot_rate.toFixed(4) : '—'} color="var(--accent-cyan)" />
               <Kv label="As-Of Date" value={asOf ?? market?.as_of ?? '—'} />
               <Kv
                 label="Forward Points Tenors"

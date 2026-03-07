@@ -319,7 +319,7 @@ export async function POST(req: NextRequest) {
 
     const market = {
       as_of: asOf,
-      spot_usdmxn: spot,
+      spot_rate: spot,
       forward_points_by_month: forwardPoints,
       provider_metadata: {
         source:              isLive ? `live_${forwardSource}` : 'indicative_fallback',

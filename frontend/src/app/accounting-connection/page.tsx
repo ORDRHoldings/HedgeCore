@@ -18,6 +18,7 @@ import { listConnectorRuns } from "../../api/connectorClient";
 import type { ConnectorRun } from "../../api/connectorClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { CONNECTORS_HELP } from "@/lib/helpContent";
+import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
 // ── Hydration-safe timestamp ───────────────────────────────────────────────
 function useRenderTs(): string {
@@ -200,6 +201,7 @@ function makeEmptyRow(): FieldMapping {
 //  Page Component
 // ══════════════════════════════════════════════════════════════════════════
 export default function AccountingConnectionPage() {
+  const _planAllowed = usePlanRedirect("professional");
   const { isAuthenticated, token, user } = useAuth();
   const router   = useRouter();
   const renderTs = useRenderTs();
