@@ -31,6 +31,14 @@ Last updated: 2026-03-07
 - Freeze: ACTIVE (v1, 7 frozen files + 5 conceptual invariants)
 - Tests: [snapshot 2026-03-06] 2158 passing, 59% coverage
 
+## Hedge Desk Redesign (completed 2026-03-07)
+- Phase A: Foundation (error handling, safeFetch, draft persistence, EmptyState)
+- Phase B: Navigation (sidebar, overview page, breadcrumb, workflow guide)
+- Phase C: Pipeline unification (5 steps: SELECT → CALCULATE → RISK → REVIEW → EXECUTE)
+- PhaseComplete: CSS variables, completion header, inline audit
+- Validation: tsc --noEmit + next build clean
+- Committed: 4 commits (fdd107a, 616aa1c, 999632a, 896f8ec)
+
 ## Active Risks
 - HIGH: Leaked secrets in git history (current files sanitized, rotation needed)
 - HIGH: No institutional market data feed (Finnhub only)

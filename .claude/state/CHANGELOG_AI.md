@@ -1,5 +1,18 @@
 # Changelog (AI-maintained)
 
+## 2026-03-07 — Hedge Desk redesign: Phases A + B + C
+- **Phase A** (foundation): hedgeErrors.ts error translation, ErrorBanner.tsx, draftPersistence.ts, safeFetch wrapper in dashboardClient, EmptyState session-expired/network/no-permission states
+- **Phase B** (navigation): AppSidebar simplified Hedge Desk section (6 items), HedgeDeskOverview landing page, dual-mode page.tsx (overview vs run), WorkflowBreadcrumb 6-step strip, WorkflowGuide step-of-5 bar, HedgeDeskPipeline draft persistence + goBack
+- **Phase C** (pipeline unification): All 5 steps unified with consistent UX
+  - Step 1 PhaseSelect: 3-tab intake (existing/manual/upload), shared basket, "STEP 1 OF 5" header
+  - Step 2 PhaseCalculate: summary cards, unified action bar, "STEP 2 OF 5"
+  - Step 3 PhaseRisk: verdict card with accent border, "STEP 3 OF 5"
+  - Step 4 PhaseReview: targeted edits — step numbering, duplicate button removal, action bar
+  - Step 5 PhaseExecute: step header, back moved to action bar
+  - PhaseComplete: CSS variable tokens, completion header strip, inline audit trail
+- Committed in 4 logical chunks: OS framework → Phase A → Phase B → Phase C
+- Validation: tsc --noEmit + next build both pass clean
+
 ## 2026-03-07 — R-004 rotation closure + post-scrub verification
 - Strengthened docs/ops/secret-rotation-checklist.md into operator-grade execution pack with verification commands and completion protocol
 - Fixed ci_risk_gate.py: removed cursor-after-close bug, cleaned up dead code
