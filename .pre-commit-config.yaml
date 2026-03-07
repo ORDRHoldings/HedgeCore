@@ -16,6 +16,15 @@ repos:
         args: [--config, backend/ruff.toml]
         files: ^backend/
 
+  - repo: local
+    hooks:
+      - id: freeze-check
+        name: Architecture Freeze Check
+        entry: python scripts/freeze_check_precommit.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.25.1
     hooks:

@@ -120,6 +120,27 @@ jobs:
           path: frontend/playwright-report/
           retention-days: 7
 
+  # ── Architecture Governance ──────────────────────────────────────────────────
+  governance:
+    name: Architecture Governance
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Freeze check
+        run: python scripts/freeze_check_precommit.py
+
+      - name: Pre-merge gate
+        run: python scripts/pre_merge_gate.py
+
+      - name: Risk gate
+        run: python scripts/ci_risk_gate.py
+
   # ── Docker build (backend) ───────────────────────────────────────────────────
   docker:
     name: Docker build

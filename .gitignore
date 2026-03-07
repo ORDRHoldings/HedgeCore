@@ -19,8 +19,10 @@ __pycache__/
 .venv/
 venv/
 
-# Claude / AI junk
-.claude/
+# Claude / AI — track rules/agents/skills/state-md, ignore machine-specific
+.claude/state/memory.db
+.claude/settings.local.json
+frontend/.claude/
 *.bak*
 *.jsonl
 

@@ -693,9 +693,9 @@
   ├───────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────────┤
   │ OpenAI API key    │ .env (committed to git)              │ CRITICAL — rotate immediately                      │
   ├───────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────────┤
-  │ JWT_SECRET        │ .env = ***REDACTED_JWT_SECRET*** │ HIGH — weak, predictable                           │
+  │ JWT_SECRET        │ .env = ***REDACTED*** │ HIGH — weak, predictable                           │
   ├───────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────────┤
-  │ DB password       │ .env = ***REDACTED_DB_PASSWORD***                  │ HIGH — weak demo password                          │
+  │ DB password       │ .env = ***REDACTED***                  │ HIGH — weak demo password                          │
   ├───────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────────┤
   │ Alpha Vantage key │ .env.local                           │ MEDIUM — frontend-side exposure risk               │
   ├───────────────────┼──────────────────────────────────────┼────────────────────────────────────────────────────┤
@@ -1007,8 +1007,8 @@
   Evidence Excerpts
 
   backend/.env (critical exposure):
-  OPENAI_API_KEY=sk-proj-...  ← REAL KEY, tracked in git (git status shows "M backend/.env")
-  JWT_SECRET=***REDACTED_JWT_SECRET***
+  OPENAI_API_KEY=***REDACTED***  ← REAL KEY, tracked in git (git status shows "M backend/.env")
+  JWT_SECRET=***REDACTED***
 
   frontend/src/lib/authContext.tsx (plan_tier issue):
   plan_tier: user.plan_tier ?? "enterprise"  // ← BYPASSES ALL FEATURE GATING

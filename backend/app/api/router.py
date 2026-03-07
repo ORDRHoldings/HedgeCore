@@ -216,3 +216,7 @@ router.include_router(v1_admin_users_router)
 # Superuser admin — monitoring dashboard (owns /v1/admin/monitor)
 from app.api.routes.v1_admin_monitor import router as v1_admin_monitor_router
 router.include_router(v1_admin_monitor_router)
+
+# DevOps dashboard — Claude Code memory.db state (owns /v1/devops)
+from app.api.routes.v1_devops import router as v1_devops_router
+router.include_router(v1_devops_router)
