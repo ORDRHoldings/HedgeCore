@@ -77,6 +77,14 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(prefix) for prefix in _CSRF_EXEMPT_PREFIXES):
             return await call_next(request)
 
+        # Skip CSRF for JWT Bearer-authenticated requests — browsers never
+        # auto-send Authorization headers, so CSRF is inherently impossible.
+        # This is required for cross-origin deployments (Vercel ↔ Render)
+        # where the CSRF cookie domain doesn't match the frontend origin.
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            return await call_next(request)
+
         # Extract cookie token
         cookie_token = request.cookies.get(_CSRF_COOKIE_NAME)
         if not cookie_token:
