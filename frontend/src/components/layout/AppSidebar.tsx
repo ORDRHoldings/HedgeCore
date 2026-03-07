@@ -187,6 +187,7 @@ const Ic = {
       <polyline points="6 10 9 7 12 10 15 7 18 10"/>
     </svg>
   ),
+  cpu:      icon("M18 12h2M4 12h2M12 4V2M12 22v-2M7.8 7.8L6.4 6.4M17.6 6.4l-1.4 1.4M7.8 16.2l-1.4 1.4M17.6 17.6l-1.4-1.4M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z", 14),
   // Sidebar-specific
   collapse: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -253,23 +254,18 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Hedge Desk", href: "/position-desk", icon: Ic.execution,
-    prefixes: ["/position-desk", "/input", "/upload-csv", "/policy-desk", "/policies", "/hedge-desk", "/calculate", "/results", "/trade-history", "/hedge-monitor"],
+    label: "Hedge Desk", href: "/hedge-desk", icon: Ic.execution,
+    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/input", "/upload-csv", "/policy-desk", "/policies", "/calculate", "/results"],
     header: "HEDGE DESK",
     items: [
-      // ── INGEST
-      { label: "Position Desk",   desc: "Lifecycle control tower",                 href: "/position-desk",        icon: Ic.table,     badge: "DESK",    badgeColor: S_CYAN,  group: "INGEST" },
-      { label: "New Exposure",    desc: "Manual entry form",                       href: "/input",                icon: Ic.pen,                                              group: "INGEST" },
-      { label: "Upload CSV/XLSX", desc: "Bulk import with validation",             href: "/position-desk/import", icon: Ic.upload,    badge: "BULK",    badgeColor: S_AMBER, group: "INGEST" },
-      // ── POLICY
-      { label: "Policy Desk",    desc: "Assign policies to positions",             href: "/policy-desk",          icon: Ic.table,     badge: "DESK",    badgeColor: S_CYAN,  group: "POLICY" },
-      { label: "Policy Library", desc: "60 institutional preset policies",         href: "/policies",             icon: Ic.book,                                             group: "POLICY" },
-      // ── EXECUTE
-      { label: "Calculate",      desc: "Guided 5-step hedge calculation",          href: "/calculate",            icon: Ic.lightning, badge: "WIZARD",  badgeColor: S_CYAN,  group: "EXECUTE" },
-      { label: "Hedge Desk",     desc: "Full hedge execution pipeline",            href: "/hedge-desk",           icon: Ic.terminal,  badge: "DESK",    badgeColor: S_CYAN,  group: "EXECUTE" },
-      { label: "Results",        desc: "Hedge schedule with rationale",            href: "/results",              icon: Ic.bar_chart,                                        group: "EXECUTE" },
-      { label: "Trade History",  desc: "Proposals, fills, slippage audit",         href: "/trade-history",        icon: Ic.clock,     badge: "LOG",     badgeColor: S_CYAN,  group: "EXECUTE", minTier: "professional" as PlanTier },
-      { label: "Hedge Monitor",  desc: "Live MTM P&L, effectiveness",             href: "/hedge-monitor",        icon: Ic.bar_chart, badge: "PREVIEW", badgeColor: S_AMBER, group: "EXECUTE", minTier: "professional" as PlanTier },
+      // ── PRIMARY OPERATING LANE
+      { label: "Overview",       desc: "Start, resume, or review hedge runs",       href: "/hedge-desk",       icon: Ic.dashboard, badge: "HOME",    badgeColor: S_CYAN,  group: "OPERATE" },
+      { label: "Active Run",     desc: "Guided hedge pipeline",                     href: "/hedge-desk?mode=run", icon: Ic.execution, badge: "PIPELINE", badgeColor: S_GREEN, group: "OPERATE" },
+      { label: "Monitor",        desc: "Live MTM P&L, drift, roll schedule",        href: "/hedge-monitor",    icon: Ic.bar_chart, badge: "LIVE",    badgeColor: S_GREEN, group: "OPERATE" },
+      { label: "History",        desc: "Proposals, fills, slippage audit",           href: "/trade-history",    icon: Ic.clock,     badge: "LOG",     badgeColor: S_CYAN,  group: "OPERATE" },
+      // ── REFERENCE
+      { label: "Policy Library", desc: "Institutional preset policies",              href: "/policies",         icon: Ic.book,                                             group: "REFERENCE" },
+      { label: "Position Desk",  desc: "Position lifecycle management",              href: "/position-desk",    icon: Ic.table,                                            group: "REFERENCE" },
     ],
   },
   {
@@ -376,11 +372,12 @@ const NAV: NavSection[] = [
   },
   {
     label: "Admin", href: "/admin-monitor", icon: Ic.monitor,
-    prefixes: ["/admin-monitor"],
+    prefixes: ["/admin-monitor", "/devops"],
     header: "Platform Operations",
     superuserOnly: true,
     items: [
       { label: "Operations Center", desc: "System health, services, DB stats",   href: "/admin-monitor",  icon: Ic.monitor, badge: "NOC",  badgeColor: S_RED },
+      { label: "DevOps Console",    desc: "AI memory, risks, freeze, decisions", href: "/devops",         icon: Ic.cpu,     badge: "OS",   badgeColor: S_CYAN },
     ],
   },
   {

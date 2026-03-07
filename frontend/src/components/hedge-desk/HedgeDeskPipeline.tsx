@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { UserContext } from "@/lib/authContext";
 import type { PositionRow } from "@/api/positionClient";
 import type { CalculateResult } from "./PhaseCalculate";
+import { saveDraft, loadDraft, clearDraft, draftAge, type HedgeDraft } from "@/lib/draftPersistence";
 
 import ProgressBar   from "./ProgressBar";
 import PhaseSelect   from "./PhaseSelect";
@@ -17,7 +18,13 @@ const HD = {
   bgDeep:  "var(--bg-deep)",
   bgPanel: "var(--bg-panel)",
   fontMono:"var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  fontUI:  "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   tertiary: "var(--text-tertiary)",
+  secondary: "var(--text-secondary)",
+  primary: "var(--text-primary)",
+  cyan:    "var(--accent-cyan)",
+  amber:   "var(--accent-amber)",
+  rim:     "var(--border-rim)",
 } as const;
 
 const PHASES = ["SELECT", "CALCULATE", "RISK", "REVIEW", "EXECUTE", "COMPLETE"];
@@ -42,6 +49,43 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
   const [proposalIds, setProposalIds]             = useState<string[]>([]);
   const [fillData, setFillData]                   = useState<{ fillPrice: number; proposalIds: string[] } | null>(null);
 
+  // Draft persistence
+  const [pendingDraft, setPendingDraft] = useState<HedgeDraft | null>(null);
+  const [draftChecked, setDraftChecked] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const userId = user.id ?? user.email ?? "anonymous";
+
+  // Check for saved draft on mount
+  useEffect(() => {
+    const draft = loadDraft(userId);
+    if (draft && draft.phase > 0) {
+      setPendingDraft(draft);
+    }
+    setDraftChecked(true);
+  }, [userId]);
+
+  // Auto-save draft when phase or key data changes (debounced)
+  useEffect(() => {
+    if (!draftChecked || phase === 0) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveDraft(userId, {
+        phase,
+        positionIds: selectedPositions.map(p => p.id),
+        positionCount: selectedPositions.length,
+        policyInstanceId,
+        runId: runId || undefined,
+        riskVerdict: riskVerdict || undefined,
+        riskDecisionHash: riskDecisionHash || undefined,
+        proposalIds: proposalIds.length > 0 ? proposalIds : undefined,
+        governanceMode,
+        savedAt: new Date().toISOString(),
+      });
+    }, 500);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [phase, selectedPositions.length, runId, proposalIds.length, draftChecked, userId, governanceMode, policyInstanceId, riskVerdict, riskDecisionHash, selectedPositions]);
+
   const advance = useCallback(() => {
     setPhase(p => {
       const next = p + 1;
@@ -65,13 +109,85 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
     setRiskDecisionHash("");
     setProposalIds([]);
     setFillData(null);
-  }, []);
+    clearDraft(userId);
+  }, [userId]);
 
   const handlePhaseClick = useCallback((i: number) => {
     if (completedPhases.has(i)) {
       setPhase(i);
     }
   }, [completedPhases]);
+
+  const dismissDraft = () => {
+    setPendingDraft(null);
+    clearDraft(userId);
+  };
+
+  // Draft resume banner
+  if (draftChecked && pendingDraft && phase === 0) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: HD.bgPanel }}>
+        <ProgressBar
+          phases={PHASES}
+          positionCount={0}
+          runId={null}
+          currentPhase={0}
+          completedPhases={new Set()}
+          onPhaseClick={() => {}}
+        />
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 16,
+            padding: "40px 32px", maxWidth: 420,
+            border: `1px solid ${HD.rim}`, borderRadius: 4,
+            background: "color-mix(in srgb, var(--accent-amber) 4%, var(--bg-panel))",
+          }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: HD.amber }}>
+              DRAFT IN PROGRESS
+            </span>
+            <span style={{ fontFamily: HD.fontUI, fontSize: 13, color: HD.secondary, textAlign: "center", lineHeight: 1.6 }}>
+              You have an unsaved hedge run with {pendingDraft.positionCount} position{pendingDraft.positionCount !== 1 ? "s" : ""},
+              saved {draftAge(pendingDraft)}.
+              {pendingDraft.runId && (
+                <> Run ID: <span style={{ fontFamily: HD.fontMono, color: HD.primary }}>{pendingDraft.runId.slice(0, 8)}</span></>
+              )}
+            </span>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={dismissDraft}
+                style={{
+                  fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                  color: HD.tertiary, background: "transparent",
+                  border: `1px solid ${HD.rim}`, padding: "7px 16px",
+                  cursor: "pointer", borderRadius: 2,
+                }}
+              >
+                START FRESH
+              </button>
+              <button
+                onClick={() => {
+                  // Resume: restore phase but start from SELECT with context
+                  // Since we only store IDs (not full objects), user needs to re-select
+                  // but the draft banner informed them of context
+                  setPendingDraft(null);
+                  // We can't fully restore positions without re-fetching, so start at phase 0
+                  // but the user knows they had a draft
+                }}
+                style={{
+                  fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                  color: "#fff", background: HD.cyan,
+                  border: `1px solid ${HD.cyan}`, padding: "7px 16px",
+                  cursor: "pointer", borderRadius: 2,
+                }}
+              >
+                CONTINUE
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", background: HD.bgPanel }}>
@@ -167,6 +283,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
               governanceMode={governanceMode}
               onComplete={(data) => {
                 setFillData(data);
+                clearDraft(userId);
                 advance();
               }}
               onBack={goBack}

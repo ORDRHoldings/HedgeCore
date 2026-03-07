@@ -4,7 +4,7 @@
  * WorkflowGuide — "Where am I" guidance strip
  *
  * 32px bar rendered immediately below the breadcrumb on every workflow page.
- * Shows step N of 5, instruction text, and a dynamic status indicator.
+ * Shows step N of 6, instruction text, and a dynamic status indicator.
  */
 
 import type { WorkflowStep } from "./WorkflowBreadcrumb";
@@ -22,6 +22,15 @@ interface GuideConfig {
 }
 
 const GUIDE_MAP: Record<string, GuideConfig> = {
+  // Pipeline phases (primary flow — all within /hedge-desk)
+  "select":    { step: 1, instruction: "Select positions to include in this hedge run",           next: "Generate hedge plan" },
+  "calculate": { step: 2, instruction: "Confirm market snapshot and generate the hedge plan",     next: "Review risk assessment" },
+  "risk":      { step: 3, instruction: "Review compliance, VaR, and pre-trade cost assessment",   next: "Review & approve" },
+  "review":    { step: 4, instruction: "Review execution plan and submit for approval",           next: "Execute trades" },
+  "execute":   { step: 5, instruction: "Confirm trade tickets and record execution fills",        next: "Complete" },
+  "complete":  { step: 0, instruction: "Hedge run complete. Review summary and next steps.",      next: "" },
+  "overview":  { step: 0, instruction: "Hedge Desk — Start a new run or resume an existing one", next: "" },
+  // Legacy page paths (still functional for direct URL access)
   "/position-desk":        { step: 1, instruction: "Load, import, or connect FX exposures",                          next: "Assign policy" },
   "/input":                { step: 1, instruction: "Enter new FX exposure details manually",                         next: "Save & view positions" },
   "/position-desk/import": { step: 1, instruction: "Upload CSV/XLSX with FX exposure data",                          next: "Review & import" },
@@ -31,9 +40,13 @@ const GUIDE_MAP: Record<string, GuideConfig> = {
   "/results":              { step: 5, instruction: "Review hedge schedule, rationale, and audit artifacts",            next: "" },
 };
 
+const TOTAL_STEPS = 5;
+
 interface Props {
   active: WorkflowStep;
   pathname?: string;
+  /** Pipeline phase index (0-5). When provided, resolves guide from phase. */
+  pipelinePhase?: number;
   /** Optional dynamic status text — overrides default "next" */
   statusText?: string;
   /** Optional status color override */
@@ -48,16 +61,18 @@ const COLOR_MAP = {
   cyan:  CYAN,
 };
 
-export default function WorkflowGuide({ active, pathname, statusText, statusColor, complete }: Props) {
-  // Resolve config from pathname or from active step
-  const path = pathname ?? (
-    active === "ingest" ? "/position-desk" :
-    active === "policy" ? "/policy-desk" :
-    active === "calculate" ? "/calculate" :
-    active === "execute" ? "/hedge-desk" :
-    "/results"
-  );
-  const config = GUIDE_MAP[path] ?? GUIDE_MAP["/position-desk"]!;
+const PHASE_KEYS: string[] = ["select", "calculate", "risk", "review", "execute", "complete"];
+
+export default function WorkflowGuide({ active, pathname, pipelinePhase, statusText, statusColor, complete }: Props) {
+  // Resolve config: prefer pipelinePhase, then pathname, then active key
+  let config: GuideConfig;
+  if (pipelinePhase !== undefined && PHASE_KEYS[pipelinePhase]) {
+    config = GUIDE_MAP[PHASE_KEYS[pipelinePhase]] ?? GUIDE_MAP["select"]!;
+  } else if (pathname && GUIDE_MAP[pathname]) {
+    config = GUIDE_MAP[pathname]!;
+  } else {
+    config = GUIDE_MAP[active] ?? GUIDE_MAP["select"]!;
+  }
 
   if (complete) {
     return (
@@ -78,20 +93,40 @@ export default function WorkflowGuide({ active, pathname, statusText, statusColo
           letterSpacing: "0.1em",
           color: GREEN,
         }}>
-          ✓ WORKFLOW COMPLETE
+          WORKFLOW COMPLETE
         </span>
         <span style={{
           fontFamily: FU,
           fontSize: 11,
           color: "var(--text-secondary)",
         }}>
-          Hedge schedule generated. Review artifacts below.
+          Hedge run complete. Review summary below or start a new run.
         </span>
       </div>
     );
   }
 
-  const resolvedColor = statusColor ? COLOR_MAP[statusColor] : (config.step === 5 ? GREEN : CYAN);
+  if (config.step === 0) {
+    // Overview mode — no step number
+    return (
+      <div style={{
+        height: 32,
+        background: `color-mix(in srgb, ${CYAN} 4%, transparent)`,
+        borderBottom: `1px solid ${RIM}`,
+        display: "flex",
+        alignItems: "center",
+        padding: "0 20px",
+        gap: 16,
+        flexShrink: 0,
+      }}>
+        <span style={{ fontFamily: FU, fontSize: 11, color: "var(--text-secondary)", flex: 1 }}>
+          {config.instruction}
+        </span>
+      </div>
+    );
+  }
+
+  const resolvedColor = statusColor ? COLOR_MAP[statusColor] : (config.step === TOTAL_STEPS ? GREEN : CYAN);
   const resolvedStatus = statusText ?? config.next;
 
   return (
@@ -114,7 +149,7 @@ export default function WorkflowGuide({ active, pathname, statusText, statusColo
         color: CYAN,
         flexShrink: 0,
       }}>
-        STEP {config.step} OF 5
+        STEP {config.step} OF {TOTAL_STEPS}
       </span>
 
       {/* Center: instruction */}

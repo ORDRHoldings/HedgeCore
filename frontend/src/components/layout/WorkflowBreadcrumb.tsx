@@ -1,32 +1,48 @@
 "use client";
 
 /**
- * WorkflowBreadcrumb — 5-step pipeline progress strip
+ * WorkflowBreadcrumb — 6-step pipeline progress strip
  *
- * Shows the institutional workflow:
- *   01 INGEST → 02 POLICY → 03 CALCULATE → 04 EXECUTE → 05 RESULTS
+ * Shows the institutional hedge workflow phases:
+ *   01 SELECT → 02 CALCULATE → 03 RISK → 04 REVIEW → 05 EXECUTE → 06 COMPLETE
  *
  * Renders as a 36px sticky bar below AppSidebar.
  * Active step gets cyan underline. Completed steps get green check.
- * Right side shows "NEXT: [STEP] →" CTA button, or "RETURN TO DASHBOARD"
- * on the final step.
+ * Right side shows "NEXT: [STEP] →" CTA or "RETURN TO DASHBOARD".
+ *
+ * All steps operate within /hedge-desk — no cross-page navigation.
  */
 
 import { useRouter } from "next/navigation";
 
-export type WorkflowStep = "ingest" | "policy" | "calculate" | "execute" | "results";
+export type WorkflowStep =
+  | "ingest" | "policy" | "calculate" | "execute" | "results"  // legacy compat
+  | "select" | "risk" | "review" | "complete" | "overview";     // pipeline phases
 
 interface Props {
   active: WorkflowStep;
+  /** Pipeline phase index (0-5). When provided, overrides step matching. */
+  pipelinePhase?: number;
 }
 
-const STEPS: { key: WorkflowStep; label: string; href: string; num: string }[] = [
-  { key: "ingest",    label: "INGEST",    href: "/position-desk", num: "01" },
-  { key: "policy",    label: "POLICY",    href: "/policy-desk",   num: "02" },
-  { key: "calculate", label: "CALCULATE", href: "/calculate",     num: "03" },
-  { key: "execute",   label: "EXECUTE",   href: "/hedge-desk",    num: "04" },
-  { key: "results",   label: "RESULTS",   href: "/results",       num: "05" },
+const STEPS: { key: WorkflowStep; label: string; num: string }[] = [
+  { key: "select",    label: "SELECT",    num: "01" },
+  { key: "calculate", label: "CALCULATE", num: "02" },
+  { key: "risk",      label: "RISK",      num: "03" },
+  { key: "review",    label: "REVIEW",    num: "04" },
+  { key: "execute",   label: "EXECUTE",   num: "05" },
+  { key: "complete",  label: "COMPLETE",  num: "06" },
 ];
+
+// Map legacy step keys to pipeline index
+const LEGACY_MAP: Record<string, number> = {
+  ingest: 0, policy: 0, select: 0,
+  calculate: 1,
+  risk: 2,
+  review: 3,
+  execute: 4,
+  results: 5, complete: 5,
+};
 
 const FM = "var(--font-terminal-mono,'IBM Plex Mono',monospace)";
 const CYAN = "var(--accent-cyan)";
@@ -34,9 +50,9 @@ const GREEN = "var(--status-pass,#22c55e)";
 const MUTED = "var(--text-tertiary)";
 const RIM = "var(--border-rim)";
 
-export default function WorkflowBreadcrumb({ active }: Props) {
+export default function WorkflowBreadcrumb({ active, pipelinePhase }: Props) {
   const router = useRouter();
-  const activeIdx = STEPS.findIndex((s) => s.key === active);
+  const activeIdx = pipelinePhase ?? LEGACY_MAP[active] ?? 0;
 
   return (
     <div
@@ -53,21 +69,26 @@ export default function WorkflowBreadcrumb({ active }: Props) {
     >
       {/* Left: step pills */}
       {STEPS.map((step, i) => {
-        const isActive = step.key === active;
+        const isActive = i === activeIdx;
         const isDone   = i < activeIdx;
         const color    = isActive ? CYAN : isDone ? GREEN : MUTED;
-        const isLast   = step.key === "results";
+        const isLast   = i === STEPS.length - 1;
 
         return (
           <div key={step.key} style={{ display: "flex", alignItems: "center" }}>
             <button
-              onClick={() => router.push(step.href)}
+              onClick={() => {
+                // Steps are informational within /hedge-desk — clicking navigates to the pipeline
+                if (isDone || isActive) {
+                  router.push("/hedge-desk?mode=run");
+                }
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 7,
                 height: 36,
-                padding: "0 14px",
+                padding: "0 10px",
                 background: isActive ? "rgba(28,98,242,0.08)" : "transparent",
                 border: "none",
                 borderBottom: isActive
@@ -75,13 +96,14 @@ export default function WorkflowBreadcrumb({ active }: Props) {
                   : isDone
                   ? `2px solid ${GREEN}`
                   : "2px solid transparent",
-                cursor: "pointer",
+                cursor: isDone || isActive ? "pointer" : "default",
                 fontFamily: FM,
                 fontSize: 9,
                 fontWeight: isActive ? 700 : 500,
                 letterSpacing: "0.12em",
                 color,
                 transition: "all 0.15s",
+                opacity: !isDone && !isActive ? 0.6 : 1,
               }}
             >
               {/* Step indicator circle */}
@@ -126,27 +148,20 @@ export default function WorkflowBreadcrumb({ active }: Props) {
         );
       })}
 
-      {/* Right: NEXT step CTA or RETURN TO DASHBOARD */}
+      {/* Right: contextual CTA */}
       <div style={{ flex: 1 }} />
       {activeIdx < STEPS.length - 1 ? (
-        <button
-          onClick={() => router.push(STEPS[activeIdx + 1].href)}
+        <span
           style={{
             fontFamily: FM,
             fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: "0.10em",
-            color: CYAN,
-            background: "rgba(28,98,242,0.08)",
-            border: "1px solid rgba(28,98,242,0.25)",
-            padding: "5px 14px",
-            cursor: "pointer",
-            borderRadius: 2,
-            whiteSpace: "nowrap",
+            fontWeight: 600,
+            letterSpacing: "0.08em",
+            color: MUTED,
           }}
         >
-          NEXT: {STEPS[activeIdx + 1].label} →
-        </button>
+          NEXT: {STEPS[activeIdx + 1]?.label}
+        </span>
       ) : (
         <button
           onClick={() => router.push("/dashboard")}

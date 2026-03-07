@@ -1,37 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import HedgeDeskPipeline from "@/components/hedge-desk/HedgeDeskPipeline";
+import HedgeDeskOverview from "@/components/hedge-desk/HedgeDeskOverview";
 import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
 import WorkflowGuide from "@/components/layout/WorkflowGuide";
 
 const HD = {
-  navy:    "#0A1F44",
-  royal:   "#1C62F2",
-  emerald: "#2ECC71",
   bgPanel: "var(--bg-panel)",
-  bgSub:   "var(--bg-sub)",
-  bgDeep:  "var(--bg-deep)",
-  rim:     "var(--border-rim)",
-  soft:    "var(--border-soft)",
+  bgDeep: "var(--bg-deep)",
+  rim: "var(--border-rim)",
   primary: "var(--text-primary)",
-  secondary:"var(--text-secondary)",
+  secondary: "var(--text-secondary)",
   tertiary: "var(--text-tertiary)",
-  cyan:    "var(--accent-cyan)",
-  amber:   "var(--accent-amber)",
-  fontUI:  "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono:"var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+  cyan: "var(--accent-cyan)",
+  amber: "var(--accent-amber)",
+  emerald: "#2ECC71",
+  fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
+  fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
 } as const;
 
 type GovernanceMode = "solo" | "team";
 
-export default function HedgeDeskPage() {
+function HedgeDeskInner() {
   const { isAuthenticated, user, token } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
+  const mode = searchParams.get("mode"); // "run" = active pipeline, null = overview
   const [governanceMode, setGovernanceMode] = useState<GovernanceMode>("solo");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
@@ -51,9 +50,9 @@ export default function HedgeDeskPage() {
         const res = await dashboardFetch("/v1/company/settings", token);
         if (res.ok) {
           const data = await res.json() as Record<string, unknown>;
-          const mode = (data.governance_mode ?? data.governanceMode ?? "solo") as string;
-          if (mode === "team" || mode === "solo") {
-            setGovernanceMode(mode as GovernanceMode);
+          const m = (data.governance_mode ?? data.governanceMode ?? "solo") as string;
+          if (m === "team" || m === "solo") {
+            setGovernanceMode(m as GovernanceMode);
           }
         }
       } catch {
@@ -66,10 +65,15 @@ export default function HedgeDeskPage() {
     load();
   }, [isAuthenticated, token]);
 
+  const startRun = useCallback(() => {
+    router.push("/hedge-desk?mode=run");
+  }, [router]);
+
   if (!isAuthenticated || !user || !token) return null;
 
+  const isRunMode = mode === "run";
   const modeBadgeColor = governanceMode === "team" ? HD.amber : HD.emerald;
-  const modeLabel      = governanceMode === "team" ? "TEAM MODE" : "SOLO MODE";
+  const modeLabel = governanceMode === "team" ? "TEAM MODE" : "SOLO MODE";
 
   return (
     <div style={{
@@ -90,7 +94,6 @@ export default function HedgeDeskPage() {
         background: HD.bgPanel,
         borderBottom: `1px solid ${HD.rim}`,
       }}>
-        {/* Title */}
         <span style={{
           fontFamily: HD.fontMono,
           fontSize: 13,
@@ -102,16 +105,15 @@ export default function HedgeDeskPage() {
           HEDGE DESK
         </span>
 
-        {/* Pipeline badge */}
         <span style={{
           fontFamily: HD.fontMono,
           fontSize: 9,
-          color: HD.cyan,
-          border: `1px solid color-mix(in srgb,${HD.cyan} 25%,transparent)`,
+          color: isRunMode ? HD.cyan : HD.tertiary,
+          border: `1px solid color-mix(in srgb,${isRunMode ? HD.cyan : HD.tertiary} 25%,transparent)`,
           padding: "1px 6px",
           letterSpacing: "0.1em",
         }}>
-          EXECUTION PIPELINE
+          {isRunMode ? "EXECUTION PIPELINE" : "OVERVIEW"}
         </span>
 
         <div style={{ flex: 1 }} />
@@ -131,7 +133,6 @@ export default function HedgeDeskPage() {
           {settingsLoaded ? modeLabel : "LOADING..."}
         </span>
 
-        {/* User context */}
         <span style={{
           fontFamily: HD.fontMono,
           fontSize: 10,
@@ -142,19 +143,57 @@ export default function HedgeDeskPage() {
         </span>
       </header>
 
-      <WorkflowBreadcrumb active="execute" />
-      <WorkflowGuide active="execute" />
+      {/* Breadcrumb + Guide — only shown in run mode */}
+      {isRunMode && (
+        <>
+          <WorkflowBreadcrumb active="select" />
+          <WorkflowGuide active={isRunMode ? "select" : "overview"} />
+        </>
+      )}
 
-      {/* Pipeline body */}
+      {/* Body */}
       <div style={{ flex: 1, overflow: "hidden" }}>
-        {settingsLoaded && (
-          <HedgeDeskPipeline
+        {isRunMode ? (
+          settingsLoaded && (
+            <HedgeDeskPipeline
+              token={token}
+              user={user}
+              governanceMode={governanceMode}
+            />
+          )
+        ) : (
+          <HedgeDeskOverview
             token={token}
             user={user}
-            governanceMode={governanceMode}
+            onStartRun={startRun}
           />
         )}
       </div>
     </div>
+  );
+}
+
+export default function HedgeDeskPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        height: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "var(--bg-panel)",
+      }}>
+        <span style={{
+          fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+          fontSize: 11,
+          color: "var(--text-tertiary)",
+          letterSpacing: "0.1em",
+        }}>
+          LOADING...
+        </span>
+      </div>
+    }>
+      <HedgeDeskInner />
+    </Suspense>
   );
 }
