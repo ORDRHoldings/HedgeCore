@@ -17,6 +17,11 @@
 
 import Cookies from "js-cookie";
 import { API_BASE } from "@/lib/api/apiBase";
+import {
+  translateError,
+  translateCaughtError,
+  type TranslatedError,
+} from "@/lib/errors/hedgeErrors";
 export { API_BASE };
 
 /** Read CSRF token from double-submit cookie (set by /auth/login). */
@@ -60,4 +65,63 @@ export async function dashboardFetch(
       ...(options?.headers ?? {}),
     },
   });
+}
+
+/**
+ * Result type for safeFetch — either success data or translated error.
+ */
+export type SafeResult<T = unknown> =
+  | { ok: true; data: T; status: number }
+  | { ok: false; error: TranslatedError; status: number | null };
+
+/**
+ * Business-safe fetch wrapper for Hedge Desk components.
+ *
+ * Wraps dashboardFetch with automatic error translation so components
+ * never need to display raw HTTP status codes or technical messages.
+ *
+ * Usage:
+ *   const result = await safeFetch<PositionList>("/v1/positions?limit=200", token);
+ *   if (!result.ok) {
+ *     setError(result.error);  // TranslatedError with title, message, action
+ *     return;
+ *   }
+ *   setPositions(result.data.items);
+ */
+export async function safeFetch<T = unknown>(
+  path: string,
+  token: string,
+  options?: RequestInit,
+): Promise<SafeResult<T>> {
+  try {
+    const res = await dashboardFetch(path, token, options);
+
+    if (!res.ok) {
+      let detail: string | undefined;
+      try {
+        const body = await res.json();
+        if (typeof body?.detail === "string") {
+          detail = body.detail;
+        } else if (Array.isArray(body?.detail)) {
+          detail = body.detail.map((d: { msg?: string }) => d.msg ?? "").join("; ");
+        }
+      } catch {
+        // body not JSON
+      }
+      return {
+        ok: false,
+        error: translateError(res.status, detail),
+        status: res.status,
+      };
+    }
+
+    const data = (await res.json()) as T;
+    return { ok: true, data, status: res.status };
+  } catch (err) {
+    return {
+      ok: false,
+      error: translateCaughtError(err),
+      status: null,
+    };
+  }
 }
