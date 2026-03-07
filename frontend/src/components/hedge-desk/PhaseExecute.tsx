@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import type { BucketResult } from "@/api/types";
+import { translateError, translateCaughtError, type TranslatedError } from "@/lib/errors/hedgeErrors";
+import HedgeErrorBanner from "./ErrorBanner";
 import {
   CheckCircleIcon, AlertCircleIcon, LoaderIcon, ChevronLeftIcon,
   CopyIcon, ExternalLinkIcon, ShieldCheckIcon, UserCheckIcon,
@@ -113,7 +115,7 @@ export default function PhaseExecute({
 }: PhaseExecuteProps) {
   const [fillPrice, setFillPrice]               = useState<string>("");
   const [executing, setExecuting]               = useState(false);
-  const [error, setError]                       = useState<string | null>(null);
+  const [error, setError]                       = useState<TranslatedError | null>(null);
   const [awaitingApproval, setAwaitingApproval] = useState(false);
   const [done, setDone]                         = useState(false);
   const [copiedRow, setCopiedRow]               = useState<number | null>(null);
@@ -187,9 +189,17 @@ export default function PhaseExecute({
       const hasOther = results.some(r => r.status === "rejected" && (r.reason as { code?: number })?.code !== 409);
       // Team mode: show staging-queue notice and halt
       if (has409 && governanceMode === "team") { setAwaitingApproval(true); setExecuting(false); return; }
-      // Solo mode: proposals must already be APPROVED — 409 means something went wrong upstream
-      if (has409) throw new Error("PROPOSAL_NOT_APPROVED — proposals were not approved before execution. Please restart the pipeline and ensure Solo Mode is active on your company settings.");
-      if (hasOther) { const f = results.find(r => r.status === "rejected" && (r.reason as { code?: number })?.code !== 409); throw (f as PromiseRejectedResult).reason; }
+      if (has409) {
+        setError(translateError(409, "Proposals must be approved before execution. Restart the pipeline and verify Solo Mode is active in your company settings."));
+        setExecuting(false);
+        return;
+      }
+      if (hasOther) {
+        const f = results.find(r => r.status === "rejected" && (r.reason as { code?: number })?.code !== 409);
+        setError(translateCaughtError((f as PromiseRejectedResult).reason));
+        setExecuting(false);
+        return;
+      }
       saveTradeHistory({
         id: `TH-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
         timestamp: new Date().toISOString(), run_id: runId, positions: proposalIds,
@@ -200,11 +210,7 @@ export default function PhaseExecute({
       });
       setDone(true); onComplete({ fillPrice: parsedFillPrice, proposalIds });
     } catch (e) {
-      if (e instanceof Error) setError(e.message);
-      else if (e !== null && typeof e === "object") {
-        const obj = e as Record<string, unknown>;
-        setError(typeof obj.message === "string" ? obj.message : typeof obj.detail === "string" ? obj.detail : JSON.stringify(e));
-      } else setError("Execution failed");
+      setError(translateCaughtError(e));
     } finally { setExecuting(false); }
   };
 
@@ -232,21 +238,18 @@ export default function PhaseExecute({
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: S.bgPanel }}>
 
-      {/* ── Header strip ────────────────────────────────────────────────── */}
+      {/* ── Step header ─────────────────────────────────────────────────── */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 20px",
+        padding: "14px 20px",
         background: S.bgSub,
         borderBottom: `1px solid var(--border-rim)`,
         flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <ChevronLeftIcon size={13} color="var(--text-tertiary)" />
-            <span style={{ fontFamily: S.mono, fontSize: 11, color: "var(--text-tertiary)", letterSpacing: "0.07em" }}>BACK TO REVIEW</span>
-          </button>
+          <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: S.tertiary }}>STEP 5 OF 5</span>
           <span style={{ width: 1, height: 14, background: "var(--border-soft)", display: "inline-block" }} />
-          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: "var(--text-primary)" }}>EXECUTION TERMINAL</span>
+          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: S.primary }}>EXECUTION TERMINAL</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "color-mix(in srgb, var(--status-pass,#22c55e) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--status-pass,#22c55e) 25%, transparent)", padding: "4px 12px", borderRadius: 2 }}>
@@ -564,8 +567,14 @@ export default function PhaseExecute({
           </div>
         )}
         {error && (
-          <div style={{ padding: "10px 14px", background: "color-mix(in srgb, var(--accent-red,#E74C3C) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--accent-red,#E74C3C) 30%, transparent)", borderRadius: 4, marginBottom: 16 }}>
-            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.red }}>{error}</span>
+          <div style={{ marginBottom: 16 }}>
+            <HedgeErrorBanner
+              error={error}
+              onRetry={() => { setError(null); handleMarkHedged(); }}
+              onReconnect={() => window.location.href = "/auth/login"}
+              onGoBack={onBack}
+              onDismiss={() => setError(null)}
+            />
           </div>
         )}
         {done && (
@@ -574,26 +583,38 @@ export default function PhaseExecute({
             <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.green, letterSpacing: "0.08em" }}>HEDGED SUCCESSFULLY — ADVANCING PIPELINE...</span>
           </div>
         )}
-        <div style={{ height: 80 }} />
+        <div style={{ height: 20 }} />
       </div>
 
-      {/* ── Sticky bottom bar ────────────────────────────────────────────── */}
+      {/* ── Unified action bar ───────────────────────────────────────────── */}
       <div style={{
         position: "sticky", bottom: 0, zIndex: 10,
         background: S.bgSub, borderTop: `2px solid var(--border-rim)`,
-        padding: "16px 24px", display: "flex", alignItems: "center",
+        padding: "14px 24px", display: "flex", alignItems: "center",
         justifyContent: "space-between", gap: 16, flexShrink: 0,
       }}>
+        {/* Left — Back */}
+        <button onClick={onBack} style={{
+          display: "flex", alignItems: "center", gap: 5, background: "none",
+          border: `1px solid var(--border-soft)`, borderRadius: 3,
+          padding: "10px 18px", cursor: "pointer",
+        }}>
+          <ChevronLeftIcon size={13} color={S.tertiary} />
+          <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>BACK</span>
+        </button>
+
+        {/* Center — Status */}
         <span style={{ fontFamily: S.mono, fontSize: 11, color: S.secondary, letterSpacing: "0.04em" }}>
-          {proposalIds.length} proposal{proposalIds.length !== 1 ? "s" : ""} —&nbsp;
-          4-eyes approval required after submission
+          {proposalIds.length} proposal{proposalIds.length !== 1 ? "s" : ""} · {governanceMode === "team" ? "4-eyes approval required" : "solo mode"}
         </span>
+
+        {/* Right — Primary CTA */}
         <button
           onClick={handleMarkHedged} disabled={!fillOk}
           style={{
             display: "flex", alignItems: "center", gap: 8,
             background: done ? S.tertiary : executing ? "color-mix(in srgb, var(--status-pass,#22c55e) 60%, #000)" : S.green,
-            color: "#000", border: "none", borderRadius: 3, padding: "14px 32px",
+            color: "#000", border: "none", borderRadius: 3, padding: "12px 28px",
             cursor: !fillOk ? "default" : "pointer",
             fontFamily: S.mono, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em",
             transition: "background 0.2s ease",
@@ -601,7 +622,7 @@ export default function PhaseExecute({
         >
           {executing && <LoaderIcon size={14} color="#000" style={{ animation: "spin 1s linear infinite" }} />}
           {done && <CheckCircleIcon size={14} color="#000" />}
-          {done ? "EXECUTION CONFIRMED" : executing ? "EXECUTING..." : "CONFIRM EXECUTION"}
+          {done ? "EXECUTION CONFIRMED" : executing ? "EXECUTING..." : "CONFIRM EXECUTION →"}
         </button>
       </div>
 

@@ -2,17 +2,11 @@
 
 import { useState } from "react";
 import type { PositionRow } from "@/api/positionClient";
-import DisclosurePanel from "./DisclosurePanel";
-import { CheckCircleIcon, RefreshCwIcon, ClipboardIcon, BarChart2Icon, HistoryIcon, FileSpreadsheetIcon, FileTextIcon } from "lucide-react";
+import { CheckCircleIcon, RefreshCwIcon, ClipboardIcon, BarChart2Icon, HistoryIcon, FileSpreadsheetIcon, FileTextIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import Link from "next/link";
 import { API_BASE } from "@/lib/api/apiBase";
 
 const HD = {
-  navy:    "#0A1F44",
-  royal:   "#1C62F2",
-  emerald: "#2ECC71",
-  crimson: "#E74C3C",
-  slate:   "#8A9AB5",
   bgPanel: "var(--bg-panel)",
   bgSub:   "var(--bg-sub)",
   bgDeep:  "var(--bg-deep)",
@@ -23,6 +17,7 @@ const HD = {
   tertiary: "var(--text-tertiary)",
   cyan:    "var(--accent-cyan)",
   amber:   "var(--accent-amber)",
+  green:   "var(--status-pass,#22c55e)",
   fontUI:  "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:"var(--font-terminal-mono,'IBM Plex Mono',monospace)",
 } as const;
@@ -50,6 +45,7 @@ export default function PhaseComplete({
 }: PhaseCompleteProps) {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState("CONFIRMATION DOWNLOADED");
+  const [auditOpen, setAuditOpen] = useState(false);
 
   function showToast(msg: string) {
     setToastMsg(msg);
@@ -214,7 +210,23 @@ export default function PhaseComplete({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: "32px 24px", height: "100%", overflowY: "auto", alignItems: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 0, height: "100%", overflow: "hidden" }}>
+
+      {/* ── Completion header ─────────────────────────────────────────── */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "14px 24px",
+        background: `color-mix(in srgb, ${HD.green} 6%, ${HD.bgSub})`,
+        borderBottom: `1px solid ${HD.rim}`,
+        flexShrink: 0,
+      }}>
+        <CheckCircleIcon size={14} color={HD.green} />
+        <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: HD.green }}>COMPLETE</span>
+        <span style={{ width: 1, height: 14, background: HD.soft, display: "inline-block" }} />
+        <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: HD.primary }}>HEDGE RUN CONFIRMED</span>
+      </div>
+
+    <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, padding: "32px 24px", alignItems: "center" }}>
 
       {/* Toast */}
       {toastVisible && (
@@ -222,9 +234,9 @@ export default function PhaseComplete({
           position: "fixed", top: 20, right: 20, zIndex: 9999,
           padding: "10px 20px",
           background: HD.bgPanel,
-          border: `1px solid ${HD.emerald}`,
+          border: `1px solid ${HD.green}`,
           borderRadius: 4,
-          fontFamily: HD.fontMono, fontSize: 11, color: HD.emerald, letterSpacing: "0.06em",
+          fontFamily: HD.fontMono, fontSize: 11, color: HD.green, letterSpacing: "0.06em",
           boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
         }}>
           {toastMsg}
@@ -234,19 +246,19 @@ export default function PhaseComplete({
       {/* Success icon */}
       <div style={{
         width: 80, height: 80, borderRadius: "50%",
-        background: `color-mix(in srgb,${HD.emerald} 15%,transparent)`,
-        border: `2px solid ${HD.emerald}`,
+        background: `color-mix(in srgb,${HD.green} 15%,transparent)`,
+        border: `2px solid ${HD.green}`,
         display: "flex", alignItems: "center", justifyContent: "center",
         marginBottom: 8,
       }}>
-        <CheckCircleIcon size={44} color={HD.emerald} />
+        <CheckCircleIcon size={44} color={HD.green} />
       </div>
 
       {/* Title */}
       <div style={{ textAlign: "center" }}>
         <div style={{
           fontFamily: HD.fontMono, fontSize: 18, fontWeight: 700,
-          letterSpacing: "0.12em", color: HD.emerald, marginBottom: 6,
+          letterSpacing: "0.12em", color: HD.green, marginBottom: 6,
         }}>
           POSITIONS HEDGED SUCCESSFULLY
         </div>
@@ -317,22 +329,35 @@ export default function PhaseComplete({
         </div>
       </div>
 
-      {/* L3 audit panel */}
-      <div style={{ width: "100%", maxWidth: 640 }}>
-        <DisclosurePanel title="Audit Trail References" level="L3">
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Audit trail references */}
+      <div style={{ width: "100%", maxWidth: 640, background: HD.bgPanel, border: `1px solid ${HD.soft}`, borderRadius: 4, overflow: "hidden" }}>
+        <button
+          onClick={() => setAuditOpen(!auditOpen)}
+          style={{
+            width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "8px 14px", background: HD.bgSub, border: "none", cursor: "pointer",
+            borderBottom: auditOpen ? `1px solid ${HD.soft}` : "none",
+          }}
+        >
+          <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
+            AUDIT TRAIL REFERENCES
+          </span>
+          {auditOpen ? <ChevronUpIcon size={12} color={HD.tertiary} /> : <ChevronDownIcon size={12} color={HD.tertiary} />}
+        </button>
+        {auditOpen && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 14px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary }}>CALCULATION RUN ID</span>
-              <code style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.slate }}>{runId}</code>
+              <code style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary }}>{runId}</code>
             </div>
             {fillData?.proposalIds.map((id, i) => (
               <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary }}>PROPOSAL {i + 1}</span>
-                <code style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.slate }}>{id}</code>
+                <code style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary }}>{id}</code>
               </div>
             ))}
           </div>
-        </DisclosurePanel>
+        )}
       </div>
 
       {/* Action buttons */}
@@ -342,11 +367,11 @@ export default function PhaseComplete({
           style={{
             display: "flex", alignItems: "center", gap: 8,
             fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-            color: "#ffffff", background: HD.royal,
+            color: "#000", background: HD.green,
             border: "none", padding: "10px 20px", cursor: "pointer", borderRadius: 3,
           }}
         >
-          <RefreshCwIcon size={14} color="#ffffff" />
+          <RefreshCwIcon size={14} color="#000" />
           RUN ANOTHER HEDGE →
         </button>
 
@@ -456,6 +481,7 @@ export default function PhaseComplete({
           DOWNLOAD JSON
         </button>
       </div>
+    </div>
     </div>
   );
 }

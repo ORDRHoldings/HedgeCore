@@ -3,16 +3,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import type { PositionRow } from "@/api/positionClient";
-import DisclosurePanel from "./DisclosurePanel";
+import { translateError, translateCaughtError, type TranslatedError } from "@/lib/errors/hedgeErrors";
+import HedgeErrorBanner from "./ErrorBanner";
 import PreTradeCostPanel from "@/components/execution/PreTradeCostPanel";
 import CrisisImpactPanel from "@/components/execution/CrisisImpactPanel";
 import React from "react";
 import {
-  LoaderIcon, CheckCircleIcon, XCircleIcon, AlertTriangleIcon, ChevronLeftIcon
+  LoaderIcon, CheckCircleIcon, XCircleIcon, AlertTriangleIcon,
+  ChevronLeftIcon, ShieldCheckIcon, RefreshCwIcon,
 } from "lucide-react";
 
+/* ── Design tokens ────────────────────────────────────────────────────────── */
+
 const HD = {
-  navy:    "#0A1F44",
   royal:   "#1C62F2",
   emerald: "#2ECC71",
   crimson: "#E74C3C",
@@ -27,9 +30,13 @@ const HD = {
   tertiary: "var(--text-tertiary)",
   cyan:    "var(--accent-cyan)",
   amber:   "var(--accent-amber)",
+  green:   "var(--status-pass,#22c55e)",
+  red:     "var(--accent-red,#ef4444)",
   fontUI:  "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:"var(--font-terminal-mono,'IBM Plex Mono',monospace)",
 } as const;
+
+/* ── Types ────────────────────────────────────────────────────────────────── */
 
 interface PhaseRiskProps {
   positions: PositionRow[];
@@ -58,6 +65,10 @@ interface RiskResponse {
   decision_hash?: string;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  PhaseRisk — Step 3: Risk gate evaluation                                 */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 export default function PhaseRisk({
   positions,
   calcResult,
@@ -70,7 +81,9 @@ export default function PhaseRisk({
   const [loading, setLoading]       = useState(true);
   const [riskData, setRiskData]     = useState<RiskResponse | null>(null);
   const [unavailable, setUnavailable] = useState(false);
-  const [error, setError]           = useState<string | null>(null);
+  const [error, setError]           = useState<TranslatedError | null>(null);
+
+  const isSmbTier = planTier === "smb";
 
   const runRiskCheck = useCallback(async () => {
     setLoading(true);
@@ -96,17 +109,21 @@ export default function PhaseRisk({
       }
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error((errData as { detail?: string }).detail ?? `HTTP ${res.status}`);
+        let detail: string | undefined;
+        try { const errData = await res.json(); detail = (errData as { detail?: string }).detail; } catch { /* */ }
+        setError(translateError(res.status, detail));
+        setUnavailable(true);
+        setRiskData({ verdict: "UNAVAILABLE", reasons: [], conditions: [], decision_hash: "" });
+        setLoading(false);
+        return;
       }
 
       const data = await res.json() as RiskResponse;
       setRiskData(data);
     } catch (e) {
-      // Network error or unrecognised status — treat as unavailable
       setUnavailable(true);
       setRiskData({ verdict: "UNAVAILABLE", reasons: [], conditions: [], decision_hash: "" });
-      setError(e instanceof Error ? e.message : "Risk check error");
+      setError(translateCaughtError(e));
     } finally {
       setLoading(false);
     }
@@ -114,8 +131,7 @@ export default function PhaseRisk({
 
   useEffect(() => { runRiskCheck(); }, [runRiskCheck]);
 
-  const isSmbTier = planTier === "smb";
-
+  // SMB tier auto-skip
   useEffect(() => {
     if (isSmbTier) {
       onComplete("APPROVE", "");
@@ -125,194 +141,310 @@ export default function PhaseRisk({
   if (isSmbTier) return null;
 
   const handleProceed = () => {
-    if (!riskData || unavailable) return; // fail-closed: unavailable gate cannot proceed
-    const verdict      = riskData.verdict;
-    const decisionHash = riskData.decision_hash ?? "";
-    onComplete(verdict, decisionHash);
+    if (!riskData) return;
+    onComplete(riskData.verdict, riskData.decision_hash ?? "");
   };
 
-  const isRejected = riskData?.verdict === "REJECT";
-  const isPassed   = riskData?.verdict === "APPROVE" || riskData?.verdict === "APPROVE_WITH_CONDITIONS";
+  const isRejected   = riskData?.verdict === "REJECT";
+  const isPassed     = riskData?.verdict === "APPROVE" || riskData?.verdict === "APPROVE_WITH_CONDITIONS";
   const isConditions = riskData?.verdict === "APPROVE_WITH_CONDITIONS";
 
-  // Badge config
-  let badgeColor: string = HD.slate;
-  let badgeLabel: string = "RUNNING...";
-  let BadgeIcon: React.ElementType = LoaderIcon;
-  if (!loading && unavailable && isSmbTier) {
-    badgeColor = HD.tertiary; badgeLabel = "POLICY CHECK: NOT REQUIRED"; BadgeIcon = CheckCircleIcon;
-  } else if (!loading && unavailable) {
-    badgeColor = HD.amber; badgeLabel = "RISK GATE UNAVAILABLE"; BadgeIcon = AlertTriangleIcon;
-  } else if (!loading && isPassed && !isConditions) {
-    badgeColor = HD.emerald; badgeLabel = "RISK GATE PASSED"; BadgeIcon = CheckCircleIcon;
-  } else if (!loading && isConditions) {
-    badgeColor = HD.amber; badgeLabel = "APPROVED WITH CONDITIONS"; BadgeIcon = AlertTriangleIcon;
-  } else if (!loading && isRejected) {
-    badgeColor = HD.crimson; badgeLabel = "RISK GATE REJECTED"; BadgeIcon = XCircleIcon;
+  // Verdict visual config
+  let verdictColor: string = HD.slate;
+  let verdictLabel = "RUNNING RISK CHECK...";
+  let VerdictIcon: React.ElementType = LoaderIcon;
+  let verdictIconProps: Record<string, unknown> = { style: { animation: "spin 1s linear infinite" } };
+
+  if (!loading) {
+    verdictIconProps = {};
+    if (unavailable) {
+      verdictColor = HD.amber;
+      verdictLabel = "RISK GATE UNAVAILABLE";
+      VerdictIcon = AlertTriangleIcon;
+    } else if (isPassed && !isConditions) {
+      verdictColor = HD.emerald;
+      verdictLabel = "RISK GATE PASSED";
+      VerdictIcon = CheckCircleIcon;
+    } else if (isConditions) {
+      verdictColor = HD.amber;
+      verdictLabel = "APPROVED WITH CONDITIONS";
+      VerdictIcon = AlertTriangleIcon;
+    } else if (isRejected) {
+      verdictColor = HD.crimson;
+      verdictLabel = "RISK GATE REJECTED";
+      VerdictIcon = XCircleIcon;
+    }
   }
 
+  const canProceed = !loading && isPassed;
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "20px 24px", height: "100%", overflowY: "auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
-      {/* Back */}
-      <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", alignSelf: "flex-start", padding: 0 }}>
-        <ChevronLeftIcon size={14} color={HD.slate} />
-        <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.slate, letterSpacing: "0.06em" }}>BACK TO CALCULATE</span>
-      </button>
+      {/* ── Scrollable content ────────────────────────────────────────── */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* L1 hint */}
-      <DisclosurePanel title="The risk engine checks your hedge plan against policy constraints." level="L1" defaultOpen>
-        <p style={{ fontFamily: HD.fontUI, fontSize: 13, color: HD.secondary, margin: 0, lineHeight: 1.6 }}>
-          The risk gate evaluates exposure limits, policy thresholds, and governance rules.
-          A PASS allows the hedge to proceed to review. A REJECT requires policy adjustment.
-        </p>
-      </DisclosurePanel>
+        {/* Step header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
+            STEP 3 OF 5 — RISK
+          </span>
+          <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
+            Evaluating hedge plan against policy constraints
+          </span>
+        </div>
 
-      {/* Status card */}
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 16,
-        padding: "32px 24px",
-        background: HD.bgPanel,
-        border: `1px solid ${HD.rim}`,
-        borderRadius: 4,
-      }}>
-        {loading ? (
-          <>
-            <LoaderIcon size={32} color={HD.slate} style={{ animation: "spin 1s linear infinite" }} />
-            <span style={{ fontFamily: HD.fontMono, fontSize: 12, letterSpacing: "0.12em", color: HD.tertiary }}>
-              RUNNING RISK CHECK...
-            </span>
-          </>
-        ) : (
-          <>
-            <BadgeIcon size={36} color={badgeColor} />
+        {/* ── Verdict card ─────────────────────────────────────────── */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          padding: "20px 24px",
+          background: HD.bgPanel,
+          border: `1px solid ${verdictColor}`,
+          borderLeft: `4px solid ${verdictColor}`,
+          borderRadius: 4,
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: "50%",
+            background: `color-mix(in srgb, ${verdictColor} 12%, transparent)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <VerdictIcon size={22} color={verdictColor} {...verdictIconProps} />
+          </div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{
-              fontFamily: HD.fontMono,
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              color: badgeColor,
-              textAlign: "center",
+              fontFamily: HD.fontMono, fontSize: 13, fontWeight: 700,
+              letterSpacing: "0.1em", color: verdictColor,
             }}>
-              {badgeLabel}
+              {verdictLabel}
             </span>
-            {unavailable && !isSmbTier && (
-              <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.amber, textAlign: "center", maxWidth: 360 }}>
-                Risk gate endpoint is temporarily unavailable. Retry or return to the previous step.
+            {loading && (
+              <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.tertiary }}>
+                Checking exposure limits, policy thresholds, and governance rules...
               </span>
             )}
-            {unavailable && isSmbTier && (
-              <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.tertiary, textAlign: "center", maxWidth: 360 }}>
-                Policy risk check is not required for your plan. You may proceed.
+            {!loading && unavailable && (
+              <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
+                Risk gate endpoint is temporarily unavailable. You can retry the check.
               </span>
             )}
-            {error && !unavailable && (
-              <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.amber }}>{error}</span>
+            {!loading && isPassed && !isConditions && (
+              <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
+                All risk checks passed. The hedge plan is within policy limits.
+              </span>
             )}
+            {!loading && isConditions && (
+              <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
+                The hedge plan was approved but has conditions that must be acknowledged.
+              </span>
+            )}
+            {!loading && isRejected && (
+              <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
+                The hedge plan exceeds policy limits. Adjust the parameters and recalculate.
+              </span>
+            )}
+          </div>
+          {riskData?.decision_hash && (
+            <span style={{
+              fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary,
+              background: HD.bgSub, padding: "2px 6px", borderRadius: 2,
+              border: `1px solid ${HD.soft}`,
+            }}
+              title={riskData.decision_hash}
+            >
+              HASH {riskData.decision_hash.slice(0, 8)}…
+            </span>
+          )}
+        </div>
+
+        {/* ── Error banner ─────────────────────────────────────────── */}
+        {error && (
+          <HedgeErrorBanner
+            error={error}
+            onRetry={runRiskCheck}
+            onReconnect={() => window.location.href = "/auth/login"}
+            onGoBack={onBack}
+            onDismiss={() => setError(null)}
+          />
+        )}
+
+        {/* ── Reasons ──────────────────────────────────────────────── */}
+        {!loading && riskData?.reasons && riskData.reasons.length > 0 && (
+          <RiskItemList
+            title="REASONS"
+            items={riskData.reasons}
+            color={isRejected ? HD.crimson : HD.secondary}
+            icon={isRejected ? XCircleIcon : ShieldCheckIcon}
+          />
+        )}
+
+        {/* ── Conditions ───────────────────────────────────────────── */}
+        {!loading && isConditions && riskData?.conditions && riskData.conditions.length > 0 && (
+          <RiskItemList
+            title="CONDITIONS"
+            items={riskData.conditions}
+            color={HD.amber}
+            icon={AlertTriangleIcon}
+          />
+        )}
+
+        {/* ── Residual risks ───────────────────────────────────────── */}
+        {!loading && riskData?.residual_risks && riskData.residual_risks.length > 0 && (
+          <RiskItemList
+            title="RESIDUAL RISKS"
+            items={riskData.residual_risks}
+            color={HD.tertiary}
+            icon={AlertTriangleIcon}
+          />
+        )}
+
+        {/* ── Quant panels (competitive differentiator) ────────────── */}
+        {!loading && (
+          <>
+            <PreTradeCostPanel positions={positions} calcResult={calcResult} />
+            <CrisisImpactPanel
+              positions={positions}
+              hedgeCoveragePercent={
+                ((calcResult?.hedge_plan as Record<string, unknown>)?.summary as Record<string, number>)?.coverage_pct
+                ?? 0.85
+              }
+            />
           </>
         )}
       </div>
 
-      {/* Reasons */}
-      {!loading && riskData?.reasons && riskData.reasons.length > 0 && (
-        <div style={{ background: HD.bgPanel, border: `1px solid ${HD.soft}`, borderRadius: 4, overflow: "hidden" }}>
-          <div style={{ padding: "8px 14px", background: HD.bgSub, borderBottom: `1px solid ${HD.soft}` }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
-              REASONS
+      {/* ── Action bar ────────────────────────────────────────────────── */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "12px 24px",
+        background: HD.bgSub,
+        borderTop: `1px solid ${HD.soft}`,
+        flexShrink: 0,
+      }}>
+        <button
+          onClick={onBack}
+          style={{
+            display: "flex", alignItems: "center", gap: 4,
+            fontFamily: HD.fontMono, fontSize: 10, letterSpacing: "0.06em",
+            color: HD.slate, background: "none",
+            border: `1px solid ${HD.rim}`, padding: "8px 14px",
+            cursor: "pointer", borderRadius: 3,
+          }}
+        >
+          <ChevronLeftIcon size={12} />
+          BACK
+        </button>
+
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}>
+          {loading && (
+            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.slate, display: "flex", alignItems: "center", gap: 4 }}>
+              <LoaderIcon size={10} style={{ animation: "spin 1s linear infinite" }} />
+              EVALUATING
             </span>
-          </div>
-          <div style={{ padding: "8px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
-            {riskData.reasons.map((r, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary, marginTop: 2 }}>▸</span>
-                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>{riskItemText(r)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Conditions */}
-      {!loading && isConditions && riskData?.conditions && riskData.conditions.length > 0 && (
-        <div style={{ background: `color-mix(in srgb,${HD.amber} 5%,${HD.bgPanel})`, border: `1px solid color-mix(in srgb,${HD.amber} 25%,transparent)`, borderRadius: 4, overflow: "hidden" }}>
-          <div style={{ padding: "8px 14px", background: `color-mix(in srgb,${HD.amber} 10%,${HD.bgSub})`, borderBottom: `1px solid color-mix(in srgb,${HD.amber} 20%,transparent)` }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.amber }}>
-              CONDITIONS
+          )}
+          {!loading && isPassed && (
+            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.emerald, display: "flex", alignItems: "center", gap: 4 }}>
+              <CheckCircleIcon size={10} />
+              {isConditions ? "CONDITIONAL PASS" : "PASSED"}
             </span>
-          </div>
-          <div style={{ padding: "8px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
-            {riskData.conditions.map((c, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <AlertTriangleIcon size={12} color={HD.amber} style={{ marginTop: 2, flexShrink: 0 }} />
-                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>{riskItemText(c)}</span>
-              </div>
-            ))}
-          </div>
+          )}
+          {!loading && isRejected && (
+            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.crimson, display: "flex", alignItems: "center", gap: 4 }}>
+              <XCircleIcon size={10} />
+              REJECTED
+            </span>
+          )}
         </div>
-      )}
 
-      {/* L3 audit hash */}
-      {!loading && riskData?.decision_hash && (
-        <DisclosurePanel title="Risk Decision Hash" level="L3">
-          <code style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.slate, wordBreak: "break-all", lineHeight: 1.6 }}>
-            {riskData.decision_hash}
-          </code>
-        </DisclosurePanel>
-      )}
-
-      {/* Embedded quant panels — competitive differentiator */}
-      {!loading && (
-        <>
-          <PreTradeCostPanel positions={positions} calcResult={calcResult} />
-          <CrisisImpactPanel
-            positions={positions}
-            hedgeCoveragePercent={
-              ((calcResult?.hedge_plan as Record<string, unknown>)?.summary as Record<string, number>)?.coverage_pct
-              ?? 0.85
-            }
-          />
-        </>
-      )}
-
-      {/* Proceed / retry */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, marginTop: "auto" }}>
+        {/* Retry — always available when not loading */}
         {!loading && (
           <button
             onClick={runRiskCheck}
             style={{
-              fontFamily: HD.fontMono, fontSize: 10, letterSpacing: "0.08em",
+              display: "flex", alignItems: "center", gap: 4,
+              fontFamily: HD.fontMono, fontSize: 10, letterSpacing: "0.06em",
               color: HD.slate, background: "none",
-              border: `1px solid ${HD.soft}`, padding: "8px 16px", cursor: "pointer", borderRadius: 3,
+              border: `1px solid ${HD.rim}`, padding: "8px 14px",
+              cursor: "pointer", borderRadius: 3,
             }}
           >
-            RETRY CHECK
+            <RefreshCwIcon size={10} />
+            RETRY
           </button>
         )}
+
         <button
           onClick={handleProceed}
-          disabled={loading || isRejected || unavailable}
+          disabled={!canProceed}
           style={{
             fontFamily: HD.fontMono,
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: "0.1em",
-            color: loading || isRejected || unavailable ? HD.slate : "#ffffff",
-            background: loading || isRejected || unavailable ? `color-mix(in srgb,${HD.slate} 20%,transparent)` : HD.royal,
-            border: `1px solid ${loading || isRejected || unavailable ? HD.soft : HD.royal}`,
+            color: canProceed ? "#ffffff" : HD.slate,
+            background: canProceed ? HD.royal : `color-mix(in srgb,${HD.slate} 20%,transparent)`,
+            border: `1px solid ${canProceed ? HD.royal : HD.soft}`,
             padding: "10px 24px",
-            cursor: loading || isRejected || unavailable ? "not-allowed" : "pointer",
+            cursor: canProceed ? "pointer" : "not-allowed",
             borderRadius: 3,
+            transition: "all 0.15s",
           }}
         >
-          {isRejected ? "BLOCKED BY RISK GATE" : unavailable ? "GATE UNAVAILABLE — RETRY" : "PROCEED TO REVIEW →"}
+          {loading ? "EVALUATING..." : isRejected ? "BLOCKED" : unavailable ? "UNAVAILABLE" : "PROCEED TO REVIEW →"}
         </button>
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  Subcomponents                                                            */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+function RiskItemList({ title, items, color, icon: Icon }: {
+  title: string;
+  items: RiskItem[];
+  color: string;
+  icon: React.ElementType;
+}) {
+  return (
+    <div style={{
+      background: `color-mix(in srgb, ${color} 4%, ${HD.bgPanel})`,
+      border: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
+      borderRadius: 4,
+      overflow: "hidden",
+    }}>
+      <div style={{
+        padding: "8px 14px",
+        background: `color-mix(in srgb, ${color} 8%, ${HD.bgSub})`,
+        borderBottom: `1px solid color-mix(in srgb, ${color} 15%, transparent)`,
+        display: "flex", alignItems: "center", gap: 6,
+      }}>
+        <Icon size={12} color={color} />
+        <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color }}>
+          {title}
+        </span>
+        <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary }}>({items.length})</span>
+      </div>
+      <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+        {items.map((item, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, marginTop: 2, flexShrink: 0 }}>
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>
+              {riskItemText(item)}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

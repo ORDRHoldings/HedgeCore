@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import type { PositionRow } from "@/api/positionClient";
+import { translateError, translateCaughtError, type TranslatedError } from "@/lib/errors/hedgeErrors";
+import HedgeErrorBanner from "./ErrorBanner";
 import {
   CheckCircleIcon,
   AlertTriangleIcon,
@@ -155,7 +157,7 @@ export default function PhaseReview({
   onBack,
 }: PhaseReviewProps) {
   const [submitting, setSubmitting]   = useState(false);
-  const [error, setError]             = useState<string | null>(null);
+  const [error, setError]             = useState<TranslatedError | null>(null);
   const [submitted, setSubmitted]     = useState(false);
   const [proposalIds, setProposalIds] = useState<string[]>([]);
   const [copied, setCopied]           = useState<"text" | "json" | null>(null);
@@ -265,13 +267,17 @@ export default function PhaseReview({
         body:   JSON.stringify({ proposals: buildProposals() }),
       });
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({})) as Record<string, unknown>;
-        const detail  = errData.detail;
-        const msg = typeof detail === "string" ? detail
-          : Array.isArray(detail) ? detail.map((d: Record<string, unknown>) => d.msg ?? JSON.stringify(d)).join("; ")
-          : detail ? JSON.stringify(detail)
-          : `HTTP ${res.status}`;
-        throw new Error(msg);
+        let detail: string | undefined;
+        try {
+          const errData = await res.json() as Record<string, unknown>;
+          const d = errData.detail;
+          detail = typeof d === "string" ? d
+            : Array.isArray(d) ? d.map((x: Record<string, unknown>) => x.msg ?? JSON.stringify(x)).join("; ")
+            : d ? JSON.stringify(d) : undefined;
+        } catch { /* body not JSON */ }
+        setError(translateError(res.status, detail));
+        setSubmitting(false);
+        return;
       }
       const data  = await res.json() as Record<string, unknown>;
       const items = (data.approved ?? data.proposals ?? []) as Array<Record<string, unknown>>;
@@ -280,7 +286,7 @@ export default function PhaseReview({
       setSubmitted(true);
       onComplete(ids);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Submission failed");
+      setError(translateCaughtError(e));
     } finally {
       setSubmitting(false);
     }
@@ -360,7 +366,7 @@ export default function PhaseReview({
       display:       "flex",
       flexDirection: "column",
       gap:            20,
-      padding:       "0 0 120px",
+      padding:       "0 0 20px",
       height:        "100%",
       overflowY:     "auto",
       background:    D.bg,
@@ -390,7 +396,7 @@ export default function PhaseReview({
           minWidth: 220,
         }}>
           <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.18em" }}>
-            STEP 04 / 04
+            STEP 4 OF 5
           </span>
           <span style={{ fontFamily: D.fontMono, fontSize: 12, fontWeight: 700, color: D.text, letterSpacing: "0.06em" }}>
             REVIEW HEDGE PLAN
@@ -483,32 +489,6 @@ export default function PhaseReview({
             </span>
           </div>
 
-          {!submitted && (
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              style={{
-                display:    "flex",
-                alignItems: "center",
-                gap:         8,
-                height:      36,
-                padding:    "0 20px",
-                background:  submitting ? D.dim : D.blue,
-                border:     "none",
-                borderRadius: 2,
-                fontFamily:  D.fontMono,
-                fontSize:    11,
-                fontWeight:  700,
-                letterSpacing: "0.08em",
-                color:       "#fff",
-                cursor:      submitting ? "not-allowed" : "pointer",
-                whiteSpace:  "nowrap" as const,
-              }}
-            >
-              {submitting && <LoaderIcon size={12} color="#fff" style={{ animation: "spin 1s linear infinite" }} />}
-              {isSolo ? "APPROVE & SUBMIT" : "SUBMIT FOR CHECKER APPROVAL"}
-            </button>
-          )}
           {submitted && (
             <span style={{ fontFamily: D.fontMono, fontSize: 10, fontWeight: 700, color: D.green, letterSpacing: "0.10em" }}>
               ✓ SUBMITTED
@@ -964,14 +944,13 @@ export default function PhaseReview({
 
         {/* ── ERROR BANNER ──────────────────────────────────────────────── */}
         {error && (
-          <div style={{
-            padding:     "12px 16px",
-            background:  `color-mix(in srgb, ${D.red} 10%, ${D.panel})`,
-            border:      `1px solid color-mix(in srgb, ${D.red} 35%, transparent)`,
-            borderRadius: 2,
-          }}>
-            <span style={{ fontFamily: D.fontMono, fontSize: 12, color: D.red }}>{error}</span>
-          </div>
+          <HedgeErrorBanner
+            error={error}
+            onRetry={() => { setError(null); handleSubmit(); }}
+            onReconnect={() => window.location.href = "/auth/login"}
+            onGoBack={onBack}
+            onDismiss={() => setError(null)}
+          />
         )}
 
         {/* ── POST-SUBMIT STATE ─────────────────────────────────────────── */}
@@ -1012,7 +991,7 @@ export default function PhaseReview({
 
       </div>
 
-      {/* ── STICKY ACTION BAR ────────────────────────────────────────────── */}
+      {/* ── ACTION BAR ──────────────────────────────────────────────────── */}
       <div style={{
         position:       "sticky",
         bottom:          0,
@@ -1022,112 +1001,120 @@ export default function PhaseReview({
         padding:        "12px 28px",
         display:        "flex",
         alignItems:     "center",
-        justifyContent: "space-between",
-        gap:             16,
+        gap:             12,
         flexShrink:      0,
       }}>
-        {/* Left */}
+        {/* Back */}
         <button
           onClick={onBack}
           style={{
-            height:        34,
-            padding:      "0 14px",
             display:      "flex",
             alignItems:   "center",
-            gap:           6,
-            background:   "transparent",
-            border:       `1px solid ${D.border}`,
-            borderRadius:  2,
+            gap:           4,
             fontFamily:    D.fontMono,
             fontSize:      10,
-            fontWeight:    600,
-            letterSpacing: "0.08em",
+            letterSpacing: "0.06em",
             color:         D.sub,
+            background:   "transparent",
+            border:       `1px solid ${D.border}`,
+            padding:      "8px 14px",
             cursor:        "pointer",
+            borderRadius:  3,
           }}
         >
-          <ChevronLeftIcon size={12} color={D.sub} />
-          BACK TO RISK
+          <ChevronLeftIcon size={12} />
+          BACK
         </button>
 
-        {/* Right — copy + submit */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {/* Center — status + copy actions */}
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
+          {submitted && (
+            <span style={{ fontFamily: D.fontMono, fontSize: 10, color: D.green, display: "flex", alignItems: "center", gap: 4 }}>
+              <CheckCircleIcon size={10} />
+              {isSolo ? "APPROVED" : "SUBMITTED"}
+            </span>
+          )}
+          {!submitted && !submitting && (
+            <span style={{ fontFamily: D.fontMono, fontSize: 10, color: D.green, display: "flex", alignItems: "center", gap: 4 }}>
+              <CheckCircleIcon size={10} />
+              READY TO SUBMIT
+            </span>
+          )}
+
+          <div style={{ flex: 1 }} />
+
           <button
             onClick={handleCopyText}
             title="Copy execution plan as text"
             style={{
-              height:        34,
-              padding:      "0 12px",
               display:      "flex",
               alignItems:   "center",
-              gap:           6,
-              background:   "transparent",
-              border:       `1px solid ${D.border}`,
-              borderRadius:  2,
+              gap:           4,
               fontFamily:    D.fontMono,
               fontSize:      10,
-              fontWeight:    600,
-              letterSpacing: "0.08em",
+              letterSpacing: "0.06em",
               color:         copied === "text" ? D.green : D.sub,
+              background:   "transparent",
+              border:       `1px solid ${D.border}`,
+              padding:      "8px 12px",
               cursor:        "pointer",
+              borderRadius:  3,
             }}
           >
-            <CopyIcon size={11} />
-            {copied === "text" ? "COPIED" : "COPY TEXT"}
+            <CopyIcon size={10} />
+            {copied === "text" ? "COPIED" : "TEXT"}
           </button>
 
           <button
             onClick={handleCopyJson}
             title="Copy execution payload as JSON"
             style={{
-              height:        34,
-              padding:      "0 12px",
               display:      "flex",
               alignItems:   "center",
-              gap:           6,
-              background:   "transparent",
-              border:       `1px solid ${D.border}`,
-              borderRadius:  2,
+              gap:           4,
               fontFamily:    D.fontMono,
               fontSize:      10,
-              fontWeight:    600,
-              letterSpacing: "0.08em",
+              letterSpacing: "0.06em",
               color:         copied === "json" ? D.green : D.sub,
+              background:   "transparent",
+              border:       `1px solid ${D.border}`,
+              padding:      "8px 12px",
               cursor:        "pointer",
+              borderRadius:  3,
             }}
           >
-            <CopyIcon size={11} />
-            {copied === "json" ? "COPIED" : "COPY JSON"}
+            <CopyIcon size={10} />
+            {copied === "json" ? "COPIED" : "JSON"}
           </button>
-
-          {!submitted && (
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              style={{
-                display:    "flex",
-                alignItems: "center",
-                gap:         10,
-                height:      44,
-                padding:    "0 32px",
-                fontFamily:  D.fontMono,
-                fontSize:    12,
-                fontWeight:  700,
-                letterSpacing: "0.10em",
-                color:       "#fff",
-                background:   submitting ? D.dim : D.blue,
-                border:      "none",
-                borderRadius: 2,
-                cursor:       submitting ? "not-allowed" : "pointer",
-                whiteSpace:  "nowrap" as const,
-                boxShadow:   submitting ? "none" : `0 0 0 1px ${D.borderHi}`,
-              }}
-            >
-              {submitting && <LoaderIcon size={13} color="#fff" style={{ animation: "spin 1s linear infinite" }} />}
-              {isSolo ? "APPROVE & SUBMIT PROPOSALS" : "SUBMIT FOR CHECKER APPROVAL"}
-            </button>
-          )}
         </div>
+
+        {/* Primary CTA */}
+        {!submitted && (
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            style={{
+              display:      "flex",
+              alignItems:   "center",
+              gap:           8,
+              fontFamily:    D.fontMono,
+              fontSize:      11,
+              fontWeight:    700,
+              letterSpacing: "0.10em",
+              color:         "#fff",
+              background:    submitting ? D.dim : D.blue,
+              border:       "none",
+              padding:      "10px 28px",
+              cursor:        submitting ? "not-allowed" : "pointer",
+              borderRadius:  3,
+              whiteSpace:   "nowrap" as const,
+              transition:   "background 0.15s",
+            }}
+          >
+            {submitting && <LoaderIcon size={13} color="#fff" style={{ animation: "spin 1s linear infinite" }} />}
+            {isSolo ? "APPROVE & SUBMIT →" : "SUBMIT FOR APPROVAL →"}
+          </button>
+        )}
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
