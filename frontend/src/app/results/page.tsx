@@ -17,6 +17,8 @@ import ReportsContainer from '../../components/reports/ReportsContainer';
 import NotificationsContainer from '../../components/notifications/NotificationsContainer';
 import HelpPanel from "@/components/layout/HelpPanel";
 import { RESULTS_HELP } from "@/lib/helpContent";
+import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
+import WorkflowGuide from "@/components/layout/WorkflowGuide";
 
 // ── Committee Pack: Top-level module navigation ───────────────────────────────
 const TOP_LEVEL_SECTIONS = [
@@ -118,6 +120,10 @@ export default function ResultsPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
     <div className="space-y-0" style={{ flex: 1 }}>
+      {/* Workflow breadcrumb + completion guide */}
+      <WorkflowBreadcrumb active="results" />
+      <WorkflowGuide active="results" complete={!!result} />
+
       {/* ── TIER 1: Run Identity Header ─────────────────────────────────────── */}
       <div className="bg-[var(--bg-panel)] border-b border-[var(--border-rim)] px-6 py-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">

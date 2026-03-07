@@ -93,8 +93,8 @@ export function getPipelineNextStep(
 
   if (needsRunCount > 0) {
     return {
-      label: "03 — Hedge Desk",
-      href: "/hedge-desk",
+      label: "03 — Calculate",
+      href: "/calculate",
       reason: `${needsRunCount} position(s) ready to calculate.`,
       readiness: "READY",
       color: colors.cyan,
@@ -108,8 +108,8 @@ export function getPipelineNextStep(
 
   if (readyToExecCount > 0) {
     return {
-      label: "04 — Execution Desk",
-      href: "/execution-desk",
+      label: "04 — Execute",
+      href: "/hedge-desk",
       reason: `${readyToExecCount} position(s) awaiting 4-eyes execution.`,
       readiness: "READY",
       color: colors.pass,

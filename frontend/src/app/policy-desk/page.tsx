@@ -26,6 +26,7 @@ import {
 } from "../../lib/store/slices/positionSlice";
 import type { PositionRow, BulkAssignResult } from "../../api/positionClient";
 import WorkflowBreadcrumb from "../../components/layout/WorkflowBreadcrumb";
+import WorkflowGuide from "../../components/layout/WorkflowGuide";
 import { bulkAssignPolicy } from "../../api/positionClient";
 import {
   listPolicyTemplates,
@@ -616,35 +617,21 @@ export default function PolicyDeskPage() {
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: S.bgDeep, overflow: "hidden", flex: 1 }}>
         {/* Workflow progress breadcrumb */}
         <WorkflowBreadcrumb active="policy" />
-        {/* Step 2 guidance strip */}
-        <div style={{
-          background: `color-mix(in srgb, ${S.cyan} 6%, transparent)`,
-          borderBottom: `1px solid ${S.rim}`,
-          padding: "6px 20px",
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          flexShrink: 0,
-        }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.cyan, letterSpacing: "0.1em" }}>
-            STEP 2 OF 4
-          </span>
-          <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>
-            Bind a policy to each position to govern hedge ratio, instruments, and tenor.
-          </span>
-          {(() => {
+        <WorkflowGuide
+          active="policy"
+          statusText={(() => {
             const needsPolicy = positions.filter(p => p.execution_status === "NEW").length;
-            return needsPolicy > 0 ? (
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, marginLeft: "auto" }}>
-                {needsPolicy} position{needsPolicy !== 1 ? "s" : ""} require a policy
-              </span>
-            ) : positions.length > 0 ? (
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.pass, marginLeft: "auto" }}>
-                ✓ All positions have a policy assigned
-              </span>
-            ) : null;
+            if (needsPolicy > 0) return `${needsPolicy} position${needsPolicy !== 1 ? "s" : ""} require a policy`;
+            if (positions.length > 0) return "✓ All positions have a policy assigned";
+            return undefined;
           })()}
-        </div>
+          statusColor={(() => {
+            const needsPolicy = positions.filter(p => p.execution_status === "NEW").length;
+            if (needsPolicy > 0) return "amber" as const;
+            if (positions.length > 0) return "green" as const;
+            return undefined;
+          })()}
+        />
         {/* Header */}
         <header style={{
           display: "flex",

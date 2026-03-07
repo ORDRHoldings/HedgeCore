@@ -10,6 +10,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
+import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
+import WorkflowGuide from "@/components/layout/WorkflowGuide";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { listPositions, type PositionRow } from "@/api/positionClient";
 import { getActivePolicy, listPolicyTemplates, type PolicyInstance, type PolicyTemplate } from "@/api/policyClient";
@@ -924,6 +926,10 @@ export default function CalculateWizardPage() {
       height: "100%", display: "flex", flexDirection: "column",
       background: S.bg, overflow: "hidden",
     }}>
+      {/* Workflow breadcrumb + guide */}
+      <WorkflowBreadcrumb active="calculate" />
+      <WorkflowGuide active="calculate" />
+
       {/* Step bar */}
       <StepBar step={step} onStep={setStep} />
 

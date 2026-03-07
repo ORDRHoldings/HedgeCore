@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import HedgeDeskPipeline from "@/components/hedge-desk/HedgeDeskPipeline";
 import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
+import WorkflowGuide from "@/components/layout/WorkflowGuide";
 
 const HD = {
   navy:    "#0A1F44",
@@ -141,7 +142,8 @@ export default function HedgeDeskPage() {
         </span>
       </header>
 
-      <WorkflowBreadcrumb active="hedge" />
+      <WorkflowBreadcrumb active="execute" />
+      <WorkflowGuide active="execute" />
 
       {/* Pipeline body */}
       <div style={{ flex: 1, overflow: "hidden" }}>

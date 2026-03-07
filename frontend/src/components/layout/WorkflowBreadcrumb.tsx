@@ -1,29 +1,31 @@
 "use client";
 
 /**
- * WorkflowBreadcrumb — 4-step pipeline progress strip
+ * WorkflowBreadcrumb — 5-step pipeline progress strip
  *
  * Shows the institutional workflow:
- *   01 POSITION DESK → 02 POLICY DESK → 03 HEDGE DESK → 04 EXECUTION DESK
+ *   01 INGEST → 02 POLICY → 03 CALCULATE → 04 EXECUTE → 05 RESULTS
  *
  * Renders as a 36px sticky bar below AppSidebar.
  * Active step gets cyan underline. Completed steps get green check.
- * Right side shows "NEXT: [STEP] →" CTA button.
+ * Right side shows "NEXT: [STEP] →" CTA button, or "RETURN TO DASHBOARD"
+ * on the final step.
  */
 
 import { useRouter } from "next/navigation";
 
-export type WorkflowStep = "position" | "policy" | "hedge" | "execution";
+export type WorkflowStep = "ingest" | "policy" | "calculate" | "execute" | "results";
 
 interface Props {
   active: WorkflowStep;
 }
 
 const STEPS: { key: WorkflowStep; label: string; href: string; num: string }[] = [
-  { key: "position",  label: "POSITION DESK",  href: "/position-desk",  num: "01" },
-  { key: "policy",    label: "POLICY DESK",    href: "/policy-desk",    num: "02" },
-  { key: "hedge",     label: "HEDGE DESK",     href: "/hedge-desk",     num: "03" },
-  { key: "execution", label: "EXECUTION DESK", href: "/execution-desk", num: "04" },
+  { key: "ingest",    label: "INGEST",    href: "/position-desk", num: "01" },
+  { key: "policy",    label: "POLICY",    href: "/policy-desk",   num: "02" },
+  { key: "calculate", label: "CALCULATE", href: "/calculate",     num: "03" },
+  { key: "execute",   label: "EXECUTE",   href: "/hedge-desk",    num: "04" },
+  { key: "results",   label: "RESULTS",   href: "/results",       num: "05" },
 ];
 
 const FM = "var(--font-terminal-mono,'IBM Plex Mono',monospace)";
@@ -54,6 +56,7 @@ export default function WorkflowBreadcrumb({ active }: Props) {
         const isActive = step.key === active;
         const isDone   = i < activeIdx;
         const color    = isActive ? CYAN : isDone ? GREEN : MUTED;
+        const isLast   = step.key === "results";
 
         return (
           <div key={step.key} style={{ display: "flex", alignItems: "center" }}>
@@ -88,18 +91,19 @@ export default function WorkflowBreadcrumb({ active }: Props) {
                   height: 15,
                   borderRadius: "50%",
                   border: `1.5px solid ${color}`,
-                  background: isDone ? color : "transparent",
+                  background: isDone ? color : isActive && isLast ? GREEN : "transparent",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 7,
                   fontWeight: 700,
-                  color: isDone ? "var(--bg-deep)" : color,
+                  color: isDone ? "var(--bg-deep)" : isActive && isLast ? "var(--bg-deep)" : color,
                   flexShrink: 0,
                   fontFamily: FM,
+                  borderColor: isActive && isLast ? GREEN : color,
                 }}
               >
-                {isDone ? "✓" : step.num}
+                {isDone || (isActive && isLast) ? "✓" : step.num}
               </span>
               {step.label}
             </button>
@@ -122,9 +126,9 @@ export default function WorkflowBreadcrumb({ active }: Props) {
         );
       })}
 
-      {/* Right: NEXT step CTA */}
+      {/* Right: NEXT step CTA or RETURN TO DASHBOARD */}
       <div style={{ flex: 1 }} />
-      {activeIdx < STEPS.length - 1 && (
+      {activeIdx < STEPS.length - 1 ? (
         <button
           onClick={() => router.push(STEPS[activeIdx + 1].href)}
           style={{
@@ -142,6 +146,25 @@ export default function WorkflowBreadcrumb({ active }: Props) {
           }}
         >
           NEXT: {STEPS[activeIdx + 1].label} →
+        </button>
+      ) : (
+        <button
+          onClick={() => router.push("/dashboard")}
+          style={{
+            fontFamily: FM,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: "0.10em",
+            color: GREEN,
+            background: "rgba(5,150,105,0.08)",
+            border: "1px solid rgba(5,150,105,0.25)",
+            padding: "5px 14px",
+            cursor: "pointer",
+            borderRadius: 2,
+            whiteSpace: "nowrap",
+          }}
+        >
+          RETURN TO DASHBOARD
         </button>
       )}
     </div>

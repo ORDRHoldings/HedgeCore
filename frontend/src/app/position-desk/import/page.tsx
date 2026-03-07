@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
+import WorkflowGuide from "@/components/layout/WorkflowGuide";
 
 const S = {
   fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -283,7 +284,8 @@ export default function PositionImportPage() {
         )}
       </div>
 
-      <WorkflowBreadcrumb active="position" />
+      <WorkflowBreadcrumb active="ingest" />
+      <WorkflowGuide active="ingest" pathname="/position-desk/import" />
 
       {/* Error banner */}
       {error && (

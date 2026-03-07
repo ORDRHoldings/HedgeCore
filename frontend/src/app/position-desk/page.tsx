@@ -45,6 +45,7 @@ import {
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { POSITIONS_HELP } from "@/lib/help";
 import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
+import WorkflowGuide from "@/components/layout/WorkflowGuide";
 import { getPipelineNextStep } from "@/utils/pipelineNextStep";
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -603,7 +604,8 @@ export default function PositionDeskPage() {
           NEXT: {pipelineNext.label} →
         </button>
       </header>
-      <WorkflowBreadcrumb active="position" />
+      <WorkflowBreadcrumb active="ingest" />
+      <WorkflowGuide active="ingest" />
       {lifecycleError && (
         <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`, borderLeft: `3px solid ${S.fail}`, padding: "7px 20px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.fail, letterSpacing: "0.06em" }}>TRANSITION ERROR</span>

@@ -219,6 +219,7 @@ interface NavItem {
   badge?: string;
   badgeColor?: string;
   minTier?: PlanTier;
+  group?: string;
 }
 
 interface NavSection {
@@ -252,40 +253,23 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Positions", href: "/position-desk", icon: Ic.table,
-    prefixes: ["/position-desk", "/input", "/upload-csv", "/import-history", "/database-connection", "/erp-integration", "/accounting-connection", "/connectors"],
-    header: "01 · POSITIONS",
+    label: "Hedge Desk", href: "/position-desk", icon: Ic.execution,
+    prefixes: ["/position-desk", "/input", "/upload-csv", "/policy-desk", "/policies", "/hedge-desk", "/calculate", "/results", "/trade-history", "/hedge-monitor"],
+    header: "HEDGE DESK",
     items: [
-      { label: "Position Desk",    desc: "Lifecycle control tower",                 href: "/position-desk",        icon: Ic.table,     badge: "DESK",  badgeColor: S_CYAN },
-      { label: "New Exposure",      desc: "Manual entry, CSV import, connector hub", href: "/input",                icon: Ic.pen },
-      { label: "Upload CSV/XLSX",  desc: "Bulk import with validation",             href: "/position-desk/import", icon: Ic.upload,    badge: "BULK",  badgeColor: S_AMBER },
-      { label: "Connect Database", desc: "SQL pull — Oracle, Postgres, MySQL",      href: "/database-connection",  icon: Ic.db,        badge: "SQL",   badgeColor: S_CYAN,  minTier: "professional" as PlanTier },
-      { label: "ERP Integration",  desc: "SAP, Oracle, NetSuite connectors",        href: "/erp-integration",      icon: Ic.lightning, badge: "ERP",   badgeColor: S_AMBER, minTier: "professional" as PlanTier },
-      { label: "Accounting",       desc: "QuickBooks, Xero, Sage import",           href: "/accounting-connection", icon: Ic.reports, minTier: "professional" as PlanTier },
-      { label: "Connectors Hub",   desc: "Unified data pipeline status",            href: "/connectors",           icon: Ic.plug,      badge: "HUB",   badgeColor: S_CYAN,  minTier: "professional" as PlanTier },
-      { label: "Import History",   desc: "Audit log of all imports",                href: "/import-history",       icon: Ic.clock,     badge: "AUDIT", badgeColor: S_CYAN,  minTier: "professional" as PlanTier },
-    ],
-  },
-  {
-    label: "Policy", href: "/policies", icon: Ic.policy,
-    prefixes: ["/policies", "/ai-policy-wizard", "/saved-policies", "/policy-desk"],
-    header: "02 · POLICY",
-    items: [
-      { label: "Policy Desk",     desc: "Assign policies to positions",    href: "/policy-desk",      icon: Ic.table,  badge: "DESK",  badgeColor: S_CYAN },
-      { label: "Policy Library",  desc: "60 institutional preset policies", href: "/policies",         icon: Ic.book },
-      { label: "AI Policy Wizard",desc: "Generate tailored policy",         href: "/ai-policy-wizard", icon: Ic.ai,     badge: "AI",    badgeColor: S_AMBER, minTier: "professional" as PlanTier },
-      { label: "Policy Vault",    desc: "Saved & branch-published policies",href: "/saved-policies",   icon: Ic.shield, badge: "SAVED", badgeColor: S_CYAN,  minTier: "professional" as PlanTier },
-    ],
-  },
-  {
-    label: "Hedge", href: "/hedge-desk", icon: Ic.execution,
-    prefixes: ["/hedge-desk", "/calculate", "/trade-history", "/hedge-monitor"],
-    header: "03 · HEDGE EXECUTION",
-    items: [
-      { label: "Calculate",     desc: "Guided 5-step hedge calculation",  href: "/calculate",     icon: Ic.lightning, badge: "WIZARD",  badgeColor: S_CYAN },
-      { label: "Hedge Desk",    desc: "Full hedge execution pipeline",    href: "/hedge-desk",    icon: Ic.terminal,  badge: "DESK",    badgeColor: S_CYAN },
-      { label: "Trade History", desc: "Proposals, fills, slippage audit", href: "/trade-history", icon: Ic.clock,     badge: "LOG",     badgeColor: S_CYAN, minTier: "professional" as PlanTier },
-      { label: "Hedge Monitor", desc: "Live MTM P&L, effectiveness",     href: "/hedge-monitor", icon: Ic.bar_chart, badge: "PREVIEW", badgeColor: S_AMBER, minTier: "professional" as PlanTier },
+      // ── INGEST
+      { label: "Position Desk",   desc: "Lifecycle control tower",                 href: "/position-desk",        icon: Ic.table,     badge: "DESK",    badgeColor: S_CYAN,  group: "INGEST" },
+      { label: "New Exposure",    desc: "Manual entry form",                       href: "/input",                icon: Ic.pen,                                              group: "INGEST" },
+      { label: "Upload CSV/XLSX", desc: "Bulk import with validation",             href: "/position-desk/import", icon: Ic.upload,    badge: "BULK",    badgeColor: S_AMBER, group: "INGEST" },
+      // ── POLICY
+      { label: "Policy Desk",    desc: "Assign policies to positions",             href: "/policy-desk",          icon: Ic.table,     badge: "DESK",    badgeColor: S_CYAN,  group: "POLICY" },
+      { label: "Policy Library", desc: "60 institutional preset policies",         href: "/policies",             icon: Ic.book,                                             group: "POLICY" },
+      // ── EXECUTE
+      { label: "Calculate",      desc: "Guided 5-step hedge calculation",          href: "/calculate",            icon: Ic.lightning, badge: "WIZARD",  badgeColor: S_CYAN,  group: "EXECUTE" },
+      { label: "Hedge Desk",     desc: "Full hedge execution pipeline",            href: "/hedge-desk",           icon: Ic.terminal,  badge: "DESK",    badgeColor: S_CYAN,  group: "EXECUTE" },
+      { label: "Results",        desc: "Hedge schedule with rationale",            href: "/results",              icon: Ic.bar_chart,                                        group: "EXECUTE" },
+      { label: "Trade History",  desc: "Proposals, fills, slippage audit",         href: "/trade-history",        icon: Ic.clock,     badge: "LOG",     badgeColor: S_CYAN,  group: "EXECUTE", minTier: "professional" as PlanTier },
+      { label: "Hedge Monitor",  desc: "Live MTM P&L, effectiveness",             href: "/hedge-monitor",        icon: Ic.bar_chart, badge: "PREVIEW", badgeColor: S_AMBER, group: "EXECUTE", minTier: "professional" as PlanTier },
     ],
   },
   {
@@ -298,7 +282,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Reports", href: "/reports", icon: Ic.reports,
-    prefixes: ["/reports", "/results"],
+    prefixes: ["/reports"],
     header: "Report Studio",
     items: [
       { label: "Report Studio",     desc: "30 presets, AI composer, export",   href: "/reports",              icon: Ic.reports,  badge: "STUDIO", badgeColor: S_CYAN },
@@ -307,6 +291,19 @@ const NAV: NavSection[] = [
       { label: "Saved Reports",     desc: "Versioned and scheduled reports",   href: "/reports?view=saved",   icon: Ic.shield,   badge: "SAVED",  badgeColor: S_CYAN },
       { label: "Run Results",       desc: "Hedge schedule with rationale",     href: "/results",              icon: Ic.bar_chart },
       { label: "Committee Pack",    desc: "IFRS 9 hedge effectiveness pack",   href: "/committee-pack",       icon: Ic.download, badge: "PDF",    badgeColor: S_AMBER },
+    ],
+  },
+  {
+    label: "Connectors", href: "/database-connection", icon: Ic.plug,
+    prefixes: ["/database-connection", "/erp-integration", "/accounting-connection", "/connectors", "/import-history"],
+    header: "Data Connectors",
+    minTier: "professional" as PlanTier,
+    items: [
+      { label: "Connect Database", desc: "SQL pull — Oracle, Postgres, MySQL",  href: "/database-connection",   icon: Ic.db,        badge: "SQL",   badgeColor: S_CYAN },
+      { label: "ERP Integration",  desc: "SAP, Oracle, NetSuite connectors",   href: "/erp-integration",       icon: Ic.lightning,  badge: "ERP",   badgeColor: S_AMBER },
+      { label: "Accounting",       desc: "QuickBooks, Xero, Sage import",      href: "/accounting-connection", icon: Ic.reports },
+      { label: "Connectors Hub",   desc: "Unified data pipeline status",       href: "/connectors",            icon: Ic.plug,       badge: "HUB",   badgeColor: S_CYAN },
+      { label: "Import History",   desc: "Audit log of all imports",           href: "/import-history",        icon: Ic.clock,      badge: "AUDIT", badgeColor: S_CYAN },
     ],
   },
   {
@@ -454,51 +451,70 @@ function Flyout({ sec, rect }: FlyoutProps) {
         {sec.header}
       </div>
       {/* Items */}
-      {sec.items.map(item => (
-        <Link
-          key={item.href + item.label}
-          href={item.href}
-          style={{
-            display:        "flex",
-            alignItems:     "center",
-            gap:            10,
-            padding:        "9px 16px",
-            textDecoration: "none",
-            borderBottom:   `1px solid ${T.flyoutBorder}`,
-            transition:     "background 80ms",
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = T.flyoutHover; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-        >
-          <span style={{ color: T.flyoutMuted, flexShrink: 0, display: "flex", alignItems: "center" }}>
-            {item.icon}
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontFamily: T.fontUI, fontSize: 13, fontWeight: 500, color: T.flyoutText }}>
-                {item.label}
+      {sec.items.map((item, idx) => {
+        const prevGroup = idx > 0 ? sec.items[idx - 1].group : undefined;
+        const showGroupDivider = item.group && item.group !== prevGroup;
+        return (
+          <div key={item.href + item.label}>
+            {showGroupDivider && (
+              <div style={{
+                padding: "6px 16px 3px",
+                fontFamily: T.fontMono,
+                fontSize: 9,
+                fontWeight: 600,
+                letterSpacing: "0.12em",
+                color: T.flyoutMuted,
+                borderTop: idx > 0 ? `1px solid ${T.flyoutBorder}` : "none",
+                opacity: 0.7,
+              }}>
+                {item.group}
+              </div>
+            )}
+            <Link
+              href={item.href}
+              style={{
+                display:        "flex",
+                alignItems:     "center",
+                gap:            10,
+                padding:        "9px 16px",
+                textDecoration: "none",
+                borderBottom:   `1px solid ${T.flyoutBorder}`,
+                transition:     "background 80ms",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = T.flyoutHover; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+            >
+              <span style={{ color: T.flyoutMuted, flexShrink: 0, display: "flex", alignItems: "center" }}>
+                {item.icon}
               </span>
-              {item.badge && (
-                <span style={{
-                  fontFamily: T.fontMono, fontSize: 8, fontWeight: 700, letterSpacing: "0.08em",
-                  color: item.badgeColor ?? T.flyoutMuted,
-                  background: `color-mix(in srgb, ${item.badgeColor ?? T.flyoutMuted} 10%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${item.badgeColor ?? T.flyoutMuted} 20%, transparent)`,
-                  padding: "1px 5px", borderRadius: 2,
-                }}>
-                  {item.badge}
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontFamily: T.fontUI, fontSize: 13, fontWeight: 500, color: T.flyoutText }}>
+                    {item.label}
+                  </span>
+                  {item.badge && (
+                    <span style={{
+                      fontFamily: T.fontMono, fontSize: 8, fontWeight: 700, letterSpacing: "0.08em",
+                      color: item.badgeColor ?? T.flyoutMuted,
+                      background: `color-mix(in srgb, ${item.badgeColor ?? T.flyoutMuted} 10%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${item.badgeColor ?? T.flyoutMuted} 20%, transparent)`,
+                      padding: "1px 5px", borderRadius: 2,
+                    }}>
+                      {item.badge}
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
-            <span style={{ fontFamily: T.fontUI, fontSize: 11, color: T.flyoutMuted, display: "block", marginTop: 1, lineHeight: 1.35 }}>
-              {item.desc}
-            </span>
-          </span>
-          <span style={{ color: T.flyoutMuted, opacity: 0.4, display: "flex", alignItems: "center" }}>
-            {Ic.chevron}
-          </span>
-        </Link>
-      ))}
+                <span style={{ fontFamily: T.fontUI, fontSize: 11, color: T.flyoutMuted, display: "block", marginTop: 1, lineHeight: 1.35 }}>
+                  {item.desc}
+                </span>
+              </span>
+              <span style={{ color: T.flyoutMuted, opacity: 0.4, display: "flex", alignItems: "center" }}>
+                {Ic.chevron}
+              </span>
+            </Link>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -630,43 +646,61 @@ function SectionRow({ sec, isActive, isExpanded, isHovered, onHover, onLeave, ex
           borderTop: `1px solid ${T.sidebarDivider}`,
           background: "rgba(0,0,0,0.15)",
         }}>
-          {sec.items.map(item => (
-            <Link
-              key={item.href + item.label}
-              href={item.href}
-              style={{
-                display:        "flex",
-                alignItems:     "center",
-                gap:            8,
-                padding:        "7px 16px 7px 44px",
-                textDecoration: "none",
-                transition:     "background 80ms",
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = T.sidebarBgHover; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-            >
-              <span style={{ color: T.textDim, flexShrink: 0, display: "flex", alignItems: "center" }}>
-                {item.icon}
-              </span>
-              <span style={{
-                fontFamily: T.fontUI, fontSize: 12, color: T.textMuted,
-                flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              }}>
-                {item.label}
-              </span>
-              {item.badge && (
-                <span style={{
-                  fontFamily: T.fontMono, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em",
-                  color: item.badgeColor ?? T.textDim,
-                  background: `color-mix(in srgb, ${item.badgeColor ?? T.textDim} 15%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${item.badgeColor ?? T.textDim} 25%, transparent)`,
-                  padding: "1px 4px", borderRadius: 2,
-                }}>
-                  {item.badge}
-                </span>
-              )}
-            </Link>
-          ))}
+          {sec.items.map((item, idx) => {
+            const prevGroup = idx > 0 ? sec.items[idx - 1].group : undefined;
+            const showGroupDivider = item.group && item.group !== prevGroup;
+            return (
+              <div key={item.href + item.label}>
+                {showGroupDivider && (
+                  <div style={{
+                    padding: "6px 16px 2px 44px",
+                    fontFamily: T.fontMono,
+                    fontSize: 9,
+                    fontWeight: 600,
+                    letterSpacing: "0.12em",
+                    color: T.textDim,
+                    borderTop: idx > 0 ? `1px solid ${T.sidebarDivider}` : "none",
+                  }}>
+                    {item.group}
+                  </div>
+                )}
+                <Link
+                  href={item.href}
+                  style={{
+                    display:        "flex",
+                    alignItems:     "center",
+                    gap:            8,
+                    padding:        "7px 16px 7px 44px",
+                    textDecoration: "none",
+                    transition:     "background 80ms",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = T.sidebarBgHover; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                >
+                  <span style={{ color: T.textDim, flexShrink: 0, display: "flex", alignItems: "center" }}>
+                    {item.icon}
+                  </span>
+                  <span style={{
+                    fontFamily: T.fontUI, fontSize: 12, color: T.textMuted,
+                    flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                  }}>
+                    {item.label}
+                  </span>
+                  {item.badge && (
+                    <span style={{
+                      fontFamily: T.fontMono, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em",
+                      color: item.badgeColor ?? T.textDim,
+                      background: `color-mix(in srgb, ${item.badgeColor ?? T.textDim} 15%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${item.badgeColor ?? T.textDim} 25%, transparent)`,
+                      padding: "1px 4px", borderRadius: 2,
+                    }}>
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

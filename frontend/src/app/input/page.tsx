@@ -23,6 +23,7 @@ import type { PolicyPreset } from '../../constants/policyPresets';
 import { validateAll } from '../../utils/validator';
 import { fmtMXN } from '../../utils/formatters';
 import WorkflowBreadcrumb from '../../components/layout/WorkflowBreadcrumb';
+import WorkflowGuide from '../../components/layout/WorkflowGuide';
 import { deriveCurrencyContext } from '../../utils/currencyContext';
 import type { AppDispatch, RootState } from '../../lib/store';
 import {
@@ -938,7 +939,8 @@ function InputPageInner() {
     <div style={{ display: "flex", minHeight: "100vh" }}>
     <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
       {/* Workflow progress breadcrumb */}
-      <WorkflowBreadcrumb active="position" />
+      <WorkflowBreadcrumb active="ingest" />
+      <WorkflowGuide active="ingest" pathname="/input" />
       {/* ── Governance strip ── */}
       <GovernanceStrip
         tradeCount={trades.length} hedgeCount={hedges.length} policyName={activePresetName}
