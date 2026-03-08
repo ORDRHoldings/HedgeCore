@@ -2,25 +2,14 @@
 
 import { useState } from "react";
 import type { PositionRow } from "@/api/positionClient";
-import { CheckCircleIcon, RefreshCwIcon, ClipboardIcon, BarChart2Icon, HistoryIcon, FileSpreadsheetIcon, FileTextIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import {
+  CheckCircleIcon, RefreshCwIcon, FileSpreadsheetIcon, FileTextIcon,
+  ChevronDownIcon, ChevronUpIcon, BarChart2Icon, DownloadIcon,
+  ArrowRightIcon, ClipboardIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { API_BASE } from "@/lib/api/apiBase";
-
-const HD = {
-  bgPanel: "var(--bg-panel)",
-  bgSub:   "var(--bg-sub)",
-  bgDeep:  "var(--bg-deep)",
-  rim:     "var(--border-rim)",
-  soft:    "var(--border-soft)",
-  primary: "var(--text-primary)",
-  secondary:"var(--text-secondary)",
-  tertiary: "var(--text-tertiary)",
-  cyan:    "var(--accent-cyan)",
-  amber:   "var(--accent-amber)",
-  green:   "var(--status-pass,#22c55e)",
-  fontUI:  "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono:"var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-} as const;
+import { T } from "./tokens";
 
 interface PhaseCompleteProps {
   positions: PositionRow[];
@@ -45,7 +34,8 @@ export default function PhaseComplete({
 }: PhaseCompleteProps) {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState("CONFIRMATION DOWNLOADED");
-  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(true);
+  const [exportOpen, setExportOpen] = useState(false);
 
   function showToast(msg: string) {
     setToastMsg(msg);
@@ -209,6 +199,8 @@ export default function PhaseComplete({
     showToast("CONFIRMATION DOWNLOADED");
   };
 
+  const completedAt = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0, height: "100%", overflow: "hidden" }}>
 
@@ -216,272 +208,315 @@ export default function PhaseComplete({
       <div style={{
         display: "flex", alignItems: "center", gap: 14,
         padding: "14px 24px",
-        background: `color-mix(in srgb, ${HD.green} 6%, ${HD.bgSub})`,
-        borderBottom: `1px solid ${HD.rim}`,
+        background: T.bgSub,
+        borderBottom: `1px solid ${T.rim}`,
         flexShrink: 0,
       }}>
-        <CheckCircleIcon size={14} color={HD.green} />
-        <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: HD.green }}>COMPLETE</span>
-        <span style={{ width: 1, height: 14, background: HD.soft, display: "inline-block" }} />
-        <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: HD.primary }}>HEDGE RUN CONFIRMED</span>
+        <CheckCircleIcon size={14} color={T.green} />
+        <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.green }}>COMPLETE</span>
+        <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
+        <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.primary }}>HEDGE RUN CONFIRMED</span>
       </div>
 
-    <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 20, padding: "32px 24px", alignItems: "center" }}>
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 16, padding: "20px 24px" }}>
 
-      {/* Toast */}
-      {toastVisible && (
-        <div style={{
-          position: "fixed", top: 20, right: 20, zIndex: 9999,
-          padding: "10px 20px",
-          background: HD.bgPanel,
-          border: `1px solid ${HD.green}`,
-          borderRadius: 4,
-          fontFamily: HD.fontMono, fontSize: 11, color: HD.green, letterSpacing: "0.06em",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
-        }}>
-          {toastMsg}
-        </div>
-      )}
-
-      {/* Success icon */}
-      <div style={{
-        width: 80, height: 80, borderRadius: "50%",
-        background: `color-mix(in srgb,${HD.green} 15%,transparent)`,
-        border: `2px solid ${HD.green}`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        marginBottom: 8,
-      }}>
-        <CheckCircleIcon size={44} color={HD.green} />
-      </div>
-
-      {/* Title */}
-      <div style={{ textAlign: "center" }}>
-        <div style={{
-          fontFamily: HD.fontMono, fontSize: 18, fontWeight: 700,
-          letterSpacing: "0.12em", color: HD.green, marginBottom: 6,
-        }}>
-          POSITIONS HEDGED SUCCESSFULLY
-        </div>
-        <div style={{ fontFamily: HD.fontUI, fontSize: 13, color: HD.secondary }}>
-          {governanceMode === "solo" ? "Solo governance run complete." : "Team governance run complete."}
-        </div>
-      </div>
-
-      {/* Summary cards */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(3,1fr)",
-        gap: 12,
-        width: "100%",
-        maxWidth: 640,
-      }}>
-        {[
-          { label: "POSITIONS HEDGED", value: String(positions.length) },
-          { label: "PROPOSALS FILED",  value: String(fillData?.proposalIds.length ?? 0) },
-          { label: "FILL PRICE",        value: fillData?.fillPrice ? fillData.fillPrice.toFixed(6) : "—" },
-        ].map(card => (
-          <div key={card.label} style={{
-            background: HD.bgPanel,
-            border: `1px solid ${HD.soft}`,
+        {/* Toast */}
+        {toastVisible && (
+          <div style={{
+            position: "fixed", top: 20, right: 20, zIndex: 9999,
+            padding: "10px 20px",
+            background: T.bgPanel,
+            border: `1px solid ${T.green}`,
             borderRadius: 4,
-            padding: "14px 16px",
-            textAlign: "center",
+            fontFamily: T.fontMono, fontSize: 12, color: T.green, letterSpacing: "0.06em",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
           }}>
-            <div style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary, letterSpacing: "0.1em", marginBottom: 6 }}>
-              {card.label}
-            </div>
-            <div style={{ fontFamily: HD.fontMono, fontSize: 20, fontWeight: 700, color: HD.primary }}>
-              {card.value}
-            </div>
+            {toastMsg}
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* Currency breakdown */}
-      <div style={{ width: "100%", maxWidth: 640, background: HD.bgPanel, border: `1px solid ${HD.soft}`, borderRadius: 4, overflow: "hidden" }}>
-        <div style={{ padding: "8px 14px", background: HD.bgSub, borderBottom: `1px solid ${HD.soft}` }}>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
-            NOTIONAL BY CURRENCY
-          </span>
+        {/* ── Confirmation banner ──────────────────────────────────────── */}
+        <div style={{
+          background: T.bgSub,
+          border: `1px solid color-mix(in srgb, ${T.green} 25%, transparent)`,
+          borderLeft: `3px solid ${T.green}`,
+          borderRadius: 4,
+          padding: "14px 18px",
+        }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10, marginBottom: 8,
+          }}>
+            <CheckCircleIcon size={16} color={T.green} />
+            <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", color: T.green }}>
+              HEDGE RUN CONFIRMED
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, letterSpacing: "0.06em" }}>RUN ID</span>
+              <code style={{ fontFamily: T.fontMono, fontSize: 12, color: T.primary }}>{runId.slice(0, 12)}...</code>
+            </div>
+            <span style={{ width: 1, height: 12, background: T.soft, display: "inline-block" }} />
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary }}>{completedAt}</span>
+            <span style={{ width: 1, height: 12, background: T.soft, display: "inline-block" }} />
+            <span style={{
+              fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+              color: T.cyan,
+              background: "color-mix(in srgb, var(--accent-cyan) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--accent-cyan) 25%, transparent)",
+              padding: "2px 8px", borderRadius: 2,
+            }}>
+              {governanceMode === "team" ? "TEAM GOVERNANCE" : "SOLO GOVERNANCE"}
+            </span>
+            <span style={{ width: 1, height: 12, background: T.soft, display: "inline-block" }} />
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.primary }}>
+              {positions.length} position{positions.length !== 1 ? "s" : ""} hedged
+            </span>
+            <span style={{ width: 1, height: 12, background: T.soft, display: "inline-block" }} />
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.primary }}>
+              {fillData?.proposalIds.length ?? 0} proposal{(fillData?.proposalIds.length ?? 0) !== 1 ? "s" : ""} filed
+            </span>
+          </div>
         </div>
-        {Object.entries(currencyBreakdown).map(([ccy, total], i, arr) => (
-          <div key={ccy} style={{
+
+        {/* ── Summary KPI cards ────────────────────────────────────────── */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3,1fr)",
+          gap: 12,
+        }}>
+          {[
+            { label: "POSITIONS HEDGED", value: String(positions.length) },
+            { label: "PROPOSALS FILED",  value: String(fillData?.proposalIds.length ?? 0) },
+            { label: "FILL PRICE",        value: fillData?.fillPrice ? fillData.fillPrice.toFixed(6) : "—" },
+          ].map(card => (
+            <div key={card.label} style={{
+              background: T.bgSub,
+              border: `1px solid ${T.soft}`,
+              borderRadius: 4,
+              padding: "12px 14px",
+              textAlign: "center",
+            }}>
+              <div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>
+                {card.label}
+              </div>
+              <div style={{ fontFamily: T.fontMono, fontSize: 16, fontWeight: 700, color: T.primary }}>
+                {card.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Currency breakdown ───────────────────────────────────────── */}
+        <div style={{ background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ padding: "8px 14px", background: T.bgDeep, borderBottom: `1px solid ${T.soft}` }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: T.tertiary }}>
+              NOTIONAL BY CURRENCY
+            </span>
+          </div>
+          {Object.entries(currencyBreakdown).map(([ccy, total], i, arr) => (
+            <div key={ccy} style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "7px 14px",
+              borderBottom: i < arr.length - 1 ? `1px solid ${T.soft}` : "none",
+            }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.cyan }}>{ccy}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 600, color: T.primary }}>{fmt(total)}</span>
+            </div>
+          ))}
+          <div style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "8px 14px",
-            borderBottom: i < arr.length - 1 ? `1px solid ${HD.soft}` : "none",
+            padding: "7px 14px",
+            borderTop: `1px solid ${T.rim}`,
+            background: T.bgDeep,
           }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.cyan }}>{ccy}</span>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 13, fontWeight: 600, color: HD.primary }}>{fmt(total)}</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.secondary }}>TOTAL NOTIONAL</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.primary }}>{fmt(totalNotional)}</span>
           </div>
-        ))}
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "8px 14px",
-          borderTop: `1px solid ${HD.rim}`,
-          background: HD.bgSub,
-        }}>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, color: HD.secondary }}>TOTAL NOTIONAL</span>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 14, fontWeight: 700, color: HD.primary }}>{fmt(totalNotional)}</span>
         </div>
-      </div>
 
-      {/* Audit trail references */}
-      <div style={{ width: "100%", maxWidth: 640, background: HD.bgPanel, border: `1px solid ${HD.soft}`, borderRadius: 4, overflow: "hidden" }}>
-        <button
-          onClick={() => setAuditOpen(!auditOpen)}
-          style={{
-            width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "8px 14px", background: HD.bgSub, border: "none", cursor: "pointer",
-            borderBottom: auditOpen ? `1px solid ${HD.soft}` : "none",
-          }}
-        >
-          <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
-            AUDIT TRAIL REFERENCES
-          </span>
-          {auditOpen ? <ChevronUpIcon size={12} color={HD.tertiary} /> : <ChevronDownIcon size={12} color={HD.tertiary} />}
-        </button>
-        {auditOpen && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 14px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary }}>CALCULATION RUN ID</span>
-              <code style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary }}>{runId}</code>
-            </div>
-            {fillData?.proposalIds.map((id, i) => (
-              <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary }}>PROPOSAL {i + 1}</span>
-                <code style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary }}>{id}</code>
+        {/* ── Audit trail references (default open) ───────────────────── */}
+        <div style={{ background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 4, overflow: "hidden" }}>
+          <button
+            onClick={() => setAuditOpen(!auditOpen)}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "8px 14px", background: T.bgDeep, border: "none", cursor: "pointer",
+              borderBottom: auditOpen ? `1px solid ${T.soft}` : "none",
+            }}
+          >
+            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: T.tertiary }}>
+              AUDIT TRAIL REFERENCES
+            </span>
+            {auditOpen ? <ChevronUpIcon size={12} color={T.tertiary} /> : <ChevronDownIcon size={12} color={T.tertiary} />}
+          </button>
+          {auditOpen && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "10px 14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary }}>CALCULATION RUN ID</span>
+                <code style={{ fontFamily: T.fontMono, fontSize: 10, color: T.secondary }}>{runId}</code>
               </div>
-            ))}
+              {fillData?.proposalIds.map((id, i) => (
+                <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary }}>PROPOSAL {i + 1}</span>
+                  <code style={{ fontFamily: T.fontMono, fontSize: 10, color: T.secondary }}>{id}</code>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Next Actions — 3-path layout ────────────────────────────── */}
+        <div>
+          <div style={{
+            fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
+            color: T.tertiary, marginBottom: 10,
+          }}>
+            NEXT ACTIONS
           </div>
-        )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+
+            {/* Monitor card */}
+            <div style={{
+              background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 4,
+              padding: "16px 14px", display: "flex", flexDirection: "column", gap: 10,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <BarChart2Icon size={14} color={T.cyan} />
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: T.primary }}>MONITOR</span>
+              </div>
+              <p style={{ fontFamily: T.fontUI, fontSize: 12, color: T.secondary, lineHeight: "1.5", margin: 0, flex: 1 }}>
+                Track this hedge in the monitor. View P&L, mark-to-market, and expiry dates.
+              </p>
+              <Link
+                href="/hedge-monitor"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
+                  color: T.cyan,
+                  background: "color-mix(in srgb, var(--accent-cyan) 8%, transparent)",
+                  border: `1px solid color-mix(in srgb, var(--accent-cyan) 25%, transparent)`,
+                  padding: "8px 14px", borderRadius: 3, textDecoration: "none",
+                  cursor: "pointer", justifyContent: "center",
+                }}
+              >
+                OPEN <ArrowRightIcon size={12} color={T.cyan} />
+              </Link>
+            </div>
+
+            {/* Export card */}
+            <div style={{
+              background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 4,
+              padding: "16px 14px", display: "flex", flexDirection: "column", gap: 10,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <DownloadIcon size={14} color={T.secondary} />
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: T.primary }}>EXPORT</span>
+              </div>
+              <p style={{ fontFamily: T.fontUI, fontSize: 12, color: T.secondary, lineHeight: "1.5", margin: 0, flex: 1 }}>
+                Download reports and execution confirmations in multiple formats.
+              </p>
+              <button
+                onClick={() => setExportOpen(!exportOpen)}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
+                  color: T.secondary,
+                  background: T.bgPanel,
+                  border: `1px solid ${T.soft}`,
+                  padding: "8px 14px", borderRadius: 3, cursor: "pointer",
+                  justifyContent: "center",
+                }}
+              >
+                EXPORT {exportOpen ? <ChevronUpIcon size={12} /> : <ChevronDownIcon size={12} />}
+              </button>
+              {exportOpen && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
+                  <button
+                    onClick={handleDownloadExcel}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
+                      color: T.cyan, background: "transparent",
+                      border: `1px solid color-mix(in srgb, var(--accent-cyan) 20%, transparent)`,
+                      padding: "6px 10px", borderRadius: 2, cursor: "pointer",
+                    }}
+                  >
+                    <FileSpreadsheetIcon size={12} color={T.cyan} /> Excel Report
+                  </button>
+                  <button
+                    onClick={handleDownloadBankPdf}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
+                      color: T.secondary, background: "transparent",
+                      border: `1px solid ${T.soft}`,
+                      padding: "6px 10px", borderRadius: 2, cursor: "pointer",
+                    }}
+                  >
+                    <FileTextIcon size={12} color={T.secondary} /> Bank Report
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
+                      color: T.tertiary, background: "transparent",
+                      border: `1px solid ${T.soft}`,
+                      padding: "6px 10px", borderRadius: 2, cursor: "pointer",
+                    }}
+                  >
+                    <ClipboardIcon size={12} color={T.tertiary} /> JSON Confirmation
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* New Run card */}
+            <div style={{
+              background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 4,
+              padding: "16px 14px", display: "flex", flexDirection: "column", gap: 10,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <RefreshCwIcon size={14} color={T.green} />
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: T.primary }}>NEW RUN</span>
+              </div>
+              <p style={{ fontFamily: T.fontUI, fontSize: 12, color: T.secondary, lineHeight: "1.5", margin: 0, flex: 1 }}>
+                Start another hedge run with a new set of positions.
+              </p>
+              <button
+                onClick={onNewRun}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
+                  color: "#000",
+                  background: T.green,
+                  border: "none",
+                  padding: "8px 14px", borderRadius: 3, cursor: "pointer",
+                  justifyContent: "center",
+                }}
+              >
+                START <ArrowRightIcon size={12} color="#000" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Footer note ─────────────────────────────────────────────── */}
+        <div style={{
+          fontFamily: T.fontUI, fontSize: 12, color: T.tertiary,
+          textAlign: "center", padding: "8px 0 4px",
+          borderTop: `1px solid ${T.soft}`,
+        }}>
+          This execution is recorded in the ORDR audit trail and can be retrieved from Audit Trail or Trade History.
+        </div>
+
       </div>
-
-      {/* Action buttons */}
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", maxWidth: 640, width: "100%" }}>
-        <button
-          onClick={onNewRun}
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-            color: "#000", background: HD.green,
-            border: "none", padding: "10px 20px", cursor: "pointer", borderRadius: 3,
-          }}
-        >
-          <RefreshCwIcon size={14} color="#000" />
-          RUN ANOTHER HEDGE →
-        </button>
-
-        <Link
-          href="/audit-trail"
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-            color: HD.cyan,
-            background: `color-mix(in srgb,${HD.cyan} 8%,transparent)`,
-            border: `1px solid color-mix(in srgb,${HD.cyan} 30%,transparent)`,
-            padding: "10px 20px", borderRadius: 3, textDecoration: "none",
-          }}
-        >
-          VIEW AUDIT TRAIL →
-        </Link>
-
-        <Link
-          href="/position-desk"
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-            color: HD.secondary,
-            background: HD.bgSub,
-            border: `1px solid ${HD.soft}`,
-            padding: "10px 20px", borderRadius: 3, textDecoration: "none",
-          }}
-        >
-          VIEW POSITIONS →
-        </Link>
-
-        <Link
-          href="/trade-history"
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-            color: HD.secondary,
-            background: HD.bgSub,
-            border: `1px solid ${HD.soft}`,
-            padding: "10px 20px", borderRadius: 3, textDecoration: "none",
-          }}
-        >
-          <HistoryIcon size={14} color={HD.secondary} />
-          TRADE HISTORY →
-        </Link>
-
-        <Link
-          href="/hedge-monitor"
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-            color: HD.secondary,
-            background: HD.bgSub,
-            border: `1px solid ${HD.soft}`,
-            padding: "10px 20px", borderRadius: 3, textDecoration: "none",
-          }}
-        >
-          <BarChart2Icon size={14} color={HD.secondary} />
-          HEDGE MONITOR →
-        </Link>
-
-        <button
-          onClick={handleDownloadExcel}
-          title="Download positions and summary as Excel-compatible CSV"
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-            color: HD.cyan,
-            background: `color-mix(in srgb,${HD.cyan} 8%,transparent)`,
-            border: `1px solid color-mix(in srgb,${HD.cyan} 30%,transparent)`,
-            padding: "10px 20px", cursor: "pointer", borderRadius: 3,
-          }}
-        >
-          <FileSpreadsheetIcon size={14} color={HD.cyan} />
-          DOWNLOAD EXCEL
-        </button>
-
-        <button
-          onClick={handleDownloadBankPdf}
-          title="Download structured bank compliance report"
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-            color: HD.secondary,
-            background: HD.bgSub,
-            border: `1px solid ${HD.soft}`,
-            padding: "10px 20px", cursor: "pointer", borderRadius: 3,
-          }}
-        >
-          <FileTextIcon size={14} color={HD.secondary} />
-          BANK REPORT
-        </button>
-
-        <button
-          onClick={handleDownload}
-          title="Download raw JSON confirmation artifact"
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-            color: HD.tertiary,
-            background: "none",
-            border: `1px solid ${HD.soft}`,
-            padding: "10px 20px", cursor: "pointer", borderRadius: 3,
-          }}
-        >
-          <ClipboardIcon size={14} color={HD.tertiary} />
-          DOWNLOAD JSON
-        </button>
-      </div>
-    </div>
     </div>
   );
 }

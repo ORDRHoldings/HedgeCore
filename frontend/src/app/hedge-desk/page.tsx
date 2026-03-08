@@ -6,8 +6,6 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import HedgeDeskPipeline from "@/components/hedge-desk/HedgeDeskPipeline";
 import HedgeDeskOverview from "@/components/hedge-desk/HedgeDeskOverview";
-import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
-import WorkflowGuide from "@/components/layout/WorkflowGuide";
 
 const HD = {
   bgPanel: "var(--bg-panel)",
@@ -142,14 +140,6 @@ function HedgeDeskInner() {
           {user.email ?? ""}
         </span>
       </header>
-
-      {/* Breadcrumb + Guide — only shown in run mode */}
-      {isRunMode && (
-        <>
-          <WorkflowBreadcrumb active="select" />
-          <WorkflowGuide active={isRunMode ? "select" : "overview"} />
-        </>
-      )}
 
       {/* Body */}
       <div style={{ flex: 1, overflow: "hidden" }}>

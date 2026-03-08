@@ -1,26 +1,11 @@
 "use client";
 
 import { CheckIcon } from "lucide-react";
+import { T } from "./tokens";
 
-const HD = {
-  navy:    "#0A1F44",
-  royal:   "#1C62F2",
-  emerald: "#2ECC71",
-  crimson: "#E74C3C",
-  slate:   "#8A9AB5",
-  bgPanel: "var(--bg-panel)",
-  bgSub:   "var(--bg-sub)",
-  bgDeep:  "var(--bg-deep)",
-  rim:     "var(--border-rim)",
-  soft:    "var(--border-soft)",
-  primary: "var(--text-primary)",
-  secondary:"var(--text-secondary)",
-  tertiary: "var(--text-tertiary)",
-  cyan:    "var(--accent-cyan)",
-  amber:   "var(--accent-amber)",
-  fontUI:  "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono:"var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-} as const;
+/* ── Aliases for backward compat inside this file ─────────────────────────── */
+
+const HD = T;
 
 interface ProgressBarProps {
   phases: string[];
@@ -29,6 +14,7 @@ interface ProgressBarProps {
   onPhaseClick: (i: number) => void;
   positionCount?: number;
   runId?: string | null;
+  instruction?: string | null;
 }
 
 export default function ProgressBar({
@@ -38,6 +24,7 @@ export default function ProgressBar({
   onPhaseClick,
   positionCount = 0,
   runId,
+  instruction,
 }: ProgressBarProps) {
   function getSubtitle(label: string): string | null {
     const upper = label.toUpperCase();
@@ -50,10 +37,14 @@ export default function ProgressBar({
   return (
     <div style={{
       display: "flex",
-      alignItems: "center",
-      padding: "16px 24px",
+      flexDirection: "column",
       background: HD.bgPanel,
       borderBottom: `1px solid ${HD.rim}`,
+    }}>
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      padding: "16px 24px 12px",
       gap: 0,
       overflowX: "auto",
     }}>
@@ -167,6 +158,21 @@ export default function ProgressBar({
           </div>
         );
       })}
+    </div>
+
+    {/* Phase instruction guide */}
+    {instruction && (
+      <div style={{
+        padding: "0 24px 10px",
+        fontFamily: HD.fontUI,
+        fontSize: 12,
+        color: HD.secondary,
+        letterSpacing: "0.01em",
+        lineHeight: 1,
+      }}>
+        {instruction}
+      </div>
+    )}
     </div>
   );
 }

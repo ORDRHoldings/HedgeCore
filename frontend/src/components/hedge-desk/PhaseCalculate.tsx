@@ -6,31 +6,15 @@ import type { PositionRow } from "@/api/positionClient";
 import { translateError, translateCaughtError, type TranslatedError } from "@/lib/errors/hedgeErrors";
 import HedgeErrorBanner from "./ErrorBanner";
 import {
-  LoaderIcon, CheckCircleIcon, ChevronLeftIcon,
+  LoaderIcon, CheckCircleIcon, ChevronLeftIcon, ChevronDownIcon, ChevronRightIcon,
   ShieldIcon, TrendingUpIcon, FileTextIcon, RefreshCwIcon,
+  ZapIcon, InfoIcon, ArrowRightIcon,
 } from "lucide-react";
+import { T } from "./tokens";
 
-/* ── Design tokens ────────────────────────────────────────────────────────── */
+/* ── Aliases for backward compat inside this file ─────────────────────────── */
 
-const HD = {
-  royal:   "#1C62F2",
-  emerald: "#2ECC71",
-  crimson: "#E74C3C",
-  slate:   "#8A9AB5",
-  bgPanel: "var(--bg-panel)",
-  bgSub:   "var(--bg-sub)",
-  bgDeep:  "var(--bg-deep)",
-  rim:     "var(--border-rim)",
-  soft:    "var(--border-soft)",
-  primary: "var(--text-primary)",
-  secondary:"var(--text-secondary)",
-  tertiary: "var(--text-tertiary)",
-  cyan:    "var(--accent-cyan)",
-  amber:   "var(--accent-amber)",
-  green:   "var(--status-pass,#22c55e)",
-  fontUI:  "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono:"var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-} as const;
+const HD = T;
 
 export interface CalculateResult {
   runId: string;
@@ -67,6 +51,12 @@ function fmtInt(n: number): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
 }
 
+function fmtUsd(n: number): string {
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /*  PhaseCalculate — Step 2: Confirm & run calculation                       */
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -84,6 +74,10 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
   const [calculating, setCalculating]       = useState(false);
   const [calcError, setCalcError]           = useState<TranslatedError | null>(null);
 
+  // Post-calculation state: hold result locally instead of immediately calling onComplete
+  const [calcDone, setCalcDone]             = useState(false);
+  const [calcResultLocal, setCalcResultLocal] = useState<CalculateResult | null>(null);
+
   // Derived data
   const currencies = Array.from(new Set(positions.map(p => p.currency)));
   const valueDates = positions.map(p => p.value_date).filter(Boolean) as string[];
@@ -95,6 +89,19 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
     acc[c].total += p.amount ?? 0;
     return acc;
   }, {});
+
+  const totalExposure = positions.reduce((s, p) => s + Math.abs(p.amount ?? 0), 0);
+  const primaryCurrency = currencies[0] ?? "USD";
+
+  // Date range for narrative
+  const sortedDates = [...valueDates].sort();
+  const earliestDate = sortedDates[0] ?? null;
+  const latestDate = sortedDates[sortedDates.length - 1] ?? null;
+  const dateRangeText = earliestDate && latestDate
+    ? earliestDate === latestDate
+      ? earliestDate
+      : `${earliestDate} to ${latestDate}`
+    : "unspecified dates";
 
   // ── Load market data ─────────────────────────────────────────────────
 
@@ -165,6 +172,8 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
   const runCalculation = async () => {
     setCalculating(true);
     setCalcError(null);
+    setCalcDone(false);
+    setCalcResultLocal(null);
     try {
       // Ensure market snapshot
       let mktSnap: Record<string, unknown>;
@@ -232,13 +241,17 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
       const runId = (data.run_id ?? data.id ?? `RUN-${Date.now()}`) as string;
       const riskDecisionHash = data.decision_hash as string | undefined;
 
-      onComplete({
+      const result: CalculateResult = {
         runId,
         calcResponse: data,
         marketSnapshot: mktSnap,
         policyInstanceId,
         riskDecisionHash,
-      });
+      };
+
+      // Store locally instead of immediately calling onComplete
+      setCalcResultLocal(result);
+      setCalcDone(true);
 
     } catch (e) {
       setCalcError(translateCaughtError(e));
@@ -247,8 +260,48 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
     }
   };
 
+  // ── Extract recommendation preview data from calc result ──────────
+  const previewData = (() => {
+    if (!calcResultLocal) return null;
+    const resp = calcResultLocal.calcResponse;
+    const hedgePlan = resp.hedge_plan as Record<string, unknown> | undefined;
+    const summary = (hedgePlan?.summary ?? resp.summary) as Record<string, unknown> | undefined;
+    const buckets = (hedgePlan?.buckets ?? resp.buckets) as Array<Record<string, unknown>> | undefined;
+    const actions = (hedgePlan?.actions ?? resp.actions ?? resp.execution_legs) as Array<Record<string, unknown>> | undefined;
+
+    const coveragePct = (summary?.coverage_pct ?? summary?.hedge_ratio ?? summary?.coverage_ratio) as number | undefined;
+    const totalActionUsd = (summary?.total_action_usd ?? summary?.total_hedge_usd ?? summary?.notional_usd) as number | undefined;
+    const estimatedCostBps = (summary?.estimated_cost_bps ?? summary?.cost_bps ?? summary?.spread_cost_bps) as number | undefined;
+    const numLegs = actions?.length ?? buckets?.length ?? 0;
+
+    return { coveragePct, totalActionUsd, estimatedCostBps, numLegs };
+  })();
+
+  const handleProceedToRisk = () => {
+    if (calcResultLocal) {
+      onComplete(calcResultLocal);
+    }
+  };
+
   const isReady = !marketLoading && !policyLoading && !calculating;
-  const canRun = isReady && !calcError;
+  const canRun = isReady && !calcError && !calcDone;
+
+  // Forward point analysis for market context
+  const forwardPointsAnalysis = (() => {
+    if (!marketSnapshot) return null;
+    const fwd = marketSnapshot.forward_points_by_month as Record<string, number> | undefined;
+    if (!fwd) return null;
+    const entries = Object.entries(fwd);
+    if (entries.length === 0) return null;
+    const avgPts = entries.reduce((s, [, v]) => s + v, 0) / entries.length;
+    const isNegative = avgPts < 0;
+    return { avgPts, isNegative };
+  })();
+
+  // Market snapshot timestamp
+  const marketAsOf = marketSnapshot
+    ? ((marketSnapshot.as_of ?? (marketSnapshot.provider_metadata as Record<string, unknown> | undefined)?.fetched_at) as string | undefined)
+    : undefined;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
@@ -265,6 +318,42 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
             Review inputs and run the hedge engine
           </span>
         </div>
+
+        {/* ── Exposure Narrative Block ────────────────────────────────── */}
+        {!policyLoading && (
+          <div style={{
+            background: `color-mix(in srgb, ${HD.cyan} 4%, ${HD.bgPanel})`,
+            border: `1px solid color-mix(in srgb, ${HD.cyan} 20%, transparent)`,
+            borderLeft: `3px solid ${HD.cyan}`,
+            borderRadius: 4,
+            padding: "14px 18px",
+          }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <InfoIcon size={14} color={HD.cyan} style={{ marginTop: 2, flexShrink: 0 }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <span style={{ fontFamily: HD.fontUI, fontSize: 13, color: HD.primary, lineHeight: 1.6 }}>
+                  You are hedging <strong style={{ fontFamily: HD.fontMono }}>{fmtInt(totalExposure)}</strong>{" "}
+                  <strong style={{ fontFamily: HD.fontMono }}>{primaryCurrency}</strong> exposure across{" "}
+                  <strong>{positions.length}</strong> position{positions.length !== 1 ? "s" : ""} maturing{" "}
+                  {dateRangeText !== "unspecified dates" ? (
+                    <span>in <strong style={{ fontFamily: HD.fontMono }}>{dateRangeText}</strong></span>
+                  ) : (
+                    <span>at {dateRangeText}</span>
+                  )}.
+                </span>
+                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>
+                  Your active policy mandates{" "}
+                  <strong style={{ fontFamily: HD.fontMono }}>{(policyConfig.hedge_ratios.confirmed * 100).toFixed(0)}%</strong>{" "}
+                  coverage on confirmed flows and{" "}
+                  <strong style={{ fontFamily: HD.fontMono }}>{(policyConfig.hedge_ratios.forecast * 100).toFixed(0)}%</strong>{" "}
+                  on forecasts.
+                  {" "}Instrument: <strong style={{ fontFamily: HD.fontMono }}>{policyConfig.execution_product}</strong>.
+                  {" "}Bucket mode: <strong style={{ fontFamily: HD.fontMono }}>{policyConfig.bucket_mode.replace(/_/g, " ")}</strong>.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Card 1: Positions ─────────────────────────────────────── */}
         <SummaryCard
@@ -300,7 +389,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
           ) : "UNAVAILABLE"}
           badgeColor={marketLoading ? HD.slate : marketSnapshot ? (
             ((marketSnapshot.provider_metadata as Record<string, unknown> | undefined)?.data_class === "LIVE") ? HD.emerald : HD.amber
-          ) : HD.crimson}
+          ) : HD.red}
         >
           {marketLoading ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -333,12 +422,35 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
                     <div key={bucket} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                       <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{bucket}</span>
                       <span style={{ fontFamily: HD.fontMono, fontSize: 14, fontWeight: 600, color: HD.primary }}>{fmt(spot + pts)}</span>
-                      <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: pts >= 0 ? HD.emerald : HD.crimson }}>
+                      <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: pts >= 0 ? HD.emerald : HD.red }}>
                         {pts >= 0 ? "+" : ""}{fmt(pts)} pts
                       </span>
                     </div>
                   ))}
                 </div>
+
+                {/* Forward points context note */}
+                {forwardPointsAnalysis && (
+                  <div style={{ marginTop: 10, padding: "8px 12px", background: HD.bgDeep, borderRadius: 3, border: `1px solid ${HD.soft}` }}>
+                    <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>
+                      Forward points indicate{" "}
+                      <strong style={{ color: HD.primary }}>
+                        {forwardPointsAnalysis.isNegative ? "weakening" : "strengthening"}
+                      </strong>{" "}
+                      of {primaryCurrency} over the hedge horizon.
+                      {forwardPointsAnalysis.isNegative && (
+                        <span style={{ color: HD.amber }}>
+                          {" "}Negative carry — hedging locks in a rate that is less favorable than the current spot.
+                        </span>
+                      )}
+                      {!forwardPointsAnalysis.isNegative && (
+                        <span style={{ color: HD.emerald }}>
+                          {" "}Positive carry — hedging locks in a rate that is more favorable than the current spot.
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
               </>
             );
           })() : (
@@ -402,6 +514,115 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
             onDismiss={() => setCalcError(null)}
           />
         )}
+
+        {/* ── Post-Calculation: Recommendation Preview ──────────────── */}
+        {calcDone && previewData && (
+          <div style={{
+            background: `color-mix(in srgb, ${HD.emerald} 4%, ${HD.bgPanel})`,
+            border: `1px solid color-mix(in srgb, ${HD.emerald} 25%, transparent)`,
+            borderLeft: `4px solid ${HD.emerald}`,
+            borderRadius: 4,
+            overflow: "hidden",
+          }}>
+            {/* Section header */}
+            <div style={{
+              padding: "10px 16px",
+              background: `color-mix(in srgb, ${HD.emerald} 8%, ${HD.bgSub})`,
+              borderBottom: `1px solid color-mix(in srgb, ${HD.emerald} 15%, transparent)`,
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <ZapIcon size={13} color={HD.emerald} />
+              <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.emerald }}>
+                RECOMMENDATION PREVIEW
+              </span>
+            </div>
+
+            <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Metric row */}
+              <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+                {previewData.coveragePct != null && (
+                  <PreviewMetric
+                    label="COVERAGE RATIO"
+                    value={`${(previewData.coveragePct * (previewData.coveragePct < 1 ? 100 : 1)).toFixed(1)}%`}
+                  />
+                )}
+                {previewData.totalActionUsd != null && (
+                  <PreviewMetric
+                    label="TOTAL ACTION"
+                    value={fmtUsd(previewData.totalActionUsd)}
+                  />
+                )}
+                {previewData.numLegs > 0 && (
+                  <PreviewMetric
+                    label="EXECUTION LEGS"
+                    value={String(previewData.numLegs)}
+                  />
+                )}
+                {previewData.estimatedCostBps != null && (
+                  <PreviewMetric
+                    label="ESTIMATED COST"
+                    value={`${previewData.estimatedCostBps.toFixed(1)} bps`}
+                  />
+                )}
+              </div>
+
+              {/* Plain-English summary */}
+              <div style={{
+                padding: "10px 14px",
+                background: HD.bgDeep,
+                borderRadius: 3,
+                border: `1px solid ${HD.soft}`,
+              }}>
+                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.6 }}>
+                  The engine recommends{" "}
+                  <strong style={{ fontFamily: HD.fontMono, color: HD.primary }}>
+                    {previewData.numLegs > 0 ? previewData.numLegs : "multiple"}
+                  </strong>{" "}
+                  hedge leg{previewData.numLegs !== 1 ? "s" : ""}
+                  {previewData.coveragePct != null && (
+                    <> covering{" "}
+                      <strong style={{ fontFamily: HD.fontMono, color: HD.primary }}>
+                        {(previewData.coveragePct * (previewData.coveragePct < 1 ? 100 : 1)).toFixed(1)}%
+                      </strong>{" "}
+                      of exposure
+                    </>
+                  )}
+                  {previewData.estimatedCostBps != null && (
+                    <> at an estimated cost of{" "}
+                      <strong style={{ fontFamily: HD.fontMono, color: HD.primary }}>
+                        {previewData.estimatedCostBps.toFixed(1)} bps
+                      </strong>
+                    </>
+                  )}.
+                </span>
+              </div>
+
+              {/* Unhedged risk note */}
+              <div style={{
+                display: "flex", alignItems: "flex-start", gap: 8,
+                padding: "8px 12px",
+                background: `color-mix(in srgb, ${HD.amber} 6%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${HD.amber} 20%, transparent)`,
+                borderRadius: 3,
+              }}>
+                <InfoIcon size={12} color={HD.amber} style={{ marginTop: 2, flexShrink: 0 }} />
+                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>
+                  <strong style={{ color: HD.amber }}>What happens if you don{"'"}t hedge:</strong>{" "}
+                  Your {fmtInt(totalExposure)} {primaryCurrency} exposure remains fully subject to exchange rate movements.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Assumptions Block (collapsible) ───────────────────────── */}
+        {!policyLoading && (
+          <AssumptionsBlock
+            marketAsOf={marketAsOf}
+            spreadBps={policyConfig.cost_assumptions.spread_bps}
+            minTradeSizeUsd={policyConfig.min_trade_size_usd}
+          />
+        )}
       </div>
 
       {/* ── Action bar ────────────────────────────────────────────────── */}
@@ -442,31 +663,74 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
               POLICY
             </span>
           )}
-          {isReady && !calculating && (
+          {isReady && !calculating && !calcDone && (
             <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.emerald, display: "flex", alignItems: "center", gap: 4 }}>
               <CheckCircleIcon size={10} />
               READY
             </span>
           )}
+          {calcDone && (
+            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.emerald, display: "flex", alignItems: "center", gap: 4 }}>
+              <CheckCircleIcon size={10} />
+              CALCULATION COMPLETE
+            </span>
+          )}
         </div>
 
-        <button
-          onClick={runCalculation}
-          disabled={!canRun}
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
-            color: "#ffffff",
-            background: canRun ? HD.royal : HD.slate,
-            border: "none", padding: "10px 28px",
-            cursor: canRun ? "pointer" : "not-allowed",
-            borderRadius: 3, transition: "background 0.15s",
-          }}
-        >
-          {calculating && <LoaderIcon size={14} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />}
-          {!calculating && <CheckCircleIcon size={14} color="#ffffff" />}
-          {calculating ? "RUNNING..." : "RUN CALCULATION"}
-        </button>
+        {/* Recalculate button (visible after calc is done) */}
+        {calcDone && (
+          <button
+            onClick={runCalculation}
+            disabled={calculating}
+            style={{
+              display: "flex", alignItems: "center", gap: 4,
+              fontFamily: HD.fontMono, fontSize: 10, letterSpacing: "0.06em",
+              color: HD.slate, background: "none",
+              border: `1px solid ${HD.rim}`, padding: "8px 14px",
+              cursor: calculating ? "not-allowed" : "pointer", borderRadius: 3,
+            }}
+          >
+            <RefreshCwIcon size={10} />
+            RECALCULATE
+          </button>
+        )}
+
+        {/* Primary CTA: switches between RUN CALCULATION and PROCEED TO RISK */}
+        {!calcDone ? (
+          <button
+            onClick={runCalculation}
+            disabled={!canRun}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+              color: "#ffffff",
+              background: canRun ? HD.royal : HD.slate,
+              border: "none", padding: "10px 28px",
+              cursor: canRun ? "pointer" : "not-allowed",
+              borderRadius: 3, transition: "background 0.15s",
+            }}
+          >
+            {calculating && <LoaderIcon size={14} color="#ffffff" style={{ animation: "spin 1s linear infinite" }} />}
+            {!calculating && <CheckCircleIcon size={14} color="#ffffff" />}
+            {calculating ? "RUNNING..." : "RUN CALCULATION"}
+          </button>
+        ) : (
+          <button
+            onClick={handleProceedToRisk}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+              color: "#ffffff",
+              background: HD.royal,
+              border: "none", padding: "10px 28px",
+              cursor: "pointer",
+              borderRadius: 3, transition: "background 0.15s",
+            }}
+          >
+            <ArrowRightIcon size={14} color="#ffffff" />
+            PROCEED TO RISK
+          </button>
+        )}
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -529,6 +793,67 @@ function PolicyField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function PreviewMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{label}</span>
+      <span style={{ fontFamily: HD.fontMono, fontSize: 16, fontWeight: 700, color: HD.primary }}>{value}</span>
+    </div>
+  );
+}
+
+function AssumptionsBlock({ marketAsOf, spreadBps, minTradeSizeUsd }: {
+  marketAsOf?: string;
+  spreadBps: number;
+  minTradeSizeUsd: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const asOfText = marketAsOf
+    ? new Date(marketAsOf).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+    : "latest available";
+
+  return (
+    <div style={{
+      border: `1px solid ${HD.soft}`,
+      borderRadius: 4,
+      overflow: "hidden",
+    }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%",
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "8px 12px",
+          background: HD.bgSub,
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+          borderBottom: open ? `1px solid ${HD.soft}` : "none",
+        }}
+      >
+        {open ? <ChevronDownIcon size={12} color={HD.slate} /> : <ChevronRightIcon size={12} color={HD.slate} />}
+        <span style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
+          ASSUMPTIONS
+        </span>
+      </button>
+      {open && (
+        <div style={{ padding: "10px 14px", background: HD.bgPanel }}>
+          <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.6 }}>
+            Market rates as of <strong style={{ fontFamily: HD.fontMono }}>{asOfText}</strong>.
+            {" "}Spread: <strong style={{ fontFamily: HD.fontMono }}>{spreadBps} bps</strong>.
+            {minTradeSizeUsd > 0 && (
+              <> Min trade size: <strong style={{ fontFamily: HD.fontMono }}>${fmtInt(minTradeSizeUsd)}</strong>.</>
+            )}
+            {minTradeSizeUsd === 0 && (
+              <> Min trade size: <strong style={{ fontFamily: HD.fontMono }}>none</strong>.</>
+            )}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PositionDetailList({ positions }: { positions: PositionRow[] }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -584,7 +909,7 @@ function PositionDetailList({ positions }: { positions: PositionRow[] }) {
             cursor: "pointer",
           }}
         >
-          {expanded ? "▲ COLLAPSE" : `▼ SHOW ALL ${positions.length} POSITIONS`}
+          {expanded ? "COLLAPSE" : `SHOW ALL ${positions.length} POSITIONS`}
         </button>
       )}
     </div>

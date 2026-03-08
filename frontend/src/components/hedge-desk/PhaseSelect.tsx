@@ -15,30 +15,11 @@ import {
   CheckSquareIcon, SquareIcon, AlertCircleIcon, LoaderIcon,
   ListIcon, PlusIcon, UploadIcon, CheckIcon, XIcon,
 } from "lucide-react";
+import { T } from "./tokens";
 
-/* ── Design tokens ────────────────────────────────────────────────────────── */
+/* ── Aliases for backward compat inside this file ─────────────────────────── */
 
-const HD = {
-  navy:    "#0A1F44",
-  royal:   "#1C62F2",
-  emerald: "#2ECC71",
-  crimson: "#E74C3C",
-  slate:   "#8A9AB5",
-  bgPanel: "var(--bg-panel)",
-  bgSub:   "var(--bg-sub)",
-  bgDeep:  "var(--bg-deep)",
-  rim:     "var(--border-rim)",
-  soft:    "var(--border-soft)",
-  primary: "var(--text-primary)",
-  secondary:"var(--text-secondary)",
-  tertiary: "var(--text-tertiary)",
-  cyan:    "var(--accent-cyan)",
-  amber:   "var(--accent-amber)",
-  green:   "var(--status-pass,#22c55e)",
-  red:     "var(--accent-red,#ef4444)",
-  fontUI:  "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono:"var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-} as const;
+const HD = T;
 
 type IntakeMode = "select" | "manual" | "upload";
 

@@ -5,39 +5,19 @@ import { dashboardFetch } from "@/lib/api/dashboardClient";
 import type { PositionRow } from "@/api/positionClient";
 import { translateError, translateCaughtError, type TranslatedError } from "@/lib/errors/hedgeErrors";
 import HedgeErrorBanner from "./ErrorBanner";
+import { T } from "./tokens";
 import {
   CheckCircleIcon,
   AlertTriangleIcon,
   LoaderIcon,
   ChevronLeftIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   ExternalLinkIcon,
   ShieldCheckIcon,
   CopyIcon,
 } from "lucide-react";
 import Link from "next/link";
-
-// ─── Bloomberg / BlackRock Terminal Palette ──────────────────────────────────
-
-const D = {
-  bg:        "var(--bg-panel)",
-  panel:     "#0D1017",
-  panelAlt:  "#111520",
-  panelMid:  "#141825",
-  border:    "#1A1F30",
-  borderMid: "#222A3F",
-  borderHi:  "#2D3554",
-  text:      "#C8D4EA",
-  sub:       "#6A7A98",
-  dim:       "#3A4460",
-  blue:      "#3B8EEA",
-  blueHi:    "#5BA3F5",
-  green:     "#00C896",
-  amber:     "#F0A830",
-  red:       "#FF4B6A",
-  slate:     "#7A8DAE",
-  fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-} as const;
 
 // ─── CME Contract Specifications ─────────────────────────────────────────────
 
@@ -85,19 +65,19 @@ function _fmtTick(n: number): string {
 function SectionRule({ label }: { label: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0" }}>
-      <div style={{ width: 3, height: 12, background: D.blue, borderRadius: 1, flexShrink: 0 }} />
+      <div style={{ width: 3, height: 12, background: T.cyan, borderRadius: 1, flexShrink: 0 }} />
       <span style={{
-        fontFamily:    D.fontMono,
-        fontSize:      9,
+        fontFamily:    T.fontMono,
+        fontSize:      12,
         fontWeight:    700,
-        letterSpacing: "0.20em",
-        color:         D.sub,
+        letterSpacing: "0.14em",
+        color:         T.tertiary,
         textTransform: "uppercase" as const,
         whiteSpace:    "nowrap" as const,
       }}>
         {label}
       </span>
-      <div style={{ flex: 1, height: 1, background: D.border }} />
+      <div style={{ flex: 1, height: 1, background: T.rim }} />
     </div>
   );
 }
@@ -108,9 +88,9 @@ function MetaKV({ label, value, valueColor, mono = true }: {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <span style={{
-        fontFamily:    D.fontMono,
-        fontSize:      10,
-        color:         D.dim,
+        fontFamily:    T.fontMono,
+        fontSize:      12,
+        color:         T.tertiary,
         letterSpacing: "0.10em",
         minWidth:      76,
         flexShrink:    0,
@@ -118,13 +98,66 @@ function MetaKV({ label, value, valueColor, mono = true }: {
         {label}
       </span>
       <span style={{
-        fontFamily: mono ? D.fontMono : D.fontUI,
-        fontSize:   12,
-        color:      valueColor ?? D.text,
+        fontFamily: mono ? T.fontMono : T.fontUI,
+        fontSize:   13,
+        color:      valueColor ?? T.primary,
         letterSpacing: mono ? "0.02em" : undefined,
       }}>
         {value}
       </span>
+    </div>
+  );
+}
+
+function CollapsibleSection({
+  label,
+  defaultOpen = false,
+  badge,
+  children,
+}: {
+  label: string;
+  defaultOpen?: boolean;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          margin: "4px 0",
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          textAlign: "left" as const,
+        }}
+      >
+        <div style={{ width: 3, height: 12, background: T.slate, borderRadius: 1, flexShrink: 0 }} />
+        <span style={{
+          fontFamily:    T.fontMono,
+          fontSize:      12,
+          fontWeight:    700,
+          letterSpacing: "0.14em",
+          color:         T.tertiary,
+          textTransform: "uppercase" as const,
+          whiteSpace:    "nowrap" as const,
+        }}>
+          {label}
+        </span>
+        {badge}
+        <div style={{ flex: 1, height: 1, background: T.rim }} />
+        {open
+          ? <ChevronDownIcon size={14} color={T.slate} />
+          : <ChevronRightIcon size={14} color={T.slate} />
+        }
+      </button>
+      {open && children}
     </div>
   );
 }
@@ -227,15 +260,35 @@ export default function PhaseReview({
 
   // ── Verdict ───────────────────────────────────────────────────────────────
 
-  const verdictColor = riskVerdict === "REJECT"                     ? D.red
-    : riskVerdict === "APPROVE_WITH_CONDITIONS"                     ? D.amber
-    : riskVerdict === "UNAVAILABLE"                                 ? D.amber
-    : D.green;
+  const verdictColor = riskVerdict === "REJECT"                     ? T.red
+    : riskVerdict === "APPROVE_WITH_CONDITIONS"                     ? T.amber
+    : riskVerdict === "UNAVAILABLE"                                 ? T.amber
+    : T.green;
 
   const verdictLabel = riskVerdict === "APPROVE"                    ? "RISK GATE: PASS"
     : riskVerdict === "APPROVE_WITH_CONDITIONS"                     ? "RISK GATE: CONDITIONAL"
     : riskVerdict === "UNAVAILABLE"                                 ? "RISK GATE: UNAVAILABLE"
     : riskVerdict;
+
+  // ── Decision Thesis derivation ────────────────────────────────────────────
+
+  const _isApprove = riskVerdict === "APPROVE";
+  const _isConditional = riskVerdict === "APPROVE_WITH_CONDITIONS";
+  const _thesisBorder = _isApprove ? T.green : T.amber;
+
+  // Find worst-case stress benefit (most negative sigma)
+  const _worstStress = stressRows.length > 0
+    ? stressRows.reduce((worst, s) => s.sigma < worst.sigma ? s : worst, stressRows[0])
+    : null;
+
+  const _ccyList = activeCurrencies.join("/");
+  const _policyStatus = _isApprove
+    ? "No policy violations detected."
+    : _isConditional
+    ? "Conditions require acknowledgement before execution."
+    : riskVerdict === "UNAVAILABLE"
+    ? "Risk gate unavailable -- proceed with caution."
+    : "Risk gate has rejected this plan.";
 
   // ── Submit ────────────────────────────────────────────────────────────────
 
@@ -357,6 +410,11 @@ export default function PhaseReview({
     : null;
   const _totalMarginAll = _spec && _totalContracts !== null ? _totalContracts * _spec.margin_est : null;
 
+  // CTA label derivation
+  const _ctaLabel = isSolo
+    ? `APPROVE & SUBMIT — ${_activeBuckets.length} leg${_activeBuckets.length !== 1 ? "s" : ""}, ${_coveragePct.toFixed(0)}% coverage`
+    : `SUBMIT FOR APPROVAL — ${_activeBuckets.length} leg${_activeBuckets.length !== 1 ? "s" : ""}`;
+
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
@@ -365,142 +423,156 @@ export default function PhaseReview({
     <div style={{
       display:       "flex",
       flexDirection: "column",
-      gap:            20,
-      padding:       "0 0 20px",
+      gap:            0,
       height:        "100%",
       overflowY:     "auto",
-      background:    D.bg,
-      fontFamily:    D.fontUI,
+      background:    T.bgPanel,
+      fontFamily:    T.fontUI,
     }}>
 
-      {/* ── TOP IDENTITY BAR ─────────────────────────────────────────────── */}
+      {/* ── 1. STEP HEADER (compact, ~50px) ───────────────────────────────── */}
       <div style={{
-        position:    "sticky",
-        top:          0,
-        zIndex:       20,
-        background:   D.panel,
-        borderBottom: `1px solid ${D.border}`,
-        display:      "flex",
-        alignItems:   "stretch",
-        gap:           0,
-        flexShrink:   0,
+        display:        "flex",
+        alignItems:     "center",
+        justifyContent: "space-between",
+        padding:        "14px 24px",
+        background:     T.bgSub,
+        borderBottom:   `1px solid ${T.rim}`,
+        flexShrink:     0,
       }}>
-        {/* Left — step label */}
-        <div style={{
-          borderRight: `1px solid ${D.border}`,
-          padding:     "0 20px",
-          display:     "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          gap: 3,
-          minWidth: 220,
-        }}>
-          <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.18em" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>
             STEP 4 OF 5
           </span>
-          <span style={{ fontFamily: D.fontMono, fontSize: 12, fontWeight: 700, color: D.text, letterSpacing: "0.06em" }}>
+          <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
+          <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.primary }}>
             REVIEW HEDGE PLAN
           </span>
         </div>
-
-        {/* Center — run metadata */}
-        <div style={{
-          flex:       1,
-          display:    "flex",
-          alignItems: "center",
-          gap:         0,
-          overflowX:  "auto",
-        }}>
-          {[
-            { label: "RUN",     value: (_re?.run_id ?? runId).slice(0, 8).toUpperCase() + "…", color: D.blueHi },
-            { label: "AS-OF",   value: _re?.timestamp
-                ? new Date(_re.timestamp).toLocaleString("en-GB", {
-                    day: "2-digit", month: "short", year: "numeric",
-                    hour: "2-digit", minute: "2-digit", timeZone: "UTC",
-                  }) + " UTC"
-                : "—",
-              color: D.text },
-            { label: "ENGINE",  value: _re?.engine_version ?? "—", color: D.text },
-            { label: "POLICY",  value: _re?.policy_hash ? `${_re.policy_hash.slice(0, 10)}…` : "—", color: D.sub },
-          ].map(({ label, value, color }) => (
-            <div key={label} style={{
-              borderRight: `1px solid ${D.border}`,
-              padding:     "14px 20px",
-              display:     "flex",
-              flexDirection: "column",
-              gap:           3,
-              flexShrink:   0,
-            }}>
-              <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.14em" }}>{label}</span>
-              <span style={{ fontFamily: D.fontMono, fontSize: 12, color, letterSpacing: "0.03em" }}>{value}</span>
-            </div>
-          ))}
-
-          {/* Hash + verified */}
-          <div style={{
-            borderRight: `1px solid ${D.border}`,
-            padding:     "14px 20px",
-            display:     "flex",
-            flexDirection: "column",
-            gap:           3,
-            flexShrink:   0,
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Run ID badge */}
+          <span style={{
+            fontFamily:    T.fontMono,
+            fontSize:      10,
+            letterSpacing: "0.06em",
+            color:         T.cyan,
+            padding:       "3px 10px",
+            background:    `color-mix(in srgb, ${T.cyan} 10%, transparent)`,
+            border:        `1px solid color-mix(in srgb, ${T.cyan} 25%, transparent)`,
+            borderRadius:  2,
           }}>
-            <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.14em" }}>HASH</span>
-            <span style={{ fontFamily: D.fontMono, fontSize: 12, color: D.sub }}>
-              {_re?.inputs_hash
-                ? `${_re.inputs_hash.slice(0, 16)}…`
-                : riskDecisionHash
-                ? `${riskDecisionHash.slice(0, 16)}…`
-                : "—"}
-            </span>
-          </div>
-          <div style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: 6 }}>
-            <ShieldCheckIcon size={12} color={D.green} />
-            <span style={{ fontFamily: D.fontMono, fontSize: 10, fontWeight: 700, color: D.green, letterSpacing: "0.10em" }}>
-              VERIFIED
-            </span>
-          </div>
-        </div>
-
-        {/* Right — verdict + submit */}
-        <div style={{
-          borderLeft:  `1px solid ${D.border}`,
-          padding:     "0 20px",
-          display:     "flex",
-          alignItems:  "center",
-          gap:          16,
-          flexShrink:   0,
-        }}>
+            RUN {(_re?.run_id ?? runId).slice(0, 8).toUpperCase()}
+          </span>
+          {/* Verdict badge */}
           <div style={{
             display:      "flex",
             alignItems:   "center",
-            gap:           8,
-            padding:      "5px 12px",
-            background:   `color-mix(in srgb, ${verdictColor} 12%, ${D.panel})`,
-            border:       `1px solid color-mix(in srgb, ${verdictColor} 30%, transparent)`,
+            gap:           6,
+            padding:      "3px 10px",
+            background:   `color-mix(in srgb, ${verdictColor} 10%, transparent)`,
+            border:       `1px solid color-mix(in srgb, ${verdictColor} 25%, transparent)`,
             borderRadius:  2,
           }}>
             {riskVerdict === "APPROVE"
               ? <CheckCircleIcon size={12} color={verdictColor} />
               : <AlertTriangleIcon size={12} color={verdictColor} />
             }
-            <span style={{ fontFamily: D.fontMono, fontSize: 10, fontWeight: 700, color: verdictColor, letterSpacing: "0.10em" }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: verdictColor, letterSpacing: "0.10em" }}>
               {verdictLabel}
             </span>
           </div>
-
           {submitted && (
-            <span style={{ fontFamily: D.fontMono, fontSize: 10, fontWeight: 700, color: D.green, letterSpacing: "0.10em" }}>
-              ✓ SUBMITTED
+            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.green, letterSpacing: "0.10em" }}>
+              SUBMITTED
             </span>
           )}
         </div>
       </div>
 
       {/* ── BODY CONTENT ─────────────────────────────────────────────────── */}
-      <div style={{ padding: "0 28px", display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20, flex: 1 }}>
 
-        {/* ── KPI METRICS BAND ──────────────────────────────────────────── */}
+        {/* ── 2. DECISION THESIS ─────────────────────────────────────────── */}
+        <div style={{
+          border:       `1px solid ${T.rim}`,
+          borderLeft:   `4px solid ${_thesisBorder}`,
+          borderRadius: 3,
+          background:   T.bgPanel,
+          padding:      "20px 24px",
+        }}>
+          <div style={{
+            fontFamily:    T.fontMono,
+            fontSize:      12,
+            fontWeight:    700,
+            letterSpacing: "0.14em",
+            color:         T.primary,
+            marginBottom:  14,
+          }}>
+            HEDGE RECOMMENDATION
+          </div>
+          <div style={{
+            fontFamily: T.fontUI,
+            fontSize:   14,
+            lineHeight: 1.7,
+            color:      T.secondary,
+          }}>
+            <p style={{ margin: "0 0 8px" }}>
+              Approve {_activeBuckets.length}-leg {_ccyList} hedge covering{" "}
+              <span style={{ fontFamily: T.fontMono, fontWeight: 700, color: T.primary }}>
+                {_coveragePct.toFixed(1)}%
+              </span>{" "}
+              of confirmed exposure at{" "}
+              <span style={{ fontFamily: T.fontMono, fontWeight: 700, color: T.primary }}>
+                {_costBps.toFixed(1)} bps
+              </span>{" "}
+              estimated cost
+              {_summary ? ` (${_fmtU(_summary.total_friction_usd)}).` : "."}
+            </p>
+            {_worstStress && (
+              <p style={{ margin: "0 0 8px" }}>
+                Stress analysis shows{" "}
+                <span style={{ fontFamily: T.fontMono, fontWeight: 700, color: _worstStress.total_hedge_benefit_usd > 0 ? T.green : T.red }}>
+                  {_fmtU(_worstStress.total_hedge_benefit_usd)}
+                </span>{" "}
+                hedge benefit at {_worstStress.sigma > 0 ? "+" : ""}{_worstStress.sigma}{"\u03C3"} shock.
+              </p>
+            )}
+            <p style={{ margin: 0 }}>
+              {_policyStatus}
+            </p>
+          </div>
+          {/* Footer bar: verdict + governance */}
+          <div style={{
+            display:    "flex",
+            alignItems: "center",
+            gap:         16,
+            marginTop:   14,
+            paddingTop:  12,
+            borderTop:  `1px solid ${T.rim}`,
+            flexWrap:   "wrap" as const,
+          }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>Risk verdict:</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: verdictColor }}>
+              {riskVerdict === "APPROVE" ? "PASS" : riskVerdict === "APPROVE_WITH_CONDITIONS" ? "CONDITIONAL" : riskVerdict}
+            </span>
+            <span style={{ width: 1, height: 12, background: T.rim, display: "inline-block" }} />
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>Governance:</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.primary }}>
+              {isSolo ? "SOLO" : "4-EYES"}
+            </span>
+            {_summary && (
+              <>
+                <span style={{ width: 1, height: 12, background: T.rim, display: "inline-block" }} />
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>Total action:</span>
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.primary }}>
+                  {_fmtU(_summary.total_action_usd)}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── 3. KPI METRICS BAND ────────────────────────────────────────── */}
         {_summary && (
           <>
             <SectionRule label="Performance Metrics" />
@@ -508,9 +580,9 @@ export default function PhaseReview({
               display:             "grid",
               gridTemplateColumns: "repeat(5, 1fr)",
               gap:                  1,
-              background:           D.border,
-              border:              `1px solid ${D.border}`,
-              borderRadius:         2,
+              background:           T.rim,
+              border:              `1px solid ${T.rim}`,
+              borderRadius:         3,
               overflow:            "hidden",
             }}>
               {([
@@ -518,41 +590,41 @@ export default function PhaseReview({
                   label: "COVERAGE RATIO",
                   value: `${_coveragePct.toFixed(1)}%`,
                   sub:   _coveragePct >= 80 ? "TARGET MET" : _coveragePct >= 50 ? "PARTIAL" : "BELOW TARGET",
-                  color: _coveragePct >= 80 ? D.green : _coveragePct >= 50 ? D.amber : D.red,
+                  color: _coveragePct >= 80 ? T.green : _coveragePct >= 50 ? T.amber : T.red,
                 },
                 {
                   label: "TOTAL ACTION",
                   value: _fmtU(_summary.total_action_usd),
                   sub:   "USD EQUIVALENT",
-                  color: D.text,
+                  color: T.primary,
                 },
                 {
                   label: "HEDGE POSITION",
                   value: `${_fmtN(_summary.total_hedge_position_mxn)}`,
                   sub:   `${_primaryCcy} LOCKED`,
-                  color: D.text,
+                  color: T.primary,
                 },
                 {
                   label: "RESIDUAL EXPOSURE",
                   value: `${_fmtN(_summary.total_residual_mxn)}`,
                   sub:   _summary.total_residual_mxn > 0 ? "OPEN RISK" : "FULLY COVERED",
-                  color: _summary.total_residual_mxn > 0 ? D.amber : D.green,
+                  color: _summary.total_residual_mxn > 0 ? T.amber : T.green,
                 },
                 {
                   label: "FRICTION COST",
                   value: `${_costBps.toFixed(1)} bps`,
                   sub:   _fmtU(_summary.total_friction_usd),
-                  color: D.sub,
+                  color: T.secondary,
                 },
               ] as Array<{ label: string; value: string; sub: string; color: string }>).map(({ label, value, sub, color }) => (
-                <div key={label} style={{ background: D.panel, padding: "18px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.18em" }}>
+                <div key={label} style={{ background: T.bgPanel, padding: "14px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.14em" }}>
                     {label}
                   </span>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 26, fontWeight: 700, color, lineHeight: 1 }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 22, fontWeight: 700, color, lineHeight: 1 }}>
                     {value}
                   </span>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 9, color: D.sub, letterSpacing: "0.10em" }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary, letterSpacing: "0.08em" }}>
                     {sub}
                   </span>
                 </div>
@@ -561,19 +633,19 @@ export default function PhaseReview({
           </>
         )}
 
-        {/* ── EXECUTION LEGS ────────────────────────────────────────────── */}
+        {/* ── 4. EXECUTION PLAN ──────────────────────────────────────────── */}
         {_activeBuckets.length > 0 && (
           <>
             <SectionRule label={`Execution Legs  ·  ${_activeBuckets.length} active`} />
-            <div style={{ border: `1px solid ${D.border}`, borderRadius: 2, overflow: "hidden" }}>
+            <div style={{ border: `1px solid ${T.rim}`, borderRadius: 3, overflow: "hidden" }}>
 
               {/* Column headers */}
               <div style={{
                 display:             "grid",
                 gridTemplateColumns: "120px 160px 90px 120px 150px 130px 120px 110px",
                 padding:             "8px 16px",
-                background:          D.panelMid,
-                borderBottom:        `1px solid ${D.border}`,
+                background:          T.bgSub,
+                borderBottom:        `1px solid ${T.rim}`,
                 minWidth:             1020,
               }}>
                 {([
@@ -587,11 +659,11 @@ export default function PhaseReview({
                   { h: "COST",       align: "right" },
                 ] as Array<{ h: string; align: "left" | "right" }>).map(({ h, align }) => (
                   <span key={h} style={{
-                    fontFamily:    D.fontMono,
-                    fontSize:      9,
+                    fontFamily:    T.fontMono,
+                    fontSize:      12,
                     fontWeight:    700,
-                    letterSpacing: "0.16em",
-                    color:         D.dim,
+                    letterSpacing: "0.12em",
+                    color:         T.tertiary,
                     textAlign:     align,
                   }}>
                     {h}
@@ -616,13 +688,13 @@ export default function PhaseReview({
                       display:             "grid",
                       gridTemplateColumns: "120px 160px 90px 120px 150px 130px 120px 110px",
                       padding:             "10px 16px",
-                      borderBottom:        i < _activeBuckets.length - 1 ? `1px solid ${D.border}` : "none",
+                      borderBottom:        i < _activeBuckets.length - 1 ? `1px solid ${T.rim}` : "none",
                       alignItems:          "center",
-                      background:           i % 2 === 0 ? D.panel : D.panelAlt,
+                      background:           i % 2 === 0 ? T.bgPanel : T.bgSub,
                       minWidth:             1020,
                     }}
                   >
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 600, color: D.blueHi }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 600, color: T.cyan }}>
                       {b.bucket}
                     </span>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -630,38 +702,38 @@ export default function PhaseReview({
                         display:      "inline-block",
                         padding:      "1px 6px",
                         background:   isSell
-                          ? `color-mix(in srgb, ${D.red} 15%, transparent)`
-                          : `color-mix(in srgb, ${D.green} 15%, transparent)`,
-                        border:       `1px solid color-mix(in srgb, ${isSell ? D.red : D.green} 35%, transparent)`,
-                        borderRadius:  1,
-                        fontFamily:    D.fontMono,
+                          ? `color-mix(in srgb, ${T.red} 12%, transparent)`
+                          : `color-mix(in srgb, ${T.green} 12%, transparent)`,
+                        border:       `1px solid color-mix(in srgb, ${isSell ? T.red : T.green} 30%, transparent)`,
+                        borderRadius:  2,
+                        fontFamily:    T.fontMono,
                         fontSize:      10,
                         fontWeight:    700,
                         letterSpacing: "0.06em",
-                        color:         isSell ? D.red : D.green,
+                        color:         isSell ? T.red : T.green,
                       }}>
                         {isSell ? "SELL" : "BUY"}
                       </span>
-                      <span style={{ fontFamily: D.fontMono, fontSize: 10, color: D.sub }}>
+                      <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary }}>
                         {isSell ? "/ BUY USD" : "/ SELL USD"}
                       </span>
                     </div>
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.text, textAlign: "right" as const }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.primary, textAlign: "right" as const }}>
                       {contracts.toLocaleString("en-US")}
                     </span>
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.text, textAlign: "right" as const }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.primary, textAlign: "right" as const }}>
                       {_fmtD(b.forward_rate)}
                     </span>
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.sub, textAlign: "right" as const }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.tertiary, textAlign: "right" as const }}>
                       {_fmtN(b.commercial_exposure_mxn ?? 0)}
                     </span>
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.text, textAlign: "right" as const }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.primary, textAlign: "right" as const }}>
                       {_fmtU(b.action_usd)}
                     </span>
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.amber, textAlign: "right" as const }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.amber, textAlign: "right" as const }}>
                       {spec ? _fmtU(marginReq) : "—"}
                     </span>
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.sub, textAlign: "right" as const }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.tertiary, textAlign: "right" as const }}>
                       {_fmtU(b.friction_usd ?? 0)}
                     </span>
                   </div>
@@ -674,29 +746,29 @@ export default function PhaseReview({
                   display:             "grid",
                   gridTemplateColumns: "120px 160px 90px 120px 150px 130px 120px 110px",
                   padding:             "9px 16px",
-                  background:          D.panelMid,
+                  background:          T.bgSub,
                   alignItems:          "center",
-                  borderTop:           `2px solid ${D.borderMid}`,
+                  borderTop:           `2px solid ${T.soft}`,
                   minWidth:             1020,
                 }}>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: D.dim }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>
                     TOTAL
                   </span>
                   <span />
-                  <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: D.text, textAlign: "right" as const }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.primary, textAlign: "right" as const }}>
                     {_totalContracts !== null ? _totalContracts.toLocaleString("en-US") : "—"}
                   </span>
                   <span />
-                  <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: D.text, textAlign: "right" as const }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.primary, textAlign: "right" as const }}>
                     {_fmtN(_summary.total_commercial_exposure_mxn)}
                   </span>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: D.text, textAlign: "right" as const }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.primary, textAlign: "right" as const }}>
                     {_fmtU(_summary.total_action_usd)}
                   </span>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: D.amber, textAlign: "right" as const }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.amber, textAlign: "right" as const }}>
                     {_totalMarginAll !== null ? _fmtU(_totalMarginAll) : "—"}
                   </span>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: D.sub, textAlign: "right" as const }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.secondary, textAlign: "right" as const }}>
                     {_fmtU(_summary.total_friction_usd)}
                   </span>
                 </div>
@@ -705,126 +777,29 @@ export default function PhaseReview({
           </>
         )}
 
-        {/* ── FUTURES CONTRACT SPECIFICATIONS ───────────────────────────── */}
-        {activeCurrencies.some(ccy => !!CME_SPECS[ccy]) && (
-          <>
-            <SectionRule label="Futures Contract Specifications  ·  CME Group" />
-            <div style={{ display: "flex", flexDirection: "column", gap: 1, background: D.border, border: `1px solid ${D.border}`, borderRadius: 2, overflow: "hidden" }}>
-              {activeCurrencies.filter(ccy => !!CME_SPECS[ccy]).map(ccy => {
-                const spec = CME_SPECS[ccy]!;
-                const matchingBucket = _activeBuckets.find(
-                  b => b.bucket.startsWith(ccy) || b.bucket === ccy
-                ) ?? _activeBuckets[0];
-                const contractsNeeded = matchingBucket
-                  ? Math.ceil(Math.abs(matchingBucket.action_mxn) / spec.contract_size)
-                  : 0;
-                const totalMargin   = contractsNeeded * spec.margin_est;
-                const notionalValue = matchingBucket
-                  ? contractsNeeded * spec.contract_size * matchingBucket.forward_rate
-                  : 0;
-
-                return (
-                  <div key={ccy} style={{ background: D.panel }}>
-                    {/* Instrument header */}
-                    <div style={{
-                      display:        "flex",
-                      alignItems:     "center",
-                      gap:             16,
-                      padding:        "10px 18px",
-                      borderBottom:   `1px solid ${D.border}`,
-                      background:     D.panelMid,
-                    }}>
-                      <span style={{ fontFamily: D.fontMono, fontSize: 18, fontWeight: 700, color: D.blueHi }}>
-                        {spec.symbol}
-                      </span>
-                      <span style={{ fontFamily: D.fontMono, fontSize: 11, fontWeight: 600, color: D.text, letterSpacing: "0.04em" }}>
-                        {spec.name.toUpperCase()}
-                      </span>
-                      <div style={{ flex: 1 }} />
-                      <span style={{
-                        fontFamily:    D.fontMono,
-                        fontSize:       9,
-                        fontWeight:     700,
-                        letterSpacing: "0.14em",
-                        color:          D.blue,
-                        padding:       "2px 8px",
-                        border:        `1px solid ${D.borderMid}`,
-                        borderRadius:   1,
-                      }}>
-                        {spec.exchange}
-                      </span>
-                    </div>
-
-                    {/* Spec grid */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 1, background: D.border }}>
-                      {([
-                        { label: "CONTRACT SIZE", value: `${_fmtN(spec.contract_size)} ${spec.currency}` },
-                        { label: "TICK SIZE",     value: _fmtTick(spec.tick_size) },
-                        { label: "TICK VALUE",    value: `$${spec.tick_value.toFixed(2)}` },
-                        { label: "MARGIN EST",    value: _fmtU(spec.margin_est) },
-                        { label: "SETTLEMENT",    value: spec.settle },
-                        { label: "EXCHANGE",      value: spec.exchange },
-                      ] as Array<{ label: string; value: string }>).map(({ label, value }) => (
-                        <div key={label} style={{ background: D.panel, padding: "12px 14px" }}>
-                          <div style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.14em", marginBottom: 6 }}>
-                            {label}
-                          </div>
-                          <div style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 600, color: D.text }}>
-                            {value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Derived row */}
-                    {contractsNeeded > 0 && (
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, background: D.border, borderTop: `1px solid ${D.border}` }}>
-                        {([
-                          { label: "CONTRACTS NEEDED", value: contractsNeeded.toLocaleString("en-US"), color: D.blueHi },
-                          { label: "TOTAL MARGIN REQ",  value: _fmtU(totalMargin),                      color: D.amber },
-                          { label: "NOTIONAL VALUE",    value: _fmtU(notionalValue),                    color: D.text },
-                        ] as Array<{ label: string; value: string; color: string }>).map(({ label, value, color }) => (
-                          <div key={label} style={{ background: D.panelAlt, padding: "12px 14px" }}>
-                            <div style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.14em", marginBottom: 6 }}>
-                              {label}
-                            </div>
-                            <div style={{ fontFamily: D.fontMono, fontSize: 16, fontWeight: 700, color }}>
-                              {value}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* ── STRESS SCENARIOS ──────────────────────────────────────────── */}
+        {/* ── 5. STRESS SCENARIOS ────────────────────────────────────────── */}
         {stressRows.length > 0 && (
           <>
             <SectionRule label="Stress Scenarios  ·  Hedge Benefit Analysis" />
-            <div style={{ border: `1px solid ${D.border}`, borderRadius: 2, overflow: "hidden" }}>
+            <div style={{ border: `1px solid ${T.rim}`, borderRadius: 3, overflow: "hidden" }}>
               <div style={{
                 display:             "grid",
                 gridTemplateColumns: "80px 140px 180px 180px 180px",
                 padding:             "8px 16px",
-                background:          D.panelMid,
-                borderBottom:        `1px solid ${D.border}`,
+                background:          T.bgSub,
+                borderBottom:        `1px solid ${T.rim}`,
                 minWidth:             780,
               }}>
                 {([
-                  { h: "σ",             align: "right" },
+                  { h: "\u03C3",       align: "right" },
                   { h: "SHOCKED SPOT",  align: "right" },
                   { h: "UNHEDGED P&L",  align: "right" },
                   { h: "HEDGED P&L",    align: "right" },
                   { h: "HEDGE BENEFIT", align: "right" },
                 ] as Array<{ h: string; align: "right" }>).map(({ h, align }) => (
                   <span key={h} style={{
-                    fontFamily: D.fontMono, fontSize: 9, fontWeight: 700,
-                    letterSpacing: "0.16em", color: D.dim, textAlign: align,
+                    fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
+                    letterSpacing: "0.12em", color: T.tertiary, textAlign: align,
                   }}>
                     {h}
                   </span>
@@ -832,9 +807,9 @@ export default function PhaseReview({
               </div>
 
               {stressRows.map((t, i) => {
-                const bColor = t.total_hedge_benefit_usd > 0 ? D.green
-                  : t.total_hedge_benefit_usd < 0 ? D.red
-                  : D.sub;
+                const bColor = t.total_hedge_benefit_usd > 0 ? T.green
+                  : t.total_hedge_benefit_usd < 0 ? T.red
+                  : T.secondary;
                 return (
                   <div
                     key={t.sigma}
@@ -842,25 +817,25 @@ export default function PhaseReview({
                       display:             "grid",
                       gridTemplateColumns: "80px 140px 180px 180px 180px",
                       padding:             "9px 16px",
-                      borderBottom:        i < stressRows.length - 1 ? `1px solid ${D.border}` : "none",
+                      borderBottom:        i < stressRows.length - 1 ? `1px solid ${T.rim}` : "none",
                       alignItems:          "center",
-                      background:           i % 2 === 0 ? D.panel : D.panelAlt,
+                      background:           i % 2 === 0 ? T.bgPanel : T.bgSub,
                       minWidth:             780,
                     }}
                   >
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, fontWeight: 700, color: t.sigma < 0 ? D.red : D.green, textAlign: "right" as const }}>
-                      {t.sigma > 0 ? "+" : ""}{t.sigma}σ
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: t.sigma < 0 ? T.red : T.green, textAlign: "right" as const }}>
+                      {t.sigma > 0 ? "+" : ""}{t.sigma}{"\u03C3"}
                     </span>
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.sub, textAlign: "right" as const }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.secondary, textAlign: "right" as const }}>
                       {_fmtD(t.shocked_spot)}
                     </span>
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.red, textAlign: "right" as const }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.red, textAlign: "right" as const }}>
                       {_fmtU(t.total_unhedged_usd)}
                     </span>
-                    <span style={{ fontFamily: D.fontMono, fontSize: 13, color: D.amber, textAlign: "right" as const }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 13, color: T.amber, textAlign: "right" as const }}>
                       {_fmtU(t.total_hedged_usd)}
                     </span>
-                    <span style={{ fontFamily: D.fontMono, fontSize: 14, fontWeight: 700, color: bColor, textAlign: "right" as const }}>
+                    <span style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: bColor, textAlign: "right" as const }}>
                       {_fmtU(t.total_hedge_benefit_usd)}
                     </span>
                   </div>
@@ -870,20 +845,194 @@ export default function PhaseReview({
           </>
         )}
 
-        {/* ── POSITIONS IN SCOPE ────────────────────────────────────────── */}
+        {/* ── 6. RUN METADATA & AUDIT (collapsible, default closed) ──────── */}
+        <CollapsibleSection
+          label="Run Metadata & Audit"
+          badge={
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <ShieldCheckIcon size={12} color={T.green} />
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.green, letterSpacing: "0.08em" }}>
+                VERIFIED
+              </span>
+            </span>
+          }
+        >
+          {/* Run metadata grid */}
+          <div style={{
+            display:             "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap:                  1,
+            background:           T.rim,
+            border:              `1px solid ${T.rim}`,
+            borderRadius:         3,
+            overflow:            "hidden",
+            marginTop:            8,
+          }}>
+            {([
+              { label: "RUN ID",       value: _re?.run_id ?? runId },
+              { label: "AS-OF",        value: _re?.timestamp
+                  ? new Date(_re.timestamp).toLocaleString("en-GB", {
+                      day: "2-digit", month: "short", year: "numeric",
+                      hour: "2-digit", minute: "2-digit", timeZone: "UTC",
+                    }) + " UTC"
+                  : "—" },
+              { label: "ENGINE",       value: _re?.engine_version ?? "—" },
+              { label: "POLICY HASH",  value: _re?.policy_hash ?? "—" },
+              { label: "INPUTS HASH",  value: _re?.inputs_hash ?? "—" },
+              { label: "OUTPUTS HASH", value: _re?.outputs_hash ?? "—" },
+            ] as Array<{ label: string; value: string }>).map(({ label, value }) => (
+              <div key={label} style={{ background: T.bgPanel, padding: "12px 14px" }}>
+                <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.12em", marginBottom: 4 }}>
+                  {label}
+                </div>
+                <code style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary, wordBreak: "break-all" as const }}>
+                  {value}
+                </code>
+              </div>
+            ))}
+          </div>
+
+          {/* Risk decision hash */}
+          {riskDecisionHash && (
+            <div style={{
+              marginTop:    8,
+              border:      `1px solid ${T.rim}`,
+              borderRadius: 3,
+              background:   T.bgPanel,
+              padding:     "12px 14px",
+            }}>
+              <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.12em", marginBottom: 4 }}>
+                RISK DECISION HASH
+              </div>
+              <code style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary, wordBreak: "break-all" as const }}>
+                {riskDecisionHash}
+              </code>
+            </div>
+          )}
+
+          {/* CME Contract Specifications (reference data, inside collapsible) */}
+          {activeCurrencies.some(ccy => !!CME_SPECS[ccy]) && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{
+                fontFamily:    T.fontMono,
+                fontSize:      12,
+                fontWeight:    700,
+                letterSpacing: "0.12em",
+                color:         T.tertiary,
+                marginBottom:  8,
+              }}>
+                CME CONTRACT SPECIFICATIONS
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 1, background: T.rim, border: `1px solid ${T.rim}`, borderRadius: 3, overflow: "hidden" }}>
+                {activeCurrencies.filter(ccy => !!CME_SPECS[ccy]).map(ccy => {
+                  const spec = CME_SPECS[ccy]!;
+                  const matchingBucket = _activeBuckets.find(
+                    b => b.bucket.startsWith(ccy) || b.bucket === ccy
+                  ) ?? _activeBuckets[0];
+                  const contractsNeeded = matchingBucket
+                    ? Math.ceil(Math.abs(matchingBucket.action_mxn) / spec.contract_size)
+                    : 0;
+                  const totalMargin   = contractsNeeded * spec.margin_est;
+                  const notionalValue = matchingBucket
+                    ? contractsNeeded * spec.contract_size * matchingBucket.forward_rate
+                    : 0;
+
+                  return (
+                    <div key={ccy} style={{ background: T.bgPanel }}>
+                      {/* Instrument header */}
+                      <div style={{
+                        display:        "flex",
+                        alignItems:     "center",
+                        gap:             16,
+                        padding:        "10px 18px",
+                        borderBottom:   `1px solid ${T.rim}`,
+                        background:     T.bgSub,
+                      }}>
+                        <span style={{ fontFamily: T.fontMono, fontSize: 18, fontWeight: 700, color: T.cyan }}>
+                          {spec.symbol}
+                        </span>
+                        <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, color: T.primary, letterSpacing: "0.04em" }}>
+                          {spec.name.toUpperCase()}
+                        </span>
+                        <div style={{ flex: 1 }} />
+                        <span style={{
+                          fontFamily:    T.fontMono,
+                          fontSize:       12,
+                          fontWeight:     700,
+                          letterSpacing: "0.12em",
+                          color:          T.cyan,
+                          padding:       "2px 8px",
+                          border:        `1px solid ${T.soft}`,
+                          borderRadius:   2,
+                        }}>
+                          {spec.exchange}
+                        </span>
+                      </div>
+
+                      {/* Spec grid */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 1, background: T.rim }}>
+                        {([
+                          { label: "CONTRACT SIZE", value: `${_fmtN(spec.contract_size)} ${spec.currency}` },
+                          { label: "TICK SIZE",     value: _fmtTick(spec.tick_size) },
+                          { label: "TICK VALUE",    value: `$${spec.tick_value.toFixed(2)}` },
+                          { label: "MARGIN EST",    value: _fmtU(spec.margin_est) },
+                          { label: "SETTLEMENT",    value: spec.settle },
+                          { label: "EXCHANGE",      value: spec.exchange },
+                        ] as Array<{ label: string; value: string }>).map(({ label, value }) => (
+                          <div key={label} style={{ background: T.bgPanel, padding: "10px 12px" }}>
+                            <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.12em", marginBottom: 4 }}>
+                              {label}
+                            </div>
+                            <div style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 600, color: T.primary }}>
+                              {value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Derived row */}
+                      {contractsNeeded > 0 && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1, background: T.rim, borderTop: `1px solid ${T.rim}` }}>
+                          {([
+                            { label: "CONTRACTS NEEDED", value: contractsNeeded.toLocaleString("en-US"), color: T.cyan },
+                            { label: "TOTAL MARGIN REQ",  value: _fmtU(totalMargin),                      color: T.amber },
+                            { label: "NOTIONAL VALUE",    value: _fmtU(notionalValue),                    color: T.primary },
+                          ] as Array<{ label: string; value: string; color: string }>).map(({ label, value, color }) => (
+                            <div key={label} style={{ background: T.bgSub, padding: "10px 12px" }}>
+                              <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.12em", marginBottom: 4 }}>
+                                {label}
+                              </div>
+                              <div style={{ fontFamily: T.fontMono, fontSize: 16, fontWeight: 700, color }}>
+                                {value}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </CollapsibleSection>
+
+        {/* ── 7. POSITIONS IN SCOPE (collapsible, default collapsed if >5) ── */}
         {positions.length > 0 && (
-          <>
-            <SectionRule label={`Positions in Scope  ·  ${positions.length} position${positions.length !== 1 ? "s" : ""}`} />
-            <div style={{ border: `1px solid ${D.border}`, borderRadius: 2, overflow: "hidden" }}>
+          <CollapsibleSection
+            label={`Positions in Scope  ·  ${positions.length} position${positions.length !== 1 ? "s" : ""}`}
+            defaultOpen={positions.length <= 5}
+          >
+            <div style={{ border: `1px solid ${T.rim}`, borderRadius: 3, overflow: "hidden", marginTop: 8 }}>
               <div style={{
                 display:             "grid",
                 gridTemplateColumns: "1fr 90px 110px 130px 160px",
                 padding:             "8px 16px",
-                background:          D.panelMid,
-                borderBottom:        `1px solid ${D.border}`,
+                background:          T.bgSub,
+                borderBottom:        `1px solid ${T.rim}`,
               }}>
                 {(["ENTITY", "TYPE", "CURRENCY", "AMOUNT", "VALUE DATE"] as string[]).map(h => (
-                  <span key={h} style={{ fontFamily: D.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", color: D.dim }}>
+                  <span key={h} style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: T.tertiary }}>
                     {h}
                   </span>
                 ))}
@@ -893,54 +1042,19 @@ export default function PhaseReview({
                   display:             "grid",
                   gridTemplateColumns: "1fr 90px 110px 130px 160px",
                   padding:             "9px 16px",
-                  borderBottom:        i < positions.length - 1 ? `1px solid ${D.border}` : "none",
-                  background:           i % 2 === 0 ? D.panel : D.panelAlt,
+                  borderBottom:        i < positions.length - 1 ? `1px solid ${T.rim}` : "none",
+                  background:           i % 2 === 0 ? T.bgPanel : T.bgSub,
                 }}>
-                  <span style={{ fontFamily: D.fontUI,   fontSize: 13, color: D.text   }}>{p.entity}</span>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 11, color: D.sub    }}>{p.type}</span>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 12, color: D.blueHi }}>{p.currency}</span>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 12, color: D.text   }}>{_fmtN(p.amount ?? 0)}</span>
-                  <span style={{ fontFamily: D.fontMono, fontSize: 11, color: D.sub    }}>{p.value_date ?? "—"}</span>
+                  <span style={{ fontFamily: T.fontUI,   fontSize: 13, color: T.primary   }}>{p.entity}</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary  }}>{p.type}</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.cyan      }}>{p.currency}</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.primary   }}>{_fmtN(p.amount ?? 0)}</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary  }}>{p.value_date ?? "—"}</span>
                 </div>
               ))}
             </div>
-          </>
+          </CollapsibleSection>
         )}
-
-        {/* ── AUDIT REFERENCE (collapsible detail) ──────────────────────── */}
-        <SectionRule label="Audit Provenance" />
-        <div style={{
-          display:             "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
-          gap:                  1,
-          background:           D.border,
-          border:              `1px solid ${D.border}`,
-          borderRadius:         2,
-          overflow:            "hidden",
-        }}>
-          {([
-            { label: "RUN ID",              value: _re?.run_id ?? runId,                    full: true },
-            { label: "RISK DECISION HASH",  value: riskDecisionHash || "—",                 full: false },
-            { label: "INPUTS HASH",         value: _re?.inputs_hash ?? "—",                 full: false },
-            { label: "OUTPUTS HASH",        value: _re?.outputs_hash ?? "—",                full: false },
-          ] as Array<{ label: string; value: string; full: boolean }>).map(({ label, value, full }) => (
-            <div
-              key={label}
-              style={{
-                background:  D.panel,
-                padding:    "12px 16px",
-                gridColumn:  full ? "1 / -1" : undefined,
-              }}
-            >
-              <div style={{ fontFamily: D.fontMono, fontSize: 9, color: D.dim, letterSpacing: "0.14em", marginBottom: 6 }}>
-                {label}
-              </div>
-              <code style={{ fontFamily: D.fontMono, fontSize: 11, color: D.sub, wordBreak: "break-all" as const }}>
-                {value}
-              </code>
-            </div>
-          ))}
-        </div>
 
         {/* ── ERROR BANNER ──────────────────────────────────────────────── */}
         {error && (
@@ -957,20 +1071,20 @@ export default function PhaseReview({
         {submitted && !isSolo && (
           <div style={{
             padding:     "14px 18px",
-            background:  `color-mix(in srgb, ${D.amber} 8%, ${D.panel})`,
-            border:      `1px solid color-mix(in srgb, ${D.amber} 25%, transparent)`,
-            borderRadius: 2,
+            background:  `color-mix(in srgb, ${T.amber} 8%, ${T.bgPanel})`,
+            border:      `1px solid color-mix(in srgb, ${T.amber} 25%, transparent)`,
+            borderRadius: 3,
             display:     "flex",
             alignItems:  "center",
             gap:          14,
           }}>
-            <AlertTriangleIcon size={14} color={D.amber} />
+            <AlertTriangleIcon size={14} color={T.amber} />
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontFamily: D.fontMono, fontSize: 11, fontWeight: 700, color: D.amber, letterSpacing: "0.08em" }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.amber, letterSpacing: "0.08em" }}>
                 PROPOSALS SUBMITTED — AWAITING CHECKER APPROVAL
               </span>
-              <Link href="/staging" style={{ fontFamily: D.fontMono, fontSize: 10, color: D.blue, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-                VIEW STAGING QUEUE <ExternalLinkIcon size={10} color={D.blue} />
+              <Link href="/staging" style={{ fontFamily: T.fontMono, fontSize: 12, color: T.cyan, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                VIEW STAGING QUEUE <ExternalLinkIcon size={10} color={T.cyan} />
               </Link>
             </div>
           </div>
@@ -979,11 +1093,11 @@ export default function PhaseReview({
         {submitted && isSolo && (
           <div style={{
             padding:     "12px 16px",
-            background:  `color-mix(in srgb, ${D.green} 8%, ${D.panel})`,
-            border:      `1px solid color-mix(in srgb, ${D.green} 25%, transparent)`,
-            borderRadius: 2,
+            background:  `color-mix(in srgb, ${T.green} 8%, ${T.bgPanel})`,
+            border:      `1px solid color-mix(in srgb, ${T.green} 25%, transparent)`,
+            borderRadius: 3,
           }}>
-            <span style={{ fontFamily: D.fontMono, fontSize: 12, fontWeight: 700, color: D.green, letterSpacing: "0.08em" }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.green, letterSpacing: "0.08em" }}>
               SELF-APPROVED (SOLO MODE) — {proposalIds.length} PROPOSAL{proposalIds.length !== 1 ? "S" : ""} STAGED
             </span>
           </div>
@@ -991,14 +1105,14 @@ export default function PhaseReview({
 
       </div>
 
-      {/* ── ACTION BAR ──────────────────────────────────────────────────── */}
+      {/* ── 9. ACTION BAR (sticky bottom) ────────────────────────────────── */}
       <div style={{
         position:       "sticky",
         bottom:          0,
         zIndex:          20,
-        background:      D.panel,
-        borderTop:      `1px solid ${D.borderMid}`,
-        padding:        "12px 28px",
+        background:      T.bgSub,
+        borderTop:      `1px solid ${T.soft}`,
+        padding:        "12px 24px",
         display:        "flex",
         alignItems:     "center",
         gap:             12,
@@ -1011,12 +1125,12 @@ export default function PhaseReview({
             display:      "flex",
             alignItems:   "center",
             gap:           4,
-            fontFamily:    D.fontMono,
-            fontSize:      10,
+            fontFamily:    T.fontMono,
+            fontSize:      12,
             letterSpacing: "0.06em",
-            color:         D.sub,
+            color:         T.secondary,
             background:   "transparent",
-            border:       `1px solid ${D.border}`,
+            border:       `1px solid ${T.rim}`,
             padding:      "8px 14px",
             cursor:        "pointer",
             borderRadius:  3,
@@ -1026,16 +1140,16 @@ export default function PhaseReview({
           BACK
         </button>
 
-        {/* Center — status + copy actions */}
+        {/* Center -- status + copy actions */}
         <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
           {submitted && (
-            <span style={{ fontFamily: D.fontMono, fontSize: 10, color: D.green, display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.green, display: "flex", alignItems: "center", gap: 4 }}>
               <CheckCircleIcon size={10} />
               {isSolo ? "APPROVED" : "SUBMITTED"}
             </span>
           )}
           {!submitted && !submitting && (
-            <span style={{ fontFamily: D.fontMono, fontSize: 10, color: D.green, display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.green, display: "flex", alignItems: "center", gap: 4 }}>
               <CheckCircleIcon size={10} />
               READY TO SUBMIT
             </span>
@@ -1050,12 +1164,12 @@ export default function PhaseReview({
               display:      "flex",
               alignItems:   "center",
               gap:           4,
-              fontFamily:    D.fontMono,
-              fontSize:      10,
+              fontFamily:    T.fontMono,
+              fontSize:      12,
               letterSpacing: "0.06em",
-              color:         copied === "text" ? D.green : D.sub,
+              color:         copied === "text" ? T.green : T.secondary,
               background:   "transparent",
-              border:       `1px solid ${D.border}`,
+              border:       `1px solid ${T.rim}`,
               padding:      "8px 12px",
               cursor:        "pointer",
               borderRadius:  3,
@@ -1072,12 +1186,12 @@ export default function PhaseReview({
               display:      "flex",
               alignItems:   "center",
               gap:           4,
-              fontFamily:    D.fontMono,
-              fontSize:      10,
+              fontFamily:    T.fontMono,
+              fontSize:      12,
               letterSpacing: "0.06em",
-              color:         copied === "json" ? D.green : D.sub,
+              color:         copied === "json" ? T.green : T.secondary,
               background:   "transparent",
-              border:       `1px solid ${D.border}`,
+              border:       `1px solid ${T.rim}`,
               padding:      "8px 12px",
               cursor:        "pointer",
               borderRadius:  3,
@@ -1088,7 +1202,7 @@ export default function PhaseReview({
           </button>
         </div>
 
-        {/* Primary CTA */}
+        {/* Primary CTA -- enhanced label */}
         {!submitted && (
           <button
             onClick={handleSubmit}
@@ -1097,14 +1211,14 @@ export default function PhaseReview({
               display:      "flex",
               alignItems:   "center",
               gap:           8,
-              fontFamily:    D.fontMono,
-              fontSize:      11,
+              fontFamily:    T.fontMono,
+              fontSize:      12,
               fontWeight:    700,
-              letterSpacing: "0.10em",
+              letterSpacing: "0.08em",
               color:         "#fff",
-              background:    submitting ? D.dim : D.blue,
+              background:    submitting ? T.tertiary : T.royal,
               border:       "none",
-              padding:      "10px 28px",
+              padding:      "10px 24px",
               cursor:        submitting ? "not-allowed" : "pointer",
               borderRadius:  3,
               whiteSpace:   "nowrap" as const,
@@ -1112,7 +1226,7 @@ export default function PhaseReview({
             }}
           >
             {submitting && <LoaderIcon size={13} color="#fff" style={{ animation: "spin 1s linear infinite" }} />}
-            {isSolo ? "APPROVE & SUBMIT →" : "SUBMIT FOR APPROVAL →"}
+            {_ctaLabel} {"\u2192"}
           </button>
         )}
       </div>

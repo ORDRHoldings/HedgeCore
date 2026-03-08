@@ -29,6 +29,15 @@ const HD = {
 
 const PHASES = ["SELECT", "CALCULATE", "RISK", "REVIEW", "EXECUTE", "COMPLETE"];
 
+const PHASE_INSTRUCTIONS: Record<number, string> = {
+  0: "Select open positions to include in this hedge run.",
+  1: "Configure policy parameters and run the hedge calculation engine.",
+  2: "Review risk metrics and confirm the risk assessment verdict.",
+  3: "Review hedge proposals and submit for execution approval.",
+  4: "Execute approved proposals and record fill details.",
+  5: "Hedge run complete. Review the summary or start a new run.",
+};
+
 interface HedgeDeskPipelineProps {
   token: string;
   user: UserContext;
@@ -134,6 +143,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
           currentPhase={0}
           completedPhases={new Set()}
           onPhaseClick={() => {}}
+          instruction={PHASE_INSTRUCTIONS[0]}
         />
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{
@@ -199,6 +209,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
         currentPhase={phase}
         completedPhases={completedPhases}
         onPhaseClick={handlePhaseClick}
+        instruction={PHASE_INSTRUCTIONS[phase] ?? null}
       />
 
       {/* Phase content */}
@@ -243,6 +254,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
               policyInstanceId={policyInstanceId}
               token={token}
               planTier={user.plan_tier}
+              governanceMode={governanceMode}
               onComplete={(verdict, decisionHash) => {
                 setRiskVerdict(verdict);
                 setRiskDecisionHash(decisionHash);

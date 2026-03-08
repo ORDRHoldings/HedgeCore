@@ -8,26 +8,9 @@ import HedgeErrorBanner from "./ErrorBanner";
 import {
   CheckCircleIcon, AlertCircleIcon, LoaderIcon, ChevronLeftIcon,
   CopyIcon, ExternalLinkIcon, ShieldCheckIcon, UserCheckIcon,
-  ActivityIcon,
+  ActivityIcon, AlertTriangleIcon, InfoIcon,
 } from "lucide-react";
-
-// ─── Design tokens ──────────────────────────────────────────────────────────
-const S = {
-  bgPanel:   "var(--bg-panel)",
-  bgSub:     "var(--bg-sub)",
-  bgDeep:    "var(--bg-deep)",
-  rim:       "var(--border-rim)",
-  soft:      "var(--border-soft)",
-  primary:   "var(--text-primary)",
-  secondary: "var(--text-secondary)",
-  tertiary:  "var(--text-tertiary)",
-  cyan:      "var(--accent-cyan)",
-  amber:     "var(--accent-amber)",
-  red:       "var(--accent-red,#E74C3C)",
-  green:     "var(--status-pass,#22c55e)",
-  mono:      "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-  ui:        "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-} as const;
+import { T } from "./tokens";
 
 // ─── CME contract specifications (reference data — margins from CME exchange) ─
 const CME_SPECS: Record<string, {
@@ -236,29 +219,34 @@ export default function PhaseExecute({
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: S.bgPanel }}>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%", background: T.bgPanel }}>
 
       {/* ── Step header ─────────────────────────────────────────────────── */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "14px 20px",
-        background: S.bgSub,
-        borderBottom: `1px solid var(--border-rim)`,
+        background: T.bgSub,
+        borderBottom: `1px solid ${T.rim}`,
         flexShrink: 0,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: S.tertiary }}>STEP 5 OF 5</span>
-          <span style={{ width: 1, height: 14, background: "var(--border-soft)", display: "inline-block" }} />
-          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: S.primary }}>EXECUTION TERMINAL</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>STEP 5 OF 5</span>
+            <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.primary }}>EXECUTION CONFIRMATION</span>
+          </div>
+          <span style={{ fontFamily: T.fontUI, fontSize: 12, color: T.secondary }}>
+            Review trade tickets, verify broker fills, and confirm execution
+          </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "color-mix(in srgb, var(--status-pass,#22c55e) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--status-pass,#22c55e) 25%, transparent)", padding: "4px 12px", borderRadius: 2 }}>
-            <ShieldCheckIcon size={12} color={S.green} />
-            <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.green, letterSpacing: "0.1em" }}>RISK: APPROVE</span>
+            <ShieldCheckIcon size={12} color={T.green} />
+            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.green, letterSpacing: "0.1em" }}>RISK: APPROVE</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "color-mix(in srgb, var(--accent-cyan) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--accent-cyan) 25%, transparent)", padding: "4px 12px", borderRadius: 2 }}>
-            <UserCheckIcon size={12} color={S.cyan} />
-            <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: S.cyan, letterSpacing: "0.1em" }}>4-EYES: {governanceMode === "team" ? "MAKER" : "SOLO"}</span>
+            <UserCheckIcon size={12} color={T.cyan} />
+            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.cyan, letterSpacing: "0.1em" }}>4-EYES: {governanceMode === "team" ? "MAKER" : "SOLO"}</span>
           </div>
         </div>
       </div>
@@ -266,11 +254,26 @@ export default function PhaseExecute({
       {/* ── Body ────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 0 20px" }}>
 
+        {/* ── Disclaimer — design-intent framing ──────────────────────── */}
+        {buckets.length > 0 && (
+          <div style={{
+            display: "flex", alignItems: "flex-start", gap: 10,
+            background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
+            borderRadius: 3, padding: "10px 14px", marginBottom: 16,
+          }}>
+            <AlertTriangleIcon size={14} color={T.amber} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontFamily: T.fontUI, fontSize: 12, color: T.amber, lineHeight: "1.5" }}>
+              ORDR Terminal generates trade tickets for manual execution. Submit these tickets to your broker platform, then record the execution details below.
+            </span>
+          </div>
+        )}
+
         {/* ── LIVE MARKET SNAPSHOT panel ──────────────────────────────── */}
         <div style={{
           marginBottom: 16,
-          background: S.bgSub,
-          border: `1px solid var(--border-rim)`,
+          background: T.bgSub,
+          border: `1px solid ${T.rim}`,
           borderRadius: 3,
           overflow: "hidden",
         }}>
@@ -278,21 +281,21 @@ export default function PhaseExecute({
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "7px 14px",
-            borderBottom: `1px solid var(--border-soft)`,
+            borderBottom: `1px solid ${T.soft}`,
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <ActivityIcon size={12} color="var(--accent-cyan)" />
-              <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: S.tertiary }}>
+              <ActivityIcon size={12} color={T.cyan} />
+              <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>
                 LIVE MARKET SNAPSHOT
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               {snapLoading ? (
-                <LoaderIcon size={10} color={S.tertiary} style={{ animation: "spin 1s linear infinite" }} />
+                <LoaderIcon size={10} color={T.tertiary} style={{ animation: "spin 1s linear infinite" }} />
               ) : (
                 <span style={{
-                  fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
-                  color: srcLive ? S.green : S.amber,
+                  fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+                  color: srcLive ? T.green : T.amber,
                   background: srcLive ? "color-mix(in srgb, var(--status-pass,#22c55e) 10%, transparent)" : "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
                   border: srcLive ? "1px solid color-mix(in srgb, var(--status-pass,#22c55e) 25%, transparent)" : "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
                   padding: "2px 8px", borderRadius: 2,
@@ -301,7 +304,7 @@ export default function PhaseExecute({
                 </span>
               )}
               {snapTs && !snapLoading && (
-                <span style={{ fontFamily: S.mono, fontSize: 9, color: S.tertiary }}>
+                <span style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary }}>
                   as of {snapTs}
                 </span>
               )}
@@ -311,30 +314,30 @@ export default function PhaseExecute({
           {/* Rate cells */}
           <div style={{ display: "flex", flexWrap: "wrap" }}>
             {snapLoading ? (
-              <div style={{ padding: "12px 16px", fontFamily: S.mono, fontSize: 11, color: S.tertiary }}>
-                Fetching live rates…
+              <div style={{ padding: "12px 16px", fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>
+                Fetching live rates...
               </div>
             ) : marketSnap?.rates?.length ? (
               marketSnap.rates.map(r => (
                 <div key={r.symbol} style={{
                   padding: "10px 18px",
-                  borderRight: `1px solid var(--border-soft)`,
-                  borderBottom: `1px solid var(--border-soft)`,
+                  borderRight: `1px solid ${T.soft}`,
+                  borderBottom: `1px solid ${T.soft}`,
                   minWidth: 130,
                 }}>
-                  <div style={{ fontFamily: S.mono, fontSize: 9, color: S.tertiary, letterSpacing: "0.12em", marginBottom: 4 }}>
+                  <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary, letterSpacing: "0.12em", marginBottom: 4 }}>
                     {r.symbol}
                   </div>
-                  <div style={{ fontFamily: S.mono, fontSize: 14, fontWeight: 700, color: S.primary, marginBottom: 2 }}>
+                  <div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: T.primary, marginBottom: 2 }}>
                     {r.mid.toFixed(4)}
                   </div>
-                  <div style={{ fontFamily: S.mono, fontSize: 9, color: S.tertiary }}>
+                  <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary }}>
                     {r.bid.toFixed(4)} / {r.ask.toFixed(4)}
                   </div>
                 </div>
               ))
             ) : (
-              <div style={{ padding: "12px 16px", fontFamily: S.mono, fontSize: 11, color: S.tertiary }}>
+              <div style={{ padding: "12px 16px", fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>
                 Market data unavailable
               </div>
             )}
@@ -350,22 +353,22 @@ export default function PhaseExecute({
               <div style={{
                 display: "flex", alignItems: "center", gap: 24,
                 padding: "7px 14px",
-                borderTop: `1px solid var(--border-soft)`,
-                background: S.bgPanel,
+                borderTop: `1px solid ${T.soft}`,
+                background: T.bgPanel,
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em" }}>SPOT USDMXN</span>
-                  <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.primary }}>{spotMxn.mid.toFixed(4)}</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, letterSpacing: "0.08em" }}>SPOT USDMXN</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.primary }}>{spotMxn.mid.toFixed(4)}</span>
                 </div>
-                <span style={{ width: 1, height: 14, background: "var(--border-soft)", display: "inline-block" }} />
+                <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em" }}>FWD RATE USED</span>
-                  <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.cyan }}>{fwdUsed.toFixed(4)}</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, letterSpacing: "0.08em" }}>FWD RATE USED</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.cyan }}>{fwdUsed.toFixed(4)}</span>
                 </div>
-                <span style={{ width: 1, height: 14, background: "var(--border-soft)", display: "inline-block" }} />
+                <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em" }}>FWD PREMIUM</span>
-                  <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: premAmt >= 0 ? S.green : S.red }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, letterSpacing: "0.08em" }}>FWD PREMIUM</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: premAmt >= 0 ? T.green : T.red }}>
                     {premAmt >= 0 ? "+" : ""}{premAmt.toFixed(4)} ({premium}%)
                   </span>
                 </div>
@@ -377,44 +380,32 @@ export default function PhaseExecute({
         {/* ── TRADE TICKETS — fixed table ─────────────────────────────── */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: S.tertiary }}>TRADE TICKETS</span>
-            <span style={{ fontFamily: S.mono, fontSize: 10, background: "var(--border-soft)", color: S.tertiary, padding: "1px 7px", borderRadius: 10 }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>TRADE TICKETS</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 10, background: T.soft, color: T.tertiary, padding: "1px 7px", borderRadius: 10 }}>
               {buckets.length > 0 ? `${buckets.length} LEG${buckets.length !== 1 ? "S" : ""}` : "NO ACTIVE LEGS"}
             </span>
           </div>
 
-          {/* Disclaimer */}
-          {buckets.length > 0 && (
-            <div style={{
-              background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
-              borderRadius: 3, padding: "5px 12px", marginBottom: 10,
-              fontFamily: S.ui, fontSize: 11, color: "var(--accent-amber)",
-            }}>
-              &#9888;&#160;&#160;ORDR Terminal does not submit orders electronically. These tickets require manual entry into your broker platform (IBKR or equivalent).
-            </div>
-          )}
-
           {buckets.length === 0 ? (
-            <div style={{ padding: "24px 20px", background: S.bgSub, border: `1px solid var(--border-soft)`, borderRadius: 4, textAlign: "center" }}>
-              <span style={{ fontFamily: S.mono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}>NO ACTIONABLE BUCKETS — ALL POSITIONS SUPPRESSED OR ZERO</span>
+            <div style={{ padding: "24px 20px", background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 4, textAlign: "center" }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.08em" }}>NO ACTIONABLE BUCKETS — ALL POSITIONS SUPPRESSED OR ZERO</span>
             </div>
           ) : (
             /* ── Fixed execution table ── */
-            <div style={{ border: `1px solid var(--border-rim)`, borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ border: `1px solid ${T.rim}`, borderRadius: 4, overflow: "hidden" }}>
               {/* Table header */}
               <div style={{
                 display: "grid",
                 gridTemplateColumns: "36px 1fr 90px 72px 90px 110px 100px 100px 80px 100px",
-                background: S.bgSub,
-                borderBottom: `1px solid var(--border-rim)`,
+                background: T.bgSub,
+                borderBottom: `1px solid ${T.rim}`,
                 padding: "0 12px",
               }}>
                 {["#","INSTRUMENT","DIRECTION","CNTRTS","FWD RATE","NOTIONAL","TOTAL USD","MARGIN","COST","EFF%"].map((h, i) => (
                   <div key={h} style={{
                     padding: "8px 6px",
-                    fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
-                    color: S.tertiary, textAlign: i === 0 ? "center" : "left",
+                    fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+                    color: T.tertiary, textAlign: i === 0 ? "center" : "left",
                     whiteSpace: "nowrap",
                   }}>{h}</div>
                 ))}
@@ -425,48 +416,48 @@ export default function PhaseExecute({
                 const m = computeTicket(b);
                 const displayRate = fillPrice && parseFloat(fillPrice) > 0 ? parseFloat(fillPrice) : b.forward_rate;
                 const dirLabel = m.side === "SELL" ? "SELL MXN" : "BUY MXN";
-                const effColor = m.hedgeEffectiveness >= 95 ? S.green : m.hedgeEffectiveness >= 80 ? S.amber : S.red;
+                const effColor = m.hedgeEffectiveness >= 95 ? T.green : m.hedgeEffectiveness >= 80 ? T.amber : T.red;
                 const isCopied = copiedRow === i;
 
                 return (
-                  <div key={b.bucket ?? i} style={{ borderBottom: i < buckets.length - 1 ? `1px solid var(--border-soft)` : "none" }}>
+                  <div key={b.bucket ?? i} style={{ borderBottom: i < buckets.length - 1 ? `1px solid ${T.soft}` : "none" }}>
                     {/* Main data row */}
                     <div style={{
                       display: "grid",
                       gridTemplateColumns: "36px 1fr 90px 72px 90px 110px 100px 100px 80px 100px",
                       padding: "0 12px",
-                      background: i % 2 === 0 ? S.bgPanel : S.bgSub,
+                      background: i % 2 === 0 ? T.bgPanel : T.bgSub,
                       alignItems: "center",
                     }}>
-                      <div style={{ padding: "12px 6px", fontFamily: S.mono, fontSize: 11, color: S.tertiary, textAlign: "center" }}>{i + 1}</div>
+                      <div style={{ padding: "12px 6px", fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, textAlign: "center" }}>{i + 1}</div>
                       <div style={{ padding: "12px 6px" }}>
-                        <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.primary }}>{m.spec.symbol}</div>
-                        <div style={{ fontFamily: S.mono, fontSize: 10, color: S.tertiary, marginTop: 2 }}>{m.spec.name}</div>
+                        <div style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.primary }}>{m.spec.symbol}</div>
+                        <div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, marginTop: 2 }}>{m.spec.name}</div>
                       </div>
                       <div style={{ padding: "12px 6px" }}>
                         <span style={{
-                          fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
-                          color: m.side === "SELL" ? S.red : S.cyan,
-                          background: m.side === "SELL" ? "color-mix(in srgb, var(--accent-red,#E74C3C) 10%, transparent)" : "color-mix(in srgb, var(--accent-cyan) 10%, transparent)",
-                          border: m.side === "SELL" ? "1px solid color-mix(in srgb, var(--accent-red,#E74C3C) 25%, transparent)" : "1px solid color-mix(in srgb, var(--accent-cyan) 25%, transparent)",
+                          fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                          color: m.side === "SELL" ? T.red : T.cyan,
+                          background: m.side === "SELL" ? "color-mix(in srgb, var(--accent-red,#DC2626) 10%, transparent)" : "color-mix(in srgb, var(--accent-cyan) 10%, transparent)",
+                          border: m.side === "SELL" ? "1px solid color-mix(in srgb, var(--accent-red,#DC2626) 25%, transparent)" : "1px solid color-mix(in srgb, var(--accent-cyan) 25%, transparent)",
                           padding: "2px 6px", borderRadius: 2, whiteSpace: "nowrap",
                         }}>{dirLabel}</span>
                       </div>
-                      <div style={{ padding: "12px 6px", fontFamily: S.mono, fontSize: 13, fontWeight: 700, color: S.primary }}>{fmt(m.contracts)}</div>
-                      <div style={{ padding: "12px 6px", fontFamily: S.mono, fontSize: 13, fontWeight: 700, color: S.cyan }}>{fmtRate(displayRate)}</div>
+                      <div style={{ padding: "12px 6px", fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.primary }}>{fmt(m.contracts)}</div>
+                      <div style={{ padding: "12px 6px", fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.cyan }}>{fmtRate(displayRate)}</div>
                       <div style={{ padding: "12px 6px" }}>
-                        <div style={{ fontFamily: S.mono, fontSize: 12, color: S.primary }}>{fmt(m.notional)}</div>
-                        <div style={{ fontFamily: S.mono, fontSize: 9, color: S.tertiary, marginTop: 1 }}>{m.currency} · {fmt(m.spec.contract_size)}/ct</div>
+                        <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.primary }}>{fmt(m.notional)}</div>
+                        <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary, marginTop: 1 }}>{m.currency} · {fmt(m.spec.contract_size)}/ct</div>
                       </div>
-                      <div style={{ padding: "12px 6px", fontFamily: S.mono, fontSize: 13, fontWeight: 700, color: S.primary }}>{fmtUsd(b.action_usd)}</div>
-                      <div style={{ padding: "12px 6px", fontFamily: S.mono, fontSize: 13, fontWeight: 700, color: S.amber }}>{fmtUsd(m.margin)}</div>
-                      <div style={{ padding: "12px 6px", fontFamily: S.mono, fontSize: 12, color: S.secondary }}>{fmtUsd(m.estCost)}</div>
+                      <div style={{ padding: "12px 6px", fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.primary }}>{fmtUsd(b.action_usd)}</div>
+                      <div style={{ padding: "12px 6px", fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.amber }}>{fmtUsd(m.margin)}</div>
+                      <div style={{ padding: "12px 6px", fontFamily: T.fontMono, fontSize: 12, color: T.secondary }}>{fmtUsd(m.estCost)}</div>
                       <div style={{ padding: "12px 6px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <div style={{ flex: 1, height: 3, background: "var(--border-soft)", borderRadius: 2, overflow: "hidden" }}>
+                          <div style={{ flex: 1, height: 3, background: T.soft, borderRadius: 2, overflow: "hidden" }}>
                             <div style={{ width: `${m.hedgeEffectiveness}%`, height: "100%", background: effColor, borderRadius: 2, transition: "width 0.4s" }} />
                           </div>
-                          <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: effColor, flexShrink: 0 }}>{m.hedgeEffectiveness}%</span>
+                          <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: effColor, flexShrink: 0 }}>{m.hedgeEffectiveness}%</span>
                         </div>
                       </div>
                     </div>
@@ -475,10 +466,10 @@ export default function PhaseExecute({
                     <div style={{
                       display: "flex", alignItems: "center", gap: 8,
                       padding: "6px 12px 8px",
-                      background: i % 2 === 0 ? S.bgPanel : S.bgSub,
-                      borderTop: `1px solid var(--border-soft)`,
+                      background: i % 2 === 0 ? T.bgPanel : T.bgSub,
+                      borderTop: `1px solid ${T.soft}`,
                     }}>
-                      <span style={{ fontFamily: S.mono, fontSize: 9, color: S.tertiary, marginRight: 4 }}>
+                      <span style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary, marginRight: 4 }}>
                         TICK {m.spec.tick_size} · TICK VALUE ${m.spec.tick_value} · CONTRACT {fmt(m.spec.contract_size)} {m.currency}
                       </span>
                       <div style={{ flex: 1 }} />
@@ -486,25 +477,25 @@ export default function PhaseExecute({
                         onClick={() => openIbkr(m.spec, m.side, m.contracts, displayRate)}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 5,
-                          fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
-                          color: "#1C62F2", background: "color-mix(in srgb,#1C62F2 8%,transparent)",
+                          fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                          color: T.royal, background: "color-mix(in srgb,#1C62F2 8%,transparent)",
                           border: "1px solid color-mix(in srgb,#1C62F2 25%,transparent)",
                           padding: "4px 10px", borderRadius: 2, cursor: "pointer",
                         }}
                       >
-                        <ExternalLinkIcon size={10} color="#1C62F2" />OPEN IN IBKR
+                        <ExternalLinkIcon size={10} color={T.royal} />OPEN IN IBKR
                       </button>
                       <button
                         onClick={() => copyRow(b, i)}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 5,
-                          fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
-                          color: isCopied ? S.green : S.tertiary,
-                          background: "transparent", border: `1px solid var(--border-soft)`,
+                          fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                          color: isCopied ? T.green : T.tertiary,
+                          background: "transparent", border: `1px solid ${T.soft}`,
                           padding: "4px 10px", borderRadius: 2, cursor: "pointer",
                         }}
                       >
-                        <CopyIcon size={10} color={isCopied ? S.green : S.tertiary} />
+                        <CopyIcon size={10} color={isCopied ? T.green : T.tertiary} />
                         {isCopied ? "COPIED" : "COPY"}
                       </button>
                     </div>
@@ -517,40 +508,86 @@ export default function PhaseExecute({
 
         {/* ── Fill price input ─────────────────────────────────────────── */}
         <div style={{
-          background: S.bgSub, border: `1px solid var(--border-soft)`, borderRadius: 4,
-          padding: "12px 16px", marginBottom: 16,
+          background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 4,
+          padding: "12px 16px", marginBottom: 12,
           display: "flex", alignItems: "center", gap: 16,
         }}>
-          <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, flexShrink: 0 }}>
+          <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: T.tertiary, flexShrink: 0 }}>
             FILL PRICE (OPTIONAL)
           </span>
           <input
             type="number" step="0.000001" min="0"
             value={fillPrice} onChange={e => setFillPrice(e.target.value)}
             placeholder="Leave blank to use forward rate"
+            disabled={!fillOk}
             style={{
-              flex: 1, fontFamily: S.mono, fontSize: 13, color: S.primary,
-              background: S.bgPanel, border: `1px solid var(--border-soft)`,
+              flex: 1, fontFamily: T.fontMono, fontSize: 13, color: T.primary,
+              background: T.bgPanel, border: `1px solid ${T.soft}`,
               borderRadius: 3, padding: "7px 12px", outline: "none", minWidth: 0,
             }}
           />
         </div>
 
+        {/* ── Post-execution context ─────────────────────────────────── */}
+        <div style={{
+          display: "flex", alignItems: "flex-start", gap: 10,
+          padding: "10px 14px", marginBottom: 16,
+          background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 3,
+        }}>
+          <InfoIcon size={13} color={T.secondary} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span style={{ fontFamily: T.fontUI, fontSize: 12, color: T.secondary, lineHeight: "1.5" }}>
+            Once confirmed, all positions will be marked HEDGED and the execution will be recorded in the audit trail. This action cannot be undone.
+          </span>
+        </div>
+
         {/* ── Total summary row ────────────────────────────────────────── */}
         {buckets.length > 0 && (
           <div style={{
-            background: S.bgSub, border: `1px solid var(--border-rim)`, borderRadius: 4,
+            background: T.bgSub, border: `1px solid ${T.rim}`, borderRadius: 4,
             marginBottom: 16, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", overflow: "hidden",
           }}>
             {([
-              ["TOTAL CONTRACTS",  fmt(totals.contracts),          S.primary],
-              ["TOTAL NOTIONAL",   fmtUsd(totals.actionUsd),       S.primary],
-              ["TOTAL MARGIN REQ", fmtUsd(totals.margin),          S.amber],
-              ["EST TOTAL COST",   fmtUsd(totals.cost),            S.secondary],
+              ["TOTAL CONTRACTS",  fmt(totals.contracts),          T.primary],
+              ["TOTAL NOTIONAL",   fmtUsd(totals.actionUsd),       T.primary],
+              ["TOTAL MARGIN REQ", fmtUsd(totals.margin),          T.amber],
+              ["EST TOTAL COST",   fmtUsd(totals.cost),            T.secondary],
             ] as const).map(([label, value, color], idx) => (
-              <div key={label} style={{ padding: "14px 18px", borderRight: idx < 3 ? `1px solid var(--border-soft)` : "none" }}>
-                <div style={{ fontFamily: S.mono, fontSize: 10, letterSpacing: "0.12em", color: S.tertiary, marginBottom: 6 }}>{label}</div>
-                <div style={{ fontFamily: S.mono, fontSize: 20, fontWeight: 700, color }}>{value}</div>
+              <div key={label} style={{ padding: "14px 18px", borderRight: idx < 3 ? `1px solid ${T.soft}` : "none" }}>
+                <div style={{ fontFamily: T.fontMono, fontSize: 10, letterSpacing: "0.12em", color: T.tertiary, marginBottom: 6 }}>{label}</div>
+                <div style={{ fontFamily: T.fontMono, fontSize: 20, fontWeight: 700, color }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Pre-Confirmation Checklist ────────────────────────────────── */}
+        {buckets.length > 0 && !done && (
+          <div style={{
+            background: "color-mix(in srgb, var(--accent-amber) 6%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--accent-amber) 20%, transparent)",
+            borderRadius: 4, padding: "14px 16px", marginBottom: 16,
+          }}>
+            <div style={{
+              fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+              color: T.amber, marginBottom: 10,
+            }}>
+              BEFORE CONFIRMING, VERIFY:
+            </div>
+            {[
+              "All trade tickets have been submitted to your broker (IBKR or equivalent)",
+              "Fill confirmations have been received for all legs",
+              "Fill prices are within acceptable slippage tolerance",
+            ].map((item, idx) => (
+              <div key={idx} style={{
+                display: "flex", alignItems: "flex-start", gap: 10,
+                marginBottom: idx < 2 ? 8 : 0,
+              }}>
+                <div style={{
+                  width: 16, height: 16, borderRadius: 2, flexShrink: 0, marginTop: 1,
+                  border: `1.5px solid color-mix(in srgb, var(--accent-amber) 50%, transparent)`,
+                  background: "color-mix(in srgb, var(--accent-amber) 4%, transparent)",
+                }} />
+                <span style={{ fontFamily: T.fontUI, fontSize: 12, color: T.secondary, lineHeight: "1.4" }}>{item}</span>
               </div>
             ))}
           </div>
@@ -559,10 +596,10 @@ export default function PhaseExecute({
         {/* ── Notices ──────────────────────────────────────────────────── */}
         {awaitingApproval && (
           <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 14px", background: "color-mix(in srgb, var(--accent-amber) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)", borderRadius: 4, marginBottom: 16 }}>
-            <AlertCircleIcon size={15} color={S.amber} style={{ flexShrink: 0, marginTop: 1 }} />
+            <AlertCircleIcon size={15} color={T.amber} style={{ flexShrink: 0, marginTop: 1 }} />
             <div>
-              <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.amber, letterSpacing: "0.08em", marginBottom: 4 }}>AWAITING CHECKER APPROVAL</div>
-              <div style={{ fontFamily: S.ui, fontSize: 13, color: S.secondary }}>One or more proposals are pending checker sign-off. Check the staging queue.</div>
+              <div style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.amber, letterSpacing: "0.08em", marginBottom: 4 }}>AWAITING CHECKER APPROVAL</div>
+              <div style={{ fontFamily: T.fontUI, fontSize: 13, color: T.secondary }}>One or more proposals are pending checker sign-off. Check the staging queue.</div>
             </div>
           </div>
         )}
@@ -579,8 +616,8 @@ export default function PhaseExecute({
         )}
         {done && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "color-mix(in srgb, var(--status-pass,#22c55e) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--status-pass,#22c55e) 25%, transparent)", borderRadius: 4, marginBottom: 16 }}>
-            <CheckCircleIcon size={15} color={S.green} />
-            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.green, letterSpacing: "0.08em" }}>HEDGED SUCCESSFULLY — ADVANCING PIPELINE...</span>
+            <CheckCircleIcon size={15} color={T.green} />
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.green, letterSpacing: "0.08em" }}>HEDGED SUCCESSFULLY — ADVANCING PIPELINE...</span>
           </div>
         )}
         <div style={{ height: 20 }} />
@@ -589,22 +626,22 @@ export default function PhaseExecute({
       {/* ── Unified action bar ───────────────────────────────────────────── */}
       <div style={{
         position: "sticky", bottom: 0, zIndex: 10,
-        background: S.bgSub, borderTop: `2px solid var(--border-rim)`,
+        background: T.bgSub, borderTop: `2px solid ${T.rim}`,
         padding: "14px 24px", display: "flex", alignItems: "center",
         justifyContent: "space-between", gap: 16, flexShrink: 0,
       }}>
         {/* Left — Back */}
         <button onClick={onBack} style={{
           display: "flex", alignItems: "center", gap: 5, background: "none",
-          border: `1px solid var(--border-soft)`, borderRadius: 3,
+          border: `1px solid ${T.soft}`, borderRadius: 3,
           padding: "10px 18px", cursor: "pointer",
         }}>
-          <ChevronLeftIcon size={13} color={S.tertiary} />
-          <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>BACK</span>
+          <ChevronLeftIcon size={13} color={T.tertiary} />
+          <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: T.tertiary }}>BACK</span>
         </button>
 
         {/* Center — Status */}
-        <span style={{ fontFamily: S.mono, fontSize: 11, color: S.secondary, letterSpacing: "0.04em" }}>
+        <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary, letterSpacing: "0.04em" }}>
           {proposalIds.length} proposal{proposalIds.length !== 1 ? "s" : ""} · {governanceMode === "team" ? "4-eyes approval required" : "solo mode"}
         </span>
 
@@ -613,16 +650,21 @@ export default function PhaseExecute({
           onClick={handleMarkHedged} disabled={!fillOk}
           style={{
             display: "flex", alignItems: "center", gap: 8,
-            background: done ? S.tertiary : executing ? "color-mix(in srgb, var(--status-pass,#22c55e) 60%, #000)" : S.green,
+            background: done ? T.tertiary : executing ? "color-mix(in srgb, var(--status-pass,#22c55e) 60%, #000)" : T.green,
             color: "#000", border: "none", borderRadius: 3, padding: "12px 28px",
             cursor: !fillOk ? "default" : "pointer",
-            fontFamily: S.mono, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em",
+            fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em",
             transition: "background 0.2s ease",
           }}
         >
           {executing && <LoaderIcon size={14} color="#000" style={{ animation: "spin 1s linear infinite" }} />}
           {done && <CheckCircleIcon size={14} color="#000" />}
-          {done ? "EXECUTION CONFIRMED" : executing ? "EXECUTING..." : "CONFIRM EXECUTION →"}
+          {done
+            ? "EXECUTION CONFIRMED"
+            : executing
+              ? "EXECUTING..."
+              : `CONFIRM EXECUTION — ${buckets.length} leg${buckets.length !== 1 ? "s" : ""}, ${fmt(totals.contracts)} contracts →`
+          }
         </button>
       </div>
 
