@@ -220,23 +220,17 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
         audioEl.srcObject = e.streams[0];
       };
 
-      // 4. Add local audio track (mic or silent fallback — SDP requires audio section)
+      // 4. Add local audio track (mic or transceiver fallback — SDP requires audio section)
+      let hasMic = false;
       try {
         const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         micStreamRef.current = micStream;
         pc.addTrack(micStream.getTracks()[0]);
+        hasMic = true;
         setIsMicOn(true);
       } catch {
-        // No mic — create a silent audio track so SDP has an audio section
-        const silentCtx = new AudioContext({ sampleRate: 24000 });
-        const oscillator = silentCtx.createOscillator();
-        const gain = silentCtx.createGain();
-        gain.gain.value = 0;
-        oscillator.connect(gain);
-        const dest = silentCtx.createMediaStreamDestination();
-        gain.connect(dest);
-        oscillator.start();
-        pc.addTrack(dest.stream.getTracks()[0]);
+        // No mic — add a recvonly audio transceiver so SDP has an audio m= line
+        pc.addTransceiver("audio", { direction: "recvonly" });
         emitTranscript("system", "No microphone found — text-only mode", true);
         setIsMicOn(false);
       }
