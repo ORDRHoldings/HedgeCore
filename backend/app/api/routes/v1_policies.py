@@ -19,8 +19,6 @@ Endpoints:
 
 All endpoints require JWT.
 """
-from __future__ import annotations
-
 import hashlib
 import json
 import uuid as _uuid
@@ -54,8 +52,6 @@ from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/policies", tags=["v1-policies"])
 
-
-
 # ---------------------------------------------------------------------------
 # Auth/RBAC helpers
 # ---------------------------------------------------------------------------
@@ -70,8 +66,6 @@ async def _check_permission(
         raise HTTPException(
             status_code=403, detail=f"Missing permission: {codename}"
         )
-
-
 # ---------------------------------------------------------------------------
 # Routes -- STATIC paths FIRST to avoid parameterized-path shadowing
 # ---------------------------------------------------------------------------
@@ -114,8 +108,6 @@ async def get_seed_status(
         expected_count=len(_POLICY_PRESETS_SEED),
         missing_short_names=missing,
     )
-
-
 # 2. GET /templates
 @router.get("/templates", response_model=list[PolicyTemplateResponse])
 async def list_templates(
@@ -133,8 +125,6 @@ async def list_templates(
     raise_if_dev_fault(request, __dev_fault)
     templates = await policy_service.list_templates(session, current_user)
     return templates
-
-
 # 3. POST /templates
 @router.post("/templates", response_model=PolicyTemplateResponse, status_code=201)
 async def create_template(
@@ -172,8 +162,6 @@ async def create_template(
         payload={"name": data.name, "short_name": data.short_name, "risk_posture": data.risk_posture},
     )
     return tmpl
-
-
 # 4. POST /templates/import  (must be BEFORE PATCH /templates/{template_id})
 @router.post("/templates/import", response_model=PolicyTemplateResponse, status_code=201)
 async def import_template(
@@ -237,8 +225,6 @@ async def import_template(
         payload={"name": name, "source_checksum": stored_checksum},
     )
     return tmpl
-
-
 # 5. PATCH /templates/{template_id}
 @router.patch("/templates/{template_id}", response_model=PolicyTemplateResponse)
 async def update_template(
@@ -274,8 +260,6 @@ async def update_template(
         payload={"name": tmpl.name, "version": tmpl.version, "fields_updated": list(updates.keys())},
     )
     return tmpl
-
-
 # 6. DELETE /templates/{template_id}
 @router.delete("/templates/{template_id}", status_code=204)
 async def delete_template(
@@ -307,8 +291,6 @@ async def delete_template(
         entity_id=str(template_id),
         payload={"template_id": str(template_id)},
     )
-
-
 # 7. GET /templates/{template_id}/history
 @router.get("/templates/{template_id}/history", response_model=list[PolicyAuditEventResponse])
 async def get_template_history(
@@ -342,8 +324,6 @@ async def get_template_history(
         )
         for e in events
     ]
-
-
 # 8. GET /templates/{template_id}/export
 @router.get("/templates/{template_id}/export")
 async def export_template(
@@ -383,8 +363,6 @@ async def export_template(
         media_type="application/json",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-
-
 # 9. GET /active
 @router.get("/active", response_model=PolicyInstanceResponse | None)
 async def get_active_policy(
@@ -408,8 +386,6 @@ async def get_active_policy(
     if tmpl:
         response.template = PolicyTemplateResponse.model_validate(tmpl)
     return response
-
-
 # 10. POST /activate
 @router.post("/activate", response_model=PolicyInstanceResponse, status_code=201)
 async def activate_policy(
@@ -462,8 +438,6 @@ async def activate_policy(
         payload={"template_id": str(data.template_id), "instance_id": str(instance.id)},
     )
     return response
-
-
 # 11. POST /deactivate
 @router.post("/deactivate", status_code=204)
 async def deactivate_policy(
@@ -487,8 +461,6 @@ async def deactivate_policy(
         entity_id=str(current_user.company_id),
         payload={"company_id": str(current_user.company_id), "branch_id": str(current_user.branch_id) if current_user.branch_id else None},
     )
-
-
 # ---------------------------------------------------------------------------
 # Favorites routes
 # ---------------------------------------------------------------------------
@@ -516,8 +488,6 @@ async def list_favorites(
         )
         result.append(resp)
     return result
-
-
 # 13. POST /favorites/{template_id}
 @router.post("/favorites/{template_id}", response_model=PolicyFavoriteResponse, status_code=201)
 async def add_favorite(
@@ -543,8 +513,6 @@ async def add_favorite(
         created_at=fav.created_at,
         template=PolicyTemplateResponse.model_validate(tmpl) if tmpl else None,
     )
-
-
 # 14. DELETE /favorites/{template_id}
 @router.delete("/favorites/{template_id}", status_code=204)
 async def remove_favorite(

@@ -7,8 +7,6 @@ The legacy /v1/calculate endpoint is UNCHANGED.
 Updated in Prompt 3 to route through sandbox_calculate_multi() in pipeline_service,
 which runs the full V2 satellite module suite and stores the result for proposal creation.
 """
-from __future__ import annotations
-
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -24,16 +22,12 @@ from app.services import rbac_service
 from app.services.pipeline_service import sandbox_calculate_multi
 
 router = APIRouter(prefix="/v1", tags=["v1-calculate-multi"])
-
-
 class MultiCalculateRequest(BaseModel):
     pair: str = Field(default="USDMXN", description="Currency pair, e.g. USDMXN, EURUSD, USDBRL")
     trades: list = Field(..., max_length=10_000)
     hedges: list = Field(default_factory=list, max_length=10_000)
     market: dict = Field(..., description="MarketSnapshot or MultiCurrencyMarketSnapshot dict")
     policy: dict = Field(..., description="PolicyConfig dict (may include pair_overrides)")
-
-
 class MultiCalculateResponse(BaseModel):
     run_id: str
     pair: str
@@ -43,8 +37,6 @@ class MultiCalculateResponse(BaseModel):
     hedge_plan: dict[str, Any] | None = None
     scenario_results: dict[str, Any] | None = None
     run_envelope: dict[str, Any] | None = None
-
-
 @router.post("/calculate/multi", response_model=MultiCalculateResponse)
 async def calculate_multi(
     request_data: MultiCalculateRequest,

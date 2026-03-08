@@ -20,8 +20,6 @@ Message types (backend → browser):
   {"type": "error",         "message": "..."}
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import os
@@ -145,8 +143,6 @@ def _validate_token(token: str) -> dict | None:
     except pyjwt.PyJWTError as exc:
         logger.warning("Voice WS: JWT validation failed: %s", exc)
         return None
-
-
 # ── HedgeCore function executor ───────────────────────────────────────────────
 
 async def _call_hedgecore(name: str, args: dict, token: str) -> dict:
@@ -270,8 +266,6 @@ async def _call_hedgecore(name: str, args: dict, token: str) -> dict:
                 return {"error": str(exc)}
 
     return {"error": f"Unknown function: {name}"}
-
-
 # ── Anthropic Messages API call with tool loop ────────────────────────────────
 
 async def _chat_with_tools(
@@ -353,8 +347,6 @@ async def _chat_with_tools(
                 return " ".join(text_parts).strip() or "Ready to assist with FX hedging."
 
     return "I couldn't complete that request. Please try again."
-
-
 # ── WebSocket endpoint ────────────────────────────────────────────────────────
 
 @router.websocket("/realtime")

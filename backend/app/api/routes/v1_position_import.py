@@ -11,8 +11,6 @@ Institutional-grade CSV import pipeline:
 
 All endpoints require JWT + trades.create permission.
 """
-from __future__ import annotations
-
 import logging
 from uuid import UUID
 
@@ -30,8 +28,6 @@ from app.services.audit_emit import emit_audit
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/positions/import", tags=["v1-position-import"])
-
-
 # ── Request/Response schemas ─────────────────────────────────────────
 
 class ValidateRequest(BaseModel):
@@ -84,13 +80,9 @@ class ImportBatchResponse(BaseModel):
             validated_at=batch.validated_at.isoformat() if batch.validated_at else None,
             committed_at=batch.committed_at.isoformat() if batch.committed_at else None,
         )
-
-
 class ImportBatchListResponse(BaseModel):
     items: list[ImportBatchResponse]
     total: int
-
-
 # ── Auth helper ──────────────────────────────────────────────────────
 
 async def _check_import_permission(session: AsyncSession, user: User) -> None:
@@ -100,8 +92,6 @@ async def _check_import_permission(session: AsyncSession, user: User) -> None:
     perms = await rbac_service.get_permissions_by_user(session, user.id)
     if "trades.create" not in perms:
         raise HTTPException(status_code=403, detail="Missing permission: trades.create")
-
-
 # ── Routes ───────────────────────────────────────────────────────────
 
 @router.post("/upload", response_model=ImportBatchResponse, status_code=201)
@@ -142,8 +132,6 @@ async def upload_csv(
     )
 
     return ImportBatchResponse.from_batch(batch)
-
-
 @router.post("/validate", response_model=ImportBatchResponse)
 async def validate_csv(
     data: ValidateRequest,
@@ -165,8 +153,6 @@ async def validate_csv(
         raise HTTPException(status_code=404, detail=str(e))
 
     return ImportBatchResponse.from_batch(batch)
-
-
 @router.post("/commit", response_model=ImportBatchResponse)
 async def commit_csv(
     data: CommitRequest,
@@ -199,8 +185,6 @@ async def commit_csv(
     )
 
     return ImportBatchResponse.from_batch(batch)
-
-
 @router.get("/template")
 async def download_template(
     session: AsyncSession = Depends(get_async_session),
@@ -213,8 +197,6 @@ async def download_template(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=position_import_template.csv"},
     )
-
-
 @router.get("/history", response_model=ImportBatchListResponse)
 async def get_import_history(
     limit: int = Query(default=50, ge=1, le=200),
@@ -226,8 +208,6 @@ async def get_import_history(
     batches = await import_svc.get_batch_history(session, current_user, limit)
     items = [ImportBatchResponse.from_batch(b) for b in batches]
     return {"items": items, "total": len(items)}
-
-
 @router.get("/{batch_id}", response_model=ImportBatchResponse)
 async def get_import_batch(
     batch_id: UUID,

@@ -10,8 +10,6 @@ Endpoints:
 
 All endpoints: superuser only. Non-superusers get 404.
 """
-from __future__ import annotations
-
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
@@ -23,8 +21,6 @@ from app.core.dependencies import require_superuser
 from app.models.user import User
 
 router = APIRouter(prefix="/v1/admin", tags=["v1-admin-metrics"])
-
-
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -109,8 +105,6 @@ async def get_metrics(
         "mrr_usd": 0,
         "conversions_in_period": 0,
     }
-
-
 @router.get("/metrics/funnel")
 async def get_funnel(
     days: int = Query(default=30, ge=1, le=365),
@@ -165,8 +159,6 @@ async def get_funnel(
             {"label": "Paid", "count": 0, "pct": 0},  # no billing table yet
         ],
     }
-
-
 @router.get("/activity")
 async def get_activity(
     limit: int = Query(default=50, ge=1, le=200),

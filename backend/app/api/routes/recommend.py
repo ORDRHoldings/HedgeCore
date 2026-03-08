@@ -1,6 +1,6 @@
-# backend/app/api/routes/recommend.py
 from __future__ import annotations
 
+# backend/app/api/routes/recommend.py
 from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException
@@ -9,8 +9,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from backend.app.engine.recommend import recommend as recommend_engine
 
 router = APIRouter(prefix="/engine", tags=["engine"])
-
-
 # -----------------------------
 # Request / Response Contracts
 # -----------------------------
@@ -52,8 +50,6 @@ class RecommendRequest(BaseModel):
 
     # Optional engine-wide policy overrides
     policy: dict[str, Any] | None = Field(default=None, description="Optional policy overrides for orchestration.")
-
-
 class RecommendResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -64,8 +60,6 @@ class RecommendResponse(BaseModel):
     # present when orchestration policy includes stage outputs
     stages: dict[str, Any] | None = None
     plan: dict[str, Any] | None = None
-
-
 # -----------------------------
 # Endpoint
 # -----------------------------
@@ -101,6 +95,4 @@ def recommend_endpoint(payload: RecommendRequest = Body(...)) -> RecommendRespon
     except Exception as e:
         # Do not leak internals; keep it clean and operationally safe.
         raise HTTPException(status_code=400, detail=f"recommend_failed: {type(e).__name__}") from e
-
-
 __all__ = ["router"]

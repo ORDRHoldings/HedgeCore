@@ -10,8 +10,6 @@ RBAC:
   GET:  requires volatility.snapshot.read   (or is_superuser)
 """
 
-from __future__ import annotations
-
 import uuid as _uuid
 from datetime import datetime
 
@@ -26,8 +24,6 @@ from app.services import rbac_service
 from app.services import volatility_snapshot_service as vss
 
 router = APIRouter(prefix="/v1/volatility-snapshots", tags=["v1-volatility-snapshots"])
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Schemas
 # ─────────────────────────────────────────────────────────────────────────────
@@ -46,8 +42,6 @@ class VolSnapshotCreateRequest(BaseModel):
     lookback_days: int | None = None
     ewma_lambda: float | None = None
     surface_json: dict | None = None
-
-
 class VolSnapshotResponse(BaseModel):
     snapshot_id: str
     pair: str
@@ -61,8 +55,6 @@ class VolSnapshotResponse(BaseModel):
     vol_regime: str | None
     term_structure_slope: float | None
     snapshot_hash: str | None
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -82,16 +74,12 @@ def _to_response(snap) -> VolSnapshotResponse:
         term_structure_slope=snap.term_structure_slope,
         snapshot_hash=snap.snapshot_hash,
     )
-
-
 async def _check_perm(session, user, perm: str):
     if user.is_superuser:
         return
     perms = await rbac_service.get_permissions_by_user(session, user.id)
     if perm not in perms:
         raise HTTPException(status_code=403, detail=f"Missing permission: {perm}")
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Routes
 # ─────────────────────────────────────────────────────────────────────────────
@@ -123,8 +111,6 @@ async def create_volatility_snapshot(
         surface_json=req.surface_json,
     )
     return _to_response(snap)
-
-
 @router.get("/{snapshot_id}", response_model=VolSnapshotResponse)
 async def get_volatility_snapshot(
     snapshot_id: str,
@@ -143,8 +129,6 @@ async def get_volatility_snapshot(
     if not snap:
         raise HTTPException(status_code=404, detail=f"Volatility snapshot {snapshot_id!r} not found")
     return _to_response(snap)
-
-
 @router.get("/latest/{pair}", response_model=VolSnapshotResponse)
 async def get_latest_volatility(
     pair: str,

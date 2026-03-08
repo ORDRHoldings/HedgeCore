@@ -6,8 +6,6 @@ Portfolio risk analytics — derived from live positions/exposure data.
 GET /v1/analytics/portfolio   — currency exposure, coverage, risk heatmap
 GET /v1/analytics/scenarios   — VaR scenarios using historical shocks
 """
-from __future__ import annotations
-
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
@@ -45,8 +43,6 @@ _SCENARIO_SHOCKS = [
 ]
 
 _EM_CURRENCIES = {"MXN", "BRL", "INR", "ZAR", "TRY", "CNY", "COP", "PHP", "THB", "IDR"}
-
-
 @router.get("/portfolio")
 async def get_portfolio_analytics(
     session: AsyncSession = Depends(get_async_session),
@@ -130,8 +126,6 @@ async def get_portfolio_analytics(
         "heatmap": heatmap,
         "run_history": run_history,
     }
-
-
 @router.get("/scenarios")
 async def get_scenario_analysis(
     session: AsyncSession = Depends(get_async_session),

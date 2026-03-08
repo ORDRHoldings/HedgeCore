@@ -11,8 +11,6 @@ Endpoints:
 
 All endpoints: JWT required, tenant-scoped by company_id.
 """
-from __future__ import annotations
-
 import json
 import uuid
 from datetime import UTC, datetime
@@ -35,8 +33,6 @@ from app.services import rbac_service
 from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/decisions", tags=["decision-desk"])
-
-
 # ── Permission helper ──────────────────────────────────────────────────────────
 
 async def _require(session: AsyncSession, user: User, codename: str) -> None:
@@ -45,8 +41,6 @@ async def _require(session: AsyncSession, user: User, codename: str) -> None:
     perms = await rbac_service.get_permissions_by_user(session, user.id)
     if codename not in perms:
         raise HTTPException(status_code=403, detail=f"Missing permission: {codename}")
-
-
 # ── Endpoint: Create decision run ─────────────────────────────────────────────
 
 @router.post("/run")
@@ -339,8 +333,6 @@ async def create_decision_run(
         "market_snapshot_id": str(snap.id),
         "policy_revision_id": policy_revision_id,
     }
-
-
 # ── Endpoint: Get decision run ─────────────────────────────────────────────────
 
 @router.get("/runs/{run_id}")
@@ -409,8 +401,6 @@ async def get_decision_run(
         "proposals": proposals,
         "trace_bundle": row.trace_bundle,
     }
-
-
 # ── Endpoint: Get execution packets ───────────────────────────────────────────
 
 @router.get("/runs/{run_id}/packets")
@@ -454,8 +444,6 @@ async def get_decision_packets(
         "packets": packets,
         "count": len(packets),
     }
-
-
 # ── Endpoint: List decision runs ──────────────────────────────────────────────
 
 @router.get("/runs")

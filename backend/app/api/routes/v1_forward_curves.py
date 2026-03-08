@@ -11,8 +11,6 @@ RBAC:
   GET:   requires forward_curve.read   (or is_superuser)
 """
 
-from __future__ import annotations
-
 import uuid as _uuid
 from datetime import datetime
 
@@ -27,8 +25,6 @@ from app.services import rbac_service
 from app.services import forward_curve_service as fcs
 
 router = APIRouter(prefix="/v1/forward-curves", tags=["v1-forward-curves"])
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Schemas
 # ─────────────────────────────────────────────────────────────────────────────
@@ -44,8 +40,6 @@ class ForwardCurveCreateRequest(BaseModel):
     bid_ask_spread_pips: float | None = None
     swap_rate_annualized: float | None = None
     metadata_json: dict | None = None
-
-
 class ForwardCurveResponse(BaseModel):
     snapshot_id: str
     pair: str
@@ -58,8 +52,6 @@ class ForwardCurveResponse(BaseModel):
     staleness_minutes: int | None
     snapshot_hash: str | None
     provenance: dict
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -78,16 +70,12 @@ def _to_response(snap) -> ForwardCurveResponse:
         snapshot_hash=snap.snapshot_hash,
         provenance=fcs.classify_data_provenance(snap.source, snap.data_class),
     )
-
-
 async def _check_perm(session, user, perm: str):
     if user.is_superuser:
         return
     perms = await rbac_service.get_permissions_by_user(session, user.id)
     if perm not in perms:
         raise HTTPException(status_code=403, detail=f"Missing permission: {perm}")
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # POST /v1/forward-curves
 # ─────────────────────────────────────────────────────────────────────────────
@@ -116,8 +104,6 @@ async def create_forward_curve(
         metadata_json=req.metadata_json,
     )
     return _to_response(snap)
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # GET /v1/forward-curves/{snapshot_id}
 # ─────────────────────────────────────────────────────────────────────────────
@@ -140,8 +126,6 @@ async def get_forward_curve(
     if not snap:
         raise HTTPException(status_code=404, detail=f"Forward curve {snapshot_id!r} not found")
     return _to_response(snap)
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # GET /v1/forward-curves/latest/{pair}
 # ─────────────────────────────────────────────────────────────────────────────
@@ -163,8 +147,6 @@ async def get_latest_forward_curve(
     if not snap:
         raise HTTPException(status_code=404, detail=f"No forward curve found for {pair}")
     return _to_response(snap)
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # GET /v1/forward-curves/pair/{pair}
 # ─────────────────────────────────────────────────────────────────────────────

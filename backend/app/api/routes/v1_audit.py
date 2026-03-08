@@ -2,8 +2,6 @@
 
 Audit event API -- /api/v1/audit
 
-
-
 Endpoints:
 
   POST  /v1/audit          -> write a single audit event (internal use + frontend)
@@ -14,13 +12,9 @@ Endpoints:
 
   GET   /v1/audit/chain    -> verify hash chain integrity for caller's tenant
 
-
-
 The audit log is append-only (WORM). Read endpoints only. No PUT/DELETE.
 
 All writes go through build_audit_event() which computes the tamper-evident hash.
-
-
 
 The prev_event_hash chain is per-tenant: each new event for a company picks up
 
@@ -30,15 +24,11 @@ that can be verified end-to-end by compliance officers or external auditors.
 
 """
 
-from __future__ import annotations
-
 import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
 logger = logging.getLogger(__name__)
-
-
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -52,13 +42,7 @@ from app.models.user import User
 
 router = APIRouter(prefix="/v1/audit", tags=["v1-audit"])
 
-
-
-
-
 # ?? Schemas ????????????????????????????????????????????????????????????????????
-
-
 
 class AuditEventCreate(BaseModel):
 
@@ -71,10 +55,6 @@ class AuditEventCreate(BaseModel):
     entity_id:   str | None = None
 
     payload:     dict          = {}
-
-
-
-
 
 class AuditEventResponse(BaseModel):
 
@@ -106,19 +86,11 @@ class AuditEventResponse(BaseModel):
 
     created_at:      str
 
-
-
-
-
 class AuditListResponse(BaseModel):
 
     items: list[AuditEventResponse]
 
     total: int
-
-
-
-
 
 class ChainIntegrityReport(BaseModel):
 
@@ -132,13 +104,7 @@ class ChainIntegrityReport(BaseModel):
 
     verified_at:     str
 
-
-
-
-
 # ?? Helpers ????????????????????????????????????????????????????????????????????
-
-
 
 def _row_to_response(r: AuditEvent) -> AuditEventResponse:
 
@@ -174,10 +140,6 @@ def _row_to_response(r: AuditEvent) -> AuditEventResponse:
 
     )
 
-
-
-
-
 async def _get_prev_hash(session: AsyncSession, company_id) -> str:
 
     """Fetch the most recent event_hash for this tenant to chain onto."""
@@ -200,13 +162,7 @@ async def _get_prev_hash(session: AsyncSession, company_id) -> str:
 
     return row or GENESIS_HASH
 
-
-
-
-
 # ?? POST /v1/audit -- write an event ???????????????????????????????????????????
-
-
 
 @router.post("", response_model=AuditEventResponse, status_code=201)
 
@@ -231,8 +187,6 @@ async def write_audit_event(
     """
 
     prev_hash = await _get_prev_hash(session, current_user.company_id)
-
-
 
     event = build_audit_event(
 
@@ -266,13 +220,7 @@ async def write_audit_event(
 
     return _row_to_response(event)
 
-
-
-
-
 # ?? GET /v1/audit -- query events ??????????????????????????????????????????????
-
-
 
 @router.get("", response_model=AuditListResponse)
 
@@ -312,15 +260,11 @@ async def list_audit_events(
 
     q = select(AuditEvent).order_by(AuditEvent.created_at.desc())
 
-
-
     # Tenant scoping
 
     if not current_user.is_superuser:
 
         q = q.where(AuditEvent.company_id == current_user.company_id)
-
-
 
     # Filters
 
@@ -366,8 +310,6 @@ async def list_audit_events(
 
             raise HTTPException(status_code=422, detail="to_ts must be ISO format")
 
-
-
     # Pagination
 
     q = q.offset(offset).limit(limit)
@@ -376,13 +318,7 @@ async def list_audit_events(
 
     return {"items": [_row_to_response(r) for r in rows], "total": len(rows)}
 
-
-
-
-
 # ?? GET /v1/audit/{event_id} -- single event ???????????????????????????????????
-
-
 
 @router.get("/{event_id}", response_model=AuditEventResponse)
 
@@ -408,13 +344,7 @@ async def get_audit_event(
 
     return _row_to_response(row)
 
-
-
-
-
 # ?? GET /v1/audit/chain -- verify hash chain integrity ?????????????????????????
-
-
 
 @router.get("/chain/verify", response_model=ChainIntegrityReport)
 
@@ -433,8 +363,6 @@ async def verify_audit_chain(
     recomputing each event's hash and verifying it matches the stored value.
 
     Also verifies that each event's prev_event_hash matches the previous event.
-
-
 
     Returns a ChainIntegrityReport:
 
@@ -459,13 +387,9 @@ async def verify_audit_chain(
 
         rows = list((await session.execute(q)).scalars().all())
 
-
-
         prev_hash = GENESIS_HASH
 
         broken_at: str | None = None
-
-
 
         for row in rows:
 
@@ -508,8 +432,6 @@ async def verify_audit_chain(
                 break
 
             prev_hash = row.event_hash
-
-
 
         return ChainIntegrityReport(
 

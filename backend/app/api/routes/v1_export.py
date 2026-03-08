@@ -1,7 +1,5 @@
 """Export endpoints: PDF, Excel, ZIP, Committee Pack -- v1 API.
 
-
-
 Sprint 1.5: GET /v1/export/committee-pack/{run_id}
 
   DB-backed committee pack assembler. Returns structured JSON payload containing:
@@ -18,8 +16,6 @@ Sprint 1.5: GET /v1/export/committee-pack/{run_id}
 
     - Position IDs linked to this run
 
-
-
   Unlike /export/pdf and /export/excel, this endpoint reads directly from the
 
   calculation_runs table (not the bounded in-memory cache) so it works for any
@@ -27,8 +23,6 @@ Sprint 1.5: GET /v1/export/committee-pack/{run_id}
   DB-persisted run regardless of server restart history.
 
 """
-
-from __future__ import annotations
 
 import logging
 
@@ -51,11 +45,7 @@ from app.services import rbac_service
 
 logger = logging.getLogger(__name__)
 
-
-
 router = APIRouter(prefix="/v1", tags=["v1-export"])
-
-
 
 async def _assert_run_accessible(
 
@@ -68,8 +58,6 @@ async def _assert_run_accessible(
 ) -> None:
 
     """Verify run_id exists in DB and belongs to caller's company (P0 tenant isolation).
-
-
 
     Superusers bypass the company check. Non-superusers whose company_id does not
 
@@ -91,8 +79,6 @@ async def _assert_run_accessible(
 
         raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
 
-
-
 async def _check_permission(session: AsyncSession, user: User, codename: str) -> None:
     """Raise 403 if user lacks the given permission and is not superuser."""
     if user.is_superuser:
@@ -103,8 +89,6 @@ async def _check_permission(session: AsyncSession, user: User, codename: str) ->
             status_code=403,
             detail=f"Missing permission: {codename}",
         )
-
-
 async def _write_export_audit(
     session: AsyncSession,
     current_user: User,
@@ -152,8 +136,6 @@ async def _write_export_audit(
     except Exception as exc:
         logger.warning("export audit event failed for run %s: %s", run_id, exc)
 
-
-
 @router.get("/export/pdf/{run_id}")
 
 async def export_pdf(
@@ -189,10 +171,6 @@ async def export_pdf(
         headers={"Content-Disposition": f'attachment; filename="BankPack_{run_id[:8]}.pdf"'},
 
     )
-
-
-
-
 
 @router.get("/export/excel/{run_id}")
 
@@ -230,10 +208,6 @@ async def export_excel(
 
     )
 
-
-
-
-
 @router.get("/export/zip/{run_id}")
 
 async def export_zip(
@@ -270,13 +244,7 @@ async def export_zip(
 
     )
 
-
-
-
-
 # ?? Sprint 1.5: Committee Pack ?????????????????????????????????????????????????
-
-
 
 @router.get("/export/committee-pack/{run_id}", tags=["v1-export"])
 
@@ -294,15 +262,11 @@ async def get_committee_pack(
 
     GET /v1/export/committee-pack/{run_id}
 
-
-
     Assembles a structured committee pack payload from the DB-persisted
 
     CalculationRun row. Unlike the PDF/Excel/ZIP endpoints, this reads directly
 
     from the calculation_runs table so it is not bounded by the in-memory cache.
-
-
 
     Returns a JSON document containing all sections needed by the frontend
 
@@ -324,8 +288,6 @@ async def get_committee_pack(
 
       - regulatory:     IFRS 9 / EMIR attestation metadata
 
-
-
     This endpoint is callable without authentication (uses get_current_user_optional)
 
     to support unauthenticated committee distribution, but respects RBAC context
@@ -339,8 +301,6 @@ async def get_committee_pack(
     await _assert_run_accessible(session, run_id, current_user)
 
     await _check_permission(session, current_user, "reports.export")
-
-
 
     # ?? 1. Fetch CalculationRun from DB ????????????????????????????????????????
 
@@ -360,8 +320,6 @@ async def get_committee_pack(
 
         raise HTTPException(status_code=500, detail="Database error fetching run.")
 
-
-
     if run_row is None:
 
         # Fall back to in-memory cache for very recent runs not yet committed
@@ -375,8 +333,6 @@ async def get_committee_pack(
         # Build a minimal committee pack from the in-memory cache
 
         return _pack_from_cache(cached)
-
-
 
     # ?? 2. Optionally fetch pinned PolicyRevision ??????????????????????????????
 
@@ -414,21 +370,15 @@ async def get_committee_pack(
 
             # Non-fatal -- pack is still valid without revision details
 
-
-
     # ?? 3. Assemble committee pack payload ?????????????????????????????????????
 
     run_envelope = run_row.run_envelope or {}
 
     trace_lite   = run_row.trace_lite   or {}
 
-
-
     # Extract hedge plan buckets from run_envelope outputs if available
 
     outputs = run_envelope.get("outputs", {}) if isinstance(run_envelope, dict) else {}
-
-
 
     # The hedge_plan may be stored as top-level key in the run_envelope JSONB
 
@@ -444,8 +394,6 @@ async def get_committee_pack(
 
     )
 
-
-
     # Scenarios similarly -- from outputs section
 
     scenarios_raw = (
@@ -457,8 +405,6 @@ async def get_committee_pack(
         or []
 
     )
-
-
 
     pack = {
 
@@ -481,8 +427,6 @@ async def get_committee_pack(
             "generated_for":   "Investment Committee -- Hedge Programme Review",
 
         },
-
-
 
         # ?? Section 2: WORM hash chain (RunEnvelope) ??
 
@@ -510,37 +454,25 @@ async def get_committee_pack(
 
         },
 
-
-
         # ?? Section 3: TraceLite pipeline stages ??
 
         "trace_lite": _normalize_trace_lite(trace_lite),
-
-
 
         # ?? Section 4: Pinned PolicyRevision ??
 
         "policy_revision": policy_revision_data,
 
-
-
         # ?? Section 5: Hedge plan buckets ??
 
         "hedge_plan": _normalize_hedge_plan(hedge_plan_raw),
-
-
 
         # ?? Section 6: Scenario analysis ??
 
         "scenarios": scenarios_raw if isinstance(scenarios_raw, list) else [],
 
-
-
         # ?? Section 7: Position IDs ??
 
         "positions": run_row.position_ids if isinstance(run_row.position_ids, list) else [],
-
-
 
         # ?? Section 8: Regulatory attestation metadata ??
 
@@ -578,19 +510,11 @@ async def get_committee_pack(
 
     }
 
-
-
     await _write_export_audit(session, current_user, run_id, "COMMITTEE_PACK")
 
     return pack
 
-
-
-
-
 # ?? Helpers ???????????????????????????????????????????????????????????????????
-
-
 
 def _normalize_trace_lite(trace_lite: dict | list) -> dict:
 
@@ -618,10 +542,6 @@ def _normalize_trace_lite(trace_lite: dict | list) -> dict:
 
     return {"run_id": None, "events": []}
 
-
-
-
-
 def _normalize_hedge_plan(hedge_plan_raw: dict) -> dict:
 
     """
@@ -647,10 +567,6 @@ def _normalize_hedge_plan(hedge_plan_raw: dict) -> dict:
         "base_ccy":   hedge_plan_raw.get("base_ccy", None),
 
     }
-
-
-
-
 
 def _serialize_policy_revision(rev: PolicyRevision) -> dict:
 
@@ -686,13 +602,7 @@ def _serialize_policy_revision(rev: PolicyRevision) -> dict:
 
     }
 
-
-
-
-
 # ?? RPT-08: Server-side per-section PDF export ???????????????????????????
-
-
 @router.get("/export/pdf-section/{run_id}")
 async def export_pdf_section(
     run_id: str,
@@ -726,11 +636,7 @@ async def export_pdf_section(
         )
     except Exception as e:
         raise HTTPException(500, detail=f"PDF generation failed: {e}")
-
-
 # ?? RPT-10: Server-side XLSX export ???????????????????????????????????????????
-
-
 @router.get("/export/xlsx/{run_id}")
 async def export_xlsx(
     run_id: str,
@@ -761,8 +667,6 @@ async def export_xlsx(
         )
     except Exception as e:
         raise HTTPException(500, detail=f"XLSX generation failed: {e}")
-
-
 # ??? Helpers ???????????????????????????????????????????????????????????????????
 
 def _pack_from_cache(cached) -> dict:
@@ -778,8 +682,6 @@ def _pack_from_cache(cached) -> dict:
     env = cached.run_envelope
 
     tl  = cached.trace_lite
-
-
 
     return {
 

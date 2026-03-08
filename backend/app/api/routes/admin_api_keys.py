@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -49,8 +47,6 @@ async def create_api_key_endpoint(
         expires_at=payload.expires_at,
     )
     return ApiKeyResponse.from_model(api_key, token=token)
-
-
 @router.get(
     "",
     response_model=ApiKeyListResponse,
@@ -62,8 +58,6 @@ async def list_api_keys_endpoint(
     result = await session.execute(ApiKey.__table__.select())
     keys: list[ApiKey] = result.scalars().all()
     return ApiKeyListResponse.from_models(keys)
-
-
 @router.delete(
     "/{key_id}",
     status_code=status.HTTP_204_NO_CONTENT,

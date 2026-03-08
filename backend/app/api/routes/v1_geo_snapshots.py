@@ -11,8 +11,6 @@ RBAC:
   GET:  requires geo.snapshot.read   (or is_superuser)
 """
 
-from __future__ import annotations
-
 import uuid as _uuid
 from datetime import datetime
 
@@ -27,8 +25,6 @@ from app.services import rbac_service
 from app.services import geo_snapshot_service as gss
 
 router = APIRouter(prefix="/v1/geo-snapshots", tags=["v1-geo-snapshots"])
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Schemas
 # ─────────────────────────────────────────────────────────────────────────────
@@ -42,8 +38,6 @@ class GeoSnapshotCreateRequest(BaseModel):
     evidence_summary: str | None = None
     confidence: float | None = Field(None, ge=0.0, le=1.0)
     factors_json: dict | None = None
-
-
 class GeoSnapshotResponse(BaseModel):
     snapshot_id: str
     corridor: str
@@ -54,12 +48,8 @@ class GeoSnapshotResponse(BaseModel):
     is_stale: bool
     confidence: float | None
     snapshot_hash: str | None
-
-
 class CorridorMapResponse(BaseModel):
     corridors: dict[str, dict]
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,16 +66,12 @@ def _to_response(snap) -> GeoSnapshotResponse:
         confidence=snap.confidence,
         snapshot_hash=snap.snapshot_hash,
     )
-
-
 async def _check_perm(session, user, perm: str):
     if user.is_superuser:
         return
     perms = await rbac_service.get_permissions_by_user(session, user.id)
     if perm not in perms:
         raise HTTPException(status_code=403, detail=f"Missing permission: {perm}")
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Routes
 # ─────────────────────────────────────────────────────────────────────────────
@@ -112,8 +98,6 @@ async def create_geo_snapshot(
         factors_json=req.factors_json,
     )
     return _to_response(snap)
-
-
 @router.get("/map", response_model=CorridorMapResponse)
 async def get_corridor_map(
     session: AsyncSession = Depends(get_async_session),
@@ -123,8 +107,6 @@ async def get_corridor_map(
     await _check_perm(session, current_user, "geo.snapshot.read")
     corridors = await gss.get_corridor_map(session, current_user.company_id)
     return CorridorMapResponse(corridors=corridors)
-
-
 @router.get("/{snapshot_id}", response_model=GeoSnapshotResponse)
 async def get_geo_snapshot(
     snapshot_id: str,
@@ -143,8 +125,6 @@ async def get_geo_snapshot(
     if not snap:
         raise HTTPException(status_code=404, detail=f"Geo snapshot {snapshot_id!r} not found")
     return _to_response(snap)
-
-
 @router.get("/latest/{corridor}", response_model=GeoSnapshotResponse)
 async def get_latest_geo_snapshot(
     corridor: str,

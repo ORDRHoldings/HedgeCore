@@ -25,8 +25,6 @@ NOTE on RPT-06: actual email delivery is NOT implemented in v1 (architecture
 freeze). Schedule rows are persisted but no SMTP/Celery task is triggered.
 """
 
-from __future__ import annotations
-
 import csv
 import io
 import logging
@@ -59,8 +57,6 @@ router = APIRouter(prefix="/v1/reports", tags=["v1-reports"])
 # ---------------------------------------------------------------------------
 
 MAX_SAVED_REPORTS_PER_USER = 20
-
-
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
@@ -70,8 +66,6 @@ async def _require(session: AsyncSession, user: User, permission: str) -> None:
     if user.is_superuser:
         return
     await rbac_service.require_permission(session, user, permission)
-
-
 # ===========================================================================
 # RPT-04: Saved Reports
 # ===========================================================================
@@ -82,8 +76,6 @@ class SaveReportRequest(BaseModel):
     run_id: str = Field(..., description="ID of the calculation run this report is based on")
     name: str = Field(..., min_length=1, max_length=255, description="Human-readable report name")
     snapshot: dict = Field(default_factory=dict, description="Serialised report state (sections, filters, etc.)")
-
-
 class SavedReportOut(BaseModel):
     id: UUID
     run_id: str
@@ -94,8 +86,6 @@ class SavedReportOut(BaseModel):
 
     class Config:
         from_attributes = True
-
-
 # ── Endpoints ───────────────────────────────────────────────────────────────
 
 @router.post("/save", response_model=SavedReportOut, status_code=201)
@@ -164,8 +154,6 @@ async def save_report(
         report.id, body.run_id, current_user.email,
     )
     return report
-
-
 @router.get("/saved", response_model=list[SavedReportOut])
 async def list_saved_reports(
     session: AsyncSession = Depends(get_async_session),
@@ -187,8 +175,6 @@ async def list_saved_reports(
     )
     rows = (await session.execute(q)).scalars().all()
     return rows
-
-
 @router.delete("/saved/{report_id}", status_code=204)
 async def delete_saved_report(
     report_id: UUID,
@@ -211,8 +197,6 @@ async def delete_saved_report(
     await session.delete(row)
     await session.commit()
     logger.info("RPT-04: deleted saved report id=%s user=%s", report_id, current_user.email)
-
-
 # ===========================================================================
 # RPT-06: Report Schedules
 # ===========================================================================
@@ -221,22 +205,16 @@ async def delete_saved_report(
 
 FrequencyEnum = Literal["DAILY", "WEEKLY", "MONTHLY"]
 ReportTypeEnum = Literal["committee_pack", "coverage", "compliance"]
-
-
 class ScheduleCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     frequency: FrequencyEnum
     report_type: ReportTypeEnum
     recipients: list[str] = Field(default_factory=list, description="List of recipient email addresses")
-
-
 class ScheduleUpdateRequest(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=255)
     frequency: FrequencyEnum | None = None
     recipients: list[str] | None = None
     is_active: bool | None = None
-
-
 class ScheduleOut(BaseModel):
     id: UUID
     name: str
@@ -250,14 +228,10 @@ class ScheduleOut(BaseModel):
 
     class Config:
         from_attributes = True
-
-
 class ScheduleCreateResponse(BaseModel):
     schedule: ScheduleOut
     status: str
     note: str
-
-
 # ── Endpoints ───────────────────────────────────────────────────────────────
 
 @router.post("/schedules", response_model=ScheduleCreateResponse, status_code=201)
@@ -299,8 +273,6 @@ async def create_schedule(
         status="scheduled",
         note="Email delivery requires SMTP configuration",
     )
-
-
 @router.get("/schedules", response_model=list[ScheduleOut])
 async def list_schedules(
     session: AsyncSession = Depends(get_async_session),
@@ -322,8 +294,6 @@ async def list_schedules(
     )
     rows = (await session.execute(q)).scalars().all()
     return rows
-
-
 @router.patch("/schedules/{schedule_id}", response_model=ScheduleOut)
 async def update_schedule(
     schedule_id: UUID,
@@ -358,8 +328,6 @@ async def update_schedule(
     await session.refresh(row)
     logger.info("RPT-06: updated schedule id=%s user=%s", schedule_id, current_user.email)
     return row
-
-
 @router.delete("/schedules/{schedule_id}", status_code=204)
 async def delete_schedule(
     schedule_id: UUID,
@@ -382,8 +350,6 @@ async def delete_schedule(
     await session.delete(row)
     await session.commit()
     logger.info("RPT-06: deleted schedule id=%s user=%s", schedule_id, current_user.email)
-
-
 # ===========================================================================
 # RPT-07: Server-side Report Generation
 # ===========================================================================
@@ -398,8 +364,6 @@ async def _fetch_run(session: AsyncSession, run_id: str, company_id: UUID) -> Ca
     if row.company_id is not None and row.company_id != company_id:
         raise HTTPException(status_code=403, detail="Access denied.")
     return row
-
-
 async def _fetch_positions(session: AsyncSession, position_ids: list, company_id: UUID) -> list[Position]:
     """Fetch Position rows by IDs, filtered to the caller's company."""
     if not position_ids:
@@ -413,8 +377,6 @@ async def _fetch_positions(session: AsyncSession, position_ids: list, company_id
         .order_by(Position.record_id)
     )
     return list((await session.execute(q)).scalars().all())
-
-
 async def _emit_report_audit(
     session: AsyncSession,
     user: User,
@@ -447,8 +409,6 @@ async def _emit_report_audit(
         await session.commit()
     except Exception:
         logger.warning("RPT-07: audit emit failed for run=%s type=%s", run_id, report_type)
-
-
 def _fmt_decimal(val: Any, decimals: int = 2) -> str:
     """Format a numeric value or return empty string."""
     if val is None:
@@ -457,8 +417,6 @@ def _fmt_decimal(val: Any, decimals: int = 2) -> str:
         return f"{float(val):,.{decimals}f}"
     except (TypeError, ValueError):
         return str(val)
-
-
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.get("/{run_id}/excel")
@@ -536,8 +494,6 @@ async def download_excel(
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-
-
 @router.get("/{run_id}/pdf")
 async def download_pdf(
     run_id: str,
@@ -646,8 +602,6 @@ async def download_pdf(
         media_type="text/plain; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
-
-
 @router.get("/{run_id}/bank-pdf")
 async def download_bank_pdf(
     run_id: str,

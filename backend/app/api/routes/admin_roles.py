@@ -3,8 +3,6 @@
 Role & Permission management API - Admin endpoints.
 """
 
-from __future__ import annotations
-
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,8 +24,6 @@ from app.services import rbac_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/admin/roles", tags=["admin-roles"])
-
-
 # -------------------------------------------------------------------
 # Permissions catalog
 # -------------------------------------------------------------------
@@ -50,8 +46,6 @@ async def list_permissions(
         PermissionGroupOut(module=module, permissions=perms_list)
         for module, perms_list in groups.items()
     ]
-
-
 # -------------------------------------------------------------------
 # Roles CRUD
 # -------------------------------------------------------------------
@@ -79,8 +73,6 @@ async def list_roles(
             )
         )
     return out
-
-
 @router.post("", response_model=RoleWithPermissions, status_code=201)
 @require_permission("users.assign_roles")
 async def create_role(
@@ -124,8 +116,6 @@ async def create_role(
         is_system=role.is_system,
         permissions=perms,
     )
-
-
 @router.put("/{role_id}/permissions", response_model=RoleWithPermissions)
 @require_permission("users.assign_roles")
 async def update_role_permissions(
@@ -153,8 +143,6 @@ async def update_role_permissions(
         is_system=role.is_system,
         permissions=perms,
     )
-
-
 @router.delete("/{role_id}", status_code=204)
 @require_permission("users.assign_roles")
 async def delete_role(
@@ -173,8 +161,6 @@ async def delete_role(
     await db.delete(role)
     await db.commit()
     logger.info(f"Role '{role.name}' deleted by user {current_user.id}")
-
-
 # -------------------------------------------------------------------
 # Internal helpers
 # -------------------------------------------------------------------

@@ -8,8 +8,6 @@ Endpoints:
   GET    /v1/mfa/status    -- Return current user's MFA status
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import secrets
@@ -30,69 +28,43 @@ from app.services.audit_emit import emit_audit
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/mfa", tags=["v1-mfa"])
-
-
 # ---------------------------------------------------------------------------
 # Pydantic schemas
 # ---------------------------------------------------------------------------
-
-
 class MFASetupResponse(BaseModel):
     provisioning_uri: str
     secret: str
     backup_codes: list[str]
-
-
 class TOTPCodeRequest(BaseModel):
     totp_code: str = Field(..., min_length=6, max_length=8, description="6-digit TOTP code")
-
-
 class MFAVerifyResponse(BaseModel):
     access_token: str
     mfa_verified: bool
-
-
 class MFAStatusResponse(BaseModel):
     is_enabled: bool
     enrolled_at: str | None = None
-
-
 class MFAMessageResponse(BaseModel):
     message: str
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
 def _now_utc() -> datetime:
     return datetime.now(UTC)
-
-
 async def _get_or_none(session: AsyncSession, user_id) -> UserMFA | None:
     """Return the UserMFA row for this user, or None."""
     result = await session.execute(
         select(UserMFA).where(UserMFA.user_id == user_id)
     )
     return result.scalars().first()
-
-
 def _generate_backup_codes() -> list[str]:
     """Generate 8 one-time backup codes (10-char hex, uppercase)."""
     return [secrets.token_hex(5).upper() for _ in range(8)]
-
-
 def _totp_verify(secret: str, code: str) -> bool:
     """Verify a 6-digit TOTP code with valid_window=1 (±30 s)."""
     return pyotp.TOTP(secret).verify(code, valid_window=1)
-
-
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
-
-
 @router.post("/setup", response_model=MFASetupResponse, status_code=200)
 async def mfa_setup(
     session: AsyncSession = Depends(get_async_session),
@@ -143,8 +115,6 @@ async def mfa_setup(
         secret=secret,
         backup_codes=backup_codes,
     )
-
-
 @router.post("/activate", response_model=MFAMessageResponse, status_code=200)
 async def mfa_activate(
     data: TOTPCodeRequest,
@@ -187,8 +157,6 @@ async def mfa_activate(
     )
 
     return MFAMessageResponse(message="MFA activated successfully")
-
-
 @router.post("/verify", response_model=MFAVerifyResponse, status_code=200)
 async def mfa_verify(
     data: TOTPCodeRequest,
@@ -225,8 +193,6 @@ async def mfa_verify(
     logger.info("MFA verified for user_id=%s", current_user.id)
 
     return MFAVerifyResponse(access_token=new_token, mfa_verified=True)
-
-
 @router.delete("/disable", response_model=MFAMessageResponse, status_code=200)
 async def mfa_disable(
     data: TOTPCodeRequest,
@@ -260,8 +226,6 @@ async def mfa_disable(
     )
 
     return MFAMessageResponse(message="MFA disabled")
-
-
 @router.get("/status", response_model=MFAStatusResponse, status_code=200)
 async def mfa_status(
     session: AsyncSession = Depends(get_async_session),

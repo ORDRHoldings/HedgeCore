@@ -13,8 +13,6 @@ Endpoints:
 
 All endpoints: superuser only. Non-superusers get 403.
 """
-from __future__ import annotations
-
 import importlib
 import logging
 import os
@@ -46,21 +44,15 @@ _START_UTC = datetime.now(UTC)
 # In-memory caches that can be cleared via restart endpoint
 # ---------------------------------------------------------------------------
 _caches: dict[str, dict] = {}
-
-
 def register_cache(name: str, cache: dict) -> None:
     """Register an in-memory cache dict so it can be cleared via the admin API."""
     _caches[name] = cache
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 def _uptime_seconds() -> float:
     return round(time.monotonic() - _START_TIME, 2)
-
-
 def _uptime_human(seconds: float) -> str:
     days, rem = divmod(int(seconds), 86400)
     hours, rem = divmod(rem, 3600)
@@ -74,8 +66,6 @@ def _uptime_human(seconds: float) -> str:
         parts.append(f"{minutes}m")
     parts.append(f"{secs}s")
     return " ".join(parts)
-
-
 def _get_memory_usage() -> dict | None:
     """Return memory usage dict via psutil, or None if unavailable."""
     try:
@@ -89,8 +79,6 @@ def _get_memory_usage() -> dict | None:
         }
     except Exception:
         return None
-
-
 # ---------------------------------------------------------------------------
 # 1. GET /health — Comprehensive system health check
 # ---------------------------------------------------------------------------
@@ -140,8 +128,6 @@ async def monitor_health(
         },
         "memory": _get_memory_usage(),
     }
-
-
 # ---------------------------------------------------------------------------
 # 2. GET /services — Service status overview
 # ---------------------------------------------------------------------------
@@ -226,8 +212,6 @@ async def monitor_services(
         "checked_at": now,
         "services": services,
     }
-
-
 # ---------------------------------------------------------------------------
 # 3. GET /tables — Database table statistics
 # ---------------------------------------------------------------------------
@@ -248,8 +232,6 @@ _MONITORED_TABLES = [
 # Pre-built SQL statements — table names are from a hardcoded constant, not user input.
 _COUNT_STMTS = {t: text("SELECT COUNT(*) FROM %s" % t) for t in _MONITORED_TABLES}
 _MAX_CREATED_STMTS = {t: text("SELECT MAX(created_at) FROM %s" % t) for t in _MONITORED_TABLES}
-
-
 @router.get("/tables")
 async def monitor_tables(
     session: AsyncSession = Depends(get_async_session),
@@ -285,8 +267,6 @@ async def monitor_tables(
         "checked_at": datetime.now(UTC).isoformat(),
         "tables": tables,
     }
-
-
 # ---------------------------------------------------------------------------
 # 4. GET /engine — Engine module status
 # ---------------------------------------------------------------------------
@@ -329,8 +309,6 @@ _ENGINE_V1_MODULES = {
     "waterfall": "v1_calculate",
     "worst_case_selector": None,
 }
-
-
 @router.get("/engine")
 async def monitor_engine(
     _su: User = Depends(require_superuser),
@@ -372,8 +350,6 @@ async def monitor_engine(
         "unwired": sum(1 for m in modules if m["status"] == "unwired"),
         "modules": modules,
     }
-
-
 # ---------------------------------------------------------------------------
 # 5. GET /errors — Recent error summary
 # ---------------------------------------------------------------------------
@@ -446,15 +422,11 @@ async def monitor_errors(
         "by_type": groups,
         "recent_errors": recent,
     }
-
-
 # ---------------------------------------------------------------------------
 # 6. POST /restart/{service} — Service restart trigger
 # ---------------------------------------------------------------------------
 
 _ALLOWED_RESTART_SERVICES = {"cache", "scheduler"}
-
-
 @router.post("/restart/{service}")
 async def restart_service(
     service: str,

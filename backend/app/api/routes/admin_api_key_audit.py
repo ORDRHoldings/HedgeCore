@@ -12,8 +12,6 @@ Design principles:
 - Deterministic ordering
 """
 
-from __future__ import annotations
-
 import logging
 from datetime import datetime
 
@@ -42,8 +40,6 @@ router = APIRouter(
 
 MAX_LIMIT = 100
 DEFAULT_LIMIT = 50
-
-
 # -------------------------------------------------------------------------
 # ? List API Key Audit Logs (Admin, Read-Only)
 # -------------------------------------------------------------------------

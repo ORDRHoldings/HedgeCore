@@ -11,8 +11,6 @@ All endpoints require a valid JWT (get_current_user).
 Tenant isolation is enforced via current_user.company_id.
 """
 
-from __future__ import annotations
-
 import logging
 from datetime import UTC, datetime
 from typing import Literal
@@ -31,8 +29,6 @@ from app.models.user import User
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/support", tags=["support"])
-
-
 # ---------------------------------------------------------------------------
 # Pydantic Schemas
 # ---------------------------------------------------------------------------
@@ -43,12 +39,8 @@ class TicketCreate(BaseModel):
     severity: Literal["S0", "S1", "S2", "S3", "S4"]
     category: str
     diagnostics_bundle: dict | None = None
-
-
 class CommentCreate(BaseModel):
     comment: str
-
-
 class TicketEventOut(BaseModel):
     id: UUID
     event_type: str
@@ -60,8 +52,6 @@ class TicketEventOut(BaseModel):
 
     class Config:
         from_attributes = True
-
-
 class TicketOut(BaseModel):
     id: UUID
     ticket_ref: str
@@ -79,8 +69,6 @@ class TicketOut(BaseModel):
 
     class Config:
         from_attributes = True
-
-
 # ---------------------------------------------------------------------------
 # Helper: generate next ticket_ref for a company
 # ---------------------------------------------------------------------------
@@ -105,8 +93,6 @@ async def _next_ticket_ref(session: AsyncSession, company_id: UUID) -> str:
     )
     count = result.scalar() or 0
     return f"TKT-{count + 1:04d}"
-
-
 # ---------------------------------------------------------------------------
 # Helper: load ticket (with tenant check)
 # ---------------------------------------------------------------------------
@@ -127,8 +113,6 @@ async def _get_ticket(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return ticket
-
-
 async def _load_events(session: AsyncSession, ticket_id: UUID) -> list[TicketEvent]:
     result = await session.execute(
         select(TicketEvent)
@@ -136,8 +120,6 @@ async def _load_events(session: AsyncSession, ticket_id: UUID) -> list[TicketEve
         .order_by(TicketEvent.created_at.asc())
     )
     return list(result.scalars().all())
-
-
 def _ticket_to_out(ticket: SupportTicket, events: list[TicketEvent]) -> TicketOut:
     return TicketOut(
         id=ticket.id,
@@ -165,8 +147,6 @@ def _ticket_to_out(ticket: SupportTicket, events: list[TicketEvent]) -> TicketOu
             for ev in events
         ],
     )
-
-
 # ---------------------------------------------------------------------------
 # POST /v1/support/tickets  -- create ticket
 # ---------------------------------------------------------------------------
@@ -218,8 +198,6 @@ async def create_ticket(
         current_user.company_id,
     )
     return _ticket_to_out(ticket, events)
-
-
 # ---------------------------------------------------------------------------
 # GET /v1/support/tickets  -- list tickets for company
 # ---------------------------------------------------------------------------
@@ -249,8 +227,6 @@ async def list_tickets(
             out.append(_ticket_to_out(t, events))
 
     return out
-
-
 # ---------------------------------------------------------------------------
 # GET /v1/support/tickets/{ticket_id}  -- get single ticket with events
 # ---------------------------------------------------------------------------
@@ -266,8 +242,6 @@ async def get_ticket(
         events = await _load_events(session, ticket.id)
 
     return _ticket_to_out(ticket, events)
-
-
 # ---------------------------------------------------------------------------
 # POST /v1/support/tickets/{ticket_id}/comments  -- add comment
 # ---------------------------------------------------------------------------

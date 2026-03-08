@@ -12,8 +12,6 @@ In production, extend to persist in Redis or a system_config DB table.
 
 All endpoints: superuser only.
 """
-from __future__ import annotations
-
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -59,8 +57,6 @@ _SYSTEM_CONFIG: dict[str, Any] = {
         "http://localhost:3001",
     ],
 }
-
-
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
@@ -72,8 +68,6 @@ class ConfigPatch(BaseModel):
     maintenance_message: str | None = None
     rate_limits: dict[str, str] | None = None
     cors_origins: list[str] | None = None
-
-
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -85,8 +79,6 @@ async def get_config(
 ) -> dict:
     """Return current system configuration. Superuser only."""
     return _SYSTEM_CONFIG
-
-
 @router.patch("")
 async def update_config(
     data: ConfigPatch,

@@ -10,8 +10,6 @@ Endpoints:
 
 All endpoints: superuser only. Non-superusers receive 404.
 """
-from __future__ import annotations
-
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -28,8 +26,6 @@ from app.models.user import User
 from app.models.user_mfa import UserMFA
 
 router = APIRouter(prefix="/v1/admin/users", tags=["v1-admin-users"])
-
-
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
@@ -47,23 +43,17 @@ class AdminUserItem(BaseModel):
     roles: list[str]
     mfa_enabled: bool
     created_at: str | None
-
-
 class AdminUserListResponse(BaseModel):
     items: list[AdminUserItem]
     total: int
     page: int
     size: int
     pages: int
-
-
 class PatchUserRequest(BaseModel):
     is_active: bool | None = None
     is_superuser: bool | None = None
     full_name: str | None = None
     job_title: str | None = None
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -80,8 +70,6 @@ async def _get_roles_for_users(session: AsyncSession, user_ids: list[UUID]) -> d
     for uid, rname in rows.all():
         result.setdefault(uid, []).append(rname)
     return result
-
-
 async def _get_mfa_status(session: AsyncSession, user_ids: list[UUID]) -> dict[UUID, bool]:
     if not user_ids:
         return {}
@@ -89,8 +77,6 @@ async def _get_mfa_status(session: AsyncSession, user_ids: list[UUID]) -> dict[U
         select(UserMFA.user_id, UserMFA.is_enabled).where(UserMFA.user_id.in_(user_ids))
     )
     return {r[0]: r[1] for r in rows.all()}
-
-
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -143,8 +129,6 @@ async def list_admin_users(
 
     pages = max(1, (total + size - 1) // size)
     return AdminUserListResponse(items=items, total=total, page=page, size=size, pages=pages)
-
-
 @router.patch("/{user_id}", response_model=dict)
 async def patch_admin_user(
     user_id: UUID,
@@ -169,8 +153,6 @@ async def patch_admin_user(
 
     await session.commit()
     return {"detail": "User updated", "user_id": str(user_id)}
-
-
 @router.post("/{user_id}/revoke-sessions", response_model=dict)
 async def revoke_user_sessions(
     user_id: UUID,

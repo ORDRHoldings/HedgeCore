@@ -2,8 +2,6 @@
 v1_ui.py — UI-specific endpoints: onboarding summary + user UI preferences.
 Tenant-safe, RBAC-gated, deterministic.
 """
-from __future__ import annotations
-
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request
@@ -20,8 +18,6 @@ from app.models.position import Position
 from app.models.user import User
 
 router = APIRouter(prefix="/v1/ui", tags=["ui"])
-
-
 # ---------------------------------------------------------------------------
 # Response / Request schemas
 # ---------------------------------------------------------------------------
@@ -38,17 +34,11 @@ class OnboardingSummaryResponse(BaseModel):
     net_notional_amount: float | None
     last_run_estimated_cost: float | None
     risk_gate_status: str  # "online" | "offline" | "unknown"
-
-
 class UiPrefsResponse(BaseModel):
     show_quickstart: bool
     quickstart_dismissed_at: str | None
-
-
 class UiPrefsUpdate(BaseModel):
     show_quickstart: bool | None = None
-
-
 # ---------------------------------------------------------------------------
 # Exported pure helpers (testable without DB)
 # ---------------------------------------------------------------------------
@@ -67,14 +57,10 @@ def build_safe_summary_defaults() -> dict:
         "last_run_estimated_cost": None,
         "risk_gate_status": "unknown",
     }
-
-
 def get_show_quickstart_from_prefs(prefs: dict | None) -> bool:
     if not prefs:
         return True
     return bool(prefs.get("show_quickstart", True))
-
-
 def apply_prefs_update(existing: dict, *, show_quickstart: bool | None = None) -> dict:
     prefs = dict(existing)
     if show_quickstart is not None:
@@ -82,8 +68,6 @@ def apply_prefs_update(existing: dict, *, show_quickstart: bool | None = None) -
         if not show_quickstart:
             prefs["quickstart_dismissed_at"] = datetime.now(UTC).isoformat()
     return prefs
-
-
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -238,8 +222,6 @@ async def get_onboarding_summary(
         pass
 
     return OnboardingSummaryResponse(**data)
-
-
 @router.get("/prefs", response_model=UiPrefsResponse)
 async def get_ui_prefs(
     current_user: User = Depends(get_current_user),
@@ -250,8 +232,6 @@ async def get_ui_prefs(
         show_quickstart=get_show_quickstart_from_prefs(prefs),
         quickstart_dismissed_at=prefs.get("quickstart_dismissed_at"),
     )
-
-
 @router.patch("/prefs", response_model=UiPrefsResponse)
 async def patch_ui_prefs(
     body: UiPrefsUpdate,

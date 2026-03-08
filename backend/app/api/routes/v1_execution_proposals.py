@@ -1,14 +1,12 @@
+from __future__ import annotations
+
 """
 
 Execution Proposal API routes -- /api/v1/proposals
 
-
-
 4-Eyes Maker/Checker workflow. A position cannot reach HEDGED without going
 
 through the proposal -> approval -> execute sequence.
-
-
 
 Endpoints:
 
@@ -30,8 +28,6 @@ Endpoints:
 
   GET  /v1/proposals/position/{position_id}    -> full history for a position (trades.view)
 
-
-
 SoD rules:
 
   - trades.edit   can create and withdraw proposals
@@ -41,8 +37,6 @@ SoD rules:
   - The same actor cannot propose + approve (enforced at service + DB level)
 
 """
-
-from __future__ import annotations
 
 import hashlib
 import json
@@ -68,21 +62,13 @@ from app.services import rbac_service
 
 logger = logging.getLogger(__name__)
 
-
-
 router = APIRouter(prefix="/v1/proposals", tags=["v1-proposals"])
-
-
-
-
 
 # ---------------------------------------------------------------------------
 
 # Pydantic schemas (inline -- proposal-specific, no reuse needed yet)
 
 # ---------------------------------------------------------------------------
-
-
 
 class ProposeExecutionRequest(BaseModel):
 
@@ -104,40 +90,20 @@ class ProposeExecutionRequest(BaseModel):
 
     risk_verdict:       str | None   = Field(default=None, max_length=32)
 
-
-
-
-
 class ApproveProposalRequest(BaseModel):
 
     approval_notes: str | None = Field(default=None, max_length=1024)
-
-
-
-
 
 class RejectProposalRequest(BaseModel):
 
     reason: str = Field(..., min_length=1, max_length=512)
 
-
-
-
-
 class WithdrawProposalRequest(BaseModel):
 
     reason: str | None = Field(default=None, max_length=512)
-
-
-
-
 class SecondApproveRequest(BaseModel):
 
     notes: str | None = Field(default=None, max_length=1024)
-
-
-
-
 
 class ProposalResponse(BaseModel):
 
@@ -209,11 +175,7 @@ class ProposalResponse(BaseModel):
 
     hedge_rate:               float | None  = None
 
-
-
     model_config = ConfigDict(from_attributes=True)
-
-
 
     @classmethod
 
@@ -298,17 +260,11 @@ class ProposalResponse(BaseModel):
 
         )
 
-
-
-
-
 # ---------------------------------------------------------------------------
 
 # Auth helpers
 
 # ---------------------------------------------------------------------------
-
-
 
 async def _check_mfa_gate(session: AsyncSession, user: User, mfa_verified: bool) -> None:
 
@@ -353,10 +309,6 @@ async def _check_mfa_gate(session: AsyncSession, user: User, mfa_verified: bool)
             },
 
         )
-
-
-
-
 async def _check_permission(session: AsyncSession, user: User, codename: str) -> None:
 
     if user.is_superuser:
@@ -369,10 +321,6 @@ async def _check_permission(session: AsyncSession, user: User, codename: str) ->
 
         raise HTTPException(status_code=403, detail=f"Missing permission: {codename}")
 
-
-
-
-
 async def _resolve_scope(session: AsyncSession, user: User) -> bool:
 
     if user.is_superuser:
@@ -383,17 +331,11 @@ async def _resolve_scope(session: AsyncSession, user: User) -> bool:
 
     return "reports.view_all_branches" in perms
 
-
-
-
-
 # ---------------------------------------------------------------------------
 
 # Audit helper
 
 # ---------------------------------------------------------------------------
-
-
 
 async def _emit_proposal_audit(
 
@@ -433,8 +375,6 @@ async def _emit_proposal_audit(
 
         prev_hash = result.scalars().first() or GENESIS_HASH
 
-
-
         request_id = ip_address = None
 
         if request:
@@ -442,8 +382,6 @@ async def _emit_proposal_audit(
             request_id = request.headers.get("X-Request-Id")
 
             ip_address = request.client.host if request.client else None
-
-
 
         actor_role = None
 
@@ -458,8 +396,6 @@ async def _emit_proposal_audit(
         except Exception:
 
             pass
-
-
 
         event = build_audit_event(
 
@@ -499,17 +435,11 @@ async def _emit_proposal_audit(
 
         logger.warning("Failed to emit audit event for proposal %s", proposal_id, exc_info=True)
 
-
-
-
-
 # ---------------------------------------------------------------------------
 
 # Routes
 
 # ---------------------------------------------------------------------------
-
-
 
 @router.post("", response_model=ProposalResponse, status_code=201)
 
@@ -618,8 +548,6 @@ async def propose_execution(
 
         logger.debug("dual-key threshold check failed (non-fatal)", exc_info=True)
 
-
-
     await _emit_proposal_audit(
 
         session, current_user,
@@ -647,8 +575,6 @@ async def propose_execution(
     )
 
     return ProposalResponse.from_orm_safe(proposal)
-
-
 # ── GET /v1/proposals — list all proposals for the company ──────────────────
 # BUGFIX: This endpoint was missing — POST /v1/proposals existed but no GET,
 # so FastAPI returned HTTP 405 Method Not Allowed on the Trade History page.
@@ -700,8 +626,6 @@ async def list_proposals(
     proposals = list(result.scalars().all())
 
     return [ProposalResponse.from_orm_safe(p) for p in proposals]
-
-
 @router.get("/pending", response_model=list[ProposalResponse])
 
 async def list_pending_proposals(
@@ -732,10 +656,6 @@ async def list_pending_proposals(
 
     return [ProposalResponse.from_orm_safe(p) for p in proposals]
 
-
-
-
-
 @router.get("/position/{position_id}", response_model=list[ProposalResponse])
 
 async def list_proposals_for_position(
@@ -759,10 +679,6 @@ async def list_proposals_for_position(
     )
 
     return [ProposalResponse.from_orm_safe(p) for p in proposals]
-
-
-
-
 
 @router.get("/{proposal_id}", response_model=ProposalResponse)
 
@@ -791,10 +707,6 @@ async def get_proposal(
         raise HTTPException(status_code=404, detail=str(e))
 
     return ProposalResponse.from_orm_safe(proposal)
-
-
-
-
 
 @router.patch("/{proposal_id}/approve", response_model=ProposalResponse)
 
@@ -869,8 +781,6 @@ async def approve_proposal(
 
         raise HTTPException(status_code=409, detail=msg)
 
-
-
     await _emit_proposal_audit(
 
         session, current_user,
@@ -898,10 +808,6 @@ async def approve_proposal(
     )
 
     return ProposalResponse.from_orm_safe(proposal)
-
-
-
-
 
 @router.patch("/{proposal_id}/reject", response_model=ProposalResponse)
 
@@ -955,8 +861,6 @@ async def reject_proposal(
 
         raise HTTPException(status_code=409, detail=msg)
 
-
-
     await _emit_proposal_audit(
 
         session, current_user,
@@ -980,10 +884,6 @@ async def reject_proposal(
     )
 
     return ProposalResponse.from_orm_safe(proposal)
-
-
-
-
 
 @router.patch("/{proposal_id}/withdraw", response_model=ProposalResponse)
 
@@ -1031,8 +931,6 @@ async def withdraw_proposal(
 
         raise HTTPException(status_code=409, detail=str(e))
 
-
-
     await _emit_proposal_audit(
 
         session, current_user,
@@ -1057,10 +955,6 @@ async def withdraw_proposal(
 
     return ProposalResponse.from_orm_safe(proposal)
 
-
-
-
-
 class ExecuteWithFillRequest(BaseModel):
     """Optional body for POST /v1/proposals/{id}/execute.
 
@@ -1074,8 +968,6 @@ class ExecuteWithFillRequest(BaseModel):
     fill_currency: str | None   = Field(default=None, max_length=8, description="Fill currency (e.g. 'MXN')")
     fill_timestamp: str | None  = Field(default=None, description="ISO 8601 fill timestamp")
     fill_notes:    str | None   = Field(default=None, max_length=512)
-
-
 @router.post("/{proposal_id}/execute", response_model=ProposalResponse)
 
 async def execute_approved_proposal(
@@ -1151,8 +1043,6 @@ async def execute_approved_proposal(
             raise HTTPException(status_code=409, detail=msg)
 
         raise HTTPException(status_code=422, detail=msg)
-
-
 
     await _emit_proposal_audit(
 
@@ -1254,8 +1144,6 @@ async def execute_approved_proposal(
         )
 
     return ProposalResponse.from_orm_safe(proposal)
-
-
 @router.patch("/{proposal_id}/second-approve", response_model=ProposalResponse)
 
 async def second_approve_proposal(
@@ -1409,29 +1297,21 @@ async def second_approve_proposal(
     )
 
     return ProposalResponse.from_orm_safe(proposal)
-
-
 # ---------------------------------------------------------------------------
 
 # POST /v1/proposals/batch — atomic multi-position proposal submission
 
 # ---------------------------------------------------------------------------
 
-
-
 class BatchProposeRequest(BaseModel):
 
     proposals: list[ProposeExecutionRequest] = Field(..., min_length=1, max_length=50)
-
-
 
 class BatchProposeResponse(BaseModel):
 
     created: list[ProposalResponse]
 
     failed: list[dict]  # {position_id, error}
-
-
 
 @router.post("/batch", response_model=BatchProposeResponse, status_code=201)
 
@@ -1532,21 +1412,15 @@ async def batch_propose_execution(
             failed.append({"position_id": str(item.position_id), "error": str(e)})
 
     return BatchProposeResponse(created=created, failed=failed)
-
-
 # ---------------------------------------------------------------------------
 # POST /v1/proposals/batch-and-approve — Solo mode: create + self-approve
 # ---------------------------------------------------------------------------
-
-
 class BatchAndApproveResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     approved: list[ProposalResponse]
     failed: list[dict]
     governance_mode: str = "solo"
-
-
 @router.post("/batch-and-approve", response_model=BatchAndApproveResponse, status_code=201)
 
 async def batch_propose_and_approve(
@@ -1691,15 +1565,11 @@ async def batch_propose_and_approve(
             failed.append({"position_id": str(item.position_id), "error": str(e)})
 
     return BatchAndApproveResponse(approved=approved, failed=failed, governance_mode="solo")
-
-
 # ---------------------------------------------------------------------------
 
 # PATCH /v1/proposals/{id}/fill — record actual fill data
 
 # ---------------------------------------------------------------------------
-
-
 
 class FillReportRequest(BaseModel):
 
@@ -1718,8 +1588,6 @@ class FillReportRequest(BaseModel):
     counterparty:     str | None = Field(default=None, max_length=128)
 
     confirmation_ref: str | None = Field(default=None, max_length=128)
-
-
 
 @router.patch("/{proposal_id}/fill", response_model=ProposalResponse)
 
@@ -1751,8 +1619,6 @@ async def report_fill(
 
     await _check_permission(session, current_user, "trades.execute")
 
-
-
     result = await session.execute(
 
         sa_select(ExecutionProposal).where(
@@ -1781,16 +1647,12 @@ async def report_fill(
 
         )
 
-
-
     import hashlib
     import json as _json
 
     def _canon(obj: dict) -> str:
 
         return _json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str)
-
-
 
     # Compute slippage if not provided
 
@@ -1807,8 +1669,6 @@ async def report_fill(
     else:
 
         slippage_bps = data.slippage_bps
-
-
 
     fill_payload = {
 
@@ -1836,8 +1696,6 @@ async def report_fill(
 
     fill_hash = hashlib.sha256(_canon(fill_payload).encode()).hexdigest()
 
-
-
     # Store fill data
 
     proposal.actual_fill_rate     = data.fill_price
@@ -1854,8 +1712,6 @@ async def report_fill(
 
     await session.refresh(proposal)
 
-
-
     await _emit_proposal_audit(
 
         session, current_user,
@@ -1871,7 +1727,5 @@ async def report_fill(
         request     = request,
 
     )
-
-
 
     return ProposalResponse.from_orm_safe(proposal)

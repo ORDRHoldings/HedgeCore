@@ -1,12 +1,10 @@
+from __future__ import annotations
+
 """
 
 Policy Revision API routes -- /api/v1/policies/revisions
 
-
-
 Provides version-pinning lineage endpoints for policy audit and replay.
-
-
 
 Endpoints:
 
@@ -16,21 +14,15 @@ Endpoints:
 
   GET  /v1/policies/revisions/{a}/diff/{b}           -> structured diff between two revisions
 
-
-
 Policy revision rows are WORM (append-only at DB level). These endpoints are
 
 read-only -- creation is triggered internally by policy activation.
-
-
 
 Permissions:
 
   All endpoints require: reports.view (auditors, analysts) or trades.view (traders)
 
 """
-
-from __future__ import annotations
 
 import logging
 from uuid import UUID
@@ -47,21 +39,13 @@ from app.services import rbac_service
 
 logger = logging.getLogger(__name__)
 
-
-
 router = APIRouter(prefix="/v1/policies/revisions", tags=["v1-policy-revisions"])
-
-
-
-
 
 # ---------------------------------------------------------------------------
 
 # Pydantic response schemas
 
 # ---------------------------------------------------------------------------
-
-
 
 class PolicyRevisionResponse(BaseModel):
 
@@ -91,11 +75,7 @@ class PolicyRevisionResponse(BaseModel):
 
     created_at:         str
 
-
-
     model_config = ConfigDict(from_attributes=True)
-
-
 
     @classmethod
 
@@ -131,10 +111,6 @@ class PolicyRevisionResponse(BaseModel):
 
         )
 
-
-
-
-
 class DiffResponse(BaseModel):
 
     is_identical:   bool
@@ -155,17 +131,11 @@ class DiffResponse(BaseModel):
 
     label_b:        str
 
-
-
-
-
 # ---------------------------------------------------------------------------
 
 # Auth helper
 
 # ---------------------------------------------------------------------------
-
-
 
 async def _check_permission(session: AsyncSession, user: User, codename: str) -> None:
 
@@ -179,17 +149,11 @@ async def _check_permission(session: AsyncSession, user: User, codename: str) ->
 
         raise HTTPException(status_code=403, detail=f"Missing permission: {codename}")
 
-
-
-
-
 # ---------------------------------------------------------------------------
 
 # Routes
 
 # ---------------------------------------------------------------------------
-
-
 
 @router.get("/instance/{instance_id}", response_model=list[PolicyRevisionResponse])
 
@@ -221,10 +185,6 @@ async def list_revisions_for_instance(
 
     return [PolicyRevisionResponse.from_orm_safe(r) for r in revisions]
 
-
-
-
-
 @router.get("/{revision_id}", response_model=PolicyRevisionResponse)
 
 async def get_revision(
@@ -254,10 +214,6 @@ async def get_revision(
         raise HTTPException(status_code=404, detail="Policy revision not found")
 
     return PolicyRevisionResponse.from_orm_safe(rev)
-
-
-
-
 
 @router.get("/{revision_a_id}/diff/{revision_b_id}", response_model=DiffResponse)
 

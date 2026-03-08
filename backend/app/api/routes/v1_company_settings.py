@@ -12,8 +12,6 @@ governance_mode values:
   "team"  -- 4-eyes enforcement; proposer != approver (default)
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -29,8 +27,6 @@ from app.services import rbac_service
 from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/company", tags=["v1-company"])
-
-
 # ---------------------------------------------------------------------------
 # Sub-models for structured payload validation
 # ---------------------------------------------------------------------------
@@ -44,12 +40,8 @@ class PolicyLimitsPayload(BaseModel):
     spread_bps: int | None = Field(default=None, ge=0, le=500)
     required_approvals: int | None = Field(default=None, ge=1, le=10)
     integrity_threshold: int | None = Field(default=None, ge=0, le=100)
-
-
 _VALID_PRODUCTS = {"NDF", "FWD", "FUTURES"}
 _VALID_STRESS_SIGMAS = {0.08, 0.15, 0.22}
-
-
 class ExecutionSettingsPayload(BaseModel):
     default_product: str | None = Field(default=None)
     stress_sigma: float | None = Field(default=None)
@@ -70,8 +62,6 @@ class ExecutionSettingsPayload(BaseModel):
         if v is not None and v not in _VALID_STRESS_SIGMAS:
             raise ValueError(f"stress_sigma must be one of {sorted(_VALID_STRESS_SIGMAS)}")
         return v
-
-
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
@@ -84,8 +74,6 @@ class CompanySettingsResponse(BaseModel):
     execution_settings: dict | None = None
     last_modified_at: str | None = None
     last_modified_by: str | None = None
-
-
 class UpdateCompanySettingsRequest(BaseModel):
     governance_mode: str | None = Field(
         default=None,
@@ -94,8 +82,6 @@ class UpdateCompanySettingsRequest(BaseModel):
     )
     policy_limits: PolicyLimitsPayload | None = None
     execution_settings: ExecutionSettingsPayload | None = None
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -106,8 +92,6 @@ async def _get_company(session: AsyncSession, company_id) -> Company:
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     return company
-
-
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -129,8 +113,6 @@ async def get_company_settings(
         last_modified_at=settings.get("last_modified_at"),
         last_modified_by=settings.get("last_modified_by"),
     )
-
-
 @router.patch("/settings", response_model=CompanySettingsResponse)
 async def update_company_settings(
     data:         UpdateCompanySettingsRequest,

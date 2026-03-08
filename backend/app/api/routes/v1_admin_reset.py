@@ -11,8 +11,6 @@ Business data erased (FK-safe order):
 
 Users / RBAC / Company rows are NEVER touched.
 """
-from __future__ import annotations
-
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -112,38 +110,26 @@ _DELETE_STEPS: list[tuple[str, str]] = [
         "DELETE FROM policy_templates WHERE company_id = :cid AND is_system = FALSE",
     ),
 ]
-
-
 # ---------------------------------------------------------------------------
 # Request / Response schemas
 # ---------------------------------------------------------------------------
 
 class ResetTarget(BaseModel):
     tenant_slug: str
-
-
 class ResetRequest(BaseModel):
     targets: list[ResetTarget]
     confirm: str  # must equal "RESET"
-
-
 class TableCounts(BaseModel):
     # Dynamic table-name -> rows deleted
     pass
-
-
 class TenantResetResult(BaseModel):
     tenant_slug: str
     tenant_id: str
     tables_cleared: dict[str, int]
-
-
 class ResetResponse(BaseModel):
     reset: bool
     targets: list[TenantResetResult]
     audit_event_ids: list[str]
-
-
 # ---------------------------------------------------------------------------
 # MXN001 SMB auto-seed helper
 # ---------------------------------------------------------------------------
@@ -224,8 +210,6 @@ async def _seed_mxn001(session: AsyncSession) -> Company:
         await session.flush()
 
     return company
-
-
 # ---------------------------------------------------------------------------
 # Core reset logic for a single tenant
 # ---------------------------------------------------------------------------
@@ -276,8 +260,6 @@ async def _reset_tenant(
     await session.flush()
 
     return counts, str(audit_evt.id)
-
-
 # ---------------------------------------------------------------------------
 # Endpoint
 # ---------------------------------------------------------------------------
@@ -349,8 +331,6 @@ async def reset_demo_data(
         targets=results,
         audit_event_ids=audit_event_ids,
     )
-
-
 # ---------------------------------------------------------------------------
 # Role definitions for full seed
 # ---------------------------------------------------------------------------
@@ -464,8 +444,6 @@ _TRUNCATE_TABLES = [
 # Pre-built SQL statements — static, no dynamic construction at runtime.
 _TRUNCATE_SQL = {t: 'TRUNCATE TABLE "%s" CASCADE' % t for t in _TRUNCATE_TABLES}
 _TRUNCATE_STMTS = {t: text(sql) for t, sql in _TRUNCATE_SQL.items()}
-
-
 # ---------------------------------------------------------------------------
 # POST /v1/admin/reset/seed-companies
 # Full database reset + seed two companies (no auth required — one-time setup)
@@ -474,8 +452,6 @@ _TRUNCATE_STMTS = {t: text(sql) for t, sql in _TRUNCATE_SQL.items()}
 class SeedResponse(BaseModel):
     ok: bool
     companies: list[dict[str, Any]]
-
-
 @router.post(
     "/seed-companies",
     response_model=SeedResponse,

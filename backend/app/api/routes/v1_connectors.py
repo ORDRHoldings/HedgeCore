@@ -9,8 +9,6 @@ Endpoints:
 
 All endpoints require JWT. Scope resolved from token.
 """
-from __future__ import annotations
-
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
@@ -28,8 +26,6 @@ from app.services import connector_service, rbac_service
 from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/connectors", tags=["v1-connectors"])
-
-
 # ---------------------------------------------------------------------------
 # Auth/RBAC helpers
 # ---------------------------------------------------------------------------
@@ -44,15 +40,11 @@ async def _check_permission(
         raise HTTPException(
             status_code=403, detail=f"Missing permission: {codename}"
         )
-
-
 async def _resolve_scope(session: AsyncSession, user: User) -> bool:
     if user.is_superuser:
         return True
     perms = await rbac_service.get_permissions_by_user(session, user.id)
     return "reports.view_all_branches" in perms
-
-
 # ---------------------------------------------------------------------------
 # Routes -- /runs must come before /import to avoid routing ambiguity
 # ---------------------------------------------------------------------------
@@ -70,8 +62,6 @@ async def list_connector_runs(
         session, current_user, all_branches, limit=limit
     )
     return {"items": items, "total": len(items)}
-
-
 @router.get("/runs/{run_id}", response_model=ConnectorRunDetailResponse)
 async def get_connector_run_detail(
     run_id: UUID,
@@ -90,8 +80,6 @@ async def get_connector_run_detail(
         **ConnectorRunResponse.model_validate(run).model_dump(),
         errors=errors,
     )
-
-
 @router.post("/import/csv", response_model=ConnectorRunResponse, status_code=200)
 async def import_csv(
     file: UploadFile = File(...),
@@ -118,8 +106,6 @@ async def import_csv(
         payload={"filename": file.filename, "rows_ok": run.rows_ok, "rows_error": run.rows_error, "status": run.status},
     )
     return run
-
-
 @router.post("/import/excel", response_model=ConnectorRunResponse, status_code=200)
 async def import_excel(
     file: UploadFile = File(...),

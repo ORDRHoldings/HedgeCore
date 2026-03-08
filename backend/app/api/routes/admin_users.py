@@ -9,8 +9,6 @@ Ensures full OpenAPI stability by:
 - Providing local response models for clear, stable OpenAPI schemas
 """
 
-from __future__ import annotations
-
 import logging
 from uuid import UUID
 
@@ -41,8 +39,6 @@ from app.schemas.admin import (
     UserRoleAssignment,
 )
 from app.services import rbac_service
-
-
 # ---------------------------------------------------------------------
 # ? Local response models to produce stable, rich OpenAPI
 # ---------------------------------------------------------------------
@@ -58,8 +54,6 @@ class PaginatedUsersResponse(BaseModel):
     page: int
     size: int
     pages: int
-
-
 # ---------------------------------------------------------------------
 # ? Schema Initialization - ensures OpenAPI stability
 # ---------------------------------------------------------------------
@@ -89,8 +83,6 @@ router = APIRouter(
     },
 )
 logger.info("? Admin router initialized.")
-
-
 # ---------------------------------------------------------------------
 # ? Utility Functions
 # ---------------------------------------------------------------------
@@ -103,8 +95,6 @@ def _clamp_pagination(page: int, size: int, max_size: int = 100) -> tuple[int, i
     if size > max_size:
         size = max_size
     return page, size
-
-
 async def _get_roles_map(session: AsyncSession, user_ids: list[UUID]) -> dict[UUID, list[str]]:
     """Return {user_id: [role_name, ...]} for a batch of user UUIDs."""
     if not user_ids:
@@ -122,8 +112,6 @@ async def _get_roles_map(session: AsyncSession, user_ids: list[UUID]) -> dict[UU
     for uid, role_name in rows:
         mapping.setdefault(uid, []).append(role_name)
     return mapping
-
-
 # ---------------------------------------------------------------------
 # GET /admin/users  -> Paginated list of users with roles
 # ---------------------------------------------------------------------
@@ -174,8 +162,6 @@ async def list_users(
         total,
     )
     return PaginatedUsersResponse(items=items, total=total, page=page, size=size, pages=pages)
-
-
 # ---------------------------------------------------------------------
 # POST /admin/users/{user_id}/roles  -> Assign role
 # ---------------------------------------------------------------------
@@ -225,8 +211,6 @@ async def assign_role(
         assigned_at="(timestamp generated)",
         assigned_by=getattr(current_user, "email", None),
     )
-
-
 # ---------------------------------------------------------------------
 # DELETE /admin/users/{user_id}/roles  -> Remove role
 # ---------------------------------------------------------------------
@@ -268,8 +252,6 @@ async def remove_role(
         user_uuid, payload.role_id, getattr(current_user, "id", None),
     )
     return {"detail": "Role removed successfully"}
-
-
 # ---------------------------------------------------------------------
 # GET /admin/roles  -> List all roles
 # ---------------------------------------------------------------------
@@ -294,8 +276,6 @@ async def list_roles(
         len(roles),
     )
     return [RoleResponse.model_validate(r, from_attributes=True) for r in roles]
-
-
 # ---------------------------------------------------------------------
 # ? Final Schema Rebuild for OpenAPI Sanity Check
 # ---------------------------------------------------------------------

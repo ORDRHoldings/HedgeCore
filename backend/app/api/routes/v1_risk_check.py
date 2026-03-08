@@ -8,8 +8,6 @@ with reasons, conditions, and residual risks.
 Every call emits a SYSTEM audit event (non-fatal if DB write fails).
 """
 
-from __future__ import annotations
-
 import hashlib
 import json
 import logging
@@ -28,28 +26,20 @@ from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 from app.models.position import Position
 from app.models.user import User
 from app.services import rbac_service
-
-
 def _canonical_json(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1", tags=["v1-risk-check"])
-
-
 # ---------------------------------------------------------------------------
 # Request / Response schemas
 # ---------------------------------------------------------------------------
-
-
 class RiskCheckRequest(BaseModel):
     policy_instance_id: UUID | None = None
     position_ids: list[UUID] = Field(..., min_length=1, max_length=50)
     market_snapshot: dict
     hedge_plan: dict | None = None
-
-
 class RiskCheckResponse(BaseModel):
     verdict: str  # APPROVE | APPROVE_WITH_CONDITIONS | REJECT
     reasons: list[dict]
@@ -60,13 +50,9 @@ class RiskCheckResponse(BaseModel):
     checked_at: str  # ISO timestamp
     policy_revision_id: str | None = None
     policy_hash: str | None = None
-
-
 # ---------------------------------------------------------------------------
 # Audit helper
 # ---------------------------------------------------------------------------
-
-
 async def _emit_risk_check_audit(
     session: AsyncSession,
     user: User,
@@ -120,13 +106,9 @@ async def _emit_risk_check_audit(
             policy_instance_id,
             exc_info=True,
         )
-
-
 # ---------------------------------------------------------------------------
 # POST /v1/risk-check
 # ---------------------------------------------------------------------------
-
-
 @router.post("/risk-check", response_model=RiskCheckResponse)
 async def risk_check(
     request: RiskCheckRequest,

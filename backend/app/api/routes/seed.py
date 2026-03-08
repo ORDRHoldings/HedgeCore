@@ -6,15 +6,9 @@ One-time seed endpoint to populate the demo company with full hierarchy,
 
 roles, and sample employees. Protected by API key.
 
-
-
 POST /api/v1/seed/company
 
 """
-
-
-
-from __future__ import annotations
 
 import logging
 import uuid
@@ -35,8 +29,6 @@ from app.models.user import User
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/seed", tags=["seed"])
-
-
 
 # ?? Policy preset seed data (mirrors frontend policyPresets.ts) ???????????????
 
@@ -107,10 +99,6 @@ _POLICY_PRESETS_SEED = [
     {'name': 'South Africa ZAR Resources Exporter', 'short_name': 'ZARR', 'description': 'ZAR-optimized policy for South African mining and resources exporters.', 'risk_posture': 'MODERATE', 'category': 'SECTOR', 'config': {'bucket_mode': 'CALENDAR_MONTH', 'hedge_ratios': {'confirmed': 0.75, 'forecast': 0.55}, 'cost_assumptions': {'spread_bps': 6.5}, 'execution_product': 'NDF', 'min_trade_size_usd': 100000.0}},
     {'name': 'India INR Technology & IT Services', 'short_name': 'INRT', 'description': 'INR-optimized hedge policy for Indian IT services and technology exporters.', 'risk_posture': 'MODERATE', 'category': 'SECTOR', 'config': {'bucket_mode': 'CALENDAR_MONTH', 'hedge_ratios': {'confirmed': 0.65, 'forecast': 0.4}, 'cost_assumptions': {'spread_bps': 5.5}, 'execution_product': 'NDF', 'min_trade_size_usd': 25000.0}},
 ]
-
-
-
-
 
 async def _seed_policy_templates(db: AsyncSession) -> int:
 
@@ -200,8 +188,6 @@ async def _seed_policy_templates(db: AsyncSession) -> int:
 
     return inserted
 
-
-
 # ?? Fixed UUIDs ??????????????????????????????????????????????????????????????
 
 COMPANY_ID   = uuid.UUID("11111111-1111-1111-1111-111111111111")
@@ -219,8 +205,6 @@ DEPT_TR_HQ   = uuid.UUID("33333333-3333-3333-3333-333333333302")
 DEPT_FX_MX   = uuid.UUID("33333333-3333-3333-3333-333333333303")
 
 DEPT_FX_LN   = uuid.UUID("33333333-3333-3333-3333-333333333304")
-
-
 
 ROLES = [
 
@@ -243,8 +227,6 @@ ROLES = [
     ("auditor",        "Compliance Auditor -- read-only audit access",    12,  False),
 
 ]
-
-
 
 ROLE_PERMS = {
 
@@ -413,8 +395,6 @@ ROLE_PERMS = {
 
 }
 
-
-
 EMPLOYEES = [
 
     ("admin@synexcapital.com",       "Admin@2026!",     "System Administrator",   "Platform Admin",              "admin",          BRANCH_HQ_ID, DEPT_TR_HQ),
@@ -447,8 +427,6 @@ EMPLOYEES = [
 
     ("j.patel@synexcapital.com",     "JPate@2026!",     "Jai Patel",              "FX Risk Analyst",            "risk_analyst",   BRANCH_LN_ID, DEPT_FX_LN),
 
-
-
     # Demo account (partner demonstrations) -- real senior_analyst on HQ FX Risk Desk
 
     # Logs in as demo/demo; all data is live from the database (no static/fake data).
@@ -456,10 +434,6 @@ EMPLOYEES = [
     ("demo",                         "demo",            "Demo User",              "FX Risk Analyst (Demo)",     "senior_analyst", BRANCH_HQ_ID, DEPT_FX_HQ),
 
 ]
-
-
-
-
 
 @router.post("/company")
 
@@ -487,11 +461,7 @@ async def seed_company(
 
         raise HTTPException(status_code=403, detail="Invalid API key")
 
-
-
     results = {"permissions": 0, "roles": 0, "branches": 0, "departments": 0, "users": 0, "policy_templates": 0}
-
-
 
     try:
 
@@ -502,8 +472,6 @@ async def seed_company(
         migration_sql = [
 
             "DROP INDEX IF EXISTS ix_permissions_module",
-
-
 
             # Core tables (FK dependency order)
 
@@ -518,8 +486,6 @@ async def seed_company(
                 is_active BOOLEAN NOT NULL DEFAULT TRUE,
 
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
-
-
 
             """CREATE TABLE IF NOT EXISTS roles (
 
@@ -537,8 +503,6 @@ async def seed_company(
 
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
 
-
-
             """CREATE TABLE IF NOT EXISTS branches (
 
                 id UUID PRIMARY KEY,
@@ -555,8 +519,6 @@ async def seed_company(
 
                 UNIQUE(company_id, code))""",
 
-
-
             """CREATE TABLE IF NOT EXISTS departments (
 
                 id UUID PRIMARY KEY,
@@ -568,8 +530,6 @@ async def seed_company(
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
                 UNIQUE(branch_id, code))""",
-
-
 
             """CREATE TABLE IF NOT EXISTS users (
 
@@ -597,8 +557,6 @@ async def seed_company(
 
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
 
-
-
             """CREATE TABLE IF NOT EXISTS user_roles (
 
                 id SERIAL PRIMARY KEY,
@@ -611,8 +569,6 @@ async def seed_company(
 
                 UNIQUE(user_id, role_id))""",
 
-
-
             """CREATE TABLE IF NOT EXISTS permissions (
 
                 id SERIAL PRIMARY KEY, codename VARCHAR(128) UNIQUE NOT NULL,
@@ -622,8 +578,6 @@ async def seed_company(
                 description VARCHAR(255) NOT NULL DEFAULT '',
 
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
-
-
 
             """CREATE TABLE IF NOT EXISTS role_permissions (
 
@@ -636,8 +590,6 @@ async def seed_company(
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
                 UNIQUE(role_id, permission_id))""",
-
-
 
             """CREATE TABLE IF NOT EXISTS refresh_tokens (
 
@@ -655,8 +607,6 @@ async def seed_company(
 
                 created_ip VARCHAR(64), created_user_agent VARCHAR(256))""",
 
-
-
             # ALTER TABLE for pre-existing tables
 
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE SET NULL",
@@ -673,8 +623,6 @@ async def seed_company(
 
             "ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN NOT NULL DEFAULT FALSE",
 
-
-
             # Indexes
 
             "CREATE INDEX IF NOT EXISTS ix_users_company_id ON users(company_id)",
@@ -689,8 +637,6 @@ async def seed_company(
 
         ]
 
-
-
         for stmt in migration_sql:
 
             try:
@@ -704,8 +650,6 @@ async def seed_company(
                 logger.warning(f"Migration step skipped: {e}")
 
         logger.info("Schema migration complete")
-
-
 
         # ?? Company (must be created FIRST -- roles/users reference it) ??
 
@@ -725,8 +669,6 @@ async def seed_company(
 
         await db.flush()
 
-
-
         # ?? Permissions ??
 
         for codename, module, action, desc in SEED_PERMISSIONS:
@@ -740,8 +682,6 @@ async def seed_company(
                 results["permissions"] += 1
 
         await db.flush()
-
-
 
         # ?? Roles (company now exists for company-scoped roles) ??
 
@@ -774,8 +714,6 @@ async def seed_company(
             role_map[name] = role
 
         await db.flush()
-
-
 
         # ?? Role permissions ??
 
@@ -815,8 +753,6 @@ async def seed_company(
 
         await db.flush()
 
-
-
         # ?? Branches ??
 
         for bid, bname, bcode, bregion, btz in [
@@ -838,8 +774,6 @@ async def seed_company(
                 results["branches"] += 1
 
         await db.flush()
-
-
 
         # ?? Departments ??
 
@@ -864,8 +798,6 @@ async def seed_company(
                 results["departments"] += 1
 
         await db.flush()
-
-
 
         # ?? Users ??
 
@@ -917,8 +849,6 @@ async def seed_company(
 
                 await db.flush()
 
-
-
             role = role_map.get(role_name)
 
             if role:
@@ -933,19 +863,13 @@ async def seed_company(
 
                     db.add(UserRole(user_id=user.id, role_id=role.id))
 
-
-
         # ?? Policy Templates ??
 
         policy_templates_inserted = await _seed_policy_templates(db)
 
         results["policy_templates"] = policy_templates_inserted
 
-
-
         await db.commit()
-
-
 
         logger.info(f"Company seed complete: {results}")
 
@@ -967,8 +891,6 @@ async def seed_company(
 
         }
 
-
-
     except Exception as e:
 
         await db.rollback()
@@ -976,8 +898,6 @@ async def seed_company(
         logger.exception(f"Seed failed: {e}")
 
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 @router.post("/reset-passwords")
 async def reset_seed_passwords(
@@ -1073,8 +993,6 @@ async def reset_seed_passwords(
         await db.rollback()
         logger.exception(f"reset-passwords failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.post("/migrate-schema")
 async def migrate_schema(
     db: AsyncSession = Depends(get_session),
@@ -1114,8 +1032,6 @@ async def migrate_schema(
             await db.rollback()
             errors.append({"stmt": stmt, "error": str(e)})
     return {"status": "ok", "applied": len(applied), "errors": errors}
-
-
 # ── Fix SMB permissions — add missing trades.execute to senior_analyst ─────
 @router.post("/fix-smb-permissions")
 async def fix_smb_permissions(

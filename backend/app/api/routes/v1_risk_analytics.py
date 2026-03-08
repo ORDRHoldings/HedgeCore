@@ -10,8 +10,6 @@ Exposes the previously-unwired engine_v1 modules as standalone endpoints:
 
 All endpoints require JWT + calculate.run_production permission.
 """
-from __future__ import annotations
-
 import logging
 from typing import Any
 
@@ -28,8 +26,6 @@ from app.services import rbac_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/risk", tags=["v1-risk-analytics"])
-
-
 # ── Request/Response schemas ─────────────────────────────────────────
 
 class HedgeEffectivenessRequest(BaseModel):
@@ -71,8 +67,6 @@ class MonteCarloRequest(BaseModel):
     seed: int | None = Field(default=None, description="Random seed for deterministic results")
     confidence_levels: list[float] = Field(default=[0.95, 0.99])
     horizon_days: int = Field(default=1, ge=1, le=30)
-
-
 # ── Auth helper ──────────────────────────────────────────────────────
 
 async def _check_risk_permission(session: AsyncSession, user: User) -> None:
@@ -81,8 +75,6 @@ async def _check_risk_permission(session: AsyncSession, user: User) -> None:
     perms = await rbac_service.get_permissions_by_user(session, user.id)
     if "calculate.run_production" not in perms and "trades.view" not in perms:
         raise HTTPException(status_code=403, detail="Missing permission: calculate.run_production or trades.view")
-
-
 # ── Routes ───────────────────────────────────────────────────────────
 
 @router.post("/hedge-effectiveness")
@@ -121,8 +113,6 @@ async def hedge_effectiveness(
         result = assess_hedge_effectiveness_dollar_offset(data.hedged_item_changes, data.instrument_changes)
 
     return result.to_dict()
-
-
 @router.post("/margin")
 async def margin_analysis(
     data: MarginRequest,
@@ -141,8 +131,6 @@ async def margin_analysis(
 
     result = compute_margin(data.hedge_actions, data.market, data.policy)
     return result.to_dict()
-
-
 @router.post("/concentration")
 async def concentration_analysis(
     data: ConcentrationRequest,
@@ -161,8 +149,6 @@ async def concentration_analysis(
 
     result = check_concentration_limits(data.hedge_actions, data.policy)
     return result.to_dict()
-
-
 @router.post("/monte-carlo")
 async def monte_carlo_analysis(
     data: MonteCarloRequest,
@@ -189,8 +175,6 @@ async def monte_carlo_analysis(
         horizon_days=data.horizon_days,
     )
     return result.to_dict()
-
-
 @router.get("/summary/{run_id}")
 async def risk_summary_for_run(
     run_id: str,
@@ -298,8 +282,6 @@ async def risk_summary_for_run(
         logger.warning("stress_scenarios failed for run %s: %s", run_id, e)
 
     return result
-
-
 # ── Stress Scenarios (institutional) ─────────────────────────────────
 
 class StressScenariosRequest(BaseModel):
@@ -311,8 +293,6 @@ class StressScenariosRequest(BaseModel):
         default=None,
         description="List of scenario names to run (null = all 5)",
     )
-
-
 @router.post("/stress-scenarios")
 async def stress_scenarios(
     data: StressScenariosRequest,
@@ -341,8 +321,6 @@ async def stress_scenarios(
         margin_total=data.margin_total,
     )
     return result.to_dict()
-
-
 # ── Composite Risk Dashboard ─────────────────────────────────────────
 
 class CompositeRiskRequest(BaseModel):
@@ -356,8 +334,6 @@ class CompositeRiskRequest(BaseModel):
     seed: int | None = Field(default=42)
     confidence_levels: list[float] = Field(default=[0.90, 0.95, 0.99, 0.995])
     horizon_days: int = Field(default=1, ge=1, le=30)
-
-
 @router.post("/composite")
 async def composite_risk(
     data: CompositeRiskRequest,
@@ -425,8 +401,6 @@ async def composite_risk(
         logger.warning("composite factor_covariance failed: %s", e)
 
     return result
-
-
 # ── Counterparty Risk ────────────────────────────────────────────────
 
 class CounterpartyRiskRequest(BaseModel):
@@ -437,8 +411,6 @@ class CounterpartyRiskRequest(BaseModel):
     volatility_annual: float = Field(default=0.10, ge=0.01, le=1.0)
     time_horizon_years: float = Field(default=1.0, ge=0.01, le=10.0)
     confidence: float = Field(default=0.975, ge=0.90, le=0.999)
-
-
 @router.post("/counterparty")
 async def counterparty_risk(
     data: CounterpartyRiskRequest,
@@ -460,8 +432,6 @@ async def counterparty_risk(
         confidence=data.confidence,
     )
     return result.to_dict()
-
-
 # ── Credit Duration Mapping ──────────────────────────────────────────
 
 class CreditDurationRequest(BaseModel):
@@ -470,8 +440,6 @@ class CreditDurationRequest(BaseModel):
     policy: dict[str, Any] = Field(default_factory=dict)
     equity_vol: float | None = Field(default=None, ge=0.01, le=2.0)
     credit_vol: float | None = Field(default=None, ge=0.01, le=2.0)
-
-
 @router.post("/credit-duration")
 async def credit_duration(
     data: CreditDurationRequest,
@@ -493,8 +461,6 @@ async def credit_duration(
         market=data.market,
     )
     return result.to_dict()
-
-
 # ── Vega-VIX Mapping ────────────────────────────────────────────────
 
 class VegaMappingRequest(BaseModel):
@@ -502,8 +468,6 @@ class VegaMappingRequest(BaseModel):
     market: dict[str, Any] = Field(default_factory=dict)
     policy: dict[str, Any] = Field(default_factory=dict)
     target_tenor_months: int = Field(default=3, ge=1, le=24)
-
-
 @router.post("/vega-mapping")
 async def vega_mapping(
     data: VegaMappingRequest,

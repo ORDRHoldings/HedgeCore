@@ -14,8 +14,6 @@ Endpoints:
 
 All endpoints: JWT required, tenant-scoped by company_id.
 """
-from __future__ import annotations
-
 import csv
 import hashlib
 import io
@@ -40,8 +38,6 @@ from app.services import rbac_service
 from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/hedge-effectiveness", tags=["hedge-effectiveness"])
-
-
 # -- Permission helper -------------------------------------------------------
 
 async def _require(session: AsyncSession, user: User, codename: str) -> None:
@@ -50,16 +46,12 @@ async def _require(session: AsyncSession, user: User, codename: str) -> None:
     perms = await rbac_service.get_permissions_by_user(session, user.id)
     if codename not in perms and "calculate.run_production" not in perms:
         raise HTTPException(status_code=403, detail=f"Missing permission: {codename}")
-
-
 # -- Request schemas ---------------------------------------------------------
 
 class DatasetPeriod(BaseModel):
     period_date: str | None = None
     hedged_item_fv_change: float
     instrument_fv_change: float
-
-
 class CreateDatasetRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
@@ -67,14 +59,10 @@ class CreateDatasetRequest(BaseModel):
     hedge_type: str = Field(default="cash_flow")
     designation_date: str | None = None
     periods: list[DatasetPeriod] = Field(..., min_length=2)
-
-
 class AssessRequest(BaseModel):
     dataset_id: str
     standard: str = Field(default="ASC_815")
     method: str = Field(default="both")
-
-
 # -- CSV parser --------------------------------------------------------------
 
 def _parse_effectiveness_csv(raw_bytes: bytes) -> tuple[list[dict], list[str]]:
@@ -137,8 +125,6 @@ def _parse_effectiveness_csv(raw_bytes: bytes) -> tuple[list[dict], list[str]]:
         raise HTTPException(status_code=422, detail="CSV must contain at least 2 valid data rows.")
 
     return rows, warnings
-
-
 # -- Endpoint: Create dataset (JSON) ----------------------------------------
 
 @router.post("/datasets")
@@ -211,8 +197,6 @@ async def create_dataset(
         "currency_pair": body.currency_pair,
         "source_hash": source_hash,
     }
-
-
 # -- Endpoint: Upload dataset (CSV) -----------------------------------------
 
 @router.post("/datasets/upload")
@@ -284,8 +268,6 @@ async def upload_dataset(
         "source_hash": source_hash,
         "parse_warnings": warnings[:50],
     }
-
-
 # -- Endpoint: List datasets ------------------------------------------------
 
 @router.get("/datasets")
@@ -319,8 +301,6 @@ async def list_datasets(
             "created_at": r.created_at.isoformat() if r.created_at else None,
         })
     return {"items": items, "total": len(items)}
-
-
 # -- Endpoint: Run assessment -----------------------------------------------
 
 @router.post("/assess")
@@ -462,8 +442,6 @@ async def run_assessment(
         "determination_narrative": result.determination_narrative,
         "compliance_notes": result.compliance_notes,
     }
-
-
 # -- Endpoint: List runs ----------------------------------------------------
 
 @router.get("/runs")
@@ -509,8 +487,6 @@ async def list_runs(
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return result
-
-
 # -- Endpoint: Get run detail -----------------------------------------------
 
 @router.get("/runs/{run_id}")
@@ -571,8 +547,6 @@ async def get_run(
         "report": report,
         "trace_bundle": r.trace_bundle,
     }
-
-
 # -- Endpoint: Export evidence binder ----------------------------------------
 
 @router.get("/runs/{run_id}/export")

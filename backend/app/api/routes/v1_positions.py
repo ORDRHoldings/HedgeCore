@@ -2,8 +2,6 @@
 
 Position API routes -- /api/v1/positions
 
-
-
 Standard CRUD:
 
   GET    /v1/positions                    -> list (trades.view)
@@ -17,8 +15,6 @@ Standard CRUD:
   POST   /v1/positions/import             -> CSV bulk import (trades.create)
 
   GET    /v1/positions/exposure           -> aggregated per-currency totals (trades.view)
-
-
 
 Lifecycle transitions (Phase 0 regulated backbone -- fail-closed):
 
@@ -34,15 +30,11 @@ Lifecycle transitions (Phase 0 regulated backbone -- fail-closed):
 
   PATCH  /v1/positions/{id}/reopen        -> REJECTED -> NEW (trades.edit)
 
-
-
 All endpoints require JWT. Scope (company+branch) is resolved from the token.
 
 Illegal lifecycle transitions return 409 Conflict with a structured error body.
 
 """
-
-from __future__ import annotations
 
 import csv
 import io
@@ -74,21 +66,13 @@ from app.services import position_service, rbac_service
 
 logger = logging.getLogger(__name__)
 
-
-
 router = APIRouter(prefix="/v1/positions", tags=["v1-positions"])
-
-
-
-
 
 # ---------------------------------------------------------------------------
 
 # Auth/RBAC helpers (inline -- avoids session factory mismatch)
 
 # ---------------------------------------------------------------------------
-
-
 
 async def _check_permission(
 
@@ -110,10 +94,6 @@ async def _check_permission(
 
         )
 
-
-
-
-
 async def _resolve_scope(session: AsyncSession, user: User) -> bool:
 
     """Returns True if the user may see all branches in their company."""
@@ -126,17 +106,11 @@ async def _resolve_scope(session: AsyncSession, user: User) -> bool:
 
     return "reports.view_all_branches" in perms
 
-
-
-
-
 # ---------------------------------------------------------------------------
 
 # Routes -- NOTE: /exposure and /import must come before /{position_id}
 
 # ---------------------------------------------------------------------------
-
-
 
 @router.get("/exposure", response_model=list[ExposureAggregation])
 
@@ -168,10 +142,6 @@ async def get_exposure(
 
     )
 
-
-
-
-
 @router.post("/import", status_code=200)
 
 async def import_positions_csv(
@@ -198,8 +168,6 @@ async def import_positions_csv(
 
     await _check_permission(session, current_user, "trades.create")
 
-
-
     content = await file.read()
 
     try:
@@ -210,15 +178,11 @@ async def import_positions_csv(
 
         text = content.decode("latin-1")
 
-
-
     reader = csv.DictReader(io.StringIO(text))
 
     rows: list[PositionCreate] = []
 
     parse_errors: list[dict] = []
-
-
 
     for i, row in enumerate(reader):
 
@@ -252,8 +216,6 @@ async def import_positions_csv(
 
             parse_errors.append({"row": i + 2, "error": str(e)})  # +2: header row + 0-index
 
-
-
     if parse_errors:
 
         raise HTTPException(
@@ -263,8 +225,6 @@ async def import_positions_csv(
             detail={"parse_errors": parse_errors},
 
         )
-
-
 
     created, import_errors = await position_service.bulk_import(
 
@@ -281,10 +241,6 @@ async def import_positions_csv(
         "total_rows": len(rows),
 
     }
-
-
-
-
 
 @router.get("", response_model=PositionListResponse)
 
@@ -321,10 +277,6 @@ async def list_positions(
 
     return {"items": items, "total": len(items), "page": page, "size": size, "pages": max(1, -(-len(items) // size))}
 
-
-
-
-
 @router.post("", response_model=PositionResponse, status_code=201)
 async def create_position(
     data:         PositionCreate,
@@ -356,8 +308,6 @@ async def create_position(
         request = request,
     )
     return pos
-
-
 @router.put("/{position_id}", response_model=PositionResponse)
 async def update_position(
     position_id:  UUID,
@@ -388,8 +338,6 @@ async def update_position(
         request = request,
     )
     return pos
-
-
 @router.delete("/{position_id}", status_code=204)
 async def delete_position(
     position_id:  UUID,
@@ -420,8 +368,6 @@ async def delete_position(
         payload     = {"action": "DELETE", "record_id": record_id_str},
         request     = request,
     )
-
-
 # ---------------------------------------------------------------------------
 
 # Lifecycle transition endpoints (Phase 0 regulated backbone)
@@ -435,8 +381,6 @@ async def delete_position(
 #                          "current_status": "...", "requested": "..."}
 
 # ---------------------------------------------------------------------------
-
-
 
 def _lifecycle_error(e: ValueError, current: str, target: str) -> HTTPException:
 
@@ -457,10 +401,6 @@ def _lifecycle_error(e: ValueError, current: str, target: str) -> HTTPException:
         },
 
     )
-
-
-
-
 
 async def _get_actor_role(session: AsyncSession, user: User) -> str | None:
 
@@ -494,10 +434,6 @@ async def _get_actor_role(session: AsyncSession, user: User) -> str | None:
 
         return None
 
-
-
-
-
 async def _emit_lifecycle_audit(
 
     session:      AsyncSession,
@@ -520,8 +456,6 @@ async def _emit_lifecycle_audit(
 
     Append an audit event for a lifecycle transition.
 
-
-
     Sprint 0.2 additions:
 
     - Threads request_id from AuditHeadersMiddleware (X-Request-Id header)
@@ -529,8 +463,6 @@ async def _emit_lifecycle_audit(
     - Captures client IP address from request
 
     - Resolves actor_role from RBAC service
-
-
 
     Fetches the most recent event_hash for this tenant to maintain chain linkage.
 
@@ -556,8 +488,6 @@ async def _emit_lifecycle_audit(
 
         prev_hash = result.scalars().first() or GENESIS_HASH
 
-
-
         # Extract correlation context from request headers (set by AuditHeadersMiddleware)
 
         request_id: str | None = None
@@ -572,13 +502,9 @@ async def _emit_lifecycle_audit(
 
             ip_address = client.host if client else None
 
-
-
         # Resolve actor's primary role for audit record
 
         actor_role = await _get_actor_role(session, user)
-
-
 
         event = build_audit_event(
 
@@ -623,10 +549,6 @@ async def _emit_lifecycle_audit(
             position_id, event_type, exc_info=True,
 
         )
-
-
-
-
 
 @router.patch("/{position_id}/assign-policy", response_model=PositionResponse)
 
@@ -701,10 +623,6 @@ async def assign_policy(
     )
 
     return pos
-
-
-
-
 
 @router.patch("/bulk-assign-policy", response_model=BulkAssignResult)
 
@@ -910,10 +828,6 @@ async def mark_ready(
 
     return pos
 
-
-
-
-
 @router.patch("/{position_id}/execute", response_model=PositionResponse)
 
 async def execute_position(
@@ -996,10 +910,6 @@ async def execute_position(
 
     return pos
 
-
-
-
-
 @router.patch("/{position_id}/reject", response_model=PositionResponse)
 
 async def reject_position(
@@ -1076,10 +986,6 @@ async def reject_position(
 
     return pos
 
-
-
-
-
 @router.patch("/{position_id}/reopen", response_model=PositionResponse)
 
 async def reopen_position(
@@ -1150,17 +1056,11 @@ async def reopen_position(
 
     return pos
 
-
-
-
-
 # ---------------------------------------------------------------------------
 
 # Lineage endpoint -- Sprint 1.4
 
 # ---------------------------------------------------------------------------
-
-
 
 @router.get("/{position_id}/lineage")
 
@@ -1178,19 +1078,13 @@ async def get_position_lineage(
 
     GET /v1/positions/{id}/lineage
 
-
-
     Returns the full provenance chain for a single position:
 
       Position -> PolicyInstance -> PolicyRevision -> CalculationRun -> ExecutionProposals
 
-
-
     Each node includes enough data to render a card: id, type, status, key fields,
 
     timestamps, and links to drill-down pages.
-
-
 
     Responds with a flat list of nodes + edges for frontend graph rendering.
 
@@ -1201,8 +1095,6 @@ async def get_position_lineage(
     await _check_permission(session, current_user, "trades.view")
 
     all_branches = await _resolve_scope(session, current_user)
-
-
 
     # Fetch the Position
 
@@ -1220,13 +1112,9 @@ async def get_position_lineage(
 
         raise HTTPException(status_code=404, detail=f"Position {position_id!s} not found")
 
-
-
     nodes: list[dict] = []
 
     edges: list[dict] = []
-
-
 
     # Node 0: Position
 
@@ -1278,8 +1166,6 @@ async def get_position_lineage(
 
     })
 
-
-
     # Node 1: PolicyInstance
 
     if pos.policy_id:
@@ -1317,8 +1203,6 @@ async def get_position_lineage(
             })
 
             edges.append({"from": pos_node_id, "to": pi_node_id, "label": "GOVERNED BY"})
-
-
 
     # Node 1b: PolicyRevision pinned to this position
 
@@ -1367,8 +1251,6 @@ async def get_position_lineage(
             anchor = f"policy:{pos.policy_id}" if pos.policy_id else pos_node_id
 
             edges.append({"from": anchor, "to": pr_node_id, "label": "PINNED REVISION"})
-
-
 
     # Node 2: CalculationRun
 
@@ -1426,8 +1308,6 @@ async def get_position_lineage(
 
                 edges.append({"from": f"policy_revision:{pos.policy_revision_id}", "to": run_node_id, "label": "GOVERNED"})
 
-
-
     # Node 3: ExecutionProposals
 
     from app.models.execution_proposal import ExecutionProposal
@@ -1445,8 +1325,6 @@ async def get_position_lineage(
     )
 
     proposals = list((await session.execute(proposals_q)).scalars().all())
-
-
 
     for ep in proposals:
 
@@ -1511,8 +1389,6 @@ async def get_position_lineage(
         if ep_run_id and pos.last_run_id == ep_run_id:
 
             edges.append({"from": ep_node_id, "to": f"run:{ep_run_id}", "label": "USES RUN"})
-
-
 
     # Integrity check: run must use the exact policy revision pinned to this position
     integrity_verified: bool | None = None

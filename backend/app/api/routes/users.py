@@ -11,8 +11,6 @@ Notes:
 - Response uses UserPublic schema (from_attributes=True).
 """
 
-from __future__ import annotations
-
 import logging
 
 from fastapi import APIRouter, Depends
@@ -24,8 +22,6 @@ from app.schemas.user import UserPublic
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-
 @router.get("/me", response_model=UserPublic, summary="Get current authenticated user")
 async def read_me(current_user: User = Depends(get_current_user)) -> UserPublic:
     """

@@ -12,8 +12,6 @@ Endpoints:
 
 All endpoints: JWT required, tenant-scoped by company_id.
 """
-from __future__ import annotations
-
 import csv
 import hashlib
 import io
@@ -38,8 +36,6 @@ from app.services import rbac_service
 from app.services.audit_emit import emit_audit
 
 router = APIRouter(prefix="/v1/audit-lab", tags=["audit-lab"])
-
-
 # ── Permission helper ──────────────────────────────────────────────────────────
 
 async def _require(session: AsyncSession, user: User, codename: str) -> None:
@@ -48,8 +44,6 @@ async def _require(session: AsyncSession, user: User, codename: str) -> None:
     perms = await rbac_service.get_permissions_by_user(session, user.id)
     if codename not in perms:
         raise HTTPException(status_code=403, detail=f"Missing permission: {codename}")
-
-
 # ── CSV parser ─────────────────────────────────────────────────────────────────
 
 _FIELD_ALIASES: dict[str, list[str]] = {
@@ -64,8 +58,6 @@ _FIELD_ALIASES: dict[str, list[str]] = {
     "fee_currency":     ["fee_currency", "fee_ccy", "commission_currency"],
     "reference":        ["reference", "ref", "transaction_id", "txn_id", "deal_ref"],
 }
-
-
 def _normalize_headers(headers: list[str]) -> dict[str, str]:
     """Map raw CSV headers to canonical field names."""
     raw_lower = {h.strip().lower(): h for h in headers}
@@ -76,8 +68,6 @@ def _normalize_headers(headers: list[str]) -> dict[str, str]:
                 mapping[canonical] = raw_lower[alias]
                 break
     return mapping
-
-
 def _parse_date(s: str | None) -> date | None:
     if not s:
         return None
@@ -88,8 +78,6 @@ def _parse_date(s: str | None) -> date | None:
         except ValueError:
             continue
     return None
-
-
 def _parse_float(s: str | None) -> float | None:
     if s is None:
         return None
@@ -100,16 +88,10 @@ def _parse_float(s: str | None) -> float | None:
         return float(s)
     except ValueError:
         return None
-
-
 def _row_canonical(row_data: dict) -> str:
     return json.dumps(row_data, sort_keys=True, default=str)
-
-
 def _row_hash(row_data: dict) -> str:
     return hashlib.sha256(_row_canonical(row_data).encode("utf-8")).hexdigest()
-
-
 def _parse_csv(
     raw_bytes: bytes,
 ) -> tuple[list[dict], list[str], set[str]]:
@@ -172,8 +154,6 @@ def _parse_csv(
             currency_pairs.add(f"{currency_sold.upper()}{currency_bought.upper()}")
 
     return rows, warnings, currency_pairs
-
-
 # ── Endpoint: Upload dataset ───────────────────────────────────────────────────
 
 @router.post("/datasets/upload")
@@ -311,8 +291,6 @@ async def upload_audit_dataset(
         "source_hash": source_hash,
         "parse_warnings": warnings[:50],  # cap at 50 for response size
     }
-
-
 # ── Endpoint: Create run ───────────────────────────────────────────────────────
 
 @router.post("/runs")
@@ -630,8 +608,6 @@ async def create_audit_run(
             "fee_confidence": result.fee_confidence,
         },
     }
-
-
 # ── Endpoint: List runs ────────────────────────────────────────────────────────
 
 @router.get("/runs")
@@ -671,8 +647,6 @@ async def list_audit_runs(
             "created_at": row.created_at.isoformat() if row.created_at else None,
         })
     return result
-
-
 # ── Endpoint: Get run ──────────────────────────────────────────────────────────
 
 @router.get("/runs/{run_id}")
@@ -743,8 +717,6 @@ async def get_audit_run(
         "trace_bundle": row.trace_bundle,
         "report_hash": row.report_hash,
     }
-
-
 # ── Endpoint: Export evidence binder ──────────────────────────────────────────
 
 @router.get("/runs/{run_id}/export")
@@ -805,8 +777,6 @@ async def export_audit_run(
         "summary": summary,
         "trace_bundle": row.trace_bundle,
     }
-
-
 # ── Endpoint: List datasets ────────────────────────────────────────────────────
 
 @router.get("/datasets")

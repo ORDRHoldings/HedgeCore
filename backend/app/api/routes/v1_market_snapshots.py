@@ -10,8 +10,6 @@ RBAC:
   GET:  requires market.snapshot.read    (or is_superuser)
 """
 
-from __future__ import annotations
-
 import uuid as _uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,8 +23,6 @@ from app.services import rbac_service
 from app.services.market_snapshot_service import create_or_get, get_by_id
 
 router = APIRouter(prefix="/v1/market-snapshots", tags=["v1-market-snapshots"])
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Schemas
 # ─────────────────────────────────────────────────────────────────────────────
@@ -34,8 +30,6 @@ router = APIRouter(prefix="/v1/market-snapshots", tags=["v1-market-snapshots"])
 class MarketSnapshotCreateRequest(BaseModel):
     """Accepts a raw MarketSnapshot-compatible payload dict."""
     payload: dict
-
-
 class MarketSnapshotResponse(BaseModel):
     snapshot_id: str
     market_snapshot_hash: str
@@ -47,8 +41,6 @@ class MarketSnapshotResponse(BaseModel):
     spot_rate: float
     is_synthetic_forward: bool
     payload: dict
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -66,8 +58,6 @@ def _snap_to_response(snap) -> MarketSnapshotResponse:
         is_synthetic_forward = snap.is_synthetic_forward,
         payload              = snap.payload,
     )
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # POST /v1/market-snapshots
 # ─────────────────────────────────────────────────────────────────────────────
@@ -92,8 +82,6 @@ async def create_market_snapshot(
 
     snap = await create_or_get(session, current_user, req.payload)
     return _snap_to_response(snap)
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # GET /v1/market-snapshots/{snapshot_id}
 # ─────────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import time
 from collections.abc import Mapping
 from typing import Any
@@ -14,8 +12,6 @@ from app.engine.recommend import recommend
 
 ROUTER_TAG = "hedge"
 router = APIRouter(prefix="/hedge", tags=[ROUTER_TAG])
-
-
 # ---------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------
@@ -33,8 +29,6 @@ def _reject(
             "details": dict(details) if isinstance(details, Mapping) else {},
         },
     )
-
-
 # ---------------------------------------------------------------------
 # Main Hedge Endpoint (CANONICAL)
 # ---------------------------------------------------------------------
@@ -152,6 +146,4 @@ async def run_hedge(payload: HedgeRequest) -> JSONResponse:
             },
         },
     )
-
-
 __all__ = ["router"]
