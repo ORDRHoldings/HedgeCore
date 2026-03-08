@@ -134,23 +134,28 @@ async def create_voice_token(
     if not api_key:
         raise HTTPException(status_code=503, detail="Voice assistant unavailable — OPENAI_API_KEY_V not configured")
 
-    model = os.environ.get("VOICE_OPENAI_MODEL", "gpt-4o-realtime-preview")
+    model = os.environ.get("VOICE_OPENAI_MODEL", "gpt-realtime")
 
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:
             resp = await client.post(
-                "https://api.openai.com/v1/realtime/sessions",
+                "https://api.openai.com/v1/realtime/client_secrets",
                 headers={
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": model,
-                    "voice": "alloy",
-                    "instructions": ORDR_INSTRUCTIONS,
-                    "tools": REALTIME_TOOLS,
-                    "input_audio_transcription": {"model": "whisper-1"},
-                    "turn_detection": {"type": "server_vad"},
+                    "session": {
+                        "type": "realtime",
+                        "model": model,
+                        "instructions": ORDR_INSTRUCTIONS,
+                        "tools": REALTIME_TOOLS,
+                        "input_audio_transcription": {"model": "whisper-1"},
+                        "turn_detection": {"type": "server_vad"},
+                        "audio": {
+                            "output": {"voice": "alloy"},
+                        },
+                    },
                 },
             )
 
@@ -159,9 +164,10 @@ async def create_voice_token(
             raise HTTPException(status_code=502, detail="Failed to create voice session")
 
         data = resp.json()
-        client_secret = data.get("client_secret", {})
-        token_value = client_secret.get("value", "")
-        expires_at = client_secret.get("expires_at", "")
+        # Response shape: { value: "ek_...", expires_at: 1234567890 }
+        # or nested: { client_secret: { value: "...", expires_at: ... } }
+        token_value = data.get("value", "") or data.get("client_secret", {}).get("value", "")
+        expires_at = data.get("expires_at", "") or data.get("client_secret", {}).get("expires_at", "")
 
         if not token_value:
             logger.error("OpenAI session response missing client_secret.value: %s", data)

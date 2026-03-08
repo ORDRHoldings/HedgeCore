@@ -1,13 +1,13 @@
 /**
- * useRealtimeVoice — React hook for OpenAI Realtime API voice interaction.
+ * useRealtimeVoice — React hook for OpenAI Realtime API via WebRTC.
  *
- * Manages:
- *   - Ephemeral token acquisition from backend
- *   - WebSocket connection to OpenAI Realtime API
- *   - Microphone capture → PCM16 24kHz → input_audio_buffer.append
- *   - Audio playback via Web Audio API
- *   - Text message sending
- *   - Tool call execution via useRealtimeTools
+ * Flow:
+ *   1. POST /api/v1/voice/token → ephemeral key
+ *   2. RTCPeerConnection: mic track (input) + audio track (output)
+ *   3. DataChannel "oai-events": send/receive Realtime events (text, tool calls)
+ *   4. SDP offer → POST api.openai.com/v1/realtime/calls → SDP answer
+ *
+ * Audio is handled natively by WebRTC — no manual PCM16 encoding needed.
  */
 
 "use client";
@@ -57,38 +57,6 @@ interface UseRealtimeVoiceReturn {
 
 let _entryId = 0;
 
-// ── PCM16 conversion ────────────────────────────────────────────────────────
-
-function float32ToPcm16Base64(float32: Float32Array): string {
-  const pcm16 = new Int16Array(float32.length);
-  for (let i = 0; i < float32.length; i++) {
-    const s = Math.max(-1, Math.min(1, float32[i]));
-    pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-  }
-  const bytes = new Uint8Array(pcm16.buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function base64ToFloat32(base64: string): Float32Array<ArrayBuffer> {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  const buffer = new ArrayBuffer(bytes.length);
-  new Uint8Array(buffer).set(bytes);
-  const pcm16 = new Int16Array(buffer);
-  const float32 = new Float32Array(pcm16.length);
-  for (let i = 0; i < pcm16.length; i++) {
-    float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7fff);
-  }
-  return float32;
-}
-
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeVoiceReturn {
@@ -97,18 +65,14 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
   const [status, setStatus] = useState<VoiceStatus>("disconnected");
   const [isMicOn, setIsMicOn] = useState(false);
 
-  const wsRef = useRef<WebSocket | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const dcRef = useRef<RTCDataChannel | null>(null);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const playbackCtxRef = useRef<AudioContext | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const playbackQueueRef = useRef<any[]>([]);
-  const isPlayingRef = useRef(false);
   const statusRef = useRef<VoiceStatus>("disconnected");
 
-  // Partial transcript accumulators
-  const assistantTranscriptRef = useRef("");
+  // Partial transcript accumulator
+  const assistantTextRef = useRef("");
   const assistantEntryIdRef = useRef(0);
 
   const updateStatus = useCallback((s: VoiceStatus) => {
@@ -123,62 +87,19 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
     [onTranscript],
   );
 
-  // ── Audio playback ──────────────────────────────────────────────────────
+  // ── Send event via data channel ─────────────────────────────────────────
 
-  const playNextChunk = useCallback(() => {
-    if (playbackQueueRef.current.length === 0) {
-      isPlayingRef.current = false;
-      if (statusRef.current === "speaking") updateStatus("ready");
-      return;
-    }
-
-    isPlayingRef.current = true;
-    const chunk = playbackQueueRef.current.shift()!;
-
-    if (!playbackCtxRef.current) {
-      playbackCtxRef.current = new AudioContext({ sampleRate: 24000 });
-    }
-    const ctx = playbackCtxRef.current;
-    const buffer = ctx.createBuffer(1, chunk.length, 24000);
-    buffer.copyToChannel(chunk, 0);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.onended = () => playNextChunk();
-    source.start();
-  }, [updateStatus]);
-
-  const enqueueAudio = useCallback(
-    (base64: string) => {
-      const float32 = base64ToFloat32(base64);
-      playbackQueueRef.current.push(float32);
-      if (!isPlayingRef.current) {
-        updateStatus("speaking");
-        playNextChunk();
-      }
-    },
-    [playNextChunk, updateStatus],
-  );
-
-  const stopPlayback = useCallback(() => {
-    playbackQueueRef.current = [];
-    isPlayingRef.current = false;
-    playbackCtxRef.current?.close().catch(() => {});
-    playbackCtxRef.current = null;
+  const sendEvent = useCallback((event: Record<string, unknown>) => {
+    const dc = dcRef.current;
+    if (!dc || dc.readyState !== "open") return;
+    dc.send(JSON.stringify(event));
   }, []);
 
-  // ── WebSocket message handler ───────────────────────────────────────────
+  // ── Handle incoming Realtime events ─────────────────────────────────────
 
-  const handleMessage = useCallback(
-    async (evt: MessageEvent) => {
-      let data: Record<string, unknown>;
-      try {
-        data = JSON.parse(evt.data as string);
-      } catch {
-        return;
-      }
-
-      const type = data.type as string;
+  const handleEvent = useCallback(
+    async (event: Record<string, unknown>) => {
+      const type = event.type as string;
 
       switch (type) {
         case "session.created":
@@ -187,17 +108,12 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
           emitTranscript("system", "ORDR Voice ready — speak or type below", true);
           break;
 
-        case "response.audio.delta":
-          enqueueAudio(data.delta as string);
-          break;
-
         case "response.audio_transcript.delta": {
-          // Streaming assistant transcript
-          const delta = data.delta as string;
-          assistantTranscriptRef.current += delta;
+          const delta = event.delta as string;
+          assistantTextRef.current += delta;
           emitTranscript(
             "assistant",
-            assistantTranscriptRef.current,
+            assistantTextRef.current,
             false,
             assistantEntryIdRef.current,
           );
@@ -205,23 +121,23 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
         }
 
         case "response.audio_transcript.done": {
-          const finalText = (data.transcript as string) ?? assistantTranscriptRef.current;
+          const finalText = (event.transcript as string) ?? assistantTextRef.current;
           emitTranscript("assistant", finalText, true, assistantEntryIdRef.current);
-          assistantTranscriptRef.current = "";
+          assistantTextRef.current = "";
           assistantEntryIdRef.current = ++_entryId;
           break;
         }
 
         case "conversation.item.input_audio_transcription.completed": {
-          const userText = (data.transcript as string)?.trim();
+          const userText = (event.transcript as string)?.trim();
           if (userText) emitTranscript("user", userText, true);
           break;
         }
 
         case "response.function_call_arguments.done": {
-          const callId = data.call_id as string;
-          const fnName = data.name as string;
-          const fnArgs = JSON.parse((data.arguments as string) ?? "{}");
+          const callId = event.call_id as string;
+          const fnName = event.name as string;
+          const fnArgs = JSON.parse((event.arguments as string) ?? "{}");
 
           onFunctionCall?.({ name: fnName, status: "calling" });
           updateStatus("processing");
@@ -230,26 +146,21 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
 
           onFunctionCall?.({ name: fnName, status: "done" });
 
-          // Send function result back to OpenAI
-          const ws = wsRef.current;
-          if (ws?.readyState === WebSocket.OPEN) {
-            ws.send(
-              JSON.stringify({
-                type: "conversation.item.create",
-                item: {
-                  type: "function_call_output",
-                  call_id: callId,
-                  output: result,
-                },
-              }),
-            );
-            ws.send(JSON.stringify({ type: "response.create" }));
-          }
+          // Send function result back
+          sendEvent({
+            type: "conversation.item.create",
+            item: {
+              type: "function_call_output",
+              call_id: callId,
+              output: result,
+            },
+          });
+          sendEvent({ type: "response.create" });
           break;
         }
 
         case "error": {
-          const errData = data.error as Record<string, unknown> | undefined;
+          const errData = event.error as Record<string, unknown> | undefined;
           const message = (errData?.message as string) ?? "Unknown error";
           updateStatus("error");
           onError?.(message);
@@ -258,7 +169,6 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
         }
 
         case "input_audio_buffer.speech_started":
-          stopPlayback();
           updateStatus("listening");
           break;
 
@@ -266,61 +176,26 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
           updateStatus("processing");
           break;
 
+        case "response.audio.started":
+          updateStatus("speaking");
+          break;
+
         case "response.done":
-          // Response complete — if not speaking, go to ready
           if (statusRef.current !== "speaking") updateStatus("ready");
+          break;
+
+        case "response.audio.done":
+          updateStatus("ready");
           break;
       }
     },
-    [token, updateStatus, emitTranscript, enqueueAudio, stopPlayback, onFunctionCall, onError],
+    [token, updateStatus, emitTranscript, sendEvent, onFunctionCall, onError],
   );
-
-  // ── Microphone ──────────────────────────────────────────────────────────
-
-  const startMic = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      micStreamRef.current = stream;
-
-      const ctx = new AudioContext({ sampleRate: 24000 });
-      audioCtxRef.current = ctx;
-
-      const source = ctx.createMediaStreamSource(stream);
-      const processor = ctx.createScriptProcessor(4096, 1, 1);
-      processorRef.current = processor;
-
-      processor.onaudioprocess = (e) => {
-        const ws = wsRef.current;
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        const inputData = e.inputBuffer.getChannelData(0);
-        const base64 = float32ToPcm16Base64(inputData);
-        ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio: base64 }));
-      };
-
-      source.connect(processor);
-      processor.connect(ctx.destination);
-      setIsMicOn(true);
-      if (statusRef.current === "ready") updateStatus("listening");
-    } catch (err) {
-      onError?.("Microphone access denied");
-      emitTranscript("system", "Microphone permission denied — use text input", true);
-    }
-  }, [updateStatus, onError, emitTranscript]);
-
-  const stopMic = useCallback(() => {
-    processorRef.current?.disconnect();
-    processorRef.current = null;
-    audioCtxRef.current?.close().catch(() => {});
-    audioCtxRef.current = null;
-    micStreamRef.current?.getTracks().forEach((t) => t.stop());
-    micStreamRef.current = null;
-    setIsMicOn(false);
-  }, []);
 
   // ── Connect ─────────────────────────────────────────────────────────────
 
   const connect = useCallback(async () => {
-    if (wsRef.current) return;
+    if (pcRef.current) return;
     updateStatus("connecting");
     emitTranscript("system", "Connecting to ORDR Voice…", true);
 
@@ -331,93 +206,140 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
         const detail = await resp.text();
         throw new Error(`Token request failed: ${resp.status} ${detail.slice(0, 200)}`);
       }
-      const { token: ephemeralToken } = await resp.json();
+      const { token: ephemeralKey } = await resp.json();
 
-      // 2. Connect to OpenAI Realtime
-      const model = "gpt-4o-realtime-preview";
-      const ws = new WebSocket(
-        `wss://api.openai.com/v1/realtime?model=${model}`,
-        // Pass token via subprotocol headers
-        // OpenAI expects: openai-insecure-api-key.<token>, openai-beta.realtime-v1
-        [
-          "realtime",
-          `openai-insecure-api-key.${ephemeralToken}`,
-          "openai-beta.realtime-v1",
-        ],
+      // 2. Create RTCPeerConnection
+      const pc = new RTCPeerConnection();
+      pcRef.current = pc;
+
+      // 3. Set up remote audio playback
+      const audioEl = document.createElement("audio");
+      audioEl.autoplay = true;
+      audioElRef.current = audioEl;
+      pc.ontrack = (e) => {
+        audioEl.srcObject = e.streams[0];
+      };
+
+      // 4. Add local mic track
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = micStream;
+      pc.addTrack(micStream.getTracks()[0]);
+      setIsMicOn(true);
+
+      // 5. Create data channel for events
+      const dc = pc.createDataChannel("oai-events");
+      dcRef.current = dc;
+
+      dc.addEventListener("open", () => {
+        updateStatus("ready");
+        emitTranscript("system", "ORDR Voice ready — speak or type below", true);
+      });
+
+      dc.addEventListener("message", (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          handleEvent(event);
+        } catch {
+          // ignore malformed
+        }
+      });
+
+      // 6. SDP offer → OpenAI → SDP answer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const model = "gpt-realtime";
+      const sdpResp = await fetch(
+        `https://api.openai.com/v1/realtime/calls?model=${model}`,
+        {
+          method: "POST",
+          body: offer.sdp,
+          headers: {
+            Authorization: `Bearer ${ephemeralKey}`,
+            "Content-Type": "application/sdp",
+          },
+        },
       );
 
-      wsRef.current = ws;
+      if (!sdpResp.ok) {
+        const errText = await sdpResp.text();
+        throw new Error(`SDP negotiation failed: ${sdpResp.status} ${errText.slice(0, 200)}`);
+      }
 
-      ws.onopen = () => {
-        emitTranscript("system", "Connected — initializing session…", true);
-      };
+      const answerSdp = await sdpResp.text();
+      await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
 
-      ws.onmessage = handleMessage;
-
-      ws.onerror = () => {
-        updateStatus("error");
-        onError?.("WebSocket connection failed");
-      };
-
-      ws.onclose = () => {
-        wsRef.current = null;
-        stopMic();
-        stopPlayback();
-        if (statusRef.current !== "error") updateStatus("disconnected");
-      };
+      emitTranscript("system", "Connected — session active", true);
     } catch (err) {
       updateStatus("error");
       const msg = err instanceof Error ? err.message : String(err);
       onError?.(msg);
       emitTranscript("system", `Connection failed: ${msg}`, true);
     }
-  }, [token, updateStatus, emitTranscript, handleMessage, onError, stopMic, stopPlayback]);
+  }, [token, updateStatus, emitTranscript, handleEvent, onError]);
 
   // ── Disconnect ──────────────────────────────────────────────────────────
 
   const disconnect = useCallback(() => {
-    stopMic();
-    stopPlayback();
-    wsRef.current?.close();
-    wsRef.current = null;
+    // Close data channel
+    dcRef.current?.close();
+    dcRef.current = null;
+
+    // Stop mic tracks
+    micStreamRef.current?.getTracks().forEach((t) => t.stop());
+    micStreamRef.current = null;
+    setIsMicOn(false);
+
+    // Close peer connection
+    pcRef.current?.getSenders().forEach((sender) => {
+      if (sender.track) sender.track.stop();
+    });
+    pcRef.current?.close();
+    pcRef.current = null;
+
+    // Clean up audio element
+    if (audioElRef.current) {
+      audioElRef.current.srcObject = null;
+      audioElRef.current = null;
+    }
+
     updateStatus("disconnected");
-  }, [stopMic, stopPlayback, updateStatus]);
+  }, [updateStatus]);
 
   // ── Send text ───────────────────────────────────────────────────────────
 
   const sendText = useCallback(
     (text: string) => {
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN || !text.trim()) return;
+      if (!text.trim()) return;
 
-      stopPlayback();
       emitTranscript("user", text.trim(), true);
       updateStatus("processing");
 
-      ws.send(
-        JSON.stringify({
-          type: "conversation.item.create",
-          item: {
-            type: "message",
-            role: "user",
-            content: [{ type: "input_text", text: text.trim() }],
-          },
-        }),
-      );
-      ws.send(JSON.stringify({ type: "response.create" }));
+      sendEvent({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: text.trim() }],
+        },
+      });
+      sendEvent({ type: "response.create" });
     },
-    [emitTranscript, updateStatus, stopPlayback],
+    [emitTranscript, updateStatus, sendEvent],
   );
 
   // ── Toggle mic ──────────────────────────────────────────────────────────
 
   const toggleMic = useCallback(() => {
-    if (isMicOn) {
-      stopMic();
-    } else {
-      startMic();
-    }
-  }, [isMicOn, startMic, stopMic]);
+    const stream = micStreamRef.current;
+    if (!stream) return;
+
+    const track = stream.getTracks()[0];
+    if (!track) return;
+
+    track.enabled = !track.enabled;
+    setIsMicOn(track.enabled);
+  }, []);
 
   return { connect, disconnect, sendText, toggleMic, isMicOn, status };
 }
