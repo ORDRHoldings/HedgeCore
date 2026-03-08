@@ -163,10 +163,15 @@ from app.api.routes.v1_admin_reset import router as v1_admin_reset_router
 
 router.include_router(v1_admin_reset_router)
 
-# Voice Agent — OpenAI Realtime bridge (owns /v1/voice)
+# Voice Agent — Claude-based text chat (legacy, kept as fallback)
 from app.api.routes.voice_agent import router as voice_agent_router
 
 router.include_router(voice_agent_router)
+
+# Voice Token — OpenAI Realtime ephemeral token endpoint (owns /v1/voice/token)
+from app.api.routes.v1_voice_token import router as v1_voice_token_router
+
+router.include_router(v1_voice_token_router)
 
 # Audit Lab — FX transaction audit (owns /v1/audit-lab)
 from app.api.routes.v1_audit_lab import router as v1_audit_lab_router
