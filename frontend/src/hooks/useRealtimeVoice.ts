@@ -256,6 +256,7 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
           dc.send(JSON.stringify({
             type: "session.update",
             session: {
+              type: "realtime",
               instructions: cfg.instructions,
               tools: cfg.tools,
             },
