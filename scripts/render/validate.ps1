@@ -32,7 +32,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $RENDER_API_BASE = "https://api.render.com/v1"
-$PROD_HEALTH_URL = "https://hedgecore.onrender.com/health"
+$PROD_HEALTH_URL = "https://hedgecore.onrender.com/api/health"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

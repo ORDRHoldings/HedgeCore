@@ -213,7 +213,7 @@ Changed branch?
 .\scripts\render\deploy-api.ps1 -Wait
 
 # 4. Verify health
-curl https://hedgecore.onrender.com/health
+curl https://hedgecore.onrender.com/api/health
 ```
 
 ---
@@ -251,7 +251,7 @@ git push origin master
 | Frontend on Vercel | Not managed by Render scripts. Deploys automatically on push. Use Vercel dashboard for manual redeploy. |
 | No Render CLI binary | Official Render Go CLI available at github.com/render-oss/render-cli — not installed in this project. REST API used instead. |
 | FINNHUB_API_KEY | Added to render.yaml env group reference. Must be present in `hedgecore-secrets` Render env group. |
-| healthCheckPath | Changed from `/api/health` to `/health` to match the actual FastAPI route. Verify with: `curl https://hedgecore.onrender.com/health` |
+| healthCheckPath | `/api/health` — matches the actual FastAPI route in main.py. Verify with: `curl https://hedgecore.onrender.com/api/health` |
 
 ---
 
@@ -259,7 +259,7 @@ git push origin master
 
 ```bash
 # Production
-curl https://hedgecore.onrender.com/health
+curl https://hedgecore.onrender.com/api/health
 
 # Expected response
 {"status": "ok", "env": "production", ...}
