@@ -31,13 +31,20 @@ Last updated: 2026-03-07
 - Freeze: ACTIVE (v1, 7 frozen files + 5 conceptual invariants)
 - Tests: [snapshot 2026-03-06] 2158 passing, 59% coverage
 
-## Hedge Desk Redesign (completed 2026-03-07)
+## Hedge Desk Redesign (completed 2026-03-07, institutional redesign 2026-03-07)
 - Phase A: Foundation (error handling, safeFetch, draft persistence, EmptyState)
 - Phase B: Navigation (sidebar, overview page, breadcrumb, workflow guide)
 - Phase C: Pipeline unification (5 steps: SELECT → CALCULATE → RISK → REVIEW → EXECUTE)
-- PhaseComplete: CSS variables, completion header, inline audit
-- Validation: tsc --noEmit + next build clean
-- Committed: 4 commits (fdd107a, 616aa1c, 999632a, 896f8ec)
+- Phase D: Institutional redesign — unified visual system, decision corridor, single nav
+  - D1: Removed duplicate WorkflowBreadcrumb + WorkflowGuide (hardcoded, never updated)
+  - D2: Created shared tokens.ts; unified all 7 phase files under one CSS-variable palette
+  - D3: Step 2 rebuilt — exposure narrative, market context, post-calc recommendation preview
+  - D4: Step 3 rebuilt — 5-constraint risk manifest, governance implications, integrated quant
+  - D5: Step 4 rebuilt — Decision Thesis, restructured as Decision Room, collapsible audit
+  - D6: Step 5 reframed — Execution Confirmation with pre-confirmation checklist
+  - D7: Step 6 rebuilt — compact closure, 3-path next actions, consolidated exports
+- Tests: 2444 passed, 0 failed | tsc clean | next build clean
+- Committed: 8360648
 
 ## Active Risks
 - HIGH: Leaked secrets in git history (current files sanitized, rotation needed)

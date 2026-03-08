@@ -1,5 +1,17 @@
 # Changelog (AI-maintained)
 
+## 2026-03-07 — Hedge Desk institutional redesign (Phase D)
+- **D1** (nav cleanup): Removed WorkflowBreadcrumb + WorkflowGuide from run mode — both were hardcoded to step 1, never updated. ProgressBar is now single authoritative progress model with phase-aware instruction text. Reclaimed ~68px vertical space.
+- **D2** (visual unification): Created `tokens.ts` shared design token file. Eliminated PhaseReview's hardcoded Bloomberg-dark palette (14 hex colors). All 7 phase files + ProgressBar now import from shared CSS-variable tokens. Zero hardcoded dark colors remain.
+- **D3** (Step 2 rebuild): PhaseCalculate expanded from thin confirmation to "Prepare & Calculate" — exposure narrative, market context interpretation, post-calc recommendation preview (coverage/cost/legs), assumptions block, consequence-of-inaction note. No longer auto-advances after calculation.
+- **D4** (Step 3 rebuild): PhaseRisk expanded — 5-constraint evaluation manifest with per-check PASS/FAIL, governance implications (solo vs 4-eyes), quant panels wrapped under "Quantitative Risk Analysis" header. SMB auto-skip now shows visible banner before advancing.
+- **D5** (Step 4 rebuild): PhaseReview restructured as Decision Room — Decision Thesis at top (plain-English recommendation), compact step header replacing heavy identity bar, CME specs + audit provenance made collapsible, enhanced CTA with contextual info.
+- **D6** (Step 5 reframe): PhaseExecute reframed as "Execution Confirmation" — pre-confirmation checklist, improved disclaimer framing, post-execution warning, CTA shows leg/contract counts.
+- **D7** (Step 6 rebuild): PhaseComplete restructured — compact confirmation banner replacing giant checkmark, 3-path next actions (Monitor/Export/New Run), export options consolidated into dropdown card, reduced from 8 buttons to 3 cards.
+- Net: +1660 lines, -917 lines across 10 files. 1 new file (tokens.ts).
+- Validation: tsc --noEmit clean, next build success, 2444 backend tests passed (0 failed).
+- Commit: 8360648
+
 ## 2026-03-07 — Hedge Desk redesign: Phases A + B + C
 - **Phase A** (foundation): hedgeErrors.ts error translation, ErrorBanner.tsx, draftPersistence.ts, safeFetch wrapper in dashboardClient, EmptyState session-expired/network/no-permission states
 - **Phase B** (navigation): AppSidebar simplified Hedge Desk section (6 items), HedgeDeskOverview landing page, dual-mode page.tsx (overview vs run), WorkflowBreadcrumb 6-step strip, WorkflowGuide step-of-5 bar, HedgeDeskPipeline draft persistence + goBack

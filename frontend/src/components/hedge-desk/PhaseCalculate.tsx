@@ -307,7 +307,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
       {/* ── Scrollable content ────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px 44px", display: "flex", flexDirection: "column", gap: 24 }}>
 
         {/* Step header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -325,8 +325,8 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
             background: `color-mix(in srgb, ${HD.cyan} 4%, ${HD.bgPanel})`,
             border: `1px solid color-mix(in srgb, ${HD.cyan} 20%, transparent)`,
             borderLeft: `3px solid ${HD.cyan}`,
-            borderRadius: 4,
-            padding: "14px 18px",
+            borderRadius: 6,
+            padding: "16px 20px",
           }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
               <InfoIcon size={14} color={HD.cyan} style={{ marginTop: 2, flexShrink: 0 }} />
@@ -363,7 +363,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
           badgeColor={HD.cyan}
         >
           {/* Currency aggregation */}
-          <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 14 }}>
             {Object.entries(currencyAgg).map(([ccy, { count, total }]) => (
               <div key={ccy} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>
@@ -431,7 +431,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
 
                 {/* Forward points context note */}
                 {forwardPointsAnalysis && (
-                  <div style={{ marginTop: 10, padding: "8px 12px", background: HD.bgDeep, borderRadius: 3, border: `1px solid ${HD.soft}` }}>
+                  <div style={{ marginTop: 14, padding: "10px 14px", background: HD.bgDeep, borderRadius: 4, border: `1px solid ${HD.soft}` }}>
                     <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>
                       Forward points indicate{" "}
                       <strong style={{ color: HD.primary }}>
@@ -521,12 +521,12 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
             background: `color-mix(in srgb, ${HD.emerald} 4%, ${HD.bgPanel})`,
             border: `1px solid color-mix(in srgb, ${HD.emerald} 25%, transparent)`,
             borderLeft: `4px solid ${HD.emerald}`,
-            borderRadius: 4,
-            overflow: "hidden",
+            borderRadius: 6,
           }}>
             {/* Section header */}
             <div style={{
-              padding: "10px 16px",
+              padding: "12px 18px",
+              borderRadius: "6px 6px 0 0",
               background: `color-mix(in srgb, ${HD.emerald} 8%, ${HD.bgSub})`,
               borderBottom: `1px solid color-mix(in srgb, ${HD.emerald} 15%, transparent)`,
               display: "flex", alignItems: "center", gap: 8,
@@ -537,9 +537,9 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
               </span>
             </div>
 
-            <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 18 }}>
               {/* Metric row */}
-              <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
                 {previewData.coveragePct != null && (
                   <PreviewMetric
                     label="COVERAGE RATIO"
@@ -568,12 +568,12 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
 
               {/* Plain-English summary */}
               <div style={{
-                padding: "10px 14px",
+                padding: "12px 16px",
                 background: HD.bgDeep,
-                borderRadius: 3,
+                borderRadius: 4,
                 border: `1px solid ${HD.soft}`,
               }}>
-                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.6 }}>
+                <span style={{ fontFamily: HD.fontUI, fontSize: 13, color: HD.secondary, lineHeight: 1.6 }}>
                   The engine recommends{" "}
                   <strong style={{ fontFamily: HD.fontMono, color: HD.primary }}>
                     {previewData.numLegs > 0 ? previewData.numLegs : "multiple"}
@@ -600,10 +600,10 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
               {/* Unhedged risk note */}
               <div style={{
                 display: "flex", alignItems: "flex-start", gap: 8,
-                padding: "8px 12px",
+                padding: "10px 14px",
                 background: `color-mix(in srgb, ${HD.amber} 6%, transparent)`,
                 border: `1px solid color-mix(in srgb, ${HD.amber} 20%, transparent)`,
-                borderRadius: 3,
+                borderRadius: 4,
               }}>
                 <InfoIcon size={12} color={HD.amber} style={{ marginTop: 2, flexShrink: 0 }} />
                 <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>
@@ -754,14 +754,14 @@ function SummaryCard({ icon: Icon, title, badge, badgeColor, children }: {
     <div style={{
       background: HD.bgPanel,
       border: `1px solid ${HD.rim}`,
-      borderRadius: 4,
-      overflow: "hidden",
+      borderRadius: 6,
     }}>
       <div style={{
         display: "flex", alignItems: "center", gap: 8,
-        padding: "8px 14px",
+        padding: "10px 16px",
         background: HD.bgSub,
         borderBottom: `1px solid ${HD.soft}`,
+        borderRadius: "6px 6px 0 0",
       }}>
         <Icon size={13} color={HD.tertiary} />
         <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
@@ -772,12 +772,12 @@ function SummaryCard({ icon: Icon, title, badge, badgeColor, children }: {
           color: badgeColor,
           background: `color-mix(in srgb, ${badgeColor} 10%, transparent)`,
           border: `1px solid color-mix(in srgb, ${badgeColor} 30%, transparent)`,
-          padding: "1px 6px", borderRadius: 2,
+          padding: "2px 8px", borderRadius: 3,
         }}>
           {badge}
         </span>
       </div>
-      <div style={{ padding: "12px 14px" }}>
+      <div style={{ padding: "16px 18px" }}>
         {children}
       </div>
     </div>
@@ -797,7 +797,7 @@ function PreviewMetric({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{label}</span>
-      <span style={{ fontFamily: HD.fontMono, fontSize: 16, fontWeight: 700, color: HD.primary }}>{value}</span>
+      <span style={{ fontFamily: HD.fontMono, fontSize: 18, fontWeight: 700, color: HD.primary }}>{value}</span>
     </div>
   );
 }
@@ -815,19 +815,19 @@ function AssumptionsBlock({ marketAsOf, spreadBps, minTradeSizeUsd }: {
   return (
     <div style={{
       border: `1px solid ${HD.soft}`,
-      borderRadius: 4,
-      overflow: "hidden",
+      borderRadius: 6,
     }}>
       <button
         onClick={() => setOpen(o => !o)}
         style={{
           width: "100%",
           display: "flex", alignItems: "center", gap: 6,
-          padding: "8px 12px",
+          padding: "10px 14px",
           background: HD.bgSub,
           border: "none",
           cursor: "pointer",
           textAlign: "left",
+          borderRadius: open ? "6px 6px 0 0" : "6px",
           borderBottom: open ? `1px solid ${HD.soft}` : "none",
         }}
       >
@@ -837,7 +837,7 @@ function AssumptionsBlock({ marketAsOf, spreadBps, minTradeSizeUsd }: {
         </span>
       </button>
       {open && (
-        <div style={{ padding: "10px 14px", background: HD.bgPanel }}>
+        <div style={{ padding: "12px 16px", background: HD.bgPanel, borderRadius: "0 0 6px 6px" }}>
           <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.6 }}>
             Market rates as of <strong style={{ fontFamily: HD.fontMono }}>{asOfText}</strong>.
             {" "}Spread: <strong style={{ fontFamily: HD.fontMono }}>{spreadBps} bps</strong>.
@@ -866,16 +866,16 @@ function PositionDetailList({ positions }: { positions: PositionRow[] }) {
     <div>
       <div style={{
         border: `1px solid ${HD.soft}`,
-        borderRadius: 3,
-        overflow: "hidden",
+        borderRadius: 4,
       }}>
         {/* Mini header */}
         <div style={{
           display: "grid",
           gridTemplateColumns: "1fr 80px 100px 90px",
           gap: 0,
-          padding: "4px 10px",
+          padding: "6px 12px",
           background: HD.bgDeep,
+          borderRadius: "4px 4px 0 0",
         }}>
           {["ENTITY", "CCY", "AMOUNT", "DATE"].map(h => (
             <span key={h} style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 600, color: HD.tertiary, letterSpacing: "0.08em" }}>{h}</span>
@@ -887,7 +887,7 @@ function PositionDetailList({ positions }: { positions: PositionRow[] }) {
             display: "grid",
             gridTemplateColumns: "1fr 80px 100px 90px",
             gap: 0,
-            padding: "5px 10px",
+            padding: "6px 12px",
             borderTop: `1px solid ${HD.soft}`,
             background: i % 2 === 0 ? HD.bgPanel : HD.bgSub,
           }}>
