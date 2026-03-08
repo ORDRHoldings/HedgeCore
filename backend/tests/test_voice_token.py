@@ -93,6 +93,8 @@ async def test_voice_token_success(authed_client):
     data = resp.json()
     assert data["token"] == "ek_test_ephemeral_token_abc123"
     assert data["expires_at"] == "1735689600"
+    assert "instructions" in data
+    assert "tools" in data
 
 
 @pytest.mark.asyncio

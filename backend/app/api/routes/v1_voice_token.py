@@ -119,6 +119,8 @@ REALTIME_TOOLS: list[dict] = [
 class VoiceTokenResponse(BaseModel):
     token: str
     expires_at: str
+    instructions: str
+    tools: list[dict]
 
 # ── Endpoint ─────────────────────────────────────────────────────────────────
 
@@ -148,8 +150,6 @@ async def create_voice_token(
                     "session": {
                         "type": "realtime",
                         "model": model,
-                        "instructions": ORDR_INSTRUCTIONS,
-                        "tools": REALTIME_TOOLS,
                         "audio": {
                             "output": {"voice": "alloy"},
                         },
@@ -172,7 +172,12 @@ async def create_voice_token(
             raise HTTPException(status_code=502, detail="Invalid voice session response")
 
         logger.info("Voice token minted for user=%s model=%s", current_user.id, model)
-        return VoiceTokenResponse(token=token_value, expires_at=str(expires_at))
+        return VoiceTokenResponse(
+            token=token_value,
+            expires_at=str(expires_at),
+            instructions=ORDR_INSTRUCTIONS,
+            tools=REALTIME_TOOLS,
+        )
 
     except httpx.HTTPError as exc:
         logger.exception("OpenAI session request failed: %s", exc)

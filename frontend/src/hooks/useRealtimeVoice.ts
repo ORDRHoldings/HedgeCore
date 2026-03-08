@@ -70,6 +70,8 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
   const audioElRef = useRef<HTMLAudioElement | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const statusRef = useRef<VoiceStatus>("disconnected");
+  // Session config received from backend (instructions + tools)
+  const sessionConfigRef = useRef<{ instructions: string; tools: Record<string, unknown>[] } | null>(null);
 
   // Partial transcript accumulator
   const assistantTextRef = useRef("");
@@ -108,7 +110,8 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
           emitTranscript("system", "ORDR Voice ready — speak or type below", true);
           break;
 
-        case "response.audio_transcript.delta": {
+        case "response.audio_transcript.delta":
+        case "response.text.delta": {
           const delta = event.delta as string;
           assistantTextRef.current += delta;
           emitTranscript(
@@ -120,8 +123,9 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
           break;
         }
 
-        case "response.audio_transcript.done": {
-          const finalText = (event.transcript as string) ?? assistantTextRef.current;
+        case "response.audio_transcript.done":
+        case "response.text.done": {
+          const finalText = (event.transcript as string) ?? (event.text as string) ?? assistantTextRef.current;
           emitTranscript("assistant", finalText, true, assistantEntryIdRef.current);
           assistantTextRef.current = "";
           assistantEntryIdRef.current = ++_entryId;
@@ -206,7 +210,13 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
         const detail = await resp.text();
         throw new Error(`Token request failed: ${resp.status} ${detail.slice(0, 200)}`);
       }
-      const { token: ephemeralKey } = await resp.json();
+      const tokenData = await resp.json();
+      const ephemeralKey = tokenData.token;
+      // Store session config for session.update after data channel opens
+      sessionConfigRef.current = {
+        instructions: tokenData.instructions ?? "",
+        tools: tokenData.tools ?? [],
+      };
 
       // 2. Create RTCPeerConnection
       const pc = new RTCPeerConnection();
@@ -240,6 +250,17 @@ export function useRealtimeVoice(options: UseRealtimeVoiceOptions): UseRealtimeV
       dcRef.current = dc;
 
       dc.addEventListener("open", () => {
+        // Send session.update with instructions + tools
+        const cfg = sessionConfigRef.current;
+        if (cfg) {
+          dc.send(JSON.stringify({
+            type: "session.update",
+            session: {
+              instructions: cfg.instructions,
+              tools: cfg.tools,
+            },
+          }));
+        }
         updateStatus("ready");
         emitTranscript("system", "ORDR Voice ready — speak or type below", true);
       });
