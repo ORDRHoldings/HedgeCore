@@ -150,8 +150,6 @@ async def create_voice_token(
                         "model": model,
                         "instructions": ORDR_INSTRUCTIONS,
                         "tools": REALTIME_TOOLS,
-                        "input_audio_transcription": {"model": "whisper-1"},
-                        "turn_detection": {"type": "server_vad"},
                         "audio": {
                             "output": {"voice": "alloy"},
                         },
