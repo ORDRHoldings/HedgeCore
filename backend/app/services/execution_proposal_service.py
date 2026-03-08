@@ -168,10 +168,21 @@ async def propose_execution(
     Position must be in READY_TO_EXECUTE state.
     At most one active (PROPOSED|APPROVED) proposal allowed per position.
     """
-    # Guard: position must be ready (or auto-advance from POLICY_ASSIGNED when run_id present)
+    # Guard: position must be ready (or auto-advance when run_id present)
     pos = await session.get(Position, position_id)
     if not pos or pos.company_id != user.company_id:
         raise ValueError("Position not found")
+    # Auto-advance from NEW when run_id present (hedge desk pipeline context).
+    # Two separate `if` blocks (not elif) so NEW falls through both:
+    # NEW → POLICY_ASSIGNED → READY_TO_EXECUTE in one call.
+    if pos.execution_status == "NEW" and run_id:
+        pos.execution_status = "POLICY_ASSIGNED"
+        pos.last_run_id = run_id
+        if hedge_amount is not None:
+            pos.hedge_amount = hedge_amount  # type: ignore[assignment]
+        if hedge_rate is not None:
+            pos.hedge_rate = hedge_rate      # type: ignore[assignment]
+        await session.flush()
     if pos.execution_status == "POLICY_ASSIGNED" and run_id:
         # Auto-transition: creating a proposal with a run_id IS the declaration that
         # the position is ready to execute. Transition inline rather than requiring a
@@ -209,20 +220,24 @@ async def propose_execution(
         "risk_decision_hash": risk_decision_hash,
         "risk_verdict":       risk_verdict,
     }
+    # Determine if dual-key (second approval) is required based on notional
+    second_required = _determine_second_approval_required(hedge_amount)
+
     proposal = ExecutionProposal(
-        id                 = _uuid.uuid4(),
-        position_id        = position_id,
-        company_id         = user.company_id,
-        branch_id          = user.branch_id,
-        status             = "PROPOSED",
-        proposed_by        = user.id,
-        proposed_by_email  = user.email,
-        proposed_at        = datetime.now(UTC),
-        proposal_payload   = payload,
-        proposal_hash      = compute_proposal_hash(payload),
-        execution_ref      = execution_ref,
-        risk_decision_hash = risk_decision_hash,
-        risk_verdict       = risk_verdict,
+        id                      = _uuid.uuid4(),
+        position_id             = position_id,
+        company_id              = user.company_id,
+        branch_id               = user.branch_id,
+        status                  = "PROPOSED",
+        proposed_by             = user.id,
+        proposed_by_email       = user.email,
+        proposed_at             = datetime.now(UTC),
+        proposal_payload        = payload,
+        proposal_hash           = compute_proposal_hash(payload),
+        execution_ref           = execution_ref,
+        risk_decision_hash      = risk_decision_hash,
+        risk_verdict            = risk_verdict,
+        second_approver_required = second_required,
     )
     session.add(proposal)
     await session.commit()
@@ -359,6 +374,81 @@ async def withdraw_proposal(
     return proposal
 
 
+async def apply_second_approval(
+    session: AsyncSession,
+    *,
+    user: User,
+    proposal_id: _uuid.UUID,
+    approval_notes: str | None = None,
+) -> ExecutionProposal:
+    """
+    Second approver signs off on an APPROVED proposal that requires dual-key.
+
+    SoD enforcement (defence in depth):
+      - Second approver must differ from BOTH maker AND primary checker.
+      - DB constraint is backup layer.
+
+    Only applicable when second_approver_required=True.
+    """
+    proposal = await _get_proposal(session, proposal_id, user.company_id)
+
+    if proposal.status != "APPROVED":
+        raise ValueError(
+            f"Proposal must be APPROVED for second approval. Current: {proposal.status}"
+        )
+
+    if not proposal.second_approver_required:
+        raise ValueError("Second approval is not required for this proposal.")
+
+    if proposal.second_approver_id is not None:
+        raise ValueError("Second approval already recorded.")
+
+    # SoD: second approver must differ from maker AND primary checker
+    if proposal.proposed_by == user.id:
+        raise ValueError(
+            "SoD violation: the second approver must differ from the proposer."
+        )
+    if proposal.approved_by == user.id:
+        raise ValueError(
+            "SoD violation: the second approver must differ from the primary checker."
+        )
+
+    now = datetime.now(UTC)
+    notes = approval_notes or "Second approval confirmed"
+
+    # Compute chained hash: second_approval_hash chains to approval_hash
+    second_hash_input = {
+        "second_approver": str(user.id),
+        "second_approved_at": now.isoformat(),
+        "second_approval_notes": notes,
+        "approval_hash": proposal.approval_hash,
+    }
+    import hashlib
+    import json
+    canonical = json.dumps(second_hash_input, sort_keys=True, separators=(",", ":"), default=str)
+    second_approval_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+    proposal.second_approver_id = user.id
+    proposal.second_approver_email = user.email
+    proposal.second_approved_at = now
+    proposal.second_approval_notes = notes
+    proposal.second_approval_hash = second_approval_hash
+
+    await session.commit()
+    await session.refresh(proposal)
+    return proposal
+
+
+def _determine_second_approval_required(
+    hedge_amount: float | None,
+    dual_key_threshold_usd: float = 1_000_000.0,
+) -> bool:
+    """Determine if second approval is required based on notional vs threshold."""
+    if hedge_amount is None:
+        return False
+    return abs(hedge_amount) >= dual_key_threshold_usd
+
+
 async def execute_approved_proposal(
     session: AsyncSession,
     *,
@@ -371,12 +461,22 @@ async def execute_approved_proposal(
     This is the only pathway to HEDGED. The position execute endpoint
     validates that an APPROVED proposal exists before calling this service.
 
+    If second_approver_required=True, second approval must be present
+    before execution can proceed.
+
     Returns the updated (proposal, position) tuple.
     """
     from app.services import position_service
 
     proposal = await _get_proposal(session, proposal_id, user.company_id)
     _assert_proposal_transition(proposal.status, "EXECUTED", proposal_id)
+
+    # Dual-key gate: if second approval required, it must be present
+    if proposal.second_approver_required and proposal.second_approver_id is None:
+        raise ValueError(
+            "Dual-key approval required: second approver must sign off before execution. "
+            "Call apply_second_approval() first."
+        )
 
     # Execution reference comes from proposal payload
     execution_ref = (

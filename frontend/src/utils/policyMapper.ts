@@ -201,6 +201,14 @@ function parseVarConfidence(s: string): number {
   return parseFloat(s.replace('%', '')) || 95;
 }
 
+/** Derive maturity profile from time horizon */
+function derivedMaturityProfile(state: WizardState): string {
+  const months = state.timeHorizonMonths || 12;
+  if (months <= 3) return 'SHORT';
+  if (months <= 12) return 'MEDIUM';
+  return 'LONG';
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Map WizardState (page) → QuestionnaireAnswers (for AI call)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,6 +241,71 @@ export function mapWizardStateToQA(state: WizardState): QuestionnaireAnswers {
     instrument_preferences:    state.instrumentPreferences,
     rolling_hedge:             state.rollingHedge,
     hedge_ratio_target:        state.hedgeRatioTarget / 100, // slider 0–100 → ratio 0–1
+
+    // --- Phase A governance context (previously dropped — audit finding #4) ---
+    regulatory_regimes: state.regulatoryRegimes?.length ? state.regulatoryRegimes : undefined,
+    board_resolution_ref: state.boardResolutionRef || undefined,
+    effective_from: state.effectiveFrom || undefined,
+    effective_until: state.effectiveUntil || undefined,
+    review_due_date: state.reviewDueDate || undefined,
+    portfolio_scope: state.portfolioScope || undefined,
+    extended_flow_types: state.extendedFlowTypes?.length ? state.extendedFlowTypes : undefined,
+    geography_focus: state.geographyFocus?.length ? state.geographyFocus : undefined,
+
+    // --- Phase B detail (previously dropped) ---
+    hedge_experience: state.hedgeExperience || undefined,
+    layered_approach: state.layeredApproach || undefined,
+    cash_flow_visibility: state.cashFlowVisibility || undefined,
+    seasonal_patterns: state.seasonalPatterns || undefined,
+    payment_frequency: state.paymentFrequency || undefined,
+    avg_transaction_size_usd: state.avgTransactionSizeUsd || undefined,
+    has_intercompany_flows: state.hasIntercompanyFlows || undefined,
+    netting_enabled: state.nettingAvailable || undefined,
+    netting_net_confirmed_forecast: state.netConfirmedForecast || undefined,
+    settlement_cycle_days: state.settlementCycleDays || undefined,
+    materiality_threshold_usd: state.materialityThresholdUsd || undefined,
+    min_hedge_size_usd: state.minHedgeSizeUsd || undefined,
+    max_single_trade_usd: state.maxSingleTradeUsd || undefined,
+
+    // --- Phase C instrument constraints (previously dropped) ---
+    instrument_allowed: state.instrAllowed && Object.keys(state.instrAllowed).length > 0 ? state.instrAllowed : undefined,
+    instrument_max_tenor_days: state.instrMaxTenorDays && Object.keys(state.instrMaxTenorDays).length > 0 ? state.instrMaxTenorDays : undefined,
+    instrument_requires_approval: state.instrRequiresApproval && Object.keys(state.instrRequiresApproval).length > 0 ? state.instrRequiresApproval : undefined,
+    instrument_max_notional_usd: state.instrMaxNotionalUsd && Object.keys(state.instrMaxNotionalUsd).length > 0 ? state.instrMaxNotionalUsd : undefined,
+    tenor_min_days: state.tenorMinDays || undefined,
+    tenor_max_days: state.tenorMaxDays || undefined,
+    roll_allowed: state.rollAllowed || undefined,
+    roll_window_days: state.rollWindowDays || undefined,
+
+    // --- Phase D budgets/constraints (previously dropped) ---
+    max_carry_cost_bps_annual: state.maxCarryCostBpsAnnual || undefined,
+    max_option_premium_pct: state.maxOptionPremiumPct || undefined,
+    max_spread_bps: state.maxSpreadBps || undefined,
+    leverage_cap: state.leverageCap || undefined,
+    margin_budget_usd: state.marginBudgetUsd || undefined,
+    max_instrument_concentration_pct: state.maxInstrumentConcentrationPct || undefined,
+    max_counterparty_concentration_pct: state.maxCounterpartyConcentrationPct || undefined,
+    max_tenor_concentration_pct: state.maxTenorConcentrationPct || undefined,
+    max_currency_concentration_pct: state.maxCurrencyConcentrationPct || undefined,
+    max_acceptable_loss: typeof state.maxAcceptableLoss === 'string' ? parseFloat(state.maxAcceptableLoss) || undefined : undefined,
+
+    // --- Phase E scenarios (previously dropped) ---
+    standard_stress_pack: state.standardStressPack || undefined,
+    var_confidence: state.varConfidence ? parseVarConfidence(state.varConfidence) : undefined,
+    drawdown_tolerance: state.drawdownTolerance ? parseFloat(state.drawdownTolerance) || undefined : undefined,
+    backtest_window_days: state.backTestWindowDays || undefined,
+    worst_case_focus: state.worstCaseFocus ? 'true' : undefined,
+    custom_scenarios: state.customScenarios?.length ? state.customScenarios as Array<Record<string, unknown>> : undefined,
+    governance_notes: state.governanceNotes || undefined,
+
+    // --- Phase F/G (previously dropped) ---
+    benchmark: state.benchmark || undefined,
+    policy_status: state.policyStatus || undefined,
+
+    // --- Derived maturity/governance context ---
+    maturity_profile: derivedMaturityProfile(state),
+    governance_tier: state.governanceNotes ? 'ENHANCED' : 'STANDARD',
+    accounting_mode: state.ifrsCompliance ? 'CASH_FLOW_HEDGE' : 'NONE',
   };
 }
 
@@ -356,6 +429,34 @@ export function buildCanonicalFromPageState(
     },
 
     execution_config: preset.policy,
+
+    // Netting policy (from Phase B wizard data)
+    netting_policy: {
+      enabled: state.nettingAvailable || false,
+      net_confirmed_forecast: state.netConfirmedForecast || false,
+      settlement_cycle_days: state.settlementCycleDays || 2,
+    },
+
+    // Instrument policy (from Phase C wizard data)
+    instrument_policy: {
+      allowed_types: state.instrumentPreferences || ['NDF', 'FWD'],
+      max_tenor_days: state.instrMaxTenorDays || {},
+      requires_approval: state.instrRequiresApproval || {},
+      max_notional_usd: state.instrMaxNotionalUsd || {},
+    },
+
+    // Scenario policy (from Phase E wizard data)
+    scenario_policy: {
+      stress_pack: state.standardStressPack || 'standard',
+      var_confidence: state.varConfidence ? parseVarConfidence(state.varConfidence) : 95,
+      drawdown_tolerance_pct: state.drawdownTolerance ? parseFloat(state.drawdownTolerance) || 5.0 : 5.0,
+      custom_scenarios: state.customScenarios || [],
+    },
+
+    // Governance depth (from Phase F/G wizard data)
+    governance_tier: state.governanceNotes ? 'ENHANCED' : 'STANDARD',
+    maturity_profile: derivedMaturityProfile(state),
+    accounting_mode: state.ifrsCompliance ? 'CASH_FLOW_HEDGE' : 'NONE',
 
     formula: preset.formula ? {
       notation:      preset.formula,

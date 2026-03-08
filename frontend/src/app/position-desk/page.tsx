@@ -2,18 +2,18 @@
 
 /**
  * /position-desk — Position Control Tower
- * Sprint 1.2 — Institutional Control Tower Upgrade
  *
- * Upgrades over Phase 0:
- *   - Two new data columns: POLICY ID chip + RUN ID chip (click-to-copy)
- *   - NEEDS_ACTION preset filter: surfaces NEW + POLICY_ASSIGNED + READY rows
- *   - Keyboard shortcuts: / (search focus), F (filter cycle), R (refresh), Esc (clear)
- *   - Disabled action buttons show WHY and HOW TO RESOLVE via tooltip
- *   - Row checkboxes for bulk visual selection
- *   - Sprint 1.1 PROPOSE button replaces EXECUTE for READY_TO_EXECUTE rows
- *   - Status badge tooltip shows next step for each lifecycle state
- *   - Rejection reason shown on REOPEN hover tooltip
- *   - Header shows NEEDS ACTION count chip + Execution Desk link
+ * Institutional exposure inventory and lifecycle management surface.
+ * NOT a pipeline step — this is a persistent operational control surface.
+ *
+ * Features:
+ *   - Readiness summary strip with KPI metrics
+ *   - Status filter tabs with counts (including NEEDS_ACTION composite)
+ *   - Sortable, dense data grid with sticky header + lifecycle row borders
+ *   - Row expansion for detail context (IDs, hedge data, audit links)
+ *   - Bulk assign / bulk reject with progress tracking
+ *   - Keyboard shortcuts: / (search), F (filter cycle), R (refresh), Esc (clear)
+ *   - Individual actions: ASSIGN POLICY, PROPOSE, REJECT, REOPEN, DELETE
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -44,9 +44,12 @@ import {
 } from "../../api/policyClient";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { POSITIONS_HELP } from "@/lib/help";
-import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
-import WorkflowGuide from "@/components/layout/WorkflowGuide";
-import { getPipelineNextStep } from "@/utils/pipelineNextStep";
+import {
+  ChevronDownIcon, ChevronUpIcon, ChevronsUpDownIcon,
+  ChevronRightIcon,
+} from "lucide-react";
+
+// ── Design tokens ────────────────────────────────────────────────────────────
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -65,14 +68,16 @@ const S = {
   purple:    "#93C5FD",
   indigo:    "#818cf8",
 } as const;
+
+// ── Status config ────────────────────────────────────────────────────────────
 type ExecStatus = "NEW" | "POLICY_ASSIGNED" | "READY_TO_EXECUTE" | "HEDGED" | "REJECTED";
 
-const STATUS_CONFIG: Record<ExecStatus, { label: string; color: string; desc: string; nextStep: string }> = {
-  NEW:              { label: "NEW",          color: S.tertiary, desc: "Awaiting policy assignment",                     nextStep: "Click ASSIGN POLICY to attach a hedge policy." },
-  POLICY_ASSIGNED:  { label: "POLICY ASGND", color: S.cyan,     desc: "Policy assigned, awaiting hedge calculation",     nextStep: "Run hedge engine, then click MARK READY with run ID." },
-  READY_TO_EXECUTE: { label: "READY",        color: S.amber,    desc: "Run linked, awaiting 4-eyes execution proposal",  nextStep: "Click PROPOSE to start the 4-eyes approval workflow." },
-  HEDGED:           { label: "HEDGED",       color: S.pass,     desc: "Execution confirmed, terminal state",             nextStep: "No further action. Position is fully hedged." },
-  REJECTED:         { label: "REJECTED",     color: S.fail,     desc: "Rejected, can be reopened",                      nextStep: "Click REOPEN to return to NEW status." },
+const STATUS_CONFIG: Record<ExecStatus, { label: string; color: string; desc: string; nextStep: string; borderColor: string; priority: number }> = {
+  NEW:              { label: "NEW",          color: S.tertiary, desc: "Awaiting policy assignment",                     nextStep: "Click ASSIGN POLICY to attach a hedge policy.",               borderColor: S.amber,   priority: 0 },
+  POLICY_ASSIGNED:  { label: "POLICY ASGND", color: S.cyan,     desc: "Policy assigned, awaiting hedge calculation",     nextStep: "Run hedge engine, then click MARK READY with run ID.",        borderColor: S.cyan,    priority: 1 },
+  READY_TO_EXECUTE: { label: "READY",        color: S.amber,    desc: "Run linked, awaiting 4-eyes execution proposal",  nextStep: "Click PROPOSE to start the 4-eyes approval workflow.",        borderColor: S.pass,    priority: 2 },
+  HEDGED:           { label: "HEDGED",       color: S.pass,     desc: "Execution confirmed, terminal state",             nextStep: "No further action. Position is fully hedged.",               borderColor: S.pass,    priority: 3 },
+  REJECTED:         { label: "REJECTED",     color: S.fail,     desc: "Rejected, can be reopened",                      nextStep: "Click REOPEN to return to NEW status.",                     borderColor: S.fail,    priority: 4 },
 };
 
 type FilterPreset = "ALL" | "NEW" | "POLICY_ASSIGNED" | "READY_TO_EXECUTE" | "HEDGED" | "REJECTED" | "NEEDS_ACTION";
@@ -84,9 +89,16 @@ const PRESET_LABELS: Record<FilterPreset, string> = {
 };
 const NEEDS_ACTION_STATUSES: ExecStatus[] = ["NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE"];
 
+// ── Sort types ───────────────────────────────────────────────────────────────
+type SortColumn = "status" | "record_id" | "entity" | "currency" | "amount" | "value_date";
+type SortDir = "asc" | "desc";
+
+// ── Types ────────────────────────────────────────────────────────────────────
 type ModalType = "assign-policy" | "mark-ready" | "reject" | "proposal-info" | null;
 interface ModalState { type: ModalType; position: PositionRow | null; }
 interface BulkRejectResult { rejected: number; skipped: number; failed: number; errors: string[]; }
+
+// ── Formatters ───────────────────────────────────────────────────────────────
 function fmtAmt(n: number | null | undefined): string {
   if (n == null) return "—";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
@@ -96,6 +108,20 @@ function truncate(s: string | null | undefined, max = 16): string {
   if (!s) return "—"; return s.length > max ? s.slice(0, max) + "…" : s;
 }
 function shortId(s: string | null | undefined): string { if (!s) return "—"; return s.slice(0, 8).toUpperCase(); }
+function daysToMaturity(dateStr: string | null | undefined): number | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return Math.ceil((d.getTime() - now.getTime()) / 86_400_000);
+}
+
+// ── Grid layout ──────────────────────────────────────────────────────────────
+const GRID_COLS = "32px 100px 120px minmax(120px,1fr) 52px 100px 94px 80px 72px 1fr";
+
+// ── Micro-components ─────────────────────────────────────────────────────────
 function Tooltip({ tip, children }: { tip: string; children: React.ReactNode }) {
   const [show, setShow] = useState(false);
   return (
@@ -109,13 +135,14 @@ function Tooltip({ tip, children }: { tip: string; children: React.ReactNode }) 
           background: "#1a1a2e", border: `1px solid ${S.rim}`,
           color: S.secondary, fontFamily: S.fontMono, fontSize: 10,
           padding: "5px 9px", borderRadius: 2, whiteSpace: "pre-wrap",
-          maxWidth: 260, lineHeight: 1.5, pointerEvents: "none",
+          maxWidth: 280, lineHeight: 1.5, pointerEvents: "none",
           boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
         }}>{tip}</span>
       )}
     </span>
   );
 }
+
 function StatusBadge({ status }: { status: ExecStatus }) {
   const cfg = STATUS_CONFIG[status];
   return (
@@ -144,11 +171,11 @@ function ActionBtn({ label, color, onClick, disabled, loading, disabledReason }:
   if (disabled && disabledReason) return <Tooltip tip={disabledReason}>{btn}</Tooltip>;
   return btn;
 }
+
 function RunIdChip({ runId, onCopy }: { runId: string | null; onCopy?: (id: string) => void }) {
   if (!runId) return <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>—</span>;
   return (
-    <Tooltip tip={`Run: ${runId}
-Click to view audit trail`}>
+    <Tooltip tip={`Run: ${runId}\nClick to view audit trail`}>
       <Link
         href={`/run-viewer?id=${encodeURIComponent(runId)}`}
         onClick={() => onCopy?.(runId)}
@@ -176,6 +203,41 @@ function PolicyChip({ policyId }: { policyId: string | null }) {
     </Tooltip>
   );
 }
+
+// ── Sort header cell ─────────────────────────────────────────────────────────
+function SortHeader({ label, column, activeColumn, activeDir, onSort, align }: {
+  label: string; column: SortColumn;
+  activeColumn: SortColumn | null; activeDir: SortDir;
+  onSort: (col: SortColumn) => void;
+  align?: "right";
+}) {
+  const isActive = activeColumn === column;
+  return (
+    <button
+      onClick={() => onSort(column)}
+      style={{
+        display: "flex", alignItems: "center", gap: 3,
+        fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+        color: isActive ? S.cyan : S.tertiary,
+        background: "transparent", border: "none", cursor: "pointer",
+        padding: "8px 4px", whiteSpace: "nowrap",
+        justifyContent: align === "right" ? "flex-end" : "flex-start",
+        width: "100%",
+      }}
+    >
+      {label}
+      {isActive ? (
+        activeDir === "asc"
+          ? <ChevronUpIcon size={10} color={S.cyan} />
+          : <ChevronDownIcon size={10} color={S.cyan} />
+      ) : (
+        <ChevronsUpDownIcon size={10} color={S.tertiary} style={{ opacity: 0.4 }} />
+      )}
+    </button>
+  );
+}
+
+// ── Modal components ─────────────────────────────────────────────────────────
 function ModalOverlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
@@ -217,6 +279,7 @@ function ModalActions({ onCancel, onConfirm, confirmLabel, confirmColor, disable
     </div>
   );
 }
+
 function PolicySelectorRow({
   tmpl, isSelected, isFavorite, isActive, onSelect
 }: {
@@ -270,6 +333,9 @@ function PolicySelectorRow({
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function PositionDeskPage() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
@@ -292,8 +358,12 @@ export default function PositionDeskPage() {
   const [hedgeRate, setHedgeRate]       = useState("");
   const [rejectReason, setRejectReason] = useState("");
 
-  // Top-level active policy (used for pipeline next-step computation)
-  const [topActivePolicy, setTopActivePolicy]           = useState<PolicyInstance | null>(null);
+  // Sort state
+  const [sortCol, setSortCol]   = useState<SortColumn | null>(null);
+  const [sortDir, setSortDir]   = useState<SortDir>("asc");
+
+  // Expanded row
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   // Policy selector state (for assign-policy modal)
   const [policyTemplates, setPolicyTemplates]           = useState<PolicyTemplate[]>([]);
@@ -319,10 +389,10 @@ export default function PositionDeskPage() {
   const [deleteConfirmId, setDeleteConfirmId]           = useState<string | null>(null);
   const [deleteRunning, setDeleteRunning]               = useState(false);
 
-  // Show/hide rejected toggle (X-15)
+  // Show/hide rejected toggle
   const [hideRejected, setHideRejected]                 = useState(false);
 
-  // ERR-1: track whether the operator dismissed the list-error banner for the current error
+  // ERR-1: track whether the operator dismissed the list-error banner
   const [errorDismissed, setErrorDismissed]             = useState(false);
 
   // Best-match policy recommendation for assign-policy modal
@@ -337,16 +407,7 @@ export default function PositionDeskPage() {
 
   useEffect(() => { if (token) dispatch(listPositionsThunk({ token })); }, [dispatch, token]);
   useEffect(() => { if (modal.type !== null) dispatch(clearLifecycleError()); }, [modal.type, dispatch]);
-  // ERR-1: un-dismiss the banner whenever a new error surfaces (new string reference = new error)
   useEffect(() => { if (listError) setErrorDismissed(false); }, [listError]);
-
-  // Fetch active policy for pipeline next-step computation (independent of modal)
-  useEffect(() => {
-    if (!token) return;
-    getActivePolicy(token)
-      .then((inst) => setTopActivePolicy(inst))
-      .catch(() => setTopActivePolicy(null));
-  }, [token]);
 
   // Load templates + favorites + active instance when assign-policy modal opens
   useEffect(() => {
@@ -376,7 +437,6 @@ export default function PositionDeskPage() {
       setPolicyTemplates(templates);
       setFavTemplateIds(new Set(favs.map(f => f.template_id)));
       setActivePolicyInstance(activeInst);
-      // Auto-select active policy instance if available
       if (activeInst) setBulkPolicyId(activeInst.id);
     }).catch(() => {});
   }, [bulkAssignOpen, token]);
@@ -398,17 +458,18 @@ export default function PositionDeskPage() {
           setPreset(cycle[(idx + 1) % cycle.length]);
           break;
         }
-        case "Escape": setSearch(""); setSelected(new Set()); break;
+        case "Escape": setSearch(""); setSelected(new Set()); setExpandedRow(null); break;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [dispatch, token, modal.type, preset]);
+
+  // ── Filtering ──────────────────────────────────────────────────────────────
   const filteredPositions = useMemo(() => {
     let rows = positions;
     if (preset === "NEEDS_ACTION") rows = rows.filter((p) => NEEDS_ACTION_STATUSES.includes(p.execution_status as ExecStatus));
     else if (preset !== "ALL") rows = rows.filter((p) => p.execution_status === preset);
-    // X-15: hide rejected when toggle is on and viewing ALL
     if (preset === "ALL" && hideRejected) rows = rows.filter((p) => p.execution_status !== "REJECTED");
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -421,6 +482,47 @@ export default function PositionDeskPage() {
     return rows;
   }, [positions, preset, search, hideRejected]);
 
+  // ── Sorting ────────────────────────────────────────────────────────────────
+  const sortedPositions = useMemo(() => {
+    if (!sortCol) return filteredPositions;
+    const sorted = [...filteredPositions];
+    sorted.sort((a, b) => {
+      let cmp = 0;
+      switch (sortCol) {
+        case "status":
+          cmp = (STATUS_CONFIG[a.execution_status as ExecStatus]?.priority ?? 99)
+              - (STATUS_CONFIG[b.execution_status as ExecStatus]?.priority ?? 99);
+          break;
+        case "record_id":
+          cmp = (a.record_id ?? "").localeCompare(b.record_id ?? "");
+          break;
+        case "entity":
+          cmp = (a.entity ?? "").localeCompare(b.entity ?? "");
+          break;
+        case "currency":
+          cmp = (a.currency ?? "").localeCompare(b.currency ?? "");
+          break;
+        case "amount":
+          cmp = (a.amount ?? 0) - (b.amount ?? 0);
+          break;
+        case "value_date":
+          cmp = (a.value_date ?? "").localeCompare(b.value_date ?? "");
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [filteredPositions, sortCol, sortDir]);
+
+  const handleSort = useCallback((col: SortColumn) => {
+    if (sortCol === col) {
+      setSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  }, [sortCol]);
+
   const statusCounts = useMemo(() => {
     const c: Record<string, number> = { ALL: positions.length };
     for (const st of ["NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE", "HEDGED", "REJECTED"] as ExecStatus[])
@@ -429,12 +531,13 @@ export default function PositionDeskPage() {
     return c;
   }, [positions]);
 
-  // Smart pipeline next-step — recomputes when positions or active policy change
-  const pipelineNext = useMemo(
-    () => getPipelineNextStep(positions, topActivePolicy, { amber: S.amber, cyan: S.cyan, pass: S.pass }),
-    [positions, topActivePolicy],
+  // ── Readiness KPIs ─────────────────────────────────────────────────────────
+  const totalExposure = useMemo(() =>
+    positions.reduce((sum, p) => sum + (p.amount ?? 0), 0),
+    [positions],
   );
 
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const openModal = useCallback((type: ModalType, position: PositionRow) => {
     setModal({ type, position });
     setPolicyId(position.policy_id ?? "");
@@ -443,7 +546,6 @@ export default function PositionDeskPage() {
     setHedgeRate(position.hedge_rate?.toString() ?? "");
     setRejectReason("");
     setPolicySearchQuery("");
-    // Reset selector so stale data doesn't show while loading
     if (type === 'assign-policy') {
       setPolicyTemplates([]);
       setActivePolicyInstance(null);
@@ -558,6 +660,7 @@ export default function PositionDeskPage() {
   const toggleSelect = useCallback((id: string) => {
     setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }, []);
+
   if (!user) return (
     <div style={{ padding: 40, fontFamily: S.fontMono, color: S.secondary, fontSize: 12 }}>
       Authentication required. <button onClick={() => router.push("/auth/login")} style={{ color: S.cyan, background: "none", border: "none", cursor: "pointer", fontFamily: S.fontMono }}>Sign in</button>
@@ -568,44 +671,95 @@ export default function PositionDeskPage() {
   const isTransitioning = lifecycleLoading !== null;
   const needsActionCount = statusCounts.NEEDS_ACTION ?? 0;
 
+  // ═════════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═════════════════════════════════════════════════════════════════════════════
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: S.bgDeep, overflow: "hidden", flex: 1 }}>
-      <header style={{ display: "flex", alignItems: "center", gap: 10, height: 44, flexShrink: 0, padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}` }}>
-        <button onClick={() => router.push("/input")} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer" }}>← Ingestion</button>
-        <span style={{ color: S.rim }}>|</span>
-        <span style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary }}>Position Desk</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, border: `1px solid ${S.rim}`, padding: "1px 5px" }}>CONTROL TOWER</span>
+
+      {/* ── Page Header ─────────────────────────────────────────────────────── */}
+      <header style={{
+        display: "flex", alignItems: "center", gap: 12, height: 44, flexShrink: 0,
+        padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`,
+      }}>
+        <span style={{ fontFamily: S.fontUI, fontSize: 14, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary }}>
+          Position Desk
+        </span>
+        <span style={{
+          fontFamily: S.fontMono, fontSize: 9, color: S.cyan,
+          border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
+          background: `color-mix(in srgb, ${S.cyan} 6%, transparent)`,
+          padding: "1px 6px", letterSpacing: "0.08em",
+        }}>CONTROL TOWER</span>
         {needsActionCount > 0 && (
-          <span onClick={() => setPreset("NEEDS_ACTION")} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.amber, background: `color-mix(in srgb, ${S.amber} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, padding: "1px 7px", borderRadius: 2, cursor: "pointer", letterSpacing: "0.06em" }}>
-            ⚡ {needsActionCount} NEEDS ACTION
+          <span onClick={() => setPreset("NEEDS_ACTION")} style={{
+            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+            color: S.amber,
+            background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
+            padding: "1px 7px", borderRadius: 2, cursor: "pointer", letterSpacing: "0.06em",
+          }}>
+            {needsActionCount} NEEDS ACTION
           </span>
         )}
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{positions.length} positions</span>
-        <button onClick={() => router.push("/position-desk/import")} title="Bulk CSV Import" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, background: `color-mix(in srgb, ${S.amber} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em" }}>↑ IMPORT CSV</button>
-        <button onClick={() => token && dispatch(listPositionsThunk({ token }))} title="Refresh (R)" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, background: "transparent", border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`, padding: "2px 8px", cursor: "pointer" }}>↻ Refresh</button>
+        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          {positions.length} position{positions.length !== 1 ? "s" : ""}
+        </span>
         <button
-          onClick={() => router.push(pipelineNext.href)}
-          title={pipelineNext.reason}
+          onClick={() => router.push("/position-desk/import")}
+          title="Bulk CSV Import"
           style={{
-            fontFamily: S.fontMono,
-            fontSize: 11,
-            fontWeight: 700,
-            color: pipelineNext.color,
-            background: `color-mix(in srgb, ${pipelineNext.color} 10%, transparent)`,
-            border: `1px solid color-mix(in srgb, ${pipelineNext.color} 35%, transparent)`,
-            padding: "3px 12px",
-            cursor: "pointer",
-            letterSpacing: "0.05em",
-            whiteSpace: "nowrap",
+            fontFamily: S.fontMono, fontSize: 10, color: S.amber,
+            background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
+            padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
           }}
-        >
-          NEXT: {pipelineNext.label} →
-        </button>
+        >IMPORT CSV</button>
+        <button
+          onClick={() => token && dispatch(listPositionsThunk({ token }))}
+          title="Refresh (R)"
+          style={{
+            fontFamily: S.fontMono, fontSize: 10, color: S.cyan,
+            background: "transparent",
+            border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
+            padding: "2px 8px", cursor: "pointer",
+          }}
+        >REFRESH</button>
       </header>
-      <WorkflowBreadcrumb active="ingest" />
-      <WorkflowGuide active="ingest" />
+
+      {/* ── Readiness Summary Strip ─────────────────────────────────────────── */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 0, flexShrink: 0,
+        borderBottom: `1px solid ${S.rim}`,
+        background: S.bgSub,
+      }}>
+        {([
+          ["TOTAL EXPOSURE", fmtAmt(totalExposure), S.primary],
+          ["POSITIONS", String(positions.length), S.primary],
+          ["NEEDS ACTION", String(needsActionCount), needsActionCount > 0 ? S.amber : S.tertiary],
+          ["READY", String(statusCounts.READY_TO_EXECUTE ?? 0), (statusCounts.READY_TO_EXECUTE ?? 0) > 0 ? S.pass : S.tertiary],
+          ["HEDGED", String(statusCounts.HEDGED ?? 0), (statusCounts.HEDGED ?? 0) > 0 ? S.pass : S.tertiary],
+          ["REJECTED", String(statusCounts.REJECTED ?? 0), (statusCounts.REJECTED ?? 0) > 0 ? S.fail : S.tertiary],
+        ] as const).map(([label, value, color], idx) => (
+          <div key={label} style={{
+            padding: "8px 16px",
+            borderRight: idx < 5 ? `1px solid ${S.soft}` : "none",
+            minWidth: 0,
+          }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 2, whiteSpace: "nowrap" }}>
+              {label}
+            </div>
+            <div style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color }}>
+              {value}
+            </div>
+          </div>
+        ))}
+        <div style={{ flex: 1 }} />
+      </div>
+
+      {/* ── Error banners ───────────────────────────────────────────────────── */}
       {lifecycleError && (
         <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`, borderLeft: `3px solid ${S.fail}`, padding: "7px 20px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.fail, letterSpacing: "0.06em" }}>TRANSITION ERROR</span>
@@ -613,8 +767,6 @@ export default function PositionDeskPage() {
           <button onClick={() => dispatch(clearLifecycleError())} style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>✕</button>
         </div>
       )}
-
-      {/* ERR-1: list-load error banner — shown when positions could not be fetched */}
       {listError && !errorDismissed && (
         <div role="alert" aria-live="assertive" style={{
           background: `color-mix(in srgb, ${S.amber} 7%, ${S.bgPanel})`,
@@ -623,13 +775,13 @@ export default function PositionDeskPage() {
           padding: "10px 20px", flexShrink: 0,
           display: "flex", alignItems: "flex-start", gap: 14,
         }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 14, color: S.amber, lineHeight: 1, marginTop: 1 }}>⚠</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 14, color: S.amber, lineHeight: 1, marginTop: 1 }}>!</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.amber, letterSpacing: "0.06em", marginBottom: 2 }}>
               POSITIONS UNAVAILABLE
             </div>
             <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginBottom: 4 }}>
-              We couldn&apos;t load positions from the server. Retry or check connectivity.
+              Could not load positions from server. Retry or check connectivity.
             </div>
             <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.03em" }}>
               Detail: {listError}
@@ -645,7 +797,7 @@ export default function PositionDeskPage() {
                 border: "none", padding: "4px 12px", cursor: loading ? "not-allowed" : "pointer",
                 borderRadius: 2, opacity: loading ? 0.6 : 1,
               }}>
-              {loading ? "Retrying…" : "↻ Retry"}
+              {loading ? "Retrying…" : "RETRY"}
             </button>
             <button
               onClick={() => setErrorDismissed(true)}
@@ -656,13 +808,14 @@ export default function PositionDeskPage() {
           </div>
         </div>
       )}
-
       {copiedRun && (
         <div style={{ background: `color-mix(in srgb, ${S.purple} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.purple} 25%, transparent)`, padding: "5px 20px", flexShrink: 0, fontFamily: S.fontMono, fontSize: 10, color: S.purple }}>
-          ✓ Run ID copied: {copiedRun}
+          Run ID copied: {copiedRun}
         </div>
       )}
-      <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "6px 20px", background: S.bgPanel, borderBottom: `1px solid ${S.soft}`, flexShrink: 0, flexWrap: "wrap" }}>
+
+      {/* ── Filter + Search Bar ─────────────────────────────────────────────── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "5px 20px", background: S.bgPanel, borderBottom: `1px solid ${S.soft}`, flexShrink: 0, flexWrap: "wrap" }}>
         {(["ALL", "NEEDS_ACTION", "NEW", "POLICY_ASSIGNED", "READY_TO_EXECUTE", "HEDGED", "REJECTED"] as FilterPreset[]).map((p) => {
           const isActive = preset === p;
           const color = p === "NEEDS_ACTION" ? S.amber : p === "ALL" ? S.secondary : p === "HEDGED" ? S.pass : p === "REJECTED" ? S.fail : STATUS_CONFIG[p as ExecStatus]?.color ?? S.secondary;
@@ -674,7 +827,6 @@ export default function PositionDeskPage() {
           );
         })}
         <div style={{ flex: 1 }} />
-        {/* X-15: Show/Hide Rejected toggle */}
         {preset === "ALL" && (statusCounts.REJECTED ?? 0) > 0 && (
           <button
             onClick={() => setHideRejected(h => !h)}
@@ -688,8 +840,10 @@ export default function PositionDeskPage() {
             {hideRejected ? `SHOW REJECTED (${statusCounts.REJECTED ?? 0})` : `HIDE REJECTED (${statusCounts.REJECTED ?? 0})`}
           </button>
         )}
-        <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search… (/ to focus · Esc to clear)" style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 10px", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, outline: "none", width: 280 }} />
+        <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search… (/ to focus)" style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 10px", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, outline: "none", width: 240 }} />
       </div>
+
+      {/* ── Bulk Actions Bar ────────────────────────────────────────────────── */}
       {selected.size > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 20px", background: `color-mix(in srgb, ${S.amber} 6%, ${S.bgPanel})`, borderBottom: `1px solid color-mix(in srgb, ${S.amber} 20%, ${S.soft})`, flexShrink: 0 }}>
           <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, fontWeight: 700, letterSpacing: "0.06em" }}>{selected.size} SELECTED</span>
@@ -708,106 +862,254 @@ export default function PositionDeskPage() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "32px 120px 140px 56px 80px 118px 86px 80px 56px 56px 1fr", padding: "5px 20px", background: S.bgSub, borderBottom: `1px solid ${S.soft}`, flexShrink: 0 }}>
-        <div><input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} style={{ cursor: "pointer", accentColor: S.amber }} /></div>
-        {["RECORD ID", "ENTITY", "CCY", "AMOUNT", "STATUS", "POLICY ID", "RUN ID", "VALUE DATE", "FLOW", "ACTIONS"].map((col) => (
-          <span key={col} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700 }}>{col}</span>
-        ))}
+      {/* ── Table Header (sticky) ───────────────────────────────────────────── */}
+      <div style={{
+        display: "grid", gridTemplateColumns: GRID_COLS, padding: "0 20px",
+        background: S.bgDeep, borderBottom: `2px solid ${S.rim}`, flexShrink: 0,
+        position: "sticky", top: 0, zIndex: 10,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", padding: "8px 0" }}>
+          <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} style={{ cursor: "pointer", accentColor: S.amber }} />
+        </div>
+        <SortHeader label="STATUS" column="status" activeColumn={sortCol} activeDir={sortDir} onSort={handleSort} />
+        <SortHeader label="RECORD ID" column="record_id" activeColumn={sortCol} activeDir={sortDir} onSort={handleSort} />
+        <SortHeader label="ENTITY" column="entity" activeColumn={sortCol} activeDir={sortDir} onSort={handleSort} />
+        <SortHeader label="CCY" column="currency" activeColumn={sortCol} activeDir={sortDir} onSort={handleSort} />
+        <SortHeader label="EXPOSURE" column="amount" activeColumn={sortCol} activeDir={sortDir} onSort={handleSort} align="right" />
+        <SortHeader label="VALUE DATE" column="value_date" activeColumn={sortCol} activeDir={sortDir} onSort={handleSort} />
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700, padding: "8px 4px" }}>POLICY</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700, padding: "8px 4px" }}>RUN</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700, padding: "8px 4px" }}>ACTIONS</span>
       </div>
+
+      {/* ── Table Body ──────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: "auto" }}>
         {loading && <div style={{ padding: "40px 20px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textAlign: "center" }}>Loading positions…</div>}
-        {/* ERR-1: suppress "No positions found" when a load error is active — avoids misleading the operator */}
         {!loading && !listError && filteredPositions.length === 0 && (
           <div style={{ padding: "48px 20px", textAlign: "center" }}>
             <div style={{ fontFamily: S.fontUI, fontSize: 14, color: S.secondary, marginBottom: 6 }}>No positions found</div>
             <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
-              {preset !== "ALL" ? `No positions with filter "${PRESET_LABELS[preset]}"` : "Import positions from the Ingestion Desk"}
+              {preset !== "ALL" ? `No positions with filter "${PRESET_LABELS[preset]}"` : "Import positions from the Ingestion Desk or create manually"}
             </div>
           </div>
         )}
-        {filteredPositions.map((p, idx) => {
+        {sortedPositions.map((p, idx) => {
           const isLoading = lifecycleLoading === p.id;
           const isSelected = selected.has(p.id);
+          const isExpanded = expandedRow === p.id;
           const st = p.execution_status as ExecStatus;
           const cfg = STATUS_CONFIG[st];
-          return (
-            <div key={p.id} style={{ display: "grid", gridTemplateColumns: "32px 120px 140px 56px 80px 118px 86px 80px 56px 56px 1fr", padding: "7px 20px", borderBottom: `1px solid ${S.soft}`, background: isSelected ? `color-mix(in srgb, ${S.amber} 5%, ${S.bgPanel})` : idx % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.bgPanel} 40%, transparent)`, alignItems: "center", opacity: isLoading ? 0.6 : 1, transition: "background 0.1s, opacity 0.15s" }}>
-              <div><input type="checkbox" checked={isSelected} onChange={() => toggleSelect(p.id)} style={{ cursor: "pointer", accentColor: S.amber }} /></div>
-              <Tooltip tip={p.record_id}><span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{truncate(p.record_id, 14)}</span></Tooltip>
-              <Tooltip tip={p.entity}><span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{truncate(p.entity, 18)}</span></Tooltip>
-              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, fontWeight: 700 }}>{p.currency}</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, textAlign: "right", paddingRight: 8 }}>{fmtAmt(p.amount)}</span>
-              <Tooltip tip={`${cfg.desc}
+          const dtm = daysToMaturity(p.value_date);
+          const isTerminal = st === "HEDGED" || st === "REJECTED";
 
-Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
-              <PolicyChip policyId={p.policy_id} />
-              <RunIdChip runId={p.last_run_id} onCopy={handleCopyRun} />
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{fmtDate(p.value_date)}</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: p.type === "AR" ? S.pass : S.amber }}>{p.type}</span>
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-                {st === "NEW" && (<>
-                  <ActionBtn label="ASSIGN POLICY" color={S.cyan} onClick={() => openModal("assign-policy", p)} loading={isLoading} />
-                  <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
-                </>)}
-                {st === "POLICY_ASSIGNED" && (<>
-                  <ActionBtn label="RE-ASSIGN" color={S.secondary} onClick={() => openModal("assign-policy", p)} loading={isLoading} />
-                  <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.04em" }}>→ Execute on Execution Desk</span>
-                </>)}
-                {st === "READY_TO_EXECUTE" && (<>
-                  <ActionBtn label="PROPOSE" color={S.pass} onClick={() => openModal("proposal-info", p)} loading={isLoading} />
-                  <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
-                </>)}
-                {st === "HEDGED" && <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>{p.execution_ref ? `REF: ${truncate(p.execution_ref, 14)}` : "TERMINAL"}</span>}
-                {st === "REJECTED" && (<>
-                  <Tooltip tip={p.rejection_reason ? `Reason: ${p.rejection_reason}` : "No reason recorded"}>
-                    <ActionBtn label="REOPEN" color={S.secondary} onClick={() => handleReopen(p)} loading={isLoading} />
-                  </Tooltip>
-                  <Tooltip tip="Permanently remove from active view (soft-delete). Audit trail preserved.">
-                    <ActionBtn label="DELETE" color={S.fail} onClick={() => setDeleteConfirmId(p.id)} loading={false} />
-                  </Tooltip>
-                </>)}
-                {/* Audit trail link */}
-                <Link
-                  href={`/lineage?position=${encodeURIComponent(p.id)}`}
-                  title="View audit trail"
-                  style={{
-                    fontFamily:    S.fontMono,
-                    fontSize:      9,
-                    color:         S.tertiary,
-                    textDecoration:"none",
-                    padding:       "1px 3px",
-                    opacity:       0.6,
-                  }}
-                >
-                  ⟁
-                </Link>
+          return (
+            <div key={p.id}>
+              {/* Main row */}
+              <div
+                onClick={() => setExpandedRow(isExpanded ? null : p.id)}
+                style={{
+                  display: "grid", gridTemplateColumns: GRID_COLS, padding: "0 20px",
+                  borderBottom: isExpanded ? "none" : `1px solid ${S.soft}`,
+                  borderLeft: `3px solid ${cfg.borderColor}`,
+                  background: isSelected
+                    ? `color-mix(in srgb, ${S.amber} 5%, ${S.bgPanel})`
+                    : idx % 2 === 0 ? S.bgPanel : `color-mix(in srgb, ${S.bgSub} 40%, ${S.bgPanel})`,
+                  alignItems: "center",
+                  opacity: isLoading ? 0.6 : isTerminal ? 0.7 : 1,
+                  transition: "background 0.1s, opacity 0.15s",
+                  cursor: "pointer",
+                  minHeight: 36,
+                }}
+              >
+                {/* Checkbox */}
+                <div onClick={e => e.stopPropagation()} style={{ padding: "6px 0" }}>
+                  <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(p.id)} style={{ cursor: "pointer", accentColor: S.amber }} />
+                </div>
+
+                {/* Status */}
+                <Tooltip tip={`${cfg.desc}\n\nNext: ${cfg.nextStep}`}>
+                  <div style={{ padding: "6px 4px" }}><StatusBadge status={st} /></div>
+                </Tooltip>
+
+                {/* Record ID */}
+                <Tooltip tip={p.record_id}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 4px" }}>
+                    <ChevronRightIcon size={10} color={S.tertiary} style={{ flexShrink: 0, transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{truncate(p.record_id, 12)}</span>
+                  </div>
+                </Tooltip>
+
+                {/* Entity */}
+                <Tooltip tip={p.entity}>
+                  <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "6px 4px", display: "block" }}>{truncate(p.entity, 20)}</span>
+                </Tooltip>
+
+                {/* Currency */}
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, fontWeight: 700, padding: "6px 4px" }}>{p.currency}</span>
+
+                {/* Exposure (amount) */}
+                <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, textAlign: "right", padding: "6px 8px 6px 4px" }}>{fmtAmt(p.amount)}</span>
+
+                {/* Value Date + days to maturity */}
+                <div style={{ padding: "6px 4px" }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{fmtDate(p.value_date)}</div>
+                  {dtm !== null && (
+                    <div style={{
+                      fontFamily: S.fontMono, fontSize: 9,
+                      color: dtm <= 7 ? S.fail : dtm <= 30 ? S.amber : S.tertiary,
+                      marginTop: 1,
+                    }}>
+                      {dtm < 0 ? `${Math.abs(dtm)}d past` : dtm === 0 ? "TODAY" : `${dtm}d`}
+                    </div>
+                  )}
+                </div>
+
+                {/* Policy */}
+                <div style={{ padding: "6px 4px" }}><PolicyChip policyId={p.policy_id} /></div>
+
+                {/* Run */}
+                <div style={{ padding: "6px 4px" }} onClick={e => e.stopPropagation()}><RunIdChip runId={p.last_run_id} onCopy={handleCopyRun} /></div>
+
+                {/* Actions */}
+                <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center", padding: "4px" }}>
+                  {st === "NEW" && (<>
+                    <ActionBtn label="ASSIGN POLICY" color={S.cyan} onClick={() => openModal("assign-policy", p)} loading={isLoading} />
+                    <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
+                  </>)}
+                  {st === "POLICY_ASSIGNED" && (<>
+                    <ActionBtn label="RE-ASSIGN" color={S.secondary} onClick={() => openModal("assign-policy", p)} loading={isLoading} />
+                    <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
+                  </>)}
+                  {st === "READY_TO_EXECUTE" && (<>
+                    <ActionBtn label="PROPOSE" color={S.pass} onClick={() => openModal("proposal-info", p)} loading={isLoading} />
+                    <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
+                  </>)}
+                  {st === "HEDGED" && <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>{p.execution_ref ? `REF: ${truncate(p.execution_ref, 12)}` : "TERMINAL"}</span>}
+                  {st === "REJECTED" && (<>
+                    <Tooltip tip={p.rejection_reason ? `Reason: ${p.rejection_reason}` : "No reason recorded"}>
+                      <ActionBtn label="REOPEN" color={S.secondary} onClick={() => handleReopen(p)} loading={isLoading} />
+                    </Tooltip>
+                    <Tooltip tip="Permanently remove from active view (soft-delete). Audit trail preserved.">
+                      <ActionBtn label="DELETE" color={S.fail} onClick={() => setDeleteConfirmId(p.id)} loading={false} />
+                    </Tooltip>
+                  </>)}
+                  <Link
+                    href={`/lineage?position=${encodeURIComponent(p.id)}`}
+                    title="View audit trail"
+                    style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, textDecoration: "none", padding: "1px 3px", opacity: 0.6 }}
+                  >
+                    ⟁
+                  </Link>
+                </div>
               </div>
+
+              {/* ── Expanded row detail ─────────────────────────────────────── */}
+              {isExpanded && (
+                <div style={{
+                  padding: "10px 20px 10px 35px",
+                  background: `color-mix(in srgb, ${S.cyan} 3%, ${S.bgSub})`,
+                  borderBottom: `1px solid ${S.soft}`,
+                  borderLeft: `3px solid ${cfg.borderColor}`,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                  gap: "8px 24px",
+                }}>
+                  <div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>POSITION ID</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, wordBreak: "break-all" }}>{p.id}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>ENTITY</div>
+                    <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.primary }}>{p.entity || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>FLOW TYPE</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: p.type === "AR" ? S.pass : S.amber }}>{p.type || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>RECORD ID</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{p.record_id}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>HEDGE AMOUNT</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>{p.hedge_amount != null ? fmtAmt(p.hedge_amount) : "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>HEDGE RATE</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>{p.hedge_rate != null ? p.hedge_rate.toFixed(4) : "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>EXECUTION REF</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{p.execution_ref || "—"}</div>
+                  </div>
+                  {st === "REJECTED" && p.rejection_reason && (
+                    <div>
+                      <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.fail, letterSpacing: "0.08em", marginBottom: 2 }}>REJECTION REASON</div>
+                      <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>{p.rejection_reason}</div>
+                    </div>
+                  )}
+                  <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8, paddingTop: 4 }}>
+                    <Link
+                      href={`/lineage?position=${encodeURIComponent(p.id)}`}
+                      style={{
+                        fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                        color: S.cyan, textDecoration: "none",
+                        border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
+                        padding: "2px 8px", borderRadius: 2,
+                      }}
+                    >
+                      VIEW AUDIT TRAIL
+                    </Link>
+                    {p.last_run_id && (
+                      <Link
+                        href={`/run-viewer?id=${encodeURIComponent(p.last_run_id)}`}
+                        style={{
+                          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                          color: S.purple, textDecoration: "none",
+                          border: `1px solid color-mix(in srgb, ${S.purple} 30%, transparent)`,
+                          padding: "2px 8px", borderRadius: 2,
+                        }}
+                      >
+                        VIEW RUN
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-      <footer style={{ height: 28, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 20px", gap: 16, background: S.bgPanel, borderTop: `1px solid ${S.rim}` }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>POSITION DESK · PHASE 1 · 4-EYES · WORM AUDIT</span>
+
+      {/* ── Footer ──────────────────────────────────────────────────────────── */}
+      <footer style={{
+        height: 28, flexShrink: 0, display: "flex", alignItems: "center",
+        padding: "0 20px", gap: 16,
+        background: S.bgPanel, borderTop: `1px solid ${S.rim}`,
+      }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>
+          POSITION DESK · 4-EYES · WORM AUDIT
+        </span>
         <div style={{ flex: 1 }} />
         <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{filteredPositions.length}/{positions.length} shown</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>/ = search · R = refresh · F = filter · Esc = clear</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>/ search · R refresh · F filter · Esc clear</span>
       </footer>
+
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      {/* MODALS                                                                 */}
+      {/* ═══════════════════════════════════════════════════════════════════════ */}
+
+      {/* ── Assign Policy Modal ─────────────────────────────────────────────── */}
       {modal.type === "assign-policy" && pos && (
         <ModalOverlay onClose={closeModal}>
           <ModalHeader title="Assign Policy" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
-          {/* Policy selector */}
           {(() => {
-            // activeTemplateId: the template currently activated as an instance
             const activeTemplateId = activePolicyInstance?.template_id ?? null;
-            // Helper: given template t, return the instance ID to assign (only valid for active template)
             const instanceIdFor = (t: PolicyTemplate): string | null =>
               activePolicyInstance && t.id === activeTemplateId ? activePolicyInstance.id : null;
-            // selectedTemplate: template whose active instance ID matches policyId
             const selectedTemplate = policyId
               ? policyTemplates.find(t => instanceIdFor(t) === policyId) ?? null
               : null;
-
             const favTemplates   = policyTemplates.filter(t => favTemplateIds.has(t.id));
             const otherTemplates = policyTemplates.filter(t => !favTemplateIds.has(t.id));
             const query = policySearchQuery.toLowerCase();
@@ -824,33 +1126,21 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
                     border: `1px solid color-mix(in srgb, var(--accent-cyan,#22d3ee) 30%, transparent)`,
                     background: `color-mix(in srgb, var(--accent-cyan,#22d3ee) 4%, var(--bg-panel))`,
                   }}>
-                    <div style={{
-                      fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5rem',
-                      color: 'var(--accent-cyan,#22d3ee)', letterSpacing: '0.12em', marginBottom: 4,
-                    }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: '0.5rem', color: S.cyan, letterSpacing: '0.12em', marginBottom: 4 }}>
                       BEST MATCH · {recommendation.confidence}
                     </div>
-                    <div style={{
-                      fontFamily: "'IBM Plex Sans',sans-serif", fontSize: '0.8125rem',
-                      color: 'var(--text-primary)', fontWeight: 600, marginBottom: 2,
-                    }}>
+                    <div style={{ fontFamily: S.fontUI, fontSize: '0.8125rem', color: S.primary, fontWeight: 600, marginBottom: 2 }}>
                       [{recommendation.shortName}] {recommendation.name}
                     </div>
-                    <div style={{
-                      fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5625rem',
-                      color: 'var(--text-tertiary)', marginBottom: 6,
-                    }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.tertiary, marginBottom: 6 }}>
                       {recommendation.reason}
                     </div>
                     <button
                       type="button"
                       onClick={() => setPolicyId(recommendation.templateId)}
                       style={{
-                        fontFamily: "'IBM Plex Mono',monospace", fontSize: '0.5625rem',
-                        letterSpacing: '0.08em', padding: '3px 10px',
-                        border: `1px solid var(--accent-cyan,#22d3ee)`,
-                        color: 'var(--accent-cyan,#22d3ee)', background: 'transparent',
-                        cursor: 'pointer',
+                        fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.08em', padding: '3px 10px',
+                        border: `1px solid ${S.cyan}`, color: S.cyan, background: 'transparent', cursor: 'pointer',
                       }}
                     >
                       USE THIS POLICY
@@ -865,83 +1155,48 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
                     </span>
                   )}
                 </label>
-                {/* Search */}
                 <input
-                  type="text"
-                  value={policySearchQuery}
-                  onChange={e => setPolicySearchQuery(e.target.value)}
+                  type="text" value={policySearchQuery} onChange={e => setPolicySearchQuery(e.target.value)}
                   placeholder="Search policies…"
-                  style={{
-                    fontFamily: S.fontUI, fontSize: '0.75rem', padding: '5px 10px',
-                    border: `1px solid ${S.rim}`, background: S.bgSub,
-                    color: S.primary, outline: 'none', width: '100%', boxSizing: 'border-box' as const,
-                  }}
+                  style={{ fontFamily: S.fontUI, fontSize: '0.75rem', padding: '5px 10px', border: `1px solid ${S.rim}`, background: S.bgSub, color: S.primary, outline: 'none', width: '100%', boxSizing: 'border-box' as const }}
                 />
-                {/* Policy list */}
-                <div style={{
-                  maxHeight: 240, overflowY: 'auto' as const,
-                  border: `1px solid ${S.rim}`, background: S.bgPanel,
-                }}>
-                  {/* FAVORITES section */}
-                  {filteredFavs.length > 0 && (
-                    <>
-                      <div style={{
-                        padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem',
-                        color: S.amber, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`,
-                        background: S.bgSub,
-                      }}>
-                        ★ FAVORITES
-                      </div>
-                      {filteredFavs.map(t => {
-                        const instId = instanceIdFor(t);
-                        return (
-                          <PolicySelectorRow
-                            key={t.id} tmpl={t}
-                            isSelected={!!instId && policyId === instId}
-                            isFavorite
-                            isActive={t.id === activeTemplateId}
-                            onSelect={() => { if (instId) setPolicyId(instId); }}
-                          />
-                        );
-                      })}
-                    </>
-                  )}
-                  {/* ALL POLICIES section */}
-                  {filteredOthers.length > 0 && (
-                    <>
-                      <div style={{
-                        padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem',
-                        color: S.tertiary, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`,
-                        background: S.bgSub,
-                      }}>
-                        ALL POLICIES
-                      </div>
-                      {filteredOthers.map(t => {
-                        const instId = instanceIdFor(t);
-                        return (
-                          <PolicySelectorRow
-                            key={t.id} tmpl={t}
-                            isSelected={!!instId && policyId === instId}
-                            isFavorite={false}
-                            isActive={t.id === activeTemplateId}
-                            onSelect={() => { if (instId) setPolicyId(instId); }}
-                          />
-                        );
-                      })}
-                    </>
-                  )}
+                <div style={{ maxHeight: 240, overflowY: 'auto' as const, border: `1px solid ${S.rim}`, background: S.bgPanel }}>
+                  {filteredFavs.length > 0 && (<>
+                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem', color: S.amber, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                      ★ FAVORITES
+                    </div>
+                    {filteredFavs.map(t => {
+                      const instId = instanceIdFor(t);
+                      return (
+                        <PolicySelectorRow key={t.id} tmpl={t}
+                          isSelected={!!instId && policyId === instId} isFavorite isActive={t.id === activeTemplateId}
+                          onSelect={() => { if (instId) setPolicyId(instId); }}
+                        />
+                      );
+                    })}
+                  </>)}
+                  {filteredOthers.length > 0 && (<>
+                    <div style={{ padding: '4px 10px', fontFamily: S.fontMono, fontSize: '0.4625rem', color: S.tertiary, letterSpacing: '0.1em', borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
+                      ALL POLICIES
+                    </div>
+                    {filteredOthers.map(t => {
+                      const instId = instanceIdFor(t);
+                      return (
+                        <PolicySelectorRow key={t.id} tmpl={t}
+                          isSelected={!!instId && policyId === instId} isFavorite={false} isActive={t.id === activeTemplateId}
+                          onSelect={() => { if (instId) setPolicyId(instId); }}
+                        />
+                      );
+                    })}
+                  </>)}
                   {filteredFavs.length === 0 && filteredOthers.length === 0 && (
-                    <div style={{ padding: '20px', textAlign: 'center', fontFamily: S.fontMono,
-                      fontSize: '0.5625rem', color: S.tertiary }}>
+                    <div style={{ padding: '20px', textAlign: 'center', fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.tertiary }}>
                       {policyTemplates.length === 0 ? 'LOADING…' : 'NO POLICIES MATCH'}
                     </div>
                   )}
                 </div>
-                {/* Selected policy display */}
                 {policyId && (
-                  <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.cyan,
-                    letterSpacing: '0.06em', padding: '3px 8px',
-                    border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)` }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.cyan, letterSpacing: '0.06em', padding: '3px 8px', border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)` }}>
                     INSTANCE: {policyId.slice(0, 8).toUpperCase()}
                     {selectedTemplate && ` · ${selectedTemplate.short_name} · ${selectedTemplate.name}`}
                   </div>
@@ -955,7 +1210,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
         </ModalOverlay>
       )}
 
-      {/* Mark Ready modal removed — handled automatically by Execution Desk pipeline */}
+      {/* ── Proposal Info Modal ─────────────────────────────────────────────── */}
       {modal.type === "proposal-info" && pos && (
         <ModalOverlay onClose={closeModal}>
           <ModalHeader title="4-Eyes Execution Proposal" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
@@ -976,10 +1231,12 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <button onClick={closeModal} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Close</button>
-            <button onClick={() => { closeModal(); router.push("/hedge-desk"); }} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: S.pass, border: "none", padding: "6px 14px", cursor: "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>→ Execution Desk</button>
+            <button onClick={() => { closeModal(); router.push("/hedge-desk"); }} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: S.pass, border: "none", padding: "6px 14px", cursor: "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>HEDGE DESK</button>
           </div>
         </ModalOverlay>
       )}
+
+      {/* ── Reject Modal ────────────────────────────────────────────────────── */}
       {modal.type === "reject" && pos && (
         <ModalOverlay onClose={closeModal}>
           <ModalHeader title="Reject Position" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
@@ -996,7 +1253,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
         </ModalOverlay>
       )}
 
-      {/* ── Bulk Reject Modal ──────────────────────────────────────────────── */}
+      {/* ── Bulk Reject Modal ───────────────────────────────────────────────── */}
       {bulkRejectOpen && (() => {
         const posMap = new Map(positions.map((p) => [p.id, p]));
         const rejectableIds = Array.from(selected).filter((id) => {
@@ -1069,7 +1326,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
         );
       })()}
 
-      {/* ── Delete Confirmation Modal ───────────────────────────────────────── */}
+      {/* ── Delete Confirmation Modal ──────────────────────────────────────── */}
       {deleteConfirmId && (() => {
         const p = positions.find((x) => x.id === deleteConfirmId);
         if (!p) return null;
@@ -1082,7 +1339,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
               <span style={{ color: S.tertiary }}>Rejection reason: {p.rejection_reason || '(none recorded)'}</span>
             </div>
             <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, padding: '6px 10px', border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 16 }}>
-              ⚠ WORM audit trail preserved. This action is irreversible via UI.
+              WORM audit trail preserved. This action is irreversible via UI.
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button onClick={() => setDeleteConfirmId(null)} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: 'pointer' }}>
@@ -1097,7 +1354,7 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
         );
       })()}
 
-      {/* ── Bulk Assign Policy Modal ────────────────────────────────────────── */}
+      {/* ── Bulk Assign Policy Modal ─────────────────────────────────────────── */}
       {bulkAssignOpen && (
         <ModalOverlay onClose={() => { if (!bulkRunning) setBulkAssignOpen(false); }}>
           <ModalHeader
@@ -1122,16 +1379,14 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
                 {!activePolicyInstance && policyTemplates.length > 0 && (
                   <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, padding: '6px 10px', border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 4 }}>
-                    ⚡ NO ACTIVE POLICY — activate one on the Policies page first
+                    NO ACTIVE POLICY — activate one on the Policies page first
                   </div>
                 )}
                 <label style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, display: 'block', marginBottom: 4, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
                   Select Policy Instance *
                 </label>
                 <input
-                  type="text"
-                  value={bulkSearchQuery}
-                  onChange={e => setBulkSearchQuery(e.target.value)}
+                  type="text" value={bulkSearchQuery} onChange={e => setBulkSearchQuery(e.target.value)}
                   placeholder="Search policies…"
                   style={{ fontFamily: S.fontUI, fontSize: '0.75rem', padding: '5px 10px', border: `1px solid ${S.rim}`, background: S.bgSub, color: S.primary, outline: 'none', width: '100%', boxSizing: 'border-box' as const }}
                 />
@@ -1181,8 +1436,6 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
               </div>
             );
           })()}
-
-          {/* Result display after run */}
           {bulkResult && (
             <div style={{ marginBottom: 14, padding: '8px 12px', border: `1px solid ${bulkResult.failed > 0 ? S.fail : S.pass}`, background: `color-mix(in srgb, ${bulkResult.failed > 0 ? S.fail : S.pass} 6%, transparent)` }}>
               <div style={{ fontFamily: S.fontMono, fontSize: 10, color: bulkResult.failed > 0 ? S.fail : S.pass, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 4 }}>
@@ -1195,7 +1448,6 @@ Next: ${cfg.nextStep}`}><div><StatusBadge status={st} /></div></Tooltip>
               )}
             </div>
           )}
-
           <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>
             Transitions: NEW → POLICY_ASSIGNED (positions in later states are skipped)
           </div>

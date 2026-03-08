@@ -12,6 +12,10 @@ export interface PolicyPreset {
   formulaExplain: string;    // plain-English explanation of the formula
   rationale: string;         // why this preset exists / real-world use
   policy: PolicyConfig;
+  maturity_profile: 'SHORT' | 'MEDIUM' | 'LONG' | 'MIXED';
+  governance_tier: 'STANDARD' | 'ENHANCED' | 'COMMITTEE';
+  evidence_grade: 'BASIC' | 'DOCUMENTED' | 'AUDITED';
+  accounting_mode: 'FAIR_VALUE' | 'CASH_FLOW_HEDGE' | 'NET_INVESTMENT' | 'NONE';
 }
 
 export const POLICY_PRESETS: PolicyPreset[] = [
@@ -34,6 +38,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 0,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'BASIC',
+    accounting_mode: 'NONE',
   },
 
   // ─── CORPORATE ──────────────────────────────────────────────────────────────
@@ -55,6 +63,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 50000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'conservative-treasury',
@@ -74,6 +86,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 100000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'balanced-corporate',
@@ -93,6 +109,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 50000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'active-risk-mgmt',
@@ -112,6 +132,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 25000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'FAIR_VALUE',
   },
   {
     id: 'cost-sensitive',
@@ -131,6 +155,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 75000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'BASIC',
+    accounting_mode: 'NONE',
   },
   {
     id: 'layered-rolling',
@@ -150,6 +178,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 50000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 
   // ─── FINANCIAL ──────────────────────────────────────────────────────────────
@@ -171,6 +203,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 500000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'FAIR_VALUE',
   },
   {
     id: 'asset-manager',
@@ -190,6 +226,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 250000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'FAIR_VALUE',
   },
   {
     id: 'private-equity',
@@ -209,6 +249,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 1000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'NONE',
   },
   {
     id: 'insurance-reserves',
@@ -228,6 +272,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 500000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 
   // ─── SOVEREIGN ──────────────────────────────────────────────────────────────
@@ -249,6 +297,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 5000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'NONE',
   },
   {
     id: 'export-proceeds',
@@ -268,6 +320,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 2000000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'central-bank-reserves',
@@ -287,6 +343,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 10000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'NONE',
   },
 
   // ─── SECTOR-SPECIFIC ────────────────────────────────────────────────────────
@@ -308,6 +368,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 100000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'tech-saas',
@@ -327,6 +391,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 5000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'BASIC',
+    accounting_mode: 'NONE',
   },
   {
     id: 'real-estate-dev',
@@ -346,6 +414,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 200000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'pharma-import',
@@ -365,6 +437,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 10000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'agri-commodity',
@@ -384,6 +460,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 10000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'auto-supply-chain',
@@ -403,6 +483,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 5000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'retail-importer',
@@ -422,6 +506,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 5000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'BASIC',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 
   // ─── SECTOR EXPANSION ───────────────────────────────────────────────────────
@@ -443,6 +531,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 10000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'BASIC',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'shipping-logistics',
@@ -462,6 +554,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 25000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'mining-resources',
@@ -481,6 +577,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 100000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'construction-infra',
@@ -500,6 +600,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 50000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'media-entertainment',
@@ -519,6 +623,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 5000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'BASIC',
+    accounting_mode: 'NONE',
   },
 
   // ─── CORPORATE EXPANSION ────────────────────────────────────────────────────
@@ -540,6 +648,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 0,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'import-export-trader',
@@ -559,6 +671,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 10000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'education-institutions',
@@ -578,6 +694,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 5000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 
   // ─── FINANCIAL EXPANSION ────────────────────────────────────────────────────
@@ -599,6 +719,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 250000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'NONE',
   },
   {
     id: 'hedge-fund',
@@ -618,6 +742,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 1000000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'FAIR_VALUE',
   },
   {
     id: 'vc-growth-equity',
@@ -637,6 +765,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 500000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'BASIC',
+    accounting_mode: 'NONE',
   },
 
   // ─── SECTOR EXPANSION (ENERGY & UTILITIES) ──────────────────────────────────
@@ -658,6 +790,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 500000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 
   // ─── ENERGY — EXPANDED ───────────────────────────────────────────────────────
@@ -679,6 +815,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 500000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'lng-exporter',
@@ -698,6 +838,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 5000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'renewable-energy',
@@ -717,6 +861,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 1000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'oil-field-services',
@@ -736,6 +884,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 250000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 
   // ─── HEALTHCARE / PHARMA — EXPANDED ──────────────────────────────────────────
@@ -757,6 +909,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 25000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'medical-device-oem',
@@ -776,6 +932,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 10000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'hospital-group-treasury',
@@ -795,6 +955,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 50000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 
   // ─── TECHNOLOGY — EXPANDED ───────────────────────────────────────────────────
@@ -816,6 +980,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 100000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'cloud-saas-enterprise',
@@ -835,6 +1003,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 500000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'NONE',
   },
   {
     id: 'hardware-oem-import',
@@ -854,6 +1026,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 25000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 
   // ─── FINANCIAL — EXPANDED ────────────────────────────────────────────────────
@@ -875,6 +1051,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 10000000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'FAIR_VALUE',
   },
   {
     id: 'pension-ldi',
@@ -894,6 +1074,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 5000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'NET_INVESTMENT',
   },
   {
     id: 'university-endowment',
@@ -913,6 +1097,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 1000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'NET_INVESTMENT',
   },
   {
     id: 'reit-crossborder',
@@ -932,6 +1120,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 500000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'spv-structured',
@@ -951,6 +1143,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 5000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 
   // ─── AGRICULTURE — EXPANDED ──────────────────────────────────────────────────
@@ -972,6 +1168,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 10000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'cocoa-chocolate',
@@ -991,6 +1191,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 25000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'grain-trader',
@@ -1010,6 +1214,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 100000,
     },
+    maturity_profile: 'SHORT',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'livestock-meat-export',
@@ -1029,6 +1237,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 50000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'STANDARD',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 
   // ─── SOVEREIGN — EXPANDED ────────────────────────────────────────────────────
@@ -1050,6 +1262,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 10000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'sovereign-wealth-fund',
@@ -1069,6 +1285,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 50000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'NET_INVESTMENT',
   },
   {
     id: 'municipal-debt-service',
@@ -1088,6 +1308,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'FWD',
       min_trade_size_usd: 2000000,
     },
+    maturity_profile: 'LONG',
+    governance_tier: 'COMMITTEE',
+    evidence_grade: 'AUDITED',
+    accounting_mode: 'NONE',
   },
 
   // ─── EMERGING MARKET SPECIALIZATION ──────────────────────────────────────────
@@ -1109,6 +1333,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 50000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'mexico-mxn-nearshore',
@@ -1128,6 +1356,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 25000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'turkey-try-corporate',
@@ -1147,6 +1379,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 100000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'south-africa-zar-resources',
@@ -1166,6 +1402,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 100000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
   {
     id: 'india-inr-tech-services',
@@ -1185,6 +1425,10 @@ export const POLICY_PRESETS: PolicyPreset[] = [
       execution_product: 'NDF',
       min_trade_size_usd: 25000,
     },
+    maturity_profile: 'MEDIUM',
+    governance_tier: 'ENHANCED',
+    evidence_grade: 'DOCUMENTED',
+    accounting_mode: 'CASH_FLOW_HEDGE',
   },
 ];
 

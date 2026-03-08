@@ -309,6 +309,8 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
             <PhaseComplete
               positions={selectedPositions}
               fillData={fillData}
+              calcResult={calcResult}
+              policyInstanceId={policyInstanceId}
               runId={runId}
               governanceMode={governanceMode}
               onNewRun={reset}

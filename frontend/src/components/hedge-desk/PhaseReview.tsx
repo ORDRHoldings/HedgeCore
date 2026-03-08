@@ -332,9 +332,19 @@ export default function PhaseReview({
         setSubmitting(false);
         return;
       }
-      const data  = await res.json() as Record<string, unknown>;
-      const items = (data.approved ?? data.proposals ?? []) as Array<Record<string, unknown>>;
-      const ids   = items.map(item => (item.id ?? item.proposal_id) as string).filter(Boolean);
+      const data     = await res.json() as Record<string, unknown>;
+      const items    = (data.approved ?? data.proposals ?? []) as Array<Record<string, unknown>>;
+      const failures = (data.failed ?? []) as Array<Record<string, unknown>>;
+      const ids      = items.map(item => (item.id ?? item.proposal_id) as string).filter(Boolean);
+
+      // Defense: if all proposals failed, block advancement
+      if (ids.length === 0 && failures.length > 0) {
+        const reason = (failures[0]?.error as string) ?? "Proposal creation failed for all positions";
+        setError(translateError(400, reason));
+        setSubmitting(false);
+        return;
+      }
+
       setProposalIds(ids);
       setSubmitted(true);
       onComplete(ids);

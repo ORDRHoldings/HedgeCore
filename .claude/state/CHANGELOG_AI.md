@@ -1,5 +1,19 @@
 # Changelog (AI-maintained)
 
+## 2026-03-08 — Policy Engine Post-Reconstruction Hardening (7 phases)
+- **Phase 1** (forward curves): Created `forward_curve_service.py` + `v1_forward_curves.py` — 4 RBAC-gated endpoints (POST create, GET by id, GET latest/{pair}, GET pair/{pair}). Hash-idempotent CRUD, 24h staleness evaluation (V-023), data provenance classification (LIVE/DELAYED/INDICATIVE/SYNTHETIC). Tests: hash determinism, staleness, provenance validation.
+- **Phase 2** (wizard deepening): Extended `policy-ai/route.ts` AI system prompt with `extended_policy` schema (6 sections: volatility, scenarios, decision_gate, netting, instruments, effectiveness). Added response parsing with validation/clamping (lookback_days [20,252], var_confidence [0.90,0.99], max_cost_bps [25,150]). Output now ExtendedPolicyConfig-level, not preset-shaped.
+- **Phase 3** (volatility overlay): Created `vol_overlay.py` (Layer 2) — band widening by vol regime (LOW=0.9, NORMAL=1.0, ELEVATED=1.15, CRISIS=1.30), ratio adjustment (clamp cur/base [0.85,1.15]), region-aware fallback vols (G10=8%, EM_LATAM=14%, EM_ASIA=10%, EM_CEEMEA=16%). Created `volatility_snapshot_service.py` + `v1_volatility_snapshots.py` (3 endpoints). 24 tests: parity (4), regime (7), widening (5), adjustment (6), fallbacks (5).
+- **Phase 4** (geopolitical overlay): Created `geo_overlay.py` (Layer 3) — linear ratio haircut when corridor risk score exceeds escalation threshold (default 0.7, max haircut 10%). Created `geo_snapshot_service.py` + `v1_geo_snapshots.py` (4 endpoints). 26 currency pairs mapped to geopolitical corridors. 18 tests: parity (4), corridors (4), haircut math (6), application (3), active overlay (4).
+- **Phase 5** (backtesting): Created `backtesting.py` — deterministic single-period evaluation (hedged/unhedged PnL, effectiveness, cost), multi-period backtest with max drawdown + aggregate metrics, policy comparison with recommendation. SHA-256 report hash. All labeled `grading: 'HEURISTIC'`. 13 tests: period eval (5), multi-period (5), comparison (2), edge cases (1).
+- **Phase 6** (netting overlay): Created `netting_overlay.py` (Layer 6) — same-pair/same-flow-type netting (conservative), cross-flow netting (aggressive, opt-in), savings tracking (~3% margin savings Almgren-Chriss estimate), legs eliminated tracking. 12 tests: parity (4), netting (7), active overlay (2).
+- **Phase 7** (governance hardening): Wired `apply_second_approval()` in execution_proposal_service — enforces SoD (second approver ≠ maker AND ≠ primary checker), chained hash linking to approval_hash. Added `_determine_second_approval_required()` ($1M threshold). Added dual-key gate in `execute_approved_proposal()`. Created 15 dual-key E2E tests + 12 multi-tenant isolation tests.
+- **Route registration**: All 3 new route modules registered in `api/router.py` (219 total routes).
+- **Whitepaper**: Created `overlay-activation-contracts.md` — activation contracts for all overlays with parity proofs, fallback behavior, grading labels.
+- **Overlay parity**: ALL overlays neutral by default (disabled). When disabled: multipliers=1.0, adjustments=[], haircut=0.0, exposures pass through. v1 parity mathematically preserved.
+- Net: +2400 lines new code, +119 new tests. 13 new files created, 4 existing files modified.
+- Validation: 2725 passed, 134 skipped, 0 failed. Frontend build clean.
+
 ## 2026-03-07 — Hedge Desk institutional redesign (Phase D)
 - **D1** (nav cleanup): Removed WorkflowBreadcrumb + WorkflowGuide from run mode — both were hardcoded to step 1, never updated. ProgressBar is now single authoritative progress model with phase-aware instruction text. Reclaimed ~68px vertical space.
 - **D2** (visual unification): Created `tokens.ts` shared design token file. Eliminated PhaseReview's hardcoded Bloomberg-dark palette (14 hex colors). All 7 phase files + ProgressBar now import from shared CSS-variable tokens. Zero hardcoded dark colors remain.

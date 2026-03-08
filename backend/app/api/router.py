@@ -220,3 +220,15 @@ router.include_router(v1_admin_monitor_router)
 # DevOps dashboard — Claude Code memory.db state (owns /v1/devops)
 from app.api.routes.v1_devops import router as v1_devops_router
 router.include_router(v1_devops_router)
+
+# Forward curve snapshots (owns /v1/forward-curves)
+from app.api.routes.v1_forward_curves import router as v1_forward_curves_router
+router.include_router(v1_forward_curves_router)
+
+# Volatility snapshots (owns /v1/volatility-snapshots)
+from app.api.routes.v1_volatility_snapshots import router as v1_volatility_snapshots_router
+router.include_router(v1_volatility_snapshots_router)
+
+# Geopolitical risk snapshots (owns /v1/geo-snapshots)
+from app.api.routes.v1_geo_snapshots import router as v1_geo_snapshots_router
+router.include_router(v1_geo_snapshots_router)

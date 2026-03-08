@@ -27,6 +27,59 @@ export interface QuestionnaireAnswers {
   instrument_preferences?: string[];        // e.g. ['Forward', 'Option', 'NDF']
   rolling_hedge?: boolean;                  // rolling programme vs static
   hedge_ratio_target?: number;             // 0–1 user-declared target ratio
+
+  // Extended fields — wizard data previously dropped (audit finding #4)
+  netting_enabled?: boolean;
+  netting_net_confirmed_forecast?: boolean;
+  settlement_cycle_days?: number;
+  materiality_threshold_usd?: number;
+  min_hedge_size_usd?: number;
+  max_single_trade_usd?: number;
+  instrument_allowed?: Record<string, boolean>;
+  instrument_max_tenor_days?: Record<string, number>;
+  instrument_requires_approval?: Record<string, boolean>;
+  instrument_max_notional_usd?: Record<string, number>;
+  tenor_min_days?: number;
+  tenor_max_days?: number;
+  roll_allowed?: boolean;
+  roll_window_days?: number;
+  max_carry_cost_bps_annual?: number;
+  max_option_premium_pct?: number;
+  max_spread_bps?: number;
+  leverage_cap?: number;
+  margin_budget_usd?: number;
+  max_instrument_concentration_pct?: number;
+  max_counterparty_concentration_pct?: number;
+  max_tenor_concentration_pct?: number;
+  max_currency_concentration_pct?: number;
+  max_acceptable_loss?: number;
+  standard_stress_pack?: string;
+  var_confidence?: number;
+  drawdown_tolerance?: number;
+  backtest_window_days?: number;
+  worst_case_focus?: string;
+  custom_scenarios?: Array<Record<string, unknown>>;
+  governance_notes?: string;
+  benchmark?: string;
+  policy_status?: string;
+  maturity_profile?: string;
+  governance_tier?: string;
+  accounting_mode?: string;
+  layered_approach?: boolean;
+  seasonal_patterns?: string;
+  payment_frequency?: string;
+  avg_transaction_size_usd?: number;
+  has_intercompany_flows?: boolean;
+  cash_flow_visibility?: string;
+  hedge_experience?: string;
+  portfolio_scope?: string;
+  extended_flow_types?: string[];
+  geography_focus?: string[];
+  board_resolution_ref?: string;
+  effective_from?: string;
+  effective_until?: string;
+  review_due_date?: string;
+  regulatory_regimes?: string[];
 }
 
 export interface AIPolicyRecommendation {
@@ -201,7 +254,7 @@ function findTopPresets(answers: QuestionnaireAnswers, n: number): PolicyPreset[
 
 // ── Claude API call ───────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are an expert FX treasury policy advisor. Given a company profile questionnaire, you produce a tailored hedge policy configuration.
+const SYSTEM_PROMPT = `You are an expert FX treasury policy advisor for institutional clients. Given a company profile questionnaire, you produce a comprehensive, structured hedge policy configuration that covers execution parameters, governance controls, scenario stress testing, and risk overlay settings.
 
 Your response MUST be a single valid JSON object with exactly these fields:
 {
@@ -224,7 +277,45 @@ Your response MUST be a single valid JSON object with exactly these fields:
       "spread_bps": <1.0 to 30.0>
     },
     "execution_product": "NDF" | "FWD",
-    "min_trade_size_usd": <0 to 10000000>
+    "min_trade_size_usd": <0 to 10000000>,
+    "maturity_profile": "SHORT" | "MEDIUM" | "LONG" | "MIXED",
+    "governance_tier": "STANDARD" | "ENHANCED" | "COMMITTEE",
+    "accounting_mode": "FAIR_VALUE" | "CASH_FLOW_HEDGE" | "NET_INVESTMENT" | "NONE"
+  },
+  "extended_policy": {
+    "volatility": {
+      "lookback_days": <20 to 252>,
+      "method": "EWMA" | "REALIZED",
+      "regime_enabled": <true if company is sophisticated enough>,
+      "band_widening_enabled": <true for active risk managers>,
+      "ratio_adjustment_enabled": <true for dynamic hedging>
+    },
+    "scenarios": {
+      "shock_pack": "standard" | "conservative" | "aggressive" | "tail_risk" | "em_stress" | "g10_stress",
+      "var_enabled": <true if risk-aware>,
+      "var_confidence": <0.90 to 0.99>,
+      "expected_shortfall_enabled": <true for institutional>
+    },
+    "decision_gate": {
+      "max_cost_bps": <25 to 150>,
+      "max_cost_usd": <5000 to 500000>,
+      "min_effectiveness": <0.15 to 0.50>,
+      "require_nonzero_hedges": true
+    },
+    "netting": {
+      "enabled": <true if company has offsetting flows>,
+      "net_confirmed_forecast": <true for aggressive netting>,
+      "settlement_cycle_days": <1 to 5>
+    },
+    "instruments": {
+      "allowed_types": ["NDF", "FWD"] | ["NDF", "FWD", "OPTION", "SWAP"],
+      "max_tenor_days": <30 to 730>,
+      "max_notional_usd": <0 to 100000000>
+    },
+    "effectiveness": {
+      "method": "NONE" | "CRITICAL_TERMS_MATCH" | "STATISTICAL_FORECAST",
+      "confidence": <0.80 to 0.99>
+    }
   }
 }
 
@@ -234,6 +325,11 @@ Rules:
 - spread_bps: reflects transaction cost (1.5 = interbank, 5–8 = typical corporate, 10+ = small/NGO)
 - execution_product: NDF for EM currency pairs, FWD for G10/stable currencies
 - min_trade_size_usd: 0 for small companies, higher for institutional clients
+- volatility regime: enable for companies with dedicated treasury teams
+- scenario shock_pack: match to risk appetite (conservative for risk-averse, aggressive/tail_risk for sophisticated)
+- decision gate: set cost/effectiveness thresholds based on company sophistication
+- netting: enable when company has bi-directional FX flows
+- effectiveness method: CRITICAL_TERMS_MATCH for hedge accounting, STATISTICAL_FORECAST for institutional
 - Do NOT include any text outside the JSON object. Return ONLY the JSON.`;
 
 async function callClaude(answers: QuestionnaireAnswers): Promise<AIPolicyResult | null> {
@@ -242,6 +338,86 @@ async function callClaude(answers: QuestionnaireAnswers): Promise<AIPolicyResult
   const instrumentList = answers.instrument_preferences?.length
     ? answers.instrument_preferences.join(', ')
     : 'No preference stated';
+
+  // Build extended context from wizard fields (audit finding #4 — previously dropped)
+  let extendedContext = '';
+
+  if (answers.netting_enabled !== undefined) {
+    extendedContext += `\nNetting: ${answers.netting_enabled ? 'Available' : 'Not available'}`;
+    if (answers.settlement_cycle_days) extendedContext += `, settlement T+${answers.settlement_cycle_days}`;
+  }
+  if (answers.max_spread_bps) {
+    extendedContext += `\nMax spread tolerance: ${answers.max_spread_bps} bps`;
+  }
+  if (answers.margin_budget_usd) {
+    extendedContext += `\nMargin budget: $${answers.margin_budget_usd.toLocaleString()}`;
+  }
+  if (answers.max_instrument_concentration_pct) {
+    extendedContext += `\nMax instrument concentration: ${answers.max_instrument_concentration_pct}%`;
+  }
+  if (answers.standard_stress_pack) {
+    extendedContext += `\nStress test preference: ${answers.standard_stress_pack}`;
+  }
+  if (answers.governance_notes) {
+    extendedContext += `\nGovernance notes: ${answers.governance_notes}`;
+  }
+  if (answers.accounting_mode) {
+    extendedContext += `\nAccounting treatment: ${answers.accounting_mode}`;
+  }
+  if (answers.layered_approach) {
+    extendedContext += `\nLayered/sleeve hedging: Yes`;
+  }
+  if (answers.materiality_threshold_usd) {
+    extendedContext += `\nMateriality threshold: $${answers.materiality_threshold_usd.toLocaleString()}`;
+  }
+  if (answers.max_single_trade_usd) {
+    extendedContext += `\nMax single trade: $${answers.max_single_trade_usd.toLocaleString()}`;
+  }
+  if (answers.leverage_cap) {
+    extendedContext += `\nLeverage cap: ${answers.leverage_cap}x`;
+  }
+  if (answers.max_carry_cost_bps_annual) {
+    extendedContext += `\nMax carry cost: ${answers.max_carry_cost_bps_annual} bps/year`;
+  }
+  if (answers.max_option_premium_pct) {
+    extendedContext += `\nMax option premium: ${answers.max_option_premium_pct}%`;
+  }
+  if (answers.portfolio_scope) {
+    extendedContext += `\nPortfolio scope: ${answers.portfolio_scope}`;
+  }
+  if (answers.hedge_experience) {
+    extendedContext += `\nHedge experience: ${answers.hedge_experience}`;
+  }
+  if (answers.cash_flow_visibility) {
+    extendedContext += `\nCash flow visibility: ${answers.cash_flow_visibility}`;
+  }
+  if (answers.seasonal_patterns) {
+    extendedContext += `\nSeasonal patterns: ${answers.seasonal_patterns}`;
+  }
+  if (answers.payment_frequency) {
+    extendedContext += `\nPayment frequency: ${answers.payment_frequency}`;
+  }
+  if (answers.has_intercompany_flows) {
+    extendedContext += `\nHas intercompany flows: Yes`;
+  }
+  if (answers.var_confidence) {
+    extendedContext += `\nVaR confidence: ${answers.var_confidence}%`;
+  }
+  if (answers.drawdown_tolerance) {
+    extendedContext += `\nDrawdown tolerance: ${answers.drawdown_tolerance}%`;
+  }
+  if (answers.regulatory_regimes?.length) {
+    extendedContext += `\nRegulatory regimes: ${answers.regulatory_regimes.join(', ')}`;
+  }
+  if (answers.geography_focus?.length) {
+    extendedContext += `\nGeography focus: ${answers.geography_focus.join(', ')}`;
+  }
+  if (answers.extended_flow_types?.length) {
+    extendedContext += `\nFlow types: ${answers.extended_flow_types.join(', ')}`;
+  }
+  if (answers.benchmark) {
+    extendedContext += `\nBenchmark: ${answers.benchmark}`;
+  }
 
   const userPrompt = `Generate a tailored FX hedge policy for this company profile:
 
@@ -257,7 +433,7 @@ Hedge objective: ${answers.hedge_objective}
 IFRS 9 hedge accounting required: ${answers.ifrs_compliance ? 'Yes — confirmed ratio must be ≥75% for effectiveness testing' : 'No'}
 Preferred instruments: ${instrumentList}
 Rolling hedge programme: ${answers.rolling_hedge ? 'Yes — programme rolls forward each month' : 'No — static tenor positions'}
-Declared hedge ratio target: ${answers.hedge_ratio_target !== undefined ? `${Math.round(answers.hedge_ratio_target * 100)}%` : 'Not specified'}
+Declared hedge ratio target: ${answers.hedge_ratio_target !== undefined ? `${Math.round(answers.hedge_ratio_target * 100)}%` : 'Not specified'}${extendedContext}
 
 Return ONLY the JSON policy object as specified.`;
 
@@ -305,7 +481,37 @@ Return ONLY the JSON policy object as specified.`;
     // Validate critical fields
     if (!parsed.name || !parsed.policy?.hedge_ratios) return null;
 
-    const suggested: PolicyPreset = {
+    // Derive maturity, governance, accounting from answers + AI response
+    // The AI may return these extended fields in the policy block
+    const policyRaw = parsed.policy as unknown as Record<string, unknown>;
+    const aiMaturity: PolicyPreset['maturity_profile'] =
+      policyRaw.maturity_profile === 'SHORT' ? 'SHORT' :
+      policyRaw.maturity_profile === 'LONG' ? 'LONG' :
+      policyRaw.maturity_profile === 'MIXED' ? 'MIXED' :
+      answers.time_horizon_months <= 3 ? 'SHORT' :
+      answers.time_horizon_months <= 12 ? 'MEDIUM' : 'LONG';
+
+    const aiGovernance: PolicyPreset['governance_tier'] =
+      policyRaw.governance_tier === 'COMMITTEE' ? 'COMMITTEE' :
+      policyRaw.governance_tier === 'ENHANCED' ? 'ENHANCED' :
+      answers.governance_notes ? 'ENHANCED' : 'STANDARD';
+
+    const aiAccounting: PolicyPreset['accounting_mode'] =
+      policyRaw.accounting_mode === 'FAIR_VALUE' ? 'FAIR_VALUE' :
+      policyRaw.accounting_mode === 'NET_INVESTMENT' ? 'NET_INVESTMENT' :
+      policyRaw.accounting_mode === 'CASH_FLOW_HEDGE' ? 'CASH_FLOW_HEDGE' :
+      answers.ifrs_compliance ? 'CASH_FLOW_HEDGE' : 'NONE';
+
+    // Extract extended_policy from AI response (Phase 2: wizard output deepening)
+    const extRaw = (parsed as Record<string, unknown>).extended_policy as Record<string, unknown> | undefined;
+    const extVol = (extRaw?.volatility ?? {}) as Record<string, unknown>;
+    const extScenarios = (extRaw?.scenarios ?? {}) as Record<string, unknown>;
+    const extGate = (extRaw?.decision_gate ?? {}) as Record<string, unknown>;
+    const extNetting = (extRaw?.netting ?? {}) as Record<string, unknown>;
+    const extInstruments = (extRaw?.instruments ?? {}) as Record<string, unknown>;
+    const extEff = (extRaw?.effectiveness ?? {}) as Record<string, unknown>;
+
+    const suggested: PolicyPreset & { extended_policy?: Record<string, unknown> } = {
       id: `ai-generated-${Date.now()}`,
       name: parsed.name,
       shortName: parsed.short_name ?? 'AI',
@@ -328,6 +534,47 @@ Return ONLY the JSON policy object as specified.`;
         execution_product: parsed.policy.execution_product ?? 'NDF',
         min_trade_size_usd: Math.max(0, parsed.policy.min_trade_size_usd ?? 0),
       },
+      maturity_profile: aiMaturity,
+      governance_tier: aiGovernance,
+      evidence_grade: 'DOCUMENTED',
+      accounting_mode: aiAccounting,
+      // Extended policy fields — structured governance/scenario/volatility output
+      extended_policy: extRaw ? {
+        volatility: {
+          lookback_days: Math.max(20, Math.min(252, Number(extVol.lookback_days) || 60)),
+          method: extVol.method === 'REALIZED' ? 'REALIZED' : 'EWMA',
+          regime_enabled: Boolean(extVol.regime_enabled),
+          band_widening_enabled: Boolean(extVol.band_widening_enabled),
+          ratio_adjustment_enabled: Boolean(extVol.ratio_adjustment_enabled),
+        },
+        scenarios: {
+          shock_pack: typeof extScenarios.shock_pack === 'string' ? extScenarios.shock_pack : 'standard',
+          var_enabled: Boolean(extScenarios.var_enabled),
+          var_confidence: Math.max(0.90, Math.min(0.99, Number(extScenarios.var_confidence) || 0.95)),
+          expected_shortfall_enabled: Boolean(extScenarios.expected_shortfall_enabled),
+        },
+        decision_gate: {
+          max_cost_bps: Math.max(25, Math.min(150, Number(extGate.max_cost_bps) || 75)),
+          max_cost_usd: Math.max(5000, Math.min(500000, Number(extGate.max_cost_usd) || 25000)),
+          min_effectiveness: Math.max(0.15, Math.min(0.50, Number(extGate.min_effectiveness) || 0.25)),
+          require_nonzero_hedges: extGate.require_nonzero_hedges !== false,
+        },
+        netting: {
+          enabled: Boolean(extNetting.enabled),
+          net_confirmed_forecast: Boolean(extNetting.net_confirmed_forecast),
+          settlement_cycle_days: Math.max(1, Math.min(5, Number(extNetting.settlement_cycle_days) || 2)),
+        },
+        instruments: {
+          allowed_types: Array.isArray(extInstruments.allowed_types) ? extInstruments.allowed_types : ['NDF', 'FWD'],
+          max_tenor_days: Math.max(30, Math.min(730, Number(extInstruments.max_tenor_days) || 365)),
+          max_notional_usd: Number(extInstruments.max_notional_usd) || 0,
+        },
+        effectiveness: {
+          method: ['NONE', 'CRITICAL_TERMS_MATCH', 'STATISTICAL_FORECAST'].includes(String(extEff.method))
+            ? String(extEff.method) : 'NONE',
+          confidence: Math.max(0.80, Math.min(0.99, Number(extEff.confidence) || 0.95)),
+        },
+      } : undefined,
     };
 
     const topPresets = findTopPresets(answers, 2);

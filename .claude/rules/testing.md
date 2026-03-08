@@ -5,7 +5,7 @@
 - Runner: `python -m pytest tests/ -x -q --tb=short`
 - Required env: `JWT_SECRET="test-secret-key-for-ci-at-least-32-chars-long" DATABASE_URL="sqlite+aiosqlite://"`
 - CI coverage gate: 40% minimum (target: 75%+)
-- Current state: ~2158 passing, 0 failed, 134 skipped (PG-only), 59% coverage
+- Current state: ~2725 passing, 0 failed, 134 skipped (PG-only), ~62% coverage
 
 ## Markers
 - `@pytest.mark.requires_postgres` — auto-skips on SQLite (defined in conftest.py)

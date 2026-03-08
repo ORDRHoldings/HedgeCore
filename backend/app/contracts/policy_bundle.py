@@ -28,7 +28,7 @@ This file is a CONTRACT. It must remain portable and cross-language friendly.
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -268,6 +268,60 @@ class ScenarioPolicy(BaseModel):
 
 
 # ============================================================
+# Extended policy sections (Phase 1 foundation)
+# ============================================================
+
+class VolatilityPolicy(BaseModel):
+    """Layer 2: Volatility-aware policy behavior. Neutral by default."""
+    enabled: bool = False
+    method: Literal["EWMA", "REALIZED", "GARCH"] = "EWMA"
+    ewma_lambda: float = Field(default=0.94, ge=0.8, le=0.99)
+    lookback_days: int = Field(default=60, ge=5, le=504)
+    band_widening_enabled: bool = False
+    ratio_adjustment_enabled: bool = False
+    fallback_vols: dict[str, float] = Field(
+        default_factory=lambda: {"G10": 0.08, "EM_LATAM": 0.14, "EM_ASIA": 0.10, "EM_CEEMEA": 0.16}
+    )
+    fallback_correlations: dict[str, float] = Field(
+        default_factory=lambda: {"intra_region": 0.60, "cross_region": 0.30}
+    )
+
+
+class GeopoliticalPolicy(BaseModel):
+    """Layer 3: Geopolitical risk overlay from Polisophic. Neutralized until activated."""
+    enabled: bool = False
+    source: str = "polisophic"
+    escalation_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    ratio_haircut_max: float = Field(default=0.10, ge=0.0, le=0.5)
+    corridor_scores: dict[str, float] = Field(default_factory=dict,
+        description="Per-corridor normalized risk scores [0,1]. Empty = no data / neutral.")
+
+
+class ProspectiveEffectivenessPolicy(BaseModel):
+    """Layer 5: IFRS 9 prospective effectiveness testing configuration."""
+    method: Literal["CRITICAL_TERMS_MATCH", "STATISTICAL_FORECAST", "NONE"] = "NONE"
+    confidence: float = Field(default=0.95, ge=0.80, le=0.99)
+    effectiveness_band_min: float = Field(default=0.80, ge=0.50, le=0.95)
+    effectiveness_band_max: float = Field(default=1.25, ge=1.05, le=2.0)
+    regression_r2_min: float = Field(default=0.80, ge=0.50, le=1.0)
+    regression_slope_min: float = Field(default=-1.25, le=-0.5)
+    regression_slope_max: float = Field(default=-0.80, ge=-1.5, le=-0.1)
+
+
+class DecisionGatePolicy(BaseModel):
+    """Layer 5: Decision gate thresholds. All configurable, all with documented defaults."""
+    max_total_cost_bps: float = Field(default=75.0, ge=0.0,
+        description="GFMA best practice: 75bps for EM FX hedging programs.")
+    max_total_cost_usd: float = Field(default=25000.0, ge=0.0)
+    min_worst_case_pnl_usd: float = Field(default=-50000.0, le=0.0)
+    min_effectiveness: float = Field(default=0.25, ge=0.0, le=2.0)
+    max_rejected_legs: int = Field(default=0, ge=0)
+    require_nonzero_hedges: bool = True
+    reject_on_unhedged_material_risks: bool = True
+    material_risk_threshold: float = Field(default=0.50, ge=0.0, le=1.0)
+
+
+# ============================================================
 # PolicyBundle contract
 # ============================================================
 
@@ -298,6 +352,12 @@ class PolicyBundle(BaseModel):
     strategy: StrategyPolicy = Field(default_factory=StrategyPolicy)
     cost: CostGovernancePolicy = Field(default_factory=CostGovernancePolicy)
     scenario: ScenarioPolicy = Field(default_factory=ScenarioPolicy)
+
+    # Extended governance sections (Phase 1)
+    volatility: VolatilityPolicy = Field(default_factory=VolatilityPolicy)
+    geopolitical: GeopoliticalPolicy = Field(default_factory=GeopoliticalPolicy)
+    prospective_effectiveness: ProspectiveEffectivenessPolicy = Field(default_factory=ProspectiveEffectivenessPolicy)
+    decision_gate: DecisionGatePolicy = Field(default_factory=DecisionGatePolicy)
 
     # Integrity
     policy_hash: str = Field(default="", description="Computed by finalize() if empty")
@@ -348,6 +408,10 @@ class PolicyBundleSeed:
     strategy: Mapping[str, Any] | None = None
     cost: Mapping[str, Any] | None = None
     scenario: Mapping[str, Any] | None = None
+    volatility: Mapping[str, Any] | None = None
+    geopolitical: Mapping[str, Any] | None = None
+    prospective_effectiveness: Mapping[str, Any] | None = None
+    decision_gate: Mapping[str, Any] | None = None
 
 
 def build_policy_bundle(seed: PolicyBundleSeed) -> PolicyBundle:
@@ -358,6 +422,10 @@ def build_policy_bundle(seed: PolicyBundleSeed) -> PolicyBundle:
         strategy=StrategyPolicy(**(seed.strategy or {})),
         cost=CostGovernancePolicy(**(seed.cost or {})),
         scenario=ScenarioPolicy(**(seed.scenario or {})),
+        volatility=VolatilityPolicy(**(seed.volatility or {})),
+        geopolitical=GeopoliticalPolicy(**(seed.geopolitical or {})),
+        prospective_effectiveness=ProspectiveEffectivenessPolicy(**(seed.prospective_effectiveness or {})),
+        decision_gate=DecisionGatePolicy(**(seed.decision_gate or {})),
     )
     return pb.finalize()
 
@@ -370,6 +438,10 @@ __all__ = [
     "StrategyPolicy",
     "CostGovernancePolicy",
     "ScenarioPolicy",
+    "VolatilityPolicy",
+    "GeopoliticalPolicy",
+    "ProspectiveEffectivenessPolicy",
+    "DecisionGatePolicy",
     "PolicyBundle",
     "PolicyBundleSeed",
     "build_policy_bundle",

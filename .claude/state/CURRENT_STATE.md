@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-03-07
+Last updated: 2026-03-08
 
 ## System Status
 - Backend: Render (hedgecore.onrender.com) — master branch
@@ -14,41 +14,41 @@ Last updated: 2026-03-07
 - Skills: 9 definitions (.claude/skills/)
 - Hooks: 8 scripts (.claude/hooks/) — 6 commands across 5 events in settings.json
 - State: SQLite memory.db (10 tables) + 6 markdown state files
-- Architecture canon: 5 files (docs/architecture/)
+- Architecture canon: 5 files (docs/architecture/) + 4 ADRs
 - CI governance: freeze-check + pre-merge-gate + risk-gate in GitHub Actions (all enforced, no advisory)
 - Pre-commit: freeze-check hook wired
 
-## Codebase Counts (repo-verified)
+## Codebase Counts (repo-verified 2026-03-08)
 - engine/: 14 orchestrator modules
-- engine_v1/: 35 production modules
-- models/: 26 model files
-- routes/: 47 route files
-- DDL tables in main.py: 35
+- engine_v1/: 41 production modules (+vol_overlay, geo_overlay, netting_overlay, backtesting, prospective_effectiveness, enhanced_scenarios)
+- models/: 27 model files (+market_data.py)
+- routes/: 50 route files (+v1_forward_curves, v1_volatility_snapshots, v1_geo_snapshots)
+- services/: 22 service files (+forward_curve_service, volatility_snapshot_service, geo_snapshot_service)
+- DDL tables in main.py: 38 (+3 market data snapshot tables)
 - Widgets in registry: 21
-- ADRs: 3 accepted
+- ADRs: 4 accepted (+0004-policy-engine-v1-extensions)
+- Whitepapers: 3 (hedge-effectiveness-thresholds, scenario-methodology, overlay-activation-contracts)
+- Tests: [snapshot 2026-03-08] 2725 passing, 134 skipped, 0 failed
 
 ## Architecture
 - Freeze: ACTIVE (v1, 7 frozen files + 5 conceptual invariants)
-- Tests: [snapshot 2026-03-06] 2158 passing, 59% coverage
+- 7-Layer overlay architecture (ADR-0004): L1 frozen kernel → L2 vol overlay → L3 geo overlay → L4 enhanced scenarios → L5 prospective effectiveness → L6 template extensions → L7 WORM/audit preserved
 
-## Hedge Desk Redesign (completed 2026-03-07, institutional redesign 2026-03-07)
-- Phase A: Foundation (error handling, safeFetch, draft persistence, EmptyState)
-- Phase B: Navigation (sidebar, overview page, breadcrumb, workflow guide)
-- Phase C: Pipeline unification (5 steps: SELECT → CALCULATE → RISK → REVIEW → EXECUTE)
-- Phase D: Institutional redesign — unified visual system, decision corridor, single nav
-  - D1: Removed duplicate WorkflowBreadcrumb + WorkflowGuide (hardcoded, never updated)
-  - D2: Created shared tokens.ts; unified all 7 phase files under one CSS-variable palette
-  - D3: Step 2 rebuilt — exposure narrative, market context, post-calc recommendation preview
-  - D4: Step 3 rebuilt — 5-constraint risk manifest, governance implications, integrated quant
-  - D5: Step 4 rebuilt — Decision Thesis, restructured as Decision Room, collapsible audit
-  - D6: Step 5 reframed — Execution Confirmation with pre-confirmation checklist
-  - D7: Step 6 rebuilt — compact closure, 3-path next actions, consolidated exports
-- Tests: 2444 passed, 0 failed | tsc clean | next build clean
-- Committed: 8360648
+## Policy Engine Hardening (completed 2026-03-08)
+- Phase 1: Forward curve ingestion service + 4 API endpoints + staleness governance
+- Phase 2: Wizard deepened — ExtendedPolicyConfig-level AI output with validation/clamping
+- Phase 3: Volatility overlay module + snapshot service + 3 API endpoints + 24 tests
+- Phase 4: Geopolitical overlay module + snapshot service + 4 API endpoints + 18 tests
+- Phase 5: Backtesting engine — single/multi-period evaluation + policy comparison + 13 tests
+- Phase 6: Netting overlay module — same-pair + cross-flow netting + savings tracking + 12 tests
+- Phase 7: Governance hardening — dual-key enforcement wired, multi-tenant isolation tests + 27 tests
+- Route registration: All 3 new route modules registered in api/router.py (219 total routes)
+- All overlays neutral by default (v1 parity preserved)
 
 ## Active Risks
 - HIGH: Leaked secrets in git history (current files sanitized, rotation needed)
-- HIGH: No institutional market data feed (Finnhub only)
+- HIGH: No institutional market data feed (forward curves synthetic, snapshot models ready)
 - HIGH: Secret rotation not done
 - HIGH: No regulatory reporting exports
-- MEDIUM: Test coverage at 59% (target 75%+)
+- MEDIUM: Overlays neutralized (framework ready, activation pending live data feeds)
+- REDUCED: Test coverage improved (2725 tests, estimated 62%+)

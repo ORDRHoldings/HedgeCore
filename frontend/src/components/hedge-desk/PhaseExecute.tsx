@@ -148,6 +148,10 @@ export default function PhaseExecute({
 
   // ── Execute ───────────────────────────────────────────────────────────────
   const handleMarkHedged = async () => {
+    if (proposalIds.length === 0) {
+      setError(translateError(400, "No execution proposals available. Return to Review step."));
+      return;
+    }
     setExecuting(true); setError(null); setAwaitingApproval(false);
     const parsedFillPrice = fillPrice ? parseFloat(fillPrice) : 0;
     try {
@@ -641,13 +645,16 @@ export default function PhaseExecute({
         </button>
 
         {/* Center — Status */}
-        <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary, letterSpacing: "0.04em" }}>
-          {proposalIds.length} proposal{proposalIds.length !== 1 ? "s" : ""} · {governanceMode === "team" ? "4-eyes approval required" : "solo mode"}
+        <span style={{ fontFamily: T.fontMono, fontSize: 12, color: proposalIds.length === 0 ? T.amber : T.secondary, letterSpacing: "0.04em" }}>
+          {proposalIds.length === 0
+            ? "No proposals — return to Review step"
+            : `${proposalIds.length} proposal${proposalIds.length !== 1 ? "s" : ""} · ${governanceMode === "team" ? "4-eyes approval required" : "solo mode"}`
+          }
         </span>
 
         {/* Right — Primary CTA */}
         <button
-          onClick={handleMarkHedged} disabled={!fillOk}
+          onClick={handleMarkHedged} disabled={!fillOk || proposalIds.length === 0}
           style={{
             display: "flex", alignItems: "center", gap: 8,
             background: done ? T.tertiary : executing ? "color-mix(in srgb, var(--status-pass,#22c55e) 60%, #000)" : T.green,

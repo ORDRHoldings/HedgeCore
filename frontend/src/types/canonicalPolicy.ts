@@ -212,6 +212,39 @@ export interface CanonicalPolicy {
    */
   execution_config: PolicyConfig;
 
+  // ── 8b. NETTING POLICY ───────────────────────────────────────────────────
+  netting_policy?: {
+    enabled: boolean;
+    net_confirmed_forecast: boolean;
+    settlement_cycle_days: number;
+  };
+
+  // ── 8c. INSTRUMENT POLICY ──────────────────────────────────────────────
+  instrument_policy?: {
+    allowed_types: string[];
+    max_tenor_days: Record<string, number>;
+    requires_approval: Record<string, boolean>;
+    max_notional_usd: Record<string, number>;
+  };
+
+  // ── 8d. SCENARIO POLICY ───────────────────────────────────────────────
+  scenario_policy?: {
+    stress_pack: string;
+    var_confidence: number;
+    drawdown_tolerance_pct: number;
+    custom_scenarios: Array<{
+      name: string;
+      spotShockPct: number;
+      volShockPct: number;
+      sourceEvent: string;
+    }>;
+  };
+
+  // ── 8e. GOVERNANCE DEPTH ──────────────────────────────────────────────
+  governance_tier?: string;
+  maturity_profile?: string;
+  accounting_mode?: string;
+
   // ── 9. FORMULA & EXPLANATION ──────────────────────────────────────────────
   formula?: {
     /** Mathematical notation string (LaTeX-compatible) */
