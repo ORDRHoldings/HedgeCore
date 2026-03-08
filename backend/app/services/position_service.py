@@ -133,16 +133,34 @@ async def update_position(
     return pos
 
 
+async def get_position(
+    session: AsyncSession,
+    user: User,
+    position_id: _uuid.UUID,
+    all_branches: bool,
+) -> Position:
+    """Fetch a single in-scope position by ID. Raises ValueError if not found."""
+    return await _get_in_scope(session, user, position_id, all_branches)
+
+
 async def delete_position(
     session: AsyncSession,
     user: User,
     position_id: _uuid.UUID,
     all_branches: bool,
 ) -> None:
-    """Soft delete -- sets is_active=False. Never hard-deletes."""
+    """Soft delete -- sets is_active=False. Never hard-deletes.
+    Only REJECTED positions may be deleted (business rule).
+    """
     pos = await _get_in_scope(session, user, position_id, all_branches)
+    if pos.execution_status != "REJECTED":
+        raise ValueError(
+            f"Only REJECTED positions can be deleted. "
+            f"Current status: {pos.execution_status}"
+        )
     pos.is_active = False
     await session.commit()
+    await session.refresh(pos)
 
 
 # ---------------------------------------------------------------------------
@@ -365,6 +383,12 @@ async def reject_position(
     _assert_transition(pos.execution_status, "REJECTED", position_id)
     pos.execution_status  = "REJECTED"
     pos.rejection_reason  = data.reason
+    # Auto-supersede any active proposals — they are stale after rejection
+    from app.services import execution_proposal_service as ep_service  # deferred: circular
+    await ep_service.supersede_active_proposals_for_position(
+        session, position_id, pos.company_id,
+        reason=f"Position rejected: {data.reason}",
+    )
     await session.commit()
     await session.refresh(pos)
     return pos
@@ -387,6 +411,12 @@ async def reopen_position(
     pos.rejection_reason  = None
     pos.policy_id         = None
     pos.last_run_id       = None
+    # Auto-supersede any lingering active proposals from prior lifecycle cycle
+    from app.services import execution_proposal_service as ep_service  # deferred: circular
+    await ep_service.supersede_active_proposals_for_position(
+        session, position_id, pos.company_id,
+        reason="Position reopened — prior proposals superseded",
+    )
     await session.commit()
     await session.refresh(pos)
     return pos

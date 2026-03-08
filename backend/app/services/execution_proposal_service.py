@@ -517,3 +517,45 @@ async def execute_approved_proposal(
     await session.refresh(proposal)
 
     return proposal, updated_pos
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle cleanup — auto-supersede stale proposals
+# ---------------------------------------------------------------------------
+
+async def supersede_active_proposals_for_position(
+    session: AsyncSession,
+    position_id: _uuid.UUID,
+    company_id: _uuid.UUID,
+    reason: str = "Position lifecycle change — proposal superseded",
+) -> int:
+    """
+    Withdraw/supersede any PROPOSED or APPROVED proposals for a position.
+
+    Called when a position transitions to REJECTED or is reopened (REJECTED→NEW),
+    which invalidates any pending hedge proposals from a prior lifecycle cycle.
+
+    Preserves WORM semantics: proposals are transitioned to WITHDRAWN (terminal),
+    never deleted. The reason is recorded for audit trail.
+
+    Returns the count of proposals superseded.
+    """
+    q = (
+        select(ExecutionProposal)
+        .where(
+            ExecutionProposal.position_id == position_id,
+            ExecutionProposal.company_id  == company_id,
+            ExecutionProposal.status.in_(("PROPOSED", "APPROVED")),
+        )
+    )
+    result = await session.execute(q)
+    active = list(result.scalars().all())
+
+    for p in active:
+        p.status = "WITHDRAWN"
+        p.rejection_reason = reason
+
+    if active:
+        await session.flush()
+
+    return len(active)

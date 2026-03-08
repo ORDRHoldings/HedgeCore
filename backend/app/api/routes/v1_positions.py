@@ -350,15 +350,19 @@ async def delete_position(
     record_id_str = str(position_id)
     try:
         # Capture record_id for the audit trail before soft-delete
-        from app.services.position_service import get_position
-        pos_obj = await get_position(session, current_user, position_id, all_branches)
+        pos_obj = await position_service.get_position(
+            session, current_user, position_id, all_branches
+        )
         if pos_obj:
             record_id_str = pos_obj.record_id
         await position_service.delete_position(
             session, current_user, position_id, all_branches
         )
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        detail = str(e)
+        if "Only REJECTED" in detail:
+            raise HTTPException(status_code=409, detail=detail)
+        raise HTTPException(status_code=404, detail=detail)
     # WORM audit: soft-delete logged (position deactivated, not destroyed)
     await _emit_lifecycle_audit(
         session, current_user,
