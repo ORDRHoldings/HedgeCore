@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AI Policy Wizard  —  /ai-policy-wizard
+ * Policy Builder  —  /ai-policy-wizard
  *
  * Institutional-grade 7-Phase wizard implementing the ORDR Policy Engine
  * whitepaper specification (BlackRock / Bloomberg defensible).
@@ -388,7 +388,7 @@ function TopBar({ onBack, pct, onHelp, lastSaved, onClearProgress }: {
       }}>← Policies</button>
       <span style={{ color: S.rim }}>|</span>
       <span style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary }}>
-        AI Policy Wizard
+        Policy Builder
       </span>
       <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", padding: "1px 5px", border: `1px solid ${S.rim}`, color: S.secondary }}>
         INSTITUTIONAL GRADE · 7 PHASES · WHITEPAPER-BACKED
@@ -1432,7 +1432,7 @@ function StepG1({
 
   if (aiLoading) return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, minHeight: 280 }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.cyan, letterSpacing: "0.12em" }}>ANALYZING PROFILE — CLAUDE AI + 60 PRESET LIBRARY…</div>
+      <div style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.cyan, letterSpacing: "0.12em" }}>ANALYZING PROFILE…</div>
       <div style={{ display: "flex", gap: 6 }}>{[0,1,2].map(i => (
         <div key={i} style={{ width: 8, height: 8, borderRadius: 4, background: S.cyan, opacity: 0.3, animation: `pulse 1.2s ease-in-out ${i * 0.4}s infinite` }} />
       ))}</div>
@@ -1459,6 +1459,9 @@ function StepG1({
         {!aiResult.fallback && (
           <span style={{ fontFamily: S.fontMono, fontSize: "0.5625rem", padding: "1px 6px", border: `1px solid ${S.pass}`, color: S.pass }}>CLAUDE AI</span>
         )}
+        {aiResult.fallback && (
+          <span style={{ fontFamily: S.fontMono, fontSize: "0.5rem", padding: "1px 6px", border: `1px solid ${S.amber}`, color: S.amber }}>RULE-BASED · NO AI</span>
+        )}
       </div>
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
@@ -1476,7 +1479,7 @@ function StepG1({
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontFamily: S.fontMono, fontSize: "0.625rem", color: S.tertiary }}>{aiResult.fallback ? "MATCH" : "AI CONFIDENCE"}</span>
           <span style={{ fontFamily: S.fontMono, fontSize: "0.875rem", fontWeight: 700, color: S.pass, padding: "2px 8px", border: `1px solid ${S.pass}`, background: `color-mix(in srgb, ${S.pass} 8%, transparent)` }}>
-            {aiResult.fallback ? "PRESET" : "87%"}
+            {aiResult.fallback ? "PRESET" : "HIGH"}
           </span>
         </div>
         <span style={{ color: S.rim }}>|</span>
@@ -1977,7 +1980,7 @@ export default function AIPolicyWizardPage() {
         borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
         fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.04em", flexShrink: 0,
       }}>
-        <span>ORDR · AI Policy Wizard · Institutional Grade</span>
+        <span>ORDR · Policy Builder · Institutional Grade</span>
         <span style={{ color: S.rim }}>—</span>
         <span style={{ color: S.purple }}>IFRS 9 · BCBS FRTB · ISDA 2022 · BIS FX Survey 2022</span>
       </footer>

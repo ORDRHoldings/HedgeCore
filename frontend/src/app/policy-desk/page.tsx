@@ -39,6 +39,9 @@ import {
 import { recommendPolicyForPosition } from "@/utils/policyRecommender";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { POLICY_DESK_HELP } from "@/lib/helpContent";
+import PolicyDetailDrawer from "@/components/policy/PolicyDetailDrawer";
+import { POLICY_PRESETS } from "@/constants/policyPresets";
+import type { PolicyPreset } from "@/constants/policyPresets";
 
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -229,6 +232,35 @@ function ModalActions({ onCancel, onConfirm, confirmLabel, confirmColor, disable
   );
 }
 
+// -- Build a PolicyPreset from template data for the detail drawer ----------------
+function buildPresetFromTemplate(tmpl: PolicyTemplate): PolicyPreset {
+  const match = POLICY_PRESETS.find(p => p.shortName === tmpl.short_name);
+  if (match) return match;
+
+  const config = tmpl.config as unknown as Record<string, unknown> | null;
+  const hr = (config?.hedge_ratios ?? {}) as Record<string, number>;
+  const ca = (config?.cost_assumptions ?? {}) as Record<string, number>;
+  return {
+    id: tmpl.id,
+    name: tmpl.name,
+    shortName: tmpl.short_name ?? '',
+    description: tmpl.description ?? '',
+    targetAudience: '',
+    riskPosture: 'MODERATE' as const,
+    category: 'CORPORATE' as const,
+    formula: '', formulaExplain: '', rationale: '',
+    policy: {
+      bucket_mode: 'CALENDAR_MONTH' as const,
+      hedge_ratios: { confirmed: hr.confirmed ?? 0.8, forecast: hr.forecast ?? 0.5 },
+      cost_assumptions: { spread_bps: ca.spread_bps ?? 5 },
+      execution_product: (String(config?.execution_product ?? 'NDF')) as 'NDF' | 'FWD',
+      min_trade_size_usd: Number(config?.min_trade_size_usd ?? 0),
+    },
+    maturity_profile: 'MEDIUM', governance_tier: 'STANDARD',
+    evidence_grade: 'BASIC', accounting_mode: 'NONE',
+  };
+}
+
 export default function PolicyDeskPage() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
@@ -281,6 +313,8 @@ export default function PolicyDeskPage() {
   const [riskPostureFilter, setRiskPostureFilter] = useState("");
   const [showComparison, setShowComparison] = useState(false);
   const [comparisonPolicies, setComparisonPolicies] = useState<string[]>([]);
+  // Policy detail drawer
+  const [detailDrawer, setDetailDrawer] = useState<{ preset: PolicyPreset; dbTemplate: PolicyTemplate | null } | null>(null);
 
   // Load positions on mount
   useEffect(() => {
@@ -1260,6 +1294,24 @@ export default function PolicyDeskPage() {
                         SYSTEM
                       </span>
                     )}
+                    <span style={{ flex: 1 }} />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDetailDrawer({
+                          preset: buildPresetFromTemplate(tmpl),
+                          dbTemplate: tmpl,
+                        });
+                      }}
+                      style={{
+                        fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.06em",
+                        padding: "2px 8px", border: `1px solid ${S.cyan}`,
+                        color: S.cyan, background: "transparent", cursor: "pointer",
+                      }}
+                    >
+                      INSPECT
+                    </button>
                   </div>
                   {tmpl.description && (
                     <div style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary }}>
@@ -1736,6 +1788,16 @@ export default function PolicyDeskPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Policy detail drawer */}
+      {detailDrawer && (
+        <PolicyDetailDrawer
+          preset={detailDrawer.preset}
+          dbTemplate={detailDrawer.dbTemplate}
+          token={token ?? undefined}
+          onClose={() => setDetailDrawer(null)}
+        />
       )}
 
       <HelpPanel config={POLICY_DESK_HELP} storageKey="policy-desk" />

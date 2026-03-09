@@ -11,7 +11,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sparkles, Check, Zap, Shield, BarChart2, Globe,
-  Search, X, Bookmark, GitCompare, Star, Bolt,
+  Search, X, Bookmark, GitCompare, Star, Bolt, Eye,
 } from "lucide-react";
 import { useAuth } from "@/lib/authContext";
 import { POLICY_PRESETS } from "@/constants/policyPresets";
@@ -31,6 +31,7 @@ import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { POLICIES_HELP } from "@/lib/help";
 import PolicyCompareModal from "@/components/policy/PolicyCompareModal";
 import PolicyRevisionDrawer from "@/components/policy/PolicyRevisionDrawer";
+import PolicyDetailDrawer from "@/components/policy/PolicyDetailDrawer";
 import { computeEffectivenessScore, getEffectivenessColor } from "@/utils/policyEffectivenessScore";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -85,13 +86,14 @@ interface PresetCardProps {
   canActivate:        boolean;   // true = dbTmpl found
   dbVersion?:         number;    // UX-POLICY-4: version from DB template
   dbUpdatedAt?:       string | null; // UX-POLICY-4: last updated timestamp
+  onInspect?:         () => void;
 }
 
 function PresetCard({
   preset, isActive, isActivating, onActivate, isFavorited, onToggleFavorite,
   effectivenessScore, effectivenessBadge, effectivenessColor,
   compareMode, isCompared, onCompareToggle, canActivate,
-  dbVersion, dbUpdatedAt,
+  dbVersion, dbUpdatedAt, onInspect,
 }: PresetCardProps) {
   const [hovered, setHovered] = useState(false);
   const rc = riskColor(preset.riskPosture);
@@ -232,6 +234,25 @@ function PresetCard({
             {preset.description}
           </div>
         )}
+
+        {/* Governance / maturity / accounting badges — always visible */}
+        <div style={{
+          display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4,
+        }}>
+          {[
+            { label: 'GOV', value: preset.governance_tier, color: preset.governance_tier === 'COMMITTEE' ? S.red : preset.governance_tier === 'ENHANCED' ? S.amber : S.green },
+            { label: 'MAT', value: preset.maturity_profile },
+            { label: 'ACCT', value: preset.accounting_mode },
+          ].map(({ label, value, color }) => (
+            <span key={label} style={{
+              fontFamily: S.fontMono, fontSize: '0.4375rem', padding: '1px 4px',
+              border: `1px solid ${color ?? S.soft}`,
+              color: color ?? S.tertiary, letterSpacing: '0.04em',
+            }}>
+              {label}: {value}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* ── Footer: action buttons ── */}
@@ -313,6 +334,27 @@ function PresetCard({
         >
           <GitCompare size={10} />
         </button>
+
+        {/* Inspect button */}
+        {onInspect && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onInspect(); }}
+            title="Inspect policy details"
+            style={{
+              background: 'none',
+              border: `1px solid ${S.rim}`,
+              cursor: 'pointer',
+              padding: '3px 5px',
+              color: S.tertiary,
+              display: 'flex', alignItems: 'center',
+              borderRadius: 2,
+              transition: 'all 0.1s',
+            }}
+          >
+            <Eye size={10} />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -344,6 +386,9 @@ export default function PoliciesPage() {
   // LOG-POLICY-1: Policy audit history drawer
   const [historyDrawer, setHistoryDrawer] = useState<{ id: string; name: string; code: string } | null>(null);
 
+  // Detail drawer state
+  const [detailDrawer, setDetailDrawer] = useState<{ preset: PolicyPreset; dbTemplate: PolicyTemplate | null } | null>(null);
+
   // Compare mode state
   const [compareMode, setCompareMode]           = useState(false);
   const [compareIds, setCompareIds]             = useState<Set<string>>(new Set());
@@ -360,7 +405,8 @@ export default function PoliciesPage() {
   const [activationModal, setActivationModal] = useState<{
     template: { id: string; name: string; short_name?: string; config: unknown } | null;
     hash: string;
-  }>({ template: null, hash: '' });
+    preset?: PolicyPreset | null;
+  }>({ template: null, hash: '', preset: null });
   const [modalHashCopied, setModalHashCopied] = useState(false);
 
   // Load active policy + templates on mount
@@ -430,7 +476,7 @@ export default function PoliciesPage() {
   const doActivateConfirmed = useCallback(async () => {
     const { template } = activationModal;
     if (!template || !token) return;
-    setActivationModal({ template: null, hash: '' });
+    setActivationModal({ template: null, hash: '', preset: null });
     setActivatingId(template.id);
     try {
       const inst = await activatePolicy(template.id, token);
@@ -445,9 +491,9 @@ export default function PoliciesPage() {
   }, [activationModal, token, showToast]);
 
   // L-04: Open modal with computed hash instead of activating immediately
-  const openActivationModal = useCallback(async (id: string, name: string, short_name: string | undefined, config: unknown) => {
+  const openActivationModal = useCallback(async (id: string, name: string, short_name: string | undefined, config: unknown, preset?: PolicyPreset | null) => {
     const hash = await computePolicyHash(config);
-    setActivationModal({ template: { id, name, short_name, config }, hash });
+    setActivationModal({ template: { id, name, short_name, config }, hash, preset: preset ?? null });
   }, []);
 
   // Activate preset — looks up template, retries if not cached yet
@@ -461,7 +507,7 @@ export default function PoliciesPage() {
         return;
       }
       // L-04: Show confirmation modal with hash instead of activating immediately
-      await openActivationModal(dbTmpl.id, preset.name, preset.shortName, dbTmpl.config);
+      await openActivationModal(dbTmpl.id, preset.name, preset.shortName, dbTmpl.config, preset);
     };
 
     // Try cached templates first, refresh if missing
@@ -506,6 +552,45 @@ export default function PoliciesPage() {
 
   // Favorite count for header badge
   const favCount = favoriteIds.size;
+
+  // Build a PolicyPreset from a saved template (for detail drawer)
+  const buildPresetFromTemplate = useCallback((tmpl: PolicyTemplate): PolicyPreset | null => {
+    // Try to find matching system preset first
+    const match = POLICY_PRESETS.find(p => p.shortName === tmpl.short_name);
+    if (match) return match;
+    // Build minimal preset from template data
+    const config = tmpl.config as {
+      hedge_ratios?: { confirmed?: number; forecast?: number };
+      cost_assumptions?: { spread_bps?: number };
+      execution_product?: string;
+      min_trade_size_usd?: number;
+      bucket_mode?: string;
+    } | undefined;
+    if (!config) return null;
+    return {
+      id: tmpl.id,
+      name: tmpl.name,
+      shortName: tmpl.short_name ?? '',
+      description: tmpl.description ?? '',
+      targetAudience: '',
+      riskPosture: (tmpl.risk_posture === 'CONSERVATIVE' || tmpl.risk_posture === 'MODERATE' || tmpl.risk_posture === 'AGGRESSIVE') ? tmpl.risk_posture : 'MODERATE',
+      category: (tmpl.category === 'CORPORATE' || tmpl.category === 'FINANCIAL' || tmpl.category === 'SOVEREIGN' || tmpl.category === 'SECTOR') ? tmpl.category : 'CORPORATE',
+      formula: '',
+      formulaExplain: '',
+      rationale: '',
+      policy: {
+        bucket_mode: (config.bucket_mode as 'CALENDAR_MONTH') ?? 'CALENDAR_MONTH',
+        hedge_ratios: { confirmed: config.hedge_ratios?.confirmed ?? 0.8, forecast: config.hedge_ratios?.forecast ?? 0.5 },
+        cost_assumptions: { spread_bps: config.cost_assumptions?.spread_bps ?? 5 },
+        execution_product: (config.execution_product as 'NDF' | 'FWD') ?? 'NDF',
+        min_trade_size_usd: config.min_trade_size_usd ?? 0,
+      },
+      maturity_profile: 'MEDIUM',
+      governance_tier: 'STANDARD',
+      evidence_grade: 'BASIC',
+      accounting_mode: 'NONE',
+    };
+  }, []);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: S.bgDeep }}>
@@ -598,7 +683,7 @@ export default function PoliciesPage() {
             }}
           >
             <Sparkles size={12} />
-            + NEW AI POLICY
+            + NEW POLICY
           </button>
         </div>
       </div>
@@ -806,6 +891,7 @@ export default function PoliciesPage() {
                 canActivate={!!dbTmpl}
                 dbVersion={dbTmpl?.version}
                 dbUpdatedAt={dbTmpl?.updated_at ?? null}
+                onInspect={() => setDetailDrawer({ preset, dbTemplate: dbTmpl ?? null })}
               />
             );
           })}
@@ -825,7 +911,7 @@ export default function PoliciesPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <Sparkles size={13} color={S.amber} />
               <span style={{ fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.1em', color: S.amber, fontWeight: 700 }}>
-                CUSTOM AI POLICIES ({savedTemplates.length})
+                CUSTOM POLICIES ({savedTemplates.length})
               </span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -850,6 +936,25 @@ export default function PoliciesPage() {
                   <div style={{ fontFamily: S.fontMono, fontSize: '0.5625rem', color: S.secondary }}>
                     Conf: {Math.round(tmpl.config.hedge_ratios.confirmed * 100)}% · Fcst: {Math.round(tmpl.config.hedge_ratios.forecast * 100)}%
                   </div>
+                  {/* Inspect button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const p = buildPresetFromTemplate(tmpl);
+                      if (p) setDetailDrawer({ preset: p, dbTemplate: tmpl });
+                    }}
+                    title="Inspect"
+                    style={{
+                      fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
+                      padding: '3px 8px',
+                      border: `1px solid ${S.rim}`,
+                      color: S.tertiary, background: 'transparent',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    }}
+                  >
+                    <Eye size={10} />
+                    INSPECT
+                  </button>
                   {/* LOG-POLICY-1: History button */}
                   <button
                     type="button"
@@ -867,7 +972,10 @@ export default function PoliciesPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => openActivationModal(tmpl.id, tmpl.name, tmpl.short_name, tmpl.config)}
+                    onClick={() => {
+                      const matchedPreset = POLICY_PRESETS.find(p => p.shortName === tmpl.short_name) ?? null;
+                      openActivationModal(tmpl.id, tmpl.name, tmpl.short_name, tmpl.config, matchedPreset);
+                    }}
                     disabled={activatingId === tmpl.id}
                     style={{
                       fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.06em',
@@ -949,7 +1057,7 @@ export default function PoliciesPage() {
       {/* ── L-04: Policy Activation Confirmation Modal ── */}
       {activationModal.template && (
         <div
-          onClick={() => setActivationModal({ template: null, hash: '' })}
+          onClick={() => setActivationModal({ template: null, hash: '', preset: null })}
           style={{
             position: 'fixed', inset: 0,
             background: 'rgba(0,0,0,0.7)',
@@ -1045,52 +1153,202 @@ export default function PoliciesPage() {
               </div>
             </div>
 
-            {/* Warning text */}
-            <div style={{
-              fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.secondary,
-              lineHeight: 1.55, marginBottom: 22,
-              padding: '8px 10px',
-              background: `color-mix(in srgb, ${S.amber} 5%, ${S.bgSub})`,
-              border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
-            }}>
-              ⚑ Verify this hash matches your approved policy document before proceeding.
-            </div>
+            {/* Governance tier badge */}
+            {(() => {
+              const govTier = activationModal.preset?.governance_tier ?? 'STANDARD';
+              const govColor = govTier === 'COMMITTEE' ? S.red : govTier === 'ENHANCED' ? S.amber : S.green;
+              const govLabel = govTier === 'COMMITTEE'
+                ? 'Requires committee approval before activation'
+                : govTier === 'ENHANCED'
+                ? 'Requires documented review before activation'
+                : 'Single operator can activate';
+              return (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14,
+                  padding: '6px 10px',
+                  background: `color-mix(in srgb, ${govColor} 6%, ${S.bgSub})`,
+                  border: `1px solid color-mix(in srgb, ${govColor} 25%, transparent)`,
+                }}>
+                  <span style={{
+                    fontFamily: S.fontMono, fontSize: '0.5625rem', letterSpacing: '0.08em',
+                    padding: '1px 6px', fontWeight: 700,
+                    border: `1px solid ${govColor}`, color: govColor,
+                  }}>
+                    {govTier}
+                  </span>
+                  <span style={{ fontFamily: S.fontUI, fontSize: '0.625rem', color: S.secondary }}>
+                    {govLabel}
+                  </span>
+                </div>
+              );
+            })()}
+
+            {/* Effect surface — fields consumed by hedge engine */}
+            {(() => {
+              const cfg = activationModal.template?.config as {
+                hedge_ratios?: { confirmed?: number; forecast?: number };
+                cost_assumptions?: { spread_bps?: number };
+                execution_product?: string;
+                bucket_mode?: string;
+                min_trade_size_usd?: number;
+              } | undefined;
+              const govTier = activationModal.preset?.governance_tier ?? 'STANDARD';
+              return (
+                <>
+                  <div style={{
+                    background: S.bgDeep, border: `1px solid ${S.rim}`,
+                    borderLeft: `3px solid ${S.cyan}`, padding: '8px 12px', marginBottom: 10,
+                  }}>
+                    <div style={{
+                      fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.1em',
+                      color: S.cyan, marginBottom: 6, fontWeight: 700,
+                    }}>
+                      EFFECT SURFACE — FIELDS CONSUMED BY HEDGE ENGINE
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
+                      {[
+                        { label: 'CONFIRMED RATIO', value: cfg?.hedge_ratios?.confirmed != null ? `${Math.round(cfg.hedge_ratios.confirmed * 100)}%` : '—' },
+                        { label: 'FORECAST RATIO', value: cfg?.hedge_ratios?.forecast != null ? `${Math.round(cfg.hedge_ratios.forecast * 100)}%` : '—' },
+                        { label: 'SPREAD', value: cfg?.cost_assumptions?.spread_bps != null ? `${cfg.cost_assumptions.spread_bps} bps` : '—' },
+                        { label: 'EXECUTION PRODUCT', value: cfg?.execution_product ?? '—' },
+                      ].map(({ label, value }) => (
+                        <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                          <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.tertiary, letterSpacing: '0.06em' }}>{label}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: '0.75rem', fontWeight: 700, color: S.primary }}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Metadata — does not affect hedge calculation */}
+                  <div style={{
+                    background: S.bgDeep, border: `1px solid ${S.rim}`,
+                    borderLeft: `3px solid ${S.soft}`, padding: '8px 12px', marginBottom: 14,
+                  }}>
+                    <div style={{
+                      fontFamily: S.fontMono, fontSize: '0.4375rem', letterSpacing: '0.1em',
+                      color: S.tertiary, marginBottom: 6, fontWeight: 700,
+                    }}>
+                      METADATA — DOES NOT AFFECT HEDGE CALCULATION
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
+                      {[
+                        { label: 'BUCKET MODE', value: cfg?.bucket_mode ?? '—' },
+                        { label: 'MIN TRADE SIZE', value: cfg?.min_trade_size_usd != null ? (cfg.min_trade_size_usd === 0 ? 'None' : `$${cfg.min_trade_size_usd.toLocaleString()}`) : '—' },
+                        { label: 'GOVERNANCE TIER', value: govTier },
+                        { label: 'MATURITY PROFILE', value: activationModal.preset?.maturity_profile ?? '—' },
+                        { label: 'ACCOUNTING MODE', value: activationModal.preset?.accounting_mode ?? '—' },
+                      ].map(({ label, value }) => (
+                        <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                          <span style={{ fontFamily: S.fontMono, fontSize: '0.4375rem', color: S.tertiary, letterSpacing: '0.06em' }}>{label}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: '0.6875rem', color: S.secondary }}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+
+            {/* Warning text — governance-tier aware */}
+            {(() => {
+              const govTier = activationModal.preset?.governance_tier ?? 'STANDARD';
+              if (govTier === 'COMMITTEE') {
+                return (
+                  <div style={{
+                    fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.secondary,
+                    lineHeight: 1.55, marginBottom: 22, padding: '8px 10px',
+                    background: `color-mix(in srgb, ${S.red} 5%, ${S.bgSub})`,
+                    border: `1px solid color-mix(in srgb, ${S.red} 20%, transparent)`,
+                  }}>
+                    This policy template requires COMMITTEE-LEVEL governance. Do not activate without written committee approval on file.
+                  </div>
+                );
+              }
+              if (govTier === 'ENHANCED') {
+                return (
+                  <div style={{
+                    fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.secondary,
+                    lineHeight: 1.55, marginBottom: 22, padding: '8px 10px',
+                    background: `color-mix(in srgb, ${S.amber} 5%, ${S.bgSub})`,
+                    border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
+                  }}>
+                    This policy template has ENHANCED governance. Verify that documented review has been completed before activation.
+                  </div>
+                );
+              }
+              return (
+                <div style={{
+                  fontFamily: S.fontUI, fontSize: '0.6875rem', color: S.secondary,
+                  lineHeight: 1.55, marginBottom: 22, padding: '8px 10px',
+                  background: `color-mix(in srgb, ${S.amber} 5%, ${S.bgSub})`,
+                  border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
+                }}>
+                  Verify this hash matches your approved policy document before proceeding.
+                </div>
+              );
+            })()}
 
             {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => setActivationModal({ template: null, hash: '' })}
-                style={{
-                  fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
-                  padding: '6px 16px',
-                  border: `1px solid ${S.rim}`,
-                  color: S.tertiary, background: 'transparent',
-                  cursor: 'pointer',
-                }}
-              >
-                CANCEL
-              </button>
-              <button
-                type="button"
-                onClick={doActivateConfirmed}
-                style={{
-                  fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.08em',
-                  fontWeight: 700,
-                  padding: '6px 18px',
-                  border: `1px solid ${S.cyan}`,
-                  color: S.bgDeep, background: S.cyan,
-                  cursor: 'pointer',
-                }}
-              >
-                CONFIRM ACTIVATION
-              </button>
-            </div>
+            {(() => {
+              const govTier = activationModal.preset?.governance_tier ?? 'STANDARD';
+              const btnColor = govTier === 'COMMITTEE' ? S.amber : S.cyan;
+              const btnLabel = govTier === 'COMMITTEE'
+                ? 'CONFIRM — COMMITTEE APPROVED'
+                : govTier === 'ENHANCED'
+                ? 'CONFIRM — REVIEW VERIFIED'
+                : 'CONFIRM ACTIVATION';
+              return (
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setActivationModal({ template: null, hash: '', preset: null })}
+                    style={{
+                      fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.06em',
+                      padding: '6px 16px',
+                      border: `1px solid ${S.rim}`,
+                      color: S.tertiary, background: 'transparent',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={doActivateConfirmed}
+                    style={{
+                      fontFamily: S.fontMono, fontSize: '0.625rem', letterSpacing: '0.08em',
+                      fontWeight: 700,
+                      padding: '6px 18px',
+                      border: `1px solid ${btnColor}`,
+                      color: S.bgDeep, background: btnColor,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {btnLabel}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
     </div>
     <HelpPanelV2 module={POLICIES_HELP} storageKey="policy-library" />
+
+    {/* ── Policy detail drawer ── */}
+    {detailDrawer && (
+      <PolicyDetailDrawer
+        preset={detailDrawer.preset}
+        dbTemplate={detailDrawer.dbTemplate}
+        token={token ?? undefined}
+        onClose={() => setDetailDrawer(null)}
+        onOpenAudit={(id, name, code) => {
+          setDetailDrawer(null);
+          setHistoryDrawer({ id, name, code });
+        }}
+      />
+    )}
     </div>
   );
 }

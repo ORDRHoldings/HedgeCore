@@ -160,7 +160,7 @@ function ActionBtn({ label, color, onClick, disabled, loading, disabledReason }:
   disabled?: boolean; loading?: boolean; disabledReason?: string;
 }) {
   const btn = (
-    <button onClick={onClick} disabled={disabled || loading} style={{
+    <button onClick={onClick} disabled={disabled || loading} data-testid={`action-${label.toLowerCase().replace(/\s+/g, "-")}`} style={{
       fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
       color: disabled ? S.tertiary : color, background: "transparent",
       border: `1px solid ${disabled ? S.rim : `color-mix(in srgb, ${color} 40%, transparent)`}`,
@@ -263,7 +263,7 @@ function ModalInput({ label, value, onChange, placeholder, type = "text", error 
   return (
     <div style={{ marginBottom: 14 }}>
       <label style={{ fontFamily: S.fontMono, fontSize: 10, color: error ? S.fail : S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: "100%", padding: "7px 10px", boxSizing: "border-box", background: S.bgSub, border: `1px solid ${error ? S.fail : S.rim}`, color: S.primary, fontFamily: S.fontMono, fontSize: 12, outline: "none" }} />
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} data-testid={`modal-input-${label.replace(/[^a-zA-Z]/g, "").toLowerCase().slice(0, 20)}`} style={{ width: "100%", padding: "7px 10px", boxSizing: "border-box", background: S.bgSub, border: `1px solid ${error ? S.fail : S.rim}`, color: S.primary, fontFamily: S.fontMono, fontSize: 12, outline: "none" }} />
       {error && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginTop: 3 }}>{error}</div>}
     </div>
   );
@@ -274,8 +274,8 @@ function ModalActions({ onCancel, onConfirm, confirmLabel, confirmColor, disable
 }) {
   return (
     <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
-      <button onClick={onCancel} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
-      <button onClick={onConfirm} disabled={disabled} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: disabled ? S.tertiary : confirmColor, border: "none", padding: "6px 14px", cursor: disabled ? "not-allowed" : "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>{confirmLabel}</button>
+      <button onClick={onCancel} data-testid="modal-cancel" style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
+      <button onClick={onConfirm} disabled={disabled} data-testid="modal-confirm" style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: disabled ? S.tertiary : confirmColor, border: "none", padding: "6px 14px", cursor: disabled ? "not-allowed" : "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>{confirmLabel}</button>
     </div>
   );
 }
@@ -388,6 +388,7 @@ export default function PositionDeskPage() {
   // Delete confirmation state
   const [deleteConfirmId, setDeleteConfirmId]           = useState<string | null>(null);
   const [deleteRunning, setDeleteRunning]               = useState(false);
+  const [deleteError, setDeleteError]                   = useState<string | null>(null);
 
   // Show/hide rejected toggle
   const [hideRejected, setHideRejected]                 = useState(false);
@@ -573,18 +574,27 @@ export default function PositionDeskPage() {
       hedgeAmount: hedgeAmount ? parseFloat(hedgeAmount) : undefined,
       hedgeRate: hedgeRate ? parseFloat(hedgeRate) : undefined, token,
     }));
-    if (r.meta.requestStatus === "fulfilled") closeModal();
+    if (r.meta.requestStatus === "fulfilled") {
+      closeModal();
+      dispatch(listPositionsThunk({ token }));
+    }
   }, [dispatch, modal.position, runId, hedgeAmount, hedgeRate, token, closeModal]);
 
   const handleReject = useCallback(async () => {
     if (!modal.position || !rejectReason.trim() || !token) return;
     const r = await dispatch(rejectPositionThunk({ id: modal.position.id, reason: rejectReason.trim(), token }));
-    if (r.meta.requestStatus === "fulfilled") closeModal();
+    if (r.meta.requestStatus === "fulfilled") {
+      closeModal();
+      dispatch(listPositionsThunk({ token }));
+    }
   }, [dispatch, modal.position, rejectReason, token, closeModal]);
 
   const handleReopen = useCallback(async (p: PositionRow) => {
     if (!token) return;
-    dispatch(reopenPositionThunk({ id: p.id, token }));
+    const r = await dispatch(reopenPositionThunk({ id: p.id, token }));
+    if (r.meta.requestStatus === "fulfilled") {
+      dispatch(listPositionsThunk({ token }));
+    }
   }, [dispatch, token]);
 
   const handleBulkAssign = useCallback(async () => {
@@ -641,12 +651,14 @@ export default function PositionDeskPage() {
   const handleDeletePosition = useCallback(async () => {
     if (!token || !deleteConfirmId) return;
     setDeleteRunning(true);
+    setDeleteError(null);
     try {
       await deletePosition(deleteConfirmId, token);
       dispatch(listPositionsThunk({ token }));
       setDeleteConfirmId(null);
     } catch (e) {
-      console.error('Delete failed:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      setDeleteError(msg || "Delete failed. You may lack the trades.delete permission.");
     } finally {
       setDeleteRunning(false);
     }
@@ -903,7 +915,7 @@ export default function PositionDeskPage() {
           const isTerminal = st === "HEDGED" || st === "REJECTED";
 
           return (
-            <div key={p.id}>
+            <div key={p.id} data-testid={`position-row-${st.toLowerCase()}`} data-position-id={p.id} data-status={st}>
               {/* Main row */}
               <div
                 onClick={() => setExpandedRow(isExpanded ? null : p.id)}
@@ -1005,7 +1017,7 @@ export default function PositionDeskPage() {
 
               {/* ── Expanded row detail ─────────────────────────────────────── */}
               {isExpanded && (
-                <div style={{
+                <div data-testid="detail-panel" style={{
                   padding: "10px 20px 10px 35px",
                   background: `color-mix(in srgb, ${S.cyan} 3%, ${S.bgSub})`,
                   borderBottom: `1px solid ${S.soft}`,
@@ -1341,11 +1353,16 @@ export default function PositionDeskPage() {
             <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, padding: '6px 10px', border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 16 }}>
               WORM audit trail preserved. This action is irreversible via UI.
             </div>
+            {deleteError && (
+              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 12, padding: '6px 10px', border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, lineHeight: 1.5 }}>
+                {deleteError}
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button onClick={() => setDeleteConfirmId(null)} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: 'pointer' }}>
+              <button onClick={() => { setDeleteConfirmId(null); setDeleteError(null); }} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: 'pointer' }}>
                 Cancel
               </button>
-              <button onClick={handleDeletePosition} disabled={deleteRunning}
+              <button onClick={handleDeletePosition} disabled={deleteRunning} data-testid="confirm-delete"
                 style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: deleteRunning ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: deleteRunning ? 'not-allowed' : 'pointer' }}>
                 {deleteRunning ? 'REMOVING…' : 'CONFIRM DELETE'}
               </button>

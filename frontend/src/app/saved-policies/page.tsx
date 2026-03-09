@@ -40,6 +40,8 @@ import HelpPanel from "@/components/layout/HelpPanel";
 import { SAVED_POLICIES_HELP } from "@/lib/helpContent";
 import { POLICY_PRESETS } from "@/constants/policyPresets";
 import PolicyRevisionDrawer from "@/components/policy/PolicyRevisionDrawer";
+import PolicyDetailDrawer from "@/components/policy/PolicyDetailDrawer";
+import type { PolicyPreset } from "@/constants/policyPresets";
 
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
@@ -232,6 +234,38 @@ function sortPolicies(list: DemoPolicy[], sortKey: SortKey): DemoPolicy[] {
   else if (sortKey === "created") sorted.sort((a, b) => b.created.localeCompare(a.created));
   else if (sortKey === "risk") sorted.sort((a, b) => (RISK_ORDER[a.riskPosture] ?? 1) - (RISK_ORDER[b.riskPosture] ?? 1));
   return sorted;
+}
+
+// -- Build a PolicyPreset from template data for the detail drawer ----------------
+function buildPresetFromTemplate(tmpl: PolicyTemplate | DemoPolicy): PolicyPreset {
+  const shortName = typeof tmpl === 'object' && 'short_name' in tmpl
+    ? (tmpl as PolicyTemplate).short_name
+    : ('code' in tmpl ? (tmpl as DemoPolicy).code : '');
+  const match = POLICY_PRESETS.find(p => p.shortName === shortName);
+  if (match) return match;
+
+  const config = ('config' in tmpl ? tmpl.config : null) as Record<string, unknown> | null;
+  const hr = (config?.hedge_ratios ?? {}) as Record<string, number>;
+  const ca = (config?.cost_assumptions ?? {}) as Record<string, number>;
+  return {
+    id: ('id' in tmpl ? String(tmpl.id) : ''),
+    name: ('name' in tmpl ? String(tmpl.name) : ''),
+    shortName: shortName ?? '',
+    description: ('description' in tmpl ? String(tmpl.description ?? '') : ''),
+    targetAudience: '',
+    riskPosture: 'MODERATE' as const,
+    category: 'CORPORATE' as const,
+    formula: '', formulaExplain: '', rationale: '',
+    policy: {
+      bucket_mode: 'CALENDAR_MONTH' as const,
+      hedge_ratios: { confirmed: hr.confirmed ?? 0.8, forecast: hr.forecast ?? 0.5 },
+      cost_assumptions: { spread_bps: ca.spread_bps ?? 5 },
+      execution_product: (String(config?.execution_product ?? 'NDF')) as 'NDF' | 'FWD',
+      min_trade_size_usd: Number(config?.min_trade_size_usd ?? 0),
+    },
+    maturity_profile: 'MEDIUM', governance_tier: 'STANDARD',
+    evidence_grade: 'BASIC', accounting_mode: 'NONE',
+  };
 }
 
 // -- Stacked bar component --------------------------------------------------------
@@ -548,12 +582,13 @@ interface PolicyCardProps {
   onToggleFavorite?: () => void;
   onExport?: () => void;
   onHistory?: () => void;  // LOG-POLICY-1
+  onInspect?: () => void;
 }
 
 function PolicyCard({
   policy, showMeta, actionLoading,
   onActivate, onDeactivate, onEdit, onDuplicate, onDelete,
-  isFavorited, onToggleFavorite, onExport, onHistory,
+  isFavorited, onToggleFavorite, onExport, onHistory, onInspect,
 }: PolicyCardProps) {
   const [hovered, setHovered] = useState(false);
   const rc = riskColor(policy.riskPosture);
@@ -730,6 +765,20 @@ function PolicyCard({
             HISTORY
           </button>
         )}
+        {onInspect && (
+          <button
+            type="button"
+            onClick={onInspect}
+            title="Inspect policy detail"
+            style={{
+              fontFamily: S.fontMono, fontSize: "0.5625rem", letterSpacing: "0.06em",
+              padding: "3px 8px", border: `1px solid ${S.cyan}`,
+              color: S.cyan, background: "transparent", cursor: "pointer",
+            }}
+          >
+            INSPECT
+          </button>
+        )}
       </div>
     </div>
   );
@@ -816,6 +865,8 @@ export default function SavedPoliciesPage() {
   const [editLoading, setEditLoading] = useState(false);
   // LOG-POLICY-1: Revision history drawer
   const [historyDrawer, setHistoryDrawer] = useState<{ id: string; name: string; code: string } | null>(null);
+  // Policy detail drawer
+  const [detailDrawer, setDetailDrawer] = useState<{ preset: PolicyPreset; dbTemplate: PolicyTemplate | null } | null>(null);
 
   // Auth guard
   useEffect(() => {
@@ -1260,6 +1311,13 @@ export default function SavedPoliciesPage() {
                   } catch { addToast("error", 'Export failed'); }
                 } : undefined}
                 onHistory={() => setHistoryDrawer({ id: policy.id, name: policy.name, code: policy.code })}
+                onInspect={() => {
+                  const raw = policies.find(p => p.id === policy.id) ?? null;
+                  setDetailDrawer({
+                    preset: buildPresetFromTemplate(raw ?? policy),
+                    dbTemplate: raw,
+                  });
+                }}
               />
             ))}
           </div>
@@ -1338,6 +1396,16 @@ export default function SavedPoliciesPage() {
           templateCode={historyDrawer.code}
           token={token ?? undefined}
           onClose={() => setHistoryDrawer(null)}
+        />
+      )}
+
+      {/* Policy detail drawer */}
+      {detailDrawer && (
+        <PolicyDetailDrawer
+          preset={detailDrawer.preset}
+          dbTemplate={detailDrawer.dbTemplate}
+          token={token ?? undefined}
+          onClose={() => setDetailDrawer(null)}
         />
       )}
 

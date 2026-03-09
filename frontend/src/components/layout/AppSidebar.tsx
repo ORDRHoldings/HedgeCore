@@ -255,7 +255,7 @@ const NAV: NavSection[] = [
   },
   {
     label: "Hedge Desk", href: "/hedge-desk", icon: Ic.execution,
-    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/input", "/upload-csv", "/policy-desk", "/policies", "/calculate", "/results"],
+    prefixes: ["/hedge-desk", "/hedge-monitor", "/trade-history", "/position-desk", "/input", "/upload-csv", "/policy-desk", "/policy-dashboard", "/policies", "/calculate", "/results"],
     header: "HEDGE DESK",
     items: [
       // ── PRIMARY OPERATING LANE
@@ -264,6 +264,7 @@ const NAV: NavSection[] = [
       { label: "Monitor",        desc: "Live MTM P&L, drift, roll schedule",        href: "/hedge-monitor",    icon: Ic.bar_chart, badge: "LIVE",    badgeColor: S_GREEN, group: "OPERATE" },
       { label: "History",        desc: "Proposals, fills, slippage audit",           href: "/trade-history",    icon: Ic.clock,     badge: "LOG",     badgeColor: S_CYAN,  group: "OPERATE" },
       // ── REFERENCE
+      { label: "Policy Dashboard", desc: "Impact analysis & policy comparison",        href: "/policy-dashboard", icon: Ic.bar_chart,                                        group: "REFERENCE" },
       { label: "Policy Library", desc: "Institutional preset policies",              href: "/policies",         icon: Ic.book,                                             group: "REFERENCE" },
       { label: "Position Desk",  desc: "Position lifecycle management",              href: "/position-desk",    icon: Ic.table,                                            group: "REFERENCE" },
     ],
