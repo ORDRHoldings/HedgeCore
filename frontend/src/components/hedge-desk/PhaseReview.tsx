@@ -452,7 +452,7 @@ export default function PhaseReview({
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>
-            STEP 4 OF 5
+            STEP 5 OF 7
           </span>
           <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
           <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.primary }}>

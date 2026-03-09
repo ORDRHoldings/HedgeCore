@@ -6,13 +6,14 @@ import type { PositionRow } from "@/api/positionClient";
 import type { CalculateResult } from "./PhaseCalculate";
 import { saveDraft, loadDraft, clearDraft, draftAge, type HedgeDraft } from "@/lib/draftPersistence";
 
-import ProgressBar   from "./ProgressBar";
-import PhaseSelect   from "./PhaseSelect";
-import PhaseCalculate from "./PhaseCalculate";
-import PhaseRisk     from "./PhaseRisk";
-import PhaseReview   from "./PhaseReview";
-import PhaseExecute  from "./PhaseExecute";
-import PhaseComplete from "./PhaseComplete";
+import ProgressBar       from "./ProgressBar";
+import PhaseSelect       from "./PhaseSelect";
+import PhaseAssignPolicy from "./PhaseAssignPolicy";
+import PhaseCalculate    from "./PhaseCalculate";
+import PhaseRisk         from "./PhaseRisk";
+import PhaseReview       from "./PhaseReview";
+import PhaseExecute      from "./PhaseExecute";
+import PhaseComplete     from "./PhaseComplete";
 
 const HD = {
   bgDeep:  "var(--bg-deep)",
@@ -27,15 +28,16 @@ const HD = {
   rim:     "var(--border-rim)",
 } as const;
 
-const PHASES = ["SELECT", "CALCULATE", "RISK", "REVIEW", "EXECUTE", "COMPLETE"];
+const PHASES = ["SELECT", "ASSIGN POLICY", "CALCULATE", "RISK", "REVIEW", "EXECUTE", "COMPLETE"];
 
 const PHASE_INSTRUCTIONS: Record<number, string> = {
-  0: "Select open positions to include in this hedge run.",
-  1: "Configure policy parameters and run the hedge calculation engine.",
-  2: "Review risk metrics and confirm the risk assessment verdict.",
-  3: "Review hedge proposals and submit for execution approval.",
-  4: "Execute approved proposals and record fill details.",
-  5: "Hedge run complete. Review the summary or start a new run.",
+  0: "Select positions to include in this hedge run.",
+  1: "Assign a hedge policy to each position before calculation.",
+  2: "Configure policy parameters and run the hedge calculation engine.",
+  3: "Review risk metrics and confirm the risk assessment verdict.",
+  4: "Review hedge proposals and submit for execution approval.",
+  5: "Execute approved proposals and record fill details.",
+  6: "Hedge run complete. Review the summary or start a new run.",
 };
 
 interface HedgeDeskPipelineProps {
@@ -176,12 +178,10 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
               </button>
               <button
                 onClick={() => {
-                  // Resume: restore phase but start from SELECT with context
-                  // Since we only store IDs (not full objects), user needs to re-select
-                  // but the draft banner informed them of context
+                  // Clear stale draft and start fresh — positions must be re-selected
+                  // since we only store IDs (not full PositionRow objects)
                   setPendingDraft(null);
-                  // We can't fully restore positions without re-fetching, so start at phase 0
-                  // but the user knows they had a draft
+                  clearDraft(userId);
                 }}
                 style={{
                   fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
@@ -190,7 +190,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
                   cursor: "pointer", borderRadius: 2,
                 }}
               >
-                CONTINUE
+                DISMISS &amp; RE-SELECT
               </button>
             </div>
           </div>
@@ -227,12 +227,29 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
           </div>
         )}
 
-        {/* Phase 1: CALCULATE */}
+        {/* Phase 1: ASSIGN POLICY */}
         {phase === 1 && (
+          <div style={{ height: "100%", overflowY: "auto" }}>
+            <PhaseAssignPolicy
+              positions={selectedPositions}
+              token={token}
+              onComplete={(updatedPositions, instanceId) => {
+                setSelectedPositions(updatedPositions);
+                setPolicyInstanceId(instanceId);
+                advance();
+              }}
+              onBack={goBack}
+            />
+          </div>
+        )}
+
+        {/* Phase 2: CALCULATE */}
+        {phase === 2 && (
           <div style={{ height: "100%", overflowY: "auto" }}>
             <PhaseCalculate
               positions={selectedPositions}
               token={token}
+              initialPolicyInstanceId={policyInstanceId}
               onComplete={(result: CalculateResult) => {
                 setCalcResult(result.calcResponse);
                 setRunId(result.runId);
@@ -245,8 +262,8 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
           </div>
         )}
 
-        {/* Phase 2: RISK */}
-        {phase === 2 && (
+        {/* Phase 3: RISK */}
+        {phase === 3 && (
           <div style={{ height: "100%", overflowY: "auto" }}>
             <PhaseRisk
               positions={selectedPositions}
@@ -265,8 +282,8 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
           </div>
         )}
 
-        {/* Phase 3: REVIEW */}
-        {phase === 3 && (
+        {/* Phase 4: REVIEW */}
+        {phase === 4 && (
           <div style={{ height: "100%", overflowY: "auto" }}>
             <PhaseReview
               positions={selectedPositions}
@@ -285,8 +302,8 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
           </div>
         )}
 
-        {/* Phase 4: EXECUTE */}
-        {phase === 4 && (
+        {/* Phase 5: EXECUTE */}
+        {phase === 5 && (
           <div style={{ height: "100%", overflowY: "auto" }}>
             <PhaseExecute
               proposalIds={proposalIds}
@@ -303,8 +320,8 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
           </div>
         )}
 
-        {/* Phase 5: COMPLETE */}
-        {phase === 5 && (
+        {/* Phase 6: COMPLETE */}
+        {phase === 6 && (
           <div style={{ height: "100%", overflowY: "auto" }}>
             <PhaseComplete
               positions={selectedPositions}
@@ -320,7 +337,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
         )}
 
         {/* Safety fallback */}
-        {phase > 5 && (
+        {phase > 6 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
             <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.tertiary }}>
               PIPELINE COMPLETE

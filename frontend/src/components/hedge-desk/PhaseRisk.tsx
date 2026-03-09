@@ -284,7 +284,7 @@ export default function PhaseRisk({
         {/* Step header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
-            STEP 3 OF 5 — RISK
+            STEP 4 OF 7 — RISK
           </span>
           <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
             Evaluating hedge plan against policy constraints

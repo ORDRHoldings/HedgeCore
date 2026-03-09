@@ -28,9 +28,10 @@ export default function ProgressBar({
 }: ProgressBarProps) {
   function getSubtitle(label: string): string | null {
     const upper = label.toUpperCase();
-    if (upper === "SELECT")    return `${positionCount} selected`;
-    if (upper === "CALCULATE") return runId ? `run: ${runId.slice(0, 8)}` : `${positionCount} pos`;
-    if (upper === "COMPLETE")  return "✓ done";
+    if (upper === "SELECT")        return `${positionCount} selected`;
+    if (upper === "ASSIGN POLICY") return `${positionCount} pos`;
+    if (upper === "CALCULATE")     return runId ? `run: ${runId.slice(0, 8)}` : `${positionCount} pos`;
+    if (upper === "COMPLETE")      return "done";
     // RISK, REVIEW, EXECUTE
     return runId ? `run: ${runId.slice(0, 8)}` : null;
   }
@@ -148,7 +149,7 @@ export default function ProgressBar({
                 flex: 1,
                 height: 2,
                 minWidth: 24,
-                maxWidth: 80,
+                maxWidth: 60,
                 background: lineColor,
                 margin: "0 8px",
                 marginBottom: 22,

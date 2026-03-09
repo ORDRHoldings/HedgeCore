@@ -29,6 +29,7 @@ interface PhaseCalculateProps {
   token: string;
   onComplete: (result: CalculateResult) => void;
   onBack: () => void;
+  initialPolicyInstanceId?: string;
 }
 
 const DEFAULT_POLICY = {
@@ -61,7 +62,7 @@ function fmtUsd(n: number): string {
 /*  PhaseCalculate — Step 2: Confirm & run calculation                       */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-export default function PhaseCalculate({ positions, token, onComplete, onBack }: PhaseCalculateProps) {
+export default function PhaseCalculate({ positions, token, onComplete, onBack, initialPolicyInstanceId }: PhaseCalculateProps) {
   const [marketSnapshot, setMarketSnapshot] = useState<Record<string, unknown> | null>(null);
   const [marketLoading, setMarketLoading]   = useState(true);
   const [marketError, setMarketError]       = useState<TranslatedError | null>(null);
@@ -149,12 +150,18 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
 
   const loadPolicy = useCallback(async () => {
     setPolicyLoading(true);
+    // If policy was already assigned in Step 2, use that ID
+    if (initialPolicyInstanceId) {
+      setPolicyInstanceId(initialPolicyInstanceId);
+    }
     try {
       const polRes = await dashboardFetch("/v1/policies/active", token);
       if (polRes.ok) {
         const polData = await polRes.json();
         setPolicyConfig((polData.config ?? polData.parameters ?? DEFAULT_POLICY) as typeof DEFAULT_POLICY);
-        setPolicyInstanceId((polData.id ?? polData.policy_instance_id) as string | undefined);
+        if (!initialPolicyInstanceId) {
+          setPolicyInstanceId((polData.id ?? polData.policy_instance_id) as string | undefined);
+        }
         setPolicyName((polData.name ?? polData.policy_name ?? null) as string | null);
       }
     } catch {
@@ -162,7 +169,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
     } finally {
       setPolicyLoading(false);
     }
-  }, [token]);
+  }, [token, initialPolicyInstanceId]);
 
   useEffect(() => { loadMarket(); }, [loadMarket]);
   useEffect(() => { loadPolicy(); }, [loadPolicy]);
@@ -312,7 +319,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack }:
         {/* Step header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
-            STEP 2 OF 5 — CALCULATE
+            STEP 3 OF 7 — CALCULATE
           </span>
           <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
             Review inputs and run the hedge engine

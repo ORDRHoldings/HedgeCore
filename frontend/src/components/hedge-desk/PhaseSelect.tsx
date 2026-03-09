@@ -35,6 +35,7 @@ interface PhaseSelectProps {
 }
 
 const STATUS_LABEL: Record<string, { color: string; label: string }> = {
+  NEW:               { color: HD.amber,   label: "NEW" },
   POLICY_ASSIGNED:   { color: HD.cyan,    label: "POLICY ASSIGNED" },
   READY_TO_EXECUTE:  { color: HD.emerald, label: "READY" },
 };
@@ -96,7 +97,7 @@ export default function PhaseSelect({ token, onComplete }: PhaseSelectProps) {
         borderBottom: `1px solid ${HD.rim}`,
         flexShrink: 0,
       }}>
-        <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: HD.tertiary }}>STEP 1 OF 5</span>
+        <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: HD.tertiary }}>STEP 1 OF 7</span>
         <span style={{ width: 1, height: 14, background: HD.soft, display: "inline-block" }} />
         <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: HD.primary }}>SELECT POSITIONS</span>
       </div>
@@ -258,6 +259,7 @@ function SelectExistingTab({ token, basket, onToggle, onToggleAll }: {
       if (!result.ok) { setError(result.error); return; }
       const items: PositionRow[] = (result.data.items ?? []) as PositionRow[];
       const eligible = items.filter(p =>
+        p.execution_status === "NEW" ||
         p.execution_status === "POLICY_ASSIGNED" ||
         p.execution_status === "READY_TO_EXECUTE"
       );
@@ -296,7 +298,7 @@ function SelectExistingTab({ token, basket, onToggle, onToggleAll }: {
           {positions.filter(p => basketIds.has(p.id)).length} of {positions.length} ELIGIBLE
         </span>
         <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
-          Only POLICY ASSIGNED and READY positions shown. Max 50 per run.
+          NEW, POLICY ASSIGNED, and READY positions shown. Max 50 per run.
         </span>
       </div>
 
@@ -709,8 +711,7 @@ function ManualEntryTab({ token, onCreated }: {
       }}>
         <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.6 }}>
           Each position is created in the system immediately.
-          After creation, assign a policy from the <strong style={{ color: HD.cyan }}>Position Desk</strong> to
-          make it eligible for hedge calculation, then switch to the <strong style={{ color: HD.cyan }}>Select Existing</strong> tab.
+          Newly created positions will be assigned a policy in Step 2.
         </span>
       </div>
     </div>
@@ -764,6 +765,7 @@ function UploadTab({ token, onImported }: {
           if (res.ok) {
             const items = (res.data.items ?? []) as PositionRow[];
             const eligible = items.filter(p =>
+              p.execution_status === "NEW" ||
               p.execution_status === "POLICY_ASSIGNED" ||
               p.execution_status === "READY_TO_EXECUTE"
             );
@@ -905,9 +907,8 @@ function UploadTab({ token, onImported }: {
         borderRadius: 3,
       }}>
         <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.6 }}>
-          Imported positions must have a policy assigned before they can be included in a hedge run.
-          After import, assign policies from the <strong style={{ color: HD.cyan }}>Position Desk</strong>,
-          then switch to the <strong style={{ color: HD.cyan }}>Select Existing</strong> tab.
+          Imported positions will be assigned a policy in Step 2.
+          After import, proceed to assign policies inline.
         </span>
       </div>
     </div>
