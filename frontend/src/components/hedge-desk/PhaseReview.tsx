@@ -165,15 +165,16 @@ function CollapsibleSection({
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 interface PhaseReviewProps {
-  positions:        PositionRow[];
-  calcResult:       Record<string, unknown>;
-  riskVerdict:      string;
-  riskDecisionHash: string;
-  runId:            string;
-  token:            string;
-  governanceMode:   "solo" | "team";
-  onComplete:       (proposalIds: string[]) => void;
-  onBack:           () => void;
+  positions:            PositionRow[];
+  calcResult:           Record<string, unknown>;
+  riskVerdict:          string;
+  riskDecisionHash:     string;
+  runId:                string;
+  token:                string;
+  governanceMode:       "solo" | "team";
+  existingProposalIds?: string[];
+  onComplete:           (proposalIds: string[]) => void;
+  onBack:               () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -186,13 +187,15 @@ export default function PhaseReview({
   runId,
   token,
   governanceMode,
+  existingProposalIds,
   onComplete,
   onBack,
 }: PhaseReviewProps) {
+  const alreadySubmitted = (existingProposalIds?.length ?? 0) > 0;
   const [submitting, setSubmitting]   = useState(false);
   const [error, setError]             = useState<TranslatedError | null>(null);
-  const [submitted, setSubmitted]     = useState(false);
-  const [proposalIds, setProposalIds] = useState<string[]>([]);
+  const [submitted, setSubmitted]     = useState(alreadySubmitted);
+  const [proposalIds, setProposalIds] = useState<string[]>(existingProposalIds ?? []);
   const [copied, setCopied]           = useState<"text" | "json" | null>(null);
 
   const isSolo = governanceMode === "solo";
@@ -311,9 +314,32 @@ export default function PhaseReview({
     });
 
   const handleSubmit = async () => {
+    if (alreadySubmitted) return;
     setSubmitting(true);
     setError(null);
     try {
+      // Pre-flight: verify positions are not in terminal state
+      const terminalPositions = [];
+      for (const p of positions) {
+        try {
+          const check = await dashboardFetch(`/v1/positions/${p.id}`, token);
+          if (check.ok) {
+            const fresh = await check.json() as { execution_status?: string };
+            if (fresh.execution_status === "HEDGED" || fresh.execution_status === "REJECTED") {
+              terminalPositions.push({ id: p.id, status: fresh.execution_status });
+            }
+          }
+        } catch { /* network error — proceed, backend will catch */ }
+      }
+      if (terminalPositions.length > 0) {
+        const statuses = terminalPositions.map(tp => `${tp.id.slice(0, 8)}: ${tp.status}`).join(", ");
+        setError(translateError(409,
+          `${terminalPositions.length} position(s) already in terminal state (${statuses}). ` +
+          "Start a new run with eligible positions."
+        ));
+        setSubmitting(false);
+        return;
+      }
       const endpoint = isSolo ? "/v1/proposals/batch-and-approve" : "/v1/proposals/batch";
       const res = await dashboardFetch(endpoint, token, {
         method: "POST",

@@ -106,8 +106,14 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
   }, []);
 
   const goBack = useCallback(() => {
-    setPhase(p => Math.max(0, p - 1));
-  }, []);
+    setPhase(p => {
+      // Once execution is complete, don't allow going back
+      if (fillData) return p;
+      // Once proposals exist, don't go back past Review (phase 4)
+      if (proposalIds.length > 0 && p <= 5) return Math.max(4, p - 1);
+      return Math.max(0, p - 1);
+    });
+  }, [proposalIds.length, fillData]);
 
   const reset = useCallback(() => {
     setPhase(0);
@@ -124,10 +130,14 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
   }, [userId]);
 
   const handlePhaseClick = useCallback((i: number) => {
-    if (completedPhases.has(i)) {
-      setPhase(i);
-    }
-  }, [completedPhases]);
+    if (!completedPhases.has(i)) return;
+    // Once proposals exist (phase >= 5), prevent navigating back to Review or earlier
+    // to avoid re-submitting proposals for positions in terminal state.
+    // Once execution started (phase >= 6), prevent all backward navigation.
+    if (proposalIds.length > 0 && i < 4) return;
+    if (fillData && i < 6) return;
+    setPhase(i);
+  }, [completedPhases, proposalIds.length, fillData]);
 
   const dismissDraft = () => {
     setPendingDraft(null);
@@ -293,6 +303,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
               runId={runId}
               token={token}
               governanceMode={governanceMode}
+              existingProposalIds={proposalIds}
               onComplete={(ids) => {
                 setProposalIds(ids);
                 advance();
