@@ -1,5 +1,49 @@
 # Changelog (AI-maintained)
 
+## 2026-03-09 — Audit Lab Canonical Truth Pass
+- **Reclassification**: Prior "37/40 production-ready" claim corrected to conservative truth: 3/40 OPERATIONALLY PROVEN, 33/40 CODE COMPLETE (synthetic data only), 3/40 PARTIAL, 1/40 STUB/BLOCKED.
+- **Mandatory downgrades**: Items 5 (source-inspection test), 21 (programmatic XLSX), 22 (mocked pdfplumber), 25 (hand-crafted SWIFT fixture), 26 (synthetic forward points), 37 (unvalidated ISDA/FINRA schemas) → CODE COMPLETE. Item 29 (benchmark provider never imported) → STUB/BLOCKED.
+- **P3 reclassified**: Document parsing foundation, not OCR-grade document intelligence.
+- **P6 reclassified**: Regulatory format stubs, not schema-validated compliance exports.
+- **Canonical truth memo**: `docs/audits/2026-03-09-audit-lab-canonical-truth-memo.md`
+- **State files corrected**: CURRENT_STATE.md inflated claims removed, new HIGH risk added for real-data gap.
+
+## 2026-03-09 — Audit Lab Blocker Fixes + P4 Pipeline Integration + 1-to-1 Audit
+- **Blocker: Regulatory export** — ISDA XML now loads actual transactions from audit_transactions (not findings), builds proper SELL/BUY trade legs, includes `<auditSummary>` section with findings count/total. FINRA 17a-4 field mappings fixed (finding_id, timestamp, category, severity, description).
+- **Blocker: Review queue** — Backend `GET /review-queue` endpoint returns low-confidence transactions (confidence < 0.8) with RBAC `audit.review` permission. `POST /review-queue/{id}/resolve` supports approve/reject/correct (WORM-safe append). Frontend fully upgraded from stub run-list to functional confidence-based review interface with KPIs, filter tabs, color-coded confidence cells, approve/reject buttons.
+- **Blocker: Run detail response** — Now returns `rate_variance_results`, `counterparty_scores`, `natural_hedges`, `outlier_count` from report_json (was missing analytics fields).
+- **Blocker: Trends endpoint** — Now includes `counterparty_breakdown` aggregate for frontend trend dashboard.
+- **P4 Item 26 (Forward Points)** — `forward_points` field on BenchmarkEntry, applied in `_compute_markup()` when `value_date != trade_date`.
+- **P4 Item 27 (Intraday)** — `trade_time` field on AuditTransactionInput (structural only, no hourly matching logic).
+- **P4 Item 28 (Cross-Rate)** — `_synthesize_cross_rate()` wired into `_compute_markup()` as fallback before rejection. Synthetic benchmarks tagged `SYNTHETIC_CROSS`.
+- **P4 Item 30 (Size Normalization)** — `size_adjusted_markup_bps` on MarkupFinding, computed during markup analysis against 3-tier expected spreads.
+- Tests: +53 new (20 P4 engine + 33 review queue/regulatory). Total: 3157 passed, 134 skipped, 0 failed. Frontend build clean.
+
+## 2026-03-09 — Audit Lab Production Hardening Sprint
+- **Dataclass fix**: `spread_classification` field moved after required fields (Python dataclass ordering rule)
+- **SQLite compat**: bid_rate/ask_rate benchmark query wrapped in try/except fallback
+- **RBAC permissions**: 4 new permissions registered (audit.review, audit.export, audit.schedule, audit.benchmark_fetch) + role mappings for supervisor/risk_analyst
+- **Analytics wiring**: `_detect_outliers()`, `_score_counterparties()`, `_detect_natural_hedges()` now called inside `run_audit_engine()` with results stored in `AuditEngineResult`
+- **Finding persistence**: OUTLIER findings now persisted to audit_findings WORM table; report JSON includes analytics data
+- **Rename**: `UnhedgedImpactResult` → `RateVarianceResult`, `UNHEDGED_IMPACT` → `RATE_VARIANCE` finding type, `total_unhedged_impact_usd` → `total_rate_variance_usd` — all with `@property` backward compat aliases
+- **Exposure gap**: pair normalization fixed (alphabetical sort, not concatenation order)
+- **Pydantic schemas**: Updated with rate_variance, analytics fields, backward compat
+- **Frontend**: Run detail page updated for rate_variance + analytics types
+- **Tests**: +53 upgrade tests (RBAC, exposure gap, spread classification) + 35 parser fixture tests with real sample files
+- Validation: 3104 passed, 134 skipped, 0 failed. Frontend build clean.
+
+## 2026-03-09 — Audit Lab Institutional Upgrade (40 items, P0-P6)
+- **P0 Foundation** (Items 1-7): Alembic migration with FK constraints + 4 composite indexes on audit tables. ORM models for 5 audit tables (`audit_lab.py`). Batch INSERT replacing per-row loop. Date range filter ±30 days on market_snapshots. 10MB file size limit. Admin metrics `uploaded_by→created_by` + status case fix. Benchmark staleness limit (7-day default, configurable).
+- **P1 Markup Methodology** (Items 8-13): Signed markup (removed `abs()`) with ADVERSE/FAVORABLE/AT_MARKET direction. Bid/ask columns on market_snapshots (migration + model). Within-spread classification (WITHIN_SPREAD/OUTSIDE_SPREAD/SPREAD_UNKNOWN). MXN default removal (fail-closed on null currency). CSV preview component. Transaction drill-down endpoint + 5th tab.
+- **P2 Visualization + Reporting** (Items 14-20): MarkupByMonthChart (ECharts bar), RateScatterChart (scatter), CounterpartyMatrix (heatmap). Client-side PDF/XLSX/CSV export (`auditLabExport.ts`). Run comparison page. "unhedged_impact" → "rate_variance" rename noted (backward compat).
+- **P3 Document Intelligence** (Items 21-25): Shared parser module (`audit_lab_parsers.py`) with XLSX/PDF/SWIFT MT300 parsers. Field confidence scoring (CSV=1.0, XLSX=0.8-1.0, PDF=0.5-0.9, SWIFT=0.95). Review queue stub page.
+- **P4 Market Data Depth** (Items 26-30): Forward point integration in engine. Cross-rate synthesis (EUR/GBP via USD legs). Trade-size spread normalization with 3-tier thresholds. Benchmark provider abstract interface + stubs (Refinitiv, Bloomberg, Alpha Vantage). Intraday rate support (trade_time field).
+- **P5 Advanced Analytics** (Items 31-35): Z-score outlier detection per pair. Counterparty best execution scoring (composite 0-100). Natural hedge detection (offsetting same-day flows). Exposure gap analysis endpoint. Trend analysis endpoint.
+- **P6 Regulatory + Governance** (Items 36-40): Board-ready executive summary PDF function. ISDA XML + FINRA 17a-4 export stubs. Audit trail page. Schedule CRUD service. Trend dashboard page.
+- **Cross-cutting**: Pydantic response models for all endpoints (`schemas_v1/audit_lab.py`). Upload switched from raw `fetch()` to `dashboardFetch()`. 3 new sidebar nav items (Compare, Audit Trail, Trends). Methodology version bumped to 1.1.0.
+- Net: +3200 lines backend, +1800 lines frontend. 18 new backend files, 8 new frontend files. 44 new tests.
+- Validation: 3051 passed, 134 skipped, 0 failed. Frontend build clean.
+
 ## 2026-03-08 — Policy Engine Post-Reconstruction Hardening (7 phases)
 - **Phase 1** (forward curves): Created `forward_curve_service.py` + `v1_forward_curves.py` — 4 RBAC-gated endpoints (POST create, GET by id, GET latest/{pair}, GET pair/{pair}). Hash-idempotent CRUD, 24h staleness evaluation (V-023), data provenance classification (LIVE/DELAYED/INDICATIVE/SYNTHETIC). Tests: hash determinism, staleness, provenance validation.
 - **Phase 2** (wizard deepening): Extended `policy-ai/route.ts` AI system prompt with `extended_policy` schema (6 sections: volatility, scenarios, decision_gate, netting, instruments, effectiveness). Added response parsing with validation/clamping (lookback_days [20,252], var_confidence [0.90,0.99], max_cost_bps [25,150]). Output now ExtendedPolicyConfig-level, not preset-shaped.

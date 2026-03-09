@@ -310,6 +310,9 @@ const NAV: NavSection[] = [
     items: [
       { label: "Audit Lab",      desc: "Quantify markup, fees, unhedged variance", href: "/audit-lab",        icon: Ic.microscope, badge: "NEW", badgeColor: S_CYAN },
       { label: "Upload Dataset", desc: "CSV upload with period selector",          href: "/audit-lab/upload", icon: Ic.upload },
+      { label: "Compare Runs",  desc: "Side-by-side run comparison",              href: "/audit-lab/compare", icon: Ic.scales },
+      { label: "Audit Trail",   desc: "Immutable event log",                      href: "/audit-lab/audit-trail", icon: Ic.shield },
+      { label: "Trends",        desc: "Period-over-period trend analysis",        href: "/audit-lab/trends", icon: Ic.bar_chart },
     ],
   },
   {

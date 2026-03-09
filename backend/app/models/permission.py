@@ -361,6 +361,10 @@ SEED_PERMISSIONS: list[tuple[str, str, str, str]] = [
     # Audit Lab
     ("audit.upload", "audit", "upload", "Upload FX transaction dataset for Audit Lab analysis"),
     ("audit.run", "audit", "run", "Execute Audit Lab analysis run on uploaded dataset"),
+    ("audit.review", "audit", "review", "Access Audit Lab human review queue for low-confidence transactions"),
+    ("audit.export", "audit", "export", "Export Audit Lab reports (PDF, XLSX, CSV, regulatory)"),
+    ("audit.schedule", "audit", "schedule", "Create, edit, and delete scheduled audit runs"),
+    ("audit.benchmark_fetch", "audit", "benchmark_fetch", "Fetch benchmark rates from external providers"),
 
     # Decision Desk
     ("decisions.run", "decisions", "run", "Create Decision Desk run (generate hedge proposals)"),
@@ -403,6 +407,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
 
         "audit.view_own", "audit.view_branch",
         "audit.upload", "audit.run",
+        "audit.review", "audit.export", "audit.schedule",
 
         "decisions.run", "decisions.view",
 
@@ -432,6 +437,7 @@ DEFAULT_ROLE_PERMISSIONS: dict[str, list[str]] = {
         "reports.view_own_branch", "reports.export_pdf", "reports.export",
 
         "audit.view_own", "audit.view_branch",
+        "audit.upload", "audit.run", "audit.review", "audit.export",
 
         "system.schema.read",
 

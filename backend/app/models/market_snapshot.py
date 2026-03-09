@@ -84,6 +84,16 @@ class MarketSnapshot(Base):
         doc="Spot rate (USD per primary_currency, or primary_currency per USD depending on convention).",
     )
 
+    bid_rate: Mapped[float | None] = mapped_column(
+        Float, nullable=True,
+        doc="Bid rate (buy side). Nullable for backward compatibility.",
+    )
+
+    ask_rate: Mapped[float | None] = mapped_column(
+        Float, nullable=True,
+        doc="Ask rate (sell side). Nullable for backward compatibility.",
+    )
+
     payload: Mapped[dict] = mapped_column(
         JSONB, nullable=False,
         doc="Full MarketSnapshot payload (spot_rate, forward_points_by_month, provider_metadata).",

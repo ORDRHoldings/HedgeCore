@@ -123,15 +123,15 @@ async def get_funnel(
     audit_complete = 0
     try:
         upload_count = (await session.execute(
-            text("SELECT COUNT(DISTINCT uploaded_by) FROM audit_datasets WHERE created_at >= :since"),
+            text("SELECT COUNT(DISTINCT created_by) FROM audit_datasets WHERE created_at >= :since"),
             {"since": since},
         )).scalar() or 0
 
         audit_complete = (await session.execute(
             text("""
-                SELECT COUNT(DISTINCT d.uploaded_by) FROM audit_runs r
+                SELECT COUNT(DISTINCT d.created_by) FROM audit_runs r
                 JOIN audit_datasets d ON d.id = r.dataset_id
-                WHERE r.status = 'completed' AND r.created_at >= :since
+                WHERE r.status = 'COMPLETED' AND r.created_at >= :since
             """),
             {"since": since},
         )).scalar() or 0

@@ -199,7 +199,10 @@ class TestEngineApiIntegration:
                 reference=row["reference"],
             ))
 
-        benchmarks = [_make_benchmark(date(2025, 1, 15), "MXNUSD", 0.0556)]
+        benchmarks = [
+            _make_benchmark(date(2025, 1, 15), "MXNUSD", 0.0556),
+            _make_benchmark(date(2025, 2, 3), "MXNUSD", 0.0556),   # cover Feb txn within 7-day staleness
+        ]
         cfg = BenchmarkConfig(benchmark_source="market_snapshot")
         result = run_audit_engine(
             "ds-001", transactions, benchmarks, cfg,
@@ -207,8 +210,9 @@ class TestEngineApiIntegration:
         )
 
         # 3 rows of MXN→USD with mid_rate MXNUSD=0.0556, effective_rate ≈ 0.0552
+        # Signed markup: all effective rates < benchmark → negative (FAVORABLE)
         assert len(result.markup_findings) == 3
-        assert result.total_markup_usd > 0
+        assert result.total_markup_usd < 0  # all favorable (signed markup, no abs)
         assert len(result.fee_findings) == 3
         assert result.total_fees_usd > 0
 

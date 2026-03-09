@@ -1,0 +1,3 @@
+trade date,sell_ccy,buy_ccy,from_amount,to_amount,bank,fee,fee_ccy,ref
+2025-01-15,MXN,USD,500000,27600,Citi,150,USD,FX-A001
+2025-01-16,EUR,USD,250000,271250,HSBC,,USD,FX-A002

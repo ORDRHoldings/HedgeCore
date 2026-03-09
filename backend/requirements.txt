@@ -63,6 +63,7 @@ wrapt==1.17.3
 redis>=5.0.4
 pandas>=2.2.0
 openpyxl>=3.1.2
+pdfplumber>=0.10.0
 fpdf2>=2.7.9
 numpy>=1.26.0
 python-docx==0.8.11

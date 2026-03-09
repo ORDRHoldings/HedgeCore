@@ -42,6 +42,7 @@ import app.models.refresh_token      # ? JWT refresh token registry (if present)
 import app.models.proposal           # ? pipeline proposals
 import app.models.staging            # ? staging artifacts + approvals
 import app.models.ledger             # ? ledger entries + anchor hashes
+import app.models.audit_lab          # ? audit lab tables (datasets, transactions, runs, findings, reports)
 
 # -------------------------------------------------------------------
 # ?? Alembic configuration

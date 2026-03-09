@@ -8,6 +8,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import dynamic from "next/dynamic";
+
+const MarkupByMonthChart = dynamic(() => import("@/components/audit-lab/MarkupByMonthChart"), { ssr: false });
+const RateScatterChart = dynamic(() => import("@/components/audit-lab/RateScatterChart"), { ssr: false });
+const CounterpartyMatrix = dynamic(() => import("@/components/audit-lab/CounterpartyMatrix"), { ssr: false });
 
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -41,11 +46,15 @@ function SevColor(sev: string) {
 interface Summary {
   total_markup_usd: number;
   total_fees_usd: number;
-  total_unhedged_impact_usd: number;
+  total_rate_variance_usd: number;
+  total_unhedged_impact_usd: number; // backward compat
   total_loss_usd: number;
   data_quality_score: number;
   fee_confidence: string;
   markup_rejections_count: number;
+  outlier_count?: number;
+  counterparty_count?: number;
+  natural_hedge_count?: number;
 }
 
 interface Finding {
@@ -74,7 +83,11 @@ interface RunDetail {
   markup_by_pair: Record<string, number>;
   markup_by_counterparty: Record<string, number>;
   markup_by_month: Record<string, number>;
-  unhedged_results: Array<Record<string, unknown>>;
+  rate_variance_results: Array<Record<string, unknown>>;
+  unhedged_results: Array<Record<string, unknown>>; // backward compat
+  counterparty_scores?: Array<Record<string, unknown>>;
+  natural_hedges?: Array<Record<string, unknown>>;
+  outlier_count?: number;
 }
 
 function KpiCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
@@ -98,7 +111,11 @@ export default function AuditRunDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"findings" | "pairs" | "counterparties" | "evidence">("findings");
+  const [exportingBoard, setExportingBoard] = useState(false);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
+  const [activeTab, setActiveTab] = useState<"findings" | "pairs" | "counterparties" | "transactions" | "evidence">("findings");
+  const [transactions, setTransactions] = useState<Array<Record<string, unknown>>>([]);
+  const [txnLoaded, setTxnLoaded] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !run_id) return;
@@ -112,6 +129,15 @@ export default function AuditRunDetailPage() {
   }, [token, run_id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Lazy-load transactions on tab switch
+  useEffect(() => {
+    if (activeTab === "transactions" && !txnLoaded && token && run_id) {
+      dashboardFetch(`/v1/audit-lab/runs/${run_id}/transactions`, token)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.transactions) { setTransactions(data.transactions); setTxnLoaded(true); } });
+    }
+  }, [activeTab, txnLoaded, token, run_id]);
 
   const handleExport = async () => {
     if (!token || !run_id) return;
@@ -129,6 +155,37 @@ export default function AuditRunDetailPage() {
         URL.revokeObjectURL(url);
       }
     } finally { setExporting(false); }
+  };
+
+  const handleBoardSummary = async () => {
+    if (!run) return;
+    setExportingBoard(true);
+    try {
+      const { exportBoardSummaryPdf } = await import("@/utils/auditLabExport");
+      await exportBoardSummaryPdf(run);
+    } finally { setExportingBoard(false); }
+  };
+
+  const handleXlsxExport = async () => {
+    if (!run || !token || !run_id) return;
+    setExportingXlsx(true);
+    try {
+      // Ensure transactions are loaded
+      let txns = transactions;
+      if (!txnLoaded) {
+        const res = await dashboardFetch(`/v1/audit-lab/runs/${run_id}/transactions`, token);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.transactions) {
+            txns = data.transactions;
+            setTransactions(txns);
+            setTxnLoaded(true);
+          }
+        }
+      }
+      const { exportAuditLabXlsx } = await import("@/utils/auditLabExport");
+      exportAuditLabXlsx(run, txns as unknown as import("@/utils/auditLabExport").Transaction[]);
+    } finally { setExportingXlsx(false); }
   };
 
   if (loading) return <div style={{ padding: 40, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>Loading…</div>;
@@ -155,17 +212,41 @@ export default function AuditRunDetailPage() {
               v{run.methodology_version} · {new Date(run.created_at).toLocaleString()} · {run.status}
             </div>
           </div>
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            style={{
-              fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
-              color: S.primary, background: S.bgPanel,
-              border: `1px solid ${S.rim}`, padding: "8px 16px", cursor: "pointer", borderRadius: 2,
-            }}
-          >
-            {exporting ? "EXPORTING…" : "↓ EVIDENCE BINDER"}
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              style={{
+                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                color: S.primary, background: S.bgPanel,
+                border: `1px solid ${S.rim}`, padding: "8px 16px", cursor: "pointer", borderRadius: 2,
+              }}
+            >
+              {exporting ? "EXPORTING…" : "↓ EVIDENCE BINDER"}
+            </button>
+            <button
+              onClick={handleBoardSummary}
+              disabled={exportingBoard}
+              style={{
+                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                color: S.primary, background: S.bgPanel,
+                border: `1px solid ${S.rim}`, padding: "8px 16px", cursor: "pointer", borderRadius: 2,
+              }}
+            >
+              {exportingBoard ? "EXPORTING…" : "↓ BOARD SUMMARY"}
+            </button>
+            <button
+              onClick={handleXlsxExport}
+              disabled={exportingXlsx}
+              style={{
+                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                color: S.primary, background: S.bgPanel,
+                border: `1px solid ${S.rim}`, padding: "8px 16px", cursor: "pointer", borderRadius: 2,
+              }}
+            >
+              {exportingXlsx ? "EXPORTING…" : "↓ XLSX DATA"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -173,27 +254,43 @@ export default function AuditRunDetailPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
         <KpiCard label="Total Markup Cost" value={fmt(s.total_markup_usd)} color={s.total_markup_usd > 0 ? S.red : S.primary} />
         <KpiCard label="Explicit Fees" value={fmt(s.total_fees_usd)} sub={`Confidence: ${s.fee_confidence}`} />
-        <KpiCard label="Unhedged Variance" value={fmt(s.total_unhedged_impact_usd)} sub="Reference baseline — analytical what-if" color={S.amber} />
+        <KpiCard label="Rate Variance" value={fmt(s.total_rate_variance_usd ?? s.total_unhedged_impact_usd)} sub="Reference baseline — analytical what-if" color={S.amber} />
         <KpiCard label="Total Quantified Cost" value={fmt(s.total_loss_usd)} color={S.red} sub={`Data quality: ${s.data_quality_score?.toFixed(0)}%`} />
       </div>
 
+      {/* Markup by month chart */}
+      {Object.keys(run.markup_by_month).length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <MarkupByMonthChart markupByMonth={run.markup_by_month} />
+        </div>
+      )}
+
       {/* Tabs */}
       <div style={{ display: "flex", gap: 0, marginBottom: 0, borderBottom: `1px solid ${S.rim}` }}>
-        {(["findings", "pairs", "counterparties", "evidence"] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              fontFamily: S.fontMono, fontSize: 11, fontWeight: activeTab === tab ? 700 : 400,
-              color: activeTab === tab ? S.cyan : S.secondary,
-              background: "transparent", border: "none",
-              borderBottom: `2px solid ${activeTab === tab ? S.cyan : "transparent"}`,
-              padding: "10px 20px", cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase",
-            }}
-          >
-            {tab === "findings" ? `Findings (${run.findings.length})` : tab === "pairs" ? "By Pair" : tab === "counterparties" ? "By Counterparty" : "Evidence Rail"}
-          </button>
-        ))}
+        {(["findings", "pairs", "counterparties", "transactions", "evidence"] as const).map(tab => {
+          const labels: Record<string, string> = {
+            findings: `Findings (${run.findings.length})`,
+            pairs: "By Pair",
+            counterparties: "By Counterparty",
+            transactions: "Transactions",
+            evidence: "Evidence Rail",
+          };
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                fontFamily: S.fontMono, fontSize: 11, fontWeight: activeTab === tab ? 700 : 400,
+                color: activeTab === tab ? S.cyan : S.secondary,
+                background: "transparent", border: "none",
+                borderBottom: `2px solid ${activeTab === tab ? S.cyan : "transparent"}`,
+                padding: "10px 20px", cursor: "pointer", letterSpacing: "0.06em", textTransform: "uppercase",
+              }}
+            >
+              {labels[tab]}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderTop: "none" }}>
@@ -247,19 +344,72 @@ export default function AuditRunDetailPage() {
 
         {/* By counterparty tab */}
         {activeTab === "counterparties" && (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr style={{ background: S.bgSub }}>
-              {["Counterparty", "Markup Cost (USD)"].map(h => <th key={h} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>)}
-            </tr></thead>
-            <tbody>
-              {Object.entries(run.markup_by_counterparty).sort(([, a], [, b]) => b - a).map(([cp, usd]) => (
-                <tr key={cp} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontUI, fontSize: 13, color: S.primary, fontWeight: 600 }}>{cp}</td>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 13, color: S.red, fontWeight: 700 }}>{fmt(usd)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr style={{ background: S.bgSub }}>
+                {["Counterparty", "Markup Cost (USD)"].map(h => <th key={h} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {Object.entries(run.markup_by_counterparty).sort(([, a], [, b]) => b - a).map(([cp, usd]) => (
+                  <tr key={cp} style={{ borderBottom: `1px solid ${S.soft}` }}>
+                    <td style={{ padding: "10px 16px", fontFamily: S.fontUI, fontSize: 13, color: S.primary, fontWeight: 600 }}>{cp}</td>
+                    <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 13, color: S.red, fontWeight: 700 }}>{fmt(usd)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {txnLoaded && transactions.length > 0 && (
+              <div style={{ padding: 16 }}>
+                <CounterpartyMatrix transactions={transactions as never[]} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Transactions tab (Item 13) */}
+        {activeTab === "transactions" && (
+          <div>
+            {!txnLoaded ? (
+              <div style={{ padding: "24px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textAlign: "center" }}>Loading transactions…</div>
+            ) : (
+              <>
+                {transactions.length > 0 && (
+                  <div style={{ padding: 16 }}>
+                    <RateScatterChart transactions={transactions as never[]} />
+                  </div>
+                )}
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr style={{ background: S.bgSub }}>
+                    {["#", "Date", "Pair", "Sold", "Bought", "Rate", "Benchmark", "Markup", "Direction", "Counterparty"].map(h => (
+                      <th key={h} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {transactions.map((t: Record<string, unknown>) => {
+                      const dir = t.markup_direction as string | undefined;
+                      const dirColor = dir === "ADVERSE" ? S.red : dir === "FAVORABLE" ? S.green : S.tertiary;
+                      return (
+                        <tr key={t.id as string} style={{ borderBottom: `1px solid ${S.soft}` }}>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{t.row_index as number}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>{(t.trade_date as string) ?? "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.cyan }}>{(t.currency_sold as string) ?? ""}{(t.currency_bought as string) ?? ""}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>{t.amount_sold != null ? Number(t.amount_sold).toLocaleString() : "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>{t.amount_bought != null ? Number(t.amount_bought).toLocaleString() : "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>{t.effective_rate != null ? Number(t.effective_rate).toFixed(6) : "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.amber }}>{t.benchmark_rate != null ? Number(t.benchmark_rate).toFixed(6) : "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: dirColor }}>{t.markup_cost_usd != null ? fmt(Number(t.markup_cost_usd)) : "—"}</td>
+                          <td style={{ padding: "8px 12px" }}>
+                            {dir && <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: dirColor, background: `color-mix(in srgb, ${dirColor} 10%, transparent)`, padding: "2px 6px", borderRadius: 2 }}>{dir}</span>}
+                          </td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontUI, fontSize: 10, color: S.secondary }}>{(t.counterparty as string) ?? "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
         )}
 
         {/* Evidence rail tab */}

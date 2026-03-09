@@ -8,8 +8,9 @@ import { useState, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import dynamic from "next/dynamic";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
+const CsvPreview = dynamic(() => import("@/components/audit-lab/CsvPreview"), { ssr: false });
 
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -100,9 +101,8 @@ function AuditLabUploadPageInner() {
       form.append("period_start", periodStart);
       form.append("period_end", periodEnd);
 
-      const res = await fetch(`${API_BASE}/v1/audit-lab/datasets/upload`, {
+      const res = await dashboardFetch("/v1/audit-lab/datasets/upload", token, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
       const data = await res.json();
@@ -169,7 +169,7 @@ function AuditLabUploadPageInner() {
           Upload FX Transaction Dataset
         </h1>
         <p style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, marginTop: 6 }}>
-          CSV with columns: trade_date, currency_sold, currency_bought, amount_sold, amount_bought. Aliases supported.
+          CSV, XLSX, or PDF with columns: trade_date, currency_sold, currency_bought, amount_sold, amount_bought. Aliases supported.
         </p>
       </div>
 
@@ -219,7 +219,7 @@ function AuditLabUploadPageInner() {
                 <input
                   id="file-input"
                   type="file"
-                  accept=".csv,.txt"
+                  accept=".csv,.txt,.xlsx,.xls,.pdf"
                   style={{ display: "none" }}
                   onChange={e => { if (e.target.files?.[0]) setFile(e.target.files[0]); }}
                 />
@@ -238,6 +238,14 @@ function AuditLabUploadPageInner() {
                 )}
               </div>
             </div>
+
+            {/* CSV Preview — shown after file selection, before upload */}
+            {file && file.name.toLowerCase().endsWith(".csv") && (
+              <div>
+                <Label>File Preview</Label>
+                <CsvPreview file={file} />
+              </div>
+            )}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
