@@ -26,6 +26,11 @@ def _ensure_ib_insync():
     global _ib_insync
     if _ib_insync is None:
         try:
+            import nest_asyncio
+            nest_asyncio.apply()
+        except ImportError:
+            pass
+        try:
             import ib_insync as _mod
             _ib_insync = _mod
         except ImportError:
@@ -109,7 +114,7 @@ class IBKRProvider(MarketDataProvider):
         if not self.is_connected:
             await self.connect()
         contract = self._make_forex_contract(symbol)
-        self._ib.qualifyContracts(contract)
+        await self._ib.qualifyContractsAsync(contract)
         bars = await self._ib.reqHistoricalDataAsync(
             contract,
             endDateTime="",
@@ -141,7 +146,7 @@ class IBKRProvider(MarketDataProvider):
         for sym in symbols:
             try:
                 contract = ib_mod.Stock(sym, "SMART", "USD")
-                self._ib.qualifyContracts(contract)
+                await self._ib.qualifyContractsAsync(contract)
                 ticker = self._ib.reqMktData(contract, snapshot=True)
                 await self._ib.sleep(2)
                 mid = ticker.midpoint() if callable(getattr(ticker, "midpoint", None)) else (
@@ -235,7 +240,7 @@ class IBKRProvider(MarketDataProvider):
         if not self.is_connected:
             await self.connect()
         contract = self._make_forex_contract(pair)
-        self._ib.qualifyContracts(contract)
+        await self._ib.qualifyContractsAsync(contract)
         ticker = self._ib.reqMktData(contract, snapshot=True)
         await self._ib.sleep(2)
         return ticker
@@ -246,7 +251,7 @@ class IBKRProvider(MarketDataProvider):
             await self.connect()
 
         contract = self._make_forex_contract(pair)
-        self._ib.qualifyContracts(contract)
+        await self._ib.qualifyContractsAsync(contract)
         ticker = self._ib.reqMktData(contract, snapshot=True)
         await self._ib.sleep(2)
         spot = ticker.midpoint() if callable(getattr(ticker, "midpoint", None)) else 0.0
@@ -268,7 +273,7 @@ class IBKRProvider(MarketDataProvider):
         else:
             contract = ib_mod.Stock(underlying, "SMART", "USD")
 
-        self._ib.qualifyContracts(contract)
+        await self._ib.qualifyContractsAsync(contract)
         chains = await self._ib.reqSecDefOptParamsAsync(
             contract.symbol, "", contract.secType, contract.conId,
         )
