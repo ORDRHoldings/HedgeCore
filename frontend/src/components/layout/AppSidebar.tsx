@@ -271,10 +271,11 @@ const NAV: NavSection[] = [
   },
   {
     label: "Markets", href: "/market-intelligence", icon: Ic.bar_chart,
-    prefixes: ["/fx-market", "/market-intelligence"],
+    prefixes: ["/fx-market", "/market-intelligence", "/chart"],
     header: "Market Data",
     items: [
       { label: "Intelligence Hub", desc: "Live rates, carry, vol, provider health", href: "/market-intelligence", icon: Ic.bar_chart, badge: "LIVE", badgeColor: S_GREEN },
+      { label: "Chart Platform",   desc: "Canvas 2D charting — OHLCV, indicators, S/R",  href: "/chart",               icon: Ic.bar_chart, badge: "NEW", badgeColor: S_CYAN },
       { label: "FX Rates", desc: "Spot, forwards, vol surface, carry", href: "/fx-market", icon: Ic.bar_chart },
     ],
   },
