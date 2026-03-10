@@ -1,6 +1,7 @@
 """Interactive Brokers provider via ib_insync. Requires IB Gateway running."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import datetime, timezone
@@ -47,6 +48,37 @@ _INDICATIVE_RATES: dict[str, dict[str, float]] = {
     "ZAR": {"1M": 8.25, "3M": 8.40, "6M": 8.20, "12M": 7.80},
     "TRY": {"1M": 45.00, "3M": 42.00, "6M": 38.00, "12M": 35.00},
 }
+
+def _get_rate(ccy: str, tenor: str) -> float:
+    """Get annualized rate for ccy/tenor, linearly interpolating if tenor not in table."""
+    curve = _INDICATIVE_RATES.get(ccy, {})
+    if not curve:
+        return 0.0
+    if tenor in curve:
+        return curve[tenor] / 100.0
+    # Interpolate: 9M = avg(6M, 12M)
+    months = _TENOR_YEARS.get(tenor, 0.0) * 12
+    if months == 0:
+        return 0.0
+    lower_t, upper_t = None, None
+    for t, y in sorted(_TENOR_YEARS.items(), key=lambda x: x[1]):
+        if t in curve and y * 12 <= months:
+            lower_t = t
+        if t in curve and y * 12 >= months and upper_t is None:
+            upper_t = t
+    if lower_t and upper_t and lower_t != upper_t:
+        r_lo = curve[lower_t] / 100.0
+        r_hi = curve[upper_t] / 100.0
+        m_lo = _TENOR_YEARS[lower_t] * 12
+        m_hi = _TENOR_YEARS[upper_t] * 12
+        frac = (months - m_lo) / (m_hi - m_lo)
+        return r_lo + frac * (r_hi - r_lo)
+    if lower_t:
+        return curve[lower_t] / 100.0
+    if upper_t:
+        return curve[upper_t] / 100.0
+    return 0.0
+
 
 # Lazy import ib_insync — not available on Render (IBKR is optional)
 _ib_insync = None
@@ -178,7 +210,7 @@ class IBKRProvider(MarketDataProvider):
                 contract = ib_mod.Stock(sym, "SMART", "USD")
                 await self._ib.qualifyContractsAsync(contract)
                 ticker = self._ib.reqMktData(contract, snapshot=True)
-                await self._ib.sleep(2)
+                await asyncio.sleep(2)
                 mid = ticker.midpoint() if callable(getattr(ticker, "midpoint", None)) else (
                     (ticker.bid + ticker.ask) / 2 if ticker.bid and ticker.ask else 0.0
                 )
@@ -272,7 +304,7 @@ class IBKRProvider(MarketDataProvider):
         contract = self._make_forex_contract(pair)
         await self._ib.qualifyContractsAsync(contract)
         ticker = self._ib.reqMktData(contract, snapshot=True)
-        await self._ib.sleep(2)
+        await asyncio.sleep(2)
         return ticker
 
     async def _fetch_fx_forwards_raw(self, pair: str) -> tuple[float, list[dict]]:
@@ -292,7 +324,7 @@ class IBKRProvider(MarketDataProvider):
         contract = self._make_forex_contract(pair)
         await self._ib.qualifyContractsAsync(contract)
         ticker = self._ib.reqMktData(contract, snapshot=True)
-        await self._ib.sleep(2)
+        await asyncio.sleep(2)
         spot = ticker.midpoint() if callable(getattr(ticker, "midpoint", None)) else 0.0
 
         if not spot or spot != spot:  # NaN check
@@ -324,8 +356,8 @@ class IBKRProvider(MarketDataProvider):
         if tenor_years == 0.0:
             return 0.0
 
-        r_base = _INDICATIVE_RATES.get(base_ccy, {}).get(tenor, 0.0) / 100.0
-        r_quote = _INDICATIVE_RATES.get(quote_ccy, {}).get(tenor, 0.0) / 100.0
+        r_base = _get_rate(base_ccy, tenor)
+        r_quote = _get_rate(quote_ccy, tenor)
 
         fwd = spot * (1.0 + r_quote * tenor_years) / (1.0 + r_base * tenor_years)
         return fwd - spot
@@ -361,7 +393,7 @@ class IBKRProvider(MarketDataProvider):
                     opt = ib_mod.Option(underlying, target_expiry, strike, right, chain.exchange)
                     self._ib.qualifyContracts(opt)
                     ticker = self._ib.reqMktData(opt, snapshot=True)
-                    await self._ib.sleep(0.5)
+                    await asyncio.sleep(0.5)
                     results.append({
                         "strike": strike,
                         "type": "CALL" if right == "C" else "PUT",
