@@ -51,7 +51,6 @@ const _FX_PAIRS = [
   "USDCNY", "USDINR", "USDSGD", "USDKRW", "USDHKD",
   "USDAUD", "USDNZD",
 ] as const;
-void _FX_PAIRS;
 
 const JPY_PAIRS = new Set(["USDJPY"]);
 const HIGH_VALUE_PAIRS = new Set(["USDCOP", "USDCLP", "USDKRW"]);
@@ -90,6 +89,13 @@ interface HealthReport {
   overall_healthy: boolean;
   stale_count: number;
   fresh_count: number;
+}
+
+interface ForwardCurveData {
+  pair: string;
+  spot_mid: number | null;
+  forward_points: Record<string, number>;
+  source: string;
 }
 
 // ── Polling intervals ────────────────────────────────────────────────────────
@@ -786,6 +792,144 @@ function MarketHealthBar({
   );
 }
 
+// ── Carry Scorecard ──────────────────────────────────────────────────────
+function CarryScorecard({
+  rates,
+  forwardCurves,
+}: {
+  rates: FXRate[];
+  forwardCurves: Record<string, ForwardCurveData>;
+}) {
+  const carryData = rates
+    .map((r) => {
+      const curve = forwardCurves[r.symbol];
+      const pts12m = curve?.forward_points?.["12M"] ?? 0;
+      const pts3m = curve?.forward_points?.["3M"] ?? 0;
+      const isJpy = JPY_PAIRS.has(r.symbol);
+      const mult = isJpy ? 100 : HIGH_VALUE_PAIRS.has(r.symbol) ? 1 : 10000;
+      const carryPips = pts12m * mult;
+      return { symbol: r.symbol, mid: r.mid, pts3m, pts12m, carryPips };
+    })
+    .filter((c) => c.pts12m !== 0)
+    .sort((a, b) => b.carryPips - a.carryPips);
+
+  if (carryData.length === 0) {
+    return (
+      <div
+        style={{
+          padding: 20,
+          textAlign: "center",
+          fontFamily: S.fontUI,
+          fontSize: 13,
+          color: S.tertiary,
+          background: S.bgPanel,
+          borderRadius: 6,
+          border: `1px solid ${S.rim}`,
+        }}
+      >
+        No forward curve data available — ingest snapshots to see carry rankings
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        background: S.bgPanel,
+        borderRadius: 6,
+        border: `1px solid ${S.rim}`,
+        overflow: "hidden",
+      }}
+    >
+      {/* Header row */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 90px 90px 90px 80px",
+          padding: "8px 16px",
+          background: S.bgSub,
+          borderBottom: `1px solid ${S.rim}`,
+          fontFamily: S.fontMono,
+          fontSize: 10,
+          fontWeight: 600,
+          color: S.tertiary,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+        }}
+      >
+        <span>Pair</span>
+        <span style={{ textAlign: "right" }}>Spot</span>
+        <span style={{ textAlign: "right" }}>3M Pts</span>
+        <span style={{ textAlign: "right" }}>12M Pts</span>
+        <span style={{ textAlign: "right" }}>Carry</span>
+      </div>
+      {/* Data rows */}
+      {carryData.map((c, i) => {
+        const isJpy = JPY_PAIRS.has(c.symbol);
+        const isHigh = HIGH_VALUE_PAIRS.has(c.symbol);
+        return (
+          <div
+            key={c.symbol}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 90px 90px 90px 80px",
+              padding: "6px 16px",
+              fontFamily: S.fontMono,
+              fontSize: 12,
+              color: S.primary,
+              borderBottom:
+                i < carryData.length - 1
+                  ? `1px solid ${S.rim}`
+                  : "none",
+            }}
+          >
+            <span style={{ fontWeight: 600 }}>
+              {c.symbol.slice(0, 3)}
+              <span style={{ color: S.tertiary }}>/</span>
+              {c.symbol.slice(3)}
+            </span>
+            <span style={{ textAlign: "right" }}>
+              {isHigh
+                ? c.mid.toFixed(2)
+                : isJpy
+                  ? c.mid.toFixed(3)
+                  : c.mid.toFixed(4)}
+            </span>
+            <span
+              style={{
+                textAlign: "right",
+                color: c.pts3m >= 0 ? S.green : S.red,
+              }}
+            >
+              {c.pts3m >= 0 ? "+" : ""}
+              {c.pts3m.toFixed(4)}
+            </span>
+            <span
+              style={{
+                textAlign: "right",
+                color: c.pts12m >= 0 ? S.green : S.red,
+              }}
+            >
+              {c.pts12m >= 0 ? "+" : ""}
+              {c.pts12m.toFixed(4)}
+            </span>
+            <span
+              style={{
+                textAlign: "right",
+                fontWeight: 700,
+                color: c.carryPips >= 0 ? S.green : S.red,
+              }}
+            >
+              {c.carryPips >= 0 ? "+" : ""}
+              {c.carryPips.toFixed(0)}p
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function MarketIntelligencePage() {
   const { token, user } = useAuth();
@@ -797,6 +941,7 @@ export default function MarketIntelligencePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState("");
   const [utcClock, setUtcClock] = useState(utcNow());
+  const [forwardCurves, setForwardCurves] = useState<Record<string, ForwardCurveData>>({});
   const [fxError, setFxError] = useState<string | null>(null);
   const [sectorError, setSectorError] = useState<string | null>(null);
 
@@ -845,6 +990,20 @@ export default function MarketIntelligencePage() {
     }
   }, [token]);
 
+  const fetchForwardCurves = useCallback(async () => {
+    if (!token) return;
+    try {
+      const pairsParam = _FX_PAIRS.join(",");
+      const res = await dashboardFetch(`/v1/forward-curves/bulk-latest?pairs=${pairsParam}`, token);
+      if (res.ok) {
+        const data = await res.json();
+        setForwardCurves(data.curves ?? {});
+      }
+    } catch {
+      // Forward curves are supplemental, silently ignore
+    }
+  }, [token]);
+
   const fetchHealth = useCallback(async () => {
     if (!token) return;
     try {
@@ -859,10 +1018,10 @@ export default function MarketIntelligencePage() {
   }, [token]);
 
   const fetchAll = useCallback(async () => {
-    await Promise.all([fetchFxRates(), fetchSectors(), fetchHealth()]);
+    await Promise.all([fetchFxRates(), fetchSectors(), fetchHealth(), fetchForwardCurves()]);
     setLastRefresh(utcNow());
     setLoading(false);
-  }, [fetchFxRates, fetchSectors, fetchHealth]);
+  }, [fetchFxRates, fetchSectors, fetchHealth, fetchForwardCurves]);
 
   // ── Initial load + polling ───────────────────────────────────────────────
   useEffect(() => {
@@ -885,9 +1044,18 @@ export default function MarketIntelligencePage() {
   // ── Force refresh handler ────────────────────────────────────────────────
   const handleForceRefresh = useCallback(async () => {
     setRefreshing(true);
+    // Trigger backend provider refresh first
+    try {
+      await dashboardFetch("/v1/market-data/refresh", token!, {
+        method: "POST",
+        body: JSON.stringify({ data_type: "fx_spot" }),
+      });
+    } catch {
+      // Best-effort, continue to re-fetch frontend data
+    }
     await fetchAll();
     setRefreshing(false);
-  }, [fetchAll]);
+  }, [token, fetchAll]);
 
   // ── Auth gate ────────────────────────────────────────────────────────────
   if (!token || !user) {
@@ -1062,6 +1230,12 @@ export default function MarketIntelligencePage() {
                 </div>
               )}
               <FXHeatmapGrid rates={fxRates} />
+            </div>
+
+            {/* Carry Scorecard */}
+            <div style={{ marginBottom: 24 }}>
+              <SectionTitle icon={TrendingUp} title="Carry Scorecard — 12M Ranked" />
+              <CarryScorecard rates={fxRates} forwardCurves={forwardCurves} />
             </div>
 
             {/* Sector Performance */}
