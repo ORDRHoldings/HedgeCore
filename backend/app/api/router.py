@@ -237,3 +237,11 @@ router.include_router(v1_volatility_snapshots_router)
 # Geopolitical risk snapshots (owns /v1/geo-snapshots)
 from app.api.routes.v1_geo_snapshots import router as v1_geo_snapshots_router
 router.include_router(v1_geo_snapshots_router)
+
+# Market data admin (owns /v1/market-data)
+from app.api.routes.v1_market_data_admin import router as v1_market_data_admin_router
+router.include_router(v1_market_data_admin_router)
+
+# Equity snapshots (owns /v1/equity-snapshots)
+from app.api.routes.v1_equity_snapshots import router as v1_equity_snapshots_router
+router.include_router(v1_equity_snapshots_router)

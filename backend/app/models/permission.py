@@ -370,6 +370,26 @@ SEED_PERMISSIONS: list[tuple[str, str, str, str]] = [
     ("decisions.run", "decisions", "run", "Create Decision Desk run (generate hedge proposals)"),
     ("decisions.view", "decisions", "view", "View Decision Desk runs and proposals"),
 
+    # Forward curves (referenced by v1_forward_curves routes)
+    ("forward_curve.create", "forward_curve", "create", "Create forward curve snapshots"),
+    ("forward_curve.read", "forward_curve", "read", "Read forward curve snapshots"),
+
+    # Volatility snapshots (referenced by v1_volatility_snapshots routes)
+    ("volatility.snapshot.create", "volatility", "snapshot.create", "Create volatility snapshots"),
+    ("volatility.snapshot.read", "volatility", "snapshot.read", "Read volatility snapshots"),
+
+    # Equity snapshots
+    ("equity.snapshot.create", "equity", "snapshot.create", "Create equity snapshots"),
+    ("equity.snapshot.read", "equity", "snapshot.read", "Read equity snapshots"),
+
+    # Options snapshots
+    ("options.snapshot.create", "options", "snapshot.create", "Create options snapshots"),
+    ("options.snapshot.read", "options", "snapshot.read", "Read options snapshots"),
+
+    # Market data admin
+    ("market_data.admin", "market_data", "admin", "Access market data admin panel"),
+    ("market_data.refresh", "market_data", "refresh", "Trigger manual data refresh"),
+
 ]
 
 
