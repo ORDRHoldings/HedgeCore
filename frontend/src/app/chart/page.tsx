@@ -240,6 +240,7 @@ function ChartPageInner() {
           source={source}
           loading={loading}
           error={error}
+          onPairChange={setPair}
         />
       </div>
     </div>

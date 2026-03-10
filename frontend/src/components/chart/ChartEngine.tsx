@@ -1,10 +1,13 @@
 "use client";
 /**
- * ChartEngine.tsx — ORDR Canvas 2D Charting Platform
+ * ChartEngine.tsx — ORDR Canvas 2D Charting Platform (TradingView Parity)
  *
- * Institutional FX charting with 23 indicators, multi-sub-pane (up to 3),
- * volume profile, smooth zoom/pan with momentum, dark theme, drawing tools.
- * Zero external charting dependencies. 60fps via requestAnimationFrame.
+ * Full-featured institutional charting: 7 chart types, 23 indicators,
+ * multi-sub-pane, volume profile, smooth zoom/pan with momentum,
+ * left drawing toolbar, symbol search, context menu, keyboard shortcuts,
+ * axis drag-to-scale, screenshot export, fullscreen, bar countdown,
+ * session highlighting, undo/redo, and dark theme.
+ * Zero external dependencies. 60fps via requestAnimationFrame.
  */
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import type {
@@ -51,8 +54,27 @@ import {
   drawCCI, drawADX, drawMFI, drawCMF, drawOBV,
 } from "./renderers/oscillators";
 import { drawVolumeProfile } from "./renderers/volumeProfile";
+import { drawCurrentPriceLine, drawOHLCLegend } from "./renderers/priceLine";
+import {
+  drawLineChart, drawAreaChart, drawBarChart,
+  drawHollowCandles, drawHeikinAshi, drawBaseline,
+} from "./renderers/chartTypes";
+import type { ChartType } from "./renderers/chartTypes";
+import { drawSessions } from "./renderers/sessions";
+import {
+  matchShortcut, detectMouseZone,
+  createAxisDragState, startAxisDrag, moveAxisDrag, endAxisDrag,
+  applyTimeScale,
+} from "./core/interactions";
+import type { AxisDragState } from "./core/interactions";
+import { exportScreenshot, toggleFullscreen } from "./core/utils";
 import ChartToolbar from "./ChartToolbar";
 import type { ChartIndicatorConfig } from "./ChartToolbar";
+import ChartLeftToolbar from "./ChartLeftToolbar";
+import ChartStatusBar from "./ChartStatusBar";
+import ChartSymbolSearch from "./ChartSymbolSearch";
+import ChartContextMenu from "./ChartContextMenu";
+import ChartIndicatorDialog from "./ChartIndicatorDialog";
 
 /* ═══════════════════════════════════════════════════════
    Types & Defaults
@@ -65,6 +87,7 @@ interface Props {
   source?: string;
   loading?: boolean;
   error?: string | null;
+  onPairChange?: (pair: string) => void;
 }
 
 const DEFAULT_CONFIG: ChartIndicatorConfig = {
@@ -105,16 +128,17 @@ function withPane(layout: ChartLayout, pane: SubPaneLayout): ChartLayout {
    Component
    ═══════════════════════════════════════════════════════ */
 
-export default function ChartEngine({ bars, pair, interval, source, loading, error }: Props) {
+export default function ChartEngine({ bars, pair, interval, source, loading, error, onPairChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const animRef = useRef<number>(0);
+  const outerRef = useRef<HTMLDivElement>(null);
 
   // High-frequency state via refs (60fps, no React re-render)
   const zoomRef = useRef<ZoomPanState>(
     createInitialZoomState(bars.length, Math.min(200, bars.length)),
   );
   const crosshairRef = useRef<CrosshairState>({ x: 0, y: 0, visible: false, snapIndex: 0 });
+  const axisDragRef = useRef<AxisDragState>(createAxisDragState());
 
   // Low-frequency state
   const [dimensions, setDimensions] = useState({ w: 1200, h: 600 });
@@ -125,7 +149,21 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
   const [drawingPoints, setDrawingPoints] = useState<{ index: number; price: number }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Layout
+  // New TradingView features
+  const [chartType, setChartType] = useState<ChartType>("candles");
+  const [activeTool, setActiveTool] = useState<string>("crosshair");
+  const [priceScale, setPriceScale] = useState<"linear" | "log" | "percent">("linear");
+  const [showSymbolSearch, setShowSymbolSearch] = useState(false);
+  const [showIndicatorDialog, setShowIndicatorDialog] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; open: boolean }>({ x: 0, y: 0, open: false });
+  const [enabledSessions, setEnabledSessions] = useState<string[]>([]);
+
+  // Undo/redo stack
+  const [undoStack, setUndoStack] = useState<Drawing[][]>([]);
+  const [redoStack, setRedoStack] = useState<Drawing[][]>([]);
+
+  // Layout (left toolbar adds 40px)
+  const LEFT_TOOLBAR_WIDTH = 40;
   const layout = useMemo(
     () => computeLayout(dimensions.w, dimensions.h, activeSubPanes.length),
     [dimensions.w, dimensions.h, activeSubPanes.length],
@@ -180,7 +218,12 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
   }, [bars, config, activeSubPanes]);
 
   // Load drawings
-  useEffect(() => { setDrawings(loadDrawings(pair)); }, [pair]);
+  useEffect(() => {
+    const loaded = loadDrawings(pair);
+    setDrawings(loaded);
+    setUndoStack([loaded]);
+    setRedoStack([]);
+  }, [pair]);
 
   // Reset zoom on bar change
   useEffect(() => {
@@ -203,7 +246,7 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     return () => ro.disconnect();
   }, []);
 
-  // Native wheel listener with { passive: false } to reliably prevent page scroll
+  // Native wheel listener with { passive: false }
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -217,6 +260,123 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     canvas.addEventListener("wheel", onWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", onWheel);
   }, [layout, bars.length]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Don't capture if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (showSymbolSearch || showIndicatorDialog) return;
+
+      const action = matchShortcut(e);
+      if (!action) return;
+
+      e.preventDefault();
+      switch (action) {
+        case "panLeft": {
+          const z = zoomRef.current;
+          const step = (z.targetEnd - z.targetStart) * 0.1;
+          zoomRef.current = { ...z, targetStart: Math.max(0, z.targetStart - step), targetEnd: z.targetEnd - step, isAnimating: true };
+          break;
+        }
+        case "panRight": {
+          const z = zoomRef.current;
+          const step = (z.targetEnd - z.targetStart) * 0.1;
+          zoomRef.current = { ...z, targetStart: z.targetStart + step, targetEnd: Math.min(bars.length - 1, z.targetEnd + step), isAnimating: true };
+          break;
+        }
+        case "zoomIn":
+          zoomRef.current = applyTimeScale(zoomRef.current, 0.85, bars.length);
+          break;
+        case "zoomOut":
+          zoomRef.current = applyTimeScale(zoomRef.current, 1.18, bars.length);
+          break;
+        case "cancel":
+          setDrawingMode(null);
+          setDrawingPoints([]);
+          setContextMenu(p => ({ ...p, open: false }));
+          break;
+        case "resetChart":
+          zoomRef.current = createInitialZoomState(bars.length, Math.min(200, bars.length));
+          break;
+        case "undo":
+          handleUndo();
+          break;
+        case "redo":
+          handleRedo();
+          break;
+        case "screenshot":
+          if (canvasRef.current) exportScreenshot(canvasRef.current, pair);
+          break;
+        case "fullscreen":
+          if (outerRef.current) toggleFullscreen(outerRef.current);
+          break;
+        case "openIndicators":
+          setShowIndicatorDialog(true);
+          break;
+        case "openSymbolSearch":
+          setShowSymbolSearch(true);
+          break;
+        case "drawTrendline":
+          setDrawingMode("trendline");
+          setActiveTool("trendline");
+          break;
+        case "drawHorizontal":
+          setDrawingMode("horizontal");
+          setActiveTool("horizontal");
+          break;
+        case "drawFibonacci":
+          setDrawingMode("fibonacci");
+          setActiveTool("fibonacci");
+          break;
+        case "drawRectangle":
+          setDrawingMode("rectangle");
+          setActiveTool("rectangle");
+          break;
+        case "deleteDrawing":
+          // Delete last drawing
+          if (drawings.length > 0) {
+            const updated = drawings.slice(0, -1);
+            pushDrawingState(updated);
+          }
+          break;
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [bars.length, pair, drawings, showSymbolSearch, showIndicatorDialog]);
+
+  /* ─── Drawing undo/redo ─── */
+  const pushDrawingState = useCallback((newDrawings: Drawing[]) => {
+    setDrawings(newDrawings);
+    saveDrawings(pair, newDrawings);
+    setUndoStack(prev => [...prev, newDrawings]);
+    setRedoStack([]);
+  }, [pair]);
+
+  const handleUndo = useCallback(() => {
+    setUndoStack(prev => {
+      if (prev.length <= 1) return prev;
+      const newStack = prev.slice(0, -1);
+      const restored = newStack[newStack.length - 1];
+      setDrawings(restored);
+      saveDrawings(pair, restored);
+      setRedoStack(r => [...r, prev[prev.length - 1]]);
+      return newStack;
+    });
+  }, [pair]);
+
+  const handleRedo = useCallback(() => {
+    setRedoStack(prev => {
+      if (prev.length === 0) return prev;
+      const newStack = prev.slice(0, -1);
+      const restored = prev[prev.length - 1];
+      setDrawings(restored);
+      saveDrawings(pair, restored);
+      setUndoStack(u => [...u, restored]);
+      return newStack;
+    });
+  }, [pair]);
 
   /* ─── Render ─── */
   const render = useCallback(() => {
@@ -236,18 +396,24 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     const viewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
     const ch = crosshairRef.current;
 
+    // Background
     ctx.fillStyle = THEME.canvasBg;
     ctx.fillRect(0, 0, dimensions.w, dimensions.h);
 
-    // Watermark — faded pair name like TradingView
+    // Watermark — faded pair name
     ctx.save();
     ctx.font = `bold ${Math.min(layout.mainHeight * 0.18, 120)}px 'IBM Plex Mono', monospace`;
-    ctx.fillStyle = "rgba(42,46,57,0.25)";
+    ctx.fillStyle = "rgba(42,46,57,0.18)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    const watermarkText = pair.length > 3 ? `${pair.slice(0,3)}/${pair.slice(3)}` : pair;
+    const watermarkText = pair.length > 3 ? `${pair.slice(0, 3)}/${pair.slice(3)}` : pair;
     ctx.fillText(watermarkText, layout.chartLeft + layout.chartWidth / 2, layout.mainTop + layout.mainHeight / 2);
     ctx.restore();
+
+    // Session highlighting (behind everything)
+    if (enabledSessions.length > 0) {
+      drawSessions(ctx, bars, layout, viewport, enabledSessions);
+    }
 
     // Layer 1: Behind candles
     if (indicators.sr.length > 0) drawSRLevels(ctx, indicators.sr, layout, viewport);
@@ -256,8 +422,30 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     for (const band of indicators.bands) drawBands(ctx, band.points, bars, layout, viewport, band.fill, band.line);
     if (indicators.ichimoku.length > 0) drawIchimoku(ctx, indicators.ichimoku, bars, layout, viewport);
 
-    // Layer 2: Candlesticks
-    drawCandlesticks(ctx, bars, layout, viewport);
+    // Layer 2: Price data (chart type dispatch)
+    switch (chartType) {
+      case "candles":
+        drawCandlesticks(ctx, bars, layout, viewport);
+        break;
+      case "hollow":
+        drawHollowCandles(ctx, bars, layout, viewport);
+        break;
+      case "bars":
+        drawBarChart(ctx, bars, layout, viewport);
+        break;
+      case "line":
+        drawLineChart(ctx, bars, layout, viewport);
+        break;
+      case "area":
+        drawAreaChart(ctx, bars, layout, viewport);
+        break;
+      case "heikinAshi":
+        drawHeikinAshi(ctx, bars, layout, viewport);
+        break;
+      case "baseline":
+        drawBaseline(ctx, bars, layout, viewport);
+        break;
+    }
 
     // Layer 3: Overlays on top
     for (const line of indicators.overlayLines) drawIndicatorLine(ctx, line.points, bars, layout, viewport, line.color);
@@ -265,11 +453,14 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     if (indicators.parabolicSAR.length > 0) drawParabolicSAR(ctx, indicators.parabolicSAR, bars, layout, viewport);
     if (indicators.pivotPoints) drawPivotPoints(ctx, indicators.pivotPoints, layout, viewport);
 
-    // Layer 4: Volume
+    // Layer 4: Current price line
+    drawCurrentPriceLine(ctx, bars, layout, viewport, pair);
+
+    // Layer 5: Volume
     drawVolume(ctx, bars, layout, viewport);
     if (indicators.volumeProfile) drawVolumeProfile(ctx, indicators.volumeProfile, layout, viewport);
 
-    // Layer 5: Sub-panes
+    // Layer 6: Sub-panes
     for (let i = 0; i < activeSubPanes.length; i++) {
       const pane = layout.subPanes[i];
       if (!pane) continue;
@@ -289,19 +480,22 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
       }
     }
 
-    // Layer 6: Drawings
+    // Layer 7: Drawings
     drawDrawings(ctx, drawings, layout, viewport, pair);
 
-    // Layer 7: Axes
+    // Layer 8: Axes
     drawPriceAxis(ctx, layout, viewport, pair);
     drawTimeAxis(ctx, layout, viewport, bars, interval);
 
-    // Layer 8: Crosshair
+    // Layer 9: Crosshair
     drawCrosshair(ctx, ch, layout, viewport, bars, pair);
 
-    // Layer 9: Legend
+    // Layer 10: OHLC Legend (top-left, on top of everything)
+    drawOHLCLegend(ctx, bars, layout, viewport, pair, ch.visible ? ch.snapIndex : -1);
+
+    // Layer 11: Legend (indicator labels)
     drawLegend(ctx, indicators.overlayLines, indicators.bands, layout);
-  }, [bars, layout, indicators, drawings, pair, interval, activeSubPanes, dimensions]);
+  }, [bars, layout, indicators, drawings, pair, interval, activeSubPanes, dimensions, chartType, enabledSessions]);
 
   /* ─── Animation loop ─── */
   useEffect(() => {
@@ -323,6 +517,15 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // Axis drag
+    if (axisDragRef.current.isDragging) {
+      const scales = moveAxisDrag(axisDragRef.current, x, y, layout.mainHeight, layout.chartWidth);
+      if (axisDragRef.current.zone === "timeAxis") {
+        zoomRef.current = applyTimeScale(zoomRef.current, scales.timeScale, bars.length);
+      }
+      return;
+    }
+
     if (zoomRef.current.isDragging) {
       zoomRef.current = handleDragMove(zoomRef.current, x, layout.chartWidth, bars.length);
     }
@@ -333,12 +536,31 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
   }, [layout, bars]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (e.button === 2) return; // Right-click handled by context menu
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // Detect zone
+    const zone = detectMouseZone(
+      x, y, layout.chartLeft, layout.chartWidth,
+      layout.mainTop, layout.mainHeight,
+      layout.priceAxisWidth, layout.timeAxisHeight,
+      dimensions.w, dimensions.h,
+    );
+
+    // Axis drag-to-scale
+    if (zone === "priceAxis" || zone === "timeAxis") {
+      const viewport = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
+      const priceRange = viewport.priceMax - viewport.priceMin;
+      const barRange = zoomRef.current.endIndex - zoomRef.current.startIndex;
+      axisDragRef.current = startAxisDrag(axisDragRef.current, zone, x, y, priceRange, barRange);
+      return;
+    }
+
+    // Drawing mode
     if (drawingMode) {
       const zoom = zoomRef.current;
       const viewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
@@ -358,19 +580,25 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
           color: getDefaultColor(drawingMode),
         };
         const updated = [...drawings, drawing];
-        setDrawings(updated);
-        saveDrawings(pair, updated);
+        pushDrawingState(updated);
         setDrawingPoints([]);
-        setDrawingMode(null);
+        if (activeTool === "crosshair" || activeTool === "cursor") {
+          setDrawingMode(null);
+        }
       }
       return;
     }
 
+    // Chart pan
     zoomRef.current = handleDragStart(zoomRef.current, x);
     setIsDragging(true);
-  }, [drawingMode, drawingPoints, layout, drawings, pair, bars]);
+  }, [drawingMode, drawingPoints, layout, drawings, pair, bars, dimensions, activeTool, pushDrawingState]);
 
   const handleMouseUp = useCallback(() => {
+    if (axisDragRef.current.isDragging) {
+      axisDragRef.current = endAxisDrag(axisDragRef.current);
+      return;
+    }
     zoomRef.current = handleDragEnd(zoomRef.current);
     setIsDragging(false);
   }, []);
@@ -382,22 +610,31 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const axisX = dimensions.w - layout.priceAxisWidth;
-    const axisY = dimensions.h - layout.timeAxisHeight;
+    const zone = detectMouseZone(
+      x, y, layout.chartLeft, layout.chartWidth,
+      layout.mainTop, layout.mainHeight,
+      layout.priceAxisWidth, layout.timeAxisHeight,
+      dimensions.w, dimensions.h,
+    );
 
-    if (x >= axisX) {
-      // Double-click on price axis — auto-fit price (reset vertical)
-      // Currently viewport auto-fits, so this is effectively a no-op
-      // but it signals "reset any manual price scaling"
+    if (zone === "priceAxis") {
+      // Auto-fit price (viewport auto-fits anyway)
       return;
     }
-
-    if (y >= axisY) {
-      // Double-click on time axis — auto-fit time (reset to show recent bars)
+    if (zone === "timeAxis") {
+      // Reset to show recent bars
       zoomRef.current = createInitialZoomState(bars.length, Math.min(200, bars.length));
       return;
     }
   }, [bars.length, dimensions, layout]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    setContextMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top, open: true });
+  }, []);
 
   const handleMouseLeave = useCallback(() => {
     crosshairRef.current = { ...crosshairRef.current, visible: false };
@@ -405,14 +642,20 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
       zoomRef.current = handleDragEnd(zoomRef.current);
       setIsDragging(false);
     }
+    if (axisDragRef.current.isDragging) {
+      axisDragRef.current = endAxisDrag(axisDragRef.current);
+    }
   }, []);
 
-  // Global mouseup: end drag even if mouse leaves the canvas fast
+  // Global mouseup
   useEffect(() => {
     const onGlobalUp = () => {
       if (zoomRef.current.isDragging) {
         zoomRef.current = handleDragEnd(zoomRef.current);
         setIsDragging(false);
+      }
+      if (axisDragRef.current.isDragging) {
+        axisDragRef.current = endAxisDrag(axisDragRef.current);
       }
     };
     document.addEventListener("mouseup", onGlobalUp);
@@ -433,11 +676,86 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
   }, []);
 
   const clearDrawings = useCallback(() => {
-    setDrawings([]);
-    saveDrawings(pair, []);
-  }, [pair]);
+    pushDrawingState([]);
+  }, [pushDrawingState]);
 
-  /* ─── Last bar ─── */
+  /* ─── Left toolbar callbacks ─── */
+  const handleSelectTool = useCallback((tool: string) => {
+    setActiveTool(tool);
+    // Map tool to drawing mode
+    const drawingTools: Record<string, DrawingType> = {
+      trendline: "trendline",
+      horizontal: "horizontal",
+      ray: "trendline",
+      vertical: "horizontal",
+      rectangle: "rectangle",
+      fibonacci: "fibonacci",
+    };
+    if (drawingTools[tool]) {
+      setDrawingMode(drawingTools[tool]);
+    } else {
+      setDrawingMode(null);
+      setDrawingPoints([]);
+    }
+  }, []);
+
+  /* ─── Context menu actions ─── */
+  const handleContextAction = useCallback((action: string) => {
+    setContextMenu(p => ({ ...p, open: false }));
+    switch (action) {
+      case "reset":
+        zoomRef.current = createInitialZoomState(bars.length, Math.min(200, bars.length));
+        break;
+      case "screenshot":
+        if (canvasRef.current) exportScreenshot(canvasRef.current, pair);
+        break;
+      case "fullscreen":
+        if (outerRef.current) toggleFullscreen(outerRef.current);
+        break;
+      case "addIndicator":
+        setShowIndicatorDialog(true);
+        break;
+      case "trendline":
+        setDrawingMode("trendline");
+        setActiveTool("trendline");
+        break;
+      case "horizontal":
+        setDrawingMode("horizontal");
+        setActiveTool("horizontal");
+        break;
+      case "fibonacci":
+        setDrawingMode("fibonacci");
+        setActiveTool("fibonacci");
+        break;
+      case "rectangle":
+        setDrawingMode("rectangle");
+        setActiveTool("rectangle");
+        break;
+      case "clearDrawings":
+        clearDrawings();
+        break;
+      // Chart types
+      case "chartType_candles": setChartType("candles"); break;
+      case "chartType_hollow": setChartType("hollow"); break;
+      case "chartType_bars": setChartType("bars"); break;
+      case "chartType_line": setChartType("line"); break;
+      case "chartType_area": setChartType("area"); break;
+      case "chartType_heikinAshi": setChartType("heikinAshi"); break;
+      case "chartType_baseline": setChartType("baseline"); break;
+      // Price scale
+      case "priceScale_linear": setPriceScale("linear"); break;
+      case "priceScale_log": setPriceScale("log"); break;
+      case "priceScale_percent": setPriceScale("percent"); break;
+    }
+  }, [bars.length, pair, clearDrawings]);
+
+  /* ─── Symbol search ─── */
+  const handleSymbolSelect = useCallback((symbol: string) => {
+    setShowSymbolSearch(false);
+    if (onPairChange) onPairChange(symbol);
+  }, [onPairChange]);
+
+  /* ─── Last bar info ─── */
   const lastBar = bars.length > 0 ? bars[bars.length - 1] : null;
   const prevBar = bars.length > 1 ? bars[bars.length - 2] : null;
   const change = lastBar && prevBar ? ((lastBar.c - prevBar.c) / prevBar.c) * 100 : 0;
@@ -457,7 +775,7 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
   }
 
   return (
-    <div style={{
+    <div ref={outerRef} style={{
       display: "flex", flexDirection: "column", height: "100%",
       background: THEME.canvasBg, borderRadius: 8,
       border: `1px solid ${THEME.subPaneBorder}`, overflow: "hidden",
@@ -465,29 +783,59 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
       {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", gap: 12,
-        padding: "8px 12px",
+        padding: "6px 12px",
         borderBottom: `1px solid ${THEME.subPaneBorder}`,
-        background: THEME.axisBg, minHeight: 42,
+        background: THEME.axisBg, minHeight: 40,
       }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, fontSize: 15, color: "#D1D4DC" }}>
-            {pair}
-          </span>
-          {lastBar && (
-            <>
-              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, fontWeight: 600, color: "#D1D4DC" }}>
-                {formatPrice(lastBar.c, pair)}
-              </span>
-              <span style={{
-                fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600,
-                color: isUp ? THEME.bullBody : THEME.bearBody,
-              }}>
-                {isUp ? "+" : ""}{change.toFixed(3)}%
-              </span>
-            </>
-          )}
+        {/* Clickable pair name → opens symbol search */}
+        <button
+          onClick={() => setShowSymbolSearch(true)}
+          style={{
+            fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, fontSize: 15,
+            color: "#D1D4DC", background: "none", border: "none", cursor: "pointer",
+            padding: "2px 4px", borderRadius: 4,
+          }}
+          title="Search symbol (press .)"
+        >
+          {pair}
+          <span style={{ fontSize: 10, color: THEME.axisText, marginLeft: 4 }}>&#9662;</span>
+        </button>
+
+        {lastBar && (
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, fontWeight: 600, color: "#D1D4DC" }}>
+              {formatPrice(lastBar.c, pair)}
+            </span>
+            <span style={{
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600,
+              color: isUp ? THEME.bullBody : THEME.bearBody,
+            }}>
+              {isUp ? "+" : ""}{change.toFixed(3)}%
+            </span>
+          </div>
+        )}
+
+        {/* Chart type selector */}
+        <div style={{ display: "flex", gap: 1, background: "#1A1E2E", borderRadius: 4, padding: 1, marginLeft: 8 }}>
+          {(["candles", "hollow", "bars", "line", "area", "heikinAshi", "baseline"] as ChartType[]).map(ct => (
+            <button
+              key={ct}
+              onClick={() => setChartType(ct)}
+              style={{
+                fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fontWeight: 600,
+                padding: "2px 6px", borderRadius: 3, border: "none",
+                background: chartType === ct ? "#2A2E39" : "transparent",
+                color: chartType === ct ? "#D1D4DC" : "#545B69",
+                cursor: "pointer", textTransform: "uppercase",
+              }}
+            >
+              {ct === "heikinAshi" ? "HA" : ct === "baseline" ? "BASE" : ct.toUpperCase().slice(0, 4)}
+            </button>
+          ))}
         </div>
+
         <div style={{ flex: 1 }} />
+
         {source && (
           <span style={{
             fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
@@ -504,7 +852,7 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
         )}
       </div>
 
-      {/* Toolbar */}
+      {/* Top Toolbar */}
       <ChartToolbar
         config={config}
         onToggle={handleToggle}
@@ -516,33 +864,83 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
         onClearDrawings={clearDrawings}
       />
 
-      {/* Canvas */}
-      <div
-        ref={containerRef}
-        style={{
-          flex: 1, position: "relative",
-          cursor: drawingMode ? "crosshair" : isDragging ? "grabbing" : "crosshair",
-          overflow: "hidden",
-          touchAction: "none",
-          userSelect: "none",
-          WebkitUserSelect: "none",
-        }}
-      >
-        <canvas
-          ref={canvasRef}
-          onMouseMove={handleMouseMove}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onDoubleClick={handleDoubleClick}
-          onContextMenu={(e) => e.preventDefault()}
+      {/* Main area: left toolbar + canvas */}
+      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
+        {/* Left Drawing Toolbar */}
+        <ChartLeftToolbar
+          activeTool={activeTool}
+          onSelectTool={handleSelectTool}
+          hasDrawings={drawings.length > 0}
+          onClearDrawings={clearDrawings}
+        />
+
+        {/* Canvas container */}
+        <div
+          ref={containerRef}
           style={{
-            display: "block", width: "100%", height: "100%",
+            flex: 1, position: "relative",
+            cursor: drawingMode ? "crosshair" : isDragging ? "grabbing" : "crosshair",
+            overflow: "hidden",
             touchAction: "none",
             userSelect: "none",
+            WebkitUserSelect: "none",
           }}
-        />
+        >
+          <canvas
+            ref={canvasRef}
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onDoubleClick={handleDoubleClick}
+            onContextMenu={handleContextMenu}
+            style={{
+              display: "block", width: "100%", height: "100%",
+              touchAction: "none",
+              userSelect: "none",
+            }}
+          />
+
+          {/* Context Menu (positioned inside canvas container) */}
+          {contextMenu.open && (
+            <ChartContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              isOpen={contextMenu.open}
+              onClose={() => setContextMenu(p => ({ ...p, open: false }))}
+              onAction={handleContextAction}
+            />
+          )}
+        </div>
       </div>
+
+      {/* Bottom Status Bar */}
+      <ChartStatusBar
+        interval={interval}
+        lastBarTimestamp={lastBar ? lastBar.t : 0}
+        priceScale={priceScale}
+        onPriceScaleChange={setPriceScale}
+        onScreenshot={() => { if (canvasRef.current) exportScreenshot(canvasRef.current, pair); }}
+        onFullscreen={() => { if (outerRef.current) toggleFullscreen(outerRef.current); }}
+      />
+
+      {/* Symbol Search Modal */}
+      <ChartSymbolSearch
+        isOpen={showSymbolSearch}
+        onClose={() => setShowSymbolSearch(false)}
+        onSelect={handleSymbolSelect}
+        currentSymbol={pair}
+      />
+
+      {/* Indicator Dialog */}
+      <ChartIndicatorDialog
+        isOpen={showIndicatorDialog}
+        onClose={() => setShowIndicatorDialog(false)}
+        activeOverlays={config}
+        activeSubPanes={activeSubPanes}
+        onToggleOverlay={handleToggle}
+        onToggleSubPane={handleToggleSubPane}
+      />
     </div>
   );
 }
@@ -565,7 +963,7 @@ function drawLegend(
 
   ctx.font = "10px 'IBM Plex Mono', monospace";
   let x = layout.chartLeft + 4;
-  const y = layout.mainTop + 14;
+  const y = layout.mainTop + 28; // Below OHLC legend
 
   for (const item of items) {
     ctx.fillStyle = item.color;
