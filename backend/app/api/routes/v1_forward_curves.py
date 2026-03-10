@@ -163,3 +163,24 @@ async def list_forward_curves(
 
     snaps = await fcs.list_by_pair(session, pair, current_user.company_id, limit=limit)
     return [_to_response(s) for s in snaps]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GET /v1/forward-curves/bulk-latest
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/bulk-latest")
+async def get_bulk_latest_forward_curves(
+    pairs: str = Query(..., description="Comma-separated pair list, e.g. USDMXN,EURUSD"),
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Return latest forward curve snapshot for multiple pairs at once."""
+    await _check_perm(session, current_user, "forward_curve.read")
+
+    pair_list = [p.strip().upper() for p in pairs.split(",") if p.strip()]
+    results = {}
+    for pair in pair_list:
+        snap = await fcs.get_latest_by_pair(session, pair, current_user.company_id)
+        if snap:
+            results[pair] = _to_response(snap)
+    return {"curves": results, "count": len(results)}
