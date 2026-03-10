@@ -200,6 +200,10 @@ router.include_router(v1_risk_analytics_router)
 from app.api.routes.v1_hedge_effectiveness import router as v1_hedge_effectiveness_router
 router.include_router(v1_hedge_effectiveness_router)
 
+# Chart data — OHLCV bars for charting platform (owns /v1/chart-data)
+from app.api.routes.v1_chart_data import router as v1_chart_data_router
+router.include_router(v1_chart_data_router)
+
 __all__ = ["router"]
 
 # Superuser admin — tenants (owns /v1/admin/tenants)
