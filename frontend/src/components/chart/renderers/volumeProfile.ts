@@ -5,6 +5,7 @@
 
 import type { VolumeProfileData } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
+import type { PriceScale } from "../core/data";
 import { priceToY } from "../core/data";
 import { THEME } from "../core/theme";
 
@@ -13,6 +14,7 @@ export function drawVolumeProfile(
   profile: VolumeProfileData,
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   if (!profile || profile.levels.length === 0) return;
 
@@ -34,8 +36,8 @@ export function drawVolumeProfile(
   let barHeightPx = 4; // fallback
   if (sortedLevels.length >= 2) {
     const priceDiff = sortedLevels[1].price - sortedLevels[0].price;
-    const y1 = priceToY(sortedLevels[0].price, priceMin, priceMax, mainTop, mainHeight);
-    const y2 = priceToY(sortedLevels[0].price + priceDiff, priceMin, priceMax, mainTop, mainHeight);
+    const y1 = priceToY(sortedLevels[0].price, priceMin, priceMax, mainTop, mainHeight, scale);
+    const y2 = priceToY(sortedLevels[0].price + priceDiff, priceMin, priceMax, mainTop, mainHeight, scale);
     barHeightPx = Math.max(2, Math.abs(y1 - y2) - 1);
   }
 
@@ -46,7 +48,7 @@ export function drawVolumeProfile(
     // Skip levels outside viewport
     if (lvl.price < priceMin || lvl.price > priceMax) continue;
 
-    const y = priceToY(lvl.price, priceMin, priceMax, mainTop, mainHeight);
+    const y = priceToY(lvl.price, priceMin, priceMax, mainTop, mainHeight, scale);
     const totalWidth = (lvl.volume / maxVol) * maxBarWidth;
     const buyWidth = lvl.volume > 0 ? (lvl.buyVolume / lvl.volume) * totalWidth : 0;
     const sellWidth = totalWidth - buyWidth;
@@ -66,7 +68,7 @@ export function drawVolumeProfile(
 
   // ── POC line ────────────────────────────────────────
   if (profile.poc >= priceMin && profile.poc <= priceMax) {
-    const pocY = priceToY(profile.poc, priceMin, priceMax, mainTop, mainHeight);
+    const pocY = priceToY(profile.poc, priceMin, priceMax, mainTop, mainHeight, scale);
     ctx.strokeStyle = THEME.vpPocColor;
     ctx.lineWidth = 1.5;
     ctx.setLineDash([6, 3]);
@@ -85,7 +87,7 @@ export function drawVolumeProfile(
 
   // ── VAH line ────────────────────────────────────────
   if (profile.vahPrice >= priceMin && profile.vahPrice <= priceMax) {
-    const vahY = priceToY(profile.vahPrice, priceMin, priceMax, mainTop, mainHeight);
+    const vahY = priceToY(profile.vahPrice, priceMin, priceMax, mainTop, mainHeight, scale);
     ctx.strokeStyle = THEME.vpVahValColor;
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
@@ -103,7 +105,7 @@ export function drawVolumeProfile(
 
   // ── VAL line ────────────────────────────────────────
   if (profile.valPrice >= priceMin && profile.valPrice <= priceMax) {
-    const valY = priceToY(profile.valPrice, priceMin, priceMax, mainTop, mainHeight);
+    const valY = priceToY(profile.valPrice, priceMin, priceMax, mainTop, mainHeight, scale);
     ctx.strokeStyle = THEME.vpVahValColor;
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);

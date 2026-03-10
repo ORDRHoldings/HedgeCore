@@ -8,6 +8,7 @@
  */
 import type { Bar } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
+import type { PriceScale } from "../core/data";
 import { priceToY, indexToX } from "../core/data";
 import { THEME } from "../core/theme";
 import { computeHeikinAshi } from "../core/heikinAshi";
@@ -56,6 +57,7 @@ function by(
   price: number,
   viewport: Viewport,
   layout: ChartLayout,
+  scale: PriceScale = "linear",
 ): number {
   return priceToY(
     price,
@@ -63,6 +65,7 @@ function by(
     viewport.priceMax,
     layout.mainTop,
     layout.mainHeight,
+    scale,
   );
 }
 
@@ -80,6 +83,7 @@ export function drawLineChart(
   bars: Bar[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   if (bars.length === 0) return;
   const [si, ei] = visibleRange(bars, viewport);
@@ -98,7 +102,7 @@ export function drawLineChart(
   let started = false;
   for (let i = si; i <= ei; i++) {
     const x = bx(i, viewport, layout);
-    const y = by(bars[i].c, viewport, layout);
+    const y = by(bars[i].c, viewport, layout, scale);
     if (!started) {
       ctx.moveTo(x, y);
       started = true;
@@ -124,6 +128,7 @@ export function drawAreaChart(
   bars: Bar[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   if (bars.length === 0) return;
   const [si, ei] = visibleRange(bars, viewport);
@@ -139,7 +144,7 @@ export function drawAreaChart(
   for (let i = si; i <= ei; i++) {
     points.push({
       x: bx(i, viewport, layout),
-      y: by(bars[i].c, viewport, layout),
+      y: by(bars[i].c, viewport, layout, scale),
     });
   }
 
@@ -191,6 +196,7 @@ export function drawBarChart(
   bars: Bar[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   if (bars.length === 0) return;
   const [si, ei] = visibleRange(bars, viewport);
@@ -207,10 +213,10 @@ export function drawBarChart(
   for (let i = si; i <= ei; i++) {
     const bar = bars[i];
     const x = bx(i, viewport, layout);
-    const hY = by(bar.h, viewport, layout);
-    const lY = by(bar.l, viewport, layout);
-    const oY = by(bar.o, viewport, layout);
-    const cY = by(bar.c, viewport, layout);
+    const hY = by(bar.h, viewport, layout, scale);
+    const lY = by(bar.l, viewport, layout, scale);
+    const oY = by(bar.o, viewport, layout, scale);
+    const cY = by(bar.c, viewport, layout, scale);
 
     const isBull = bar.c >= bar.o;
     ctx.strokeStyle = isBull ? THEME.bullBody : THEME.bearBody;
@@ -246,6 +252,7 @@ export function drawHollowCandles(
   bars: Bar[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   if (bars.length === 0) return;
   const [si, ei] = visibleRange(bars, viewport);
@@ -263,10 +270,10 @@ export function drawHollowCandles(
   for (let i = si; i <= ei; i++) {
     const bar = bars[i];
     const x = bx(i, viewport, layout);
-    const oY = by(bar.o, viewport, layout);
-    const cY = by(bar.c, viewport, layout);
-    const hY = by(bar.h, viewport, layout);
-    const lY = by(bar.l, viewport, layout);
+    const oY = by(bar.o, viewport, layout, scale);
+    const cY = by(bar.c, viewport, layout, scale);
+    const hY = by(bar.h, viewport, layout, scale);
+    const lY = by(bar.l, viewport, layout, scale);
 
     const isBull = bar.c >= bar.o;
     const color = isBull ? THEME.bullBody : THEME.bearBody;
@@ -312,6 +319,7 @@ export function drawHeikinAshi(
   bars: Bar[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   if (bars.length === 0) return;
 
@@ -348,10 +356,10 @@ export function drawHeikinAshi(
   for (let i = si; i <= ei; i++) {
     const bar = haBars[i];
     const x = bx(i, haViewport, layout);
-    const oY = by(bar.o, haViewport, layout);
-    const cY = by(bar.c, haViewport, layout);
-    const hY = by(bar.h, haViewport, layout);
-    const lY = by(bar.l, haViewport, layout);
+    const oY = by(bar.o, haViewport, layout, scale);
+    const cY = by(bar.c, haViewport, layout, scale);
+    const hY = by(bar.h, haViewport, layout, scale);
+    const lY = by(bar.l, haViewport, layout, scale);
 
     const isBull = bar.c >= bar.o;
     const isDoji = Math.abs(bar.c - bar.o) < (bar.h - bar.l) * 0.05;
@@ -390,6 +398,7 @@ export function drawBaseline(
   bars: Bar[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   if (bars.length === 0) return;
   const [si, ei] = visibleRange(bars, viewport);
@@ -408,14 +417,14 @@ export function drawBaseline(
     count++;
   }
   const baseline = count > 0 ? sum / count : 0;
-  const baseY = by(baseline, viewport, layout);
+  const baseY = by(baseline, viewport, layout, scale);
 
   // Collect points
   const points: { x: number; y: number; close: number }[] = [];
   for (let i = si; i <= ei; i++) {
     points.push({
       x: bx(i, viewport, layout),
-      y: by(bars[i].c, viewport, layout),
+      y: by(bars[i].c, viewport, layout, scale),
       close: bars[i].c,
     });
   }

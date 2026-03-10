@@ -1,5 +1,6 @@
 import type { SRLevel, FVGZone, TrendLine } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
+import type { PriceScale } from "../core/data";
 import { priceToY, indexToX } from "../core/data";
 import { THEME } from "../core/theme";
 
@@ -10,12 +11,13 @@ export function drawSRLevels(
   levels: SRLevel[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   const { mainTop, mainHeight, chartLeft, priceAxisWidth, canvasWidth } = layout;
   const { priceMin, priceMax } = viewport;
 
   for (const level of levels) {
-    const y = priceToY(level.price, priceMin, priceMax, mainTop, mainHeight);
+    const y = priceToY(level.price, priceMin, priceMax, mainTop, mainHeight, scale);
     if (y < mainTop || y > mainTop + mainHeight) continue;
 
     const alpha = Math.min(0.8, 0.2 + level.strength * 0.1);
@@ -51,6 +53,7 @@ export function drawFVGZones(
   zones: FVGZone[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   const { mainTop, mainHeight, chartLeft, chartWidth, priceAxisWidth, canvasWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
@@ -60,8 +63,8 @@ export function drawFVGZones(
 
     const x1 = indexToX(zone.startIndex, startIndex, endIndex, chartLeft, chartWidth);
     const x2 = canvasWidth - priceAxisWidth; // extend to right edge
-    const yTop = priceToY(zone.top, priceMin, priceMax, mainTop, mainHeight);
-    const yBot = priceToY(zone.bottom, priceMin, priceMax, mainTop, mainHeight);
+    const yTop = priceToY(zone.top, priceMin, priceMax, mainTop, mainHeight, scale);
+    const yBot = priceToY(zone.bottom, priceMin, priceMax, mainTop, mainHeight, scale);
 
     ctx.fillStyle = zone.type === "bullish"
       ? THEME.fvgBullFill
@@ -91,6 +94,7 @@ export function drawTrendlines(
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
@@ -103,9 +107,9 @@ export function drawTrendlines(
     if (i2 < startIndex - 5 || i1 > endIndex + 5) continue;
 
     const x1 = indexToX(i1, startIndex, endIndex, chartLeft, chartWidth);
-    const y1 = priceToY(line.y1, priceMin, priceMax, mainTop, mainHeight);
+    const y1 = priceToY(line.y1, priceMin, priceMax, mainTop, mainHeight, scale);
     const x2 = indexToX(i2, startIndex, endIndex, chartLeft, chartWidth);
-    const y2 = priceToY(line.y2, priceMin, priceMax, mainTop, mainHeight);
+    const y2 = priceToY(line.y2, priceMin, priceMax, mainTop, mainHeight, scale);
 
     const alpha = Math.min(0.8, 0.3 + line.touches * 0.1);
     ctx.strokeStyle = line.direction === "up"

@@ -472,49 +472,49 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     }
 
     // Layer 1: Behind candles
-    if (indicators.sr.length > 0) drawSRLevels(ctx, indicators.sr, layout, viewport);
-    if (indicators.fvg.length > 0) drawFVGZones(ctx, indicators.fvg, layout, viewport);
-    if (indicators.trend.length > 0) drawTrendlines(ctx, indicators.trend, bars, layout, viewport);
-    for (const band of indicators.bands) drawBands(ctx, band.points, bars, layout, viewport, band.fill, band.line);
-    if (indicators.ichimoku.length > 0) drawIchimoku(ctx, indicators.ichimoku, bars, layout, viewport);
+    if (indicators.sr.length > 0) drawSRLevels(ctx, indicators.sr, layout, viewport, priceScale);
+    if (indicators.fvg.length > 0) drawFVGZones(ctx, indicators.fvg, layout, viewport, priceScale);
+    if (indicators.trend.length > 0) drawTrendlines(ctx, indicators.trend, bars, layout, viewport, priceScale);
+    for (const band of indicators.bands) drawBands(ctx, band.points, bars, layout, viewport, band.fill, band.line, priceScale);
+    if (indicators.ichimoku.length > 0) drawIchimoku(ctx, indicators.ichimoku, bars, layout, viewport, priceScale);
 
     // Layer 2: Price data (chart type dispatch)
     switch (chartType) {
       case "candles":
-        drawCandlesticks(ctx, bars, layout, viewport);
+        drawCandlesticks(ctx, bars, layout, viewport, priceScale);
         break;
       case "hollow":
-        drawHollowCandles(ctx, bars, layout, viewport);
+        drawHollowCandles(ctx, bars, layout, viewport, priceScale);
         break;
       case "bars":
-        drawBarChart(ctx, bars, layout, viewport);
+        drawBarChart(ctx, bars, layout, viewport, priceScale);
         break;
       case "line":
-        drawLineChart(ctx, bars, layout, viewport);
+        drawLineChart(ctx, bars, layout, viewport, priceScale);
         break;
       case "area":
-        drawAreaChart(ctx, bars, layout, viewport);
+        drawAreaChart(ctx, bars, layout, viewport, priceScale);
         break;
       case "heikinAshi":
-        drawHeikinAshi(ctx, bars, layout, viewport);
+        drawHeikinAshi(ctx, bars, layout, viewport, priceScale);
         break;
       case "baseline":
-        drawBaseline(ctx, bars, layout, viewport);
+        drawBaseline(ctx, bars, layout, viewport, priceScale);
         break;
     }
 
     // Layer 3: Overlays on top
-    for (const line of indicators.overlayLines) drawIndicatorLine(ctx, line.points, bars, layout, viewport, line.color);
-    if (indicators.vwap.length > 0) drawVWAP(ctx, indicators.vwap, bars, layout, viewport);
-    if (indicators.parabolicSAR.length > 0) drawParabolicSAR(ctx, indicators.parabolicSAR, bars, layout, viewport);
-    if (indicators.pivotPoints) drawPivotPoints(ctx, indicators.pivotPoints, layout, viewport);
+    for (const line of indicators.overlayLines) drawIndicatorLine(ctx, line.points, bars, layout, viewport, line.color, 1.5, priceScale);
+    if (indicators.vwap.length > 0) drawVWAP(ctx, indicators.vwap, bars, layout, viewport, priceScale);
+    if (indicators.parabolicSAR.length > 0) drawParabolicSAR(ctx, indicators.parabolicSAR, bars, layout, viewport, priceScale);
+    if (indicators.pivotPoints) drawPivotPoints(ctx, indicators.pivotPoints, layout, viewport, priceScale);
 
     // Layer 4: Current price line
     drawCurrentPriceLine(ctx, bars, layout, viewport, pair, priceScale);
 
     // Layer 5: Volume
     drawVolume(ctx, bars, layout, viewport);
-    if (indicators.volumeProfile) drawVolumeProfile(ctx, indicators.volumeProfile, layout, viewport);
+    if (indicators.volumeProfile) drawVolumeProfile(ctx, indicators.volumeProfile, layout, viewport, priceScale);
 
     // Layer 6: Sub-panes
     for (let i = 0; i < activeSubPanes.length; i++) {
@@ -537,7 +537,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     }
 
     // Layer 7: Drawings
-    drawDrawings(ctx, drawings, layout, viewport, pair);
+    drawDrawings(ctx, drawings, layout, viewport, pair, priceScale);
 
     // Layer 8: Axes
     drawPriceAxis(ctx, layout, viewport, pair, priceScale, refPrice);

@@ -1,5 +1,6 @@
 import type { Bar } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
+import type { PriceScale } from "../core/data";
 import { priceToY, indexToX } from "../core/data";
 import { THEME } from "../core/theme";
 
@@ -8,6 +9,7 @@ export function drawCandlesticks(
   bars: Bar[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
@@ -24,10 +26,10 @@ export function drawCandlesticks(
   for (let i = si; i <= ei; i++) {
     const bar = bars[i];
     const x = Math.round(indexToX(i, startIndex, endIndex, chartLeft, chartWidth));
-    const oY = Math.round(priceToY(bar.o, priceMin, priceMax, mainTop, mainHeight));
-    const cY = Math.round(priceToY(bar.c, priceMin, priceMax, mainTop, mainHeight));
-    const hY = Math.round(priceToY(bar.h, priceMin, priceMax, mainTop, mainHeight));
-    const lY = Math.round(priceToY(bar.l, priceMin, priceMax, mainTop, mainHeight));
+    const oY = Math.round(priceToY(bar.o, priceMin, priceMax, mainTop, mainHeight, scale));
+    const cY = Math.round(priceToY(bar.c, priceMin, priceMax, mainTop, mainHeight, scale));
+    const hY = Math.round(priceToY(bar.h, priceMin, priceMax, mainTop, mainHeight, scale));
+    const lY = Math.round(priceToY(bar.l, priceMin, priceMax, mainTop, mainHeight, scale));
 
     const isBull = bar.c >= bar.o;
     const isDoji = Math.abs(bar.c - bar.o) < (bar.h - bar.l) * 0.05;

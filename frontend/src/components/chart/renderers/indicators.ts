@@ -6,6 +6,7 @@ import type {
   PivotPointData,
 } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
+import type { PriceScale } from "../core/data";
 import { priceToY, indexToX } from "../core/data";
 import { THEME } from "../core/theme";
 
@@ -19,6 +20,7 @@ export function drawIndicatorLine(
   viewport: Viewport,
   color: string,
   lineWidth: number = 1.5,
+  scale: PriceScale = "linear",
 ): void {
   if (points.length < 2) return;
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
@@ -30,12 +32,11 @@ export function drawIndicatorLine(
   let started = false;
 
   for (const pt of points) {
-    // Find bar index by timestamp
     const idx = bars.findIndex(b => b.t === pt.t);
     if (idx < startIndex - 1 || idx > endIndex + 1) continue;
 
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const y = priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight);
+    const y = priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight, scale);
     if (!started) { ctx.moveTo(x, y); started = true; }
     else ctx.lineTo(x, y);
   }
@@ -52,12 +53,12 @@ export function drawBands(
   viewport: Viewport,
   fillColor: string,
   lineColor: string,
+  scale: PriceScale = "linear",
 ): void {
   if (points.length < 2) return;
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
 
-  // Fill between upper and lower
   ctx.fillStyle = fillColor;
   ctx.beginPath();
 
@@ -68,9 +69,9 @@ export function drawBands(
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
     visiblePts.push({
       x,
-      upper: priceToY(pt.upper, priceMin, priceMax, mainTop, mainHeight),
-      lower: priceToY(pt.lower, priceMin, priceMax, mainTop, mainHeight),
-      mid: priceToY(pt.middle, priceMin, priceMax, mainTop, mainHeight),
+      upper: priceToY(pt.upper, priceMin, priceMax, mainTop, mainHeight, scale),
+      lower: priceToY(pt.lower, priceMin, priceMax, mainTop, mainHeight, scale),
+      mid: priceToY(pt.middle, priceMin, priceMax, mainTop, mainHeight, scale),
     });
   }
 
@@ -271,8 +272,9 @@ export function drawVWAP(
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
-  drawIndicatorLine(ctx, points, bars, layout, viewport, THEME.vwapColor, 2);
+  drawIndicatorLine(ctx, points, bars, layout, viewport, THEME.vwapColor, 2, scale);
 }
 
 // ── Ichimoku Cloud overlay ────────────────────────────
@@ -283,6 +285,7 @@ export function drawIchimoku(
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   if (points.length < 2) return;
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
@@ -306,11 +309,11 @@ export function drawIchimoku(
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
     vis.push({
       x,
-      tenkanY: priceToY(pt.tenkan, priceMin, priceMax, mainTop, mainHeight),
-      kijunY: priceToY(pt.kijun, priceMin, priceMax, mainTop, mainHeight),
-      senkouAY: priceToY(pt.senkouA, priceMin, priceMax, mainTop, mainHeight),
-      senkouBY: priceToY(pt.senkouB, priceMin, priceMax, mainTop, mainHeight),
-      chikouY: priceToY(pt.chikou, priceMin, priceMax, mainTop, mainHeight),
+      tenkanY: priceToY(pt.tenkan, priceMin, priceMax, mainTop, mainHeight, scale),
+      kijunY: priceToY(pt.kijun, priceMin, priceMax, mainTop, mainHeight, scale),
+      senkouAY: priceToY(pt.senkouA, priceMin, priceMax, mainTop, mainHeight, scale),
+      senkouBY: priceToY(pt.senkouB, priceMin, priceMax, mainTop, mainHeight, scale),
+      chikouY: priceToY(pt.chikou, priceMin, priceMax, mainTop, mainHeight, scale),
       senkouA: pt.senkouA,
       senkouB: pt.senkouB,
     });
@@ -379,8 +382,9 @@ export function drawHMA(
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
-  drawIndicatorLine(ctx, points, bars, layout, viewport, "#00E676", 1.5);
+  drawIndicatorLine(ctx, points, bars, layout, viewport, "#00E676", 1.5, scale);
 }
 
 // ── TEMA overlay ──────────────────────────────────────
@@ -391,8 +395,9 @@ export function drawTEMA(
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
-  drawIndicatorLine(ctx, points, bars, layout, viewport, "#FF4081", 1.5);
+  drawIndicatorLine(ctx, points, bars, layout, viewport, "#FF4081", 1.5, scale);
 }
 
 // ── Donchian Channel overlay ──────────────────────────
@@ -403,8 +408,9 @@ export function drawDonchian(
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
-  drawBands(ctx, points, bars, layout, viewport, "rgba(0,188,212,0.06)", "#00BCD4");
+  drawBands(ctx, points, bars, layout, viewport, "rgba(0,188,212,0.06)", "#00BCD4", scale);
 }
 
 // ── Parabolic SAR dots overlay ────────────────────────
@@ -415,6 +421,7 @@ export function drawParabolicSAR(
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   if (points.length === 0) return;
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
@@ -427,7 +434,7 @@ export function drawParabolicSAR(
 
     const bar = bars[idx] as { t: number; c: number };
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const y = priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight);
+    const y = priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight, scale);
 
     // SAR above close = bearish (red), below close = bullish (green)
     const closePrice = bar.c;
@@ -446,6 +453,7 @@ export function drawPivotPoints(
   pivots: PivotPointData,
   layout: ChartLayout,
   viewport: Viewport,
+  scale: PriceScale = "linear",
 ): void {
   const { mainTop, mainHeight, chartLeft, chartWidth, priceAxisWidth, canvasWidth } = layout;
   const { priceMin, priceMax } = viewport;
@@ -459,7 +467,7 @@ export function drawPivotPoints(
     dashed: boolean,
   ) => {
     if (price < priceMin || price > priceMax) return;
-    const y = priceToY(price, priceMin, priceMax, mainTop, mainHeight);
+    const y = priceToY(price, priceMin, priceMax, mainTop, mainHeight, scale);
 
     ctx.strokeStyle = color;
     ctx.lineWidth = 1;

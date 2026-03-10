@@ -1,4 +1,5 @@
 import type { ChartLayout, Viewport } from "../core/data";
+import type { PriceScale } from "../core/data";
 import { priceToY, indexToX, formatPrice } from "../core/data";
 import { THEME } from "../core/theme";
 
@@ -30,25 +31,26 @@ export function drawDrawings(
   layout: ChartLayout,
   viewport: Viewport,
   pair: string,
+  scale: PriceScale = "linear",
 ): void {
   for (const d of drawings) {
     switch (d.type) {
-      case "trendline": drawTrendlineDrawing(ctx, d, layout, viewport); break;
-      case "horizontal": drawHorizontalDrawing(ctx, d, layout, viewport, pair); break;
-      case "fibonacci": drawFibonacciDrawing(ctx, d, layout, viewport, pair); break;
-      case "rectangle": drawRectangleDrawing(ctx, d, layout, viewport); break;
+      case "trendline": drawTrendlineDrawing(ctx, d, layout, viewport, scale); break;
+      case "horizontal": drawHorizontalDrawing(ctx, d, layout, viewport, pair, scale); break;
+      case "fibonacci": drawFibonacciDrawing(ctx, d, layout, viewport, pair, scale); break;
+      case "rectangle": drawRectangleDrawing(ctx, d, layout, viewport, scale); break;
     }
   }
 }
 
-function drawTrendlineDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout: ChartLayout, viewport: Viewport): void {
+function drawTrendlineDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout: ChartLayout, viewport: Viewport, scale: PriceScale = "linear"): void {
   if (d.points.length < 2) return;
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
   const x1 = indexToX(d.points[0].index, startIndex, endIndex, chartLeft, chartWidth);
-  const y1 = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight);
+  const y1 = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight, scale);
   const x2 = indexToX(d.points[1].index, startIndex, endIndex, chartLeft, chartWidth);
-  const y2 = priceToY(d.points[1].price, priceMin, priceMax, mainTop, mainHeight);
+  const y2 = priceToY(d.points[1].price, priceMin, priceMax, mainTop, mainHeight, scale);
 
   ctx.strokeStyle = d.color;
   ctx.lineWidth = 1.5;
@@ -58,11 +60,11 @@ function drawTrendlineDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout:
   ctx.stroke();
 }
 
-function drawHorizontalDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout: ChartLayout, viewport: Viewport, pair: string): void {
+function drawHorizontalDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout: ChartLayout, viewport: Viewport, pair: string, scale: PriceScale = "linear"): void {
   if (d.points.length < 1) return;
   const { mainTop, mainHeight, priceAxisWidth, canvasWidth } = layout;
   const { priceMin, priceMax } = viewport;
-  const y = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight);
+  const y = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight, scale);
 
   ctx.strokeStyle = d.color;
   ctx.lineWidth = 1;
@@ -79,7 +81,7 @@ function drawHorizontalDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout
   ctx.fillText(formatPrice(d.points[0].price, pair), canvasWidth - priceAxisWidth - 4, y - 3);
 }
 
-function drawFibonacciDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout: ChartLayout, viewport: Viewport, pair: string): void {
+function drawFibonacciDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout: ChartLayout, viewport: Viewport, pair: string, scale: PriceScale = "linear"): void {
   if (d.points.length < 2) return;
   const { mainTop, mainHeight, priceAxisWidth, canvasWidth, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
@@ -92,7 +94,7 @@ function drawFibonacciDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout:
 
   for (const level of FIB_LEVELS) {
     const price = p2 + (p1 - p2) * level;
-    const y = priceToY(price, priceMin, priceMax, mainTop, mainHeight);
+    const y = priceToY(price, priceMin, priceMax, mainTop, mainHeight, scale);
 
     ctx.strokeStyle = d.color;
     ctx.lineWidth = 0.5;
@@ -110,15 +112,15 @@ function drawFibonacciDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout:
   }
 }
 
-function drawRectangleDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout: ChartLayout, viewport: Viewport): void {
+function drawRectangleDrawing(ctx: CanvasRenderingContext2D, d: Drawing, layout: ChartLayout, viewport: Viewport, scale: PriceScale = "linear"): void {
   if (d.points.length < 2) return;
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
 
   const x1 = indexToX(d.points[0].index, startIndex, endIndex, chartLeft, chartWidth);
-  const y1 = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight);
+  const y1 = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight, scale);
   const x2 = indexToX(d.points[1].index, startIndex, endIndex, chartLeft, chartWidth);
-  const y2 = priceToY(d.points[1].price, priceMin, priceMax, mainTop, mainHeight);
+  const y2 = priceToY(d.points[1].price, priceMin, priceMax, mainTop, mainHeight, scale);
 
   ctx.fillStyle = d.color.replace(")", ",0.08)").replace("rgb", "rgba");
   ctx.fillRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
