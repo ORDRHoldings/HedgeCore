@@ -1,12 +1,7 @@
 import type { Bar } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
 import { priceToY, indexToX } from "../core/data";
-
-const BULL_BODY = "#059669";
-const BULL_WICK = "#059669";
-const BEAR_BODY = "#DC2626";
-const BEAR_WICK = "#DC2626";
-const DOJI_COLOR = "#94A3B8";
+import { THEME } from "../core/theme";
 
 export function drawCandlesticks(
   ctx: CanvasRenderingContext2D,
@@ -35,7 +30,7 @@ export function drawCandlesticks(
     const isDoji = Math.abs(bar.c - bar.o) < (bar.h - bar.l) * 0.05;
 
     // Wick
-    ctx.strokeStyle = isDoji ? DOJI_COLOR : (isBull ? BULL_WICK : BEAR_WICK);
+    ctx.strokeStyle = isDoji ? THEME.dojiColor : (isBull ? THEME.bullWick : THEME.bearWick);
     ctx.lineWidth = wickWidth;
     ctx.beginPath();
     ctx.moveTo(x, hY);
@@ -45,7 +40,7 @@ export function drawCandlesticks(
     // Body
     const bodyTop = Math.min(oY, cY);
     const bodyHeight = Math.max(1, Math.abs(oY - cY));
-    ctx.fillStyle = isDoji ? DOJI_COLOR : (isBull ? BULL_BODY : BEAR_BODY);
+    ctx.fillStyle = isDoji ? THEME.dojiColor : (isBull ? THEME.bullBody : THEME.bearBody);
     ctx.fillRect(x - barWidth / 2, bodyTop, barWidth, bodyHeight);
   }
 }

@@ -1,9 +1,7 @@
 import type { Bar } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
 import { indexToX } from "../core/data";
-
-const BULL_VOL = "rgba(5,150,105,0.35)";
-const BEAR_VOL = "rgba(220,38,38,0.35)";
+import { THEME } from "../core/theme";
 
 export function drawVolume(
   ctx: CanvasRenderingContext2D,
@@ -26,7 +24,7 @@ export function drawVolume(
   if (maxVol === 0) return;
 
   // Separator line
-  ctx.strokeStyle = "#E2E8F0";
+  ctx.strokeStyle = THEME.separator;
   ctx.lineWidth = 0.5;
   ctx.beginPath();
   ctx.moveTo(0, volumeTop);
@@ -39,7 +37,7 @@ export function drawVolume(
     const h = (bar.v / maxVol) * (volumeHeight - 4);
     const isBull = bar.c >= bar.o;
 
-    ctx.fillStyle = isBull ? BULL_VOL : BEAR_VOL;
+    ctx.fillStyle = isBull ? THEME.bullVol : THEME.bearVol;
     ctx.fillRect(x - barWidth / 2, volumeTop + volumeHeight - h, barWidth, h);
   }
 }

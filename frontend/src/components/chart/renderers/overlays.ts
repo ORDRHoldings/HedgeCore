@@ -1,6 +1,7 @@
 import type { SRLevel, FVGZone, TrendLine } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
 import { priceToY, indexToX } from "../core/data";
+import { THEME } from "../core/theme";
 
 // ── Support/Resistance ──────────────────────────────────
 
@@ -19,8 +20,8 @@ export function drawSRLevels(
 
     const alpha = Math.min(0.8, 0.2 + level.strength * 0.1);
     const color = level.type === "support"
-      ? `rgba(5,150,105,${alpha})`
-      : `rgba(220,38,38,${alpha})`;
+      ? `${THEME.supportColor}${alpha})`
+      : `${THEME.resistanceColor}${alpha})`;
 
     ctx.strokeStyle = color;
     ctx.lineWidth = 1;
@@ -63,20 +64,20 @@ export function drawFVGZones(
     const yBot = priceToY(zone.bottom, priceMin, priceMax, mainTop, mainHeight);
 
     ctx.fillStyle = zone.type === "bullish"
-      ? "rgba(5,150,105,0.08)"
-      : "rgba(220,38,38,0.08)";
+      ? THEME.fvgBullFill
+      : THEME.fvgBearFill;
     ctx.fillRect(x1, yTop, x2 - x1, yBot - yTop);
 
     // Border
     ctx.strokeStyle = zone.type === "bullish"
-      ? "rgba(5,150,105,0.25)"
-      : "rgba(220,38,38,0.25)";
+      ? THEME.fvgBullBorder
+      : THEME.fvgBearBorder;
     ctx.lineWidth = 0.5;
     ctx.strokeRect(x1, yTop, x2 - x1, yBot - yTop);
 
     // Label
     ctx.font = "9px 'IBM Plex Mono', monospace";
-    ctx.fillStyle = zone.type === "bullish" ? "rgba(5,150,105,0.6)" : "rgba(220,38,38,0.6)";
+    ctx.fillStyle = zone.type === "bullish" ? `${THEME.supportColor}0.6)` : `${THEME.resistanceColor}0.6)`;
     ctx.textAlign = "left";
     ctx.fillText("FVG", x1 + 3, yTop + 10);
   }
@@ -108,8 +109,8 @@ export function drawTrendlines(
 
     const alpha = Math.min(0.8, 0.3 + line.touches * 0.1);
     ctx.strokeStyle = line.direction === "up"
-      ? `rgba(5,150,105,${alpha})`
-      : `rgba(220,38,38,${alpha})`;
+      ? `${THEME.supportColor}${alpha})`
+      : `${THEME.resistanceColor}${alpha})`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(x1, y1);

@@ -1,6 +1,13 @@
-import type { IndicatorPoint, BandPoint, MACDPoint } from "../indicators/types";
+import type {
+  IndicatorPoint,
+  BandPoint,
+  MACDPoint,
+  IchimokuPoint,
+  PivotPointData,
+} from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
 import { priceToY, indexToX } from "../core/data";
+import { THEME } from "../core/theme";
 
 // ── Overlay line (SMA, EMA) ────────────────────────────
 
@@ -129,9 +136,9 @@ export function drawRSI(
   if (subPaneHeight === 0) return;
 
   // Background + border
-  ctx.fillStyle = "#FAFBFC";
+  ctx.fillStyle = THEME.subPaneBg;
   ctx.fillRect(0, subPaneTop, layout.canvasWidth - layout.priceAxisWidth, subPaneHeight);
-  ctx.strokeStyle = "#E2E8F0";
+  ctx.strokeStyle = THEME.subPaneBorder;
   ctx.lineWidth = 0.5;
   ctx.beginPath();
   ctx.moveTo(0, subPaneTop);
@@ -140,26 +147,26 @@ export function drawRSI(
 
   // RSI label
   ctx.font = "10px 'IBM Plex Mono', monospace";
-  ctx.fillStyle = "#94A3B8";
+  ctx.fillStyle = THEME.axisText;
   ctx.textAlign = "left";
   ctx.fillText("RSI(14)", 6, subPaneTop + 12);
 
   // 30/70 lines
   const y30 = subPaneTop + subPaneHeight * (1 - 30/100);
   const y70 = subPaneTop + subPaneHeight * (1 - 70/100);
-  ctx.strokeStyle = "rgba(220,38,38,0.2)";
+  ctx.strokeStyle = THEME.level30_70;
   ctx.setLineDash([4, 4]);
   ctx.beginPath();
   ctx.moveTo(0, y70); ctx.lineTo(layout.canvasWidth - layout.priceAxisWidth, y70);
   ctx.stroke();
-  ctx.strokeStyle = "rgba(5,150,105,0.2)";
+  ctx.strokeStyle = THEME.level70_30;
   ctx.beginPath();
   ctx.moveTo(0, y30); ctx.lineTo(layout.canvasWidth - layout.priceAxisWidth, y30);
   ctx.stroke();
   ctx.setLineDash([]);
 
   // RSI line
-  ctx.strokeStyle = "#8B5CF6";
+  ctx.strokeStyle = THEME.rsiColor;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   let started = false;
@@ -187,9 +194,9 @@ export function drawMACD(
   const { startIndex, endIndex } = viewport;
   if (subPaneHeight === 0) return;
 
-  ctx.fillStyle = "#FAFBFC";
+  ctx.fillStyle = THEME.subPaneBg;
   ctx.fillRect(0, subPaneTop, layout.canvasWidth - layout.priceAxisWidth, subPaneHeight);
-  ctx.strokeStyle = "#E2E8F0";
+  ctx.strokeStyle = THEME.subPaneBorder;
   ctx.lineWidth = 0.5;
   ctx.beginPath();
   ctx.moveTo(0, subPaneTop);
@@ -197,7 +204,7 @@ export function drawMACD(
   ctx.stroke();
 
   ctx.font = "10px 'IBM Plex Mono', monospace";
-  ctx.fillStyle = "#94A3B8";
+  ctx.fillStyle = THEME.axisText;
   ctx.textAlign = "left";
   ctx.fillText("MACD(12,26,9)", 6, subPaneTop + 12);
 
@@ -218,7 +225,7 @@ export function drawMACD(
   const barWidth = Math.max(1, (chartWidth / range) * 0.5);
 
   // Zero line
-  ctx.strokeStyle = "rgba(148,163,184,0.3)";
+  ctx.strokeStyle = THEME.zeroLine;
   ctx.lineWidth = 0.5;
   ctx.beginPath();
   ctx.moveTo(0, midY);
@@ -229,12 +236,12 @@ export function drawMACD(
   for (const { idx, pt } of visible) {
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
     const h = pt.histogram * scale;
-    ctx.fillStyle = pt.histogram >= 0 ? "rgba(5,150,105,0.4)" : "rgba(220,38,38,0.4)";
+    ctx.fillStyle = pt.histogram >= 0 ? THEME.macdHistPos : THEME.macdHistNeg;
     ctx.fillRect(x - barWidth / 2, midY - (h > 0 ? h : 0), barWidth, Math.abs(h));
   }
 
   // MACD line
-  ctx.strokeStyle = "#3B82F6";
+  ctx.strokeStyle = THEME.macdLine;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   visible.forEach(({ idx, pt }, i) => {
@@ -245,7 +252,7 @@ export function drawMACD(
   ctx.stroke();
 
   // Signal line
-  ctx.strokeStyle = "#F97316";
+  ctx.strokeStyle = THEME.macdSignal;
   ctx.lineWidth = 1;
   ctx.beginPath();
   visible.forEach(({ idx, pt }, i) => {
@@ -254,4 +261,234 @@ export function drawMACD(
     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   });
   ctx.stroke();
+}
+
+// ── VWAP overlay ──────────────────────────────────────
+
+export function drawVWAP(
+  ctx: CanvasRenderingContext2D,
+  points: IndicatorPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+): void {
+  drawIndicatorLine(ctx, points, bars, layout, viewport, THEME.vwapColor, 2);
+}
+
+// ── Ichimoku Cloud overlay ────────────────────────────
+
+export function drawIchimoku(
+  ctx: CanvasRenderingContext2D,
+  points: IchimokuPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+): void {
+  if (points.length < 2) return;
+  const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
+  const { startIndex, endIndex, priceMin, priceMax } = viewport;
+
+  // Collect visible points with their x/y coords
+  const vis: {
+    x: number;
+    tenkanY: number;
+    kijunY: number;
+    senkouAY: number;
+    senkouBY: number;
+    chikouY: number;
+    senkouA: number;
+    senkouB: number;
+  }[] = [];
+
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    vis.push({
+      x,
+      tenkanY: priceToY(pt.tenkan, priceMin, priceMax, mainTop, mainHeight),
+      kijunY: priceToY(pt.kijun, priceMin, priceMax, mainTop, mainHeight),
+      senkouAY: priceToY(pt.senkouA, priceMin, priceMax, mainTop, mainHeight),
+      senkouBY: priceToY(pt.senkouB, priceMin, priceMax, mainTop, mainHeight),
+      chikouY: priceToY(pt.chikou, priceMin, priceMax, mainTop, mainHeight),
+      senkouA: pt.senkouA,
+      senkouB: pt.senkouB,
+    });
+  }
+  if (vis.length < 2) return;
+
+  // Cloud fill between senkouA and senkouB
+  // Draw as segments, coloring bullish/bearish per segment
+  for (let i = 0; i < vis.length - 1; i++) {
+    const curr = vis[i];
+    const next = vis[i + 1];
+    const bullish = curr.senkouA >= curr.senkouB;
+    ctx.fillStyle = bullish ? "rgba(38,166,154,0.06)" : "rgba(239,83,80,0.06)";
+    ctx.beginPath();
+    ctx.moveTo(curr.x, curr.senkouAY);
+    ctx.lineTo(next.x, next.senkouAY);
+    ctx.lineTo(next.x, next.senkouBY);
+    ctx.lineTo(curr.x, curr.senkouBY);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Tenkan-sen (conversion line)
+  ctx.strokeStyle = "#2962FF";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.tenkanY); else ctx.lineTo(p.x, p.tenkanY); });
+  ctx.stroke();
+
+  // Kijun-sen (base line)
+  ctx.strokeStyle = "#EF5350";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.kijunY); else ctx.lineTo(p.x, p.kijunY); });
+  ctx.stroke();
+
+  // Chikou span (lagging)
+  ctx.strokeStyle = "#787B86";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath();
+  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.chikouY); else ctx.lineTo(p.x, p.chikouY); });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Senkou A (leading span A)
+  ctx.strokeStyle = "rgba(38,166,154,0.5)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.senkouAY); else ctx.lineTo(p.x, p.senkouAY); });
+  ctx.stroke();
+
+  // Senkou B (leading span B)
+  ctx.strokeStyle = "rgba(239,83,80,0.5)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.senkouBY); else ctx.lineTo(p.x, p.senkouBY); });
+  ctx.stroke();
+}
+
+// ── HMA overlay ───────────────────────────────────────
+
+export function drawHMA(
+  ctx: CanvasRenderingContext2D,
+  points: IndicatorPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+): void {
+  drawIndicatorLine(ctx, points, bars, layout, viewport, "#00E676", 1.5);
+}
+
+// ── TEMA overlay ──────────────────────────────────────
+
+export function drawTEMA(
+  ctx: CanvasRenderingContext2D,
+  points: IndicatorPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+): void {
+  drawIndicatorLine(ctx, points, bars, layout, viewport, "#FF4081", 1.5);
+}
+
+// ── Donchian Channel overlay ──────────────────────────
+
+export function drawDonchian(
+  ctx: CanvasRenderingContext2D,
+  points: BandPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+): void {
+  drawBands(ctx, points, bars, layout, viewport, "rgba(0,188,212,0.06)", "#00BCD4");
+}
+
+// ── Parabolic SAR dots overlay ────────────────────────
+
+export function drawParabolicSAR(
+  ctx: CanvasRenderingContext2D,
+  points: IndicatorPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+): void {
+  if (points.length === 0) return;
+  const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
+  const { startIndex, endIndex, priceMin, priceMax } = viewport;
+
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    if (idx < 0 || idx >= bars.length) continue;
+
+    const bar = bars[idx] as { t: number; c: number };
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight);
+
+    // SAR above close = bearish (red), below close = bullish (green)
+    const closePrice = bar.c;
+    ctx.fillStyle = pt.value > closePrice ? "#EF5350" : "#26A69A";
+
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ── Pivot Points overlay ──────────────────────────────
+
+export function drawPivotPoints(
+  ctx: CanvasRenderingContext2D,
+  pivots: PivotPointData,
+  layout: ChartLayout,
+  viewport: Viewport,
+): void {
+  const { mainTop, mainHeight, chartLeft, chartWidth, priceAxisWidth, canvasWidth } = layout;
+  const { priceMin, priceMax } = viewport;
+
+  const lineRight = canvasWidth - priceAxisWidth;
+
+  const drawPivotLine = (
+    price: number,
+    label: string,
+    color: string,
+    dashed: boolean,
+  ) => {
+    if (price < priceMin || price > priceMax) return;
+    const y = priceToY(price, priceMin, priceMax, mainTop, mainHeight);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    if (dashed) ctx.setLineDash([4, 4]);
+    else ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.moveTo(chartLeft, y);
+    ctx.lineTo(lineRight, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Label on right side
+    ctx.font = "9px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = color;
+    ctx.textAlign = "right";
+    ctx.fillText(label, lineRight - 4, y - 3);
+  };
+
+  // PP - solid white
+  drawPivotLine(pivots.pp, "PP", "#D1D4DC", false);
+
+  // Resistance - dashed red
+  drawPivotLine(pivots.r1, "R1", "#EF5350", true);
+  drawPivotLine(pivots.r2, "R2", "#EF5350", true);
+  drawPivotLine(pivots.r3, "R3", "#EF5350", true);
+
+  // Support - dashed green
+  drawPivotLine(pivots.s1, "S1", "#26A69A", true);
+  drawPivotLine(pivots.s2, "S2", "#26A69A", true);
+  drawPivotLine(pivots.s3, "S3", "#26A69A", true);
 }

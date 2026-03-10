@@ -1,5 +1,6 @@
 import type { ChartLayout, Viewport } from "../core/data";
 import { priceToY, indexToX, formatPrice } from "../core/data";
+import { THEME } from "../core/theme";
 
 export type DrawingType = "trendline" | "horizontal" | "fibonacci" | "rectangle";
 
@@ -11,10 +12,10 @@ export interface Drawing {
 }
 
 const DRAWING_COLORS: Record<DrawingType, string> = {
-  trendline: "#3B82F6",
-  horizontal: "#F59E0B",
-  fibonacci: "#8B5CF6",
-  rectangle: "#06B6D4",
+  trendline: THEME.drawTrendline,
+  horizontal: THEME.drawHorizontal,
+  fibonacci: THEME.drawFibonacci,
+  rectangle: THEME.drawRectangle,
 };
 
 const FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];

@@ -7,6 +7,11 @@ export interface Viewport {
   priceMax: number;
 }
 
+export interface SubPaneLayout {
+  top: number;
+  height: number;
+}
+
 export interface ChartLayout {
   canvasWidth: number;
   canvasHeight: number;
@@ -14,7 +19,10 @@ export interface ChartLayout {
   mainHeight: number;
   volumeTop: number;
   volumeHeight: number;
+  subPanes: SubPaneLayout[];
+  /** @deprecated Use subPanes[0].top — kept for backward compat */
   subPaneTop: number;
+  /** @deprecated Use subPanes[0].height — kept for backward compat */
   subPaneHeight: number;
   priceAxisWidth: number;
   timeAxisHeight: number;
@@ -23,22 +31,37 @@ export interface ChartLayout {
   chartWidth: number;
 }
 
-export function computeLayout(w: number, h: number, hasSubPane: boolean): ChartLayout {
+export function computeLayout(w: number, h: number, subPaneCount: number): ChartLayout {
   const priceAxisWidth = 80;
   const timeAxisHeight = 28;
-  const chartLeft = 0;
+  const chartLeft = 10;
   const chartRight = w - priceAxisWidth;
   const chartWidth = chartRight - chartLeft;
-  const mainTop = 0;
-  const volumeHeight = 60;
-  const subPaneHeight = hasSubPane ? 100 : 0;
-  const mainHeight = h - timeAxisHeight - volumeHeight - subPaneHeight;
+  const mainTop = 4;
+  const volumeHeight = 80;
+
+  const panePixels = Math.max(70, Math.floor(90));
+  const totalSubPaneHeight = subPaneCount * panePixels;
+  const mainHeight = Math.max(200, h - timeAxisHeight - volumeHeight - totalSubPaneHeight - mainTop);
   const volumeTop = mainTop + mainHeight;
-  const subPaneTop = volumeTop + volumeHeight;
+
+  // Build sub-pane array
+  const subPanes: SubPaneLayout[] = [];
+  let subCursor = volumeTop + volumeHeight;
+  for (let i = 0; i < subPaneCount; i++) {
+    subPanes.push({ top: subCursor, height: panePixels });
+    subCursor += panePixels;
+  }
+
+  // Backward-compatible scalar fields (first pane or zero)
+  const subPaneTop = subPanes.length > 0 ? subPanes[0].top : volumeTop + volumeHeight;
+  const subPaneHeight = subPanes.length > 0 ? subPanes[0].height : 0;
+
   return {
     canvasWidth: w, canvasHeight: h,
     mainTop, mainHeight,
     volumeTop, volumeHeight,
+    subPanes,
     subPaneTop, subPaneHeight,
     priceAxisWidth, timeAxisHeight,
     chartLeft, chartRight, chartWidth,

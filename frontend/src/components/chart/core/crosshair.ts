@@ -1,12 +1,8 @@
 import type { Bar } from "../indicators/types";
 import type { ChartLayout, Viewport } from "./data";
 import { priceToY, indexToX, formatPrice } from "./data";
+import { THEME } from "./theme";
 
-const CROSSHAIR_COLOR = "#94A3B8";
-const LABEL_BG = "#1E293B";
-const LABEL_TEXT = "#F8FAFC";
-const TOOLTIP_BG = "rgba(15,23,42,0.92)";
-const TOOLTIP_TEXT = "#F8FAFC";
 const FONT = "11px 'IBM Plex Mono', monospace";
 
 export interface CrosshairState {
@@ -32,7 +28,7 @@ export function drawCrosshair(
 
   ctx.save();
   ctx.setLineDash([4, 4]);
-  ctx.strokeStyle = CROSSHAIR_COLOR;
+  ctx.strokeStyle = THEME.crosshairColor;
   ctx.lineWidth = 0.5;
 
   // Horizontal line
@@ -56,9 +52,9 @@ export function drawCrosshair(
   ctx.font = FONT;
   const priceStr = formatPrice(price, pair);
   const pw = ctx.measureText(priceStr).width + 12;
-  ctx.fillStyle = LABEL_BG;
+  ctx.fillStyle = THEME.labelBg;
   ctx.fillRect(axisX, state.y - 10, pw, 20);
-  ctx.fillStyle = LABEL_TEXT;
+  ctx.fillStyle = THEME.labelText;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   ctx.fillText(priceStr, axisX + 6, state.y);
@@ -70,9 +66,9 @@ export function drawCrosshair(
     const d = new Date(bar.t * 1000);
     const timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     const tw = ctx.measureText(timeStr).width + 12;
-    ctx.fillStyle = LABEL_BG;
+    ctx.fillStyle = THEME.labelBg;
     ctx.fillRect(snapX - tw/2, axisY, tw, 20);
-    ctx.fillStyle = LABEL_TEXT;
+    ctx.fillStyle = THEME.labelText;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText(timeStr, snapX, axisY + 4);
@@ -97,7 +93,7 @@ function drawTooltip(ctx: CanvasRenderingContext2D, bar: Bar, pair: string, layo
   ];
   const maxW = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16;
 
-  ctx.fillStyle = TOOLTIP_BG;
+  ctx.fillStyle = THEME.tooltipBg;
   const rh = lines.length * lineH + 12;
   roundRect(ctx, x, y, maxW, rh, 4);
   ctx.fill();
@@ -109,8 +105,8 @@ function drawTooltip(ctx: CanvasRenderingContext2D, bar: Bar, pair: string, layo
   lines.forEach((line, i) => {
     const isC = i === 3;
     const color = isC
-      ? (bar.c >= bar.o ? "#34D399" : "#F87171")
-      : TOOLTIP_TEXT;
+      ? (bar.c >= bar.o ? THEME.tooltipGreen : THEME.tooltipRed)
+      : THEME.tooltipText;
     ctx.fillStyle = color;
     ctx.fillText(line, x + 8, y + 6 + i * lineH);
   });

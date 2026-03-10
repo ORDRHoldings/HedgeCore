@@ -49,3 +49,51 @@ export interface TrendLine {
   touches: number;
   direction: "up" | "down";
 }
+
+export interface StochasticPoint {
+  t: number;
+  k: number;
+  d: number;
+}
+
+export interface ADXPoint {
+  t: number;
+  adx: number;
+  plusDI: number;
+  minusDI: number;
+}
+
+export interface IchimokuPoint {
+  t: number;
+  tenkan: number;
+  kijun: number;
+  senkouA: number;
+  senkouB: number;
+  chikou: number;
+}
+
+export interface VolumeProfileLevel {
+  price: number;
+  volume: number;
+  buyVolume: number;
+  sellVolume: number;
+  percentage: number;
+}
+
+export interface VolumeProfileData {
+  levels: VolumeProfileLevel[];
+  poc: number;
+  vahPrice: number;
+  valPrice: number;
+  totalVolume: number;
+}
+
+export interface PivotPointData {
+  pp: number;
+  r1: number;
+  r2: number;
+  r3: number;
+  s1: number;
+  s2: number;
+  s3: number;
+}

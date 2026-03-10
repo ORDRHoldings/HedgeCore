@@ -83,6 +83,8 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             # Voice WebSocket — browser WS API cannot send headers, JWT is in query param.
             # The endpoint itself validates the token; middleware must not block upgrade.
             "/api/v1/voice/",
+            # Public endpoints — unauthenticated, rate-limited by the route itself.
+            "/api/v1/public/",
         )
 
         self._keys: dict[str, APIKeyRecord] = {}

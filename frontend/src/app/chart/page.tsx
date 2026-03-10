@@ -13,14 +13,14 @@ import ChartEngine from "@/components/chart/ChartEngine";
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
   fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
-  bgPanel: "var(--bg-panel, #FFFFFF)",
-  bgDeep: "var(--bg-deep, #F8FAFC)",
-  bgSub: "var(--bg-sub, #F1F5F9)",
-  rim: "var(--border-rim, #E2E8F0)",
-  accent: "var(--accent-cyan, #1C62F2)",
-  textPrimary: "var(--text-primary, #0F172A)",
-  textSecondary: "var(--text-secondary, #334155)",
-  textTertiary: "var(--text-tertiary, #94A3B8)",
+  bgPanel: "#131722",
+  bgDeep: "#0B1120",
+  bgSub: "#1E222D",
+  rim: "#2A2E39",
+  accent: "#1C62F2",
+  textPrimary: "#D1D4DC",
+  textSecondary: "#787B86",
+  textTertiary: "#545B69",
 } as const;
 
 const FX_PAIRS = [

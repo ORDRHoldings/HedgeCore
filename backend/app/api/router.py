@@ -204,6 +204,10 @@ router.include_router(v1_hedge_effectiveness_router)
 from app.api.routes.v1_chart_data import router as v1_chart_data_router
 router.include_router(v1_chart_data_router)
 
+# Public chart data — unauthenticated, rate-limited (owns /v1/public/chart-data)
+from app.api.routes.v1_public_chart_data import router as v1_public_chart_data_router
+router.include_router(v1_public_chart_data_router)
+
 __all__ = ["router"]
 
 # Superuser admin — tenants (owns /v1/admin/tenants)

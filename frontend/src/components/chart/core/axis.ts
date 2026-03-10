@@ -1,11 +1,7 @@
 import type { Bar } from "../indicators/types";
 import type { ChartLayout, Viewport } from "./data";
 import { priceToY, indexToX, formatPrice, formatTimestamp } from "./data";
-
-const AXIS_BG = "#FAFBFC";
-const AXIS_TEXT = "#64748B";
-const GRID_LINE = "rgba(226,232,240,0.5)";
-const AXIS_FONT = "11px 'IBM Plex Mono', monospace";
+import { THEME } from "./theme";
 
 export function drawPriceAxis(
   ctx: CanvasRenderingContext2D,
@@ -18,11 +14,11 @@ export function drawPriceAxis(
   const axisX = canvasWidth - priceAxisWidth;
 
   // Background
-  ctx.fillStyle = AXIS_BG;
+  ctx.fillStyle = THEME.axisBg;
   ctx.fillRect(axisX, mainTop, priceAxisWidth, mainHeight);
 
   // Border
-  ctx.strokeStyle = "#E2E8F0";
+  ctx.strokeStyle = THEME.separator;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(axisX, mainTop);
@@ -34,8 +30,8 @@ export function drawPriceAxis(
   const step = niceStep(range, mainHeight / 50);
   const start = Math.ceil(priceMin / step) * step;
 
-  ctx.font = AXIS_FONT;
-  ctx.fillStyle = AXIS_TEXT;
+  ctx.font = THEME.axisFont;
+  ctx.fillStyle = THEME.axisText;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
 
@@ -44,7 +40,7 @@ export function drawPriceAxis(
     if (y < mainTop + 10 || y > mainTop + mainHeight - 10) continue;
 
     // Grid line
-    ctx.strokeStyle = GRID_LINE;
+    ctx.strokeStyle = THEME.gridLine;
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     ctx.moveTo(0, y);
@@ -52,7 +48,7 @@ export function drawPriceAxis(
     ctx.stroke();
 
     // Label
-    ctx.fillStyle = AXIS_TEXT;
+    ctx.fillStyle = THEME.axisText;
     ctx.fillText(formatPrice(price, pair), axisX + 6, y);
   }
 }
@@ -69,11 +65,11 @@ export function drawTimeAxis(
   const axisY = canvasHeight - timeAxisHeight;
 
   // Background
-  ctx.fillStyle = AXIS_BG;
+  ctx.fillStyle = THEME.axisBg;
   ctx.fillRect(0, axisY, canvasWidth, timeAxisHeight);
 
   // Border
-  ctx.strokeStyle = "#E2E8F0";
+  ctx.strokeStyle = THEME.separator;
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(0, axisY);
@@ -84,8 +80,8 @@ export function drawTimeAxis(
   const visibleBars = endIndex - startIndex;
   const labelSpacing = Math.max(1, Math.floor(visibleBars / 8));
 
-  ctx.font = AXIS_FONT;
-  ctx.fillStyle = AXIS_TEXT;
+  ctx.font = THEME.axisFont;
+  ctx.fillStyle = THEME.axisText;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
 
@@ -96,14 +92,14 @@ export function drawTimeAxis(
     if (x < 30 || x > canvasWidth - 90) continue;
 
     // Grid line
-    ctx.strokeStyle = GRID_LINE;
+    ctx.strokeStyle = THEME.gridLine;
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, axisY);
     ctx.stroke();
 
-    ctx.fillStyle = AXIS_TEXT;
+    ctx.fillStyle = THEME.axisText;
     ctx.fillText(formatTimestamp(bars[idx].t, interval), x, axisY + 6);
   }
 }

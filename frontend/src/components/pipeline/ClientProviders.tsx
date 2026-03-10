@@ -36,6 +36,9 @@ import dynamic from "next/dynamic";
 // Dynamic import — voice terminal uses browser APIs (AudioContext, WebSocket)
 const VoiceTerminal = dynamic(() => import("../voice/VoiceTerminal"), { ssr: false });
 
+// Public routes: no sidebar, no voice, full viewport
+const PUBLIC_ROUTES = ["/", "/market"];
+
 // Auth pages where the voice assistant should NOT appear
 const AUTH_PREFIXES = ["/auth", "/login", "/register"];
 
@@ -57,6 +60,13 @@ function VoiceShell() {
 
 function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
+
+  // Public routes: no sidebar, no voice, full viewport
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  if (isPublicRoute) {
+    return <main className="min-h-screen">{children}</main>;
+  }
+
   const showPipelineChrome = PIPELINE_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
