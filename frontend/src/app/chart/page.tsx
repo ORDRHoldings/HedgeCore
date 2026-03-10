@@ -56,7 +56,7 @@ function ChartPageInner() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: S.bgDeep }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: S.bgDeep, overflow: "hidden" }}>
       {/* ── Top Control Bar ── */}
       <div style={{
         display: "flex", alignItems: "center", gap: 8,
@@ -138,7 +138,7 @@ function ChartPageInner() {
       </div>
 
       {/* ── Chart Area ── */}
-      <div style={{ flex: 1, padding: 8 }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         <ChartEngine
           bars={bars}
           pair={pair}

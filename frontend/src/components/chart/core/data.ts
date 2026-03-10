@@ -35,7 +35,8 @@ export function computeLayout(w: number, h: number, subPaneCount: number): Chart
   const priceAxisWidth = 80;
   const timeAxisHeight = 28;
   const chartLeft = 10;
-  const chartRight = w - priceAxisWidth;
+  const chartRightPad = 8; // breathing room before price axis
+  const chartRight = w - priceAxisWidth - chartRightPad;
   const chartWidth = chartRight - chartLeft;
   const mainTop = 4;
   const volumeHeight = 80;

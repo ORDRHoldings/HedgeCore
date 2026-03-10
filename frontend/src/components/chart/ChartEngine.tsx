@@ -203,6 +203,21 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     return () => ro.disconnect();
   }, []);
 
+  // Native wheel listener with { passive: false } to reliably prevent page scroll
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      zoomRef.current = zoomWheel(zoomRef.current, e.deltaY, x, layout.chartLeft, layout.chartWidth, bars.length);
+    };
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", onWheel);
+  }, [layout, bars.length]);
+
   /* ─── Render ─── */
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -352,18 +367,23 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
 
   const handleMouseLeave = useCallback(() => {
     crosshairRef.current = { ...crosshairRef.current, visible: false };
-    zoomRef.current = handleDragEnd(zoomRef.current);
-    setIsDragging(false);
+    if (zoomRef.current.isDragging) {
+      zoomRef.current = handleDragEnd(zoomRef.current);
+      setIsDragging(false);
+    }
   }, []);
 
-  const handleWheelEvent = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    zoomRef.current = zoomWheel(zoomRef.current, e.deltaY, x, layout.chartLeft, layout.chartWidth, bars.length);
-  }, [layout, bars.length]);
+  // Global mouseup: end drag even if mouse leaves the canvas fast
+  useEffect(() => {
+    const onGlobalUp = () => {
+      if (zoomRef.current.isDragging) {
+        zoomRef.current = handleDragEnd(zoomRef.current);
+        setIsDragging(false);
+      }
+    };
+    document.addEventListener("mouseup", onGlobalUp);
+    return () => document.removeEventListener("mouseup", onGlobalUp);
+  }, []);
 
   /* ─── Toolbar callbacks ─── */
   const handleToggle = useCallback((key: string) => {
@@ -468,6 +488,10 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
         style={{
           flex: 1, position: "relative",
           cursor: drawingMode ? "crosshair" : isDragging ? "grabbing" : "crosshair",
+          overflow: "hidden",
+          touchAction: "none",
+          userSelect: "none",
+          WebkitUserSelect: "none",
         }}
       >
         <canvas
@@ -476,8 +500,12 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
-          onWheel={handleWheelEvent}
-          style={{ display: "block", width: "100%", height: "100%" }}
+          onContextMenu={(e) => e.preventDefault()}
+          style={{
+            display: "block", width: "100%", height: "100%",
+            touchAction: "none",
+            userSelect: "none",
+          }}
         />
       </div>
     </div>

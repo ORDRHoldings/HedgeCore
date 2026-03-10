@@ -27,6 +27,7 @@ const TIMEFRAMES: { label: string; value: string }[] = [
   { label: "4H", value: "4h" },
   { label: "1D", value: "1day" },
   { label: "1W", value: "1week" },
+  { label: "1M", value: "1month" },
 ];
 
 function MarketPageInner() {
@@ -35,7 +36,7 @@ function MarketPageInner() {
   const { bars, loading, error, source, refetch } = usePublicChartData(pair, interval, 500);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#0B1120" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "#0B1120", overflow: "hidden", position: "fixed", inset: 0 }}>
       {/* ── Dark Top Bar ── */}
       <div
         style={{
@@ -169,7 +170,7 @@ function MarketPageInner() {
       </div>
 
       {/* ── Chart Area ── */}
-      <div style={{ flex: 1, padding: 8 }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         <ChartEngine
           bars={bars}
           pair={pair}

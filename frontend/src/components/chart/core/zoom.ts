@@ -26,11 +26,11 @@ export interface ZoomPanState {
   isAnimating: boolean;
 }
 
-const LERP_ZOOM = 0.18;      // Zoom smoothing (higher = snappier)
-const LERP_MOMENTUM = 0.12;  // Momentum smoothing
-const VELOCITY_DECAY = 0.94;  // Friction
-const VELOCITY_MIN = 0.01;    // Stop threshold
-const EPSILON = 0.005;        // Animation complete threshold
+const LERP_ZOOM = 0.22;      // Zoom smoothing (higher = snappier)
+const LERP_MOMENTUM = 0.15;  // Momentum smoothing
+const VELOCITY_DECAY = 0.92;  // Friction (lower = stops sooner)
+const VELOCITY_MIN = 0.05;    // Stop threshold (higher = stops earlier, less float)
+const EPSILON = 0.01;         // Animation complete threshold
 
 export function createInitialZoomState(barCount: number, visibleBars = 200): ZoomPanState {
   const end = Math.max(0, barCount - 1);
@@ -135,17 +135,18 @@ export function handleDragMove(
   if (newEnd > barCount - 1) { newEnd = barCount - 1; newStart = newEnd - range; }
   if (newStart < 0) newStart = 0;
 
-  // Track velocity
+  // Track velocity for momentum after release
   const now = performance.now();
   const dt = now - state.lastDragTime;
-  const vel = dt > 0 ? ((mouseX - state.lastDragX) / chartWidth) * range * (-16 / dt) : 0;
+  // Only track velocity if enough time has passed (avoid spikes from fast events)
+  const vel = dt > 2 ? ((mouseX - state.lastDragX) / chartWidth) * range * (-16 / Math.max(dt, 8)) : state.velocityX;
 
   return {
     ...state,
     startIndex: newStart, endIndex: newEnd,
     targetStart: newStart, targetEnd: newEnd,
     lastDragX: mouseX, lastDragTime: now,
-    velocityX: vel * 0.3 + state.velocityX * 0.7, // Smooth velocity
+    velocityX: vel * 0.25 + state.velocityX * 0.75, // Gentle velocity tracking
   };
 }
 

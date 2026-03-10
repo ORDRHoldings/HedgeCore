@@ -64,15 +64,19 @@ function Shell({ children }: { children: ReactNode }) {
   // Public routes: no sidebar, no voice, full viewport
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   if (isPublicRoute) {
-    return <main className="min-h-screen">{children}</main>;
+    return <main style={{ height: "100vh", overflow: "hidden" }}>{children}</main>;
   }
 
   const showPipelineChrome = PIPELINE_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
 
+  // Full-viewport routes that must not scroll (chart platform)
+  const isFullViewport = pathname === "/chart";
+  const mainOverflow = isFullViewport ? "overflow-hidden" : "overflow-auto";
+
   return (
-    <div className="min-h-screen bg-[var(--bg-deep)] flex flex-row">
+    <div className="min-h-screen bg-[var(--bg-deep)] flex flex-row" style={isFullViewport ? { height: "100vh", overflow: "hidden" } : undefined}>
       <AppSidebar />
       <div className="flex-1 min-w-0 flex flex-col">
         {showPipelineChrome && (
@@ -81,7 +85,7 @@ function Shell({ children }: { children: ReactNode }) {
             <StaleSnapshotBanner />
           </>
         )}
-        <main className="flex-1 min-h-0 overflow-auto">{children}</main>
+        <main className={`flex-1 min-h-0 ${mainOverflow}`}>{children}</main>
       </div>
       <VoiceShell />
     </div>
