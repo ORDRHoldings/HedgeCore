@@ -18,6 +18,36 @@ from .provider_base import (
 UTC = timezone.utc
 _log = logging.getLogger(__name__)
 
+# Tenor → year-fraction for CIP forward point calculation
+_TENOR_YEARS: dict[str, float] = {
+    "1M": 1 / 12, "3M": 3 / 12, "6M": 6 / 12, "9M": 9 / 12, "12M": 1.0,
+}
+
+# Indicative deposit/OIS rates (annualized %) — institutional calibration.
+# Replace with live rate feed (e.g. IBKR bond yields, Bloomberg SOFR/ESTR) for production.
+_INDICATIVE_RATES: dict[str, dict[str, float]] = {
+    "USD": {"1M": 5.33, "3M": 5.40, "6M": 5.35, "12M": 5.10},
+    "EUR": {"1M": 3.75, "3M": 3.85, "6M": 3.70, "12M": 3.50},
+    "GBP": {"1M": 5.25, "3M": 5.30, "6M": 5.15, "12M": 4.90},
+    "JPY": {"1M": -0.05, "3M": 0.00, "6M": 0.10, "12M": 0.30},
+    "MXN": {"1M": 11.00, "3M": 11.10, "6M": 10.80, "12M": 10.25},
+    "BRL": {"1M": 13.75, "3M": 13.50, "6M": 12.80, "12M": 11.50},
+    "COP": {"1M": 12.25, "3M": 12.00, "6M": 11.50, "12M": 10.75},
+    "CLP": {"1M": 9.50, "3M": 9.25, "6M": 8.75, "12M": 8.00},
+    "PEN": {"1M": 7.00, "3M": 6.80, "6M": 6.50, "12M": 6.00},
+    "CAD": {"1M": 5.00, "3M": 4.95, "6M": 4.85, "12M": 4.60},
+    "CHF": {"1M": 1.75, "3M": 1.80, "6M": 1.70, "12M": 1.50},
+    "CNY": {"1M": 2.80, "3M": 2.85, "6M": 2.75, "12M": 2.60},
+    "INR": {"1M": 6.50, "3M": 6.70, "6M": 6.60, "12M": 6.40},
+    "SGD": {"1M": 3.80, "3M": 3.85, "6M": 3.75, "12M": 3.60},
+    "KRW": {"1M": 3.50, "3M": 3.55, "6M": 3.45, "12M": 3.30},
+    "HKD": {"1M": 5.30, "3M": 5.35, "6M": 5.30, "12M": 5.05},
+    "AUD": {"1M": 4.35, "3M": 4.40, "6M": 4.30, "12M": 4.10},
+    "NZD": {"1M": 5.50, "3M": 5.45, "6M": 5.30, "12M": 5.00},
+    "ZAR": {"1M": 8.25, "3M": 8.40, "6M": 8.20, "12M": 7.80},
+    "TRY": {"1M": 45.00, "3M": 42.00, "6M": 38.00, "12M": 35.00},
+}
+
 # Lazy import ib_insync — not available on Render (IBKR is optional)
 _ib_insync = None
 
@@ -246,7 +276,16 @@ class IBKRProvider(MarketDataProvider):
         return ticker
 
     async def _fetch_fx_forwards_raw(self, pair: str) -> tuple[float, list[dict]]:
-        """Fetch forward points from IBKR. Returns (spot_mid, [{tenor, points}])."""
+        """Fetch forward points from IBKR via CIP-derived synthetic calculation.
+
+        IBKR doesn't expose FX forward points directly via reqMktData.
+        We fetch the spot rate live, then compute forward points using
+        covered interest rate parity: F = S × (1 + r_quote × T) / (1 + r_base × T).
+        Forward points = F - S.
+
+        Rate curves are institutional indicative rates — replace with live
+        OIS/deposit rate feeds for production accuracy.
+        """
         if not self.is_connected:
             await self.connect()
 
@@ -256,11 +295,40 @@ class IBKRProvider(MarketDataProvider):
         await self._ib.sleep(2)
         spot = ticker.midpoint() if callable(getattr(ticker, "midpoint", None)) else 0.0
 
-        # Forward points via swap rates — placeholder for actual IBKR swap data
+        if not spot or spot != spot:  # NaN check
+            return 0.0, []
+
+        base_ccy = pair[:3].upper()
+        quote_ccy = pair[3:6].upper()
         tenors = ["1M", "3M", "6M", "9M", "12M"]
-        curves = [{"tenor": t, "points": 0.0} for t in tenors]
+        curves = []
+        for tenor in tenors:
+            points = self._compute_cip_forward_points(spot, base_ccy, quote_ccy, tenor)
+            curves.append({"tenor": tenor, "points": round(points, 6)})
 
         return spot, curves
+
+    @staticmethod
+    def _compute_cip_forward_points(
+        spot: float, base_ccy: str, quote_ccy: str, tenor: str,
+    ) -> float:
+        """Covered interest rate parity forward points.
+
+        F = S × (1 + r_quote × T) / (1 + r_base × T)
+        Forward points = F - S
+
+        For USD/XXX pairs: base=USD, quote=XXX
+        For XXX/USD pairs: base=XXX, quote=USD
+        """
+        tenor_years = _TENOR_YEARS.get(tenor, 0.0)
+        if tenor_years == 0.0:
+            return 0.0
+
+        r_base = _INDICATIVE_RATES.get(base_ccy, {}).get(tenor, 0.0) / 100.0
+        r_quote = _INDICATIVE_RATES.get(quote_ccy, {}).get(tenor, 0.0) / 100.0
+
+        fwd = spot * (1.0 + r_quote * tenor_years) / (1.0 + r_base * tenor_years)
+        return fwd - spot
 
     async def _fetch_options_raw(self, underlying: str, expiry: str | None = None) -> list[dict]:
         """Fetch options chain from IBKR."""
