@@ -1603,11 +1603,28 @@ async def lifespan(app: FastAPI):
 
 
 
+    # ── Market data providers ─────────────────────────────────────────────
+    try:
+        from app.services.market_data import init_market_data
+        init_market_data(settings)
+        logger.info("Market data providers initialized")
+    except Exception as e:
+        logger.warning(f"Market data init skipped: {e}")
+
     try:
 
         yield
 
     finally:
+
+        # Stop market data scheduler
+        try:
+            from app.services.market_data import get_scheduler
+            sched = get_scheduler()
+            if sched and sched.is_running:
+                sched.stop()
+        except Exception:
+            pass
 
         await shutdown_engine()
 

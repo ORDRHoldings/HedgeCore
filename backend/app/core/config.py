@@ -333,6 +333,25 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
 
     # ------------------------------------------------------------------
+    # Market Data Providers
+    # ------------------------------------------------------------------
+    TWELVEDATA_API_KEY: str = ""
+    TWELVEDATA_BASE_URL: str = "https://api.twelvedata.com"
+    TWELVEDATA_RATE_LIMIT: int = 8
+    TWELVEDATA_DAILY_LIMIT: int = 800
+
+    IBKR_HOST: str = "127.0.0.1"
+    IBKR_PORT: int = 4002
+    IBKR_CLIENT_ID: int = 1
+    IBKR_ENABLED: bool = False
+
+    MARKET_DATA_SPOT_INTERVAL_SEC: int = 300
+    MARKET_DATA_FORWARD_INTERVAL_SEC: int = 3600
+    MARKET_DATA_EQUITY_INTERVAL_SEC: int = 300
+    MARKET_DATA_VOL_INTERVAL_SEC: int = 3600
+    MARKET_DATA_OPTIONS_INTERVAL_SEC: int = 3600
+
+    # ------------------------------------------------------------------
 
     # ? API Key / Service Token Settings
 
