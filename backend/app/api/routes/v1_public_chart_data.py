@@ -21,12 +21,27 @@ router = APIRouter(prefix="/v1/public/chart-data", tags=["v1-public-chart-data"]
 # ── Restrictions ─────────────────────────────────────────
 
 ALLOWED_PAIRS = frozenset({
+    # FX — majors, crosses & EM
     "EURUSD", "GBPUSD", "USDJPY", "USDCAD", "AUDUSD",
     "NZDUSD", "USDCHF", "EURGBP", "EURJPY", "GBPJPY",
     "USDMXN", "USDCNH", "USDZAR", "USDTRY", "AUDJPY",
+    "USDBRL", "USDINR", "EURCHF", "EURAUD", "GBPAUD",
+    "GBPNZD", "AUDNZD", "CADJPY", "CHFJPY", "NZDJPY",
+    "USDSGD", "USDHKD", "USDNOK", "USDSEK", "USDPLN",
+    "USDDKK", "USDCZK", "USDHUF",
+    # Crypto
+    "BTCUSD", "ETHUSD", "XRPUSD", "SOLUSD", "ADAUSD",
+    "DOGEUSD", "DOTUSD", "AVAXUSD", "MATICUSD", "LINKUSD",
+    "BNBUSD", "LTCUSD",
+    # Indices (TwelveData format)
+    "SPX", "NDX", "DJI", "IXIC", "RUT", "VIX",
+    "FTSE", "DAX", "CAC", "N225", "HSI", "STOXX50E",
+    # Commodities
+    "XAUUSD", "XAGUSD",
 })
 
 ALLOWED_INTERVALS = frozenset({
+    "1min", "3min", "5min", "15min", "30min",
     "1h", "4h", "1day", "1week", "1month",
 })
 

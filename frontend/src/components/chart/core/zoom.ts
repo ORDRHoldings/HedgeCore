@@ -157,3 +157,16 @@ export function handleDragEnd(state: ZoomPanState): ZoomPanState {
     isAnimating: Math.abs(state.velocityX) > VELOCITY_MIN,
   };
 }
+
+export function fitToVisibleBars(state: ZoomPanState, barCount: number, visibleBars = 200): ZoomPanState {
+  const end = Math.max(0, barCount - 1);
+  const start = Math.max(0, end - visibleBars);
+  return {
+    ...state,
+    startIndex: start, endIndex: end,
+    targetStart: start, targetEnd: end,
+    velocityX: 0,
+    isAnimating: false,
+    isDragging: false,
+  };
+}

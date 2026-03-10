@@ -23,17 +23,104 @@ const S = {
   textTertiary: "#545B69",
 } as const;
 
-const FX_PAIRS = [
-  "USDMXN", "EURUSD", "GBPUSD", "USDJPY", "USDCAD",
-  "AUDUSD", "NZDUSD", "USDCHF", "EURGBP", "EURJPY",
-  "GBPJPY", "AUDJPY", "USDCNH", "USDBRL", "USDZAR",
-  "USDTRY", "USDINR",
+const ASSET_GROUPS: { label: string; items: { symbol: string; display: string }[] }[] = [
+  {
+    label: "FX Majors",
+    items: [
+      { symbol: "EURUSD", display: "EUR/USD" },
+      { symbol: "GBPUSD", display: "GBP/USD" },
+      { symbol: "USDJPY", display: "USD/JPY" },
+      { symbol: "USDCAD", display: "USD/CAD" },
+      { symbol: "AUDUSD", display: "AUD/USD" },
+      { symbol: "NZDUSD", display: "NZD/USD" },
+      { symbol: "USDCHF", display: "USD/CHF" },
+    ],
+  },
+  {
+    label: "FX Crosses",
+    items: [
+      { symbol: "EURGBP", display: "EUR/GBP" },
+      { symbol: "EURJPY", display: "EUR/JPY" },
+      { symbol: "GBPJPY", display: "GBP/JPY" },
+      { symbol: "AUDJPY", display: "AUD/JPY" },
+      { symbol: "EURCHF", display: "EUR/CHF" },
+      { symbol: "EURAUD", display: "EUR/AUD" },
+      { symbol: "GBPAUD", display: "GBP/AUD" },
+      { symbol: "GBPNZD", display: "GBP/NZD" },
+      { symbol: "AUDNZD", display: "AUD/NZD" },
+      { symbol: "CADJPY", display: "CAD/JPY" },
+      { symbol: "CHFJPY", display: "CHF/JPY" },
+      { symbol: "NZDJPY", display: "NZD/JPY" },
+    ],
+  },
+  {
+    label: "FX EM",
+    items: [
+      { symbol: "USDMXN", display: "USD/MXN" },
+      { symbol: "USDCNH", display: "USD/CNH" },
+      { symbol: "USDZAR", display: "USD/ZAR" },
+      { symbol: "USDTRY", display: "USD/TRY" },
+      { symbol: "USDBRL", display: "USD/BRL" },
+      { symbol: "USDINR", display: "USD/INR" },
+      { symbol: "USDSGD", display: "USD/SGD" },
+      { symbol: "USDHKD", display: "USD/HKD" },
+      { symbol: "USDNOK", display: "USD/NOK" },
+      { symbol: "USDSEK", display: "USD/SEK" },
+      { symbol: "USDPLN", display: "USD/PLN" },
+      { symbol: "USDDKK", display: "USD/DKK" },
+      { symbol: "USDCZK", display: "USD/CZK" },
+      { symbol: "USDHUF", display: "USD/HUF" },
+    ],
+  },
+  {
+    label: "Crypto",
+    items: [
+      { symbol: "BTCUSD", display: "BTC/USD" },
+      { symbol: "ETHUSD", display: "ETH/USD" },
+      { symbol: "XRPUSD", display: "XRP/USD" },
+      { symbol: "SOLUSD", display: "SOL/USD" },
+      { symbol: "ADAUSD", display: "ADA/USD" },
+      { symbol: "DOGEUSD", display: "DOGE/USD" },
+      { symbol: "DOTUSD", display: "DOT/USD" },
+      { symbol: "AVAXUSD", display: "AVAX/USD" },
+      { symbol: "MATICUSD", display: "MATIC/USD" },
+      { symbol: "LINKUSD", display: "LINK/USD" },
+      { symbol: "BNBUSD", display: "BNB/USD" },
+      { symbol: "LTCUSD", display: "LTC/USD" },
+    ],
+  },
+  {
+    label: "Indices",
+    items: [
+      { symbol: "SPX", display: "S&P 500" },
+      { symbol: "NDX", display: "NASDAQ" },
+      { symbol: "DJI", display: "Dow Jones" },
+      { symbol: "IXIC", display: "NASDAQ Comp" },
+      { symbol: "RUT", display: "Russell 2000" },
+      { symbol: "VIX", display: "VIX" },
+      { symbol: "FTSE", display: "FTSE 100" },
+      { symbol: "DAX", display: "DAX" },
+      { symbol: "CAC", display: "CAC 40" },
+      { symbol: "N225", display: "Nikkei 225" },
+      { symbol: "HSI", display: "Hang Seng" },
+      { symbol: "STOXX50E", display: "Euro Stoxx" },
+    ],
+  },
+  {
+    label: "Commodities",
+    items: [
+      { symbol: "XAUUSD", display: "Gold" },
+      { symbol: "XAGUSD", display: "Silver" },
+    ],
+  },
 ];
 
 const TIMEFRAMES: { label: string; value: string }[] = [
   { label: "1m", value: "1min" },
+  { label: "3m", value: "3min" },
   { label: "5m", value: "5min" },
   { label: "15m", value: "15min" },
+  { label: "30m", value: "30min" },
   { label: "1H", value: "1h" },
   { label: "4H", value: "4h" },
   { label: "1D", value: "1day" },
@@ -65,7 +152,7 @@ function ChartPageInner() {
         background: S.bgPanel,
         minHeight: 48,
       }}>
-        {/* Pair Selector */}
+        {/* Pair Selector with optgroup */}
         <select
           value={pair}
           onChange={e => setPair(e.target.value)}
@@ -80,10 +167,17 @@ function ChartPageInner() {
             color: S.textPrimary,
             cursor: "pointer",
             outline: "none",
+            maxWidth: 180,
           }}
         >
-          {FX_PAIRS.map(p => (
-            <option key={p} value={p}>{p.slice(0, 3)}/{p.slice(3)}</option>
+          {ASSET_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.items.map((item) => (
+                <option key={item.symbol} value={item.symbol}>
+                  {item.display}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
 

@@ -239,6 +239,16 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     ctx.fillStyle = THEME.canvasBg;
     ctx.fillRect(0, 0, dimensions.w, dimensions.h);
 
+    // Watermark — faded pair name like TradingView
+    ctx.save();
+    ctx.font = `bold ${Math.min(layout.mainHeight * 0.18, 120)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = "rgba(42,46,57,0.25)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const watermarkText = pair.length > 3 ? `${pair.slice(0,3)}/${pair.slice(3)}` : pair;
+    ctx.fillText(watermarkText, layout.chartLeft + layout.chartWidth / 2, layout.mainTop + layout.mainHeight / 2);
+    ctx.restore();
+
     // Layer 1: Behind candles
     if (indicators.sr.length > 0) drawSRLevels(ctx, indicators.sr, layout, viewport);
     if (indicators.fvg.length > 0) drawFVGZones(ctx, indicators.fvg, layout, viewport);
@@ -364,6 +374,30 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     zoomRef.current = handleDragEnd(zoomRef.current);
     setIsDragging(false);
   }, []);
+
+  const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const axisX = dimensions.w - layout.priceAxisWidth;
+    const axisY = dimensions.h - layout.timeAxisHeight;
+
+    if (x >= axisX) {
+      // Double-click on price axis — auto-fit price (reset vertical)
+      // Currently viewport auto-fits, so this is effectively a no-op
+      // but it signals "reset any manual price scaling"
+      return;
+    }
+
+    if (y >= axisY) {
+      // Double-click on time axis — auto-fit time (reset to show recent bars)
+      zoomRef.current = createInitialZoomState(bars.length, Math.min(200, bars.length));
+      return;
+    }
+  }, [bars.length, dimensions, layout]);
 
   const handleMouseLeave = useCallback(() => {
     crosshairRef.current = { ...crosshairRef.current, visible: false };
@@ -500,6 +534,7 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
+          onDoubleClick={handleDoubleClick}
           onContextMenu={(e) => e.preventDefault()}
           style={{
             display: "block", width: "100%", height: "100%",

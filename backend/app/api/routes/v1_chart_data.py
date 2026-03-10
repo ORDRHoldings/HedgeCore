@@ -26,7 +26,8 @@ router = APIRouter(prefix="/v1/chart-data", tags=["v1-chart-data"])
 # ── Allowed intervals ────────────────────────────────────
 
 ALLOWED_INTERVALS = frozenset({
-    "1min", "5min", "15min", "1h", "4h", "1day", "1week", "1month",
+    "1min", "3min", "5min", "15min", "30min",
+    "1h", "4h", "1day", "1week", "1month",
 })
 
 # ── Response schemas ─────────────────────────────────────
