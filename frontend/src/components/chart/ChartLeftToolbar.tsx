@@ -55,6 +55,13 @@ const DIVIDER_COLOR = THEME.subPaneBorder;
 const ICON_COLOR = THEME.axisText; // #787B86
 const ICON_ACTIVE_COLOR = "#D1D4DC";
 const DELETE_HOVER_COLOR = "#EF5350";
+const DISABLED_COLOR = "#3A3E4A";
+
+/** Tools that are NOT yet implemented — shown grayed out with "Coming Soon" */
+const DISABLED_TOOLS = new Set<ToolKey>([
+  "ray", "vertical", "pitchfork", "text", "arrow",
+  "priceRange", "measure", "zoomIn", "eraser",
+]);
 
 /* ═══════════════════════════════════════════════════════
    SVG Icons (16x16 inline paths)
@@ -344,6 +351,7 @@ function ToolButton({
 }) {
   const [hovered, setHovered] = useState(false);
   const [tooltipVisible, setTooltipVisible] = useState(false);
+  const isDisabled = DISABLED_TOOLS.has(toolKey);
 
   const handleMouseEnter = useCallback(() => {
     setHovered(true);
@@ -355,21 +363,25 @@ function ToolButton({
     setTooltipVisible(false);
   }, []);
 
-  const iconColor = isActive
-    ? ICON_ACTIVE_COLOR
-    : hovered && hoverColor
-      ? hoverColor
-      : hovered
-        ? ICON_ACTIVE_COLOR
-        : ICON_COLOR;
+  const iconColor = isDisabled
+    ? DISABLED_COLOR
+    : isActive
+      ? ICON_ACTIVE_COLOR
+      : hovered && hoverColor
+        ? hoverColor
+        : hovered
+          ? ICON_ACTIVE_COLOR
+          : ICON_COLOR;
 
-  const bgColor = isActive
-    ? ACTIVE_BG
-    : hovered
-      ? hoverColor
-        ? `${hoverColor}18`
-        : HOVER_BG
-      : "transparent";
+  const bgColor = isDisabled
+    ? "transparent"
+    : isActive
+      ? ACTIVE_BG
+      : hovered
+        ? hoverColor
+          ? `${hoverColor}18`
+          : HOVER_BG
+        : "transparent";
 
   return (
     <div
@@ -378,7 +390,7 @@ function ToolButton({
       onMouseLeave={handleMouseLeave}
     >
       <button
-        onClick={onClick}
+        onClick={isDisabled ? undefined : onClick}
         data-tool={toolKey}
         aria-label={label}
         style={{
@@ -390,9 +402,10 @@ function ToolButton({
           border: "none",
           borderRadius: 4,
           background: bgColor,
-          cursor: "pointer",
+          cursor: isDisabled ? "default" : "pointer",
           padding: 0,
-          transition: "background 0.12s ease",
+          opacity: isDisabled ? 0.4 : 1,
+          transition: "background 0.12s ease, opacity 0.12s ease",
         }}
       >
         {getToolIcon(toolKey, iconColor)}
@@ -407,7 +420,7 @@ function ToolButton({
             top: "50%",
             transform: "translateY(-50%)",
             background: THEME.tooltipBg,
-            color: THEME.tooltipText,
+            color: isDisabled ? "#545B69" : THEME.tooltipText,
             fontFamily: "'IBM Plex Mono', monospace",
             fontSize: 11,
             fontWeight: 500,
@@ -420,7 +433,7 @@ function ToolButton({
             boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
           }}
         >
-          {label}
+          {isDisabled ? `${label} — Coming Soon` : label}
         </div>
       )}
     </div>

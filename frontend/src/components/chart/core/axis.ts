@@ -1,5 +1,6 @@
 import type { Bar } from "../indicators/types";
 import type { ChartLayout, Viewport } from "./data";
+import type { PriceScale } from "./data";
 import { priceToY, indexToX, formatPrice, formatTimestamp } from "./data";
 import { THEME } from "./theme";
 
@@ -8,6 +9,8 @@ export function drawPriceAxis(
   layout: ChartLayout,
   viewport: Viewport,
   pair: string,
+  scale: PriceScale = "linear",
+  refPrice?: number,
 ): void {
   const { canvasWidth, priceAxisWidth, mainTop, mainHeight } = layout;
   const { priceMin, priceMax } = viewport;
@@ -17,39 +20,85 @@ export function drawPriceAxis(
   ctx.fillStyle = THEME.axisBg;
   ctx.fillRect(axisX, mainTop, priceAxisWidth, mainHeight);
 
-  // Border
+  // Border (pixel-snapped)
   ctx.strokeStyle = THEME.separator;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(axisX, mainTop);
-  ctx.lineTo(axisX, mainTop + mainHeight);
+  ctx.moveTo(Math.round(axisX) + 0.5, mainTop);
+  ctx.lineTo(Math.round(axisX) + 0.5, mainTop + mainHeight);
   ctx.stroke();
-
-  // Price labels
-  const range = priceMax - priceMin;
-  const step = niceStep(range, mainHeight / 50);
-  const start = Math.ceil(priceMin / step) * step;
 
   ctx.font = THEME.axisFont;
   ctx.fillStyle = THEME.axisText;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
 
-  for (let price = start; price <= priceMax; price += step) {
-    const y = priceToY(price, priceMin, priceMax, mainTop, mainHeight);
-    if (y < mainTop + 10 || y > mainTop + mainHeight - 10) continue;
+  if (scale === "log" && priceMin > 0 && priceMax > 0) {
+    // Log scale: generate ticks in log space
+    const logMin = Math.log(priceMin);
+    const logMax = Math.log(priceMax);
+    const logRange = logMax - logMin;
+    const logStep = niceStep(logRange, mainHeight / 50);
+    const logStart = Math.ceil(logMin / logStep) * logStep;
 
-    // Grid line
-    ctx.strokeStyle = THEME.gridLine;
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(axisX, y);
-    ctx.stroke();
+    for (let lp = logStart; lp <= logMax; lp += logStep) {
+      const price = Math.exp(lp);
+      const y = Math.round(priceToY(price, priceMin, priceMax, mainTop, mainHeight, scale));
+      if (y < mainTop + 10 || y > mainTop + mainHeight - 10) continue;
 
-    // Label
-    ctx.fillStyle = THEME.axisText;
-    ctx.fillText(formatPrice(price, pair), axisX + 6, y);
+      ctx.strokeStyle = THEME.gridLine;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(axisX, y + 0.5);
+      ctx.stroke();
+
+      ctx.fillStyle = THEME.axisText;
+      ctx.fillText(formatPrice(price, pair), axisX + 6, y);
+    }
+  } else if (scale === "percent" && refPrice && refPrice > 0) {
+    // Percent scale: show % change from reference price
+    const range = priceMax - priceMin;
+    const step = niceStep(range, mainHeight / 50);
+    const start = Math.ceil(priceMin / step) * step;
+
+    for (let price = start; price <= priceMax; price += step) {
+      const y = Math.round(priceToY(price, priceMin, priceMax, mainTop, mainHeight));
+      if (y < mainTop + 10 || y > mainTop + mainHeight - 10) continue;
+
+      ctx.strokeStyle = THEME.gridLine;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(axisX, y + 0.5);
+      ctx.stroke();
+
+      const pctChange = ((price - refPrice) / refPrice) * 100;
+      const pctStr = (pctChange >= 0 ? "+" : "") + pctChange.toFixed(2) + "%";
+      ctx.fillStyle = THEME.axisText;
+      ctx.fillText(pctStr, axisX + 6, y);
+    }
+  } else {
+    // Linear scale (default)
+    const range = priceMax - priceMin;
+    const step = niceStep(range, mainHeight / 50);
+    const start = Math.ceil(priceMin / step) * step;
+
+    for (let price = start; price <= priceMax; price += step) {
+      const y = Math.round(priceToY(price, priceMin, priceMax, mainTop, mainHeight));
+      if (y < mainTop + 10 || y > mainTop + mainHeight - 10) continue;
+
+      // Grid line (pixel-snapped)
+      ctx.strokeStyle = THEME.gridLine;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(axisX, y + 0.5);
+      ctx.stroke();
+
+      ctx.fillStyle = THEME.axisText;
+      ctx.fillText(formatPrice(price, pair), axisX + 6, y);
+    }
   }
 }
 
@@ -68,12 +117,12 @@ export function drawTimeAxis(
   ctx.fillStyle = THEME.axisBg;
   ctx.fillRect(0, axisY, canvasWidth, timeAxisHeight);
 
-  // Border
+  // Border (pixel-snapped)
   ctx.strokeStyle = THEME.separator;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, axisY);
-  ctx.lineTo(canvasWidth, axisY);
+  ctx.moveTo(0, Math.round(axisY) + 0.5);
+  ctx.lineTo(canvasWidth, Math.round(axisY) + 0.5);
   ctx.stroke();
 
   // Labels
@@ -88,15 +137,15 @@ export function drawTimeAxis(
   for (let i = startIndex; i <= endIndex; i += labelSpacing) {
     const idx = Math.floor(i);
     if (idx < 0 || idx >= bars.length) continue;
-    const x = indexToX(i, startIndex, endIndex, chartLeft, chartWidth);
+    const x = Math.round(indexToX(i, startIndex, endIndex, chartLeft, chartWidth));
     if (x < 30 || x > canvasWidth - 90) continue;
 
-    // Grid line
+    // Grid line (pixel-snapped)
     ctx.strokeStyle = THEME.gridLine;
     ctx.lineWidth = 0.5;
     ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, axisY);
+    ctx.moveTo(x + 0.5, 0);
+    ctx.lineTo(x + 0.5, axisY);
     ctx.stroke();
 
     ctx.fillStyle = THEME.axisText;

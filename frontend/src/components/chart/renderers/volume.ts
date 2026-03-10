@@ -23,21 +23,24 @@ export function drawVolume(
   }
   if (maxVol === 0) return;
 
-  // Separator line
+  // Separator line (pixel-snapped)
   ctx.strokeStyle = THEME.separator;
   ctx.lineWidth = 0.5;
   ctx.beginPath();
-  ctx.moveTo(0, volumeTop);
-  ctx.lineTo(layout.canvasWidth - layout.priceAxisWidth, volumeTop);
+  ctx.moveTo(0, Math.round(volumeTop) + 0.5);
+  ctx.lineTo(layout.canvasWidth - layout.priceAxisWidth, Math.round(volumeTop) + 0.5);
   ctx.stroke();
+
+  const bw = Math.max(1, Math.round(barWidth));
+  const halfBw = Math.round(bw / 2);
 
   for (let i = si; i <= ei; i++) {
     const bar = bars[i];
-    const x = indexToX(i, startIndex, endIndex, chartLeft, chartWidth);
-    const h = (bar.v / maxVol) * (volumeHeight - 4);
+    const x = Math.round(indexToX(i, startIndex, endIndex, chartLeft, chartWidth));
+    const h = Math.round((bar.v / maxVol) * (volumeHeight - 4));
     const isBull = bar.c >= bar.o;
 
     ctx.fillStyle = isBull ? THEME.bullVol : THEME.bearVol;
-    ctx.fillRect(x - barWidth / 2, volumeTop + volumeHeight - h, barWidth, h);
+    ctx.fillRect(x - halfBw, volumeTop + volumeHeight - h, bw, h);
   }
 }

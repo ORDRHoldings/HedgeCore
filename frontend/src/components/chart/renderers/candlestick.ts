@@ -18,29 +18,32 @@ export function drawCandlesticks(
   const si = Math.max(0, Math.floor(startIndex));
   const ei = Math.min(bars.length - 1, Math.ceil(endIndex));
 
+  const bw = Math.max(1, Math.round(barWidth));
+  const halfBw = Math.round(bw / 2);
+
   for (let i = si; i <= ei; i++) {
     const bar = bars[i];
-    const x = indexToX(i, startIndex, endIndex, chartLeft, chartWidth);
-    const oY = priceToY(bar.o, priceMin, priceMax, mainTop, mainHeight);
-    const cY = priceToY(bar.c, priceMin, priceMax, mainTop, mainHeight);
-    const hY = priceToY(bar.h, priceMin, priceMax, mainTop, mainHeight);
-    const lY = priceToY(bar.l, priceMin, priceMax, mainTop, mainHeight);
+    const x = Math.round(indexToX(i, startIndex, endIndex, chartLeft, chartWidth));
+    const oY = Math.round(priceToY(bar.o, priceMin, priceMax, mainTop, mainHeight));
+    const cY = Math.round(priceToY(bar.c, priceMin, priceMax, mainTop, mainHeight));
+    const hY = Math.round(priceToY(bar.h, priceMin, priceMax, mainTop, mainHeight));
+    const lY = Math.round(priceToY(bar.l, priceMin, priceMax, mainTop, mainHeight));
 
     const isBull = bar.c >= bar.o;
     const isDoji = Math.abs(bar.c - bar.o) < (bar.h - bar.l) * 0.05;
 
-    // Wick
+    // Wick (snap to half-pixel for crisp 1px line)
     ctx.strokeStyle = isDoji ? THEME.dojiColor : (isBull ? THEME.bullWick : THEME.bearWick);
-    ctx.lineWidth = wickWidth;
+    ctx.lineWidth = Math.max(1, Math.round(wickWidth));
     ctx.beginPath();
-    ctx.moveTo(x, hY);
-    ctx.lineTo(x, lY);
+    ctx.moveTo(x + 0.5, hY);
+    ctx.lineTo(x + 0.5, lY);
     ctx.stroke();
 
-    // Body
+    // Body (pixel-snapped fill)
     const bodyTop = Math.min(oY, cY);
     const bodyHeight = Math.max(1, Math.abs(oY - cY));
     ctx.fillStyle = isDoji ? THEME.dojiColor : (isBull ? THEME.bullBody : THEME.bearBody);
-    ctx.fillRect(x - barWidth / 2, bodyTop, barWidth, bodyHeight);
+    ctx.fillRect(x - halfBw, bodyTop, bw, bodyHeight);
   }
 }

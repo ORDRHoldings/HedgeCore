@@ -1,9 +1,12 @@
 import type { Bar } from "../indicators/types";
 import type { ChartLayout, Viewport } from "./data";
-import { priceToY, indexToX, formatPrice } from "./data";
+import type { PriceScale } from "./data";
+import { priceToY, yToPrice, indexToX, formatPrice } from "./data";
 import { THEME } from "./theme";
 
 const FONT = "11px 'IBM Plex Mono', monospace";
+
+export type CrosshairMode = "crosshair" | "dot" | "none";
 
 export interface CrosshairState {
   x: number;
@@ -19,45 +22,75 @@ export function drawCrosshair(
   viewport: Viewport,
   bars: Bar[],
   pair: string,
+  mode: CrosshairMode = "crosshair",
+  scale: PriceScale = "linear",
+  refPrice?: number,
 ): void {
-  if (!state.visible) return;
+  if (!state.visible || mode === "none") return;
+
   const { canvasWidth, canvasHeight, priceAxisWidth, mainTop, mainHeight, timeAxisHeight, chartLeft, chartWidth } = layout;
   const { priceMin, priceMax, startIndex, endIndex } = viewport;
   const axisY = canvasHeight - timeAxisHeight;
   const axisX = canvasWidth - priceAxisWidth;
+  const snapX = Math.round(indexToX(state.snapIndex, startIndex, endIndex, chartLeft, chartWidth));
 
+  if (mode === "dot") {
+    // Dot mode: small circle at snap position, no lines
+    const idx = Math.round(state.snapIndex);
+    if (idx >= 0 && idx < bars.length) {
+      const bar = bars[idx];
+      const dotY = Math.round(priceToY(bar.c, priceMin, priceMax, mainTop, mainHeight, scale));
+      ctx.save();
+      ctx.fillStyle = THEME.crosshairColor;
+      ctx.beginPath();
+      ctx.arc(snapX, dotY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    return;
+  }
+
+  // Full crosshair mode
   ctx.save();
   ctx.setLineDash([4, 4]);
   ctx.strokeStyle = THEME.crosshairColor;
   ctx.lineWidth = 0.5;
 
-  // Horizontal line
+  // Horizontal line (pixel-snapped)
+  const hy = Math.round(state.y) + 0.5;
   ctx.beginPath();
-  ctx.moveTo(0, state.y);
-  ctx.lineTo(axisX, state.y);
+  ctx.moveTo(0, hy);
+  ctx.lineTo(axisX, hy);
   ctx.stroke();
 
-  // Vertical line
-  const snapX = indexToX(state.snapIndex, startIndex, endIndex, chartLeft, chartWidth);
+  // Vertical line (pixel-snapped)
   ctx.beginPath();
-  ctx.moveTo(snapX, mainTop);
-  ctx.lineTo(snapX, axisY);
+  ctx.moveTo(snapX + 0.5, mainTop);
+  ctx.lineTo(snapX + 0.5, axisY);
   ctx.stroke();
 
   ctx.setLineDash([]);
   ctx.restore();
 
-  // Price label on Y axis
-  const price = priceMin + ((mainTop + mainHeight - state.y) / mainHeight) * (priceMax - priceMin);
+  // Price label on Y axis (scale-aware)
+  const price = yToPrice(state.y, priceMin, priceMax, mainTop, mainHeight, scale);
   ctx.font = FONT;
-  const priceStr = formatPrice(price, pair);
+
+  let priceStr: string;
+  if (scale === "percent" && refPrice && refPrice > 0) {
+    const pct = ((price - refPrice) / refPrice) * 100;
+    priceStr = (pct >= 0 ? "+" : "") + pct.toFixed(2) + "%";
+  } else {
+    priceStr = formatPrice(price, pair);
+  }
+
   const pw = ctx.measureText(priceStr).width + 12;
   ctx.fillStyle = THEME.labelBg;
-  ctx.fillRect(axisX, state.y - 10, pw, 20);
+  ctx.fillRect(axisX, Math.round(state.y) - 10, pw, 20);
   ctx.fillStyle = THEME.labelText;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(priceStr, axisX + 6, state.y);
+  ctx.fillText(priceStr, axisX + 6, Math.round(state.y));
 
   // Time label on X axis
   const idx = Math.round(state.snapIndex);

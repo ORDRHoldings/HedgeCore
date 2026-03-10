@@ -93,12 +93,32 @@ export function computeViewport(
   };
 }
 
-export function priceToY(price: number, priceMin: number, priceMax: number, top: number, height: number): number {
-  return top + height - ((price - priceMin) / (priceMax - priceMin)) * height;
+export type PriceScale = "linear" | "log" | "percent";
+
+export function priceToY(
+  price: number, priceMin: number, priceMax: number,
+  top: number, height: number, scale: PriceScale = "linear",
+): number {
+  if (scale === "log" && priceMin > 0 && priceMax > 0) {
+    const logMin = Math.log(priceMin);
+    const logMax = Math.log(priceMax);
+    const logPrice = Math.log(Math.max(price, 1e-10));
+    return top + height - ((logPrice - logMin) / (logMax - logMin || 1)) * height;
+  }
+  return top + height - ((price - priceMin) / (priceMax - priceMin || 1)) * height;
 }
 
-export function yToPrice(y: number, priceMin: number, priceMax: number, top: number, height: number): number {
-  return priceMin + ((top + height - y) / height) * (priceMax - priceMin);
+export function yToPrice(
+  y: number, priceMin: number, priceMax: number,
+  top: number, height: number, scale: PriceScale = "linear",
+): number {
+  const frac = (top + height - y) / height;
+  if (scale === "log" && priceMin > 0 && priceMax > 0) {
+    const logMin = Math.log(priceMin);
+    const logMax = Math.log(priceMax);
+    return Math.exp(logMin + frac * (logMax - logMin));
+  }
+  return priceMin + frac * (priceMax - priceMin);
 }
 
 export function indexToX(index: number, startIndex: number, endIndex: number, chartLeft: number, chartWidth: number): number {

@@ -7,6 +7,7 @@
 
 import type { Bar } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
+import type { PriceScale } from "../core/data";
 import { priceToY, formatPrice } from "../core/data";
 import { THEME } from "../core/theme";
 
@@ -38,6 +39,7 @@ export function drawCurrentPriceLine(
   layout: ChartLayout,
   viewport: Viewport,
   pair: string,
+  scale: PriceScale = "linear",
 ): void {
   if (bars.length === 0) return;
 
@@ -49,7 +51,7 @@ export function drawCurrentPriceLine(
   const { mainTop, mainHeight, chartLeft, chartWidth, canvasWidth, priceAxisWidth } = layout;
   const { priceMin, priceMax } = viewport;
 
-  const y = priceToY(lastBar.c, priceMin, priceMax, mainTop, mainHeight);
+  const y = priceToY(lastBar.c, priceMin, priceMax, mainTop, mainHeight, scale);
 
   // Clamp: skip drawing if the price line is outside the visible main pane
   if (y < mainTop || y > mainTop + mainHeight) return;

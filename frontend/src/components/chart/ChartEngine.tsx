@@ -30,7 +30,7 @@ import { computeLayout, computeViewport, formatPrice } from "./core/data";
 import type { ChartLayout, SubPaneLayout } from "./core/data";
 import { drawPriceAxis, drawTimeAxis } from "./core/axis";
 import { drawCrosshair, snapToBar } from "./core/crosshair";
-import type { CrosshairState } from "./core/crosshair";
+import type { CrosshairState, CrosshairMode } from "./core/crosshair";
 import {
   createInitialZoomState, handleWheel as zoomWheel,
   handleDragStart, handleDragMove, handleDragEnd, tickAnimation,
@@ -165,7 +165,7 @@ function withPane(layout: ChartLayout, pane: SubPaneLayout): ChartLayout {
    Component
    ═══════════════════════════════════════════════════════ */
 
-export default function ChartEngine({ bars, pair, interval, source, loading, error, onPairChange }: Props) {
+function ChartEngineInner({ bars, pair, interval, source, loading, error, onPairChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const outerRef = useRef<HTMLDivElement>(null);
@@ -176,6 +176,8 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
   );
   const crosshairRef = useRef<CrosshairState>({ x: 0, y: 0, visible: false, snapIndex: 0 });
   const axisDragRef = useRef<AxisDragState>(createAxisDragState());
+  const priceZoomRef = useRef(1.0);       // Price axis zoom factor (1.0 = auto-fit)
+  const dragStartPriceZoom = useRef(1.0); // Snapshot at drag start
 
   // Low-frequency state
   const [dimensions, setDimensions] = useState({ w: 1200, h: 600 });
@@ -193,6 +195,7 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
   const [showSymbolSearch, setShowSymbolSearch] = useState(false);
   const [showIndicatorDialog, setShowIndicatorDialog] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; open: boolean }>({ x: 0, y: 0, open: false });
+  const [crosshairMode, setCrosshairMode] = useState<CrosshairMode>("crosshair");
   const [enabledSessions, setEnabledSessions] = useState<string[]>([]);
 
   // Undo/redo stack
@@ -432,8 +435,22 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     ctx.scale(dpr, dpr);
 
     const zoom = zoomRef.current;
-    const viewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
+    const rawViewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
+
+    // Apply price axis zoom factor
+    const viewport = priceZoomRef.current !== 1.0
+      ? (() => {
+          const mid = (rawViewport.priceMin + rawViewport.priceMax) / 2;
+          const halfRange = ((rawViewport.priceMax - rawViewport.priceMin) / 2) * priceZoomRef.current;
+          return { ...rawViewport, priceMin: mid - halfRange, priceMax: mid + halfRange };
+        })()
+      : rawViewport;
+
     const ch = crosshairRef.current;
+
+    // Reference price for percent scale (first visible bar's close)
+    const refBarIdx = Math.max(0, Math.floor(zoom.startIndex));
+    const refPrice = bars[refBarIdx]?.c || bars[0]?.c || 1;
 
     // Background
     ctx.fillStyle = THEME.canvasBg;
@@ -493,7 +510,7 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     if (indicators.pivotPoints) drawPivotPoints(ctx, indicators.pivotPoints, layout, viewport);
 
     // Layer 4: Current price line
-    drawCurrentPriceLine(ctx, bars, layout, viewport, pair);
+    drawCurrentPriceLine(ctx, bars, layout, viewport, pair, priceScale);
 
     // Layer 5: Volume
     drawVolume(ctx, bars, layout, viewport);
@@ -523,18 +540,18 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     drawDrawings(ctx, drawings, layout, viewport, pair);
 
     // Layer 8: Axes
-    drawPriceAxis(ctx, layout, viewport, pair);
+    drawPriceAxis(ctx, layout, viewport, pair, priceScale, refPrice);
     drawTimeAxis(ctx, layout, viewport, bars, interval);
 
     // Layer 9: Crosshair
-    drawCrosshair(ctx, ch, layout, viewport, bars, pair);
+    drawCrosshair(ctx, ch, layout, viewport, bars, pair, crosshairMode, priceScale, refPrice);
 
     // Layer 10: OHLC Legend (top-left, on top of everything)
     drawOHLCLegend(ctx, bars, layout, viewport, pair, ch.visible ? ch.snapIndex : -1);
 
     // Layer 11: Legend (indicator labels)
     drawLegend(ctx, indicators.overlayLines, indicators.bands, layout);
-  }, [bars, layout, indicators, drawings, pair, interval, activeSubPanes, dimensions, chartType, enabledSessions]);
+  }, [bars, layout, indicators, drawings, pair, interval, activeSubPanes, dimensions, chartType, enabledSessions, priceScale, crosshairMode]);
 
   /* ─── Animation loop ─── */
   useEffect(() => {
@@ -561,6 +578,9 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
       const scales = moveAxisDrag(axisDragRef.current, x, y, layout.mainHeight, layout.chartWidth);
       if (axisDragRef.current.zone === "timeAxis") {
         zoomRef.current = applyTimeScale(zoomRef.current, scales.timeScale, bars.length);
+      } else if (axisDragRef.current.zone === "priceAxis") {
+        // Apply price axis zoom: scale relative to drag start value
+        priceZoomRef.current = Math.max(0.1, Math.min(10, dragStartPriceZoom.current * scales.priceScale));
       }
       return;
     }
@@ -595,6 +615,7 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
       const viewport = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
       const priceRange = viewport.priceMax - viewport.priceMin;
       const barRange = zoomRef.current.endIndex - zoomRef.current.startIndex;
+      dragStartPriceZoom.current = priceZoomRef.current; // snapshot for relative scaling
       axisDragRef.current = startAxisDrag(axisDragRef.current, zone, x, y, priceRange, barRange);
       return;
     }
@@ -657,7 +678,8 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     );
 
     if (zone === "priceAxis") {
-      // Auto-fit price (viewport auto-fits anyway)
+      // Auto-fit: reset price zoom to 1.0 (auto-fit from viewport)
+      priceZoomRef.current = 1.0;
       return;
     }
     if (zone === "timeAxis") {
@@ -723,8 +745,6 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     const drawingTools: Record<string, DrawingType> = {
       trendline: "trendline",
       horizontal: "horizontal",
-      ray: "trendline",
-      vertical: "horizontal",
       rectangle: "rectangle",
       fibonacci: "fibonacci",
     };
@@ -784,9 +804,9 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
       case "priceScale:log": setPriceScale("log"); break;
       case "priceScale:percentage": setPriceScale("percent"); break;
       // Crosshair mode
-      case "crosshairMode:crosshair": break; // default, no-op
-      case "crosshairMode:dot": break;
-      case "crosshairMode:none": break;
+      case "crosshairMode:crosshair": setCrosshairMode("crosshair"); break;
+      case "crosshairMode:dot": setCrosshairMode("dot"); break;
+      case "crosshairMode:none": setCrosshairMode("none"); break;
       default: break;
     }
   }, [bars.length, pair, clearDrawings]);
@@ -1039,6 +1059,60 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
         onToggleSubPane={handleToggleSubPane}
       />
     </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   Error Boundary
+   ═══════════════════════════════════════════════════════ */
+
+class ChartErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; errorMessage: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMessage: "" };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMessage: error.message };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", height: "100%", gap: 12,
+          fontFamily: "'IBM Plex Mono', monospace", color: "#EF5350",
+          fontSize: 13, background: THEME.canvasBg, borderRadius: 8,
+          border: `1px solid ${THEME.subPaneBorder}`,
+        }}>
+          <span style={{ fontSize: 11, color: THEME.axisText }}>CHART ERROR</span>
+          <span>{this.state.errorMessage}</span>
+          <button
+            onClick={() => this.setState({ hasError: false, errorMessage: "" })}
+            style={{
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+              padding: "4px 12px", borderRadius: 4, border: `1px solid ${THEME.subPaneBorder}`,
+              background: THEME.axisBg, color: THEME.labelText, cursor: "pointer",
+            }}
+          >
+            RETRY
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function ChartEngine(props: Props) {
+  return (
+    <ChartErrorBoundary>
+      <ChartEngineInner {...props} />
+    </ChartErrorBoundary>
   );
 }
 
