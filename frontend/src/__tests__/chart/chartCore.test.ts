@@ -202,11 +202,13 @@ describe("handleWheel", () => {
     expect(range).toBeGreaterThanOrEqual(10);
   });
 
-  it("clamps to bar boundaries", () => {
+  it("clamps to bar boundaries (with future space margin)", () => {
     const s = createInitialZoomState(500);
     const result = handleWheel(s, 100, 400, 0, 800, 500);
+    const range = result.targetEnd - result.targetStart;
+    const maxEnd = 499 + range * 1.0; // RIGHT_MARGIN = 1.0
     expect(result.targetStart).toBeGreaterThanOrEqual(0);
-    expect(result.targetEnd).toBeLessThanOrEqual(499);
+    expect(result.targetEnd).toBeLessThanOrEqual(maxEnd);
   });
 });
 
@@ -308,7 +310,8 @@ describe("computeLayout", () => {
   it("chartWidth = chartRight - chartLeft", () => {
     const layout = computeLayout(1200, 600, 0);
     expect(layout.chartWidth).toBe(layout.chartRight - layout.chartLeft);
-    expect(layout.chartRight).toBe(1200 - 80);
+    // chartRight = canvasWidth - priceAxisWidth - chartRightPad(8)
+    expect(layout.chartRight).toBe(1200 - 80 - 8);
   });
 });
 

@@ -77,16 +77,17 @@ export function computeViewport(
 ): Viewport {
   if (bars.length === 0) return { startIndex: 0, endIndex: 0, priceMin: 0, priceMax: 1 };
   const si = Math.max(0, Math.floor(startIndex));
-  const ei = Math.min(bars.length - 1, Math.ceil(endIndex));
+  // Don't clamp endIndex to bars.length-1 — allow future space past last bar
+  const eiData = Math.min(bars.length - 1, Math.ceil(endIndex));
   let lo = Infinity, hi = -Infinity;
-  for (let i = si; i <= ei; i++) {
+  for (let i = si; i <= eiData; i++) {
     if (bars[i].l < lo) lo = bars[i].l;
     if (bars[i].h > hi) hi = bars[i].h;
   }
   const range = hi - lo || 0.0001;
   return {
     startIndex: si,
-    endIndex: ei,
+    endIndex: Math.max(eiData, Math.ceil(endIndex)), // Keep the extended endIndex for spacing
     priceMin: lo - range * padding,
     priceMax: hi + range * padding,
   };

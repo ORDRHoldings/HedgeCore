@@ -75,6 +75,8 @@ import ChartStatusBar from "./ChartStatusBar";
 import ChartSymbolSearch from "./ChartSymbolSearch";
 import ChartContextMenu from "./ChartContextMenu";
 import ChartIndicatorDialog from "./ChartIndicatorDialog";
+import IndicatorLayers from "./IndicatorLayers";
+import type { OverlayChip, SubPaneChip } from "./IndicatorLayers";
 
 /* ═══════════════════════════════════════════════════════
    Types & Defaults
@@ -118,6 +120,41 @@ const EMPTY_BUNDLE: IndicatorBundle = {
   overlayLines: [], bands: [], vwap: [], ichimoku: [],
   parabolicSAR: [], pivotPoints: null, volumeProfile: null,
   subPaneData: {}, sr: [], fvg: [], trend: [],
+};
+
+/* ─── Indicator chip color/label maps ─── */
+const OVERLAY_META: Record<string, { label: string; color: string }> = {
+  sma20: { label: "SMA(20)", color: "#FFD54F" },
+  sma50: { label: "SMA(50)", color: "#FF8A65" },
+  sma200: { label: "SMA(200)", color: "#FF5252" },
+  ema20: { label: "EMA(20)", color: "#26C6DA" },
+  ema50: { label: "EMA(50)", color: "#00E676" },
+  hma9: { label: "HMA(9)", color: "#00E676" },
+  tema20: { label: "TEMA(20)", color: "#FF4081" },
+  vwap: { label: "VWAP", color: THEME.vwapColor },
+  bollinger: { label: "BB(20,2)", color: THEME.bbLine },
+  keltner: { label: "KC(20,10)", color: THEME.kcLine },
+  ichimoku: { label: "Ichimoku", color: "#2962FF" },
+  donchian: { label: "DC(20)", color: "#00BCD4" },
+  volumeProfile: { label: "Vol Profile", color: THEME.vpPocColor },
+  sr: { label: "S/R", color: "#26A69A" },
+  fvg: { label: "FVG", color: "#26A69A" },
+  trendlines: { label: "Trendlines", color: "#EF5350" },
+  pivotPoints: { label: "Pivot Pts", color: "#9598A1" },
+  parabolicSAR: { label: "SAR", color: "#26A69A" },
+};
+
+const SUBPANE_META: Record<string, { label: string; color: string }> = {
+  rsi: { label: "RSI(14)", color: "#7B1FA2" },
+  macd: { label: "MACD(12,26,9)", color: "#2962FF" },
+  stochastic: { label: "Stoch(14,3)", color: "#FF6D00" },
+  stochRSI: { label: "StochRSI", color: "#FF6D00" },
+  williamsR: { label: "Williams %R", color: "#FF6D00" },
+  cci: { label: "CCI(20)", color: "#2196F3" },
+  adx: { label: "ADX(14)", color: "#787B86" },
+  obv: { label: "OBV", color: "#FF9800" },
+  mfi: { label: "MFI(14)", color: "#E040FB" },
+  cmf: { label: "CMF(20)", color: "#00BCD4" },
 };
 
 function withPane(layout: ChartLayout, pane: SubPaneLayout): ChartLayout {
@@ -282,7 +319,9 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
         case "panRight": {
           const z = zoomRef.current;
           const step = (z.targetEnd - z.targetStart) * 0.1;
-          zoomRef.current = { ...z, targetStart: z.targetStart + step, targetEnd: Math.min(bars.length - 1, z.targetEnd + step), isAnimating: true };
+          const range = z.targetEnd - z.targetStart;
+          const maxEnd = bars.length - 1 + range * 1.0; // Match RIGHT_MARGIN
+          zoomRef.current = { ...z, targetStart: z.targetStart + step, targetEnd: Math.min(maxEnd, z.targetEnd + step), isAnimating: true };
           break;
         }
         case "zoomIn":
@@ -630,10 +669,8 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
 
   const handleContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    setContextMenu({ x: e.clientX - rect.left, y: e.clientY - rect.top, open: true });
+    // Use viewport coordinates — ChartContextMenu uses position: "fixed"
+    setContextMenu({ x: e.clientX, y: e.clientY, open: true });
   }, []);
 
   const handleMouseLeave = useCallback(() => {
@@ -760,6 +797,44 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
     if (onPairChange) onPairChange(symbol);
   }, [onPairChange]);
 
+  /* ─── Indicator layer chips ─── */
+  const overlayChips: OverlayChip[] = useMemo(() => {
+    const OVERLAY_KEYS = [
+      "sma20", "sma50", "sma200", "ema20", "ema50",
+      "hma9", "tema20", "vwap",
+      "bollinger", "keltner", "ichimoku", "donchian",
+      "volumeProfile", "sr", "fvg", "trendlines",
+      "pivotPoints", "parabolicSAR",
+    ];
+    return OVERLAY_KEYS
+      .filter((k) => OVERLAY_META[k])
+      .map((k) => ({
+        key: k,
+        label: OVERLAY_META[k].label,
+        color: OVERLAY_META[k].color,
+        enabled: !!config[k],
+      }))
+      .filter((c) => c.enabled);
+  }, [config]);
+
+  const subPaneChips: SubPaneChip[] = useMemo(() => {
+    return activeSubPanes
+      .filter((k) => SUBPANE_META[k])
+      .map((k) => ({
+        key: k,
+        label: SUBPANE_META[k].label,
+        color: SUBPANE_META[k].color,
+      }));
+  }, [activeSubPanes]);
+
+  const handleRemoveOverlay = useCallback((key: string) => {
+    handleToggle(key);
+  }, [handleToggle]);
+
+  const handleRemoveSubPane = useCallback((key: string) => {
+    handleToggleSubPane(key);
+  }, [handleToggleSubPane]);
+
   /* ─── Last bar info ─── */
   const lastBar = bars.length > 0 ? bars[bars.length - 1] : null;
   const prevBar = bars.length > 1 ? bars[bars.length - 2] : null;
@@ -850,6 +925,15 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
             {source}
           </span>
         )}
+        {source && source.toLowerCase().includes("twelve") && (
+          <span style={{
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 9,
+            padding: "1px 5px", borderRadius: 3,
+            background: "rgba(255,152,0,0.15)", color: "#FF9800", fontWeight: 600,
+          }}>
+            DELAYED
+          </span>
+        )}
         {loading && (
           <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: THEME.axisText }}>
             LOADING...
@@ -904,6 +988,14 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
               touchAction: "none",
               userSelect: "none",
             }}
+          />
+
+          {/* Indicator layer chips (TradingView-style) */}
+          <IndicatorLayers
+            activeOverlays={overlayChips}
+            activeSubPanes={subPaneChips}
+            onRemoveOverlay={handleRemoveOverlay}
+            onRemoveSubPane={handleRemoveSubPane}
           />
 
           {/* Context Menu (positioned inside canvas container) */}

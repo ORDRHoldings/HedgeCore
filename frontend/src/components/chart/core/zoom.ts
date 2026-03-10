@@ -31,7 +31,7 @@ const LERP_MOMENTUM = 0.15;  // Momentum smoothing
 const VELOCITY_DECAY = 0.92;  // Friction (lower = stops sooner)
 const VELOCITY_MIN = 0.05;    // Stop threshold (higher = stops earlier, less float)
 const EPSILON = 0.01;         // Animation complete threshold
-const RIGHT_MARGIN = 0.3;    // Allow scrolling 30% past last bar (future space like TradingView)
+const RIGHT_MARGIN = 1.0;    // Allow scrolling 100% past last bar (full screen of future space like TradingView)
 
 export function createInitialZoomState(barCount: number, visibleBars = 200): ZoomPanState {
   const end = Math.max(0, barCount - 1);
