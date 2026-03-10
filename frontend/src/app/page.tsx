@@ -35,6 +35,34 @@ const FEATURES_TERMINAL = [
   "Role-based access (9 roles, 41 perms)",
 ];
 
+const FEATURES_POLISOPHIC = [
+  "Geopolitical corridor risk scoring",
+  "Multi-factor country risk analysis",
+  "Real-time risk event monitoring",
+  "Portfolio impact assessment",
+];
+
+const FEATURES_PORTFOLIO = [
+  "Full hedge lifecycle management",
+  "Position desk with readiness KPIs",
+  "7-step execution pipeline",
+  "Portfolio risk analytics",
+];
+
+const FEATURES_SANDBOX = [
+  "Tri-state pipeline: Sandbox to Ledger",
+  "Scenario studio with stress testing",
+  "Policy comparison and backtesting",
+  "Safe experimentation environment",
+];
+
+const FEATURES_WIKI = [
+  "FX hedging knowledge base",
+  "Strategy guides and best practices",
+  "Instrument and product glossary",
+  "Regulatory framework references",
+];
+
 const STATS = [
   { value: "219", label: "API Endpoints" },
   { value: "41", label: "Engine Modules" },
@@ -426,6 +454,102 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Secondary Product Cards ── */}
+      <section
+        style={{
+          position: "relative",
+          zIndex: 10,
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
+          gap: 16,
+          padding: isMobile ? "32px 24px 0" : "32px 32px 0",
+          maxWidth: 1080,
+          margin: "0 auto",
+          animation: "fadeInUp 1.1s ease-out",
+        }}
+      >
+        {/* Polisophic */}
+        <ProductCard
+          title="POLISOPHIC"
+          badge="GEOPOLITICAL"
+          badgeColor="#E040FB"
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E040FB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M2 12h20" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+          }
+          description="Geopolitical risk corridor scoring with multi-factor analysis and portfolio impact assessment."
+          features={FEATURES_POLISOPHIC}
+          href="/auth/login"
+          ctaLabel="SIGN IN TO ACCESS"
+          ctaGradient="linear-gradient(135deg, #E040FB 0%, #AB47BC 100%)"
+          isMobile={isMobile}
+        />
+
+        {/* Hedge Portfolio */}
+        <ProductCard
+          title="HEDGE PORTFOLIO"
+          badge="PORTFOLIO"
+          badgeColor="#FF9800"
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF9800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+              <path d="M8 21h8" />
+              <path d="M12 17v4" />
+              <path d="M7 10l3-3 2 2 5-5" />
+            </svg>
+          }
+          description="Full hedge lifecycle from position entry to execution with 7-step pipeline and risk analytics."
+          features={FEATURES_PORTFOLIO}
+          href="/auth/login"
+          ctaLabel="SIGN IN TO ACCESS"
+          ctaGradient="linear-gradient(135deg, #FF9800 0%, #E65100 100%)"
+          isMobile={isMobile}
+        />
+
+        {/* Simulation & Sandbox */}
+        <ProductCard
+          title="SIMULATION"
+          badge="SANDBOX"
+          badgeColor="#00BCD4"
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00BCD4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+          }
+          description="Tri-state governance pipeline with scenario studio, stress testing, and safe experimentation."
+          features={FEATURES_SANDBOX}
+          href="/auth/login"
+          ctaLabel="SIGN IN TO ACCESS"
+          ctaGradient="linear-gradient(135deg, #00BCD4 0%, #00838F 100%)"
+          isMobile={isMobile}
+        />
+
+        {/* HedgeWiki */}
+        <ProductCard
+          title="HEDGEWIKI"
+          badge="KNOWLEDGE"
+          badgeColor="#8BC34A"
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8BC34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+              <path d="M8 7h8" />
+              <path d="M8 11h6" />
+            </svg>
+          }
+          description="Comprehensive FX hedging knowledge base with strategy guides, glossary, and regulatory references."
+          features={FEATURES_WIKI}
+          href="https://hedge-wiki.vercel.app/"
+          ctaLabel="OPEN HEDGEWIKI"
+          ctaGradient="linear-gradient(135deg, #8BC34A 0%, #558B2F 100%)"
+          isMobile={isMobile}
+          external
+        />
+      </section>
+
       {/* ── Stats Bar ── */}
       <section
         style={{
@@ -499,6 +623,125 @@ export default function LandingPage() {
           ORDR TERMINAL &mdash; SYNEXIUN
         </span>
       </footer>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   Secondary Product Card Component
+   ═══════════════════════════════════════════════════════ */
+
+function ProductCard({
+  title, badge, badgeColor, icon, description, features, href, ctaLabel, ctaGradient, isMobile, external,
+}: {
+  title: string;
+  badge: string;
+  badgeColor: string;
+  icon: React.ReactNode;
+  description: string;
+  features: string[];
+  href: string;
+  ctaLabel: string;
+  ctaGradient: string;
+  isMobile: boolean;
+  external?: boolean;
+}) {
+  const linkProps = external
+    ? { target: "_blank" as const, rel: "noopener noreferrer" }
+    : {};
+
+  return (
+    <div
+      style={{
+        background: "rgba(30, 34, 45, 0.5)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        border: "1px solid rgba(255,255,255,0.06)",
+        borderRadius: 14,
+        padding: isMobile ? "24px 20px" : "24px 20px",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            background: `${badgeColor}18`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {icon}
+        </div>
+        <div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.04em" }}>
+            {title}
+          </div>
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 9,
+              fontWeight: 700,
+              color: badgeColor,
+              background: `${badgeColor}20`,
+              padding: "1px 6px",
+              borderRadius: 3,
+              letterSpacing: "0.08em",
+            }}
+          >
+            {badge}
+          </span>
+        </div>
+      </div>
+
+      <p style={{ fontFamily: FONT_UI, fontSize: 12, color: "#7B8BA5", lineHeight: 1.5, marginBottom: 16, marginTop: 0 }}>
+        {description}
+      </p>
+
+      <ul style={{ listStyle: "none", padding: 0, margin: "0 0 18px 0", flex: 1 }}>
+        {features.map((f) => (
+          <li
+            key={f}
+            style={{
+              fontFamily: FONT_UI,
+              fontSize: 12,
+              color: "#A0AEC0",
+              padding: "3px 0",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ width: 5, height: 5, borderRadius: "50%", background: badgeColor, flexShrink: 0 }} />
+            {f}
+          </li>
+        ))}
+      </ul>
+
+      <Link
+        href={href}
+        {...linkProps}
+        style={{
+          display: "block",
+          textAlign: "center",
+          fontFamily: FONT_MONO,
+          fontSize: 11,
+          fontWeight: 700,
+          color: "#FFFFFF",
+          background: ctaGradient,
+          padding: "10px 16px",
+          borderRadius: 8,
+          textDecoration: "none",
+          letterSpacing: "0.06em",
+          transition: "all 0.2s",
+        }}
+      >
+        {ctaLabel}
+      </Link>
     </div>
   );
 }
