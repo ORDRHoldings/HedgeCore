@@ -270,10 +270,11 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Markets", href: "/fx-market", icon: Ic.bar_chart,
-    prefixes: ["/fx-market"],
+    label: "Markets", href: "/market-intelligence", icon: Ic.bar_chart,
+    prefixes: ["/fx-market", "/market-intelligence"],
     header: "Market Data",
     items: [
+      { label: "Intelligence Hub", desc: "Live rates, carry, vol, provider health", href: "/market-intelligence", icon: Ic.bar_chart, badge: "LIVE", badgeColor: S_GREEN },
       { label: "FX Rates", desc: "Spot, forwards, vol surface, carry", href: "/fx-market", icon: Ic.bar_chart },
     ],
   },
