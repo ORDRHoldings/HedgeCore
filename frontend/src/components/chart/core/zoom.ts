@@ -31,6 +31,7 @@ const LERP_MOMENTUM = 0.15;  // Momentum smoothing
 const VELOCITY_DECAY = 0.92;  // Friction (lower = stops sooner)
 const VELOCITY_MIN = 0.05;    // Stop threshold (higher = stops earlier, less float)
 const EPSILON = 0.01;         // Animation complete threshold
+const RIGHT_MARGIN = 0.3;    // Allow scrolling 30% past last bar (future space like TradingView)
 
 export function createInitialZoomState(barCount: number, visibleBars = 200): ZoomPanState {
   const end = Math.max(0, barCount - 1);
@@ -52,13 +53,14 @@ export function tickAnimation(state: ZoomPanState, barCount: number): ZoomPanSta
   // Apply momentum
   if (Math.abs(velocityX) > VELOCITY_MIN) {
     const range = targetEnd - targetStart;
+    const maxEnd = barCount - 1 + range * RIGHT_MARGIN;
     targetStart += velocityX;
     targetEnd += velocityX;
     velocityX *= VELOCITY_DECAY;
 
-    // Clamp targets
+    // Clamp targets (allow future space past last bar)
     if (targetStart < 0) { targetStart = 0; targetEnd = range; velocityX = 0; }
-    if (targetEnd > barCount - 1) { targetEnd = barCount - 1; targetStart = targetEnd - range; velocityX = 0; }
+    if (targetEnd > maxEnd) { targetEnd = maxEnd; targetStart = targetEnd - range; velocityX = 0; }
     if (targetStart < 0) targetStart = 0;
   } else {
     velocityX = 0;
@@ -92,6 +94,7 @@ export function handleWheel(
   const minRange = 10;
   const maxRange = barCount;
   const frac = Math.max(0, Math.min(1, (mouseX - chartLeft) / chartWidth));
+  const maxEnd = barCount - 1 + range * RIGHT_MARGIN; // Allow future space
 
   const zoomFactor = deltaY > 0 ? 1.12 : 0.89;
   let newRange = range * zoomFactor;
@@ -102,7 +105,7 @@ export function handleWheel(
   let newEnd = newStart + newRange;
 
   if (newStart < 0) { newStart = 0; newEnd = newRange; }
-  if (newEnd > barCount - 1) { newEnd = barCount - 1; newStart = newEnd - newRange; }
+  if (newEnd > maxEnd) { newEnd = maxEnd; newStart = newEnd - newRange; }
   if (newStart < 0) newStart = 0;
 
   return { ...state, targetStart: newStart, targetEnd: newEnd, isAnimating: true, velocityX: 0 };
@@ -126,13 +129,14 @@ export function handleDragMove(
 ): ZoomPanState {
   if (!state.isDragging) return state;
   const range = state.dragStartEnd - state.dragStartStart;
+  const maxEnd = barCount - 1 + range * RIGHT_MARGIN; // Allow future space
   const dx = mouseX - state.dragStartX;
   const indexDelta = -(dx / chartWidth) * range;
 
   let newStart = state.dragStartStart + indexDelta;
   let newEnd = state.dragStartEnd + indexDelta;
   if (newStart < 0) { newStart = 0; newEnd = range; }
-  if (newEnd > barCount - 1) { newEnd = barCount - 1; newStart = newEnd - range; }
+  if (newEnd > maxEnd) { newEnd = maxEnd; newStart = newEnd - range; }
   if (newStart < 0) newStart = 0;
 
   // Track velocity for momentum after release

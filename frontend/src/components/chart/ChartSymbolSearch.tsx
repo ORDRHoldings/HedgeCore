@@ -14,7 +14,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 interface Asset {
   symbol: string;
   display: string;
-  category: "fx" | "crypto" | "indices" | "commodities";
+  category: "fx" | "crypto" | "indices" | "equities" | "commodities";
 }
 
 export interface ChartSymbolSearchProps {
@@ -34,11 +34,12 @@ const RECENT_KEY = "ordr_recent_symbols";
 const MAX_RECENT = 10;
 const MAX_VISIBLE = 50;
 
-type CategoryFilter = "all" | "fx" | "crypto" | "indices" | "commodities";
+type CategoryFilter = "all" | "fx" | "crypto" | "indices" | "equities" | "commodities";
 
 const CATEGORY_TABS: { key: CategoryFilter; label: string }[] = [
   { key: "all", label: "ALL" },
   { key: "fx", label: "FX" },
+  { key: "equities", label: "STOCKS" },
   { key: "crypto", label: "CRYPTO" },
   { key: "indices", label: "INDICES" },
   { key: "commodities", label: "COMMODITIES" },
@@ -46,6 +47,7 @@ const CATEGORY_TABS: { key: CategoryFilter; label: string }[] = [
 
 const CATEGORY_COLORS: Record<string, string> = {
   fx: "#2962FF",
+  equities: "#4CAF50",
   crypto: "#FF6D00",
   indices: "#26A69A",
   commodities: "#E91E63",
@@ -114,9 +116,52 @@ const ASSETS: Asset[] = [
   { symbol: "N225", display: "Nikkei 225", category: "indices" },
   { symbol: "HSI", display: "Hang Seng Index", category: "indices" },
   { symbol: "STOXX50E", display: "Euro Stoxx 50", category: "indices" },
+  // US Equities — Top 40
+  { symbol: "SPY", display: "SPDR S&P 500 ETF", category: "equities" },
+  { symbol: "QQQ", display: "Invesco QQQ Trust (NASDAQ)", category: "equities" },
+  { symbol: "AAPL", display: "Apple Inc.", category: "equities" },
+  { symbol: "MSFT", display: "Microsoft Corporation", category: "equities" },
+  { symbol: "AMZN", display: "Amazon.com Inc.", category: "equities" },
+  { symbol: "TSLA", display: "Tesla Inc.", category: "equities" },
+  { symbol: "GOOGL", display: "Alphabet Inc. (Google)", category: "equities" },
+  { symbol: "META", display: "Meta Platforms Inc.", category: "equities" },
+  { symbol: "NVDA", display: "NVIDIA Corporation", category: "equities" },
+  { symbol: "AMD", display: "Advanced Micro Devices", category: "equities" },
+  { symbol: "NFLX", display: "Netflix Inc.", category: "equities" },
+  { symbol: "DIS", display: "Walt Disney Co.", category: "equities" },
+  { symbol: "BA", display: "Boeing Co.", category: "equities" },
+  { symbol: "JPM", display: "JPMorgan Chase & Co.", category: "equities" },
+  { symbol: "GS", display: "Goldman Sachs Group", category: "equities" },
+  { symbol: "V", display: "Visa Inc.", category: "equities" },
+  { symbol: "MA", display: "Mastercard Inc.", category: "equities" },
+  { symbol: "JNJ", display: "Johnson & Johnson", category: "equities" },
+  { symbol: "PFE", display: "Pfizer Inc.", category: "equities" },
+  { symbol: "UNH", display: "UnitedHealth Group", category: "equities" },
+  { symbol: "XOM", display: "Exxon Mobil Corp.", category: "equities" },
+  { symbol: "CVX", display: "Chevron Corp.", category: "equities" },
+  { symbol: "WMT", display: "Walmart Inc.", category: "equities" },
+  { symbol: "HD", display: "Home Depot Inc.", category: "equities" },
+  { symbol: "COST", display: "Costco Wholesale", category: "equities" },
+  { symbol: "KO", display: "Coca-Cola Co.", category: "equities" },
+  { symbol: "PEP", display: "PepsiCo Inc.", category: "equities" },
+  { symbol: "MCD", display: "McDonald's Corp.", category: "equities" },
+  { symbol: "NKE", display: "Nike Inc.", category: "equities" },
+  { symbol: "INTC", display: "Intel Corp.", category: "equities" },
+  { symbol: "CRM", display: "Salesforce Inc.", category: "equities" },
+  { symbol: "ADBE", display: "Adobe Inc.", category: "equities" },
+  { symbol: "PYPL", display: "PayPal Holdings", category: "equities" },
+  { symbol: "SQ", display: "Block Inc. (Square)", category: "equities" },
+  { symbol: "COIN", display: "Coinbase Global", category: "equities" },
+  { symbol: "PLTR", display: "Palantir Technologies", category: "equities" },
+  { symbol: "SOFI", display: "SoFi Technologies", category: "equities" },
+  { symbol: "RIVN", display: "Rivian Automotive", category: "equities" },
+  { symbol: "LCID", display: "Lucid Group Inc.", category: "equities" },
   // Commodities
   { symbol: "XAUUSD", display: "Gold / US Dollar", category: "commodities" },
   { symbol: "XAGUSD", display: "Silver / US Dollar", category: "commodities" },
+  { symbol: "CRUDE_OIL", display: "Crude Oil (WTI)", category: "commodities" },
+  { symbol: "NATURAL_GAS", display: "Natural Gas", category: "commodities" },
+  { symbol: "COPPER", display: "Copper", category: "commodities" },
 ];
 
 /* ═══════════════════════════════════════════════════════

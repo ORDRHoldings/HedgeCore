@@ -91,24 +91,24 @@ async def test_public_chart_unauthenticated_access():
 
 @pytest.mark.asyncio
 async def test_public_chart_restricted_pair():
-    """Non-major pair returns 422."""
+    """Non-allowed pair returns 422."""
     orch = _make_orchestrator()
     with patch("app.api.routes.v1_public_chart_data.get_orchestrator", return_value=orch):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url=_BASE_URL) as client:
-            resp = await client.get(f"{_ENDPOINT}/USDSGD", params={"interval": "1day"})
+            resp = await client.get(f"{_ENDPOINT}/USDXYZ", params={"interval": "1day"})
     assert resp.status_code == 422
     assert "not available" in resp.json()["detail"]
 
 
 @pytest.mark.asyncio
 async def test_public_chart_restricted_interval():
-    """Sub-hourly interval (1min) returns 422."""
+    """Unsupported interval (2min) returns 422."""
     orch = _make_orchestrator()
     with patch("app.api.routes.v1_public_chart_data.get_orchestrator", return_value=orch):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url=_BASE_URL) as client:
-            resp = await client.get(f"{_ENDPOINT}/EURUSD", params={"interval": "1min"})
+            resp = await client.get(f"{_ENDPOINT}/EURUSD", params={"interval": "2min"})
     assert resp.status_code == 422
     assert "not available" in resp.json()["detail"]
 

@@ -3,6 +3,7 @@
  *
  * Same pattern as useChartData.ts but without JWT token.
  * Uses raw fetch to /v1/public/chart-data/{symbol} (no Authorization header).
+ * Auto-refreshes based on interval (60s for intraday, 5min for daily+).
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { Bar } from "@/components/chart/indicators/types";
@@ -25,6 +26,12 @@ interface UsePublicChartDataResult {
   refetch: () => void;
 }
 
+function getRefreshInterval(interval: string): number {
+  if (interval.includes("min")) return 60_000;   // 1min for intraday
+  if (interval === "1h" || interval === "4h") return 120_000; // 2min for hourly
+  return 300_000; // 5min for daily+
+}
+
 export function usePublicChartData(
   symbol: string,
   interval: string,
@@ -35,16 +42,16 @@ export function usePublicChartData(
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState("\u2014");
   const abortRef = useRef<AbortController | null>(null);
+  const isFirstFetch = useRef(true);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (silent = false) => {
     if (!symbol) return;
 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setLoading(true);
-    setError(null);
+    if (!silent) { setLoading(true); setError(null); }
 
     try {
       const url = `${API_BASE}/v1/public/chart-data/${encodeURIComponent(symbol)}?interval=${interval}&limit=${limit}`;
@@ -63,20 +70,31 @@ export function usePublicChartData(
         setBars(data.bars);
         setSource(data.source);
         setLoading(false);
+        setError(null);
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setError(err instanceof Error ? err.message : "Failed to fetch chart data");
-      setLoading(false);
+      if (!silent) {
+        setError(err instanceof Error ? err.message : "Failed to fetch chart data");
+        setLoading(false);
+      }
     }
   }, [symbol, interval, limit]);
 
+  // Initial fetch + auto-refresh
   useEffect(() => {
-    fetchData();
+    isFirstFetch.current = true;
+    fetchData(false);
+    isFirstFetch.current = false;
+
+    const ms = getRefreshInterval(interval);
+    const timer = window.setInterval(() => fetchData(true), ms);
+
     return () => {
+      window.clearInterval(timer);
       abortRef.current?.abort();
     };
-  }, [fetchData]);
+  }, [fetchData, interval]);
 
-  return { bars, loading, error, source, refetch: fetchData };
+  return { bars, loading, error, source, refetch: () => fetchData(false) };
 }

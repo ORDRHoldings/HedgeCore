@@ -36,8 +36,16 @@ ALLOWED_PAIRS = frozenset({
     # Indices (TwelveData format)
     "SPX", "NDX", "DJI", "IXIC", "RUT", "VIX",
     "FTSE", "DAX", "CAC", "N225", "HSI", "STOXX50E",
+    # US Equities
+    "SPY", "QQQ", "AAPL", "MSFT", "AMZN", "TSLA", "GOOGL", "META",
+    "NVDA", "AMD", "NFLX", "DIS", "BA", "JPM", "GS", "V", "MA",
+    "BRK.B", "JNJ", "PFE", "UNH", "XOM", "CVX", "WMT", "HD",
+    "COST", "KO", "PEP", "MCD", "NKE", "INTC", "CRM", "ADBE",
+    "PYPL", "SQ", "COIN", "PLTR", "SOFI", "RIVN", "LCID",
     # Commodities
     "XAUUSD", "XAGUSD",
+    # Commodity futures (TwelveData)
+    "CRUDE_OIL", "NATURAL_GAS", "COPPER", "WHEAT", "CORN",
 })
 
 ALLOWED_INTERVALS = frozenset({

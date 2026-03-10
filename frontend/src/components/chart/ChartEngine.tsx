@@ -731,21 +731,26 @@ export default function ChartEngine({ bars, pair, interval, source, loading, err
         setDrawingMode("rectangle");
         setActiveTool("rectangle");
         break;
-      case "clearDrawings":
+      case "deleteAllDrawings":
         clearDrawings();
         break;
-      // Chart types
-      case "chartType_candles": setChartType("candles"); break;
-      case "chartType_hollow": setChartType("hollow"); break;
-      case "chartType_bars": setChartType("bars"); break;
-      case "chartType_line": setChartType("line"); break;
-      case "chartType_area": setChartType("area"); break;
-      case "chartType_heikinAshi": setChartType("heikinAshi"); break;
-      case "chartType_baseline": setChartType("baseline"); break;
+      // Chart types (colon format from ChartContextMenu)
+      case "chartType:candles": setChartType("candles"); break;
+      case "chartType:hollow": setChartType("hollow"); break;
+      case "chartType:bars": setChartType("bars"); break;
+      case "chartType:line": setChartType("line"); break;
+      case "chartType:area": setChartType("area"); break;
+      case "chartType:heikinashi": setChartType("heikinAshi"); break;
+      case "chartType:baseline": setChartType("baseline"); break;
       // Price scale
-      case "priceScale_linear": setPriceScale("linear"); break;
-      case "priceScale_log": setPriceScale("log"); break;
-      case "priceScale_percent": setPriceScale("percent"); break;
+      case "priceScale:linear": setPriceScale("linear"); break;
+      case "priceScale:log": setPriceScale("log"); break;
+      case "priceScale:percentage": setPriceScale("percent"); break;
+      // Crosshair mode
+      case "crosshairMode:crosshair": break; // default, no-op
+      case "crosshairMode:dot": break;
+      case "crosshairMode:none": break;
+      default: break;
     }
   }, [bars.length, pair, clearDrawings]);
 

@@ -1,5 +1,6 @@
 /**
  * hooks/useChartData.ts — Fetches OHLCV chart data from /v1/chart-data/{symbol}
+ * Auto-refreshes based on interval (60s for intraday, 5min for daily+).
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -21,6 +22,12 @@ interface UseChartDataResult {
   refetch: () => void;
 }
 
+function getRefreshInterval(interval: string): number {
+  if (interval.includes("min")) return 60_000;
+  if (interval === "1h" || interval === "4h") return 120_000;
+  return 300_000;
+}
+
 export function useChartData(
   symbol: string,
   interval: string,
@@ -33,15 +40,14 @@ export function useChartData(
   const [source, setSource] = useState("—");
   const abortRef = useRef<AbortController | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (silent = false) => {
     if (!symbol || !token) return;
 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setLoading(true);
-    setError(null);
+    if (!silent) { setLoading(true); setError(null); }
 
     try {
       const res = await dashboardFetch(
@@ -58,18 +64,29 @@ export function useChartData(
         setBars(data.bars);
         setSource(data.source);
         setLoading(false);
+        setError(null);
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setError(err instanceof Error ? err.message : "Failed to fetch chart data");
-      setLoading(false);
+      if (!silent) {
+        setError(err instanceof Error ? err.message : "Failed to fetch chart data");
+        setLoading(false);
+      }
     }
   }, [symbol, interval, token, limit]);
 
+  // Initial fetch + auto-refresh
   useEffect(() => {
-    fetchData();
-    return () => { abortRef.current?.abort(); };
-  }, [fetchData]);
+    fetchData(false);
 
-  return { bars, loading, error, source, refetch: fetchData };
+    const ms = getRefreshInterval(interval);
+    const timer = window.setInterval(() => fetchData(true), ms);
+
+    return () => {
+      window.clearInterval(timer);
+      abortRef.current?.abort();
+    };
+  }, [fetchData, interval]);
+
+  return { bars, loading, error, source, refetch: () => fetchData(false) };
 }
