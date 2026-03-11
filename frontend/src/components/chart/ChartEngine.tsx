@@ -236,7 +236,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   // Drag-to-move drawings
   const drawingDragRef = useRef<{
     drawingId: string;
-    part: "body" | "p0" | "p1";
+    part: string; // "body"|"p0"|"p1"|"rect-adj-0"|"rect-adj-1"|"edge-top"|"edge-bottom"|"edge-left"|"edge-right"
     startX: number; startY: number;
     origPoints: { index: number; price: number }[];
   } | null>(null);
@@ -652,14 +652,23 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       const neededPoints = currentMode === "horizontal" ? 1 : 2;
       if (currentPoints.length < neededPoints) {
         let rbx = ch.x, rby = ch.y;
-        // Shift-snap to 15° increments
         if (shiftHeldRef.current && currentMode !== "horizontal") {
           const p0 = currentPoints[0];
           const p0x = indexToX(p0.index, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth);
           const p0y = priceToY(p0.price, viewport.priceMin, viewport.priceMax, layout.mainTop, layout.mainHeight, priceScale);
-          const snapped = shiftSnapPoint(p0x, p0y, ch.x, ch.y);
-          rbx = snapped.x;
-          rby = snapped.y;
+          if (currentMode === "rectangle") {
+            // Shift = square constraint (equal width and height in pixels)
+            const dx = ch.x - p0x;
+            const dy = ch.y - p0y;
+            const side = Math.max(Math.abs(dx), Math.abs(dy));
+            rbx = p0x + side * Math.sign(dx || 1);
+            rby = p0y + side * Math.sign(dy || 1);
+          } else {
+            // Shift-snap to 15° increments for trendlines
+            const snapped = shiftSnapPoint(p0x, p0y, ch.x, ch.y);
+            rbx = snapped.x;
+            rby = snapped.y;
+          }
         }
         drawRubberBand(ctx, currentPoints[0], rbx, rby, layout, viewport, priceScale, currentMode, undefined, magneticSnapResultRef.current);
       }
@@ -742,7 +751,48 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
           id: drag.drawingId,
           points: drag.origPoints.map(p => ({ index: Math.round(p.index + dIdx), price: p.price + dPrice })),
         };
+      } else if (drag.part === "rect-adj-0") {
+        // Corner at (p0.index, p1.price): move p0.index + p1.price
+        dragOverrideRef.current = {
+          id: drag.drawingId,
+          points: [
+            { index: Math.round(drag.origPoints[0].index + dIdx), price: drag.origPoints[0].price },
+            { index: drag.origPoints[1].index, price: drag.origPoints[1].price + dPrice },
+          ],
+        };
+      } else if (drag.part === "rect-adj-1") {
+        // Corner at (p1.index, p0.price): move p1.index + p0.price
+        dragOverrideRef.current = {
+          id: drag.drawingId,
+          points: [
+            { index: drag.origPoints[0].index, price: drag.origPoints[0].price + dPrice },
+            { index: Math.round(drag.origPoints[1].index + dIdx), price: drag.origPoints[1].price },
+          ],
+        };
+      } else if (drag.part === "edge-top" || drag.part === "edge-bottom") {
+        // Edge drag: move only price of the relevant point (vertical only)
+        const topPointIdx = drag.origPoints[0].price > drag.origPoints[1].price ? 0 : 1;
+        const botPointIdx = 1 - topPointIdx;
+        const targetIdx = drag.part === "edge-top" ? topPointIdx : botPointIdx;
+        dragOverrideRef.current = {
+          id: drag.drawingId,
+          points: drag.origPoints.map((p, i) =>
+            i === targetIdx ? { index: p.index, price: p.price + dPrice } : { ...p }
+          ),
+        };
+      } else if (drag.part === "edge-left" || drag.part === "edge-right") {
+        // Edge drag: move only index of the relevant point (horizontal only)
+        const leftPointIdx = drag.origPoints[0].index < drag.origPoints[1].index ? 0 : 1;
+        const rightPointIdx = 1 - leftPointIdx;
+        const targetIdx = drag.part === "edge-left" ? leftPointIdx : rightPointIdx;
+        dragOverrideRef.current = {
+          id: drag.drawingId,
+          points: drag.origPoints.map((p, i) =>
+            i === targetIdx ? { index: Math.round(p.index + dIdx), price: p.price } : { ...p }
+          ),
+        };
       } else {
+        // p0 or p1 corner drag (trendline + rectangle defining corners)
         const pi = drag.part === "p0" ? 0 : 1;
         const newPoints = drag.origPoints.map((p, i) => {
           if (i !== pi) return { ...p };

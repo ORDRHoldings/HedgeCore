@@ -5,7 +5,7 @@
  * Appears on right-click of any drawing. Dark theme, scrollable.
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import type { Drawing, DrawingType, DrawingStats, LineStyle } from "./renderers/drawings";
+import type { Drawing, DrawingType, DrawingStats, LineStyle, RectLabelPosition } from "./renderers/drawings";
 import { DEFAULT_STATS } from "./renderers/drawings";
 import { THEME } from "./core/theme";
 
@@ -30,6 +30,15 @@ const LINE_WIDTHS = [0.5, 1, 1.5, 2, 3, 4];
 const LINE_STYLES: LineStyle[] = ["solid", "dashed", "dotted"];
 const FONT_SIZES = [9, 10, 11, 12, 14, 16, 18];
 const STAT_POSITIONS: DrawingStats["position"][] = ["top", "bottom", "left", "right"];
+const RECT_LABEL_POSITIONS: { value: RectLabelPosition; label: string }[] = [
+  { value: "top-left", label: "TL" },
+  { value: "top-center", label: "TC" },
+  { value: "top-right", label: "TR" },
+  { value: "center", label: "C" },
+  { value: "bottom-left", label: "BL" },
+  { value: "bottom-center", label: "BC" },
+  { value: "bottom-right", label: "BR" },
+];
 
 export default function DrawingPropertiesPanel({
   drawing, x, y, onUpdate, onDelete, onDuplicate, onCreateParallel, onClose,
@@ -83,6 +92,8 @@ export default function DrawingPropertiesPanel({
   }, [label, drawing.label, update]);
 
   const isTrendline = drawing.type === "trendline";
+  const isRectangle = drawing.type === "rectangle";
+  const hasTwoPoints = drawing.points.length >= 2;
 
   return (
     <div
@@ -194,8 +205,8 @@ export default function DrawingPropertiesPanel({
             </span>
           </Row>
 
-          {/* Extend (trendline only) */}
-          {isTrendline && (
+          {/* Extend (trendline + rectangle) */}
+          {(isTrendline || isRectangle) && (
             <Row label="Extend">
               <div style={{ display: "flex", gap: 4 }}>
                 <Tog active={drawing.extendLeft} onClick={() => update({ extendLeft: !drawing.extendLeft })}
@@ -217,6 +228,101 @@ export default function DrawingPropertiesPanel({
               </div>
             </Row>
           )}
+
+          {/* Rectangle: Fill */}
+          {isRectangle && (<>
+            <SectionHeader label="Fill" />
+            <Row label="Show">
+              <Tog active={drawing.fillEnabled !== false} onClick={() => update({ fillEnabled: !(drawing.fillEnabled !== false) })}
+                label={drawing.fillEnabled !== false ? "VISIBLE" : "HIDDEN"} color={drawing.color} />
+            </Row>
+            {drawing.fillEnabled !== false && (
+              <Row label="Color">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                  <button onClick={() => update({ fillColor: "" })} style={{
+                    width: 18, height: 18, borderRadius: 3, padding: 0, cursor: "pointer",
+                    background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)`,
+                    border: !drawing.fillColor ? "2px solid #D1D4DC" : "1px solid rgba(255,255,255,0.1)",
+                  }} title="Use border color" />
+                  {PRESET_COLORS.slice(0, 10).map((c) => (
+                    <button key={c} onClick={() => update({ fillColor: c })} style={{
+                      width: 18, height: 18, borderRadius: 3, background: c, padding: 0,
+                      border: drawing.fillColor === c ? "2px solid #D1D4DC" : "1px solid rgba(255,255,255,0.1)",
+                      cursor: "pointer",
+                    }} />
+                  ))}
+                </div>
+              </Row>
+            )}
+            {drawing.fillEnabled !== false && (
+              <Row label="Opacity">
+                <input type="range" min={0.02} max={0.8} step={0.02}
+                  value={drawing.fillOpacity ?? 0.15} onChange={(e) => update({ fillOpacity: parseFloat(e.target.value) })}
+                  style={{ flex: 1, accentColor: drawing.color }} />
+                <span style={{ fontSize: 10, color: THEME.axisText, minWidth: 28, textAlign: "right" }}>
+                  {Math.round((drawing.fillOpacity ?? 0.15) * 100)}%
+                </span>
+              </Row>
+            )}
+          </>)}
+
+          {/* Rectangle: Middle Line */}
+          {isRectangle && (<>
+            <SectionHeader label="Middle Line" />
+            <Row label="Show">
+              <Tog active={drawing.midLine || false} onClick={() => update({ midLine: !drawing.midLine })}
+                label={drawing.midLine ? "VISIBLE" : "HIDDEN"} color={drawing.color} />
+            </Row>
+            {drawing.midLine && (<>
+              <Row label="Color">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                  <button onClick={() => update({ midLineColor: "" })} style={{
+                    width: 18, height: 18, borderRadius: 3, padding: 0, cursor: "pointer",
+                    background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)`,
+                    border: !drawing.midLineColor ? "2px solid #D1D4DC" : "1px solid rgba(255,255,255,0.1)",
+                  }} title="Use border color" />
+                  {PRESET_COLORS.slice(0, 8).map((c) => (
+                    <button key={c} onClick={() => update({ midLineColor: c })} style={{
+                      width: 18, height: 18, borderRadius: 3, background: c, padding: 0,
+                      border: drawing.midLineColor === c ? "2px solid #D1D4DC" : "1px solid rgba(255,255,255,0.1)",
+                      cursor: "pointer",
+                    }} />
+                  ))}
+                </div>
+              </Row>
+              <Row label="Width">
+                <div style={{ display: "flex", gap: 3 }}>
+                  {[0.5, 1, 1.5, 2].map((w) => (
+                    <button key={w} onClick={() => update({ midLineWidth: w })} style={{
+                      width: 28, height: 22, borderRadius: 3, padding: 0, cursor: "pointer",
+                      background: (drawing.midLineWidth || 1) === w ? "#2A2E39" : "transparent",
+                      border: (drawing.midLineWidth || 1) === w ? `1px solid ${drawing.color}` : "1px solid rgba(255,255,255,0.05)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <div style={{ width: 16, height: Math.max(1, w), background: drawing.midLineColor || drawing.color, borderRadius: 1 }} />
+                    </button>
+                  ))}
+                </div>
+              </Row>
+              <Row label="Style">
+                <div style={{ display: "flex", gap: 3 }}>
+                  {LINE_STYLES.map((s) => (
+                    <button key={s} onClick={() => update({ midLineStyle: s })} style={{
+                      width: 48, height: 22, borderRadius: 3, padding: 0, cursor: "pointer",
+                      background: (drawing.midLineStyle || "dashed") === s ? "#2A2E39" : "transparent",
+                      border: (drawing.midLineStyle || "dashed") === s ? `1px solid ${drawing.color}` : "1px solid rgba(255,255,255,0.05)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <svg width="32" height="2" style={{ overflow: "visible" }}>
+                        <line x1="0" y1="1" x2="32" y2="1" stroke={drawing.midLineColor || drawing.color} strokeWidth="1"
+                          strokeDasharray={s === "dashed" ? "6,4" : s === "dotted" ? "2,2" : "none"} />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </Row>
+            </>)}
+          </>)}
 
           {/* Display toggles */}
           <SectionHeader label="Display" />
@@ -242,9 +348,9 @@ export default function DrawingPropertiesPanel({
           </Row>
 
           {/* Coordinates */}
-          {isTrendline && drawing.points.length >= 2 && (<>
+          {(isTrendline || isRectangle) && hasTwoPoints && (<>
             <SectionHeader label="Coordinates" />
-            <Row label="P1">
+            <Row label={isRectangle ? "TL" : "P1"}>
               <CoordInput value={drawing.points[0].index} onChange={(v) => {
                 const pts = [...drawing.points];
                 pts[0] = { ...pts[0], index: v };
@@ -256,7 +362,7 @@ export default function DrawingPropertiesPanel({
                 update({ points: pts });
               }} label="Price" step={0.00001} />
             </Row>
-            <Row label="P2">
+            <Row label={isRectangle ? "BR" : "P2"}>
               <CoordInput value={drawing.points[1].index} onChange={(v) => {
                 const pts = [...drawing.points];
                 pts[1] = { ...pts[1], index: v };
@@ -324,6 +430,18 @@ export default function DrawingPropertiesPanel({
               ))}
             </div>
           </Row>
+          {/* Rectangle label position (7-position grid) */}
+          {isRectangle && (
+            <Row label="Pos">
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 2, maxWidth: 132 }}>
+                {RECT_LABEL_POSITIONS.map(p => (
+                  <Tog key={p.value} active={(drawing.labelPosition || "top-left") === p.value}
+                    onClick={() => update({ labelPosition: p.value })}
+                    label={p.label} color={drawing.color} />
+                ))}
+              </div>
+            </Row>
+          )}
         </>)}
 
         {/* ── STATS TAB ── */}

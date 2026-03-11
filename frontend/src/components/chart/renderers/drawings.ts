@@ -63,7 +63,21 @@ export interface Drawing {
   stats: DrawingStats;
   // Behavior
   locked: boolean;
+  // Rectangle-specific
+  fillEnabled: boolean;
+  fillColor: string;         // "" = use drawing color
+  fillOpacity: number;       // 0–1, separate from border opacity
+  midLine: boolean;          // horizontal midline
+  midLineColor: string;      // "" = use drawing color
+  midLineWidth: number;
+  midLineStyle: LineStyle;
+  labelPosition: RectLabelPosition;
 }
+
+export type RectLabelPosition =
+  | "top-left" | "top-center" | "top-right"
+  | "center"
+  | "bottom-left" | "bottom-center" | "bottom-right";
 
 // ══════════════════════════════════════════════════════
 //  Constants
@@ -129,6 +143,14 @@ export function createDrawing(
     showPriceLabels: false,
     stats: { ...DEFAULT_STATS },
     locked: false,
+    fillEnabled: type === "rectangle",
+    fillColor: "",
+    fillOpacity: 0.15,
+    midLine: false,
+    midLineColor: "",
+    midLineWidth: 1,
+    midLineStyle: "dashed",
+    labelPosition: "top-left",
     ...overrides,
   };
 }
@@ -404,7 +426,7 @@ export function detectBreakouts(
 export interface HitTestResult {
   drawingId: string;
   distance: number;
-  part: "body" | "p0" | "p1";
+  part: string; // "body"|"p0"|"p1"|"rect-adj-0"|"rect-adj-1"|"edge-top"|"edge-bottom"|"edge-left"|"edge-right"
 }
 
 export function hitTestDrawings(
@@ -452,21 +474,62 @@ export function hitTestDrawings(
       }
     } else if (d.type === "rectangle") {
       if (d.points.length < 2) continue;
-      const x1 = indexToX(d.points[0].index, startIndex, endIndex, chartLeft, chartWidth);
-      const y1 = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight, scale);
-      const x2 = indexToX(d.points[1].index, startIndex, endIndex, chartLeft, chartWidth);
-      const y2 = priceToY(d.points[1].price, priceMin, priceMax, mainTop, mainHeight, scale);
-      const left = Math.min(x1, x2), right = Math.max(x1, x2);
-      const top = Math.min(y1, y2), bot = Math.max(y1, y2);
+      const rx1 = indexToX(d.points[0].index, startIndex, endIndex, chartLeft, chartWidth);
+      const ry1 = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight, scale);
+      const rx2 = indexToX(d.points[1].index, startIndex, endIndex, chartLeft, chartWidth);
+      const ry2 = priceToY(d.points[1].price, priceMin, priceMax, mainTop, mainHeight, scale);
+      const rLeft = Math.min(rx1, rx2), rRight = Math.max(rx1, rx2);
+      const rTop = Math.min(ry1, ry2), rBot = Math.max(ry1, ry2);
 
-      if (mx >= left - HIT_THRESHOLD && mx <= right + HIT_THRESHOLD &&
-          my >= top - HIT_THRESHOLD && my <= bot + HIT_THRESHOLD) {
-        const minEdge = Math.min(
-          Math.abs(mx - left), Math.abs(mx - right),
-          Math.abs(my - top), Math.abs(my - bot),
-        );
-        if (minEdge <= HIT_THRESHOLD && (!best || minEdge < best.distance)) {
-          best = { drawingId: d.id, distance: minEdge, part: "body" };
+      // 4 corner handles: p0, p1, and two adjacent corners
+      const corners: { x: number; y: number; part: string }[] = [
+        { x: rx1, y: ry1, part: "p0" },
+        { x: rx2, y: ry2, part: "p1" },
+        { x: rx1, y: ry2, part: "rect-adj-0" }, // (p0.index, p1.price)
+        { x: rx2, y: ry1, part: "rect-adj-1" }, // (p1.index, p0.price)
+      ];
+      for (const c of corners) {
+        const cd = Math.hypot(mx - c.x, my - c.y);
+        if (cd <= HANDLE_RADIUS && (!best || cd < best.distance)) {
+          best = { drawingId: d.id, distance: cd, part: c.part };
+        }
+      }
+      if (best && best.drawingId === d.id) { /* corner takes priority, skip body/edge */ }
+      // 4 edge midpoint handles
+      else {
+        const edges: { x: number; y: number; part: string }[] = [
+          { x: (rLeft + rRight) / 2, y: rTop, part: "edge-top" },
+          { x: (rLeft + rRight) / 2, y: rBot, part: "edge-bottom" },
+          { x: rLeft, y: (rTop + rBot) / 2, part: "edge-left" },
+          { x: rRight, y: (rTop + rBot) / 2, part: "edge-right" },
+        ];
+        for (const e of edges) {
+          const ed = Math.hypot(mx - e.x, my - e.y);
+          if (ed <= HANDLE_RADIUS && (!best || ed < best.distance)) {
+            best = { drawingId: d.id, distance: ed, part: e.part };
+          }
+        }
+        // Edge line hit (border)
+        if (!best || best.drawingId !== d.id) {
+          if (mx >= rLeft - HIT_THRESHOLD && mx <= rRight + HIT_THRESHOLD &&
+              my >= rTop - HIT_THRESHOLD && my <= rBot + HIT_THRESHOLD) {
+            const minEdge = Math.min(
+              Math.abs(mx - rLeft), Math.abs(mx - rRight),
+              Math.abs(my - rTop), Math.abs(my - rBot),
+            );
+            if (minEdge <= HIT_THRESHOLD && (!best || minEdge < best.distance)) {
+              best = { drawingId: d.id, distance: minEdge, part: "body" };
+            }
+          }
+        }
+        // Interior body click (fill area)
+        if (!best || best.drawingId !== d.id) {
+          if (d.fillEnabled !== false && mx >= rLeft && mx <= rRight && my >= rTop && my <= rBot) {
+            const dist = 0.5; // low priority — inside fill
+            if (!best || dist < best.distance) {
+              best = { drawingId: d.id, distance: dist, part: "body" };
+            }
+          }
         }
       }
     } else if (d.type === "fibonacci") {
@@ -582,7 +645,7 @@ export function drawDrawings(
       case "trendline": drawTrendlineDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars); break;
       case "horizontal": drawHorizontalDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered); break;
       case "fibonacci": drawFibonacciDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered); break;
-      case "rectangle": drawRectangleDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered); break;
+      case "rectangle": drawRectangleDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars); break;
     }
   }
 }
@@ -877,8 +940,45 @@ export function drawRubberBand(
     const w = cursorX - x1;
     const h = cursorY - y1;
     ctx.strokeRect(x1, y1, w, h);
-    ctx.fillStyle = (lineColor).replace(")", ",0.06)").replace("rgb", "rgba");
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = lineColor;
     ctx.fillRect(x1, y1, w, h);
+    ctx.globalAlpha = 0.8;
+    // Dimension info box
+    const { priceMin: pm, priceMax: px } = viewport;
+    const priceH = Math.max(
+      yToPrice(y1, pm, px, layout.mainTop, layout.mainHeight, scale),
+      yToPrice(cursorY, pm, px, layout.mainTop, layout.mainHeight, scale),
+    );
+    const priceL = Math.min(
+      yToPrice(y1, pm, px, layout.mainTop, layout.mainHeight, scale),
+      yToPrice(cursorY, pm, px, layout.mainTop, layout.mainHeight, scale),
+    );
+    const priceDiff = priceH - priceL;
+    const barSpan = Math.abs(Math.round(xToIndex(cursorX, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth))
+      - Math.round(xToIndex(x1, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth)));
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    const infoText = `${priceDiff.toFixed(4)} | ${barSpan} bars`;
+    const tw = ctx.measureText(infoText).width + 10;
+    const ix = Math.min(x1, cursorX) + Math.abs(w) / 2 - tw / 2;
+    const iy = Math.max(y1, cursorY) + 6;
+    ctx.fillStyle = "rgba(19,23,34,0.9)";
+    ctx.beginPath();
+    ctx.roundRect(ix, iy, tw, 18, 3);
+    ctx.fill();
+    ctx.fillStyle = lineColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(infoText, ix + tw / 2, iy + 9);
+    // Corner guides
+    ctx.globalAlpha = 0.4;
+    ctx.setLineDash([2, 2]);
+    // horizontal guide from cursor
+    ctx.beginPath(); ctx.moveTo(cursorX, cursorY); ctx.lineTo(x1, cursorY); ctx.stroke();
+    // vertical guide from cursor
+    ctx.beginPath(); ctx.moveTo(cursorX, cursorY); ctx.lineTo(cursorX, y1); ctx.stroke();
+    ctx.setLineDash([6, 4]);
+    ctx.globalAlpha = 0.8;
   } else if (drawingType === "horizontal") {
     ctx.beginPath();
     ctx.moveTo(layout.chartLeft, cursorY);
@@ -1077,10 +1177,11 @@ function drawRectangleDrawing(
   d: Drawing,
   layout: ChartLayout,
   viewport: Viewport,
-  _pair: string,
+  pair: string,
   scale: PriceScale,
   isSelected: boolean,
-  _isHovered: boolean,
+  isHovered: boolean,
+  bars?: Bar[],
 ): void {
   if (d.points.length < 2) return;
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
@@ -1091,28 +1192,247 @@ function drawRectangleDrawing(
   const x2 = indexToX(d.points[1].index, startIndex, endIndex, chartLeft, chartWidth);
   const y2 = priceToY(d.points[1].price, priceMin, priceMax, mainTop, mainHeight, scale);
 
-  ctx.save();
-  ctx.globalAlpha = d.opacity;
+  let left = Math.min(x1, x2), right = Math.max(x1, x2);
+  const top = Math.min(y1, y2), bot = Math.max(y1, y2);
+  const w = right - left;
+  const h = bot - top;
 
-  ctx.fillStyle = d.color.replace(")", ",0.08)").replace("rgb", "rgba");
-  ctx.fillRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+  // Extend left/right
+  if (d.extendLeft) left = chartLeft;
+  if (d.extendRight) right = chartLeft + chartWidth;
+  const ew = right - left;
+
+  ctx.save();
+
+  // ── Active zone glow (current price inside rectangle) ──
+  const topPrice = Math.max(d.points[0].price, d.points[1].price);
+  const botPrice = Math.min(d.points[0].price, d.points[1].price);
+  const lastBar = bars && bars.length > 0 ? bars[bars.length - 1] : null;
+  const isActiveZone = lastBar && lastBar.c >= botPrice && lastBar.c <= topPrice;
+  if (isActiveZone && !isSelected) {
+    ctx.shadowColor = d.color;
+    ctx.shadowBlur = 8;
+  }
+
+  // ── Fill ──
+  ctx.globalAlpha = d.opacity;
+  if (d.fillEnabled !== false) {
+    const fc = d.fillColor || d.color;
+    ctx.globalAlpha = d.fillOpacity ?? 0.15;
+    ctx.fillStyle = fc;
+    ctx.fillRect(left, top, ew, h);
+    ctx.globalAlpha = d.opacity;
+  }
+  ctx.shadowBlur = 0;
+
+  // ── Border ──
   ctx.setLineDash(getLineDash(d.lineStyle || "solid"));
   ctx.strokeStyle = d.color;
   ctx.lineWidth = isSelected ? d.lineWidth + 0.5 : d.lineWidth;
-  ctx.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+  ctx.strokeRect(left, top, ew, h);
   ctx.setLineDash([]);
 
+  // ── Middle line ──
+  if (d.midLine) {
+    const midY = (top + bot) / 2;
+    ctx.setLineDash(getLineDash(d.midLineStyle || "dashed"));
+    ctx.strokeStyle = d.midLineColor || d.color;
+    ctx.lineWidth = d.midLineWidth || 1;
+    ctx.beginPath();
+    ctx.moveTo(left, Math.round(midY) + 0.5);
+    ctx.lineTo(right, Math.round(midY) + 0.5);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── Zone type auto-label ──
+  if (!d.label && (isSelected || isHovered) && bars && bars.length > 0) {
+    const zoneType = classifyZone(d, bars);
+    if (zoneType) {
+      ctx.font = "bold 9px 'IBM Plex Mono', monospace";
+      ctx.fillStyle = zoneType === "SUPPLY" ? "rgba(239,83,80,0.6)" : zoneType === "DEMAND" ? "rgba(38,166,154,0.6)" : "rgba(149,152,161,0.4)";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "top";
+      ctx.fillText(zoneType + " ZONE", right - 4, top + 3);
+    }
+  }
+
+  // ── Label with position ──
   if (d.label) {
     const effColor = d.labelColor || d.color;
     const weight = d.labelBold ? "bold" : "normal";
     const style = d.labelItalic ? "italic" : "normal";
-    ctx.font = `${style} ${weight} ${d.labelFontSize || 10}px 'IBM Plex Mono', monospace`;
+    ctx.font = `${style} ${weight} ${d.labelFontSize || 11}px 'IBM Plex Mono', monospace`;
     ctx.fillStyle = effColor;
+    const pos = d.labelPosition || "top-left";
+    const pad = 6;
+    let lx: number, ly: number;
+    if (pos.includes("left")) { ctx.textAlign = "left"; lx = left + pad; }
+    else if (pos.includes("right")) { ctx.textAlign = "right"; lx = right - pad; }
+    else { ctx.textAlign = "center"; lx = left + ew / 2; }
+    if (pos.startsWith("top")) { ctx.textBaseline = "top"; ly = top + pad; }
+    else if (pos.startsWith("bottom")) { ctx.textBaseline = "bottom"; ly = bot - pad; }
+    else { ctx.textBaseline = "middle"; ly = top + h / 2; }
+    ctx.fillText(d.label, lx, ly);
+  }
+
+  // ── Stats box ──
+  if ((isSelected || d.stats?.alwaysShow) && d.points.length >= 2) {
+    const rectStats = computeRectStats(d, bars || [], pair);
+    const lines: string[] = [];
+    if (d.stats?.showPrice) lines.push(`${rectStats.priceRange}`);
+    if (d.stats?.showPips) lines.push(`${rectStats.pips} pips`);
+    if (d.stats?.showPercent) lines.push(`${rectStats.percent}`);
+    if (d.stats?.showBars) lines.push(`${rectStats.bars} bars`);
+    if (d.stats?.showDateRange && rectStats.dateRange !== "—") lines.push(rectStats.dateRange);
+    if (lines.length > 0) {
+      ctx.font = "10px 'IBM Plex Mono', monospace";
+      const boxW = Math.max(...lines.map(l => ctx.measureText(l).width)) + 12;
+      const boxH = lines.length * 13 + 8;
+      const statsPos = d.stats?.position || "top";
+      let bx: number, by: number;
+      if (statsPos === "bottom") { bx = left + ew / 2 - boxW / 2; by = bot + 4; }
+      else if (statsPos === "left") { bx = left - boxW - 4; by = top + h / 2 - boxH / 2; }
+      else if (statsPos === "right") { bx = right + 4; by = top + h / 2 - boxH / 2; }
+      else { bx = left + ew / 2 - boxW / 2; by = top - boxH - 4; } // top (default)
+      ctx.fillStyle = "rgba(19,23,34,0.92)";
+      ctx.beginPath();
+      ctx.roundRect(bx, by, boxW, boxH, 3);
+      ctx.fill();
+      ctx.strokeStyle = d.color;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+      ctx.fillStyle = d.color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], bx + boxW / 2, by + 4 + i * 13);
+      }
+    }
+  }
+
+  // ── Active zone indicator badge ──
+  if (isActiveZone) {
+    ctx.font = "bold 8px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = d.color;
     ctx.textAlign = "left";
-    ctx.fillText(d.label, Math.min(x1, x2) + 4, Math.min(y1, y2) + 12);
+    ctx.textBaseline = "bottom";
+    ctx.fillText("● ACTIVE", left + 4, bot - 3);
+  }
+
+  // ── Selection handles (4 corners + 4 edge midpoints) ──
+  if (isSelected || isHovered) {
+    const handleAlpha = isSelected ? 0.9 : 0.5;
+    const handles = [
+      { x: x1, y: y1 }, { x: x2, y: y2 },         // p0, p1 (defining corners)
+      { x: x1, y: y2 }, { x: x2, y: y1 },         // adjacent corners
+    ];
+    const edgeMids = [
+      { x: (x1 + x2) / 2, y: Math.min(y1, y2) },  // top edge mid
+      { x: (x1 + x2) / 2, y: Math.max(y1, y2) },  // bottom edge mid
+      { x: Math.min(x1, x2), y: (y1 + y2) / 2 },  // left edge mid
+      { x: Math.max(x1, x2), y: (y1 + y2) / 2 },  // right edge mid
+    ];
+    ctx.globalAlpha = handleAlpha;
+    // Corner handles (circles)
+    for (const hp of handles) {
+      ctx.beginPath();
+      ctx.arc(hp.x, hp.y, isSelected ? 4.5 : 3, 0, Math.PI * 2);
+      ctx.fillStyle = THEME.canvasBg;
+      ctx.fill();
+      ctx.strokeStyle = d.color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(hp.x, hp.y, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = d.color;
+      ctx.fill();
+    }
+    // Edge midpoint handles (small diamonds)
+    if (isSelected) {
+      for (const ep of edgeMids) {
+        ctx.save();
+        ctx.translate(ep.x, ep.y);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = THEME.canvasBg;
+        ctx.fillRect(-3, -3, 6, 6);
+        ctx.strokeStyle = d.color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-3, -3, 6, 6);
+        ctx.restore();
+      }
+    }
+  }
+
+  // ── Lock indicator ──
+  if (d.locked) {
+    ctx.globalAlpha = 0.5;
+    ctx.font = "bold 9px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = "#FF9800";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "bottom";
+    ctx.fillText("🔒", right - 2, top - 2);
   }
 
   ctx.restore();
+}
+
+// ── Rectangle stats ──
+function computeRectStats(d: Drawing, bars: Bar[], pair: string) {
+  if (d.points.length < 2) return { priceRange: "—", pips: "—", percent: "—", bars: "—", dateRange: "—" };
+  const p0 = d.points[0], p1 = d.points[1];
+  const priceH = Math.max(p0.price, p1.price);
+  const priceL = Math.min(p0.price, p1.price);
+  const diff = priceH - priceL;
+  const pct = priceL !== 0 ? (diff / priceL) * 100 : 0;
+  const pip = getPipSize(pair);
+  const pips = diff / pip;
+  const barCount = Math.abs(p1.index - p0.index);
+  let dateRange = "—";
+  const i0 = Math.min(bars.length - 1, Math.max(0, Math.min(p0.index, p1.index)));
+  const i1 = Math.min(bars.length - 1, Math.max(0, Math.max(p0.index, p1.index)));
+  if (bars[i0] && bars[i1]) dateRange = formatDateRange(bars[i0].t, bars[i1].t);
+  return {
+    priceRange: `${formatPrice(priceL, pair)} – ${formatPrice(priceH, pair)}`,
+    pips: pips.toFixed(1),
+    percent: `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`,
+    bars: String(barCount),
+    dateRange,
+  };
+}
+
+// ── Zone classification ──
+function classifyZone(d: Drawing, bars: Bar[]): "SUPPLY" | "DEMAND" | "RANGE" | null {
+  if (d.points.length < 2) return null;
+  const leftIdx = Math.min(d.points[0].index, d.points[1].index);
+  const rightIdx = Math.max(d.points[0].index, d.points[1].index);
+  // Look at bars before the zone
+  const lookback = Math.min(10, leftIdx);
+  if (lookback < 3 || leftIdx >= bars.length) return null;
+  let sumBefore = 0;
+  let countBefore = 0;
+  for (let i = Math.max(0, leftIdx - lookback); i < leftIdx && i < bars.length; i++) {
+    sumBefore += bars[i].c;
+    countBefore++;
+  }
+  // Look at bars after the zone
+  const lookAhead = Math.min(10, bars.length - rightIdx - 1);
+  if (lookAhead < 1) return null;
+  let sumAfter = 0;
+  let countAfter = 0;
+  for (let i = rightIdx + 1; i <= Math.min(bars.length - 1, rightIdx + lookAhead); i++) {
+    sumAfter += bars[i].c;
+    countAfter++;
+  }
+  if (countBefore === 0 || countAfter === 0) return null;
+  const avgBefore = sumBefore / countBefore;
+  const avgAfter = sumAfter / countAfter;
+  const midPrice = (Math.max(d.points[0].price, d.points[1].price) + Math.min(d.points[0].price, d.points[1].price)) / 2;
+  // Price dropped after the zone → supply; rose → demand
+  if (avgBefore > midPrice && avgAfter < midPrice) return "SUPPLY";
+  if (avgBefore < midPrice && avgAfter > midPrice) return "DEMAND";
+  if (Math.abs(avgAfter - avgBefore) / midPrice < 0.002) return "RANGE";
+  return null;
 }
 
 // ══════════════════════════════════════════════════════
@@ -1150,6 +1470,14 @@ export function loadDrawings(pair: string): Drawing[] {
       showMidPoint: false,
       showPriceLabels: false,
       locked: false,
+      fillEnabled: d.type === "rectangle",
+      fillColor: "",
+      fillOpacity: 0.15,
+      midLine: false,
+      midLineColor: "",
+      midLineWidth: 1,
+      midLineStyle: "dashed",
+      labelPosition: "top-left",
       ...d,
       // Ensure stats is fully populated even if partially saved
       stats: { ...DEFAULT_STATS, ...(d.stats || {}) },

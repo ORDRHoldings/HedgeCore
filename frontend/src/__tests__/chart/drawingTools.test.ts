@@ -848,3 +848,262 @@ describe("Opacity", () => {
     expect(d.opacity).toBe(0.4);
   });
 });
+
+// ═══════════════════════════════════════════════════════════
+//  21. Rectangle: Fill properties
+// ═══════════════════════════════════════════════════════════
+
+describe("Rectangle fill properties", () => {
+  it("enables fill by default for rectangles", () => {
+    const d = createDrawing("rectangle", [
+      { index: 10, price: 1.1 },
+      { index: 50, price: 1.3 },
+    ]);
+    expect(d.fillEnabled).toBe(true);
+    expect(d.fillOpacity).toBe(0.15);
+    expect(d.fillColor).toBe("");
+  });
+
+  it("does not enable fill by default for trendlines", () => {
+    const d = makeTrendline();
+    expect(d.fillEnabled).toBe(false);
+  });
+
+  it("can override fill properties", () => {
+    const d = createDrawing("rectangle", [
+      { index: 10, price: 1.1 },
+      { index: 50, price: 1.3 },
+    ], { fillColor: "#FF0000", fillOpacity: 0.5, fillEnabled: false });
+    expect(d.fillColor).toBe("#FF0000");
+    expect(d.fillOpacity).toBe(0.5);
+    expect(d.fillEnabled).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  22. Rectangle: Middle line
+// ═══════════════════════════════════════════════════════════
+
+describe("Rectangle middle line", () => {
+  it("defaults to disabled", () => {
+    const d = createDrawing("rectangle", [
+      { index: 10, price: 1.1 },
+      { index: 50, price: 1.3 },
+    ]);
+    expect(d.midLine).toBe(false);
+    expect(d.midLineStyle).toBe("dashed");
+    expect(d.midLineWidth).toBe(1);
+    expect(d.midLineColor).toBe("");
+  });
+
+  it("can be enabled with custom style", () => {
+    const d = createDrawing("rectangle", [
+      { index: 10, price: 1.1 },
+      { index: 50, price: 1.3 },
+    ], { midLine: true, midLineColor: "#00BCD4", midLineWidth: 2, midLineStyle: "dotted" });
+    expect(d.midLine).toBe(true);
+    expect(d.midLineColor).toBe("#00BCD4");
+    expect(d.midLineWidth).toBe(2);
+    expect(d.midLineStyle).toBe("dotted");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  23. Rectangle: Label position
+// ═══════════════════════════════════════════════════════════
+
+describe("Rectangle label position", () => {
+  it("defaults to top-left", () => {
+    const d = createDrawing("rectangle", [
+      { index: 10, price: 1.1 },
+      { index: 50, price: 1.3 },
+    ]);
+    expect(d.labelPosition).toBe("top-left");
+  });
+
+  it("supports all 7 positions", () => {
+    const positions = [
+      "top-left", "top-center", "top-right",
+      "center",
+      "bottom-left", "bottom-center", "bottom-right",
+    ] as const;
+    positions.forEach(pos => {
+      const d = createDrawing("rectangle", [
+        { index: 10, price: 1.1 },
+        { index: 50, price: 1.3 },
+      ], { labelPosition: pos });
+      expect(d.labelPosition).toBe(pos);
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  24. Rectangle: Hit testing — corners + interior
+// ═══════════════════════════════════════════════════════════
+
+describe("Rectangle hit testing — corners + interior", () => {
+  const layout = makeLayout();
+  const viewport = makeViewport(0, 100, 1.0, 1.5);
+
+  function makeRect(p0Idx = 20, p0Price = 1.1, p1Idx = 60, p1Price = 1.3, overrides?: Partial<Drawing>) {
+    return createDrawing("rectangle", [
+      { index: p0Idx, price: p0Price },
+      { index: p1Idx, price: p1Price },
+    ], overrides);
+  }
+
+  function idx2px(idx: number) {
+    return layout.chartLeft + ((idx - viewport.startIndex) / (viewport.endIndex - viewport.startIndex)) * layout.chartWidth;
+  }
+  function price2px(price: number) {
+    return layout.mainTop + layout.mainHeight - ((price - viewport.priceMin) / (viewport.priceMax - viewport.priceMin)) * layout.mainHeight;
+  }
+
+  it("detects p0 corner handle", () => {
+    const d = makeRect();
+    const result = hitTestDrawings(idx2px(20), price2px(1.1), [d], layout, viewport);
+    expect(result).not.toBeNull();
+    expect(result!.part).toBe("p0");
+  });
+
+  it("detects p1 corner handle", () => {
+    const d = makeRect();
+    const result = hitTestDrawings(idx2px(60), price2px(1.3), [d], layout, viewport);
+    expect(result).not.toBeNull();
+    expect(result!.part).toBe("p1");
+  });
+
+  it("detects adjacent corner (rect-adj-0)", () => {
+    const d = makeRect();
+    // rect-adj-0 is at (p0.index=20, p1.price=1.3)
+    const result = hitTestDrawings(idx2px(20), price2px(1.3), [d], layout, viewport);
+    expect(result).not.toBeNull();
+    expect(result!.part).toBe("rect-adj-0");
+  });
+
+  it("detects adjacent corner (rect-adj-1)", () => {
+    const d = makeRect();
+    // rect-adj-1 is at (p1.index=60, p0.price=1.1)
+    const result = hitTestDrawings(idx2px(60), price2px(1.1), [d], layout, viewport);
+    expect(result).not.toBeNull();
+    expect(result!.part).toBe("rect-adj-1");
+  });
+
+  it("detects edge midpoint (edge-top)", () => {
+    const d = makeRect();
+    // Top edge midpoint: x = mid(20,60)=40, y = higher price 1.3
+    const midX = idx2px(40);
+    const topY = price2px(1.3);
+    const result = hitTestDrawings(midX, topY, [d], layout, viewport);
+    expect(result).not.toBeNull();
+    expect(result!.part).toBe("edge-top");
+  });
+
+  it("detects edge midpoint (edge-left)", () => {
+    const d = makeRect();
+    const leftX = idx2px(20);
+    const midY = price2px(1.2);
+    const result = hitTestDrawings(leftX, midY, [d], layout, viewport);
+    expect(result).not.toBeNull();
+    expect(result!.part).toBe("edge-left");
+  });
+
+  it("detects interior body click (filled rectangle)", () => {
+    const d = makeRect();
+    // Click well inside the rectangle
+    const centerX = idx2px(40);
+    const centerY = price2px(1.2);
+    const result = hitTestDrawings(centerX, centerY, [d], layout, viewport);
+    expect(result).not.toBeNull();
+    expect(result!.part).toBe("body");
+  });
+
+  it("does NOT detect interior click when fill is disabled", () => {
+    const d = makeRect(20, 1.1, 60, 1.3, { fillEnabled: false });
+    // Click in center — should not hit because fill is disabled and we're far from edges
+    const centerX = idx2px(40);
+    const centerY = price2px(1.2);
+    const result = hitTestDrawings(centerX, centerY, [d], layout, viewport);
+    expect(result).toBeNull();
+  });
+
+  it("prefers corner handle over body click", () => {
+    const d = makeRect();
+    // Click exactly at p0 corner
+    const result = hitTestDrawings(idx2px(20), price2px(1.1), [d], layout, viewport);
+    expect(result).not.toBeNull();
+    expect(result!.part).toBe("p0"); // Corner should win over body
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  25. Rectangle: Extend left/right
+// ═══════════════════════════════════════════════════════════
+
+describe("Rectangle extend left/right", () => {
+  it("defaults to no extend", () => {
+    const d = createDrawing("rectangle", [
+      { index: 10, price: 1.1 },
+      { index: 50, price: 1.3 },
+    ]);
+    expect(d.extendLeft).toBe(false);
+    expect(d.extendRight).toBe(false);
+  });
+
+  it("can enable both extends", () => {
+    const d = createDrawing("rectangle", [
+      { index: 10, price: 1.1 },
+      { index: 50, price: 1.3 },
+    ], { extendLeft: true, extendRight: true });
+    expect(d.extendLeft).toBe(true);
+    expect(d.extendRight).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  26. Rectangle: Persistence migration
+// ═══════════════════════════════════════════════════════════
+
+describe("Rectangle persistence migration", () => {
+  it("migrates old rectangle without new fields", () => {
+    const oldRect = {
+      id: "d_old_rect",
+      type: "rectangle",
+      points: [{ index: 10, price: 1.1 }, { index: 50, price: 1.3 }],
+      color: "#FF5722",
+    };
+    localStore["ordr_drawings_EURUSD"] = JSON.stringify([oldRect]);
+    const loaded = loadDrawings("EURUSD");
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].fillEnabled).toBe(true); // type === "rectangle"
+    expect(loaded[0].fillOpacity).toBe(0.15);
+    expect(loaded[0].fillColor).toBe("");
+    expect(loaded[0].midLine).toBe(false);
+    expect(loaded[0].midLineStyle).toBe("dashed");
+    expect(loaded[0].labelPosition).toBe("top-left");
+  });
+
+  it("preserves explicitly set rectangle fields", () => {
+    const rect = {
+      id: "d_new_rect",
+      type: "rectangle",
+      points: [{ index: 10, price: 1.1 }, { index: 50, price: 1.3 }],
+      color: "#FF5722",
+      fillEnabled: true,
+      fillColor: "#00BCD4",
+      fillOpacity: 0.4,
+      midLine: true,
+      midLineColor: "#FFEB3B",
+      midLineWidth: 2,
+      midLineStyle: "dotted",
+      labelPosition: "center",
+    };
+    localStore["ordr_drawings_GBPUSD"] = JSON.stringify([rect]);
+    const loaded = loadDrawings("GBPUSD");
+    expect(loaded[0].fillColor).toBe("#00BCD4");
+    expect(loaded[0].fillOpacity).toBe(0.4);
+    expect(loaded[0].midLine).toBe(true);
+    expect(loaded[0].midLineColor).toBe("#FFEB3B");
+    expect(loaded[0].labelPosition).toBe("center");
+  });
+});
