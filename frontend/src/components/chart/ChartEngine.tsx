@@ -46,8 +46,10 @@ import {
 } from "./renderers/indicators";
 import { drawSRLevels, drawFVGZones, drawTrendlines } from "./renderers/overlays";
 import {
-  drawDrawings, loadDrawings, saveDrawings, getDefaultColor,
+  drawDrawings, loadDrawings, saveDrawings, getDefaultColor, createDrawing,
+  hitTestDrawings, drawRubberBand,
 } from "./renderers/drawings";
+import DrawingPropertiesPanel from "./DrawingPropertiesPanel";
 import type { Drawing, DrawingType } from "./renderers/drawings";
 import {
   drawStochastic, drawStochRSI, drawWilliamsR,
@@ -206,11 +208,18 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   const [undoStack, setUndoStack] = useState<Drawing[][]>([]);
   const [redoStack, setRedoStack] = useState<Drawing[][]>([]);
 
+  // Drawing selection + hover + properties panel
+  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
+  const [hoveredDrawingId, setHoveredDrawingId] = useState<string | null>(null);
+  const [drawingPropsPanel, setDrawingPropsPanel] = useState<{ drawingId: string; x: number; y: number } | null>(null);
+
   // Drawing tool refs (avoid stale closures in pointer handlers)
   const drawingModeRef = useRef<DrawingType | null>(drawingMode);
   const drawingPointsRef = useRef<{ index: number; price: number }[]>(drawingPoints);
+  const drawingsRef = useRef<Drawing[]>(drawings);
   useEffect(() => { drawingModeRef.current = drawingMode; }, [drawingMode]);
   useEffect(() => { drawingPointsRef.current = drawingPoints; }, [drawingPoints]);
+  useEffect(() => { drawingsRef.current = drawings; }, [drawings]);
 
   // Layout (left toolbar adds 40px)
   const LEFT_TOOLBAR_WIDTH = 40;
@@ -402,9 +411,27 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
           setDrawingMode("rectangle");
           setActiveTool("rectangle");
           break;
+        case "cancel":
+          // Cancel drawing in progress or deselect
+          if (drawingMode) {
+            setDrawingMode(null);
+            drawingModeRef.current = null;
+            setDrawingPoints([]);
+            drawingPointsRef.current = [];
+            setActiveTool("crosshair");
+          } else if (selectedDrawingId) {
+            setSelectedDrawingId(null);
+            setDrawingPropsPanel(null);
+          }
+          break;
         case "deleteDrawing":
-          // Delete last drawing
-          if (drawings.length > 0) {
+          // Delete selected drawing, or last drawing
+          if (selectedDrawingId) {
+            const updated = drawings.filter(d => d.id !== selectedDrawingId);
+            pushDrawingState(updated);
+            setSelectedDrawingId(null);
+            setDrawingPropsPanel(null);
+          } else if (drawings.length > 0) {
             const updated = drawings.slice(0, -1);
             pushDrawingState(updated);
           }
@@ -413,7 +440,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [bars.length, pair, drawings, showSymbolSearch, showIndicatorDialog]);
+  }, [bars.length, pair, drawings, showSymbolSearch, showIndicatorDialog, selectedDrawingId, drawingMode]);
 
   /* ─── Drawing undo/redo ─── */
   const pushDrawingState = useCallback((newDrawings: Drawing[]) => {
@@ -571,7 +598,17 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     }
 
     // Layer 7: Drawings
-    drawDrawings(ctx, drawings, layout, viewport, pair, priceScale);
+    drawDrawings(ctx, drawings, layout, viewport, pair, priceScale, selectedDrawingId, hoveredDrawingId);
+
+    // Layer 7b: Rubber-band preview (drawing in progress)
+    const currentPoints = drawingPointsRef.current;
+    const currentMode = drawingModeRef.current;
+    if (currentMode && currentPoints.length > 0 && ch.visible) {
+      const neededPoints = currentMode === "horizontal" ? 1 : 2;
+      if (currentPoints.length < neededPoints) {
+        drawRubberBand(ctx, currentPoints[0], ch.x, ch.y, layout, viewport, priceScale, currentMode);
+      }
+    }
 
     // Layer 8: Axes
     drawPriceAxis(ctx, layout, viewport, pair, priceScale, refPrice);
@@ -585,7 +622,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
 
     // Layer 11: Legend (indicator labels)
     drawLegend(ctx, indicators.overlayLines, indicators.bands, layout);
-  }, [bars, layout, indicators, drawings, pair, interval, activeSubPanes, dimensions, chartType, enabledSessions, priceScale, crosshairMode]);
+  }, [bars, layout, indicators, drawings, pair, interval, activeSubPanes, dimensions, chartType, enabledSessions, priceScale, crosshairMode, selectedDrawingId, hoveredDrawingId]);
 
   /* ─── Animation loop ─── */
   useEffect(() => {
@@ -633,7 +670,13 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     const viewport = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
     const snap = snapToBar(x, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth, bars.length);
     crosshairRef.current = { x, y, visible: true, snapIndex: snap };
-  }, [layout, bars, contextMenu.open]);
+
+    // Hit test drawings for hover — only when not in drawing mode and not panning
+    if (!drawingModeRef.current && !zoomRef.current.isDragging) {
+      const hit = hitTestDrawings(x, y, drawingsRef.current, layout, viewport, priceScale);
+      setHoveredDrawingId(hit ? hit.drawingId : null);
+    }
+  }, [layout, bars, contextMenu.open, priceScale]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     // FIX 2: Dismiss context menu on click and don't propagate
@@ -683,28 +726,43 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
 
       const neededPoints = currentDrawingMode === "horizontal" ? 1 : 2;
       if (newPoints.length >= neededPoints) {
-        const drawing: Drawing = {
-          id: `d_${Date.now()}`,
-          type: currentDrawingMode,
-          points: newPoints,
-          color: getDefaultColor(currentDrawingMode),
-        };
+        const drawing = createDrawing(currentDrawingMode, newPoints);
         const updated = [...drawings, drawing];
         pushDrawingState(updated);
         setDrawingPoints([]);
         drawingPointsRef.current = [];
-        if (activeTool === "crosshair" || activeTool === "cursor") {
-          setDrawingMode(null);
-          drawingModeRef.current = null;
-        }
+        // Auto-deactivate drawing mode after placement
+        setDrawingMode(null);
+        drawingModeRef.current = null;
+        setActiveTool("crosshair");
+        // Select the newly created drawing
+        setSelectedDrawingId(drawing.id);
       }
       return;
+    }
+
+    // Click on chart without drawing mode: hit-test for selection
+    {
+      const zoom = zoomRef.current;
+      const viewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
+      const hit = hitTestDrawings(x, y, drawingsRef.current, layout, viewport, priceScale);
+      if (hit) {
+        setSelectedDrawingId(hit.drawingId);
+        // Close properties panel if clicking a different drawing
+        if (drawingPropsPanel && drawingPropsPanel.drawingId !== hit.drawingId) {
+          setDrawingPropsPanel(null);
+        }
+        return; // Don't start pan when clicking a drawing
+      } else {
+        setSelectedDrawingId(null);
+        setDrawingPropsPanel(null);
+      }
     }
 
     // Chart pan — pass Y for vertical panning
     zoomRef.current = handleDragStart(zoomRef.current, x, y);
     setIsDragging(true);
-  }, [contextMenu.open, layout, drawings, bars, dimensions, activeTool, pushDrawingState]);
+  }, [contextMenu.open, layout, drawings, bars, dimensions, activeTool, pushDrawingState, priceScale, drawingPropsPanel]);
 
   const handleMouseUp = useCallback(() => {
     if (axisDragRef.current.isDragging) {
@@ -751,9 +809,27 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
 
   const handleContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    // Use viewport coordinates — ChartContextMenu uses position: "fixed"
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Check if right-clicking on a drawing → open properties panel
+    const zoom = zoomRef.current;
+    const viewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
+    const hit = hitTestDrawings(x, y, drawingsRef.current, layout, viewport, priceScale);
+    if (hit) {
+      setSelectedDrawingId(hit.drawingId);
+      setDrawingPropsPanel({ drawingId: hit.drawingId, x: e.clientX, y: e.clientY });
+      setContextMenu(prev => ({ ...prev, open: false }));
+      return;
+    }
+
+    // Generic context menu
+    setDrawingPropsPanel(null);
     setContextMenu({ x: e.clientX, y: e.clientY, open: true });
-  }, []);
+  }, [bars, layout, priceScale]);
 
   const handleMouseLeave = useCallback(() => {
     crosshairRef.current = { ...crosshairRef.current, visible: false };
@@ -1073,7 +1149,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
           ref={containerRef}
           style={{
             flex: 1, position: "relative",
-            cursor: drawingMode ? "crosshair" : isDragging ? "grabbing" : "crosshair",
+            cursor: drawingMode ? "crosshair" : isDragging ? "grabbing" : hoveredDrawingId ? "pointer" : "crosshair",
             overflow: "hidden",
             touchAction: "none",
             userSelect: "none",
@@ -1115,6 +1191,44 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
               onAction={handleContextAction}
             />
           )}
+
+          {/* Drawing Properties Panel (right-click on a drawing) */}
+          {drawingPropsPanel && (() => {
+            const d = drawings.find(dr => dr.id === drawingPropsPanel.drawingId);
+            if (!d) return null;
+            return (
+              <DrawingPropertiesPanel
+                drawing={d}
+                x={drawingPropsPanel.x}
+                y={drawingPropsPanel.y}
+                onUpdate={(updated) => {
+                  const newDrawings = drawings.map(dr => dr.id === updated.id ? updated : dr);
+                  pushDrawingState(newDrawings);
+                }}
+                onDelete={() => {
+                  const newDrawings = drawings.filter(dr => dr.id !== drawingPropsPanel.drawingId);
+                  pushDrawingState(newDrawings);
+                  setDrawingPropsPanel(null);
+                  setSelectedDrawingId(null);
+                }}
+                onDuplicate={() => {
+                  const clone = createDrawing(d.type, d.points.map(p => ({ ...p })), {
+                    color: d.color,
+                    lineWidth: d.lineWidth,
+                    label: d.label ? `${d.label} (copy)` : "",
+                    extendLeft: d.extendLeft,
+                    extendRight: d.extendRight,
+                    showAngle: d.showAngle,
+                    opacity: d.opacity,
+                  });
+                  pushDrawingState([...drawings, clone]);
+                  setDrawingPropsPanel(null);
+                  setSelectedDrawingId(clone.id);
+                }}
+                onClose={() => setDrawingPropsPanel(null)}
+              />
+            );
+          })()}
         </div>
       </div>
 
