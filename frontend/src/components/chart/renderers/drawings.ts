@@ -14,12 +14,24 @@ import type { ChartLayout, Viewport } from "../core/data";
 import type { PriceScale } from "../core/data";
 import { priceToY, indexToX, yToPrice, xToIndex, formatPrice } from "../core/data";
 import { THEME } from "../core/theme";
+import { drawGenericDrawing, hitTestGenericDrawing } from "./drawingTools";
 
 // ══════════════════════════════════════════════════════
 //  Types
 // ══════════════════════════════════════════════════════
 
-export type DrawingType = "trendline" | "horizontal" | "fibonacci" | "rectangle";
+export type DrawingType =
+  | "trendline" | "horizontal" | "fibonacci" | "rectangle"
+  | "ray" | "extended_line" | "horizontal_ray" | "vertical_line" | "cross_line" | "info_line" | "trend_angle"
+  | "parallel_channel" | "regression_trend" | "flat_top_bottom" | "disjoint_channel"
+  | "pitchfork" | "schiff_pitchfork" | "mod_schiff_pitchfork" | "inside_pitchfork"
+  | "fib_extension" | "fib_channel" | "fib_time_zone" | "fib_speed_fan"
+  | "gann_box" | "gann_fan"
+  | "xabcd_pattern" | "cypher_pattern" | "abcd_pattern" | "triangle_pattern" | "three_drives" | "head_shoulders"
+  | "elliott_impulse" | "elliott_correction" | "elliott_triangle"
+  | "circle" | "ellipse" | "triangle_shape" | "arrow_drawing" | "brush" | "polyline" | "arc"
+  | "long_position" | "short_position" | "date_range" | "price_range" | "date_price_range" | "forecast"
+  | "text_note" | "anchored_text" | "callout" | "price_label" | "arrow_marker_up" | "arrow_marker_down" | "flag_mark";
 export type LineStyle = "solid" | "dashed" | "dotted";
 
 export interface DrawingStats {
@@ -72,6 +84,36 @@ export interface Drawing {
   midLineWidth: number;
   midLineStyle: LineStyle;
   labelPosition: RectLabelPosition;
+  // Channel-specific
+  channelWidth?: number;
+  channelFillEnabled?: boolean;
+  channelFillColor?: string;
+  channelFillOpacity?: number;
+  // Position tool
+  entryPrice?: number;
+  targetPrice?: number;
+  stopPrice?: number;
+  quantity?: number;
+  riskPercent?: number;
+  accountSize?: number;
+  // Pattern labels
+  patternLabels?: string[];
+  // Text/annotation
+  text?: string;
+  fontSize?: number;
+  fontBold?: boolean;
+  fontItalic?: boolean;
+  backgroundColor?: string;
+  borderRadius?: number;
+  // Brush
+  brushPoints?: { x: number; y: number }[];
+  brushSize?: number;
+  // Fib overrides
+  fibLevels?: number[];
+  fibShowExtensions?: boolean;
+  // Gann
+  gannShowAngles?: boolean;
+  gannShowPriceTime?: boolean;
 }
 
 export type RectLabelPosition =
@@ -88,6 +130,64 @@ const DRAWING_COLORS: Record<DrawingType, string> = {
   horizontal: THEME.drawHorizontal,
   fibonacci: THEME.drawFibonacci,
   rectangle: THEME.drawRectangle,
+  // Lines
+  ray: "#2962FF",
+  extended_line: "#2962FF",
+  horizontal_ray: "#FF9800",
+  vertical_line: "#787B86",
+  cross_line: "#787B86",
+  info_line: "#26A69A",
+  trend_angle: "#FF6D00",
+  // Channels
+  parallel_channel: "#2962FF",
+  regression_trend: "#9C27B0",
+  flat_top_bottom: "#FF9800",
+  disjoint_channel: "#00BCD4",
+  pitchfork: "#2962FF",
+  schiff_pitchfork: "#2962FF",
+  mod_schiff_pitchfork: "#2962FF",
+  inside_pitchfork: "#2962FF",
+  // Fibonacci
+  fib_extension: "#9C27B0",
+  fib_channel: "#9C27B0",
+  fib_time_zone: "#9C27B0",
+  fib_speed_fan: "#9C27B0",
+  // Gann
+  gann_box: "#FF6D00",
+  gann_fan: "#FF6D00",
+  // Patterns
+  xabcd_pattern: "#00BCD4",
+  cypher_pattern: "#00BCD4",
+  abcd_pattern: "#00BCD4",
+  triangle_pattern: "#FF9800",
+  three_drives: "#00BCD4",
+  head_shoulders: "#E91E63",
+  elliott_impulse: "#26A69A",
+  elliott_correction: "#EF5350",
+  elliott_triangle: "#FF9800",
+  // Shapes
+  circle: "#2962FF",
+  ellipse: "#2962FF",
+  triangle_shape: "#FF9800",
+  arrow_drawing: "#EF5350",
+  brush: "#FFEB3B",
+  polyline: "#2962FF",
+  arc: "#9C27B0",
+  // Measurement
+  long_position: "#26A69A",
+  short_position: "#EF5350",
+  date_range: "#787B86",
+  price_range: "#787B86",
+  date_price_range: "#787B86",
+  forecast: "#2962FF",
+  // Annotations
+  text_note: "#D1D4DC",
+  anchored_text: "#D1D4DC",
+  callout: "#FFEB3B",
+  price_label: "#FF9800",
+  arrow_marker_up: "#26A69A",
+  arrow_marker_down: "#EF5350",
+  flag_mark: "#FF9800",
 };
 
 const FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
@@ -151,8 +251,53 @@ export function createDrawing(
     midLineWidth: 1,
     midLineStyle: "dashed",
     labelPosition: "top-left",
+    channelFillEnabled: false,
+    channelFillOpacity: 0.15,
+    channelFillColor: "",
+    brushSize: 2,
+    text: "",
+    fontSize: 14,
+    fontBold: false,
+    fontItalic: false,
+    backgroundColor: "",
+    borderRadius: 4,
     ...overrides,
   };
+}
+
+// ══════════════════════════════════════════════════════
+//  Points required per drawing type
+// ══════════════════════════════════════════════════════
+
+export function getPointsRequired(type: DrawingType): number {
+  switch (type) {
+    case "horizontal": case "vertical_line": case "cross_line": case "horizontal_ray":
+    case "text_note": case "anchored_text": case "price_label":
+    case "arrow_marker_up": case "arrow_marker_down": case "flag_mark":
+      return 1;
+    case "trendline": case "ray": case "extended_line": case "info_line": case "trend_angle":
+    case "fibonacci": case "rectangle": case "circle": case "ellipse":
+    case "date_range": case "price_range": case "date_price_range":
+    case "gann_box": case "gann_fan": case "fib_time_zone": case "fib_speed_fan":
+    case "long_position": case "short_position": case "regression_trend":
+      return 2;
+    case "parallel_channel": case "flat_top_bottom":
+    case "pitchfork": case "schiff_pitchfork": case "mod_schiff_pitchfork": case "inside_pitchfork":
+    case "fib_extension": case "fib_channel":
+    case "callout": case "triangle_shape": case "arc": case "forecast":
+      return 3;
+    case "abcd_pattern": case "elliott_correction": case "disjoint_channel":
+      return 4;
+    case "xabcd_pattern": case "cypher_pattern": case "triangle_pattern":
+      return 5;
+    case "elliott_impulse": case "head_shoulders": case "elliott_triangle":
+      return 6;
+    case "three_drives":
+      return 7;
+    case "brush": case "polyline": case "arrow_drawing":
+      return -1;
+    default: return 2;
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -542,6 +687,11 @@ export function hitTestDrawings(
       if (dist <= HIT_THRESHOLD && (!best || dist < best.distance)) {
         best = { drawingId: d.id, distance: dist, part: "body" };
       }
+    } else {
+      const genericHit = hitTestGenericDrawing(mx, my, d, layout, viewport, scale);
+      if (genericHit && (!best || genericHit.distance < best.distance)) {
+        best = genericHit;
+      }
     }
   }
   return best;
@@ -646,6 +796,7 @@ export function drawDrawings(
       case "horizontal": drawHorizontalDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered); break;
       case "fibonacci": drawFibonacciDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered); break;
       case "rectangle": drawRectangleDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars); break;
+      default: drawGenericDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars); break;
     }
   }
 }
@@ -1478,6 +1629,16 @@ export function loadDrawings(pair: string): Drawing[] {
       midLineWidth: 1,
       midLineStyle: "dashed",
       labelPosition: "top-left",
+      channelFillEnabled: false,
+      channelFillOpacity: 0.15,
+      channelFillColor: "",
+      brushSize: 2,
+      text: "",
+      fontSize: 14,
+      fontBold: false,
+      fontItalic: false,
+      backgroundColor: "",
+      borderRadius: 4,
       ...d,
       // Ensure stats is fully populated even if partially saved
       stats: { ...DEFAULT_STATS, ...(d.stats || {}) },

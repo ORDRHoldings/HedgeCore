@@ -48,7 +48,7 @@ import { drawSRLevels, drawFVGZones, drawTrendlines } from "./renderers/overlays
 import {
   drawDrawings, loadDrawings, saveDrawings, createDrawing,
   hitTestDrawings, drawRubberBand, drawDrawingPriceLabels,
-  magneticSnap, shiftSnapPoint, createParallelLine,
+  magneticSnap, shiftSnapPoint, createParallelLine, getPointsRequired,
 } from "./renderers/drawings";
 import type { MagneticSnapResult } from "./renderers/drawings";
 import DrawingPropertiesPanel from "./DrawingPropertiesPanel";
@@ -792,14 +792,15 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
           ),
         };
       } else {
-        // p0 or p1 corner drag (trendline + rectangle defining corners)
-        const pi = drag.part === "p0" ? 0 : 1;
+        // Point drag (p0, p1, p2, p3, etc.) — generic for all drawing types
+        const pi = drag.part.startsWith("p") ? parseInt(drag.part.slice(1), 10) : 0;
+        const clampedPi = Math.min(pi, drag.origPoints.length - 1);
         const newPoints = drag.origPoints.map((p, i) => {
-          if (i !== pi) return { ...p };
+          if (i !== clampedPi) return { ...p };
           let newIdx = Math.round(p.index + dIdx);
           let newPrice = p.price + dPrice;
           if (shiftHeldRef.current && drag.origPoints.length === 2) {
-            const anchor = drag.origPoints[1 - pi];
+            const anchor = drag.origPoints[1 - clampedPi];
             const ax = indexToX(anchor.index, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth);
             const ay = priceToY(anchor.price, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
             const cx = indexToX(newIdx, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth);
@@ -887,8 +888,9 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       setDrawingPoints(newPoints);
       drawingPointsRef.current = newPoints;
 
-      const neededPoints = currentDrawingMode === "horizontal" ? 1 : 2;
-      if (newPoints.length >= neededPoints) {
+      const neededPoints = getPointsRequired(currentDrawingMode);
+      // Variable-point tools (brush/polyline) are terminated by double-click, not point count
+      if (neededPoints > 0 && newPoints.length >= neededPoints) {
         const drawing = createDrawing(currentDrawingMode, newPoints);
         const updated = [...drawings, drawing];
         pushDrawingState(updated);
@@ -974,6 +976,24 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       layout.priceAxisWidth, layout.timeAxisHeight,
       dimensions.w, dimensions.h,
     );
+
+    // Complete variable-point drawing tools (brush/polyline) on double-click
+    const currentDrawingMode = drawingModeRef.current;
+    if (currentDrawingMode && getPointsRequired(currentDrawingMode) < 0) {
+      const currentPoints = drawingPointsRef.current;
+      if (currentPoints.length >= 2) {
+        const drawing = createDrawing(currentDrawingMode, currentPoints);
+        const updated = [...drawingsRef.current, drawing];
+        pushDrawingState(updated);
+        setDrawingPoints([]);
+        drawingPointsRef.current = [];
+        setDrawingMode(null);
+        drawingModeRef.current = null;
+        setActiveTool("crosshair");
+        setSelectedDrawingId(drawing.id);
+      }
+      return;
+    }
 
     if (zone === "priceAxis") {
       // Auto-fit: reset price zoom to 1.0 (auto-fit from viewport)
@@ -1086,15 +1106,22 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   /* ─── Left toolbar callbacks ─── */
   const handleSelectTool = useCallback((tool: string) => {
     setActiveTool(tool);
-    // Map tool to drawing mode
-    const drawingTools: Record<string, DrawingType> = {
-      trendline: "trendline",
-      horizontal: "horizontal",
-      rectangle: "rectangle",
-      fibonacci: "fibonacci",
-    };
-    if (drawingTools[tool]) {
-      setDrawingMode(drawingTools[tool]);
+    // All DrawingType values are valid tool keys — direct 1:1 mapping
+    const allDrawingTypes: Set<string> = new Set([
+      "trendline", "horizontal", "fibonacci", "rectangle",
+      "ray", "extended_line", "horizontal_ray", "vertical_line", "cross_line", "info_line", "trend_angle",
+      "parallel_channel", "regression_trend", "flat_top_bottom", "disjoint_channel",
+      "pitchfork", "schiff_pitchfork", "mod_schiff_pitchfork", "inside_pitchfork",
+      "fib_extension", "fib_channel", "fib_time_zone", "fib_speed_fan",
+      "gann_box", "gann_fan",
+      "xabcd_pattern", "cypher_pattern", "abcd_pattern", "triangle_pattern", "three_drives", "head_shoulders",
+      "elliott_impulse", "elliott_correction", "elliott_triangle",
+      "circle", "ellipse", "triangle_shape", "arrow_drawing", "brush", "polyline", "arc",
+      "long_position", "short_position", "date_range", "price_range", "date_price_range", "forecast",
+      "text_note", "anchored_text", "callout", "price_label", "arrow_marker_up", "arrow_marker_down", "flag_mark",
+    ]);
+    if (allDrawingTypes.has(tool)) {
+      setDrawingMode(tool as DrawingType);
     } else {
       setDrawingMode(null);
       setDrawingPoints([]);

@@ -7,6 +7,7 @@
  */
 import React, { useState, useEffect, useRef } from "react";
 import type { DrawingType } from "./renderers/drawings";
+import { getPointsRequired } from "./renderers/drawings";
 import { THEME } from "./core/theme";
 
 /* ═══════════════════════════════════════════════════════
@@ -154,7 +155,11 @@ export default function ChartToolbar({
 
       {drawingMode && (
         <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: THEME.stochK, marginLeft: 8 }}>
-          Click {drawingMode === "horizontal" ? "1 point" : "2 points"} on chart
+          {(() => {
+            const n = getPointsRequired(drawingMode);
+            if (n < 0) return "Click points, double-click to finish";
+            return `Click ${n} point${n !== 1 ? "s" : ""} on chart`;
+          })()}
         </span>
       )}
 

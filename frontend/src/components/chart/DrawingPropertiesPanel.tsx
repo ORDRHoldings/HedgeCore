@@ -94,6 +94,15 @@ export default function DrawingPropertiesPanel({
   const isTrendline = drawing.type === "trendline";
   const isRectangle = drawing.type === "rectangle";
   const hasTwoPoints = drawing.points.length >= 2;
+  const isLineType = ["trendline", "ray", "extended_line", "horizontal_ray", "info_line", "trend_angle"].includes(drawing.type);
+  const isChannel = ["parallel_channel", "regression_trend", "flat_top_bottom", "disjoint_channel",
+    "pitchfork", "schiff_pitchfork", "mod_schiff_pitchfork", "inside_pitchfork"].includes(drawing.type);
+  const isShape = ["circle", "ellipse", "triangle_shape", "arc"].includes(drawing.type);
+  const isAnnotation = ["text_note", "anchored_text", "callout", "price_label"].includes(drawing.type);
+  const isPosition = ["long_position", "short_position"].includes(drawing.type);
+  const hasExtend = isLineType || isRectangle || isChannel;
+  const hasArrows = isLineType;
+  const hasFill = isRectangle || isChannel || isShape || isPosition;
 
   return (
     <div
@@ -205,8 +214,8 @@ export default function DrawingPropertiesPanel({
             </span>
           </Row>
 
-          {/* Extend (trendline + rectangle) */}
-          {(isTrendline || isRectangle) && (
+          {/* Extend (line types + rectangle + channels) */}
+          {hasExtend && (
             <Row label="Extend">
               <div style={{ display: "flex", gap: 4 }}>
                 <Tog active={drawing.extendLeft} onClick={() => update({ extendLeft: !drawing.extendLeft })}
@@ -217,8 +226,8 @@ export default function DrawingPropertiesPanel({
             </Row>
           )}
 
-          {/* Arrows (trendline only) */}
-          {isTrendline && (
+          {/* Arrows (line types) */}
+          {hasArrows && (
             <Row label="Arrows">
               <div style={{ display: "flex", gap: 4 }}>
                 <Tog active={drawing.arrowLeft || false} onClick={() => update({ arrowLeft: !drawing.arrowLeft })}
@@ -229,8 +238,8 @@ export default function DrawingPropertiesPanel({
             </Row>
           )}
 
-          {/* Rectangle: Fill */}
-          {isRectangle && (<>
+          {/* Fill (rectangle, channels, shapes, positions) */}
+          {hasFill && (<>
             <SectionHeader label="Fill" />
             <Row label="Show">
               <Tog active={drawing.fillEnabled !== false} onClick={() => update({ fillEnabled: !(drawing.fillEnabled !== false) })}
@@ -266,8 +275,8 @@ export default function DrawingPropertiesPanel({
             )}
           </>)}
 
-          {/* Rectangle: Middle Line */}
-          {isRectangle && (<>
+          {/* Middle Line (rectangle + channels) */}
+          {(isRectangle || isChannel) && (<>
             <SectionHeader label="Middle Line" />
             <Row label="Show">
               <Tog active={drawing.midLine || false} onClick={() => update({ midLine: !drawing.midLine })}
@@ -326,13 +335,13 @@ export default function DrawingPropertiesPanel({
 
           {/* Display toggles */}
           <SectionHeader label="Display" />
-          {isTrendline && (
+          {isLineType && (
             <Row label="Angle">
               <Tog active={drawing.showAngle} onClick={() => update({ showAngle: !drawing.showAngle })}
                 label={drawing.showAngle ? "VISIBLE" : "HIDDEN"} color={drawing.color} />
             </Row>
           )}
-          {isTrendline && (
+          {isLineType && (
             <Row label="Mid Pt">
               <Tog active={drawing.showMidPoint || false} onClick={() => update({ showMidPoint: !drawing.showMidPoint })}
                 label={drawing.showMidPoint ? "VISIBLE" : "HIDDEN"} color={drawing.color} />
@@ -348,32 +357,22 @@ export default function DrawingPropertiesPanel({
           </Row>
 
           {/* Coordinates */}
-          {(isTrendline || isRectangle) && hasTwoPoints && (<>
+          {hasTwoPoints && (<>
             <SectionHeader label="Coordinates" />
-            <Row label={isRectangle ? "TL" : "P1"}>
-              <CoordInput value={drawing.points[0].index} onChange={(v) => {
-                const pts = [...drawing.points];
-                pts[0] = { ...pts[0], index: v };
-                update({ points: pts });
-              }} label="Bar" />
-              <CoordInput value={parseFloat(drawing.points[0].price.toFixed(5))} onChange={(v) => {
-                const pts = [...drawing.points];
-                pts[0] = { ...pts[0], price: v };
-                update({ points: pts });
-              }} label="Price" step={0.00001} />
-            </Row>
-            <Row label={isRectangle ? "BR" : "P2"}>
-              <CoordInput value={drawing.points[1].index} onChange={(v) => {
-                const pts = [...drawing.points];
-                pts[1] = { ...pts[1], index: v };
-                update({ points: pts });
-              }} label="Bar" />
-              <CoordInput value={parseFloat(drawing.points[1].price.toFixed(5))} onChange={(v) => {
-                const pts = [...drawing.points];
-                pts[1] = { ...pts[1], price: v };
-                update({ points: pts });
-              }} label="Price" step={0.00001} />
-            </Row>
+            {drawing.points.map((pt, pi) => (
+              <Row key={pi} label={`P${pi + 1}`}>
+                <CoordInput value={pt.index} onChange={(v) => {
+                  const pts = [...drawing.points];
+                  pts[pi] = { ...pts[pi], index: v };
+                  update({ points: pts });
+                }} label="Bar" />
+                <CoordInput value={parseFloat(pt.price.toFixed(5))} onChange={(v) => {
+                  const pts = [...drawing.points];
+                  pts[pi] = { ...pts[pi], price: v };
+                  update({ points: pts });
+                }} label="Price" step={0.00001} />
+              </Row>
+            ))}
           </>)}
         </>)}
 
@@ -494,7 +493,7 @@ export default function DrawingPropertiesPanel({
         display: "flex", gap: 4, flexWrap: "wrap",
       }}>
         <ActionBtn onClick={onDuplicate} label="CLONE" />
-        {isTrendline && onCreateParallel && (
+        {isLineType && onCreateParallel && (
           <ActionBtn onClick={onCreateParallel} label="PARALLEL" />
         )}
         <ActionBtn onClick={onDelete} label="DELETE" danger />
@@ -594,11 +593,24 @@ function CoordInput({ value, onChange, label, step }: {
 }
 
 function getTypeName(type: DrawingType): string {
-  switch (type) {
-    case "trendline": return "TRENDLINE";
-    case "horizontal": return "HORIZONTAL";
-    case "fibonacci": return "FIBONACCI";
-    case "rectangle": return "RECTANGLE";
-    default: return "DRAWING";
-  }
+  const names: Partial<Record<DrawingType, string>> = {
+    trendline: "TRENDLINE", horizontal: "HORIZONTAL", fibonacci: "FIBONACCI", rectangle: "RECTANGLE",
+    ray: "RAY", extended_line: "EXTENDED LINE", horizontal_ray: "HORIZONTAL RAY",
+    vertical_line: "VERTICAL LINE", cross_line: "CROSS LINE", info_line: "INFO LINE", trend_angle: "TREND ANGLE",
+    parallel_channel: "PARALLEL CHANNEL", regression_trend: "REGRESSION", flat_top_bottom: "FLAT TOP/BOTTOM",
+    disjoint_channel: "DISJOINT CHANNEL", pitchfork: "PITCHFORK", schiff_pitchfork: "SCHIFF PITCHFORK",
+    mod_schiff_pitchfork: "MOD SCHIFF", inside_pitchfork: "INSIDE PITCHFORK",
+    fib_extension: "FIB EXTENSION", fib_channel: "FIB CHANNEL", fib_time_zone: "FIB TIME ZONE",
+    fib_speed_fan: "FIB SPEED FAN", gann_box: "GANN BOX", gann_fan: "GANN FAN",
+    xabcd_pattern: "XABCD PATTERN", cypher_pattern: "CYPHER", abcd_pattern: "ABCD PATTERN",
+    triangle_pattern: "TRIANGLE PATTERN", three_drives: "THREE DRIVES", head_shoulders: "HEAD & SHOULDERS",
+    elliott_impulse: "ELLIOTT IMPULSE", elliott_correction: "ELLIOTT CORRECTION", elliott_triangle: "ELLIOTT TRIANGLE",
+    circle: "CIRCLE", ellipse: "ELLIPSE", triangle_shape: "TRIANGLE", arrow_drawing: "ARROW",
+    brush: "BRUSH", polyline: "POLYLINE", arc: "ARC",
+    long_position: "LONG POSITION", short_position: "SHORT POSITION",
+    date_range: "DATE RANGE", price_range: "PRICE RANGE", date_price_range: "DATE & PRICE RANGE",
+    forecast: "FORECAST", text_note: "TEXT", anchored_text: "ANCHORED TEXT", callout: "CALLOUT",
+    price_label: "PRICE LABEL", arrow_marker_up: "ARROW UP", arrow_marker_down: "ARROW DOWN", flag_mark: "FLAG",
+  };
+  return names[type] || type.toUpperCase().replace(/_/g, " ");
 }
