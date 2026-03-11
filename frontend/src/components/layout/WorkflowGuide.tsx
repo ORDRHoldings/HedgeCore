@@ -32,10 +32,8 @@ const GUIDE_MAP: Record<string, GuideConfig> = {
   "overview":  { step: 0, instruction: "Hedge Desk — Start a new run or resume an existing one", next: "" },
   // Legacy page paths (still functional for direct URL access)
   "/position-desk":        { step: 1, instruction: "Load, import, or connect FX exposures",                          next: "Assign policy" },
-  "/input":                { step: 1, instruction: "Enter new FX exposure details manually",                         next: "Save & view positions" },
   "/position-desk/import": { step: 1, instruction: "Upload CSV/XLSX with FX exposure data",                          next: "Review & import" },
-  "/policy-desk":          { step: 2, instruction: "Bind a policy to each position to govern hedge parameters",       next: "Calculate hedges" },
-  "/calculate":            { step: 3, instruction: "Select positions, review market data, run the hedge engine",       next: "Review results" },
+  "/policies?tab=assign":  { step: 2, instruction: "Bind a policy to each position to govern hedge parameters",       next: "Calculate hedges" },
   "/hedge-desk":           { step: 4, instruction: "Execute the hedge pipeline: propose, review, approve",             next: "View results" },
   "/results":              { step: 5, instruction: "Review hedge schedule, rationale, and audit artifacts",            next: "" },
 };
@@ -88,7 +86,7 @@ export default function WorkflowGuide({ active, pathname, pipelinePhase, statusT
       }}>
         <span style={{
           fontFamily: FM,
-          fontSize: 9,
+          fontSize: 12,
           fontWeight: 700,
           letterSpacing: "0.1em",
           color: GREEN,
@@ -97,7 +95,7 @@ export default function WorkflowGuide({ active, pathname, pipelinePhase, statusT
         </span>
         <span style={{
           fontFamily: FU,
-          fontSize: 11,
+          fontSize: 12,
           color: "var(--text-secondary)",
         }}>
           Hedge run complete. Review summary below or start a new run.
@@ -119,7 +117,7 @@ export default function WorkflowGuide({ active, pathname, pipelinePhase, statusT
         gap: 16,
         flexShrink: 0,
       }}>
-        <span style={{ fontFamily: FU, fontSize: 11, color: "var(--text-secondary)", flex: 1 }}>
+        <span style={{ fontFamily: FU, fontSize: 12, color: "var(--text-secondary)", flex: 1 }}>
           {config.instruction}
         </span>
       </div>
@@ -143,7 +141,7 @@ export default function WorkflowGuide({ active, pathname, pipelinePhase, statusT
       {/* Left: step badge */}
       <span style={{
         fontFamily: FM,
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: 700,
         letterSpacing: "0.1em",
         color: CYAN,
@@ -155,7 +153,7 @@ export default function WorkflowGuide({ active, pathname, pipelinePhase, statusT
       {/* Center: instruction */}
       <span style={{
         fontFamily: FU,
-        fontSize: 11,
+        fontSize: 12,
         color: "var(--text-secondary)",
         flex: 1,
         whiteSpace: "nowrap",
@@ -169,7 +167,7 @@ export default function WorkflowGuide({ active, pathname, pipelinePhase, statusT
       {resolvedStatus && (
         <span style={{
           fontFamily: FM,
-          fontSize: 10,
+          fontSize: 12,
           color: resolvedColor,
           flexShrink: 0,
         }}>

@@ -46,9 +46,9 @@ export async function GET(req: NextRequest) {
       max-width: 440px;
       width: 100%;
     }
-    .label   { font-size: 9px; letter-spacing: 0.1em; color: #64748b; margin-bottom: 14px; }
+    .label   { font-size: 12px; letter-spacing: 0.1em; color: #64748b; margin-bottom: 14px; }
     .system  { font-size: 20px; font-weight: 700; color: ${color}; margin-bottom: 10px; }
-    .msg     { font-size: 11px; color: #94a3b8; margin-bottom: 28px; line-height: 1.6; }
+    .msg     { font-size: 12px; color: #94a3b8; margin-bottom: 28px; line-height: 1.6; }
     .spinner {
       width: 20px; height: 20px;
       border: 2px solid #1e293b;
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
       margin: 0 auto 12px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .status { font-size: 10px; color: ${color}; text-align: center; letter-spacing: 0.06em; }
+    .status { font-size: 12px; color: ${color}; text-align: center; letter-spacing: 0.06em; }
   </style>
 </head>
 <body>

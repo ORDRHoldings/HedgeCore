@@ -3,8 +3,8 @@
  *
  * Unit tests for the getPipelineNextStep() pipeline routing function.
  * Covers all 5 lifecycle permutations:
- *  1. No positions           → "Add Exposure"       href="/input"
- *  2. NEW positions          → "02 — Policy Desk"   href="/policy-desk"
+ *  1. No positions           → "Add Exposure"       href="/position-desk"
+ *  2. NEW positions          → "02 — Policy Desk"   href="/policies?tab=assign"
  *  3. POLICY_ASSIGNED        → "03 — Hedge Desk"    href="/hedge-desk"
  *  4. READY_TO_EXECUTE       → "04 — Execution Desk" href="/execution-desk"
  *  5. All HEDGED             → "All Complete"       href="/dashboard"
@@ -42,7 +42,7 @@ describe("1. No positions → Add Exposure", () => {
   it("returns 'Add Exposure' when positions array is empty", () => {
     const result = getPipelineNextStep([], null, COLORS);
     expect(result.label).toBe("Add Exposure");
-    expect(result.href).toBe("/input");
+    expect(result.href).toBe("/position-desk");
     expect(result.readiness).toBe("NEEDS_ACTION");
     expect(result.color).toBe(COLORS.amber);
   });
@@ -50,7 +50,7 @@ describe("1. No positions → Add Exposure", () => {
   it("handles null-ish positions (treats as empty)", () => {
     // TypeScript won't allow null directly but runtime safety matters
     const result = getPipelineNextStep([] as PipelinePosition[], null, COLORS);
-    expect(result.href).toBe("/input");
+    expect(result.href).toBe("/position-desk");
   });
 
   it("excludes inactive positions — if all inactive → Add Exposure", () => {
@@ -60,7 +60,7 @@ describe("1. No positions → Add Exposure", () => {
     ];
     const result = getPipelineNextStep(positions, POLICY, COLORS);
     expect(result.label).toBe("Add Exposure");
-    expect(result.href).toBe("/input");
+    expect(result.href).toBe("/position-desk");
   });
 });
 
@@ -72,7 +72,7 @@ describe("2. NEW positions → Policy Desk", () => {
   it("returns Policy Desk when at least one position is NEW", () => {
     const result = getPipelineNextStep([makePos("NEW")], POLICY, COLORS);
     expect(result.label).toBe("02 — Policy Desk");
-    expect(result.href).toBe("/policy-desk");
+    expect(result.href).toBe("/policies?tab=assign");
     expect(result.readiness).toBe("NEEDS_ACTION");
     expect(result.color).toBe(COLORS.amber);
   });
@@ -80,7 +80,7 @@ describe("2. NEW positions → Policy Desk", () => {
   it("returns Policy Desk when there is no activePolicy even if no NEW positions", () => {
     const result = getPipelineNextStep([makePos("POLICY_ASSIGNED")], null, COLORS);
     expect(result.label).toBe("02 — Policy Desk");
-    expect(result.href).toBe("/policy-desk");
+    expect(result.href).toBe("/policies?tab=assign");
   });
 
   it("reason mentions the count of unpolicied positions", () => {
@@ -92,7 +92,7 @@ describe("2. NEW positions → Policy Desk", () => {
   it("mixed NEW and HEDGED → still routes to Policy Desk (NEW takes priority)", () => {
     const positions = [makePos("NEW"), makePos("HEDGED")];
     const result = getPipelineNextStep(positions, POLICY, COLORS);
-    expect(result.href).toBe("/policy-desk");
+    expect(result.href).toBe("/policies?tab=assign");
   });
 });
 
@@ -190,7 +190,7 @@ describe("6. Priority order — first failing condition wins", () => {
       makePos("READY_TO_EXECUTE"),
       makePos("HEDGED"),
     ];
-    expect(getPipelineNextStep(positions, POLICY, COLORS).href).toBe("/policy-desk");
+    expect(getPipelineNextStep(positions, POLICY, COLORS).href).toBe("/policies?tab=assign");
   });
 
   it("no NEW → POLICY_ASSIGNED > READY_TO_EXECUTE", () => {
@@ -237,6 +237,6 @@ describe("7. Inactive position exclusion", () => {
       { execution_status: "NEW" },  // no is_active field — defaults to active
     ];
     const result = getPipelineNextStep(positions, POLICY, COLORS);
-    expect(result.href).toBe("/policy-desk");
+    expect(result.href).toBe("/policies?tab=assign");
   });
 });

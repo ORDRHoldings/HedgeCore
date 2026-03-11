@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 const STEPS = [
   { num: "01", title: "Add Your FX Exposures", desc: "Enter AR/AP positions — the currencies you owe or will receive.", href: "/position-desk", action: "OPEN POSITION DESK" },
-  { num: "02", title: "Assign a Hedge Policy", desc: "Select a policy template that governs your hedge ratios and instruments.", href: "/policy-desk", action: "OPEN POLICY DESK" },
+  { num: "02", title: "Assign a Hedge Policy", desc: "Select a policy template that governs your hedge ratios and instruments.", href: "/policies?tab=assign", action: "OPEN POLICY DESK" },
   { num: "03", title: "Run the Hedge Calculation", desc: "The engine computes your optimal hedge plan against live FX rates.", href: "/hedge-desk", action: "OPEN HEDGE DESK" },
   { num: "04", title: "Review & Execute", desc: "Approve the hedge plan and open trade tickets directly in IBKR.", href: "/execution-desk", action: "OPEN EXECUTION" },
 ];
@@ -74,7 +74,7 @@ export default function OnboardingModal({ userId }: Props) {
         <div style={{ marginBottom: 32 }}>
           <div style={{
             fontFamily: M.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             color: M.cyan,
             letterSpacing: "0.2em",
@@ -160,7 +160,7 @@ export default function OnboardingModal({ userId }: Props) {
                 onClick={() => { dismiss(); router.push(s.href); }}
                 style={{
                   fontFamily: M.fontMono,
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: "0.1em",
                   color: activeStep === idx ? M.cyan : M.muted,

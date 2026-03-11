@@ -83,6 +83,9 @@ import TensorDecompositionPanel from "../../components/sandbox/TensorDecompositi
 import { getDemoRequest } from "../../constants/demoFixtures";
 import { getPairMeta } from "../../constants/pairRegistry";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Zap } from "lucide-react";
+
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -171,13 +174,13 @@ function DataSourceBadge({ status, fetchedAt }: { status: string; fetchedAt: str
         animation: isLoading ? "pulse 1.2s infinite" : undefined,
       }} />
       <span style={{
-        fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
         color: isLive ? "var(--accent-green)" : isLoading ? "var(--text-tertiary)" : "var(--accent-amber)",
       }}>
         {isLive ? "LIVE" : isLoading ? "FETCHING" : "CALIBRATED"}
       </span>
       {fetchedAt && isLive && (
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: "var(--text-tertiary)" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: "var(--text-tertiary)" }}>
           {new Date(fetchedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
         </span>
       )}
@@ -192,14 +195,14 @@ function BigKpi({ label, value, sub, accent }: { label: string; value: string; s
       background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4,
       padding: "12px 16px", display: "flex", flexDirection: "column", gap: 3,
     }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
         {label}
       </div>
       <div style={{ fontFamily: S.fontMono, fontSize: 20, fontWeight: 700, color: accent ?? S.primary, lineHeight: 1 }}>
         {value}
       </div>
       {sub && (
-        <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>
+        <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
           {sub}
         </div>
       )}
@@ -243,10 +246,10 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
   return (
     <div style={{ background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden" }}>
       <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel, display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
           GOVERNANCE CHAIN
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
           R1–R8 Waterfall + GOV checks
         </span>
       </div>
@@ -256,7 +259,7 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
             <tr style={{ background: S.panel }}>
               {["Rule ID", "Name", "Status", "Evidence", "Regulatory Ref"].map(h => (
                 <th key={h} style={{
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                   color: S.tertiary, textTransform: "uppercase",
                   padding: "8px 14px", textAlign: "left",
                   borderBottom: `1px solid ${S.rim}`,
@@ -267,11 +270,11 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
           <tbody>
             {waterfall?.rules?.map((r: { rule_id: string; name: string; status: string; result_summary?: string; threshold?: unknown }) => (
               <tr key={r.rule_id} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                <td style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.cyan, padding: "10px 14px" }}>{r.rule_id}</td>
+                <td style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, padding: "10px 14px" }}>{r.rule_id}</td>
                 <td style={{ fontFamily: S.fontUI, fontSize: 13, color: S.primary, padding: "10px 14px" }}>{r.name}</td>
                 <td style={{ padding: "10px 14px" }}>
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     color: statusColor(r.status),
                     padding: "2px 8px",
                     border: `1px solid ${statusColor(r.status)}`,
@@ -282,18 +285,18 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
                 <td style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, padding: "10px 14px" }}>
                   {r.result_summary ?? "—"}
                 </td>
-                <td style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, padding: "10px 14px" }}>
+                <td style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, padding: "10px 14px" }}>
                   IFRS 9 / Basel III
                 </td>
               </tr>
             ))}
             {govRules.map(r => (
               <tr key={r.id} style={{ borderBottom: `1px solid ${S.soft}`, background: `color-mix(in srgb, ${S.sub} 40%, transparent)` }}>
-                <td style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.amber, padding: "10px 14px" }}>{r.id}</td>
+                <td style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.amber, padding: "10px 14px" }}>{r.id}</td>
                 <td style={{ fontFamily: S.fontUI, fontSize: 13, color: S.primary, padding: "10px 14px" }}>{r.name}</td>
                 <td style={{ padding: "10px 14px" }}>
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     color: statusColor(r.status),
                     padding: "2px 8px",
                     border: `1px solid ${statusColor(r.status)}`,
@@ -302,7 +305,7 @@ function InlineAuditSummary({ sandboxResult, liveDataFetched }: {
                   }}>● {r.status}</span>
                 </td>
                 <td style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, padding: "10px 14px" }}>{r.evidence}</td>
-                <td style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, padding: "10px 14px" }}>{r.ref}</td>
+                <td style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, padding: "10px 14px" }}>{r.ref}</td>
               </tr>
             ))}
           </tbody>
@@ -333,16 +336,16 @@ function WidgetMode({ currency, notional, tab }: { currency: string; notional: n
         background: S.sub,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: S.cyan }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.cyan }}>
             HEDGECORE
           </span>
           <DataSourceBadge status={liveStatus} fetchedAt={null} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {currency} · {(notional / 1e6).toFixed(0)}M · Spot {spot.toFixed(4)}
           </span>
         </div>
         <a href="/sandbox" target="_blank" style={{
-          fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, textDecoration: "none",
+          fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textDecoration: "none",
           padding: "3px 10px", border: `1px solid ${S.rim}`, borderRadius: 2,
         }}>Full Platform ↗</a>
       </div>
@@ -364,7 +367,7 @@ function WidgetMode({ currency, notional, tab }: { currency: string; notional: n
       )}
       <div style={{
         padding: "6px 16px", borderTop: `1px solid ${S.soft}`,
-        fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, background: S.sub,
+        fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, background: S.sub,
         display: "flex", justifyContent: "space-between",
       }}>
         <span>HedgeCore ORDR Terminal · Free simulation engine</span>
@@ -475,11 +478,11 @@ function SandboxPageInner() {
           Run ID: <strong>{sandboxResult.run_id}</strong> · Generated: {new Date().toLocaleString()}
         </p>
         <div style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4, padding: 18, marginBottom: 14 }}>
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 10 }}>WATERFALL STATUS</div>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 10 }}>WATERFALL STATUS</div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {waterfall?.rules.map((r: { rule_id: string; status: string }) => (
               <div key={r.rule_id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>{r.rule_id}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{r.rule_id}</span>
                 <StatusChip status={r.status as ChipStatus} size="sm" />
               </div>
             ))}
@@ -511,13 +514,13 @@ function SandboxPageInner() {
         display: "flex", alignItems: "center", gap: 12, height: 48,
         flexShrink: 0,
       }}>
-        <button onClick={() => router.push("/input")} style={{
-          fontFamily: S.fontUI, fontSize: 11, fontWeight: 500,
+        <button onClick={() => router.push("/position-desk")} style={{
+          fontFamily: S.fontUI, fontSize: 12, fontWeight: 500,
           padding: "3px 10px", border: `1px solid ${S.rim}`,
           color: S.secondary, background: "transparent", cursor: "pointer", borderRadius: 2,
         }}>← Position Desk</button>
 
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, letterSpacing: "0.12em", color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.12em", color: S.tertiary }}>
           SIMULATION LAB
         </span>
         <PairSelector value={selectedPair} onChange={handlePairChange} />
@@ -530,11 +533,11 @@ function SandboxPageInner() {
           <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>
             {spot.toFixed(4)}
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {primaryCurrency}/USD
           </span>
           <button onClick={refreshSpot} title="Refresh live spot" style={{
-            fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+            fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
             background: "transparent", border: "none", cursor: "pointer", padding: "0 2px",
           }}>↻</button>
         </div>
@@ -542,12 +545,12 @@ function SandboxPageInner() {
         {sandboxResult && (
           <>
             <span style={{ color: S.rim }}>|</span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               RUN <span style={{ color: S.cyan, fontWeight: 700 }}>{sandboxResult.run_id.slice(0, 8).toUpperCase()}</span>
             </span>
             {waterfall && (
               <span style={{
-                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                 padding: "3px 8px", borderRadius: 2,
                 background: `color-mix(in srgb, ${waterfall.integrity_score >= 80 ? S.green : S.amber} 12%, transparent)`,
                 color: waterfall.integrity_score >= 80 ? S.green : S.amber,
@@ -566,7 +569,7 @@ function SandboxPageInner() {
           <button
             onClick={() => router.push(`/sandbox/whitepaper?runId=${sandboxResult.run_id}`)}
             style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 600,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
               padding: "4px 12px", border: `1px solid ${S.rim}`,
               color: S.secondary, background: "transparent", cursor: "pointer", borderRadius: 2,
               display: "flex", alignItems: "center", gap: 5,
@@ -577,7 +580,7 @@ function SandboxPageInner() {
 
         {sandboxResult && (
           <button onClick={() => router.push("/hedge-desk")} style={{
-            fontFamily: S.fontUI, fontSize: 11, fontWeight: 700,
+            fontFamily: S.fontUI, fontSize: 12, fontWeight: 700,
             padding: "5px 16px",
             border: `1px solid ${S.cyan}`,
             color: S.cyan, background: "transparent", cursor: "pointer", borderRadius: 2,
@@ -597,26 +600,26 @@ function SandboxPageInner() {
             background: `color-mix(in srgb, ${S.sub} 60%, ${S.panel})`,
             flexShrink: 0,
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>PAIR</span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.cyan }}>{meta.label}</span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{meta.group}</span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>·</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>PAIR</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan }}>{meta.label}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{meta.group}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>·</span>
             {meta.isNdf ? (
               <span style={{
-                fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.amber,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.amber,
                 padding: "1px 6px", border: `1px solid ${S.amber}`, borderRadius: 2,
                 background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
               }}>NDF CASH-SETTLED</span>
             ) : (
               <span style={{
-                fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.green,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.green,
                 padding: "1px 6px", border: `1px solid ${S.green}`, borderRadius: 2,
                 background: `color-mix(in srgb, ${S.green} 10%, transparent)`,
               }}>DELIVERABLE</span>
             )}
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>Spot fallback: {meta.demoSpot.toLocaleString("en", { maximumFractionDigits: 4, minimumFractionDigits: 2 })}</span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>ADV: ${meta.adv_mn.toLocaleString()}M</span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>1M Vol: {meta.vol1m}%</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>Spot fallback: {meta.demoSpot.toLocaleString("en", { maximumFractionDigits: 4, minimumFractionDigits: 2 })}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>ADV: ${meta.adv_mn.toLocaleString()}M</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>1M Vol: {meta.vol1m}%</span>
           </div>
         );
       })()}
@@ -634,7 +637,7 @@ function SandboxPageInner() {
         }}>
           {sandboxResult && waterfall && (
             <div style={{ padding: "12px 14px", borderTop: `1px solid ${S.rim}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 10 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 10 }}>
                 SIMULATION SUMMARY
               </div>
 
@@ -650,8 +653,8 @@ function SandboxPageInner() {
                   ["Data Source", liveStatus === "live" ? "Live API" : "Calibrated"],
                 ].map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0" }}>
-                    <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>{k}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.primary }}>{v}</span>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{k}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -660,7 +663,7 @@ function SandboxPageInner() {
               <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
                 {waterfall.rules.map((r: { rule_id: string; status: string }) => (
                   <div key={r.rule_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{r.rule_id}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{r.rule_id}</span>
                     <StatusChip status={r.status as ChipStatus} size="sm" />
                   </div>
                 ))}
@@ -671,7 +674,7 @@ function SandboxPageInner() {
           {/* Audit shortcut when no result */}
           {!sandboxResult && (
             <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
                 SIMULATION LAB STATUS
               </div>
               <div style={{
@@ -687,7 +690,7 @@ function SandboxPageInner() {
                   fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: S.primary,
                   padding: "6px 12px", background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 2,
                 }}>
-                  {liveSpot.toFixed(4)} <span style={{ fontWeight: 400, color: S.tertiary, fontSize: 10 }}>{primaryCurrency}/USD</span>
+                  {liveSpot.toFixed(4)} <span style={{ fontWeight: 400, color: S.tertiary, fontSize: 12 }}>{primaryCurrency}/USD</span>
                 </div>
               )}
             </div>
@@ -704,7 +707,7 @@ function SandboxPageInner() {
           }}>
             {TABS.map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                 padding: "0 18px", height: 42,
                 border: "none",
                 borderBottom: activeTab === tab.id ? `2px solid ${S.cyan}` : "2px solid transparent",
@@ -718,7 +721,7 @@ function SandboxPageInner() {
                 {tab.icon} {tab.label}
                 {tab.id === "audit" && sandboxResult && (
                   <span style={{
-                    marginLeft: 6, fontSize: 9, fontWeight: 700,
+                    marginLeft: 6, fontSize: 12, fontWeight: 700,
                     color: (waterfall?.integrity_score ?? 0) >= 80 ? S.green : S.amber,
                     border: `1px solid ${(waterfall?.integrity_score ?? 0) >= 80 ? S.green : S.amber}`,
                     borderRadius: 2, padding: "1px 4px",
@@ -734,7 +737,7 @@ function SandboxPageInner() {
           <div style={{
             padding: "5px 18px",
             borderBottom: `1px solid ${S.soft}`,
-            fontFamily: S.fontMono, fontSize: 10, color: S.tertiary,
+            fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
             background: `color-mix(in srgb, ${S.sub} 40%, transparent)`,
             flexShrink: 0, display: "flex", alignItems: "center", gap: 12,
           }}>
@@ -760,7 +763,7 @@ function SandboxPageInner() {
                 type="empty"
                 title="No simulation data"
                 message="Upload exposure positions via the Position Desk to run a hedge calculation."
-                action={{ label: "Go to Position Desk", onClick: () => router.push("/input") }}
+                action={{ label: "Go to Position Desk", onClick: () => router.push("/position-desk") }}
               />
             )}
 
@@ -835,7 +838,7 @@ function SandboxPageInner() {
                     background: `color-mix(in srgb, ${S.amber} 6%, transparent)`,
                     border: `1px solid ${S.amber}`, borderRadius: 4, padding: "12px 16px",
                   }}>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.amber, marginBottom: 8, letterSpacing: "0.08em" }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.amber, marginBottom: 8, letterSpacing: "0.08em" }}>
                       ACTIVE CRISIS SCENARIO: {selectedCrisis.name.toUpperCase()}
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 10 }}>
@@ -847,7 +850,7 @@ function SandboxPageInner() {
                         ["NDF Effectiveness", `${selectedCrisis.hedgeEffectiveness.ndf.toFixed(1)}%`],
                       ].map(([k, v]) => (
                         <div key={k} style={{ background: S.sub, borderRadius: 3, padding: "8px 12px", border: `1px solid ${S.soft}` }}>
-                          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 4 }}>{k}</div>
+                          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 4 }}>{k}</div>
                           <div style={{ fontFamily: S.fontMono, fontSize: 16, fontWeight: 700, color: S.amber }}>{v}</div>
                         </div>
                       ))}
@@ -855,11 +858,11 @@ function SandboxPageInner() {
                     <p style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.6, margin: 0 }}>
                       {selectedCrisis.description.slice(0, 400)}…
                     </p>
-                    <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                    <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       Academic ref: {selectedCrisis.academicRef} · Region: {selectedCrisis.region} · Severity: {selectedCrisis.severity}
                     </div>
                     <button onClick={() => setSelectedCrisis(null)} style={{
-                      marginTop: 8, fontFamily: S.fontMono, fontSize: 10,
+                      marginTop: 8, fontFamily: S.fontMono, fontSize: 12,
                       color: S.tertiary, background: "transparent", border: `1px solid ${S.soft}`,
                       cursor: "pointer", padding: "3px 10px", borderRadius: 2,
                     }}>✕ Clear crisis</button>
@@ -893,7 +896,7 @@ function SandboxPageInner() {
                     display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
                   }}>
                     <div>
-                      <p style={{ fontFamily: S.fontMono, fontSize: 11, letterSpacing: "0.06em", color: S.cyan, marginBottom: 4 }}>
+                      <p style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em", color: S.cyan, marginBottom: 4 }}>
                         SIMULATION COMPLETE
                       </p>
                       <p style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, margin: 0 }}>
@@ -913,7 +916,7 @@ function SandboxPageInner() {
                       }}>→ Open Execution Bridge</button>
                       <button onClick={() => router.push("/hedge-desk")} style={{
                         fontFamily: "'IBM Plex Mono', monospace",
-                        fontSize: 11, fontWeight: 700,
+                        fontSize: 12, fontWeight: 700,
                         padding: "8px 20px",
                         background: "#1C62F2",
                         color: "#fff",
@@ -965,7 +968,7 @@ function SandboxPageInner() {
                     onClick={() => router.push("/hedge-desk")}
                     style={{
                       fontFamily: "'IBM Plex Mono', monospace",
-                      fontSize: 11, fontWeight: 700,
+                      fontSize: 12, fontWeight: 700,
                       padding: "8px 20px",
                       background: "#1C62F2",
                       color: "#fff",
@@ -1079,7 +1082,7 @@ function SandboxPageInner() {
                     {/* Regulatory framework reference table */}
                     <div style={{ background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden" }}>
                       <div style={{ padding: "10px 16px", borderBottom: `1px solid ${S.rim}`, background: S.panel }}>
-                        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
                           REGULATORY FRAMEWORK COVERAGE
                         </span>
                       </div>
@@ -1089,7 +1092,7 @@ function SandboxPageInner() {
                             <tr style={{ background: S.panel }}>
                               {["Standard", "Full Name", "Key Requirement", "Platform Implementation", "Status"].map(h => (
                                 <th key={h} style={{
-                                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                                   color: S.tertiary, textTransform: "uppercase",
                                   padding: "9px 14px", textAlign: "left",
                                   borderBottom: `1px solid ${S.rim}`,
@@ -1111,13 +1114,13 @@ function SandboxPageInner() {
                               ["MiFID II RTS 6", "Algo trading governance", "Pre-trade validation, audit trail", "Run envelope with SHA-256 hash", "PASS"],
                             ].map(([std, name, req, impl, status]) => (
                               <tr key={std} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                                <td style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.cyan, padding: "10px 14px" }}>{std}</td>
+                                <td style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, padding: "10px 14px" }}>{std}</td>
                                 <td style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary, padding: "10px 14px" }}>{name}</td>
                                 <td style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, padding: "10px 14px" }}>{req}</td>
                                 <td style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, padding: "10px 14px" }}>{impl}</td>
                                 <td style={{ padding: "10px 14px" }}>
                                   <span style={{
-                                    fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                                     color: status === "PASS" ? S.green : status === "WARN" ? S.amber : S.tertiary,
                                     padding: "2px 7px", borderRadius: 2,
                                     border: `1px solid ${status === "PASS" ? S.green : status === "WARN" ? S.amber : S.rim}`,
@@ -1134,7 +1137,7 @@ function SandboxPageInner() {
                     {/* Disclaimer */}
                     <div style={{
                       padding: "12px 16px", border: `1px solid ${S.soft}`, borderRadius: 3,
-                      fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.6,
+                      fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, lineHeight: 1.6,
                       background: S.sub,
                     }}>
                       <strong style={{ color: S.secondary }}>Disclaimer:</strong> This audit report is generated automatically
@@ -1162,7 +1165,7 @@ function SandboxPageInner() {
                     <div style={{
                       padding: "10px 16px", background: `color-mix(in srgb, ${S.cyan} 4%, transparent)`,
                       border: `1px solid color-mix(in srgb, ${S.cyan} 20%, transparent)`, borderRadius: 4,
-                      fontFamily: S.fontMono, fontSize: 11, color: S.secondary,
+                      fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
                     }}>
                       <span style={{ color: S.cyan, fontWeight: 700 }}>V2 ANALYTICS ENGINE</span>
                       {" — "}
@@ -1221,7 +1224,7 @@ function SandboxPageInner() {
           display: "flex", flexDirection: "column",
         }}>
           <div style={{ padding: "9px 14px", borderBottom: `1px solid ${S.rim}`, background: S.sub }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
               CONTEXT PANEL
             </span>
           </div>
@@ -1231,7 +1234,7 @@ function SandboxPageInner() {
             {/* Stress tab context */}
             {activeTab === "stress" && sandboxResult?.v2_results && (
               <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>WORST CASE</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>WORST CASE</div>
                 {[
                   ["Unhedged Loss", (() => {
                     const wc = v2?.worst_case as Record<string, unknown> | undefined;
@@ -1260,7 +1263,7 @@ function SandboxPageInner() {
             {/* Regulatory context */}
             {activeTab === "regulatory" && (
               <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>CAPITAL SNAPSHOT</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>CAPITAL SNAPSHOT</div>
                 {[
                   ["SA-CCR EAD", `$${(notionalUSD * 0.04 * 1.4).toLocaleString(undefined, { maximumFractionDigits: 0 })}`],
                   ["Capital Charge (8%)", `$${(notionalUSD * 0.04 * 1.4 * 0.08).toLocaleString(undefined, { maximumFractionDigits: 0 })}`],
@@ -1280,7 +1283,7 @@ function SandboxPageInner() {
             {/* Crisis context */}
             {activeTab === "crises" && (
               <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>CRISIS STATISTICS</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>CRISIS STATISTICS</div>
                 {[
                   ["Calibrated Crises", "18"],
                   ["Date Range", "1994 – 2023"],
@@ -1303,7 +1306,7 @@ function SandboxPageInner() {
             {/* Audit context */}
             {activeTab === "audit" && (
               <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>RULE CATEGORIES</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>RULE CATEGORIES</div>
                 {[
                   ["PRE-001–004", "Pre-run validation"],
                   ["CALC-001–004", "Calculation audit"],
@@ -1311,7 +1314,7 @@ function SandboxPageInner() {
                   ["GOV-001–002", "Governance chain"],
                 ].map(([k, v]) => (
                   <div key={k} style={{ padding: "6px 0", borderBottom: `1px solid ${S.soft}` }}>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.cyan }}>{k}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan }}>{k}</div>
                     <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{v}</div>
                   </div>
                 ))}
@@ -1320,7 +1323,7 @@ function SandboxPageInner() {
 
             {/* Always-visible: compliance badges */}
             <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 12, marginTop: "auto" }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, marginBottom: 8, letterSpacing: "0.1em" }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8, letterSpacing: "0.1em" }}>
                 COMPLIANCE STANDARDS
               </div>
               {[
@@ -1335,8 +1338,8 @@ function SandboxPageInner() {
                 <div key={c.label} style={{ display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 7 }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: c.ok ? S.green : S.amber, flexShrink: 0, marginTop: 3 }} />
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, fontWeight: 600 }}>{c.label}</div>
-                    <div style={{ fontFamily: S.fontUI, fontSize: 10, color: S.tertiary }}>{c.sub}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, fontWeight: 600 }}>{c.label}</div>
+                    <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>{c.sub}</div>
                   </div>
                 </div>
               ))}
@@ -1344,20 +1347,20 @@ function SandboxPageInner() {
 
             {/* Live spot refresh */}
             <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 10 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, marginBottom: 6 }}>MARKET DATA</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 6 }}>MARKET DATA</div>
               <DataSourceBadge status={liveStatus} fetchedAt={fetchedAt} />
               {liveSpot && (
                 <div style={{ marginTop: 6, fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color: S.primary }}>
-                  {liveSpot.toFixed(4)} <span style={{ fontSize: 10, color: S.tertiary, fontWeight: 400 }}>{primaryCurrency}/USD</span>
+                  {liveSpot.toFixed(4)} <span style={{ fontSize: 12, color: S.tertiary, fontWeight: 400 }}>{primaryCurrency}/USD</span>
                 </div>
               )}
               {fetchedAt && (
-                <div style={{ fontFamily: S.fontUI, fontSize: 10, color: S.tertiary, marginTop: 2 }}>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 2 }}>
                   Updated {new Date(fetchedAt).toLocaleTimeString()}
                 </div>
               )}
               <button onClick={refreshSpot} style={{
-                marginTop: 6, fontFamily: S.fontMono, fontSize: 10,
+                marginTop: 6, fontFamily: S.fontMono, fontSize: 12,
                 color: S.cyan, background: "transparent",
                 border: `1px solid ${S.rim}`, cursor: "pointer",
                 padding: "3px 10px", borderRadius: 2, width: "100%",
@@ -1390,6 +1393,8 @@ export default function SandboxPage() {
   const _planAllowed = usePlanRedirect("professional");
   if (!_planAllowed) return null;
   return (
+
+    <PageShell icon={Zap} title="Sandbox" breadcrumb={["Dashboard", "Sandbox"]} noPadding>
     <Suspense fallback={
       <div style={{
         fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -1400,5 +1405,7 @@ export default function SandboxPage() {
     }>
       <SandboxPageInner />
     </Suspense>
-  );
+  
+    </PageShell>
+    );
 }

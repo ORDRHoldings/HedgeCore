@@ -47,7 +47,7 @@ interface ColorTokens {
  *
  * Priority order (first match wins):
  *  1. No active positions at all → go create exposures (/input)
- *  2. Any position has no policy (NEW status) → go assign policy (/policy-desk)
+ *  2. Any position has no policy (NEW status) → go assign policy (/policies?tab=assign)
  *  3. Positions have policy but need a run (POLICY_ASSIGNED) → go calculate (/hedge-desk)
  *  4. Positions are ready to execute (READY_TO_EXECUTE) → go execute (/execution-desk)
  *  5. All hedged → return to dashboard
@@ -64,7 +64,7 @@ export function getPipelineNextStep(
   if (activePositions.length === 0) {
     return {
       label: "Add Exposure",
-      href: "/input",
+      href: "/position-desk",
       reason: "No exposures yet. Create your first FX position.",
       readiness: "NEEDS_ACTION",
       color: colors.amber,
@@ -79,7 +79,7 @@ export function getPipelineNextStep(
   if (unpoliciedCount > 0 || !activePolicy) {
     return {
       label: "02 — Policy Desk",
-      href: "/policy-desk",
+      href: "/policies?tab=assign",
       reason: `${unpoliciedCount} position(s) need a policy assigned.`,
       readiness: "NEEDS_ACTION",
       color: colors.amber,
@@ -94,7 +94,7 @@ export function getPipelineNextStep(
   if (needsRunCount > 0) {
     return {
       label: "03 — Calculate",
-      href: "/calculate",
+      href: "/hedge-desk",
       reason: `${needsRunCount} position(s) ready to calculate.`,
       readiness: "READY",
       color: colors.cyan,

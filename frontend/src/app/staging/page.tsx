@@ -12,6 +12,9 @@ import HelpPanel from "@/components/layout/HelpPanel";
 import { STAGING_HELP } from "@/lib/helpContent";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Globe } from "lucide-react";
+
 // ── Execution Proposals panel (new hedge-desk workflow) ───────────────────────
 interface ExecProposal {
   id: string;
@@ -74,11 +77,11 @@ function ExecutionProposalsPanel({ token }: { token: string }) {
   return (
     <div style={{ marginBottom: 20 }}>
       {toast && (
-        <div style={{ padding: "8px 14px", background: "color-mix(in srgb,var(--accent-red) 8%,transparent)", border: "1px solid var(--accent-red)", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 11, color: "var(--accent-red)", marginBottom: 8 }}>
+        <div style={{ padding: "8px 14px", background: "color-mix(in srgb,var(--accent-red) 8%,transparent)", border: "1px solid var(--accent-red)", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, color: "var(--accent-red)", marginBottom: 8 }}>
           {toast}
         </div>
       )}
-      <div style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 9, letterSpacing: "0.08em", color: "var(--accent-amber)", marginBottom: 8, textTransform: "uppercase" as const }}>
+      <div style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, letterSpacing: "0.08em", color: "var(--accent-amber)", marginBottom: 8, textTransform: "uppercase" as const }}>
         ⚑ {proposals.length} EXECUTION PROPOSAL{proposals.length !== 1 ? "S" : ""} AWAITING CHECKER APPROVAL
       </div>
       <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border-rim)" }}>
@@ -86,7 +89,7 @@ function ExecutionProposalsPanel({ token }: { token: string }) {
           <thead>
             <tr style={{ background: "var(--bg-sub)" }}>
               {["PROPOSAL ID", "POSITION", "EXECUTION REF", "AMOUNT USD", "RATE", "PROPOSED BY", "AGE", "ACTION"].map(h => (
-                <th key={h} style={{ padding: "7px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 9, letterSpacing: "0.07em", color: "var(--text-tertiary)", textAlign: "left" as const, borderBottom: "1px solid var(--border-rim)" }}>
+                <th key={h} style={{ padding: "7px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, letterSpacing: "0.07em", color: "var(--text-tertiary)", textAlign: "left" as const, borderBottom: "1px solid var(--border-rim)" }}>
                   {h}
                 </th>
               ))}
@@ -95,32 +98,32 @@ function ExecutionProposalsPanel({ token }: { token: string }) {
           <tbody>
             {proposals.map((p, i) => (
               <tr key={p.id} style={{ borderBottom: i < proposals.length - 1 ? "1px solid var(--border-soft)" : "none" }}>
-                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, color: "var(--accent-cyan)" }}>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, color: "var(--accent-cyan)" }}>
                   {p.id.slice(0, 8)}…
                 </td>
-                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10 }}>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12 }}>
                   {p.position_id.slice(0, 8)}…
                 </td>
-                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10 }}>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12 }}>
                   {p.execution_ref || "—"}
                 </td>
-                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10 }}>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12 }}>
                   {p.hedge_amount != null ? `$${Math.round(p.hedge_amount).toLocaleString()}` : "—"}
                 </td>
-                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10 }}>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12 }}>
                   {p.hedge_rate != null ? p.hedge_rate.toFixed(4) : "—"}
                 </td>
-                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, color: "var(--text-secondary)" }}>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, color: "var(--text-secondary)" }}>
                   {p.proposed_by_email || "—"}
                 </td>
-                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, color: "var(--text-secondary)" }}>
+                <td style={{ padding: "8px 12px", fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, color: "var(--text-secondary)" }}>
                   {p.proposed_at ? (() => { const d = Date.now() - new Date(p.proposed_at).getTime(); const m = Math.floor(d/60000); return m < 60 ? `${m}m` : `${Math.floor(m/60)}h`; })() : "—"}
                 </td>
                 <td style={{ padding: "8px 12px", textAlign: "right" as const }}>
                   <button
                     onClick={() => handleApprove(p.id)}
                     disabled={approving === p.id}
-                    style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 9, letterSpacing: "0.07em", fontWeight: 700, padding: "4px 12px", background: approving === p.id ? "var(--text-tertiary)" : "var(--status-pass,#22c55e)", color: "var(--bg-deep)", border: "none", cursor: approving === p.id ? "not-allowed" : "pointer" }}
+                    style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, letterSpacing: "0.07em", fontWeight: 700, padding: "4px 12px", background: approving === p.id ? "var(--text-tertiary)" : "var(--status-pass,#22c55e)", color: "var(--bg-deep)", border: "none", cursor: approving === p.id ? "not-allowed" : "pointer" }}
                   >
                     {approving === p.id ? "…" : "APPROVE ✓"}
                   </button>
@@ -130,7 +133,7 @@ function ExecutionProposalsPanel({ token }: { token: string }) {
           </tbody>
         </table>
       </div>
-      <div style={{ marginTop: 6, fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 9, color: "var(--text-tertiary)" }}>
+      <div style={{ marginTop: 6, fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, color: "var(--text-tertiary)" }}>
         After approving, return to the Execution Desk to complete the trade.
       </div>
     </div>
@@ -383,7 +386,7 @@ export default function StagingListPage() {
       </div>
     )}
 
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary, flex: 1 }}>
+    <PageShell icon={Globe} title="Staging Area" breadcrumb={["Dashboard","Staging"]}>
 
       {/* ── Page header ── */}
       <header style={{
@@ -663,7 +666,7 @@ export default function StagingListPage() {
         <span style={{ color: S.rim }}>·</span>
         <span suppressHydrationWarning>{renderTs}</span>
       </footer>
-    </div>
+    </PageShell>
     <HelpPanel config={STAGING_HELP} storageKey="staging" />
     </div>
   );

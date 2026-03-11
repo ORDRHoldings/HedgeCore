@@ -80,7 +80,7 @@ function Th({ children, right }: { children: React.ReactNode; right?: boolean })
     <th
       style={{
         fontFamily:    S.fontMono,
-        fontSize:      9,
+        fontSize: 12,
         fontWeight:    600,
         letterSpacing: "0.1em",
         textTransform: "uppercase" as const,
@@ -104,7 +104,7 @@ function Td({
     <td
       style={{
         fontFamily:    mono ? S.fontMono : S.fontUI,
-        fontSize:      11,
+        fontSize: 12,
         color:         S.textPrimary,
         padding:       "5px 8px",
         textAlign:     (right ? "right" : "left") as "right" | "left",
@@ -181,7 +181,7 @@ export default function RecentRunsWidget({
         <span
           style={{
             fontFamily:    S.fontMono,
-            fontSize:      11,
+            fontSize: 12,
             fontWeight:    600,
             letterSpacing: "0.08em",
             color:         S.textPrimary,
@@ -225,7 +225,7 @@ export default function RecentRunsWidget({
             icon={History}
             title="No Calculation Runs Yet"
             description="Your hedge calculation history will appear here. Start by registering positions and running a sandbox calculation."
-            cta={{ label: "OPEN HEDGE DESK", onClick: () => router.push("/input") }}
+            cta={{ label: "OPEN HEDGE DESK", onClick: () => router.push("/position-desk") }}
           />
         )}
         {!loading && !error && runs.length > 0 && (
@@ -264,7 +264,7 @@ export default function RecentRunsWidget({
                       <span
                         style={{
                           fontFamily:    S.fontMono,
-                          fontSize:      9,
+                          fontSize: 12,
                           fontWeight:    600,
                           letterSpacing: "0.08em",
                           color:         chip.color,
@@ -284,7 +284,7 @@ export default function RecentRunsWidget({
                         href={`/run-viewer?id=${encodeURIComponent(run.id)}`}
                         style={{
                           fontFamily:   S.fontMono,
-                          fontSize:     10,
+                          fontSize: 12,
                           color:        S.textTertiary,
                           background:   "none",
                           border:       `1px solid ${S.border}`,

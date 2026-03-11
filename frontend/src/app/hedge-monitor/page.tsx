@@ -18,6 +18,9 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Play } from "lucide-react";
+
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -131,11 +134,11 @@ function Section({ title, badge, badgeColor, children }: {
           border: "none", cursor: "pointer", textAlign: "left",
         }}
       >
-        <span style={{ transition: "transform 0.15s", transform: open ? "rotate(90deg)" : "rotate(0deg)", color: S.tertiary, fontSize: 10 }}>▸</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, flex: 1, textTransform: "uppercase" }}>{title}</span>
+        <span style={{ transition: "transform 0.15s", transform: open ? "rotate(90deg)" : "rotate(0deg)", color: S.tertiary, fontSize: 12 }}>▸</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, flex: 1, textTransform: "uppercase" }}>{title}</span>
         {badge && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, padding: "1px 5px",
+            fontFamily: S.fontMono, fontSize: 12, padding: "1px 5px",
             border: `1px solid ${badgeColor ?? S.cyan}40`,
             background: `${badgeColor ?? S.cyan}10`,
             color: badgeColor ?? S.cyan, letterSpacing: "0.06em",
@@ -274,13 +277,13 @@ export default function HedgeMonitorPage() {
   // ── Empty state ──────────────────────────────────────────────────────────────
   if (!loading && activeHedges.length === 0) {
     return (
-      <div style={{ minHeight: "100vh", background: S.bgDeep, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, fontFamily: S.fontUI }}>
-        <div style={{ fontFamily: S.fontMono, fontSize: 11, letterSpacing: "0.12em", color: S.tertiary }}>NO HEDGED POSITIONS</div>
+      <div style={{ minHeight: "100vh", background: S.bgDeep, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: S.fontUI }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.12em", color: S.tertiary }}>NO HEDGED POSITIONS</div>
         <div style={{ fontSize: 14, color: S.secondary, textAlign: "center", maxWidth: 380, lineHeight: 1.6 }}>
           No hedged positions yet. Run the Hedge Desk to generate your first hedge.
         </div>
         <Link href="/hedge-desk" style={{
-          fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
           color: "#fff", background: "#1C62F2", border: "none", padding: "10px 24px",
           textDecoration: "none", display: "inline-block",
         }}>
@@ -301,7 +304,7 @@ export default function HedgeMonitorPage() {
       }}>
         <button
           onClick={() => router.push("/dashboard")}
-          style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer", padding: 0, letterSpacing: "0.04em" }}
+          style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, background: "none", border: "none", cursor: "pointer", padding: 0, letterSpacing: "0.04em" }}
         >
           ← Dashboard
         </button>
@@ -309,7 +312,7 @@ export default function HedgeMonitorPage() {
         <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.primary, textTransform: "uppercase" }}>
           Hedge Monitor
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.08em", color: S.cyan, border: `1px solid ${S.cyan}40`, background: `${S.cyan}10`, padding: "2px 7px" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.08em", color: S.cyan, border: `1px solid ${S.cyan}40`, background: `${S.cyan}10`, padding: "2px 7px" }}>
           LIVE MTM
         </span>
         <div style={{ flex: 1 }} />
@@ -320,12 +323,12 @@ export default function HedgeMonitorPage() {
             background: S.green, boxShadow: `0 0 6px ${S.green}`,
             animation: "pulse 2s infinite", display: "inline-block",
           }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.green, letterSpacing: "0.1em" }}>LIVE</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>{utcTime} UTC</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.green, letterSpacing: "0.1em" }}>LIVE</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>{utcTime} UTC</span>
         </div>
         <button
           onClick={load}
-          style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 10px", cursor: "pointer", letterSpacing: "0.04em" }}
+          style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 10px", cursor: "pointer", letterSpacing: "0.04em" }}
         >
           ↻
         </button>
@@ -335,12 +338,12 @@ export default function HedgeMonitorPage() {
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
 
         {loading && (
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, textAlign: "center", padding: 60, letterSpacing: "0.08em" }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textAlign: "center", padding: 60, letterSpacing: "0.08em" }}>
             LOADING PORTFOLIO DATA...
           </div>
         )}
         {error && (
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.red, padding: "10px 14px", background: `${S.red}12`, border: `1px solid ${S.red}40` }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.red, padding: "10px 14px", background: `${S.red}12`, border: `1px solid ${S.red}40` }}>
             ERROR — {error}
           </div>
         )}
@@ -359,9 +362,9 @@ export default function HedgeMonitorPage() {
                 { label: "MTM P&L",         value: fmtUSD(totalMtmPnL),         color: totalMtmPnL >= 0 ? S.green : S.red, sub: totalMtmPnL >= 0 ? "Hedges in profit" : "Hedges at loss" },
               ].map(kpi => (
                 <div key={kpi.label} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>{kpi.label}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>{kpi.label}</span>
                   <span style={{ fontFamily: S.fontMono, fontSize: 20, fontWeight: 700, color: kpi.color, lineHeight: 1 }}>{kpi.value}</span>
-                  <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>{kpi.sub}</span>
+                  <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>{kpi.sub}</span>
                 </div>
               ))}
             </div>
@@ -372,7 +375,7 @@ export default function HedgeMonitorPage() {
               padding: "10px 16px", background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 4,
             }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>HEDGE EFFECTIVENESS RATIO</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>HEDGE EFFECTIVENESS RATIO</span>
                 <span style={{ fontFamily: S.fontMono, fontSize: 16, fontWeight: 700, color: avgEff >= 80 ? S.green : S.amber }}>{avgEff.toFixed(1)}%</span>
               </div>
               <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5, maxWidth: 440 }}>
@@ -382,7 +385,7 @@ export default function HedgeMonitorPage() {
               </div>
               <div style={{ flex: 1 }} />
               <Link href="/hedge-desk" style={{
-                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                 color: "#fff", background: "#1C62F2", padding: "7px 16px",
                 textDecoration: "none", borderRadius: 3, whiteSpace: "nowrap",
               }}>
@@ -397,7 +400,7 @@ export default function HedgeMonitorPage() {
                   <thead>
                     <tr style={{ background: S.bgSub }}>
                       {["ENTITY", "CCY", "NOTIONAL", "ENTRY RATE", "CURRENT", "MTM P&L", "EFF.%", "INSTRUMENT", "STATUS"].map(h => (
-                        <th key={h} scope="col" style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, padding: "7px 12px", textAlign: "left", whiteSpace: "nowrap", borderBottom: `1px solid ${S.soft}` }}>
+                        <th key={h} scope="col" style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, padding: "7px 12px", textAlign: "left", whiteSpace: "nowrap", borderBottom: `1px solid ${S.soft}` }}>
                           {h}
                         </th>
                       ))}
@@ -409,22 +412,22 @@ export default function HedgeMonitorPage() {
                       return (
                         <tr key={h.id} style={{ background: i % 2 === 0 ? S.bgPanel : S.bgSub }}>
                           <td style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>{h.entity}</td>
-                          <td style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>{h.currency}</td>
-                          <td style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>{fmtAmt(h.notionalUSD)}</td>
-                          <td style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>{h.entryRate.toFixed(4)}</td>
-                          <td style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>{h.currentRate.toFixed(4)}</td>
+                          <td style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>{h.currency}</td>
+                          <td style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>{fmtAmt(h.notionalUSD)}</td>
+                          <td style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>{h.entryRate.toFixed(4)}</td>
+                          <td style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>{h.currentRate.toFixed(4)}</td>
                           <td style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, color: itm ? S.emerald : S.crimson, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>
                             {fmtUSD(h.mtmPnL)}
                           </td>
-                          <td style={{ fontFamily: S.fontMono, fontSize: 11, color: h.effectiveness >= 80 ? S.green : S.amber, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>
+                          <td style={{ fontFamily: S.fontMono, fontSize: 12, color: h.effectiveness >= 80 ? S.green : S.amber, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>
                             {h.effectiveness.toFixed(1)}%
                           </td>
-                          <td style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>
+                          <td style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>
                             {h.instrument?.slice(0, 20) ?? "—"}
                           </td>
                           <td style={{ padding: "7px 12px", borderBottom: `1px solid ${S.soft}` }}>
                             <span style={{
-                              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                               color: itm ? S.emerald : S.crimson, padding: "2px 6px",
                               border: `1px solid ${itm ? S.emerald : S.crimson}40`,
                               background: `${itm ? S.emerald : S.crimson}12`,
@@ -451,6 +454,8 @@ export default function HedgeMonitorPage() {
                     const days = daysUntil(h.expiry!);
                     const urgency = days < 7 ? S.red : days < 14 ? S.amber : S.green;
                     return (
+                      <PageShell icon={Play} title="Hedge Monitor" breadcrumb={["Dashboard","Hedge Monitor"]}>
+
                       <div key={h.id} style={{
                         display: "grid", gridTemplateColumns: "1fr auto auto auto",
                         alignItems: "center", gap: 16, padding: "10px 12px",
@@ -459,20 +464,22 @@ export default function HedgeMonitorPage() {
                       }}>
                         <div>
                           <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary }}>{h.entity}</span>
-                          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginLeft: 8 }}>{h.instrument}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginLeft: 8 }}>{h.instrument}</span>
                         </div>
-                        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan }}>{h.currency}</span>
-                        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>{h.currency}</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                           {h.expiry!.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </span>
                         <span style={{
-                          fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                           color: urgency, padding: "2px 8px",
                           border: `1px solid ${urgency}40`, background: `${urgency}12`,
                         }}>
                           {days < 0 ? "EXPIRED" : days < 7 ? `${days}d CRITICAL` : days < 14 ? `${days}d WARNING` : `${days}d`}
                         </span>
                       </div>
+                    
+                      </PageShell>
                     );
                   })}
                 {activeHedges.every(h => !h.instrument || !parseExpiryFromInstrument(h.instrument)) && (
@@ -500,7 +507,7 @@ export default function HedgeMonitorPage() {
                       }} />
                     </div>
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: 11, fontWeight: 600,
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
                       color: h.effectiveness >= 80 ? S.green : h.effectiveness >= 60 ? S.amber : S.red,
                       textAlign: "right",
                     }}>
@@ -508,7 +515,7 @@ export default function HedgeMonitorPage() {
                     </span>
                   </div>
                 ))}
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginTop: 8 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 8 }}>
                   IFRS 9 §6.4.1 — hedge effectiveness must remain within 80–125% range. Dollar-offset method.
                 </div>
               </div>

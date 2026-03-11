@@ -30,7 +30,7 @@ export const CURRENCY_FX_HELP: HelpPanelConfig = {
         description:
           "Market data is the second input to the hedge engine. Spot rates and forward points feed directly into bucket pricing, carry calculations, and scenario stress tests. Without live rates, the engine falls back to indicative data.",
         prev: { label: "Position Desk", href: "/position-desk" },
-        next: { label: "Run Engine", href: "/input" },
+        next: { label: "Run Engine", href: "/position-desk" },
       },
     },
     {
@@ -530,7 +530,7 @@ export const POSITION_DESK_HELP: HelpPanelConfig = {
         label:    "Step 1 of 7 — Position Management",
         description:
           "The Position Desk is the starting point of the hedge workflow. Raw FX exposures (AR receivables, AP payables) are loaded here, either via CSV import, ERP connector, or manual entry. Positions flow through the lifecycle: NEW → POLICY_ASSIGNED → READY_TO_EXECUTE → HEDGED.",
-        next: { label: "FX Market Data", href: "/currency-fx" },
+        next: { label: "FX Market Data", href: "/market-overview" },
       },
     },
     {
@@ -635,9 +635,9 @@ export const POSITION_DESK_HELP: HelpPanelConfig = {
       icon:  "→",
       type:  "workflow",
       steps: [
-        { step: 1, label: "Import Positions", description: "Import via CSV (Upload CSV) or ERP connector (Connectors). Or add manually. Each position represents one FX cash flow.", link: "/upload-csv" },
+        { step: 1, label: "Import Positions", description: "Import via CSV (Upload CSV) or ERP connector (Connectors). Or add manually. Each position represents one FX cash flow.", link: "/position-desk" },
         { step: 2, label: "Assign Policy", description: "Select one or more positions → click ASSIGN POLICY. Choose the correct hedge policy for this entity/currency." },
-        { step: 3, label: "Run Hedge Engine", description: "Navigate to Input → select positions → run engine. The engine computes the hedge plan and creates a CalculationRun record.", link: "/input" },
+        { step: 3, label: "Run Hedge Engine", description: "Navigate to Input → select positions → run engine. The engine computes the hedge plan and creates a CalculationRun record.", link: "/position-desk" },
         { step: 4, label: "Mark Ready to Execute", description: "After reviewing the hedge plan in Execution Bridge, mark positions as READY_TO_EXECUTE with the computed hedge amount and rate." },
         { step: 5, label: "4-Eyes Proposal", description: "Click PROPOSE on READY positions. A second authorised user must APPROVE the proposal before execution can proceed." },
         { step: 6, label: "Execute", description: "Once approved, execute the hedge via IBKR or prime broker. Record the execution reference to transition positions to HEDGED." },
@@ -705,7 +705,7 @@ export const POLICY_DESK_HELP: HelpPanelConfig = {
         label:    "Step 2 of 7 — Policy Assignment",
         description:
           "Policy assignment is the critical governance step between position ingestion and hedge execution. Every FX position must be assigned a hedge policy before it can progress to calculation and execution. This desk provides four assignment modes: active policy quick-assign, template selection, favorites, and AI recommendations.",
-        prev: { label: "Ingestion Desk", href: "/input" },
+        prev: { label: "Ingestion Desk", href: "/position-desk" },
         next: { label: "Position Desk", href: "/position-desk" },
       },
     },
@@ -926,7 +926,7 @@ export const EXECUTION_HELP: HelpPanelConfig = {
         label:    "Step 4 of 7 — Trade Execution",
         description:
           "The Execution Hub is where approved hedge plans are turned into live trades. It provides the pre-trade compliance checklist (4-eyes, ISDA confirmation, board mandate), the IBKR JSON/FIX order payload, and settlement mechanics per bucket ticket.",
-        prev: { label: "Hedge Engine", href: "/input" },
+        prev: { label: "Hedge Engine", href: "/position-desk" },
         next: { label: "Portfolio Risk", href: "/portfolio-risk" },
       },
     },
@@ -1045,7 +1045,7 @@ export const SCENARIO_STUDIO_HELP: HelpPanelConfig = {
         label:    "Step 3 of 7 — Scenario Analysis",
         description:
           "The Scenario Studio sits between market data and execution. It runs stress tests and Monte Carlo simulations to quantify hedge effectiveness under various market shocks, informing the hedge ratio and tenor decisions before execution.",
-        prev: { label: "FX Market Data", href: "/currency-fx" },
+        prev: { label: "FX Market Data", href: "/market-overview" },
         next: { label: "Execution Hub", href: "/hedge-desk" },
       },
     },
@@ -1219,7 +1219,7 @@ export const SANDBOX_HELP: HelpPanelConfig = {
         label:    "Step 3 (Alt) — Simulation",
         description:
           "The Sandbox is the advanced simulation environment. It mirrors the live execution workflow but runs in a non-committing mode, allowing full analysis without creating audit events or modifying positions.",
-        prev: { label: "FX Rates", href: "/currency-fx" },
+        prev: { label: "FX Rates", href: "/market-overview" },
         next: { label: "Execution Hub", href: "/hedge-desk" },
       },
     },
@@ -1915,7 +1915,7 @@ export const POLICY_LIBRARY_HELP: HelpPanelConfig = {
         label:       "Step 4 of 7 — Policy Engine",
         description: "The Policy Engine governs every hedge calculation. Select a system preset or build a custom policy using the AI Wizard. Activate one policy per branch — all subsequent calculations use that policy's parameters until changed.",
         prev: { label: "Position Desk",   href: "/position-desk" },
-        next: { label: "Run Engine",      href: "/input" },
+        next: { label: "Run Engine",      href: "/position-desk" },
       },
     },
     {
@@ -2164,7 +2164,7 @@ export const SAVED_POLICIES_HELP: HelpPanelConfig = {
         label:       "Step 4 of 7 — Policy Engine",
         description: "Saved Policies is the governance library for all custom policies created by your team. Activate any policy here to make it live for your branch — it immediately governs all new hedge calculations.",
         prev: { label: "Policy Library",  href: "/policies" },
-        next: { label: "Run Engine",      href: "/input" },
+        next: { label: "Run Engine",      href: "/position-desk" },
       },
     },
     {
@@ -2297,7 +2297,7 @@ export const INPUT_HELP: HelpPanelConfig = {
         total:       7,
         label:       "Step 3 of 7 — Run Engine",
         description: "Input is the engine trigger. After loading positions (step 1) and market data (step 2), you bind a hedge policy and launch a deterministic calculation run. Output flows to Sandbox (step 4) for stress testing.",
-        prev: { label: "Market Data", href: "/currency-fx" },
+        prev: { label: "Market Data", href: "/market-overview" },
         next: { label: "Sandbox",     href: "/sandbox" },
       },
     },
@@ -2387,7 +2387,7 @@ export const INPUT_HELP: HelpPanelConfig = {
       type:  "workflow",
       steps: [
         { step: 1, label: "Load Positions",      description: "Navigate to Position Desk, upload your FX exposure CSV, confirm lifecycle transitions to POLICY_ASSIGNED.", link: "/position-desk" },
-        { step: 2, label: "Fetch Market Data",   description: "Go to Currency FX, confirm spot rates and forward curve are live (green badge). Stale data shows a warning.", link: "/currency-fx" },
+        { step: 2, label: "Fetch Market Data",   description: "Go to Currency FX, confirm spot rates and forward curve are live (green badge). Stale data shows a warning.", link: "/market-overview" },
         { step: 3, label: "Bind Policy",         description: "In the Input page, select the active hedge policy from the dropdown. The policy card shows all parameters." },
         { step: 4, label: "Run Engine",          description: "Click RUN HEDGE ENGINE. The engine executes deterministically — same inputs always produce the same output." },
         { step: 5, label: "Review Results",      description: "Output appears in Run Viewer. Review bucket breakdown, hedge notionals, costs, and effectiveness score.", link: "/run-viewer" },
@@ -2509,7 +2509,7 @@ export const RESULTS_HELP: HelpPanelConfig = {
         total:       7,
         label:       "Step 4 of 7 — Results Review",
         description: "Results are generated after the engine run. Review hedge notionals, bucket breakdown, and effectiveness score before promoting to the Staging Pipeline for supervisor approval.",
-        prev: { label: "Run Engine", href: "/input" },
+        prev: { label: "Run Engine", href: "/position-desk" },
         next: { label: "Sandbox",    href: "/sandbox" },
       },
     },
@@ -3323,8 +3323,8 @@ export const HELP_CENTER_HELP: HelpPanelConfig = {
       type:  "workflow",
       steps: [
         { step: 1, label: "Position Desk",    description: "Upload FX positions via CSV or connect your ERP. Review lifecycle transitions to POLICY_ASSIGNED.", link: "/position-desk" },
-        { step: 2, label: "Market Data",      description: "Fetch live FX rates and 12-month forward curves. Confirm rates are live (green badge) before running.", link: "/currency-fx" },
-        { step: 3, label: "Run Engine",       description: "Bind a policy and trigger the deterministic calculation engine. Review hedge notionals and costs.", link: "/input" },
+        { step: 2, label: "Market Data",      description: "Fetch live FX rates and 12-month forward curves. Confirm rates are live (green badge) before running.", link: "/market-overview" },
+        { step: 3, label: "Run Engine",       description: "Bind a policy and trigger the deterministic calculation engine. Review hedge notionals and costs.", link: "/position-desk" },
         { step: 4, label: "Sandbox",          description: "Stress-test your hedge plan against historical FX scenarios. Review scenario P&L and adjust if needed.", link: "/sandbox" },
         { step: 5, label: "Stage & Approve",  description: "Submit calculation run for 4-eyes supervisor approval. Track through PENDING → APPROVED.", link: "/staging" },
         { step: 6, label: "Ledger",           description: "Approved plans are sealed into the immutable Ledger. WORM-protected, hash-chained audit record.", link: "/ledger" },

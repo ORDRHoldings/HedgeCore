@@ -8,6 +8,9 @@ import HelpPanel from "@/components/layout/HelpPanel";
 import { POLISOPHIC_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Shield } from "lucide-react";
+
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
   const [renderTs, setRenderTs] = useState('');
@@ -426,6 +429,8 @@ export default function Polisophic() {
   const GAP = 8;
 
   return (
+
+    <PageShell icon={Shield} title="Polisophic" breadcrumb={["Dashboard", "Polisophic"]} noPadding>
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary }}>
       <TopBar onBack={() => router.push("/")} tab={tab} setTab={setTab} />
 
@@ -1117,5 +1122,7 @@ export default function Polisophic() {
         <span>{"Static data · Enriched model"} · {renderTs}</span>
       </footer>
     </div>
-  );
+  
+    </PageShell>
+    );
 }

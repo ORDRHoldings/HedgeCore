@@ -44,10 +44,12 @@ import {
 } from "../../api/policyClient";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { POSITIONS_HELP } from "@/lib/help";
-import {
-  ChevronDownIcon, ChevronUpIcon, ChevronsUpDownIcon,
-  ChevronRightIcon,
-} from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon, ChevronsUpDownIcon,
+  ChevronRightIcon, PlusIcon, UploadIcon, LayoutDashboard } from "lucide-react"
+import AddPositionDrawer from "@/components/position/AddPositionDrawer";
+import ImportCsvModal from "@/components/position/ImportCsvModal";
+
+import { PageShell } from "@/components/layout/PageShell";
 
 // ── Design tokens ────────────────────────────────────────────────────────────
 const S = {
@@ -133,7 +135,7 @@ function Tooltip({ tip, children }: { tip: string; children: React.ReactNode }) 
           position: "absolute", bottom: "calc(100% + 6px)", left: "50%",
           transform: "translateX(-50%)", zIndex: 500,
           background: "#1a1a2e", border: `1px solid ${S.rim}`,
-          color: S.secondary, fontFamily: S.fontMono, fontSize: 10,
+          color: S.secondary, fontFamily: S.fontMono, fontSize: 12,
           padding: "5px 9px", borderRadius: 2, whiteSpace: "pre-wrap",
           maxWidth: 280, lineHeight: 1.5, pointerEvents: "none",
           boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
@@ -147,7 +149,7 @@ function StatusBadge({ status }: { status: ExecStatus }) {
   const cfg = STATUS_CONFIG[status];
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
       color: cfg.color, background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`,
       border: `1px solid color-mix(in srgb, ${cfg.color} 28%, transparent)`,
       padding: "2px 6px", borderRadius: 2, whiteSpace: "nowrap",
@@ -161,7 +163,7 @@ function ActionBtn({ label, color, onClick, disabled, loading, disabledReason }:
 }) {
   const btn = (
     <button onClick={onClick} disabled={disabled || loading} data-testid={`action-${label.toLowerCase().replace(/\s+/g, "-")}`} style={{
-      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
       color: disabled ? S.tertiary : color, background: "transparent",
       border: `1px solid ${disabled ? S.rim : `color-mix(in srgb, ${color} 40%, transparent)`}`,
       padding: "2px 7px", cursor: disabled ? "not-allowed" : "pointer",
@@ -173,14 +175,14 @@ function ActionBtn({ label, color, onClick, disabled, loading, disabledReason }:
 }
 
 function RunIdChip({ runId, onCopy }: { runId: string | null; onCopy?: (id: string) => void }) {
-  if (!runId) return <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>—</span>;
+  if (!runId) return <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.rim }}>—</span>;
   return (
     <Tooltip tip={`Run: ${runId}\nClick to view audit trail`}>
       <Link
         href={`/run-viewer?id=${encodeURIComponent(runId)}`}
         onClick={() => onCopy?.(runId)}
         style={{
-          fontFamily: S.fontMono, fontSize: 9, color: S.purple,
+          fontFamily: S.fontMono, fontSize: 12, color: S.purple,
           background: `color-mix(in srgb, ${S.purple} 10%, transparent)`,
           border: `1px solid color-mix(in srgb, ${S.purple} 25%, transparent)`,
           padding: "1px 5px", borderRadius: 2, cursor: "pointer", letterSpacing: "0.04em",
@@ -191,11 +193,11 @@ function RunIdChip({ runId, onCopy }: { runId: string | null; onCopy?: (id: stri
 }
 
 function PolicyChip({ policyId }: { policyId: string | null }) {
-  if (!policyId) return <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>—</span>;
+  if (!policyId) return <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.rim }}>—</span>;
   return (
     <Tooltip tip={`Policy ID: ${policyId}`}>
       <span style={{
-        fontFamily: S.fontMono, fontSize: 9, color: S.cyan,
+        fontFamily: S.fontMono, fontSize: 12, color: S.cyan,
         background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
         border: `1px solid color-mix(in srgb, ${S.cyan} 20%, transparent)`,
         padding: "1px 5px", borderRadius: 2, letterSpacing: "0.04em",
@@ -217,7 +219,7 @@ function SortHeader({ label, column, activeColumn, activeDir, onSort, align }: {
       onClick={() => onSort(column)}
       style={{
         display: "flex", alignItems: "center", gap: 3,
-        fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
         color: isActive ? S.cyan : S.tertiary,
         background: "transparent", border: "none", cursor: "pointer",
         padding: "8px 4px", whiteSpace: "nowrap",
@@ -252,7 +254,7 @@ function ModalHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary, letterSpacing: "0.04em", textTransform: "uppercase" }}>{title}</div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, marginTop: 4 }}>{subtitle}</div>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, marginTop: 4 }}>{subtitle}</div>
     </div>
   );
 }
@@ -262,9 +264,9 @@ function ModalInput({ label, value, onChange, placeholder, type = "text", error 
 }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <label style={{ fontFamily: S.fontMono, fontSize: 10, color: error ? S.fail : S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</label>
+      <label style={{ fontFamily: S.fontMono, fontSize: 12, color: error ? S.fail : S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</label>
       <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} data-testid={`modal-input-${label.replace(/[^a-zA-Z]/g, "").toLowerCase().slice(0, 20)}`} style={{ width: "100%", padding: "7px 10px", boxSizing: "border-box", background: S.bgSub, border: `1px solid ${error ? S.fail : S.rim}`, color: S.primary, fontFamily: S.fontMono, fontSize: 12, outline: "none" }} />
-      {error && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginTop: 3 }}>{error}</div>}
+      {error && <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail, marginTop: 3 }}>{error}</div>}
     </div>
   );
 }
@@ -274,8 +276,8 @@ function ModalActions({ onCancel, onConfirm, confirmLabel, confirmColor, disable
 }) {
   return (
     <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
-      <button onClick={onCancel} data-testid="modal-cancel" style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
-      <button onClick={onConfirm} disabled={disabled} data-testid="modal-confirm" style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: disabled ? S.tertiary : confirmColor, border: "none", padding: "6px 14px", cursor: disabled ? "not-allowed" : "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>{confirmLabel}</button>
+      <button onClick={onCancel} data-testid="modal-cancel" style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Cancel</button>
+      <button onClick={onConfirm} disabled={disabled} data-testid="modal-confirm" style={{ fontFamily: S.fontMono, fontSize: 12, color: S.bgDeep, background: disabled ? S.tertiary : confirmColor, border: "none", padding: "6px 14px", cursor: disabled ? "not-allowed" : "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>{confirmLabel}</button>
     </div>
   );
 }
@@ -392,6 +394,10 @@ export default function PositionDeskPage() {
 
   // Show/hide rejected toggle
   const [hideRejected, setHideRejected]                 = useState(false);
+
+  // Add Position drawer + Import CSV modal
+  const [showAdd, setShowAdd]       = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   // ERR-1: track whether the operator dismissed the list-error banner
   const [errorDismissed, setErrorDismissed]             = useState(false);
@@ -674,10 +680,14 @@ export default function PositionDeskPage() {
   }, []);
 
   if (!user) return (
+
+    
     <div style={{ padding: 40, fontFamily: S.fontMono, color: S.secondary, fontSize: 12 }}>
       Authentication required. <button onClick={() => router.push("/auth/login")} style={{ color: S.cyan, background: "none", border: "none", cursor: "pointer", fontFamily: S.fontMono }}>Sign in</button>
     </div>
-  );
+  
+    
+    );
 
   const pos = modal.position;
   const isTransitioning = lifecycleLoading !== null;
@@ -699,14 +709,14 @@ export default function PositionDeskPage() {
           Position Desk
         </span>
         <span style={{
-          fontFamily: S.fontMono, fontSize: 9, color: S.cyan,
+          fontFamily: S.fontMono, fontSize: 12, color: S.cyan,
           border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
           background: `color-mix(in srgb, ${S.cyan} 6%, transparent)`,
           padding: "1px 6px", letterSpacing: "0.08em",
         }}>CONTROL TOWER</span>
         {needsActionCount > 0 && (
           <span onClick={() => setPreset("NEEDS_ACTION")} style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             color: S.amber,
             background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
             border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
@@ -716,24 +726,36 @@ export default function PositionDeskPage() {
           </span>
         )}
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           {positions.length} position{positions.length !== 1 ? "s" : ""}
         </span>
         <button
-          onClick={() => router.push("/position-desk/import")}
+          onClick={() => setShowAdd(true)}
+          title="Add a single position"
+          style={{
+            fontFamily: S.fontMono, fontSize: 12, color: S.cyan,
+            background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
+            border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
+            padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
+            display: "flex", alignItems: "center", gap: 4,
+          }}
+        ><PlusIcon size={10} />ADD POSITION</button>
+        <button
+          onClick={() => setShowImport(true)}
           title="Bulk CSV Import"
           style={{
-            fontFamily: S.fontMono, fontSize: 10, color: S.amber,
+            fontFamily: S.fontMono, fontSize: 12, color: S.amber,
             background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
             border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`,
             padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
+            display: "flex", alignItems: "center", gap: 4,
           }}
-        >IMPORT CSV</button>
+        ><UploadIcon size={10} />IMPORT CSV</button>
         <button
           onClick={() => token && dispatch(listPositionsThunk({ token }))}
           title="Refresh (R)"
           style={{
-            fontFamily: S.fontMono, fontSize: 10, color: S.cyan,
+            fontFamily: S.fontMono, fontSize: 12, color: S.cyan,
             background: "transparent",
             border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
             padding: "2px 8px", cursor: "pointer",
@@ -760,7 +782,7 @@ export default function PositionDeskPage() {
             borderRight: idx < 5 ? `1px solid ${S.soft}` : "none",
             minWidth: 0,
           }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 2, whiteSpace: "nowrap" }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 2, whiteSpace: "nowrap" }}>
               {label}
             </div>
             <div style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color }}>
@@ -774,9 +796,9 @@ export default function PositionDeskPage() {
       {/* ── Error banners ───────────────────────────────────────────────────── */}
       {lifecycleError && (
         <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`, borderLeft: `3px solid ${S.fail}`, padding: "7px 20px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.fail, letterSpacing: "0.06em" }}>TRANSITION ERROR</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>{lifecycleError}</span>
-          <button onClick={() => dispatch(clearLifecycleError())} style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>✕</button>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.fail, letterSpacing: "0.06em" }}>TRANSITION ERROR</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{lifecycleError}</span>
+          <button onClick={() => dispatch(clearLifecycleError())} style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>✕</button>
         </div>
       )}
       {listError && !errorDismissed && (
@@ -789,13 +811,13 @@ export default function PositionDeskPage() {
         }}>
           <span style={{ fontFamily: S.fontMono, fontSize: 14, color: S.amber, lineHeight: 1, marginTop: 1 }}>!</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.amber, letterSpacing: "0.06em", marginBottom: 2 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.amber, letterSpacing: "0.06em", marginBottom: 2 }}>
               POSITIONS UNAVAILABLE
             </div>
             <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginBottom: 4 }}>
               Could not load positions from server. Retry or check connectivity.
             </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.03em" }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.03em" }}>
               Detail: {listError}
             </div>
           </div>
@@ -804,7 +826,7 @@ export default function PositionDeskPage() {
               onClick={() => { dispatch(clearListError()); if (token) dispatch(listPositionsThunk({ token })); }}
               disabled={loading}
               style={{
-                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                 color: S.bgDeep, background: loading ? S.tertiary : S.amber,
                 border: "none", padding: "4px 12px", cursor: loading ? "not-allowed" : "pointer",
                 borderRadius: 2, opacity: loading ? 0.6 : 1,
@@ -814,14 +836,14 @@ export default function PositionDeskPage() {
             <button
               onClick={() => setErrorDismissed(true)}
               title="Dismiss"
-              style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, background: "none", border: "none", cursor: "pointer", padding: "2px 4px" }}>
+              style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, background: "none", border: "none", cursor: "pointer", padding: "2px 4px" }}>
               ✕
             </button>
           </div>
         </div>
       )}
       {copiedRun && (
-        <div style={{ background: `color-mix(in srgb, ${S.purple} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.purple} 25%, transparent)`, padding: "5px 20px", flexShrink: 0, fontFamily: S.fontMono, fontSize: 10, color: S.purple }}>
+        <div style={{ background: `color-mix(in srgb, ${S.purple} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.purple} 25%, transparent)`, padding: "5px 20px", flexShrink: 0, fontFamily: S.fontMono, fontSize: 12, color: S.purple }}>
           Run ID copied: {copiedRun}
         </div>
       )}
@@ -833,7 +855,7 @@ export default function PositionDeskPage() {
           const color = p === "NEEDS_ACTION" ? S.amber : p === "ALL" ? S.secondary : p === "HEDGED" ? S.pass : p === "REJECTED" ? S.fail : STATUS_CONFIG[p as ExecStatus]?.color ?? S.secondary;
           const count = statusCounts[p] ?? 0;
           return (
-            <button key={p} onClick={() => setPreset(p)} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: isActive ? color : S.tertiary, background: isActive ? `color-mix(in srgb, ${color} 12%, transparent)` : "transparent", border: `1px solid ${isActive ? `color-mix(in srgb, ${color} 35%, transparent)` : S.rim}`, padding: "3px 9px", cursor: "pointer", borderRadius: 2, transition: "all 0.1s" }}>
+            <button key={p} onClick={() => setPreset(p)} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: isActive ? color : S.tertiary, background: isActive ? `color-mix(in srgb, ${color} 12%, transparent)` : "transparent", border: `1px solid ${isActive ? `color-mix(in srgb, ${color} 35%, transparent)` : S.rim}`, padding: "3px 9px", cursor: "pointer", borderRadius: 2, transition: "all 0.1s" }}>
               {PRESET_LABELS[p]} ({count})
             </button>
           );
@@ -843,7 +865,7 @@ export default function PositionDeskPage() {
           <button
             onClick={() => setHideRejected(h => !h)}
             style={{
-              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
               color: hideRejected ? S.fail : S.tertiary,
               background: hideRejected ? `color-mix(in srgb, ${S.fail} 8%, transparent)` : "transparent",
               border: `1px solid ${hideRejected ? `color-mix(in srgb, ${S.fail} 30%, transparent)` : S.rim}`,
@@ -852,25 +874,25 @@ export default function PositionDeskPage() {
             {hideRejected ? `SHOW REJECTED (${statusCounts.REJECTED ?? 0})` : `HIDE REJECTED (${statusCounts.REJECTED ?? 0})`}
           </button>
         )}
-        <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search… (/ to focus)" style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 10px", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, outline: "none", width: 240 }} />
+        <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search… (/ to focus)" style={{ fontFamily: S.fontMono, fontSize: 12, padding: "3px 10px", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, outline: "none", width: 240 }} />
       </div>
 
       {/* ── Bulk Actions Bar ────────────────────────────────────────────────── */}
       {selected.size > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 20px", background: `color-mix(in srgb, ${S.amber} 6%, ${S.bgPanel})`, borderBottom: `1px solid color-mix(in srgb, ${S.amber} 20%, ${S.soft})`, flexShrink: 0 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, fontWeight: 700, letterSpacing: "0.06em" }}>{selected.size} SELECTED</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, fontWeight: 700, letterSpacing: "0.06em" }}>{selected.size} SELECTED</span>
           <button
             onClick={() => setBulkAssignOpen(true)}
-            style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: S.bgDeep, background: S.cyan, border: "none", padding: "3px 12px", cursor: "pointer", borderRadius: 2 }}>
+            style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: S.bgDeep, background: S.cyan, border: "none", padding: "3px 12px", cursor: "pointer", borderRadius: 2 }}>
             BULK ASSIGN POLICY
           </button>
           <button
             onClick={() => { setBulkRejectReason(''); setBulkRejectResult(null); setBulkRejectOpen(true); }}
-            style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: "#fff", background: S.fail, border: "none", padding: "3px 12px", cursor: "pointer", borderRadius: 2 }}>
+            style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: "#fff", background: S.fail, border: "none", padding: "3px 12px", cursor: "pointer", borderRadius: 2 }}>
             BULK REJECT
           </button>
-          <button onClick={() => setSelected(new Set())} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer", borderRadius: 2 }}>CLEAR</button>
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{selected.size} position{selected.size !== 1 ? 's' : ''} selected</span>
+          <button onClick={() => setSelected(new Set())} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer", borderRadius: 2 }}>CLEAR</button>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{selected.size} position{selected.size !== 1 ? 's' : ''} selected</span>
         </div>
       )}
 
@@ -889,9 +911,9 @@ export default function PositionDeskPage() {
         <SortHeader label="CCY" column="currency" activeColumn={sortCol} activeDir={sortDir} onSort={handleSort} />
         <SortHeader label="EXPOSURE" column="amount" activeColumn={sortCol} activeDir={sortDir} onSort={handleSort} align="right" />
         <SortHeader label="VALUE DATE" column="value_date" activeColumn={sortCol} activeDir={sortDir} onSort={handleSort} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700, padding: "8px 4px" }}>POLICY</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700, padding: "8px 4px" }}>RUN</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700, padding: "8px 4px" }}>ACTIONS</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700, padding: "8px 4px" }}>POLICY</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700, padding: "8px 4px" }}>RUN</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700, padding: "8px 4px" }}>ACTIONS</span>
       </div>
 
       {/* ── Table Body ──────────────────────────────────────────────────────── */}
@@ -900,7 +922,7 @@ export default function PositionDeskPage() {
         {!loading && !listError && filteredPositions.length === 0 && (
           <div style={{ padding: "48px 20px", textAlign: "center" }}>
             <div style={{ fontFamily: S.fontUI, fontSize: 14, color: S.secondary, marginBottom: 6 }}>No positions found</div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               {preset !== "ALL" ? `No positions with filter "${PRESET_LABELS[preset]}"` : "Import positions from the Ingestion Desk or create manually"}
             </div>
           </div>
@@ -947,27 +969,27 @@ export default function PositionDeskPage() {
                 <Tooltip tip={p.record_id}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 4px" }}>
                     <ChevronRightIcon size={10} color={S.tertiary} style={{ flexShrink: 0, transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{truncate(p.record_id, 12)}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{truncate(p.record_id, 12)}</span>
                   </div>
                 </Tooltip>
 
                 {/* Entity */}
                 <Tooltip tip={p.entity}>
-                  <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "6px 4px", display: "block" }}>{truncate(p.entity, 20)}</span>
+                  <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", padding: "6px 4px", display: "block" }}>{truncate(p.entity, 20)}</span>
                 </Tooltip>
 
                 {/* Currency */}
                 <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, fontWeight: 700, padding: "6px 4px" }}>{p.currency}</span>
 
                 {/* Exposure (amount) */}
-                <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, textAlign: "right", padding: "6px 8px 6px 4px" }}>{fmtAmt(p.amount)}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, textAlign: "right", padding: "6px 8px 6px 4px" }}>{fmtAmt(p.amount)}</span>
 
                 {/* Value Date + days to maturity */}
                 <div style={{ padding: "6px 4px" }}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{fmtDate(p.value_date)}</div>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{fmtDate(p.value_date)}</div>
                   {dtm !== null && (
                     <div style={{
-                      fontFamily: S.fontMono, fontSize: 9,
+                      fontFamily: S.fontMono, fontSize: 12,
                       color: dtm <= 7 ? S.fail : dtm <= 30 ? S.amber : S.tertiary,
                       marginTop: 1,
                     }}>
@@ -996,7 +1018,7 @@ export default function PositionDeskPage() {
                     <ActionBtn label="PROPOSE" color={S.pass} onClick={() => openModal("proposal-info", p)} loading={isLoading} />
                     <ActionBtn label="REJECT" color={S.fail} onClick={() => openModal("reject", p)} loading={isLoading} />
                   </>)}
-                  {st === "HEDGED" && <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>{p.execution_ref ? `REF: ${truncate(p.execution_ref, 12)}` : "TERMINAL"}</span>}
+                  {st === "HEDGED" && <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>{p.execution_ref ? `REF: ${truncate(p.execution_ref, 12)}` : "TERMINAL"}</span>}
                   {st === "REJECTED" && (<>
                     <Tooltip tip={p.rejection_reason ? `Reason: ${p.rejection_reason}` : "No reason recorded"}>
                       <ActionBtn label="REOPEN" color={S.secondary} onClick={() => handleReopen(p)} loading={isLoading} />
@@ -1008,7 +1030,7 @@ export default function PositionDeskPage() {
                   <Link
                     href={`/lineage?position=${encodeURIComponent(p.id)}`}
                     title="View audit trail"
-                    style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, textDecoration: "none", padding: "1px 3px", opacity: 0.6 }}
+                    style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textDecoration: "none", padding: "1px 3px", opacity: 0.6 }}
                   >
                     ⟁
                   </Link>
@@ -1027,44 +1049,44 @@ export default function PositionDeskPage() {
                   gap: "8px 24px",
                 }}>
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>POSITION ID</div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, wordBreak: "break-all" }}>{p.id}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>POSITION ID</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, wordBreak: "break-all" }}>{p.id}</div>
                   </div>
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>ENTITY</div>
-                    <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.primary }}>{p.entity || "—"}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>ENTITY</div>
+                    <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary }}>{p.entity || "—"}</div>
                   </div>
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>FLOW TYPE</div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: p.type === "AR" ? S.pass : S.amber }}>{p.type || "—"}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>FLOW TYPE</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: p.type === "AR" ? S.pass : S.amber }}>{p.type || "—"}</div>
                   </div>
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>RECORD ID</div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{p.record_id}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>RECORD ID</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{p.record_id}</div>
                   </div>
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>HEDGE AMOUNT</div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>{p.hedge_amount != null ? fmtAmt(p.hedge_amount) : "—"}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>HEDGE AMOUNT</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{p.hedge_amount != null ? fmtAmt(p.hedge_amount) : "—"}</div>
                   </div>
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>HEDGE RATE</div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>{p.hedge_rate != null ? p.hedge_rate.toFixed(4) : "—"}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>HEDGE RATE</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{p.hedge_rate != null ? p.hedge_rate.toFixed(4) : "—"}</div>
                   </div>
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>EXECUTION REF</div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{p.execution_ref || "—"}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 2 }}>EXECUTION REF</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{p.execution_ref || "—"}</div>
                   </div>
                   {st === "REJECTED" && p.rejection_reason && (
                     <div>
-                      <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.fail, letterSpacing: "0.08em", marginBottom: 2 }}>REJECTION REASON</div>
-                      <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>{p.rejection_reason}</div>
+                      <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail, letterSpacing: "0.08em", marginBottom: 2 }}>REJECTION REASON</div>
+                      <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{p.rejection_reason}</div>
                     </div>
                   )}
                   <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8, paddingTop: 4 }}>
                     <Link
                       href={`/lineage?position=${encodeURIComponent(p.id)}`}
                       style={{
-                        fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                         color: S.cyan, textDecoration: "none",
                         border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
                         padding: "2px 8px", borderRadius: 2,
@@ -1076,7 +1098,7 @@ export default function PositionDeskPage() {
                       <Link
                         href={`/run-viewer?id=${encodeURIComponent(p.last_run_id)}`}
                         style={{
-                          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                           color: S.purple, textDecoration: "none",
                           border: `1px solid color-mix(in srgb, ${S.purple} 30%, transparent)`,
                           padding: "2px 8px", borderRadius: 2,
@@ -1099,12 +1121,12 @@ export default function PositionDeskPage() {
         padding: "0 20px", gap: 16,
         background: S.bgPanel, borderTop: `1px solid ${S.rim}`,
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>
           POSITION DESK · 4-EYES · WORM AUDIT
         </span>
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{filteredPositions.length}/{positions.length} shown</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>/ search · R refresh · F filter · Esc clear</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{filteredPositions.length}/{positions.length} shown</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.rim }}>/ search · R refresh · F filter · Esc clear</span>
       </footer>
 
       {/* ═══════════════════════════════════════════════════════════════════════ */}
@@ -1159,7 +1181,7 @@ export default function PositionDeskPage() {
                     </button>
                   </div>
                 )}
-                <label style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, display: 'block', marginBottom: 4, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                <label style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, display: 'block', marginBottom: 4, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
                   Policy Instance *
                   {!activePolicyInstance && policyTemplates.length > 0 && (
                     <span style={{ color: S.amber, marginLeft: 8, fontSize: '0.5625rem' }}>
@@ -1216,8 +1238,8 @@ export default function PositionDeskPage() {
               </div>
             );
           })()}
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>Transition: {pos.execution_status} → POLICY_ASSIGNED</div>
-          {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 8 }}>Transition: {pos.execution_status} → POLICY_ASSIGNED</div>
+          {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
           <ModalActions onCancel={closeModal} onConfirm={handleAssignPolicy} confirmLabel="ASSIGN POLICY" confirmColor={S.cyan} disabled={!policyId.trim() || isTransitioning} />
         </ModalOverlay>
       )}
@@ -1226,7 +1248,7 @@ export default function PositionDeskPage() {
       {modal.type === "proposal-info" && pos && (
         <ModalOverlay onClose={closeModal}>
           <ModalHeader title="4-Eyes Execution Proposal" subtitle={`${pos.record_id} · ${pos.entity} (${pos.currency})`} />
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, padding: "8px 12px", border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 14, lineHeight: 1.7 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, padding: "8px 12px", border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 14, lineHeight: 1.7 }}>
             <strong>4-Eyes Workflow Required — Segregation of Duties</strong><br />
             Execution to HEDGED requires a formal approval chain:<br /><br />
             1 · Maker submits: POST /v1/proposals<br />
@@ -1235,15 +1257,15 @@ export default function PositionDeskPage() {
             SoD enforced at DB layer (approver ≠ proposer).<br />
             Proposal hash + approval hash chained for tamper evidence.
           </div>
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, padding: "6px 10px", border: `1px solid ${S.rim}`, marginBottom: 14, lineHeight: 1.6 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, padding: "6px 10px", border: `1px solid ${S.rim}`, marginBottom: 14, lineHeight: 1.6 }}>
             Position ID: {pos.id}<br />
             Policy: {pos.policy_id ?? "—"}<br />
             Last Run: {pos.last_run_id ?? "—"}<br />
             Hedge Amount: {pos.hedge_amount != null ? fmtAmt(pos.hedge_amount) : "not set"}
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <button onClick={closeModal} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Close</button>
-            <button onClick={() => { closeModal(); router.push("/hedge-desk"); }} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: S.pass, border: "none", padding: "6px 14px", cursor: "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>HEDGE DESK</button>
+            <button onClick={closeModal} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, padding: "6px 14px", cursor: "pointer" }}>Close</button>
+            <button onClick={() => { closeModal(); router.push("/hedge-desk"); }} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.bgDeep, background: S.pass, border: "none", padding: "6px 14px", cursor: "pointer", fontWeight: 700, letterSpacing: "0.04em" }}>HEDGE DESK</button>
           </div>
         </ModalOverlay>
       )}
@@ -1259,8 +1281,8 @@ export default function PositionDeskPage() {
             placeholder="e.g. Counterparty credit limit exceeded"
             error={rejectReason.length > 0 && rejectReason.trim().length < 5 ? "Minimum 5 characters required" : undefined}
           />
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>Transition: {pos.execution_status} → REJECTED (can be reopened)</div>
-          {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 8 }}>Transition: {pos.execution_status} → REJECTED (can be reopened)</div>
+          {lifecycleError && <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail, marginBottom: 10, padding: "4px 8px", border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)` }}>{lifecycleError}</div>}
           <ModalActions onCancel={closeModal} onConfirm={handleReject} confirmLabel="REJECT POSITION" confirmColor={S.fail} disabled={rejectReason.trim().length < 5 || isTransitioning} />
         </ModalOverlay>
       )}
@@ -1287,12 +1309,12 @@ export default function PositionDeskPage() {
                 placeholder="e.g. Outside hedge policy window — defer to next cycle"
                 error={bulkRejectReason.length > 0 && bulkRejectReason.trim().length < 5 ? "Minimum 5 characters required" : undefined}
               />
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 12 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 12 }}>
                 Transition: NEW / POLICY_ASSIGNED / READY_TO_EXECUTE → REJECTED (can be reopened individually)
               </div>
               {bulkRejecting && (
                 <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, marginBottom: 6, letterSpacing: '0.06em' }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, marginBottom: 6, letterSpacing: '0.06em' }}>
                     REJECTING… {bulkRejectProgress}/{rejectableIds.length}
                   </div>
                   <div style={{ height: 4, background: S.bgSub, borderRadius: 2, overflow: 'hidden' }}>
@@ -1303,13 +1325,13 @@ export default function PositionDeskPage() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
                 <button
                   onClick={() => { if (!bulkRejecting) { setBulkRejectOpen(false); setBulkRejectResult(null); } }}
-                  style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: bulkRejecting ? 'not-allowed' : 'pointer' }}>
+                  style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: bulkRejecting ? 'not-allowed' : 'pointer' }}>
                   Cancel
                 </button>
                 <button
                   onClick={handleBulkReject}
                   disabled={bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0}
-                  style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0 ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0 ? 'not-allowed' : 'pointer' }}>
+                  style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0 ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: bulkRejectReason.trim().length < 5 || bulkRejecting || rejectableIds.length === 0 ? 'not-allowed' : 'pointer' }}>
                   {bulkRejecting ? `REJECTING ${bulkRejectProgress}/${rejectableIds.length}…` : `REJECT ${rejectableIds.length} POSITIONS`}
                 </button>
               </div>
@@ -1317,18 +1339,18 @@ export default function PositionDeskPage() {
             {bulkRejectResult && (
               <div>
                 <div style={{ padding: '10px 14px', border: `1px solid ${bulkRejectResult.failed > 0 ? S.fail : S.pass}`, background: `color-mix(in srgb, ${bulkRejectResult.failed > 0 ? S.fail : S.pass} 6%, transparent)`, marginBottom: 14 }}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: bulkRejectResult.failed > 0 ? S.fail : S.pass, letterSpacing: '0.06em', marginBottom: 4 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: bulkRejectResult.failed > 0 ? S.fail : S.pass, letterSpacing: '0.06em', marginBottom: 4 }}>
                     RESULT: {bulkRejectResult.rejected} REJECTED · {bulkRejectResult.skipped} SKIPPED · {bulkRejectResult.failed} FAILED
                   </div>
                   {bulkRejectResult.errors.length > 0 && (
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, maxHeight: 80, overflowY: 'auto' }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, maxHeight: 80, overflowY: 'auto' }}>
                       {bulkRejectResult.errors.map((e, i) => <div key={i}>{e}</div>)}
                     </div>
                   )}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button onClick={() => { setBulkRejectOpen(false); setBulkRejectResult(null); }}
-                    style={{ fontFamily: S.fontMono, fontSize: 11, color: S.bgDeep, background: S.pass, border: 'none', padding: '6px 18px', cursor: 'pointer', fontWeight: 700 }}>
+                    style={{ fontFamily: S.fontMono, fontSize: 12, color: S.bgDeep, background: S.pass, border: 'none', padding: '6px 18px', cursor: 'pointer', fontWeight: 700 }}>
                     Done
                   </button>
                 </div>
@@ -1345,25 +1367,25 @@ export default function PositionDeskPage() {
         return (
           <ModalOverlay onClose={() => { if (!deleteRunning) setDeleteConfirmId(null); }}>
             <ModalHeader title="Remove Position" subtitle={`${p.record_id} · ${p.entity} (${p.currency})`} />
-            <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, lineHeight: 1.6, marginBottom: 16 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, lineHeight: 1.6, marginBottom: 16 }}>
               This will <strong style={{ color: S.primary }}>permanently remove</strong> this position from the active view.<br />
               The position will be soft-deleted ({'"'}is_active = false{'"'}) — it cannot be recovered from the UI but remains in the database for audit compliance.<br /><br />
               <span style={{ color: S.tertiary }}>Rejection reason: {p.rejection_reason || '(none recorded)'}</span>
             </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, padding: '6px 10px', border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 16 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, padding: '6px 10px', border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 16 }}>
               WORM audit trail preserved. This action is irreversible via UI.
             </div>
             {deleteError && (
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail, marginBottom: 12, padding: '6px 10px', border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, lineHeight: 1.5 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail, marginBottom: 12, padding: '6px 10px', border: `1px solid ${S.fail}`, background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, lineHeight: 1.5 }}>
                 {deleteError}
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button onClick={() => { setDeleteConfirmId(null); setDeleteError(null); }} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: 'pointer' }}>
+              <button onClick={() => { setDeleteConfirmId(null); setDeleteError(null); }} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: 'pointer' }}>
                 Cancel
               </button>
               <button onClick={handleDeletePosition} disabled={deleteRunning} data-testid="confirm-delete"
-                style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: deleteRunning ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: deleteRunning ? 'not-allowed' : 'pointer' }}>
+                style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', color: '#fff', background: deleteRunning ? S.tertiary : S.fail, border: 'none', padding: '6px 14px', cursor: deleteRunning ? 'not-allowed' : 'pointer' }}>
                 {deleteRunning ? 'REMOVING…' : 'CONFIRM DELETE'}
               </button>
             </div>
@@ -1395,11 +1417,11 @@ export default function PositionDeskPage() {
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
                 {!activePolicyInstance && policyTemplates.length > 0 && (
-                  <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, padding: '6px 10px', border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 4 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, padding: '6px 10px', border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, marginBottom: 4 }}>
                     NO ACTIVE POLICY — activate one on the Policies page first
                   </div>
                 )}
-                <label style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, display: 'block', marginBottom: 4, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
+                <label style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, display: 'block', marginBottom: 4, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
                   Select Policy Instance *
                 </label>
                 <input
@@ -1430,11 +1452,15 @@ export default function PositionDeskPage() {
                     {filteredBulkOthers.map(t => {
                       const instId = instanceIdFor(t);
                       return (
+                        <PageShell icon={LayoutDashboard} title="Position Desk" breadcrumb={["Dashboard", "Position Desk"]} noPadding>
+
                         <PolicySelectorRow key={t.id} tmpl={t}
                           isSelected={!!instId && bulkPolicyId === instId}
                           isFavorite={false} isActive={t.id === activeTemplateId}
                           onSelect={() => { if (instId) setBulkPolicyId(instId); }}
                         />
+                      
+                        </PageShell>
                       );
                     })}
                   </>)}
@@ -1455,33 +1481,52 @@ export default function PositionDeskPage() {
           })()}
           {bulkResult && (
             <div style={{ marginBottom: 14, padding: '8px 12px', border: `1px solid ${bulkResult.failed > 0 ? S.fail : S.pass}`, background: `color-mix(in srgb, ${bulkResult.failed > 0 ? S.fail : S.pass} 6%, transparent)` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: bulkResult.failed > 0 ? S.fail : S.pass, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 4 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: bulkResult.failed > 0 ? S.fail : S.pass, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 4 }}>
                 RESULT: {bulkResult.assigned} ASSIGNED · {bulkResult.skipped} SKIPPED · {bulkResult.failed} FAILED
               </div>
               {bulkResult.errors.length > 0 && (
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, maxHeight: 80, overflowY: 'auto' as const }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, maxHeight: 80, overflowY: 'auto' as const }}>
                   {bulkResult.errors.map((e, i) => <div key={i}>{e}</div>)}
                 </div>
               )}
             </div>
           )}
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 8 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 8 }}>
             Transitions: NEW → POLICY_ASSIGNED (positions in later states are skipped)
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
             <button onClick={() => { if (!bulkRunning) setBulkAssignOpen(false); }}
-              style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: bulkRunning ? 'not-allowed' : 'pointer' }}>
+              style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, background: 'transparent', border: `1px solid ${S.rim}`, padding: '6px 14px', cursor: bulkRunning ? 'not-allowed' : 'pointer' }}>
               {bulkResult && bulkResult.assigned > 0 ? 'Done' : 'Cancel'}
             </button>
             {!bulkResult && (
               <button onClick={handleBulkAssign}
                 disabled={!bulkPolicyId.trim() || bulkRunning}
-                style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: S.bgDeep, background: !bulkPolicyId.trim() || bulkRunning ? S.tertiary : S.cyan, border: 'none', padding: '6px 14px', cursor: !bulkPolicyId.trim() || bulkRunning ? 'not-allowed' : 'pointer' }}>
+                style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', color: S.bgDeep, background: !bulkPolicyId.trim() || bulkRunning ? S.tertiary : S.cyan, border: 'none', padding: '6px 14px', cursor: !bulkPolicyId.trim() || bulkRunning ? 'not-allowed' : 'pointer' }}>
                 {bulkRunning ? `ASSIGNING ${selected.size}…` : `ASSIGN TO ${selected.size} POSITIONS`}
               </button>
             )}
           </div>
         </ModalOverlay>
+      )}
+      {/* ── Add Position Drawer ──────────────────────────────────────────── */}
+      {token && (
+        <AddPositionDrawer
+          open={showAdd}
+          onClose={() => setShowAdd(false)}
+          token={token}
+          onSuccess={() => { if (token) dispatch(listPositionsThunk({ token })); }}
+        />
+      )}
+
+      {/* ── Import CSV Modal ──────────────────────────────────────────────── */}
+      {token && (
+        <ImportCsvModal
+          open={showImport}
+          onClose={() => setShowImport(false)}
+          token={token}
+          onSuccess={() => { if (token) dispatch(listPositionsThunk({ token })); }}
+        />
       )}
     </div>
     <HelpPanelV2 module={POSITIONS_HELP} storageKey="position-desk" />

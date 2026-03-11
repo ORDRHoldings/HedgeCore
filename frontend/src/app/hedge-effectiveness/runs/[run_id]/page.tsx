@@ -19,6 +19,9 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import dynamic from "next/dynamic";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Play } from "lucide-react";
+
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 // ── Design Tokens ─────────────────────────────────────────────────────────
@@ -176,18 +179,22 @@ export default function HedgeEffectivenessRunPage() {
 
   if (loading) {
     return (
+
+    
       <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: S.deep }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
           <div style={{
             width: 32, height: 32, border: `2px solid ${S.rim}`, borderTopColor: S.cyan,
             borderRadius: "50%", animation: "spin 0.8s linear infinite",
           }} />
-          <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, letterSpacing: "0.1em" }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, letterSpacing: "0.1em" }}>
             LOADING ASSESSMENT
           </span>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       </div>
+    
+    
     );
   }
 
@@ -217,7 +224,7 @@ export default function HedgeEffectivenessRunPage() {
             <button
               onClick={() => router.push("/hedge-effectiveness?tab=runs")}
               style={{
-                fontFamily: S.mono, fontSize: 10, fontWeight: 600, color: S.text3,
+                fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.text3,
                 background: S.sub, border: `1px solid ${S.rim}`,
                 padding: "4px 12px", borderRadius: 3, cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 4,
@@ -230,11 +237,11 @@ export default function HedgeEffectivenessRunPage() {
               BACK
             </button>
             <div style={{ width: 1, height: 16, background: S.soft }} />
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 600, color: S.text3, letterSpacing: "0.12em" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.text3, letterSpacing: "0.12em" }}>
               EFFECTIVENESS ASSESSMENT
             </span>
             <div style={{ flex: 1 }} />
-            <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
               {run.created_at ? new Date(run.created_at).toLocaleString() : ""}
             </span>
           </div>
@@ -268,7 +275,7 @@ export default function HedgeEffectivenessRunPage() {
                 {run.dataset_name}
                 {run.currency_pair && (
                   <span style={{
-                    fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.cyan,
+                    fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.cyan,
                     marginLeft: 10, padding: "2px 8px", borderRadius: 3,
                     background: "rgba(28,98,242,0.06)", border: "1px solid rgba(28,98,242,0.15)",
                   }}>
@@ -276,7 +283,7 @@ export default function HedgeEffectivenessRunPage() {
                   </span>
                 )}
               </div>
-              <div style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, marginTop: 3, display: "flex", gap: 16 }}>
+              <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, marginTop: 3, display: "flex", gap: 16 }}>
                 <span>{run.standard}</span>
                 <span style={{ color: S.rim }}>\u2502</span>
                 <span>{run.hedge_type.replace(/_/g, " ").toUpperCase()}</span>
@@ -288,9 +295,9 @@ export default function HedgeEffectivenessRunPage() {
             </div>
 
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: S.mono, fontSize: 9, color: S.text3, letterSpacing: "0.08em" }}>RUN HASH</div>
+              <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, letterSpacing: "0.08em" }}>RUN HASH</div>
               <div style={{
-                fontFamily: S.mono, fontSize: 10, color: S.text2, marginTop: 2,
+                fontFamily: S.mono, fontSize: 12, color: S.text2, marginTop: 2,
                 padding: "2px 8px", background: S.sub, borderRadius: 2,
               }}>
                 {run.run_hash?.slice(0, 20)}...
@@ -346,7 +353,7 @@ export default function HedgeEffectivenessRunPage() {
                 }} />
               )}
               <div style={{
-                fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3,
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
                 letterSpacing: "0.14em", marginBottom: 4,
               }}>
                 {kpi.label}
@@ -357,7 +364,7 @@ export default function HedgeEffectivenessRunPage() {
               }}>
                 {kpi.value != null ? kpi.fmt(kpi.value) : "\u2014"}
               </div>
-              <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 2 }}>
+              <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, marginTop: 2 }}>
                 {kpi.sub}
               </div>
             </div>
@@ -376,7 +383,7 @@ export default function HedgeEffectivenessRunPage() {
               key={t.key}
               onClick={() => setActiveSection(t.key)}
               style={{
-                fontFamily: S.mono, fontSize: 10, fontWeight: activeSection === t.key ? 700 : 500,
+                fontFamily: S.mono, fontSize: 12, fontWeight: activeSection === t.key ? 700 : 500,
                 letterSpacing: "0.1em", color: activeSection === t.key ? HEX.cyan : S.text3,
                 padding: "10px 18px", background: "transparent", border: "none",
                 borderBottom: activeSection === t.key ? `2px solid ${HEX.cyan}` : "2px solid transparent",
@@ -420,7 +427,7 @@ function ResultsSection({ run, narrative, periods }: { run: RunDetail; narrative
           borderLeft: `3px solid ${run.overall_effective ? HEX.green : HEX.red}`,
         }}>
           <div style={{
-            fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3,
+            fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
             letterSpacing: "0.14em", marginBottom: 6,
           }}>
             DETERMINATION NARRATIVE
@@ -439,18 +446,18 @@ function ResultsSection({ run, narrative, periods }: { run: RunDetail; narrative
           background: S.panel, border: `1px solid ${S.rim}`,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
               CUMULATIVE EFFECTIVENESS RATIO OVER TIME
             </span>
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{ width: 12, height: 2, background: HEX.cyan, borderRadius: 1 }} />
-                <span style={{ fontFamily: S.mono, fontSize: 8, color: S.text3 }}>Cumulative Ratio</span>
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>Cumulative Ratio</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{ width: 12, height: 8, background: "rgba(5,150,105,0.1)", border: "1px solid rgba(5,150,105,0.25)", borderRadius: 1 }} />
-                <span style={{ fontFamily: S.mono, fontSize: 8, color: S.text3 }}>Effective Band (0.80 - 1.25)</span>
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>Effective Band (0.80 - 1.25)</span>
               </div>
             </div>
           </div>
@@ -463,7 +470,7 @@ function ResultsSection({ run, narrative, periods }: { run: RunDetail; narrative
           background: S.panel, border: `1px solid ${S.rim}`,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
               DOLLAR-OFFSET METHOD
             </span>
             {run.dollar_offset_effective != null && (
@@ -472,10 +479,10 @@ function ResultsSection({ run, narrative, periods }: { run: RunDetail; narrative
           </div>
           <DollarOffsetGauge ratio={run.dollar_offset_ratio} effective={run.dollar_offset_effective} />
           <div style={{ textAlign: "center", marginTop: 8 }}>
-            <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, lineHeight: 1.6 }}>
+            <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, lineHeight: 1.6 }}>
               Ratio = -\u03A3(Instrument \u0394FV) / \u03A3(Hedged Item \u0394FV)
             </div>
-            <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>
+            <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
               Effective band: <strong style={{ color: S.text2 }}>0.80 \u2014 1.25</strong>
             </div>
           </div>
@@ -487,12 +494,12 @@ function ResultsSection({ run, narrative, periods }: { run: RunDetail; narrative
           background: S.panel, border: `1px solid ${S.rim}`,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
               REGRESSION METHOD
             </span>
             {run.regression_method === "regression_insufficient_data" ? (
               <span style={{
-                fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.1em",
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                 padding: "2px 8px", borderRadius: 2, background: S.sub, color: S.text3,
               }}>
                 INSUFFICIENT DATA
@@ -510,10 +517,10 @@ function ResultsSection({ run, narrative, periods }: { run: RunDetail; narrative
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={HEX.text3} strokeWidth="1.5" opacity="0.4">
                 <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
               </svg>
-              <div style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, textAlign: "center" }}>
+              <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, textAlign: "center" }}>
                 Requires <strong style={{ color: S.text2 }}>30+ data points</strong> for regression analysis
                 <br />
-                <span style={{ fontSize: 10 }}>Current dataset: {run.period_count} periods</span>
+                <span style={{ fontSize: 12 }}>Current dataset: {run.period_count} periods</span>
               </div>
             </div>
           ) : (
@@ -529,18 +536,18 @@ function ResultsSection({ run, narrative, periods }: { run: RunDetail; narrative
           background: S.panel, border: `1px solid ${S.rim}`,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
               PERIOD-BY-PERIOD FAIR VALUE CHANGES
             </span>
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{ width: 10, height: 10, background: HEX.cyan, borderRadius: 2 }} />
-                <span style={{ fontFamily: S.mono, fontSize: 8, color: S.text3 }}>Hedged Item</span>
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>Hedged Item</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{ width: 10, height: 10, background: HEX.amberLight, borderRadius: 2 }} />
-                <span style={{ fontFamily: S.mono, fontSize: 8, color: S.text3 }}>Instrument</span>
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>Instrument</span>
               </div>
             </div>
           </div>
@@ -555,7 +562,7 @@ function ResultsSection({ run, narrative, periods }: { run: RunDetail; narrative
 function PassFailBadge({ pass }: { pass: boolean }) {
   return (
     <span style={{
-      fontFamily: S.mono, fontSize: 8, fontWeight: 800, letterSpacing: "0.12em",
+      fontFamily: S.mono, fontSize: 12, fontWeight: 800, letterSpacing: "0.12em",
       padding: "2px 8px", borderRadius: 2,
       background: pass ? HEX.greenBg : HEX.redBg,
       color: pass ? HEX.green : HEX.red,
@@ -583,7 +590,7 @@ function CumulativeRatioChart({ periods }: { periods: PeriodData[] }) {
       backgroundColor: "#FFFFFFEE",
       borderColor: HEX.border,
       borderWidth: 1,
-      textStyle: { color: HEX.text1, fontSize: 11, fontFamily: "'IBM Plex Mono', monospace" },
+      textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
       extraCssText: "box-shadow: 0 4px 20px rgba(0,0,0,0.08);",
       formatter: (params: Array<{ name: string; value: number | null; color: string }>) => {
         const p = params[0];
@@ -599,7 +606,7 @@ function CumulativeRatioChart({ periods }: { periods: PeriodData[] }) {
     xAxis: {
       type: "category" as const,
       data: labels,
-      axisLabel: { color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace", rotate: labels.length > 10 ? 30 : 0 },
+      axisLabel: { color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", rotate: labels.length > 10 ? 30 : 0 },
       axisLine: { lineStyle: { color: HEX.border } },
       axisTick: { show: false },
     },
@@ -607,7 +614,7 @@ function CumulativeRatioChart({ periods }: { periods: PeriodData[] }) {
       type: "value" as const,
       min: (v: { min: number }) => Math.max(0, Math.floor((v.min - 0.1) * 10) / 10),
       max: (v: { max: number }) => Math.min(3, Math.ceil((v.max + 0.1) * 10) / 10),
-      axisLabel: { color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace", formatter: (v: number) => v.toFixed(2) },
+      axisLabel: { color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", formatter: (v: number) => v.toFixed(2) },
       splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.5 } },
     },
     series: [
@@ -680,7 +687,7 @@ function CumulativeRatioChart({ periods }: { periods: PeriodData[] }) {
     label: {
       position: "insideEndTop",
       fontFamily: "'IBM Plex Mono', monospace",
-      fontSize: 9,
+      fontSize: 12,
     },
     data: [
       {
@@ -784,7 +791,7 @@ function DollarOffsetGauge({ ratio, effective }: { ratio: number | null; effecti
         },
         axisLabel: {
           color: HEX.text3,
-          fontSize: 9,
+          fontSize: 12,
           fontFamily: "'IBM Plex Mono', monospace",
           distance: 22,
           formatter: (v: number) => {
@@ -793,7 +800,7 @@ function DollarOffsetGauge({ ratio, effective }: { ratio: number | null; effecti
             return "";
           },
           rich: {
-            band: { color: HEX.green, fontWeight: "bold" as const, fontSize: 10 },
+            band: { color: HEX.green, fontWeight: "bold" as const, fontSize: 12 },
           },
         },
         title: { show: false },
@@ -839,12 +846,12 @@ function RegressionPanel({ run, periods }: { run: RunDetail; periods: PeriodData
           }}>
             <AnimatedNumber value={run.regression_r_squared} />
           </div>
-          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginTop: 4 }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginTop: 4 }}>
             R-SQUARED (R\u00B2)
           </div>
           {run.regression_r_squared != null && (
             <div style={{
-              fontFamily: S.mono, fontSize: 9, marginTop: 6,
+              fontFamily: S.mono, fontSize: 12, marginTop: 6,
               color: run.regression_r_squared >= 0.80 ? HEX.green : HEX.red,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
             }}>
@@ -862,12 +869,12 @@ function RegressionPanel({ run, periods }: { run: RunDetail; periods: PeriodData
           }}>
             <AnimatedNumber value={run.regression_slope} />
           </div>
-          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginTop: 4 }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.12em", marginTop: 4 }}>
             SLOPE (\u03B2)
           </div>
           {run.regression_slope != null && (
             <div style={{
-              fontFamily: S.mono, fontSize: 9, marginTop: 6,
+              fontFamily: S.mono, fontSize: 12, marginTop: 6,
               color: (run.regression_slope >= -1.25 && run.regression_slope <= -0.80) ? HEX.green : HEX.red,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
             }}>
@@ -907,7 +914,7 @@ function RegressionScatter({ periods, slope }: { periods: PeriodData[]; slope: n
       backgroundColor: "#FFFFFFEE",
       borderColor: HEX.border,
       borderWidth: 1,
-      textStyle: { color: HEX.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
       formatter: (params: { value: number[] }) => {
         return `Hedged: ${params.value[0]?.toLocaleString()}<br/>Instrument: ${params.value[1]?.toLocaleString()}`;
       },
@@ -918,8 +925,8 @@ function RegressionScatter({ periods, slope }: { periods: PeriodData[]; slope: n
       name: "Hedged Item \u0394FV",
       nameLocation: "center" as const,
       nameGap: 24,
-      nameTextStyle: { color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace" },
-      axisLabel: { color: HEX.text3, fontSize: 8, fontFamily: "'IBM Plex Mono', monospace", formatter: (v: number) => v >= 1000 || v <= -1000 ? `${(v / 1000).toFixed(0)}K` : v.toFixed(0) },
+      nameTextStyle: { color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
+      axisLabel: { color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", formatter: (v: number) => v >= 1000 || v <= -1000 ? `${(v / 1000).toFixed(0)}K` : v.toFixed(0) },
       axisLine: { lineStyle: { color: HEX.border } },
       splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.4 } },
     },
@@ -928,8 +935,8 @@ function RegressionScatter({ periods, slope }: { periods: PeriodData[]; slope: n
       name: "Instrument \u0394FV",
       nameLocation: "center" as const,
       nameGap: 42,
-      nameTextStyle: { color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace" },
-      axisLabel: { color: HEX.text3, fontSize: 8, fontFamily: "'IBM Plex Mono', monospace", formatter: (v: number) => v >= 1000 || v <= -1000 ? `${(v / 1000).toFixed(0)}K` : v.toFixed(0) },
+      nameTextStyle: { color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
+      axisLabel: { color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", formatter: (v: number) => v >= 1000 || v <= -1000 ? `${(v / 1000).toFixed(0)}K` : v.toFixed(0) },
       splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.4 } },
     },
     series: [
@@ -991,21 +998,21 @@ function PeriodBarChart({ periods }: { periods: PeriodData[] }) {
       backgroundColor: "#FFFFFFEE",
       borderColor: HEX.border,
       borderWidth: 1,
-      textStyle: { color: HEX.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
       extraCssText: "box-shadow: 0 4px 20px rgba(0,0,0,0.08);",
     },
     grid: { left: 56, right: 20, top: 20, bottom: 32, containLabel: false },
     xAxis: {
       type: "category" as const,
       data: labels,
-      axisLabel: { color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace", rotate: labels.length > 8 ? 30 : 0 },
+      axisLabel: { color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", rotate: labels.length > 8 ? 30 : 0 },
       axisLine: { lineStyle: { color: HEX.border } },
       axisTick: { show: false },
     },
     yAxis: {
       type: "value" as const,
       axisLabel: {
-        color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace",
         formatter: (v: number) => Math.abs(v) >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : Math.abs(v) >= 1_000 ? `${(v / 1_000).toFixed(0)}K` : v.toFixed(0),
       },
       splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.5 } },
@@ -1077,10 +1084,10 @@ function PeriodsSection({ periods }: { periods: PeriodData[] }) {
   }
 
   const colStyle: React.CSSProperties = {
-    fontFamily: S.mono, fontSize: 11, color: S.text2, padding: "8px 0",
+    fontFamily: S.mono, fontSize: 12, color: S.text2, padding: "8px 0",
   };
   const headStyle: React.CSSProperties = {
-    fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3,
+    fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
     letterSpacing: "0.14em", padding: "8px 0",
   };
 
@@ -1169,7 +1176,7 @@ function ComplianceSection({ compliance, run }: { compliance: string[]; run: Run
         padding: 24, borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`,
       }}>
         <div style={{
-          fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3,
+          fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
           letterSpacing: "0.14em", marginBottom: 14,
           display: "flex", alignItems: "center", gap: 8,
         }}>
@@ -1188,7 +1195,7 @@ function ComplianceSection({ compliance, run }: { compliance: string[]; run: Run
                 background: S.sub, borderRadius: 4,
                 borderLeft: `2px solid ${HEX.cyan}`,
               }}>
-                <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.cyan, flexShrink: 0 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: HEX.cyan, flexShrink: 0 }}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <p style={{ fontFamily: S.ui, fontSize: 12, color: S.text1, lineHeight: 1.6, margin: 0 }}>
@@ -1205,7 +1212,7 @@ function ComplianceSection({ compliance, run }: { compliance: string[]; run: Run
         padding: 24, borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`,
       }}>
         <div style={{
-          fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3,
+          fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
           letterSpacing: "0.14em", marginBottom: 14,
           display: "flex", alignItems: "center", gap: 8,
         }}>
@@ -1231,13 +1238,13 @@ function ComplianceSection({ compliance, run }: { compliance: string[]; run: Run
               border: item.highlight ? `1px solid ${HEX.cyan}20` : "none",
             }}>
               <div style={{
-                fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3,
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
                 letterSpacing: "0.12em", marginBottom: 4,
               }}>
                 {item.label}
               </div>
               <div style={{
-                fontFamily: S.mono, fontSize: 10, color: item.highlight ? HEX.cyan : S.text2,
+                fontFamily: S.mono, fontSize: 12, color: item.highlight ? HEX.cyan : S.text2,
                 wordBreak: "break-all", lineHeight: 1.4,
               }}>
                 {item.value}
@@ -1254,7 +1261,7 @@ function ComplianceSection({ compliance, run }: { compliance: string[]; run: Run
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={HEX.green} strokeWidth="2">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/>
           </svg>
-          <span style={{ fontFamily: S.mono, fontSize: 10, color: HEX.green }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.green }}>
             WORM-sealed record \u2014 immutable, append-only, tamper-evident
           </span>
         </div>
@@ -1284,7 +1291,7 @@ function TraceSection({
   return (
     <div style={{ maxWidth: 900 }}>
       <div style={{
-        fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3,
+        fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
         letterSpacing: "0.14em", marginBottom: 16,
         display: "flex", alignItems: "center", gap: 8,
       }}>
@@ -1304,6 +1311,8 @@ function TraceSection({
         {traces.map((t, i) => {
           const color = stepColor(t.step);
           return (
+            <PageShell icon={Play} title="Effectiveness Detail" breadcrumb={["Hedge Effectiveness", "Run Detail"]} noPadding>
+
             <div key={i} style={{
               display: "flex", gap: 16, marginBottom: 12, position: "relative",
             }}>
@@ -1323,13 +1332,13 @@ function TraceSection({
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <span style={{
-                    fontFamily: S.mono, fontSize: 8, fontWeight: 800, letterSpacing: "0.12em",
+                    fontFamily: S.mono, fontSize: 12, fontWeight: 800, letterSpacing: "0.12em",
                     padding: "1px 8px", borderRadius: 2, background: S.sub, color: S.text3,
                   }}>
                     STEP {i + 1}
                   </span>
                   <span style={{
-                    fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: color,
+                    fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: color,
                   }}>
                     {t.step}
                   </span>
@@ -1340,13 +1349,13 @@ function TraceSection({
                 {Object.keys(t.data).length > 0 && (
                   <details>
                     <summary style={{
-                      fontFamily: S.mono, fontSize: 9, color: S.text3, cursor: "pointer",
+                      fontFamily: S.mono, fontSize: 12, color: S.text3, cursor: "pointer",
                       padding: "4px 0", userSelect: "none",
                     }}>
                       DATA PAYLOAD
                     </summary>
                     <pre style={{
-                      fontFamily: S.mono, fontSize: 9, color: S.text3, margin: "4px 0 0",
+                      fontFamily: S.mono, fontSize: 12, color: S.text3, margin: "4px 0 0",
                       whiteSpace: "pre-wrap", wordBreak: "break-all",
                       background: S.sub, padding: 10, borderRadius: 3,
                       maxHeight: 200, overflow: "auto",
@@ -1357,6 +1366,8 @@ function TraceSection({
                 )}
               </div>
             </div>
+          
+            </PageShell>
           );
         })}
       </div>

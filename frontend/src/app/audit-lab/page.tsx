@@ -8,6 +8,8 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { PageShell } from "@/components/layout/PageShell";
+import { Microscope } from "lucide-react";
 
 const S = {
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -48,7 +50,7 @@ interface DecisionRun {
 function Badge({ label, color }: { label: string; color: string }) {
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
       color, background: `color-mix(in srgb, ${color} 12%, transparent)`,
       border: `1px solid color-mix(in srgb, ${color} 25%, transparent)`,
       padding: "1px 6px", borderRadius: 2,
@@ -59,7 +61,7 @@ function Badge({ label, color }: { label: string; color: string }) {
 function SectionHeader({ label }: { label: string }) {
   return (
     <div style={{
-      fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em",
       color: S.tertiary, textTransform: "uppercase", paddingBottom: 8,
       borderBottom: `1px solid ${S.soft}`, marginBottom: 12,
     }}>{label}</div>
@@ -100,15 +102,13 @@ export default function AuditLabPage() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div style={{
-      minHeight: "100vh", background: S.bgDeep, fontFamily: S.fontUI,
-      padding: "32px 40px",
-    }}>
+    <PageShell icon={Microscope} title="Audit Lab" breadcrumb={["Dashboard", "Audit Lab"]}>
+      <div style={{ fontFamily: S.fontUI }}>
       {/* Page header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: S.tertiary }}>AUDIT LAB</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.tertiary }}>AUDIT LAB</span>
             <Badge label="BETA" color={S.amber} />
           </div>
           <h1 style={{ fontFamily: S.fontMono, fontSize: 22, fontWeight: 700, color: S.primary, margin: 0, letterSpacing: "-0.02em" }}>
@@ -158,7 +158,7 @@ export default function AuditLabPage() {
                       <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 600, color: S.primary, marginBottom: 3 }}>
                         {ds.source_filename}
                       </div>
-                      <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginBottom: 6 }}>
+                      <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 6 }}>
                         {ds.period_start} → {ds.period_end} · {ds.row_count} rows
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
@@ -168,13 +168,13 @@ export default function AuditLabPage() {
                       </div>
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
-                      <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginBottom: 6 }}>
+                      <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 6 }}>
                         {new Date(ds.created_at).toLocaleDateString()}
                       </div>
                       <Link
                         href={`/audit-lab/upload?dataset_id=${ds.id}`}
                         style={{
-                          fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                           color: S.cyan, textDecoration: "none",
                           border: `1px solid color-mix(in srgb, var(--accent-cyan) 30%, transparent)`,
                           padding: "3px 10px", borderRadius: 2,
@@ -213,10 +213,10 @@ export default function AuditLabPage() {
                     onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = S.soft}
                     >
                       <div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, marginBottom: 3, fontWeight: 600 }}>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, marginBottom: 3, fontWeight: 600 }}>
                           {run.run_id.slice(0, 16)}…
                         </div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                           v{run.methodology_version} · {new Date(run.created_at).toLocaleString()}
                         </div>
                       </div>
@@ -230,6 +230,7 @@ export default function AuditLabPage() {
 
         </div>
       )}
-    </div>
+      </div>
+    </PageShell>
   );
 }

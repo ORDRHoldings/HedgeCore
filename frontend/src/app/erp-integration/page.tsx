@@ -15,6 +15,9 @@ import HelpPanel from "@/components/layout/HelpPanel";
 import { ERP_INTEGRATION_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { LayoutDashboard } from "lucide-react";
+
 // -- Hydration-safe timestamp hook ------------------------------------------------
 function useRenderTs(): string {
   const [renderTs, setRenderTs] = useState("");
@@ -140,7 +143,7 @@ function badge(
 ): React.CSSProperties {
   return {
     fontFamily:    S.fontMono,
-    fontSize:      9,
+    fontSize: 12,
     fontWeight:    700,
     letterSpacing: "0.08em",
     color,
@@ -166,7 +169,7 @@ function connStatusColor(status: ConnStatus): string {
 // -- Shared input styles ----------------------------------------------------------
 const labelStyle: React.CSSProperties = {
   fontFamily:    S.fontMono,
-  fontSize:      10,
+  fontSize: 12,
   fontWeight:    600,
   letterSpacing: "0.08em",
   color:         S.tertiary,
@@ -198,7 +201,7 @@ const selectStyle: React.CSSProperties = {
 
 const smallSelectStyle: React.CSSProperties = {
   ...selectStyle,
-  fontSize:    11,
+  fontSize: 12,
   padding:     "4px 24px 4px 6px",
   width:       "100%",
   height:      26,
@@ -450,15 +453,7 @@ export default function ERPIntegrationPage() {
   // ==========================================================================
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-    <div style={{
-      minHeight:  "100vh",
-      display:    "flex",
-      flexDirection: "column",
-      background: S.bgDeep,
-      fontFamily: S.fontUI,
-      color:      S.primary,
-      flex:       1,
-    }}>
+    <PageShell icon={LayoutDashboard} title="ERP Integration" breadcrumb={["Connectors","ERP"]}>
 
       {/* ====== TopBar (44px) ====== */}
       <header style={{
@@ -477,7 +472,7 @@ export default function ERPIntegrationPage() {
           onClick={() => router.back()}
           style={{
             fontFamily:    S.fontMono,
-            fontSize:      10,
+            fontSize: 12,
             color:         S.tertiary,
             background:    "transparent",
             border:        `1px solid ${S.rim}`,
@@ -509,7 +504,7 @@ export default function ERPIntegrationPage() {
           }}>
             ERP Integration
           </div>
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, letterSpacing: "0.07em", color: S.tertiary }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.07em", color: S.tertiary }}>
             POSITION DESK &gt; ERP INTEGRATION
           </div>
         </div>
@@ -534,17 +529,17 @@ export default function ERPIntegrationPage() {
               gap:          1,
               borderRight:  i < arr.length - 1 ? `1px solid ${S.rim}` : "none",
             }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.05em" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.05em" }}>
                 {label}
               </span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color, lineHeight: 1 }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color, lineHeight: 1 }}>
                 {value}
               </span>
             </div>
           ))}
         </div>
 
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>{renderTs}</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{renderTs}</span>
       </header>
 
       {/* ====== Tab Bar (36px) ====== */}
@@ -618,7 +613,7 @@ export default function ERPIntegrationPage() {
               alignItems:    "center",
               justifyContent: "space-between",
             }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.08em", color: S.tertiary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                 CONNECTION CONFIGURATION — {activeTab.toUpperCase()}
               </span>
               <span style={badge(currentStatus, connStatusColor(currentStatus))}>
@@ -703,7 +698,7 @@ export default function ERPIntegrationPage() {
                         onClick={() => handleAuthorize(activeTab)}
                         style={{
                           fontFamily:    S.fontMono,
-                          fontSize:      11,
+                          fontSize: 12,
                           fontWeight:    600,
                           letterSpacing: "0.06em",
                           color:         S.amber,
@@ -730,7 +725,7 @@ export default function ERPIntegrationPage() {
                 </div>
                 <div style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      10,
+                  fontSize: 12,
                   color:         S.tertiary,
                   marginTop:     4,
                   letterSpacing: "0.04em",
@@ -753,13 +748,13 @@ export default function ERPIntegrationPage() {
               justifyContent: "space-between",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.08em", color: S.tertiary }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                   FIELD MAPPING — {activeTab.toUpperCase()} → ORDR TRADEROW
                 </span>
                 <span style={badge("MAPPED", S.pass)}>{mappedCount} MAPPED</span>
                 <span style={badge("PENDING", S.amber)}>{pendingCount} PENDING</span>
               </div>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                 {currentMappings.length} ROWS
               </span>
             </div>
@@ -776,7 +771,7 @@ export default function ERPIntegrationPage() {
                           padding:       "7px 12px",
                           textAlign:     "left",
                           fontFamily:    S.fontMono,
-                          fontSize:      9,
+                          fontSize: 12,
                           letterSpacing: "0.07em",
                           color:         S.tertiary,
                           fontWeight:    600,
@@ -809,7 +804,7 @@ export default function ERPIntegrationPage() {
                           placeholder="ERP field name"
                           style={{
                             fontFamily:   S.fontMono,
-                            fontSize:     11,
+                            fontSize: 12,
                             color:        S.cyan,
                             background:   S.bgDeep,
                             border:       `1px solid ${S.rim}`,
@@ -898,7 +893,7 @@ export default function ERPIntegrationPage() {
                 onClick={addMappingRow}
                 style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      11,
+                  fontSize: 12,
                   fontWeight:    600,
                   letterSpacing: "0.06em",
                   color:         S.secondary,
@@ -917,7 +912,7 @@ export default function ERPIntegrationPage() {
                 onClick={handleSaveMapping}
                 style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      11,
+                  fontSize: 12,
                   fontWeight:    700,
                   letterSpacing: "0.06em",
                   color:         S.bgDeep,
@@ -953,7 +948,7 @@ export default function ERPIntegrationPage() {
                 disabled={!currentConfig.endpointUrl || testState === "loading"}
                 style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      11,
+                  fontSize: 12,
                   fontWeight:    600,
                   letterSpacing: "0.06em",
                   color:         !currentConfig.endpointUrl ? S.tertiary : S.cyan,
@@ -984,7 +979,7 @@ export default function ERPIntegrationPage() {
               {testState === "success" && testResult && (
                 <div style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      10,
+                  fontSize: 12,
                   fontWeight:    600,
                   letterSpacing: "0.06em",
                   color:         S.pass,
@@ -1000,7 +995,7 @@ export default function ERPIntegrationPage() {
               {testState === "failed" && testResult && (
                 <div style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      10,
+                  fontSize: 12,
                   fontWeight:    600,
                   letterSpacing: "0.06em",
                   color:         S.fail,
@@ -1022,7 +1017,7 @@ export default function ERPIntegrationPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{
                 fontFamily:    S.fontMono,
-                fontSize:      10,
+                fontSize: 12,
                 fontWeight:    600,
                 letterSpacing: "0.08em",
                 color:         S.tertiary,
@@ -1051,7 +1046,7 @@ export default function ERPIntegrationPage() {
               disabled={!currentConfig.endpointUrl || syncState === "syncing"}
               style={{
                 fontFamily:    S.fontMono,
-                fontSize:      11,
+                fontSize: 12,
                 fontWeight:    600,
                 letterSpacing: "0.06em",
                 color:         !currentConfig.endpointUrl ? S.tertiary : syncColor(),
@@ -1076,7 +1071,7 @@ export default function ERPIntegrationPage() {
               onClick={handleSave}
               style={{
                 fontFamily:    S.fontMono,
-                fontSize:      11,
+                fontSize: 12,
                 fontWeight:    700,
                 letterSpacing: "0.06em",
                 color:         S.bgDeep,
@@ -1106,7 +1101,7 @@ export default function ERPIntegrationPage() {
         borderTop:      `1px solid ${S.rim}`,
         flexShrink:     0,
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.06em" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>
           {renderTs} — ORDR · ERP Integration · {configuredCount}/4 connectors configured
         </span>
       </footer>
@@ -1118,7 +1113,7 @@ export default function ERPIntegrationPage() {
           to   { transform: rotate(360deg); }
         }
       `}</style>
-    </div>
+    </PageShell>
     <HelpPanel config={ERP_INTEGRATION_HELP} storageKey="erp-integration" />
     </div>
   );

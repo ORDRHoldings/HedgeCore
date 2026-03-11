@@ -1,33 +1,32 @@
 "use client";
 
 /**
- * /policy-desk — Policy Assignment Control Center
+ * PolicyAssignTab — Policy Assignment Control Center (tab component)
  *
+ * Extracted from /policy-desk for use in the unified /policies tabbed layout.
  * Central hub for assigning hedge policies to FX positions.
  * Multiple assignment modes:
  *   1. Active Policy (quick-assign using company's activated policy)
  *   2. Template Selection (choose from policy library)
  *   3. Favorites (frequently-used policies)
  *   4. AI Recommendation (intelligent policy suggestion based on position)
- *
- * Workflow: Ingestion → Policy Desk → Execution
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
-import { useAuth } from "../../lib/authContext";
-import type { AppDispatch, RootState } from "../../lib/store";
+import { useAuth } from "@/lib/authContext";
+import type { AppDispatch, RootState } from "@/lib/store";
 import {
   listPositionsThunk,
   assignPolicyThunk,
   clearLifecycleError,
-} from "../../lib/store/slices/positionSlice";
-import type { PositionRow, BulkAssignResult } from "../../api/positionClient";
-import WorkflowBreadcrumb from "../../components/layout/WorkflowBreadcrumb";
-import WorkflowGuide from "../../components/layout/WorkflowGuide";
-import { bulkAssignPolicy } from "../../api/positionClient";
+} from "@/lib/store/slices/positionSlice";
+import type { PositionRow, BulkAssignResult } from "@/api/positionClient";
+import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
+import WorkflowGuide from "@/components/layout/WorkflowGuide";
+import { bulkAssignPolicy } from "@/api/positionClient";
 import {
   listPolicyTemplates,
   listFavorites,
@@ -35,7 +34,7 @@ import {
   type PolicyTemplate,
   type PolicyInstance,
   type PolicyFavorite,
-} from "../../api/policyClient";
+} from "@/api/policyClient";
 import { recommendPolicyForPosition } from "@/utils/policyRecommender";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { POLICY_DESK_HELP } from "@/lib/helpContent";
@@ -109,7 +108,7 @@ function StatusBadge({ status }: { status: ExecStatus }) {
   return (
     <span style={{
       fontFamily: S.fontMono,
-      fontSize: 9,
+      fontSize: 12,
       fontWeight: 700,
       letterSpacing: "0.08em",
       color: S.primary,
@@ -125,11 +124,11 @@ function StatusBadge({ status }: { status: ExecStatus }) {
 }
 
 function PolicyChip({ policyId, policyName }: { policyId: string | null; policyName?: string | null }) {
-  if (!policyId) return <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.rim }}>—</span>;
+  if (!policyId) return <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.rim }}>—</span>;
   return (
     <span style={{
       fontFamily: S.fontMono,
-      fontSize: 9,
+      fontSize: 12,
       color: S.primary,
       background: S.bgSub,
       border: `1px solid ${S.darkBorder}`,
@@ -182,7 +181,7 @@ function ModalHeader({ title, subtitle }: { title: string; subtitle?: string }) 
         {title}
       </div>
       {subtitle && (
-        <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, marginTop: 4 }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, marginTop: 4 }}>
           {subtitle}
         </div>
       )}
@@ -203,7 +202,7 @@ function ModalActions({ onCancel, onConfirm, confirmLabel, confirmColor, disable
         onClick={onCancel}
         style={{
           fontFamily: S.fontMono,
-          fontSize: 11,
+          fontSize: 12,
           color: S.secondary,
           background: "transparent",
           border: `1px solid ${S.rim}`,
@@ -217,7 +216,7 @@ function ModalActions({ onCancel, onConfirm, confirmLabel, confirmColor, disable
         disabled={disabled}
         style={{
           fontFamily: S.fontMono,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 700,
           letterSpacing: "0.04em",
           color: S.bgDeep,
@@ -261,7 +260,7 @@ function buildPresetFromTemplate(tmpl: PolicyTemplate): PolicyPreset {
   };
 }
 
-export default function PolicyDeskPage() {
+export default function PolicyAssignTab() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { user, token } = useAuth();
@@ -678,10 +677,10 @@ export default function PolicyDeskPage() {
           borderBottom: `1px solid ${S.rim}`,
         }}>
           <button
-            onClick={() => router.push("/input")}
+            onClick={() => router.push("/position-desk")}
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: S.tertiary,
               background: "transparent",
               border: `1px solid ${S.rim}`,
@@ -703,7 +702,7 @@ export default function PolicyDeskPage() {
           </span>
           <span style={{
             fontFamily: S.fontMono,
-            fontSize: 9,
+            fontSize: 12,
             color: S.secondary,
             border: `1px solid ${S.rim}`,
             padding: "1px 5px",
@@ -715,7 +714,7 @@ export default function PolicyDeskPage() {
               onClick={() => setPreset("NEEDS_POLICY")}
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 700,
                 color: S.primary,
                 background: S.bgSub,
@@ -729,7 +728,7 @@ export default function PolicyDeskPage() {
             </span>
           )}
           <div style={{ flex: 1 }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {positions.length} positions
           </span>
           <button
@@ -737,7 +736,7 @@ export default function PolicyDeskPage() {
             title="Refresh (R)"
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: S.primary,
               background: "transparent",
               border: `1px solid ${S.darkBorder}`,
@@ -750,7 +749,7 @@ export default function PolicyDeskPage() {
             onClick={() => router.push("/position-desk")}
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: S.pass,
               background: `color-mix(in srgb, ${S.pass} 8%, transparent)`,
               border: `1px solid color-mix(in srgb, ${S.pass} 25%, transparent)`,
@@ -763,7 +762,7 @@ export default function PolicyDeskPage() {
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: S.primary,
               background: showAdvancedFilters ? S.bgSub : "transparent",
               border: `1px solid ${S.darkBorder}`,
@@ -777,7 +776,7 @@ export default function PolicyDeskPage() {
             disabled={filteredPositions.length === 0}
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: filteredPositions.length === 0 ? S.tertiary : S.primary,
               background: "transparent",
               border: `1px solid ${S.darkBorder}`,
@@ -790,7 +789,7 @@ export default function PolicyDeskPage() {
             onClick={() => setShowComparison(!showComparison)}
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: S.primary,
               background: showComparison ? S.bgSub : "transparent",
               border: `1px solid ${S.darkBorder}`,
@@ -813,16 +812,16 @@ export default function PolicyDeskPage() {
             alignItems: "center",
             gap: 12,
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.fail, letterSpacing: "0.06em" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.fail, letterSpacing: "0.06em" }}>
               ERROR
             </span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>{lifecycleError}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{lifecycleError}</span>
             <button
               onClick={() => dispatch(clearLifecycleError())}
               style={{
                 marginLeft: "auto",
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.tertiary,
                 background: "none",
                 border: "none",
@@ -854,7 +853,7 @@ export default function PolicyDeskPage() {
                 onClick={() => setPreset(p)}
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 9,
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: "0.06em",
                   color: isActive ? S.primary : S.tertiary,
@@ -877,7 +876,7 @@ export default function PolicyDeskPage() {
             placeholder="Search… (/ to focus · Esc to clear)"
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               padding: "3px 10px",
               background: S.bgSub,
               border: `1px solid ${S.rim}`,
@@ -899,7 +898,7 @@ export default function PolicyDeskPage() {
             borderBottom: `1px solid ${S.soft}`,
             flexShrink: 0,
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, fontWeight: 700, letterSpacing: "0.06em" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, fontWeight: 700, letterSpacing: "0.06em" }}>
               ADVANCED FILTERS:
             </span>
             <select
@@ -907,7 +906,7 @@ export default function PolicyDeskPage() {
               onChange={(e) => setCurrencyFilter(e.target.value)}
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.primary,
                 background: S.bgPanel,
                 border: `1px solid ${S.darkBorder}`,
@@ -924,7 +923,7 @@ export default function PolicyDeskPage() {
               onChange={(e) => setRiskPostureFilter(e.target.value)}
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.primary,
                 background: S.bgPanel,
                 border: `1px solid ${S.darkBorder}`,
@@ -945,7 +944,7 @@ export default function PolicyDeskPage() {
                 }}
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 9,
+                  fontSize: 12,
                   color: S.tertiary,
                   background: "transparent",
                   border: `1px solid ${S.rim}`,
@@ -956,7 +955,7 @@ export default function PolicyDeskPage() {
               </button>
             )}
             <div style={{ flex: 1 }} />
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               {filteredPositions.length} filtered
             </span>
           </div>
@@ -973,7 +972,7 @@ export default function PolicyDeskPage() {
             borderBottom: `1px solid ${S.darkBorder}`,
             flexShrink: 0,
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.primary, fontWeight: 700, letterSpacing: "0.06em" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, fontWeight: 700, letterSpacing: "0.06em" }}>
               {selected.size} SELECTED
             </span>
 
@@ -983,7 +982,7 @@ export default function PolicyDeskPage() {
                 disabled={bulkRunning}
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 9,
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: "0.06em",
                   color: bulkRunning ? S.tertiary : S.primary,
@@ -1002,7 +1001,7 @@ export default function PolicyDeskPage() {
               disabled={bulkRunning}
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 color: bulkRunning ? S.tertiary : S.primary,
@@ -1021,7 +1020,7 @@ export default function PolicyDeskPage() {
                 disabled={bulkRunning}
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 9,
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: "0.06em",
                   color: bulkRunning ? S.tertiary : S.primary,
@@ -1040,7 +1039,7 @@ export default function PolicyDeskPage() {
               disabled={bulkRunning || generatingAI}
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 color: bulkRunning || generatingAI ? S.tertiary : S.primary,
@@ -1058,7 +1057,7 @@ export default function PolicyDeskPage() {
               style={{
                 marginLeft: "auto",
                 fontFamily: S.fontMono,
-                fontSize: 9,
+                fontSize: 12,
                 color: S.tertiary,
                 background: "transparent",
                 border: `1px solid ${S.rim}`,
@@ -1083,11 +1082,11 @@ export default function PolicyDeskPage() {
             alignItems: "center",
             gap: 12,
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: bulkResult.failed > 0 ? S.amber : S.pass, letterSpacing: "0.08em", minWidth: 120 }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: bulkResult.failed > 0 ? S.amber : S.pass, letterSpacing: "0.08em", minWidth: 120 }}>
               {bulkResult.failed > 0 ? "PARTIAL FAILURE" : "POLICY ASSIGNED"}
             </span>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>
                 {lastAssignedPolicyName
                   ? `${lastAssignedPolicyName}${lastAssignedPolicyCode ? ` (…${lastAssignedPolicyCode})` : ""} → ${bulkResult.assigned} position${bulkResult.assigned !== 1 ? "s" : ""}`
                   : `${bulkResult.assigned} assigned`}
@@ -1095,12 +1094,12 @@ export default function PolicyDeskPage() {
                 {bulkResult.failed > 0 && <span style={{ color: S.fail }}> · {bulkResult.failed} failed</span>}
               </span>
               {bulkResult.assigned > 0 && (
-                <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.tertiary }}>
+                <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                   Policy governs hedge ratio, instruments, and tenor. Proceed to Hedge Desk to run calculation.
                 </span>
               )}
               {bulkResult.errors.length > 0 && (
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail }}>
                   {bulkResult.errors[0]}
                 </span>
               )}
@@ -1111,7 +1110,7 @@ export default function PolicyDeskPage() {
                 style={{
                   marginLeft: "auto",
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 700,
                   color: "#ffffff",
                   background: "#1C62F2",
@@ -1127,7 +1126,7 @@ export default function PolicyDeskPage() {
             )}
             <button
               onClick={() => { setBulkResult(null); setLastAssignedPolicyName(null); setLastAssignedPolicyCode(null); }}
-              style={{ marginLeft: bulkResult.assigned > 0 ? 8 : "auto", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>
+              style={{ marginLeft: bulkResult.assigned > 0 ? 8 : "auto", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}>
               ✕
             </button>
           </div>
@@ -1136,19 +1135,19 @@ export default function PolicyDeskPage() {
         {/* Position table */}
         <div style={{ flex: 1, overflow: "auto", padding: "12px 20px" }}>
           {loading ? (
-            <div style={{ padding: 40, textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+            <div style={{ padding: 40, textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               Loading positions...
             </div>
           ) : error ? (
-            <div style={{ padding: 40, textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.fail }}>
+            <div style={{ padding: 40, textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.fail }}>
               Error: {error}
             </div>
           ) : filteredPositions.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+            <div style={{ padding: 40, textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               No positions found. {search && "Try adjusting your search."}
             </div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: S.fontMono }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: S.fontMono }}>
               <thead>
                 <tr style={{ background: S.bgSub, borderBottom: `1px solid ${S.rim}` }}>
                   <th style={{ padding: "8px 10px", textAlign: "left" }}>
@@ -1159,28 +1158,28 @@ export default function PolicyDeskPage() {
                       style={{ cursor: "pointer" }}
                     />
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     RECORD ID
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     ENTITY
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     TYPE
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     CCY
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     AMOUNT
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     VALUE DATE
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     STATUS
                   </th>
-                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>
                     POLICY
                   </th>
                 </tr>
@@ -1216,7 +1215,7 @@ export default function PolicyDeskPage() {
                         <span style={{
                           padding: "2px 6px",
                           borderRadius: 0,
-                          fontSize: 9,
+                          fontSize: 12,
                           fontWeight: 700,
                           background: pos.type === "AR" ? `color-mix(in srgb, ${S.pass} 12%, transparent)` : `color-mix(in srgb, ${S.fail} 12%, transparent)`,
                           color: pos.type === "AR" ? S.pass : S.fail,
@@ -1276,7 +1275,7 @@ export default function PolicyDeskPage() {
                     </span>
                     <span style={{
                       fontFamily: S.fontMono,
-                      fontSize: 9,
+                      fontSize: 12,
                       color: S.tertiary,
                       border: `1px solid ${S.rim}`,
                       padding: "1px 5px",
@@ -1286,7 +1285,7 @@ export default function PolicyDeskPage() {
                     {tmpl.is_system && (
                       <span style={{
                         fontFamily: S.fontMono,
-                        fontSize: 9,
+                        fontSize: 12,
                         color: S.primary,
                         border: `1px solid ${S.darkBorder}`,
                         padding: "1px 5px",
@@ -1305,7 +1304,7 @@ export default function PolicyDeskPage() {
                         });
                       }}
                       style={{
-                        fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.06em",
+                        fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em",
                         padding: "2px 8px", border: `1px solid ${S.cyan}`,
                         color: S.cyan, background: "transparent", cursor: "pointer",
                       }}
@@ -1314,7 +1313,7 @@ export default function PolicyDeskPage() {
                     </button>
                   </div>
                   {tmpl.description && (
-                    <div style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary }}>
+                    <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
                       {tmpl.description}
                     </div>
                   )}
@@ -1357,13 +1356,13 @@ export default function PolicyDeskPage() {
                     transition: "all 0.1s",
                   }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, fontWeight: 700 }}>FAV</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, fontWeight: 700 }}>FAV</span>
                     <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>
                       {tmpl.name}
                     </span>
                     <span style={{
                       fontFamily: S.fontMono,
-                      fontSize: 9,
+                      fontSize: 12,
                       color: S.tertiary,
                       border: `1px solid ${S.rim}`,
                       padding: "1px 5px",
@@ -1372,7 +1371,7 @@ export default function PolicyDeskPage() {
                     </span>
                   </div>
                   {fav.notes && (
-                    <div style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary, fontStyle: "italic" }}>
+                    <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, fontStyle: "italic" }}>
                       {fav.notes}
                     </div>
                   )}
@@ -1411,12 +1410,12 @@ export default function PolicyDeskPage() {
                     marginBottom: 10,
                   }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.primary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>
                       {pos.record_id}
                     </span>
                     <span style={{
                       fontFamily: S.fontMono,
-                      fontSize: 9,
+                      fontSize: 12,
                       color: S.darkBorder,
                       border: `1px solid ${S.darkBorder}`,
                       padding: "2px 6px",
@@ -1426,11 +1425,11 @@ export default function PolicyDeskPage() {
                     </span>
                   </div>
                   <div style={{ marginBottom: 6 }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>
                       → {rec.templateName}
                     </span>
                   </div>
-                  <div style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary, lineHeight: 1.4 }}>
+                  <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.4 }}>
                     {rec.reasoning}
                   </div>
                 </div>
@@ -1455,7 +1454,7 @@ export default function PolicyDeskPage() {
             subtitle="Select up to 3 policies to compare side-by-side"
           />
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, marginBottom: 12 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, marginBottom: 12 }}>
               Select policies to compare:
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflow: "auto" }}>
@@ -1485,7 +1484,7 @@ export default function PolicyDeskPage() {
                       </span>
                       <span style={{
                         fontFamily: S.fontMono,
-                        fontSize: 9,
+                        fontSize: 12,
                         color: S.tertiary,
                         border: `1px solid ${S.rim}`,
                         padding: "1px 5px",
@@ -1493,7 +1492,7 @@ export default function PolicyDeskPage() {
                         {tmpl.risk_posture}
                       </span>
                     </div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                       Hedge Ratio: {tmpl.config?.hedge_ratios?.confirmed ?? "N/A"}% confirmed, {tmpl.config?.hedge_ratios?.forecast ?? "N/A"}% forecast |
                       Instrument: {tmpl.config?.execution_product ?? "N/A"}
                     </div>
@@ -1504,11 +1503,11 @@ export default function PolicyDeskPage() {
           </div>
           {comparisonPolicies.length > 0 && (
             <div style={{ marginTop: 20, borderTop: `1px solid ${S.soft}`, paddingTop: 16 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, fontWeight: 700, marginBottom: 12 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, fontWeight: 700, marginBottom: 12 }}>
                 COMPARISON TABLE ({comparisonPolicies.length} selected):
               </div>
               <div style={{ overflow: "auto", maxHeight: 300 }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 10 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 12 }}>
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                       <th style={{ textAlign: "left", padding: "6px 8px", color: S.secondary }}>Attribute</th>
@@ -1579,7 +1578,7 @@ export default function PolicyDeskPage() {
               }}
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 11,
+                fontSize: 12,
                 color: S.secondary,
                 background: "transparent",
                 border: `1px solid ${S.rim}`,
@@ -1600,17 +1599,17 @@ export default function PolicyDeskPage() {
             subtitle={`Assigning to ${selected.size} selected position${selected.size !== 1 ? "s" : ""}`}
           />
           <div style={{ padding: "12px 14px", background: `color-mix(in srgb, ${S.cyan} 6%, transparent)`, border: `1px solid color-mix(in srgb, ${S.cyan} 25%, transparent)`, marginBottom: 16 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.cyan, letterSpacing: "0.08em", marginBottom: 6 }}>POLICY TO ASSIGN</div>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, letterSpacing: "0.08em", marginBottom: 6 }}>POLICY TO ASSIGN</div>
             <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary }}>
               {activePolicy.template?.name ?? `Instance ${activePolicy.id.slice(0, 8)}`}
             </div>
             {activePolicy.template?.risk_posture && (
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, marginTop: 4 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, marginTop: 4 }}>
                 Risk posture: {activePolicy.template.risk_posture}
               </div>
             )}
           </div>
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, marginBottom: 20, lineHeight: 1.7 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, marginBottom: 20, lineHeight: 1.7 }}>
             This will transition <strong style={{ color: S.primary }}>{selected.size} position{selected.size !== 1 ? "s" : ""}</strong> to <strong style={{ color: S.cyan }}>POLICY_ASSIGNED</strong>.<br />
             Positions already in a later lifecycle state will be skipped.
           </div>
@@ -1652,7 +1651,7 @@ export default function PolicyDeskPage() {
             {/* Modal title */}
             <div style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               letterSpacing: "0.10em",
               color: S.amber,
@@ -1664,12 +1663,12 @@ export default function PolicyDeskPage() {
 
             {/* Template info */}
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 4 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 4 }}>
                 TEMPLATE
               </div>
               <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary }}>
                 {activationModal.templateName}{" "}
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, fontWeight: 400 }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, fontWeight: 400 }}>
                   ({activationModal.templateCode}) v{activationModal.version}
                 </span>
               </div>
@@ -1677,7 +1676,7 @@ export default function PolicyDeskPage() {
 
             {/* Hash display */}
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 6 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 6 }}>
                 CONFIG HASH
               </div>
               <div style={{
@@ -1690,7 +1689,7 @@ export default function PolicyDeskPage() {
               }}>
                 <span style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: S.cyan,
                   letterSpacing: "0.04em",
                   flex: 1,
@@ -1711,7 +1710,7 @@ export default function PolicyDeskPage() {
                     }}
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 9,
+                      fontSize: 12,
                       color: activationModal.copied ? S.pass : S.secondary,
                       background: "transparent",
                       border: `1px solid ${activationModal.copied ? S.pass : S.darkBorder}`,
@@ -1735,11 +1734,11 @@ export default function PolicyDeskPage() {
               marginBottom: 24,
             }}>
               {activationModal.configHash === "unavailable" ? (
-                <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, lineHeight: 1.6 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, lineHeight: 1.6 }}>
                   Config hash unavailable — proceeding without client-side verification.
                 </div>
               ) : (
-                <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, lineHeight: 1.7 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, lineHeight: 1.7 }}>
                   <span style={{ color: S.amber, fontWeight: 700 }}>⚠</span>{"  "}
                   Verify this hash matches your approved policy document before activating.
                   This action assigns the template to{" "}
@@ -1755,7 +1754,7 @@ export default function PolicyDeskPage() {
                 onClick={() => setActivationModal(null)}
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: S.tertiary,
                   background: "transparent",
                   border: `1px solid ${S.rim}`,
@@ -1773,7 +1772,7 @@ export default function PolicyDeskPage() {
                 }}
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: "0.04em",
                   color: S.bgDeep,

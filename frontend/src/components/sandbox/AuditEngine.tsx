@@ -460,16 +460,16 @@ function downloadAuditReport(report: AuditReport): void {
 body { font-family: 'Georgia', serif; color: #1a1a2e; background: #fff; max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
 h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
 h2 { font-size: 16px; font-weight: 700; color: #0f172a; margin: 28px 0 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; }
-.meta { font-family: 'Courier New', monospace; font-size: 11px; color: #94a3b8; margin-bottom: 24px; }
+.meta { font-family: 'Courier New', monospace; font-size: 12px; color: #94a3b8; margin-bottom: 24px; }
 .kpi-row { display: flex; gap: 20px; margin: 16px 0; }
 .kpi { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px 18px; flex: 1; }
 .kpi-val { font-family: 'Courier New', monospace; font-size: 22px; font-weight: 700; }
-.kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin-top: 4px; }
+.kpi-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin-top: 4px; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; }
-th { background: #f1f5f9; padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 2px solid #cbd5e1; }
+th { background: #f1f5f9; padding: 8px 10px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 2px solid #cbd5e1; }
 td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 10px; font-weight: 700; border: 1px solid; }
-.disclaimer { background: #fefce8; border: 1px solid #fde68a; border-radius: 6px; padding: 14px 18px; margin-top: 24px; font-size: 11px; color: #713f12; line-height: 1.6; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 12px; font-weight: 700; border: 1px solid; }
+.disclaimer { background: #fefce8; border: 1px solid #fde68a; border-radius: 6px; padding: 14px 18px; margin-top: 24px; font-size: 12px; color: #713f12; line-height: 1.6; }
 @media print { body { padding: 20px; } }
 </style>
 </head>
@@ -495,11 +495,11 @@ ${catRules.map(r => `<tr>
 <td style="font-family:'Courier New',monospace;font-weight:700">${r.id}</td>
 <td>${r.name}</td>
 <td><span class="badge" style="color:${statusColor(r.status)};border-color:${statusColor(r.status)};background:${statusColor(r.status)}18">● ${r.status}</span></td>
-<td style="font-size:10px">${r.severity}</td>
-<td style="font-size:11px;color:#475569">${r.evidence}</td>
-<td style="font-family:'Courier New',monospace;font-size:11px">${r.value ?? "—"}</td>
-<td style="font-size:11px;color:#475569">${r.threshold ?? "—"}</td>
-<td style="font-size:10px;color:#6366f1">${r.regulatoryRef}</td>
+<td style="font-size: 12px">${r.severity}</td>
+<td style="font-size: 12px;color:#475569">${r.evidence}</td>
+<td style="font-family:'Courier New',monospace;font-size: 12px">${r.value ?? "—"}</td>
+<td style="font-size: 12px;color:#475569">${r.threshold ?? "—"}</td>
+<td style="font-size: 12px;color:#6366f1">${r.regulatoryRef}</td>
 </tr>`).join("")}
 </tbody></table>`;
 }).join("")}
@@ -523,7 +523,7 @@ function StatusBadge({ status }: { status: RuleStatus }) {
     status === "FAIL" ? S.red : S.tertiary;
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
       color, padding: "2px 8px", borderRadius: 2,
       border: `1px solid ${color}`,
       background: `color-mix(in srgb, ${color} 10%, transparent)`,
@@ -540,7 +540,7 @@ function SeverityBadge({ severity }: { severity: RuleSeverity }) {
     S.tertiary;
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
       color, letterSpacing: "0.05em",
     }}>{severity}</span>
   );
@@ -613,7 +613,7 @@ export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpot
               {report.integrityScore}/100
             </span>
             <span style={{
-              fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
               color: certColor, padding: "3px 10px",
               border: `1px solid ${certColor}`, borderRadius: 2,
               background: `color-mix(in srgb, ${certColor} 10%, transparent)`,
@@ -624,14 +624,14 @@ export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpot
               {report.summary.passed} passed · {report.summary.warned} warnings · {report.summary.failed} failed
             </span>
           </div>
-          <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>
+          <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
             Run: {report.runId.slice(0, 12)} · {new Date(report.timestamp).toLocaleString()} ·
             Standards: IFRS 9 · BCBS 279 · ISDA SIMM v2.6 · EMIR · MiFID II
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={() => setShowFormulas(f => !f)} style={{
-            fontFamily: S.fontMono, fontSize: 10, fontWeight: 600,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
             padding: "5px 12px", border: `1px solid ${S.soft}`,
             color: S.tertiary, background: "transparent", cursor: "pointer", borderRadius: 2,
           }}>
@@ -662,17 +662,17 @@ export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpot
               background: S.panel, display: "flex", alignItems: "center", gap: 12,
               borderLeft: `3px solid ${cat.color}`,
             }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: cat.color }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: cat.color }}>
                 {cat.label}
               </span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                 {catRules.length} rules
               </span>
               {catFailed > 0 && (
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.red }}>● {catFailed} FAIL</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.red }}>● {catFailed} FAIL</span>
               )}
               {catWarned > 0 && (
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber }}>● {catWarned} WARN</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber }}>● {catWarned} WARN</span>
               )}
             </div>
 
@@ -683,7 +683,7 @@ export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpot
                   <tr style={{ background: `color-mix(in srgb, ${S.panel} 60%, transparent)` }}>
                     {["Rule", "Name", "Status", "Sev.", "Evidence", "Value", "Threshold", "Reg. Ref"].map(h => (
                       <th key={h} style={{
-                        fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                         color: S.tertiary, textTransform: "uppercase",
                         padding: "8px 14px", textAlign: "left",
                         borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
@@ -705,7 +705,7 @@ export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpot
                           transition: "background 100ms",
                         }}
                       >
-                        <td style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.cyan, padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <td style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, padding: "12px 14px", whiteSpace: "nowrap" }}>
                           {rule.id} {expandedRule === rule.id ? "▼" : "▶"}
                         </td>
                         <td style={{ fontFamily: S.fontUI, fontSize: 13, color: S.primary, padding: "12px 14px" }}>
@@ -723,10 +723,10 @@ export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpot
                         <td style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary, padding: "12px 14px", whiteSpace: "nowrap" }}>
                           {rule.value ?? "—"}
                         </td>
-                        <td style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, padding: "12px 14px", whiteSpace: "nowrap" }}>
+                        <td style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, padding: "12px 14px", whiteSpace: "nowrap" }}>
                           {rule.threshold ?? "—"}
                         </td>
-                        <td style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, padding: "12px 14px", maxWidth: 200 }}>
+                        <td style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, padding: "12px 14px", maxWidth: 200 }}>
                           {rule.regulatoryRef.split(" — ")[0]}
                         </td>
                       </tr>
@@ -746,12 +746,12 @@ export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpot
                                   {rule.detail}
                                 </div>
                               )}
-                              <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>
+                              <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                                 <strong style={{ color: S.secondary }}>Regulatory Reference:</strong> {rule.regulatoryRef}
                               </div>
                               {(showFormulas || rule.formulaUsed) && (
                                 <div style={{
-                                  fontFamily: S.fontMono, fontSize: 11, color: S.cyan,
+                                  fontFamily: S.fontMono, fontSize: 12, color: S.cyan,
                                   background: `color-mix(in srgb, ${S.cyan} 4%, ${S.sub})`,
                                   border: `1px solid color-mix(in srgb, ${S.cyan} 20%, transparent)`,
                                   borderRadius: 2, padding: "8px 12px",
@@ -759,7 +759,7 @@ export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpot
                                   {rule.formulaUsed}
                                 </div>
                               )}
-                              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                                 Timestamp: {new Date(rule.timestamp).toISOString()}
                               </div>
                             </div>
@@ -778,7 +778,7 @@ export default function AuditEngine({ sandboxResult, spot, notionalUSD, liveSpot
       {/* ── Disclaimer ── */}
       <div style={{
         padding: "12px 16px", border: `1px solid ${S.soft}`, borderRadius: 3,
-        fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.6,
+        fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, lineHeight: 1.6,
         background: S.sub,
       }}>
         <strong style={{ color: S.secondary }}>Disclaimer:</strong> This audit report is generated algorithmically

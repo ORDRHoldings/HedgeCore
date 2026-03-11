@@ -7,6 +7,9 @@ import { dashboardFetch } from "@/lib/api/dashboardClient";
 import HedgeDeskPipeline from "@/components/hedge-desk/HedgeDeskPipeline";
 import HedgeDeskOverview from "@/components/hedge-desk/HedgeDeskOverview";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Play } from "lucide-react";
+
 const HD = {
   bgPanel: "var(--bg-panel)",
   bgDeep: "var(--bg-deep)",
@@ -105,7 +108,7 @@ function HedgeDeskInner() {
 
         <span style={{
           fontFamily: HD.fontMono,
-          fontSize: 9,
+          fontSize: 12,
           color: isRunMode ? HD.cyan : HD.tertiary,
           border: `1px solid color-mix(in srgb,${isRunMode ? HD.cyan : HD.tertiary} 25%,transparent)`,
           padding: "1px 6px",
@@ -119,7 +122,7 @@ function HedgeDeskInner() {
         {/* Governance mode badge */}
         <span style={{
           fontFamily: HD.fontMono,
-          fontSize: 9,
+          fontSize: 12,
           fontWeight: 700,
           letterSpacing: "0.1em",
           color: modeBadgeColor,
@@ -133,7 +136,7 @@ function HedgeDeskInner() {
 
         <span style={{
           fontFamily: HD.fontMono,
-          fontSize: 10,
+          fontSize: 12,
           color: HD.tertiary,
           marginLeft: 8,
         }}>
@@ -165,6 +168,8 @@ function HedgeDeskInner() {
 
 export default function HedgeDeskPage() {
   return (
+
+    <PageShell icon={Play} title="Hedge Desk" breadcrumb={["Dashboard", "Hedge Desk"]} noPadding>
     <Suspense fallback={
       <div style={{
         height: "100vh",
@@ -175,7 +180,7 @@ export default function HedgeDeskPage() {
       }}>
         <span style={{
           fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-          fontSize: 11,
+          fontSize: 12,
           color: "var(--text-tertiary)",
           letterSpacing: "0.1em",
         }}>
@@ -185,5 +190,7 @@ export default function HedgeDeskPage() {
     }>
       <HedgeDeskInner />
     </Suspense>
-  );
+  
+    </PageShell>
+    );
 }

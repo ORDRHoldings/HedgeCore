@@ -3,6 +3,9 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Zap } from "lucide-react";
+
 // ─── Fonts + design tokens ────────────────────────────────────────────────────
 const fontMono = "'IBM Plex Mono', 'Courier New', monospace";
 const fontUI   = "'IBM Plex Sans', system-ui, sans-serif";
@@ -68,7 +71,7 @@ function WhitepaperPageInner() {
       th{background:#f1f5f9;font-weight:700;padding:8px 12px;text-align:left;border:1px solid #e2e8f0;}
       td{padding:7px 12px;border:1px solid #e2e8f0;vertical-align:top;}
       .callout{padding:12px 16px;border-radius:4px;margin:12px 0;background:#f0fdf4;border-left:4px solid #22c55e;}
-      .badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;}
+      .badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size: 12px;font-weight:700;}
       .badge-crit{background:#fee2e2;color:#991b1b;}
       .badge-warn{background:#fef3c7;color:#92400e;}
       .badge-info{background:#e0f2fe;color:#0369a1;}
@@ -226,7 +229,7 @@ function WhitepaperPageInner() {
           <button
             onClick={() => setTocOpen(!tocOpen)}
             style={{
-              fontFamily: fontMono, fontSize: 11,
+              fontFamily: fontMono, fontSize: 12,
               color: TOKEN.cyan, background: "transparent",
               border: `1px solid ${TOKEN.soft}`, borderRadius: 2,
               padding: "3px 10px", cursor: "pointer",
@@ -238,7 +241,7 @@ function WhitepaperPageInner() {
             HEDGECORE — INSTITUTIONAL FX RISK MANAGEMENT
           </span>
           <span style={{
-            fontFamily: fontMono, fontSize: 10,
+            fontFamily: fontMono, fontSize: 12,
             color: TOKEN.tert, letterSpacing: "0.04em",
           }}>
             TECHNICAL WHITEPAPER · RUN {runLabel} · {genDate}
@@ -248,7 +251,7 @@ function WhitepaperPageInner() {
           <button
             onClick={handleDownloadHTML}
             style={{
-              fontFamily: fontMono, fontSize: 11,
+              fontFamily: fontMono, fontSize: 12,
               color: TOKEN.primary, background: TOKEN.bgSub,
               border: `1px solid ${TOKEN.soft}`, borderRadius: 2,
               padding: "5px 14px", cursor: "pointer",
@@ -259,7 +262,7 @@ function WhitepaperPageInner() {
           <a
             href={`/sandbox?runId=${runId}`}
             style={{
-              fontFamily: fontMono, fontSize: 11,
+              fontFamily: fontMono, fontSize: 12,
               color: TOKEN.cyan, background: "transparent",
               border: `1px solid ${TOKEN.soft}`, borderRadius: 2,
               padding: "5px 14px", textDecoration: "none",
@@ -274,7 +277,7 @@ function WhitepaperPageInner() {
         {/* TOC sidebar */}
         <nav style={styles.toc} aria-label="Table of contents">
           <div style={{ padding: "16px 12px 8px" }}>
-            <div style={{ fontFamily: fontMono, fontSize: 9, fontWeight: 700, color: TOKEN.tert, letterSpacing: "0.1em", marginBottom: 10 }}>
+            <div style={{ fontFamily: fontMono, fontSize: 12, fontWeight: 700, color: TOKEN.tert, letterSpacing: "0.1em", marginBottom: 10 }}>
               TABLE OF CONTENTS
             </div>
             {TOC_SECTIONS.map(s => (
@@ -314,7 +317,7 @@ function WhitepaperPageInner() {
           {/* Cover */}
           <div style={{ marginBottom: 40 }}>
             <div style={{
-              fontFamily: fontMono, fontSize: 10,
+              fontFamily: fontMono, fontSize: 12,
               color: TOKEN.cyan, letterSpacing: "0.12em",
               marginBottom: 8, textTransform: "uppercase",
             }}>
@@ -336,7 +339,7 @@ function WhitepaperPageInner() {
             </p>
             <div style={{
               display: "flex", gap: 12, flexWrap: "wrap",
-              fontFamily: fontMono, fontSize: 11, color: TOKEN.tert,
+              fontFamily: fontMono, fontSize: 12, color: TOKEN.tert,
             }}>
               <span>VERSION 2.0</span>
               <span>·</span>
@@ -353,7 +356,7 @@ function WhitepaperPageInner() {
               background: `color-mix(in srgb, ${TOKEN.amber} 6%, transparent)`,
               border: `1px solid color-mix(in srgb, ${TOKEN.amber} 30%, transparent)`,
               borderRadius: 3,
-              fontFamily: fontMono, fontSize: 11,
+              fontFamily: fontMono, fontSize: 12,
               color: TOKEN.tert,
             }}>
               CONFIDENTIAL — For qualified institutional investors and risk professionals only.
@@ -650,7 +653,7 @@ USD/MXN Microstructure (BIS 2022):
                 {["Rule ID", "Name", "Severity", "Regulatory Reference", "Pass Criterion"].map(h => (
                   <th key={h} style={{
                     textAlign: "left", padding: "8px 10px",
-                    color: TOKEN.tert, fontWeight: 700, fontSize: 10,
+                    color: TOKEN.tert, fontWeight: 700, fontSize: 12,
                     letterSpacing: "0.06em", textTransform: "uppercase",
                     background: TOKEN.bgSub,
                   }}>
@@ -677,11 +680,11 @@ USD/MXN Microstructure (BIS 2022):
                 ["GOV-002","Trace Completeness","MEDIUM","SOX §302","trace_events.length > 0"],
               ].map(([id, name, sev, ref, pass]) => (
                 <tr key={id} style={{ borderBottom: `1px solid ${TOKEN.soft}` }}>
-                  <td style={{ padding: "6px 10px", color: TOKEN.cyan, fontWeight: 700, fontSize: 11 }}>{id}</td>
+                  <td style={{ padding: "6px 10px", color: TOKEN.cyan, fontWeight: 700, fontSize: 12 }}>{id}</td>
                   <td style={{ padding: "6px 10px", color: TOKEN.sec, fontSize: 12 }}>{name}</td>
                   <td style={{ padding: "6px 10px" }}>
                     <span style={{
-                      fontFamily: fontMono, fontSize: 10,
+                      fontFamily: fontMono, fontSize: 12,
                       padding: "2px 6px", borderRadius: 2, fontWeight: 700,
                       color: sev === "CRITICAL" ? TOKEN.red : sev === "HIGH" ? TOKEN.amber : TOKEN.tert,
                       background: sev === "CRITICAL"
@@ -693,7 +696,7 @@ USD/MXN Microstructure (BIS 2022):
                       {sev}
                     </span>
                   </td>
-                  <td style={{ padding: "6px 10px", color: TOKEN.tert, fontSize: 11 }}>{ref}</td>
+                  <td style={{ padding: "6px 10px", color: TOKEN.tert, fontSize: 12 }}>{ref}</td>
                   <td style={{ padding: "6px 10px", color: TOKEN.sec, fontSize: 12 }}>{pass}</td>
                 </tr>
               ))}
@@ -764,7 +767,7 @@ React iframe integration:
             "Bank for International Settlements (2022). Triennial Central Bank Survey — FX and OTC Derivatives Markets.",
           ].map((ref, i) => (
             <p key={i} style={{
-              fontFamily: fontMono, fontSize: 11,
+              fontFamily: fontMono, fontSize: 12,
               color: TOKEN.tert, lineHeight: 1.6,
               margin: "0 0 6px",
               paddingLeft: 28,
@@ -792,7 +795,7 @@ React iframe integration:
           </div>
 
           <p style={{
-            fontFamily: fontMono, fontSize: 10,
+            fontFamily: fontMono, fontSize: 12,
             color: TOKEN.tert, textAlign: "center",
             margin: "16px 0 0",
           }}>
@@ -808,6 +811,8 @@ React iframe integration:
 
 export default function WhitepaperPage() {
   return (
+
+    <PageShell icon={Zap} title="Methodology Whitepaper" breadcrumb={["Sandbox", "Whitepaper"]} noPadding>
     <Suspense
       fallback={
         <div style={{
@@ -826,5 +831,7 @@ export default function WhitepaperPage() {
     >
       <WhitepaperPageInner />
     </Suspense>
-  );
+  
+    </PageShell>
+    );
 }

@@ -46,8 +46,8 @@ const AUTH_PREFIXES = ["/auth", "/login", "/register"];
 const PIPELINE_PREFIXES = [
   "/sandbox",
   "/execution",
-  "/currency-fx",
-  "/input",
+  "/market-overview",
+  "/position-desk",
 ];
 
 function VoiceShell() {

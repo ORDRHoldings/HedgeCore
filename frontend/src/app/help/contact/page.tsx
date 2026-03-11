@@ -6,6 +6,9 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { generateDiagnosticsBundle } from "@/lib/support/diagnostics";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { HelpCircle } from "lucide-react";
+
 // ── Style constants ────────────────────────────────────────────────────────────
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -68,7 +71,7 @@ const inputStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = {
   display: "block",
   fontFamily: S.fontMono,
-  fontSize: 11,
+  fontSize: 12,
   color: S.tertiary,
   letterSpacing: "0.08em",
   marginBottom: 6,
@@ -164,32 +167,26 @@ function ContactPageInner() {
   const isValid = subject.trim().length > 0 && description.trim().length >= 50;
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: S.bgDeep,
-        padding: "24px",
-      }}
-    >
+    
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
 
         {/* Breadcrumb */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28 }}>
           <button
             onClick={() => router.push("/help")}
-            style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, background: "none", border: "none", cursor: "pointer", padding: 0, letterSpacing: "0.05em" }}
+            style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, background: "none", border: "none", cursor: "pointer", padding: 0, letterSpacing: "0.05em" }}
           >
             DOCUMENTATION
           </button>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>›</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>›</span>
           <button
             onClick={() => router.push("/help/support")}
-            style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, background: "none", border: "none", cursor: "pointer", padding: 0, letterSpacing: "0.05em" }}
+            style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, background: "none", border: "none", cursor: "pointer", padding: 0, letterSpacing: "0.05em" }}
           >
             SUPPORT CENTER
           </button>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>›</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, letterSpacing: "0.05em" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>›</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, letterSpacing: "0.05em" }}>
             OPEN TICKET
           </span>
         </div>
@@ -334,7 +331,7 @@ function ContactPageInner() {
                     <div
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         color: description.length >= 50 ? S.pass : S.tertiary,
                         marginTop: 4,
                         letterSpacing: "0.04em",
@@ -460,7 +457,7 @@ function ContactPageInner() {
                           paddingTop: 10,
                           borderTop: `1px solid ${S.soft}`,
                           fontFamily: S.fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                           letterSpacing: "0.06em",
                           color:
                             diagStatus === "ready" ? S.pass
@@ -541,7 +538,7 @@ function ContactPageInner() {
               }}
             >
               <div style={{ padding: "14px 16px", borderBottom: `1px solid ${S.soft}` }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
                   SLA — RESPONSE TIMES
                 </span>
               </div>
@@ -557,7 +554,7 @@ function ContactPageInner() {
                       borderBottom: i < SLA.length - 1 ? `1px solid ${S.soft}` : "none",
                     }}
                   >
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, letterSpacing: "0.04em" }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, letterSpacing: "0.04em" }}>
                       {row.severity}
                     </span>
                     <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
@@ -579,7 +576,7 @@ function ContactPageInner() {
               }}
             >
               <div style={{ padding: "14px 16px", borderBottom: `1px solid ${S.soft}` }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
                   CONTACT
                 </span>
               </div>
@@ -613,7 +610,7 @@ function ContactPageInner() {
               }}
             >
               <div style={{ padding: "14px 16px", borderBottom: `1px solid ${S.soft}` }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
                   QUICK LINKS
                 </span>
               </div>
@@ -649,12 +646,14 @@ function ContactPageInner() {
           </div>
         </div>
       </div>
-    </div>
+    
   );
 }
 
 export default function ContactPage() {
   return (
+    <PageShell icon={HelpCircle} title="Contact Support" breadcrumb={["Help","Contact"]}>
+
     <Suspense
       fallback={
         <div
@@ -675,5 +674,7 @@ export default function ContactPage() {
     >
       <ContactPageInner />
     </Suspense>
+  
+    </PageShell>
   );
 }

@@ -1,74 +1,110 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
 import type { UserContext } from "@/lib/authContext";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { T } from "@/lib/design/tokens";
+import { PageShell } from "@/components/layout/PageShell";
+import { KpiStrip } from "@/components/ui/KpiStrip";
+import { Icon } from "@/components/ui/Icon";
+import { LayoutDashboard, Play, BarChart3, Activity } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-import KpiSummaryWidget       from "@/components/dashboard/widgets/KpiSummaryWidget";
-import FxRatesWidget          from "@/components/dashboard/widgets/FxRatesWidget";
-import RecentRunsWidget       from "@/components/dashboard/widgets/RecentRunsWidget";
-import PendingApprovalsWidget from "@/components/dashboard/widgets/PendingApprovalsWidget";
-import WidgetErrorBoundary    from "@/components/ui/WidgetErrorBoundary";
-
-import { RefreshCw } from "lucide-react";
-
-/* ── Tokens ──────────────────────────────────────────────────────────────── */
-const T = {
-  bg:        "#F8FAFC",
-  panel:     "#FFFFFF",
-  sub:       "#F1F5F9",
-  rim:       "#E2E8F0",
-  soft:      "#CBD5E1",
-  rule:      "rgba(0,0,0,0.05)",
-  blue:      "#1C62F2",
-  blueDim:   "rgba(28,98,242,0.06)",
-  blueBdr:   "rgba(28,98,242,0.18)",
-  primary:   "#0F172A",
-  secondary: "#334155",
-  muted:     "#94A3B8",
-  mono:      "'JetBrains Mono','IBM Plex Mono',monospace",
-  ui:        "'Inter','IBM Plex Sans',sans-serif",
-} as const;
-
-/* ── Formatters ──────────────────────────────────────────────────────────── */
-function fmtAgo(ts: number) {
-  const s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 5)    return "just now";
-  if (s < 60)   return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  return `${Math.floor(s / 3600)}h ago`;
+/* ── Helpers ────────────────────────────────────────────────────────────── */
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
 }
 
-/* ── Quadrant label ──────────────────────────────────────────────────────── */
-function Label({ index, title, sub }: { index: string; title: string; sub: string }) {
+function fmtDate(): string {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+}
+
+function fmtUsd(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
+/* ── Types ──────────────────────────────────────────────────────────────── */
+interface DashboardData {
+  newCount: number;
+  monitorCount: number;
+  hedgedCount: number;
+  totalExposure: number;
+  hedgeCoverage: number;
+  pendingApprovals: number;
+  openPositions: number;
+  marketOnline: boolean;
+}
+
+/* ── Mission Card ───────────────────────────────────────────────────────── */
+function MissionCard({ href, icon, title, stat, statLabel, desc }: {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  stat: string | number;
+  statLabel: string;
+  desc: string;
+}) {
   return (
-    <div style={{
-      height: 36, flexShrink: 0,
-      display: "flex", alignItems: "center", gap: 10,
-      padding: "0 16px",
-      background: T.sub,
-      borderBottom: `1px solid ${T.rim}`,
-    }}>
-      <span style={{
-        fontFamily: T.mono, fontSize: 15, color: T.muted,
-        letterSpacing: "0.1em", fontWeight: 700,
-      }}>
-        {index}
-      </span>
-      <span style={{ width: 1, height: 12, background: T.rim, flexShrink: 0 }} />
-      <span style={{
-        fontFamily: T.mono, fontSize: 15, fontWeight: 700,
-        color: T.primary, letterSpacing: "0.1em",
-      }}>
-        {title}
-      </span>
-      <span style={{
-        fontFamily: T.ui, fontSize: 15,
-        color: T.muted,
-      }}>
-        {sub}
-      </span>
+    <Link href={href} style={{ textDecoration: "none" }}>
+      <div
+        style={{
+          background: T.bgPanel,
+          border: `1px solid ${T.rim}`,
+          borderRadius: 4,
+          padding: "24px 20px",
+          cursor: "pointer",
+          transition: "border-color 150ms",
+          minHeight: 160,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent-blue)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = T.rim; }}
+      >
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <Icon icon={icon} size={20} color={T.tertiary} />
+            <span style={{ fontFamily: T.fontUI, fontSize: 14, fontWeight: 600, color: T.primary }}>
+              {title}
+            </span>
+          </div>
+          <div style={{ fontFamily: T.fontUI, fontSize: 13, color: T.secondary, lineHeight: 1.5 }}>
+            {desc}
+          </div>
+        </div>
+        <div style={{ marginTop: 16, display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{ fontFamily: T.fontMono, fontSize: 28, fontWeight: 700, color: T.primary }}>
+            {stat}
+          </span>
+          <span style={{ fontFamily: T.fontUI, fontSize: 12, color: T.tertiary, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            {statLabel}
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/* ── Skeleton ───────────────────────────────────────────────────────────── */
+function CardSkeleton() {
+  return (
+    <div style={{ background: T.bgPanel, border: `1px solid ${T.rim}`, borderRadius: 4, padding: "24px 20px", minHeight: 160 }}>
+      <div style={{ height: 14, width: 120, background: T.soft, borderRadius: 2, marginBottom: 12 }} />
+      <div style={{ height: 12, width: "80%", background: T.soft, borderRadius: 2, marginBottom: 8 }} />
+      <div style={{ height: 12, width: "60%", background: T.soft, borderRadius: 2 }} />
+      <div style={{ height: 28, width: 60, background: T.soft, borderRadius: 2, marginTop: 20 }} />
     </div>
   );
 }
@@ -78,11 +114,9 @@ export default function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, user, token } = useAuth();
 
-  const [ready,  setReady]  = useState(false);
-  const [rKey,   setRKey]   = useState(0);
-  const [lastTs, setLastTs] = useState(Date.now());
-  const [ago,    setAgo]    = useState("just now");
-  const ivRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [ready, setReady] = useState(false);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { setReady(true); }, []);
 
@@ -90,139 +124,128 @@ export default function DashboardPage() {
     if (ready && !isLoading && !isAuthenticated) router.replace("/auth/login");
   }, [ready, isLoading, isAuthenticated, router]);
 
-  useEffect(() => {
-    if (ivRef.current) clearInterval(ivRef.current);
-    setAgo(fmtAgo(lastTs));
-    ivRef.current = setInterval(() => setAgo(fmtAgo(lastTs)), 10_000);
-    return () => { if (ivRef.current) clearInterval(ivRef.current); };
-  }, [lastTs]);
+  const fetchData = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const [posRes, statusRes] = await Promise.allSettled([
+        dashboardFetch("/v1/positions", token),
+        dashboardFetch("/v1/market-data/status", token),
+      ]);
 
-  function refresh() { setRKey(k => k + 1); setLastTs(Date.now()); }
+      let newCount = 0, monitorCount = 0, hedgedCount = 0, totalExposure = 0, openPositions = 0;
+      if (posRes.status === "fulfilled" && posRes.value.ok) {
+        const positions = await posRes.value.json();
+        const list = Array.isArray(positions) ? positions : (positions?.items ?? []);
+        newCount = list.filter((p: Record<string, unknown>) => p.lifecycle_status === "NEW").length;
+        monitorCount = list.filter((p: Record<string, unknown>) =>
+          p.lifecycle_status === "HEDGED" || p.lifecycle_status === "READY_TO_EXECUTE"
+        ).length;
+        hedgedCount = list.filter((p: Record<string, unknown>) => p.lifecycle_status === "HEDGED").length;
+        openPositions = list.length;
+        totalExposure = list.reduce((sum: number, p: Record<string, unknown>) =>
+          sum + (Number(p.notional_amount) || 0), 0
+        );
+      }
+
+      const marketOnline = statusRes.status === "fulfilled" && statusRes.value.ok;
+      const hedgeCoverage = openPositions > 0 ? Math.round((hedgedCount / openPositions) * 100) : 0;
+
+      setData({ newCount, monitorCount, hedgedCount, totalExposure, hedgeCoverage, pendingApprovals: 0, openPositions, marketOnline });
+    } catch {
+      setData({ newCount: 0, monitorCount: 0, hedgedCount: 0, totalExposure: 0, hedgeCoverage: 0, pendingApprovals: 0, openPositions: 0, marketOnline: false });
+    }
+    setLoading(false);
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchData();
+    const id = setInterval(fetchData, 60_000);
+    return () => clearInterval(id);
+  }, [token, fetchData]);
 
   if (!ready || isLoading) {
     return (
       <div style={{
-        height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-        background: T.bg, fontFamily: T.mono, fontSize: 14,
-        color: T.muted, letterSpacing: "0.18em",
+        height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: T.bgDeep, fontFamily: T.fontMono, fontSize: 14,
+        color: T.tertiary, letterSpacing: "0.18em",
       }}>
-        LOADING…
+        LOADING...
       </div>
     );
   }
   if (!isAuthenticated || !user || !token) return null;
 
   const u = user as UserContext;
+  const firstName = (u.full_name ?? u.email).split(" ")[0];
+  const companyName = u.company?.name ?? "";
+  const role = u.roles?.[0] ?? "";
 
   return (
-    <div style={{
-      height: "100%",
-      display: "flex",
-      flexDirection: "column",
-      background: T.bg,
-      overflow: "hidden",
-    }}>
-
-      {/* ── Context strip ──────────────────────────────────────────────── */}
-      <div style={{
-        height: 36, flexShrink: 0,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 20px",
-        background: T.panel,
-        borderBottom: `1px solid ${T.rim}`,
-      }}>
-        <span style={{
-          fontFamily: T.mono, fontSize: 11, fontWeight: 600,
-          color: T.muted, letterSpacing: "0.14em",
-        }}>
-          DASHBOARD
-        </span>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{
-            fontFamily: T.mono, fontSize: 11,
-            color: T.muted, letterSpacing: "0.06em",
-          }}>
-            {ago}
-          </span>
-          <button
-            onClick={refresh}
-            style={{
-              display: "flex", alignItems: "center", gap: 5,
-              fontFamily: T.mono, fontSize: 11, letterSpacing: "0.1em",
-              color: T.secondary, background: "none",
-              border: `1px solid ${T.soft}`,
-              padding: "3px 10px", borderRadius: 2, cursor: "pointer",
-            }}
-          >
-            <RefreshCw size={10} strokeWidth={1.5} />
-            REFRESH
-          </button>
+    <PageShell icon={LayoutDashboard} title="Mission Control">
+      {/* Greeting */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontFamily: T.fontUI, fontSize: 20, fontWeight: 700, color: T.primary }}>
+          {greeting()}, {firstName}
+        </div>
+        <div style={{ fontFamily: T.fontUI, fontSize: 13, color: T.secondary, marginTop: 4 }}>
+          {fmtDate()}
+          {companyName && <span> &middot; {companyName}</span>}
+          {role && <span> &middot; {role.replace(/_/g, " ").toUpperCase()}</span>}
         </div>
       </div>
 
-      {/* ── 2 × 2 grid ───────────────────────────────────────────────────── */}
-      <div style={{
-        flex: 1,
-        display: "grid",
-        gridTemplate: "1fr 1fr / 1fr 1fr",
-        overflow: "hidden",
-        minHeight: 0,
-      }}>
-
-        {/* 01 · PORTFOLIO */}
-        <div style={{
-          display: "flex", flexDirection: "column", overflow: "hidden",
-          borderRight: `1px solid ${T.rim}`,
-          borderBottom: `1px solid ${T.rim}`,
-        }}>
-          <Label index="01" title="PORTFOLIO" sub="Exposure & coverage" />
-          <div style={{ flex: 1, overflow: "hidden" }}>
-            <WidgetErrorBoundary widgetId="kpi_summary">
-              <KpiSummaryWidget token={token} user={u} key={`kpi-${rKey}`} />
-            </WidgetErrorBoundary>
-          </div>
-        </div>
-
-        {/* 02 · MARKET */}
-        <div style={{
-          display: "flex", flexDirection: "column", overflow: "hidden",
-          borderBottom: `1px solid ${T.rim}`,
-        }}>
-          <Label index="02" title="MARKET" sub="Live FX rates" />
-          <div style={{ flex: 1, overflow: "hidden" }}>
-            <WidgetErrorBoundary widgetId="fx_rates">
-              <FxRatesWidget token={token} user={u} key={`fx-${rKey}`} />
-            </WidgetErrorBoundary>
-          </div>
-        </div>
-
-        {/* 03 · PIPELINE */}
-        <div style={{
-          display: "flex", flexDirection: "column", overflow: "hidden",
-          borderRight: `1px solid ${T.rim}`,
-        }}>
-          <Label index="03" title="PIPELINE" sub="Recent calculations" />
-          <div style={{ flex: 1, overflow: "hidden" }}>
-            <WidgetErrorBoundary widgetId="recent_runs">
-              <RecentRunsWidget token={token} key={`runs-${rKey}`} />
-            </WidgetErrorBoundary>
-          </div>
-        </div>
-
-        {/* 04 · GOVERNANCE */}
-        <div style={{
-          display: "flex", flexDirection: "column", overflow: "hidden",
-        }}>
-          <Label index="04" title="GOVERNANCE" sub="Pending approvals" />
-          <div style={{ flex: 1, overflow: "hidden" }}>
-            <WidgetErrorBoundary widgetId="pending_approvals">
-              <PendingApprovalsWidget token={token} user={u} key={`gov-${rKey}`} />
-            </WidgetErrorBoundary>
-          </div>
-        </div>
-
+      {/* Mission Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+        {loading ? (
+          <>
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </>
+        ) : (
+          <>
+            <MissionCard
+              href="/hedge-desk?mode=run"
+              icon={Play}
+              title="New Hedge"
+              stat={data?.newCount ?? 0}
+              statLabel="positions awaiting hedge"
+              desc="Start a new hedge run for unhedged positions."
+            />
+            <MissionCard
+              href="/hedge-monitor"
+              icon={Activity}
+              title="Monitor"
+              stat={data?.monitorCount ?? 0}
+              statLabel="active hedges"
+              desc="Track live hedges, MTM P&L, drift alerts."
+            />
+            <MissionCard
+              href="/market-overview"
+              icon={BarChart3}
+              title="Market Data"
+              stat={data?.marketOnline ? "LIVE" : "OFFLINE"}
+              statLabel={data?.marketOnline ? "market feed active" : "feed unavailable"}
+              desc="FX heatmap, indices, commodities, economic calendar."
+            />
+          </>
+        )}
       </div>
-    </div>
+
+      {/* KPI Strip */}
+      <KpiStrip
+        loading={loading}
+        items={[
+          { label: "Total Exposure", value: data ? fmtUsd(data.totalExposure) : "—" },
+          { label: "Hedge Coverage", value: data ? `${data.hedgeCoverage}%` : "—" },
+          { label: "Open Positions", value: data?.openPositions ?? "—" },
+          { label: "Pending Approvals", value: data?.pendingApprovals ?? 0 },
+          { label: "Hedged", value: data?.hedgedCount ?? 0 },
+        ]}
+      />
+    </PageShell>
   );
 }

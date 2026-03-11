@@ -41,6 +41,9 @@ import {
   type WizardState,
 } from "../../utils/policyMapper";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Shield } from "lucide-react";
+
 // ── Hydration-safe timestamp hook ──────────────────────────────────────────
 function useRenderTs(): string {
   const [ts, setTs] = useState('');
@@ -1878,7 +1881,7 @@ export default function AIPolicyWizardPage() {
   const canNext = !IS_LAST;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: S.bgDeep }}>
+    <PageShell icon={Shield} title="Policy Builder" breadcrumb={["Dashboard","Policy Builder"]}>
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: 'auto', minWidth: 0, fontFamily: S.fontUI, color: S.primary }}>
       <TopBar
         onBack={() => router.push('/policies')}
@@ -1987,6 +1990,6 @@ export default function AIPolicyWizardPage() {
 
     </div>
     <HelpPanel config={AI_WIZARD_HELP} storageKey="ai-wizard" activeSection={activePanelSection} />
-    </div>
+    </PageShell>
   );
 }

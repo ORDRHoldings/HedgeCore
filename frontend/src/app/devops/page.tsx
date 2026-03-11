@@ -11,9 +11,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import {
-  Cpu, Shield, AlertTriangle, Clock, GitBranch, CheckCircle, FileText,
-} from "lucide-react";
+import { Cpu, Shield, AlertTriangle, Clock, GitBranch, CheckCircle, FileText, Monitor } from "lucide-react"
+
+import { PageShell } from "@/components/layout/PageShell";
 
 // ── Design Tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -128,7 +128,7 @@ function Section({ title, icon, children }: {
         {icon}
         <span style={{
           fontFamily: T.fontMono,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 700,
           letterSpacing: "0.12em",
           color: T.textDim,
@@ -202,10 +202,10 @@ export default function DevOpsPage() {
   const sprintPct = sprintTotal > 0 && sprint ? Math.round((sprint.done / sprintTotal) * 100) : 0;
 
   const iconStyle = { color: T.textDim, flexShrink: 0 } as const;
-  const mono11: React.CSSProperties = { fontFamily: T.fontMono, fontSize: 11, color: T.text };
-  const mono10dim: React.CSSProperties = { fontFamily: T.fontMono, fontSize: 10, color: T.textFaint };
+  const mono11: React.CSSProperties = { fontFamily: T.fontMono, fontSize: 12, color: T.text };
+  const mono10dim: React.CSSProperties = { fontFamily: T.fontMono, fontSize: 12, color: T.textFaint };
   const thStyle: React.CSSProperties = {
-    fontFamily: T.fontMono, fontSize: 9, fontWeight: 600,
+    fontFamily: T.fontMono, fontSize: 12, fontWeight: 600,
     letterSpacing: "0.1em", color: T.textFaint, textTransform: "uppercase",
     textAlign: "left", padding: "6px 0", borderBottom: `1px solid ${T.border}`,
   };
@@ -221,7 +221,7 @@ export default function DevOpsPage() {
         .devops-row:hover { background: ${T.bgHover} !important; }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: T.bgDeep, color: T.text, fontFamily: T.fontUI }}>
+      <PageShell icon={Monitor} title="DevOps Console" breadcrumb={["Dashboard","DevOps"]}>
         {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -242,7 +242,7 @@ export default function DevOpsPage() {
               <div style={{ fontFamily: T.fontMono, fontSize: 15, fontWeight: 700, letterSpacing: "0.16em", color: T.textWhite }}>
                 DEVOPS CONSOLE
               </div>
-              <div style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 500, letterSpacing: "0.2em", color: T.textFaint, marginTop: 1 }}>
+              <div style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 500, letterSpacing: "0.2em", color: T.textFaint, marginTop: 1 }}>
                 CLAUDE CODE OPERATING STATE
               </div>
             </div>
@@ -250,7 +250,7 @@ export default function DevOpsPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <span style={mono10dim}>{lastRefresh.toLocaleTimeString()}</span>
             <button onClick={() => { setLoading(true); fetchData(); }} style={{
-              fontFamily: T.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.08em",
+              fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em",
               color: T.blue, background: T.blueDim, border: `1px solid rgba(59,130,246,0.2)`,
               borderRadius: 6, padding: "6px 14px", cursor: "pointer",
             }}>
@@ -315,14 +315,14 @@ export default function DevOpsPage() {
                       ] as const).map(([label, count, color]) => (
                         <div key={label} style={{ textAlign: "center" }}>
                           <div style={{ fontFamily: T.fontMono, fontSize: 20, fontWeight: 700, color }}>{count}</div>
-                          <div style={{ fontFamily: T.fontMono, fontSize: 9, letterSpacing: "0.08em", color: T.textFaint }}>{label}</div>
+                          <div style={{ fontFamily: T.fontMono, fontSize: 12, letterSpacing: "0.08em", color: T.textFaint }}>{label}</div>
                         </div>
                       ))}
                     </div>
                     <div style={{ height: 8, borderRadius: 4, background: T.bgCard, overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${sprintPct}%`, borderRadius: 4, background: `linear-gradient(90deg, ${T.blue}, ${T.green})`, transition: "width 500ms" }} />
                     </div>
-                    <div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textFaint, marginTop: 6, textAlign: "right" }}>
+                    <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint, marginTop: 6, textAlign: "right" }}>
                       {sprintPct}% complete
                     </div>
                   </>
@@ -345,7 +345,7 @@ export default function DevOpsPage() {
                         }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                             <span style={{
-                              fontFamily: T.fontMono, fontSize: 9, fontWeight: 700,
+                              fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
                               letterSpacing: "0.08em", color: c.fg,
                               background: `${c.fg}22`, padding: "1px 6px", borderRadius: 3,
                             }}>
@@ -353,7 +353,7 @@ export default function DevOpsPage() {
                             </span>
                           </div>
                           <div style={{ ...mono11, marginBottom: 4 }}>{r.text}</div>
-                          <div style={{ fontFamily: T.fontUI, fontSize: 11, color: T.textDim }}>
+                          <div style={{ fontFamily: T.fontUI, fontSize: 12, color: T.textDim }}>
                             Mitigation: {r.mitigation}
                           </div>
                         </div>
@@ -380,8 +380,8 @@ export default function DevOpsPage() {
                       {data.architecture_freeze.map((f, i) => (
                         <tr key={i} className="devops-row">
                           <td style={tdStyle}>{f.component}</td>
-                          <td style={{ ...tdStyle, color: T.textDim, fontSize: 11 }}>{f.frozen_at}</td>
-                          <td style={{ ...tdStyle, color: T.cyan, fontSize: 11 }}>{f.adr}</td>
+                          <td style={{ ...tdStyle, color: T.textDim, fontSize: 12 }}>{f.frozen_at}</td>
+                          <td style={{ ...tdStyle, color: T.cyan, fontSize: 12 }}>{f.adr}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -399,7 +399,7 @@ export default function DevOpsPage() {
                       .sort((a, b) => b.date.localeCompare(a.date))
                       .map((s, i) => (
                         <div key={i} style={{ display: "flex", gap: 12, padding: "6px 0", borderBottom: `1px solid ${T.border}` }}>
-                          <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textDim, whiteSpace: "nowrap", flexShrink: 0, minWidth: 80 }}>
+                          <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textDim, whiteSpace: "nowrap", flexShrink: 0, minWidth: 80 }}>
                             {s.date}
                           </span>
                           <span style={{ ...mono11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -427,11 +427,11 @@ export default function DevOpsPage() {
                     <tbody>
                       {data.decisions.map((d, i) => (
                         <tr key={i} className="devops-row">
-                          <td style={{ ...tdStyle, color: T.textDim, fontSize: 11, whiteSpace: "nowrap" }}>{d.date}</td>
+                          <td style={{ ...tdStyle, color: T.textDim, fontSize: 12, whiteSpace: "nowrap" }}>{d.date}</td>
                           <td style={tdStyle}>{d.title}</td>
                           <td style={{ ...tdStyle, textAlign: "right" }}>
                             <span style={{
-                              fontFamily: T.fontMono, fontSize: 9, fontWeight: 600,
+                              fontFamily: T.fontMono, fontSize: 12, fontWeight: 600,
                               color: d.status === "accepted" ? T.green : d.status === "rejected" ? T.red : T.amber,
                               background: d.status === "accepted" ? T.greenDim : d.status === "rejected" ? T.redDim : T.amberDim,
                               padding: "2px 6px", borderRadius: 3, textTransform: "uppercase",
@@ -465,7 +465,7 @@ export default function DevOpsPage() {
                           <td style={tdStyle}>{v.run_type}</td>
                           <td style={tdStyle}>
                             <span style={{
-                              fontFamily: T.fontMono, fontSize: 9, fontWeight: 700,
+                              fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
                               color: v.result === "PASS" ? T.green : T.red,
                               background: v.result === "PASS" ? T.greenDim : T.redDim,
                               padding: "2px 6px", borderRadius: 3,
@@ -473,7 +473,7 @@ export default function DevOpsPage() {
                               {v.result}
                             </span>
                           </td>
-                          <td style={{ ...tdStyle, textAlign: "right", color: T.textDim, fontSize: 11 }}>{v.date}</td>
+                          <td style={{ ...tdStyle, textAlign: "right", color: T.textDim, fontSize: 12 }}>{v.date}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -492,7 +492,7 @@ export default function DevOpsPage() {
                     </div>
                     <div>
                       <div style={{ fontFamily: T.fontUI, fontSize: 13, color: T.text }}>Tracked Files</div>
-                      <div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textFaint }}>
+                      <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint }}>
                         Files with recorded facts in the memory database
                       </div>
                     </div>
@@ -511,7 +511,7 @@ export default function DevOpsPage() {
             <span style={mono10dim}>Logged in as {user.email}</span>
           </div>
         </div>
-      </div>
+      </PageShell>
     </>
   );
 }

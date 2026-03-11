@@ -18,6 +18,9 @@ import { getActivePolicy, listPolicyTemplates, type PolicyInstance, type PolicyT
 import { calculate } from "@/api/client";
 import type { TradeRow, PolicyConfig, MarketSnapshot, CalculateResponse, BucketResult } from "@/api/types";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { LayoutDashboard } from "lucide-react";
+
 /* ── Design tokens ──────────────────────────────────────────────────────── */
 const S = {
   bg:        "#F8FAFC",
@@ -85,7 +88,7 @@ function StepBar({ step, onStep }: { step: Step; onStep: (s: Step) => void }) {
             <span style={{
               width: 22, height: 22, borderRadius: "50%", display: "flex",
               alignItems: "center", justifyContent: "center", flexShrink: 0,
-              fontFamily: S.mono, fontSize: 10, fontWeight: 700,
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700,
               background: isDone ? S.green : isActive ? S.blue : S.soft,
               color: isDone || isActive ? "#fff" : S.tertiary,
               transition: "background 120ms",
@@ -93,7 +96,7 @@ function StepBar({ step, onStep }: { step: Step; onStep: (s: Step) => void }) {
               {isDone ? "\u2713" : i + 1}
             </span>
             <span style={{
-              fontFamily: S.mono, fontSize: 10, fontWeight: 600,
+              fontFamily: S.mono, fontSize: 12, fontWeight: 600,
               letterSpacing: "0.1em",
               color: isActive ? S.blue : isDone ? S.green : S.muted,
             }}>
@@ -147,7 +150,7 @@ function StepPositions({
     <div style={{ padding: "20px 24px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.primary, letterSpacing: "0.08em" }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.primary, letterSpacing: "0.08em" }}>
             SELECT POSITIONS
           </div>
           <div style={{ fontFamily: S.ui, fontSize: 12, color: S.tertiary, marginTop: 2 }}>
@@ -155,7 +158,7 @@ function StepPositions({
           </div>
         </div>
         <button onClick={onSelectAll} style={{
-          fontFamily: S.mono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+          fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
           color: S.blue, background: S.blueDim, border: `1px solid ${S.blueBdr}`,
           padding: "4px 12px", borderRadius: 2, cursor: "pointer",
         }}>
@@ -166,7 +169,7 @@ function StepPositions({
       {grouped.map(([ccy, rows]) => (
         <div key={ccy} style={{ marginBottom: 16 }}>
           <div style={{
-            fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.14em",
+            fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em",
             color: S.muted, padding: "6px 0", borderBottom: `1px solid ${S.rim}`,
           }}>
             {ccy} EXPOSURES ({rows.length})
@@ -192,16 +195,16 @@ function StepPositions({
                   display: "flex", alignItems: "center", justifyContent: "center",
                   transition: "all 80ms",
                 }}>
-                  {checked && <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>{"\u2713"}</span>}
+                  {checked && <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>{"\u2713"}</span>}
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.primary }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.primary }}>
                       {p.record_id}
                     </span>
                     <span style={{
-                      fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em",
+                      fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                       color: p.type === "AR" ? S.green : S.amber,
                       background: p.type === "AR" ? S.greenDim : S.amberDim,
                       border: `1px solid ${p.type === "AR" ? S.greenBdr : S.amberBdr}`,
@@ -210,7 +213,7 @@ function StepPositions({
                       {p.type}
                     </span>
                     <span style={{
-                      fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.06em",
+                      fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                       color: p.status === "CONFIRMED" ? S.blue : S.amber,
                       background: p.status === "CONFIRMED" ? S.blueDim : S.amberDim,
                       border: `1px solid ${p.status === "CONFIRMED" ? S.blueBdr : S.amberBdr}`,
@@ -219,13 +222,13 @@ function StepPositions({
                       {p.status}
                     </span>
                     <span style={{
-                      fontFamily: S.mono, fontSize: 8, fontWeight: 600, letterSpacing: "0.04em",
+                      fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.04em",
                       color: S.tertiary, background: S.sub, padding: "1px 5px", borderRadius: 2,
                     }}>
                       {p.execution_status}
                     </span>
                   </div>
-                  <div style={{ fontFamily: S.ui, fontSize: 11, color: S.tertiary, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <div style={{ fontFamily: S.ui, fontSize: 12, color: S.tertiary, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {p.description || p.entity}
                   </div>
                 </div>
@@ -234,7 +237,7 @@ function StepPositions({
                   <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.primary }}>
                     {p.currency} {fmtNum(p.amount)}
                   </div>
-                  <div style={{ fontFamily: S.mono, fontSize: 10, color: S.muted }}>
+                  <div style={{ fontFamily: S.mono, fontSize: 12, color: S.muted }}>
                     {p.value_date}
                   </div>
                 </div>
@@ -246,7 +249,7 @@ function StepPositions({
 
       <div style={{
         marginTop: 12, padding: "8px 12px", background: S.sub, borderRadius: 3,
-        fontFamily: S.mono, fontSize: 10, color: S.tertiary,
+        fontFamily: S.mono, fontSize: 12, color: S.tertiary,
       }}>
         {selected.size} of {eligible.length} positions selected
       </div>
@@ -287,7 +290,7 @@ function StepPolicy({
 
   return (
     <div style={{ padding: "20px 24px" }}>
-      <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.primary, letterSpacing: "0.08em", marginBottom: 4 }}>
+      <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.primary, letterSpacing: "0.08em", marginBottom: 4 }}>
         HEDGE POLICY
       </div>
       <div style={{ fontFamily: S.ui, fontSize: 12, color: S.tertiary, marginBottom: 20 }}>
@@ -301,16 +304,16 @@ function StepPolicy({
           background: S.greenDim, border: `1px solid ${S.greenBdr}`,
           display: "flex", alignItems: "center", gap: 10,
         }}>
-          <span style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.green, letterSpacing: "0.1em" }}>ACTIVE</span>
+          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.green, letterSpacing: "0.1em" }}>ACTIVE</span>
           <span style={{ fontFamily: S.ui, fontSize: 12, fontWeight: 600, color: S.primary }}>{activePolicy.template.name}</span>
-          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.tertiary }}>{activePolicy.template.risk_posture}</span>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.tertiary }}>{activePolicy.template.risk_posture}</span>
         </div>
       )}
 
       {/* Template selector */}
       {templates.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: S.muted, marginBottom: 8 }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.muted, marginBottom: 8 }}>
             AVAILABLE TEMPLATES
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -325,10 +328,10 @@ function StepPolicy({
                 }}>
                   <div style={{ fontFamily: S.ui, fontSize: 12, fontWeight: 600, color: S.primary }}>{t.name}</div>
                   <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                    <span style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.tertiary, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.tertiary, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>
                       {t.risk_posture}
                     </span>
-                    <span style={{ fontFamily: S.mono, fontSize: 8, color: S.muted }}>
+                    <span style={{ fontFamily: S.mono, fontSize: 12, color: S.muted }}>
                       {t.config?.hedge_ratios?.confirmed ? `${(t.config.hedge_ratios.confirmed * 100).toFixed(0)}%/${(t.config.hedge_ratios.forecast * 100).toFixed(0)}%` : ""}
                     </span>
                   </div>
@@ -344,7 +347,7 @@ function StepPolicy({
         padding: 16, background: S.sub, borderRadius: 4,
         border: `1px solid ${S.rim}`,
       }}>
-        <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: S.muted, marginBottom: 12 }}>
+        <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.muted, marginBottom: 12 }}>
           CALCULATION PARAMETERS
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -357,11 +360,11 @@ function StepPolicy({
           <ParamField label="Min trade (USD)" value={config.min_trade_size_usd} suffix="USD" scale={1}
             onChange={v => onOverride({ min_trade_size_usd: v })} />
           <div>
-            <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 600, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em" }}>Execution product</div>
+            <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em" }}>Execution product</div>
             <div style={{ display: "flex", gap: 6 }}>
               {(["NDF", "FWD"] as const).map(prod => (
                 <button key={prod} onClick={() => onOverride({ execution_product: prod })} style={{
-                  fontFamily: S.mono, fontSize: 10, fontWeight: 600, padding: "4px 14px", borderRadius: 2, cursor: "pointer",
+                  fontFamily: S.mono, fontSize: 12, fontWeight: 600, padding: "4px 14px", borderRadius: 2, cursor: "pointer",
                   background: config.execution_product === prod ? S.blue : S.panel,
                   color: config.execution_product === prod ? "#fff" : S.tertiary,
                   border: `1px solid ${config.execution_product === prod ? S.blue : S.rim}`,
@@ -382,7 +385,7 @@ function ParamField({ label, value, suffix, scale, onChange }: {
 }) {
   return (
     <div>
-      <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 600, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em" }}>{label}</div>
+      <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em" }}>{label}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
         <input
           type="number"
@@ -394,7 +397,7 @@ function ParamField({ label, value, suffix, scale, onChange }: {
             color: S.primary, outline: "none",
           }}
         />
-        <span style={{ fontFamily: S.mono, fontSize: 9, color: S.muted }}>{suffix}</span>
+        <span style={{ fontFamily: S.mono, fontSize: 12, color: S.muted }}>{suffix}</span>
       </div>
     </div>
   );
@@ -415,11 +418,11 @@ function StepMarket({
   return (
     <div style={{ padding: "20px 24px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-        <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.primary, letterSpacing: "0.08em" }}>
+        <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.primary, letterSpacing: "0.08em" }}>
           MARKET DATA
         </div>
         <button onClick={onAutoFetch} disabled={loading} style={{
-          fontFamily: S.mono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+          fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
           color: loading ? S.muted : S.blue, background: S.blueDim, border: `1px solid ${S.blueBdr}`,
           padding: "4px 12px", borderRadius: 2, cursor: loading ? "default" : "pointer",
           opacity: loading ? 0.6 : 1,
@@ -433,7 +436,7 @@ function StepMarket({
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
         <div>
-          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 600, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em" }}>SPOT RATE</div>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em" }}>SPOT RATE</div>
           <input
             type="number"
             step="0.0001"
@@ -447,7 +450,7 @@ function StepMarket({
           />
         </div>
         <div>
-          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 600, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em" }}>AS OF DATE</div>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em" }}>AS OF DATE</div>
           <input
             type="date"
             value={market.as_of}
@@ -465,7 +468,7 @@ function StepMarket({
       <div style={{
         padding: 16, background: S.sub, borderRadius: 4, border: `1px solid ${S.rim}`,
       }}>
-        <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: S.muted, marginBottom: 12 }}>
+        <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.muted, marginBottom: 12 }}>
           FORWARD POINTS BY MONTH
         </div>
         {months.length === 0 ? (
@@ -476,7 +479,7 @@ function StepMarket({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8 }}>
             {months.map(m => (
               <div key={m}>
-                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.muted, marginBottom: 2 }}>{m}</div>
+                <div style={{ fontFamily: S.mono, fontSize: 12, color: S.muted, marginBottom: 2 }}>{m}</div>
                 <input
                   type="number"
                   step="0.0001"
@@ -498,7 +501,7 @@ function StepMarket({
       </div>
 
       {/* Provider metadata */}
-      <div style={{ marginTop: 12, fontFamily: S.mono, fontSize: 9, color: S.muted, letterSpacing: "0.06em" }}>
+      <div style={{ marginTop: 12, fontFamily: S.mono, fontSize: 12, color: S.muted, letterSpacing: "0.06em" }}>
         SOURCE: {(market.provider_metadata?.source as string) || "MANUAL"} | DATA CLASS: {(market.provider_metadata?.data_class as string) || "USER_INPUT"}
       </div>
     </div>
@@ -523,7 +526,7 @@ function StepReview({
 
   return (
     <div style={{ padding: "20px 24px" }}>
-      <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.primary, letterSpacing: "0.08em", marginBottom: 4 }}>
+      <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.primary, letterSpacing: "0.08em", marginBottom: 4 }}>
         REVIEW INPUTS
       </div>
       <div style={{ fontFamily: S.ui, fontSize: 12, color: S.tertiary, marginBottom: 20 }}>
@@ -555,7 +558,7 @@ function StepReview({
         <div style={{
           padding: "10px 14px", marginBottom: 16, borderRadius: 4,
           background: S.redDim, border: `1px solid ${S.redBdr}`,
-          fontFamily: S.mono, fontSize: 11, color: S.red, lineHeight: 1.5,
+          fontFamily: S.mono, fontSize: 12, color: S.red, lineHeight: 1.5,
         }}>
           {error}
         </div>
@@ -585,9 +588,9 @@ function ReviewCard({ title, items, color }: { title: string; items: string[]; c
       padding: "12px 14px", borderRadius: 4, background: S.panel,
       border: `1px solid ${S.rim}`, borderTop: `3px solid ${color}`,
     }}>
-      <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color, marginBottom: 8 }}>{title}</div>
+      <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color, marginBottom: 8 }}>{title}</div>
       {items.map((item, i) => (
-        <div key={i} style={{ fontFamily: S.mono, fontSize: 11, color: S.secondary, lineHeight: 1.8 }}>{item}</div>
+        <div key={i} style={{ fontFamily: S.mono, fontSize: 12, color: S.secondary, lineHeight: 1.8 }}>{item}</div>
       ))}
     </div>
   );
@@ -604,15 +607,15 @@ function StepResults({ result, currency }: { result: CalculateResponse; currency
       {/* Run header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div>
-          <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.primary, letterSpacing: "0.08em" }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.primary, letterSpacing: "0.08em" }}>
             HEDGE PLAN RESULTS
           </div>
-          <div style={{ fontFamily: S.mono, fontSize: 9, color: S.muted, marginTop: 2 }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, color: S.muted, marginTop: 2 }}>
             RUN {run_envelope.run_id.slice(0, 8)} | ENGINE {run_envelope.engine_version} | {validation_report.status === "PASS" ? "VALIDATED" : "WARNINGS"}
           </div>
         </div>
         <span style={{
-          fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+          fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
           color: validation_report.status === "PASS" ? S.green : S.amber,
           background: validation_report.status === "PASS" ? S.greenDim : S.amberDim,
           border: `1px solid ${validation_report.status === "PASS" ? S.greenBdr : S.amberBdr}`,
@@ -641,7 +644,7 @@ function StepResults({ result, currency }: { result: CalculateResponse; currency
           borderBottom: `1px solid ${S.rim}`,
         }}>
           {["BUCKET", "EXPOSURE", "EXISTING", "ACTION", "USD EQUIV", "FRICTION", "RESIDUAL"].map(h => (
-            <span key={h} style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", color: S.muted }}>{h}</span>
+            <span key={h} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.muted }}>{h}</span>
           ))}
         </div>
         {buckets.map((b: BucketResult) => (
@@ -652,18 +655,18 @@ function StepResults({ result, currency }: { result: CalculateResponse; currency
             borderBottom: `1px solid ${S.rim}`,
             background: b.suppressed ? S.amberDim : "transparent",
           }}>
-            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.primary }}>{b.bucket}</span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.secondary }}>{fmtNum(b.commercial_exposure_mxn)}</span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.secondary }}>{fmtNum(b.existing_hedges_mxn)}</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.primary }}>{b.bucket}</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.secondary }}>{fmtNum(b.commercial_exposure_mxn)}</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.secondary }}>{fmtNum(b.existing_hedges_mxn)}</span>
             <span style={{
-              fontFamily: S.mono, fontSize: 11, fontWeight: 600,
+              fontFamily: S.mono, fontSize: 12, fontWeight: 600,
               color: b.action_mxn > 0 ? S.green : b.action_mxn < 0 ? S.red : S.muted,
             }}>
               {b.suppressed ? "SUPPRESSED" : fmtNum(b.action_mxn)}
             </span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.secondary }}>{fmtUsd(b.action_usd)}</span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.red }}>{fmtUsd(b.friction_usd)}</span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.secondary }}>{fmtNum(b.residual_mxn)}</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.secondary }}>{fmtUsd(b.action_usd)}</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.red }}>{fmtUsd(b.friction_usd)}</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.secondary }}>{fmtNum(b.residual_mxn)}</span>
           </div>
         ))}
       </div>
@@ -671,7 +674,7 @@ function StepResults({ result, currency }: { result: CalculateResponse; currency
       {/* Scenario summary */}
       {scenario_results.totals.length > 0 && (
         <div style={{ marginTop: 20 }}>
-          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: S.muted, marginBottom: 8 }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.muted, marginBottom: 8 }}>
             SCENARIO STRESS TEST
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8 }}>
@@ -679,14 +682,14 @@ function StepResults({ result, currency }: { result: CalculateResponse; currency
               <div key={t.sigma} style={{
                 padding: "10px 12px", background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4,
               }}>
-                <div style={{ fontFamily: S.mono, fontSize: 9, color: S.muted, marginBottom: 4 }}>
+                <div style={{ fontFamily: S.mono, fontSize: 12, color: S.muted, marginBottom: 4 }}>
                   {t.sigma > 0 ? "+" : ""}{(t.sigma * 100).toFixed(0)}% SHOCK
                 </div>
-                <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.primary }}>
+                <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.primary }}>
                   Spot: {t.shocked_spot.toFixed(4)}
                 </div>
                 <div style={{
-                  fontFamily: S.mono, fontSize: 11, fontWeight: 600,
+                  fontFamily: S.mono, fontSize: 12, fontWeight: 600,
                   color: t.total_hedge_benefit_usd >= 0 ? S.green : S.red,
                 }}>
                   Benefit: {fmtUsd(t.total_hedge_benefit_usd)}
@@ -700,7 +703,7 @@ function StepResults({ result, currency }: { result: CalculateResponse; currency
       {/* Audit hash */}
       <div style={{
         marginTop: 20, padding: "10px 14px", background: S.sub, borderRadius: 4,
-        fontFamily: S.mono, fontSize: 9, color: S.muted, lineHeight: 1.8,
+        fontFamily: S.mono, fontSize: 12, color: S.muted, lineHeight: 1.8,
       }}>
         <span style={{ fontWeight: 700, letterSpacing: "0.08em" }}>AUDIT ENVELOPE</span><br />
         inputs_hash: {run_envelope.inputs_hash?.slice(0, 16)}...<br />
@@ -717,7 +720,7 @@ function KpiBox({ label, value, color }: { label: string; value: string; color: 
       padding: "10px 12px", background: S.panel, border: `1px solid ${S.rim}`,
       borderTop: `3px solid ${color}`, borderRadius: 4,
     }}>
-      <div style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", color: S.muted, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.muted, marginBottom: 4 }}>{label}</div>
       <div style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 700, color: S.primary }}>{value}</div>
     </div>
   );
@@ -912,16 +915,22 @@ export default function CalculateWizardPage() {
 
   if (isLoading || !isAuthenticated || !user || !token) {
     return (
+
+    
       <div style={{
         height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
         background: S.bg, fontFamily: S.mono, fontSize: 12, color: S.muted, letterSpacing: "0.14em",
       }}>
         LOADING...
       </div>
+    
+    
     );
   }
 
   return (
+    <PageShell icon={LayoutDashboard} title="Calculate" breadcrumb={["Dashboard", "Calculate"]} noPadding>
+
     <div style={{
       height: "100%", display: "flex", flexDirection: "column",
       background: S.bg, overflow: "hidden",
@@ -982,7 +991,7 @@ export default function CalculateWizardPage() {
           <button
             onClick={() => step > 0 ? setStep((step - 1) as Step) : router.push("/position-desk")}
             style={{
-              fontFamily: S.mono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+              fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em",
               color: S.tertiary, background: "none", border: `1px solid ${S.rim}`,
               padding: "6px 18px", borderRadius: 2, cursor: "pointer",
             }}
@@ -995,7 +1004,7 @@ export default function CalculateWizardPage() {
               onClick={() => canAdvance(step) && setStep((step + 1) as Step)}
               disabled={!canAdvance(step)}
               style={{
-                fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                 color: canAdvance(step) ? "#fff" : S.muted,
                 background: canAdvance(step) ? S.blue : S.sub,
                 border: "none", padding: "6px 24px", borderRadius: 2,
@@ -1007,7 +1016,7 @@ export default function CalculateWizardPage() {
             </button>
           )}
           {step === 3 && (
-            <span style={{ fontFamily: S.mono, fontSize: 10, color: S.muted }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.muted }}>
               Press the calculate button above to run
             </span>
           )}
@@ -1024,7 +1033,7 @@ export default function CalculateWizardPage() {
           <button
             onClick={() => { setResult(null); setStep(0); }}
             style={{
-              fontFamily: S.mono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+              fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em",
               color: S.tertiary, background: "none", border: `1px solid ${S.rim}`,
               padding: "6px 18px", borderRadius: 2, cursor: "pointer",
             }}
@@ -1035,7 +1044,7 @@ export default function CalculateWizardPage() {
             <button
               onClick={() => router.push("/results")}
               style={{
-                fontFamily: S.mono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+                fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em",
                 color: S.blue, background: S.blueDim, border: `1px solid ${S.blueBdr}`,
                 padding: "6px 18px", borderRadius: 2, cursor: "pointer",
               }}
@@ -1045,7 +1054,7 @@ export default function CalculateWizardPage() {
             <button
               onClick={() => router.push("/hedge-desk")}
               style={{
-                fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                 color: "#fff", background: S.blue, border: "none",
                 padding: "6px 24px", borderRadius: 2, cursor: "pointer",
               }}
@@ -1056,5 +1065,7 @@ export default function CalculateWizardPage() {
         </div>
       )}
     </div>
+  
+    </PageShell>
   );
 }

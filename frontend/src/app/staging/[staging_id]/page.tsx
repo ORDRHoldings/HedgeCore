@@ -4,15 +4,15 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import {
-  CheckCircle,
+import { CheckCircle,
   XCircle,
   Play,
   ArrowLeft,
   RefreshCw,
   ShieldCheck,
-  AlertTriangle,
-} from "lucide-react";
+  AlertTriangle, Globe } from "lucide-react"
+
+import { PageShell } from "@/components/layout/PageShell";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const S = {
@@ -623,10 +623,7 @@ export default function ProposalDetailPage() {
     : [];
 
   return (
-    <div style={{
-      minHeight: "100vh", display: "flex", flexDirection: "column" as const,
-      background: S.bgDeep, fontFamily: S.fontUI, color: S.primary,
-    }}>
+    <PageShell icon={Globe} title="Staging Detail" breadcrumb={["Dashboard","Staging","Detail"]}>
 
       {/* ── Header 44px ── */}
       <header style={{
@@ -1096,6 +1093,6 @@ export default function ProposalDetailPage() {
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

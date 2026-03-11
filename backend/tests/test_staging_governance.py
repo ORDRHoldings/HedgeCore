@@ -293,11 +293,13 @@ class TestGovernanceNavAccessControlRemoved:
         assert '"Access Control"' not in governance_section, \
             "Access Control label must NOT appear in Governance nav items"
 
-    def test_access_control_page_still_exists(self):
-        """The /access-control page must still exist (route not deleted)."""
+    def test_access_control_redirected_to_settings(self):
+        """The /access-control route must redirect to /settings via next.config.js."""
         import pathlib
-        p = pathlib.Path(__file__).parents[2] / "frontend" / "src" / "app" / "access-control" / "page.tsx"
-        assert p.exists(), "/access-control/page.tsx must still exist (route preserved)"
+        p = pathlib.Path(__file__).parents[2] / "frontend" / "next.config.js"
+        src = p.read_text(encoding="utf-8")
+        assert "/access-control" in src, "/access-control must have a redirect in next.config.js"
+        assert "/settings" in src, "/settings must be the redirect target"
 
     def test_governance_section_exists(self):
         """Governance section header must exist in AppSidebar."""

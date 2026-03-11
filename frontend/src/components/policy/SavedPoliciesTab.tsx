@@ -1,24 +1,21 @@
 "use client";
 
 /**
- * saved-policies/page.tsx
- * ORDR Terminal -- My Saved Policies
+ * SavedPoliciesTab — My Saved Policies (tab component)
  *
- * Route: /saved-policies
- * Module: Policy Engine > My Saved Policies
- *
+ * Extracted from /saved-policies for use in the unified /policies tabbed layout.
  * Card-grid view of user-created, branch, and company-wide policy templates.
- * Tabs: My Policies | Branch Policies | Company-wide
+ * Sub-tabs: My Policies | Branch Policies | Company-wide | Favorites
  *
  * All action buttons (Activate, Edit, Duplicate, Delete, Deactivate) are fully
  * wired to the policyClient API with optimistic UI and inline feedback.
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useAuth } from "../../lib/authContext";
+import { useAuth } from "@/lib/authContext";
 import { useRouter } from "next/navigation";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
-import EmptyState from "../../components/ui/EmptyState";
+import EmptyState from "@/components/ui/EmptyState";
 import Link from "next/link";
 import { Bookmark, Download, Upload } from "lucide-react";
 import {
@@ -34,8 +31,8 @@ import {
   removeFavorite,
   exportPolicyTemplate,
   importPolicyTemplate,
-} from "../../api/policyClient";
-import type { PolicyTemplate, PolicyInstance, UpdateTemplatePayload, PolicyFavorite } from "../../api/policyClient";
+} from "@/api/policyClient";
+import type { PolicyTemplate, PolicyInstance, UpdateTemplatePayload, PolicyFavorite } from "@/api/policyClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { SAVED_POLICIES_HELP } from "@/lib/helpContent";
 import { POLICY_PRESETS } from "@/constants/policyPresets";
@@ -81,7 +78,7 @@ interface Toast {
 function Badge({ label, color }: { label: string; color: string }) {
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
       color, background: `color-mix(in srgb, ${color} 12%, transparent)`,
       border: `1px solid color-mix(in srgb, ${color} 25%, transparent)`,
       padding: "1px 5px", borderRadius: 2, textTransform: "uppercase" as const,
@@ -826,7 +823,7 @@ function ActionBtn({ label, accent, danger, onClick, disabled }: {
 }
 
 // -- Main page component ----------------------------------------------------------
-export default function SavedPoliciesPage() {
+export default function SavedPoliciesTab() {
   const _planAllowed = usePlanRedirect("professional");
   const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();

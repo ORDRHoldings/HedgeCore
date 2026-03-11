@@ -127,7 +127,7 @@ export default function ExposureSummaryWidget({ token, onRemove }: Props) {
             icon={TrendingUp}
             title="No FX Exposures Registered"
             description="Register your currency positions to see exposure breakdown by currency pair."
-            cta={{ label: "OPEN POSITION DESK", onClick: () => router.push("/input") }}
+            cta={{ label: "OPEN POSITION DESK", onClick: () => router.push("/position-desk") }}
           />
         ) : (
           <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6 }}>

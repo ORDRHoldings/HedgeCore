@@ -8,6 +8,9 @@ import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { AUDIT_HELP } from "@/lib/help";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Globe } from "lucide-react";
+
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
   const [renderTs, setRenderTs] = useState('');
@@ -164,7 +167,7 @@ function Badge({ label, color }: { label: string; color: string }) {
   return (
     <span style={{
       fontFamily:    S.fontMono,
-      fontSize:      9,
+      fontSize: 12,
       fontWeight:    700,
       letterSpacing: "0.08em",
       color,
@@ -219,7 +222,7 @@ function TopBar({ renderTs, onBack, onRefresh, loading }: {
         disabled={loading}
         title="Reload events from server"
         style={{
-          fontFamily: S.fontMono, fontSize: 10, color: loading ? S.tertiary : S.primary,
+          fontFamily: S.fontMono, fontSize: 12, color: loading ? S.tertiary : S.primary,
           background: "transparent", border: `1px solid ${S.rim}`,
           padding: "3px 10px", cursor: loading ? "wait" : "pointer",
           letterSpacing: "0.04em",
@@ -564,6 +567,8 @@ export default function AuditTrailPage() {
   const actors = ["All Actors", ...Array.from(new Set(events.map(e => e.actor))).sort()];
 
   return (
+
+    <PageShell icon={Globe} title="Audit Trail" breadcrumb={["Dashboard", "Audit Trail"]} noPadding>
     <div style={{
       background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI,
       display: "flex", flexDirection: "column",
@@ -818,7 +823,7 @@ export default function AuditTrailPage() {
             {loading && (
               <div style={{ padding: "40px 24px", textAlign: "center" }}>
                 <div style={{
-                  fontFamily: S.fontMono, fontSize: 11, color: S.tertiary,
+                  fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                   letterSpacing: "0.06em",
                 }}>
                   LOADING AUDIT EVENTS…
@@ -829,13 +834,13 @@ export default function AuditTrailPage() {
             {/* Error */}
             {!loading && fetchError && (
               <div style={{ padding: "32px 24px", textAlign: "center" }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.fail, letterSpacing: "0.06em" }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail, letterSpacing: "0.06em" }}>
                   FAILED TO LOAD — {fetchError}
                 </div>
                 <button
                   onClick={fetchEvents}
                   style={{
-                    marginTop: 12, fontFamily: S.fontMono, fontSize: 10,
+                    marginTop: 12, fontFamily: S.fontMono, fontSize: 12,
                     fontWeight: 600, letterSpacing: "0.06em",
                     color: S.cyan, background: "transparent",
                     border: `1px solid ${S.cyan}`,
@@ -855,7 +860,7 @@ export default function AuditTrailPage() {
                     ? "No audit events recorded yet. Events are written automatically as your team takes actions."
                     : "No events match the current filters."}
                 </div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 6, letterSpacing: "0.06em" }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 6, letterSpacing: "0.06em" }}>
                   {events.length === 0 ? "EMPTY AUDIT LOG" : "0 MATCHING EVENTS"}
                 </div>
               </div>
@@ -887,5 +892,7 @@ export default function AuditTrailPage() {
         }
       `}</style>
     </div>
-  );
+  
+    </PageShell>
+    );
 }

@@ -36,7 +36,7 @@ export const SANDBOX_HELP: ModuleHelp = {
         position: 1,
         total: 7,
         label: "Sandbox",
-        next: { label: "Input", href: "/input" },
+        next: { label: "Input", href: "/position-desk" },
         description:
           "Sandbox is the entry point of the hedge workflow — explore hedge strategies without commitment. The full 7-stage engine runs in simulation mode. Successful sandbox runs can be promoted to a formal proposal via the Execution Desk.",
       },

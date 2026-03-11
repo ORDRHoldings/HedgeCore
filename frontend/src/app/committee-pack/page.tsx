@@ -36,6 +36,9 @@ import {
 import HelpPanel from "../../components/layout/HelpPanel";
 import { COMMITTEE_PACK_HELP } from "../../lib/helpContent";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { FileText } from "lucide-react";
+
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -106,7 +109,7 @@ function SectionDivider({ label }: { label: string }) {
     }}>
       <div style={{ flex: 1, height: 1, background: S.rim }} />
       <span style={{
-        fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.10em",
+        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.10em",
         color: S.tertiary, whiteSpace: "nowrap" as const,
       }}>
         {label}
@@ -138,7 +141,7 @@ function HashRow({
       }}
     >
       <span style={{
-        fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
         letterSpacing: "0.06em", color: S.secondary, textTransform: "uppercase" as const,
       }}>
         {label}
@@ -148,7 +151,7 @@ function HashRow({
         aria-label={`SHA-256 hash: ${value ?? "not available"}`}
         title={value ?? "—"}
         style={{
-          fontFamily: S.fontMono, fontSize: 9,
+          fontFamily: S.fontMono, fontSize: 12,
           color: highlight ? S.cyan : S.secondary,
           wordBreak: "break-all" as const,
           cursor: value ? "pointer" : "default",
@@ -163,7 +166,7 @@ function HashRow({
         onClick={copy}
         disabled={!value}
         style={{
-          fontFamily: S.fontMono, fontSize: 8,
+          fontFamily: S.fontMono, fontSize: 12,
           color: copied ? S.pass : S.tertiary,
           transition: "color 0.2s",
           background: "none", border: "none", cursor: value ? "pointer" : "default",
@@ -181,14 +184,14 @@ function PolicyRow({ label, value }: { label: string; value: string }) {
   return (
     <tr>
       <td style={{
-        padding: "5px 10px 5px 0", fontFamily: S.fontMono, fontSize: 10,
+        padding: "5px 10px 5px 0", fontFamily: S.fontMono, fontSize: 12,
         color: S.secondary, whiteSpace: "nowrap" as const, verticalAlign: "top",
         borderBottom: `1px solid ${S.rim}`,
       }}>
         {label}
       </td>
       <td style={{
-        padding: "5px 0", fontFamily: S.fontMono, fontSize: 10,
+        padding: "5px 0", fontFamily: S.fontMono, fontSize: 12,
         color: S.primary, borderBottom: `1px solid ${S.rim}`,
       }}>
         {value}
@@ -211,7 +214,7 @@ function ScenarioBadge({ scenario }: { scenario: CommitteePackScenario }) {
       borderRadius: 3, padding: "8px 12px", minWidth: 100,
     }}>
       <div style={{
-        fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
         color: S.secondary, letterSpacing: "0.08em", marginBottom: 4,
       }}>
         σ {sigma > 0 ? `+${(sigma * 100).toFixed(0)}%` : `${(sigma * 100).toFixed(0)}%`}
@@ -223,7 +226,7 @@ function ScenarioBadge({ scenario }: { scenario: CommitteePackScenario }) {
         {fmtUsd(benefit)}
       </div>
       <div style={{
-        fontFamily: S.fontUI, fontSize: 9, color: S.tertiary, marginTop: 2,
+        fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 2,
       }}>
         hedge benefit
       </div>
@@ -275,7 +278,7 @@ function CommitteePackInner() {
           Navigate from Position Desk or Run Viewer to generate a committee pack.
         </div>
         <Link href="/position-desk" style={{
-          fontFamily: S.fontMono, fontSize: 10, color: S.cyan,
+          fontFamily: S.fontMono, fontSize: 12, color: S.cyan,
           border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
           padding: "4px 12px", borderRadius: 2, textDecoration: "none",
         }}>
@@ -297,7 +300,7 @@ function CommitteePackInner() {
           borderTopColor: S.cyan, borderRadius: "50%",
           animation: "spin 0.8s linear infinite",
         }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
           Loading committee pack…
         </span>
       </div>
@@ -312,15 +315,15 @@ function CommitteePackInner() {
         justifyContent: "center", height: "60vh", gap: 10,
       }}>
         <div style={{
-          fontFamily: S.fontMono, fontSize: 11, color: S.fail,
+          fontFamily: S.fontMono, fontSize: 12, color: S.fail,
           background: `color-mix(in srgb, ${S.fail} 8%, ${S.bgPanel})`,
           border: `1px solid color-mix(in srgb, ${S.fail} 20%, transparent)`,
           borderRadius: 3, padding: "8px 16px",
         }}>
           {err}
         </div>
-        <Link href="/execution-history" style={{
-          fontFamily: S.fontMono, fontSize: 10, color: S.secondary, textDecoration: "none",
+        <Link href="/trade-history" style={{
+          fontFamily: S.fontMono, fontSize: 12, color: S.secondary, textDecoration: "none",
         }}>
           ← Back to Run History
         </Link>
@@ -350,15 +353,15 @@ function CommitteePackInner() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Link href={`/run-viewer?id=${encodeURIComponent(runId)}`} style={{
-            fontFamily: S.fontMono, fontSize: 9, color: S.purple,
+            fontFamily: S.fontMono, fontSize: 12, color: S.purple,
             background: `color-mix(in srgb, ${S.purple} 8%, transparent)`,
             border: `1px solid color-mix(in srgb, ${S.purple} 20%, transparent)`,
             padding: "3px 8px", borderRadius: 2, textDecoration: "none",
           }}>
             ← RUN VIEWER
           </Link>
-          <Link href="/execution-history" style={{
-            fontFamily: S.fontMono, fontSize: 9, color: S.secondary,
+          <Link href="/trade-history" style={{
+            fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
             border: `1px solid ${S.rim}`, padding: "3px 8px", borderRadius: 2,
             textDecoration: "none",
           }}>
@@ -367,7 +370,7 @@ function CommitteePackInner() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+            fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
             letterSpacing: "0.06em",
           }}>
             RUN {shortId(runId)}
@@ -376,7 +379,7 @@ function CommitteePackInner() {
             onClick={() => window.print()}
             aria-label="Print committee pack to PDF"
             style={{
-              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
               letterSpacing: "0.06em",
               color: S.bgDeep, background: S.cyan,
               border: "none", borderRadius: 2, padding: "4px 14px",
@@ -405,7 +408,7 @@ function CommitteePackInner() {
         {/* Title block */}
         <div style={{ marginBottom: 20 }}>
           <div style={{
-            fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase" as const,
             marginBottom: 6,
           }}>
@@ -447,13 +450,13 @@ function CommitteePackInner() {
               background: S.bgPanel, padding: "10px 14px",
             }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                 letterSpacing: "0.08em", color: S.tertiary, marginBottom: 3,
               }}>
                 {label.toUpperCase()}
               </div>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 11, color: S.primary, fontWeight: 600,
+                fontFamily: S.fontMono, fontSize: 12, color: S.primary, fontWeight: 600,
               }}>
                 {value}
               </div>
@@ -468,13 +471,13 @@ function CommitteePackInner() {
           borderRadius: 2, padding: "10px 14px",
         }}>
           <div style={{
-            fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             letterSpacing: "0.10em", color: S.pass, marginBottom: 4,
           }}>
             IFRS 9 §B6.4 — HEDGE EFFECTIVENESS DOCUMENTATION
           </div>
           <div style={{
-            fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.5,
+            fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5,
           }}>
             {regulatory.attestation}
           </div>
@@ -491,23 +494,23 @@ function CommitteePackInner() {
       }}>
         <div style={{ marginBottom: 12 }}>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             letterSpacing: "0.08em", color: S.tertiary,
           }}>
             ENGINE VERSION
           </span>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, color: S.cyan, marginLeft: 10,
+            fontFamily: S.fontMono, fontSize: 12, color: S.cyan, marginLeft: 10,
           }}>
             {run_envelope.engine_version}
           </span>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginLeft: 16,
+            fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginLeft: 16,
           }}>
             TIMESTAMP
           </span>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, color: S.secondary, marginLeft: 10,
+            fontFamily: S.fontMono, fontSize: 12, color: S.secondary, marginLeft: 10,
           }}>
             {fmtTs(run_envelope.timestamp)}
           </span>
@@ -523,7 +526,7 @@ function CommitteePackInner() {
 
         <div style={{
           marginTop: 12,
-          fontFamily: S.fontUI, fontSize: 10, color: S.secondary, lineHeight: 1.5,
+          fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5,
         }}>
           {regulatory.worm_note}
         </div>
@@ -538,7 +541,7 @@ function CommitteePackInner() {
         background: S.bgPanel, padding: "18px 20px", marginBottom: 8,
       }}>
         {trace_lite.events.length === 0 ? (
-          <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>
+          <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
             No trace events recorded for this run.
           </div>
         ) : (
@@ -561,7 +564,7 @@ function CommitteePackInner() {
                     border: `1px solid ${col}`,
                     background: `color-mix(in srgb, ${col} 12%, ${S.bgPanel})`,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     color: col, flexShrink: 0, marginTop: 4,
                   }}>
                     {evt.step[0] ?? "?"}
@@ -572,19 +575,19 @@ function CommitteePackInner() {
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                         color: col, letterSpacing: "0.06em",
                       }}>
                         {evt.step}
                       </span>
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+                        fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                       }}>
                         {fmtTs(evt.timestamp)}
                       </span>
                     </div>
                     <div style={{
-                      fontFamily: S.fontUI, fontSize: 11, color: S.secondary,
+                      fontFamily: S.fontUI, fontSize: 12, color: S.secondary,
                     }}>
                       {evt.detail ?? "—"}
                     </div>
@@ -611,13 +614,13 @@ function CommitteePackInner() {
             borderRadius: 2, padding: "10px 14px",
           }}>
             <span style={{
-              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
               color: S.amber, letterSpacing: "0.06em",
             }}>
               UNPINNED RUN
             </span>
             <span style={{
-              fontFamily: S.fontUI, fontSize: 11, color: S.secondary, marginLeft: 10,
+              fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginLeft: 10,
             }}>
               This run was executed before policy version pinning was activated
               (Sprint 1.0). The policy configuration in force at calculation time
@@ -632,32 +635,32 @@ function CommitteePackInner() {
               flexWrap: "wrap" as const,
             }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                 color: S.bgDeep, background: S.pass,
                 padding: "2px 8px", borderRadius: 2, letterSpacing: "0.06em",
               }}>
                 REV {policy_revision.revision}
               </div>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 9, color: S.secondary,
+                fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
               }}>
                 Policy Instance: {policy_revision.policy_instance_id.slice(0, 8).toUpperCase()}
               </div>
               {policy_revision.created_by_email && (
                 <div style={{
-                  fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+                  fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                 }}>
                   Activated by: {policy_revision.created_by_email}
                 </div>
               )}
               <div style={{
-                fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+                fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
               }}>
                 {fmtTs(policy_revision.created_at)}
               </div>
               {policy_revision.change_reason && (
                 <div style={{
-                  fontFamily: S.fontUI, fontSize: 10, color: S.secondary,
+                  fontFamily: S.fontUI, fontSize: 12, color: S.secondary,
                   fontStyle: "italic",
                 }}>
                   &quot;{policy_revision.change_reason}&quot;
@@ -673,7 +676,7 @@ function CommitteePackInner() {
             {/* Canonical policy config table */}
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <caption style={{
-                fontFamily: S.fontMono, fontSize: 8, color: S.secondary,
+                fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
                 letterSpacing: "0.06em", textAlign: "left" as const,
                 padding: "0 0 6px", captionSide: "top" as const,
               }}>
@@ -710,7 +713,7 @@ function CommitteePackInner() {
       }}>
         {buckets.length === 0 ? (
           <div style={{
-            padding: "18px 20px", fontFamily: S.fontUI, fontSize: 11, color: S.tertiary,
+            padding: "18px 20px", fontFamily: S.fontUI, fontSize: 12, color: S.tertiary,
           }}>
             No hedge buckets in this run.
           </div>
@@ -718,7 +721,7 @@ function CommitteePackInner() {
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <caption style={{
-                fontFamily: S.fontMono, fontSize: 8, color: S.secondary,
+                fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
                 letterSpacing: "0.06em", textAlign: "left" as const,
                 padding: "6px 12px 4px", captionSide: "top" as const,
               }}>
@@ -728,7 +731,7 @@ function CommitteePackInner() {
                 <tr style={{ background: S.bgSub }}>
                   {["BUCKET", "DIRECTION", "NOTIONAL (USD)", "COVERAGE", "INSTRUMENT"].map(h => (
                     <th key={h} scope="col" style={{
-                      padding: "8px 12px", fontFamily: S.fontMono, fontSize: 8,
+                      padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12,
                       fontWeight: 700, letterSpacing: "0.08em", color: S.secondary,
                       textAlign: "left" as const, borderBottom: `1px solid ${S.rim}`,
                       whiteSpace: "nowrap" as const,
@@ -748,35 +751,35 @@ function CommitteePackInner() {
                       background: i % 2 === 0 ? S.bgPanel : S.bgSub,
                     }}>
                       <td style={{
-                        padding: "7px 12px", fontFamily: S.fontMono, fontSize: 10,
+                        padding: "7px 12px", fontFamily: S.fontMono, fontSize: 12,
                         color: S.primary, borderBottom: `1px solid ${S.rim}`,
                         whiteSpace: "nowrap" as const,
                       }}>
                         {b.bucket as string}
                       </td>
                       <td style={{
-                        padding: "7px 12px", fontFamily: S.fontMono, fontSize: 9,
+                        padding: "7px 12px", fontFamily: S.fontMono, fontSize: 12,
                         fontWeight: 700, color: dirColor,
                         borderBottom: `1px solid ${S.rim}`,
                       }}>
                         {(b.action_direction as string)?.toUpperCase() ?? "—"}
                       </td>
                       <td style={{
-                        padding: "7px 12px", fontFamily: S.fontMono, fontSize: 10,
+                        padding: "7px 12px", fontFamily: S.fontMono, fontSize: 12,
                         color: S.secondary, borderBottom: `1px solid ${S.rim}`,
                         textAlign: "right" as const,
                       }}>
                         {fmtUsd(b.action_usd as number)}
                       </td>
                       <td style={{
-                        padding: "7px 12px", fontFamily: S.fontMono, fontSize: 10,
+                        padding: "7px 12px", fontFamily: S.fontMono, fontSize: 12,
                         color: S.secondary, borderBottom: `1px solid ${S.rim}`,
                         textAlign: "right" as const,
                       }}>
                         {fmtPct(b.coverage_pct as number)}
                       </td>
                       <td style={{
-                        padding: "7px 12px", fontFamily: S.fontMono, fontSize: 9,
+                        padding: "7px 12px", fontFamily: S.fontMono, fontSize: 12,
                         color: S.tertiary, borderBottom: `1px solid ${S.rim}`,
                       }}>
                         {mapping
@@ -801,13 +804,13 @@ function CommitteePackInner() {
             {Object.entries(hedge_plan.summary).map(([k, v]) => (
               <div key={k}>
                 <span style={{
-                  fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+                  fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                   letterSpacing: "0.06em",
                 }}>
                   {k.replace(/_/g, " ").toUpperCase()}
                 </span>
                 <span style={{
-                  fontFamily: S.fontMono, fontSize: 10, color: S.secondary, marginLeft: 6,
+                  fontFamily: S.fontMono, fontSize: 12, color: S.secondary, marginLeft: 6,
                 }}>
                   {String(v)}
                 </span>
@@ -826,7 +829,7 @@ function CommitteePackInner() {
         background: S.bgPanel, padding: "18px 20px", marginBottom: 8,
       }}>
         {scenarios.length === 0 ? (
-          <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>
+          <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
             No scenario analysis data in this run.
           </div>
         ) : (
@@ -839,7 +842,7 @@ function CommitteePackInner() {
           </div>
         )}
         <div style={{
-          marginTop: 12, fontFamily: S.fontUI, fontSize: 10,
+          marginTop: 12, fontFamily: S.fontUI, fontSize: 12,
           color: S.secondary, lineHeight: 1.5,
         }}>
           Scenario values represent the estimated P&amp;L benefit of the hedge programme
@@ -859,7 +862,7 @@ function CommitteePackInner() {
       }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <caption style={{
-            fontFamily: S.fontMono, fontSize: 8, color: S.secondary,
+            fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
             letterSpacing: "0.06em", textAlign: "left" as const,
             padding: "0 0 6px", captionSide: "top" as const,
           }}>
@@ -879,20 +882,20 @@ function CommitteePackInner() {
           borderRadius: 2, padding: "10px 14px",
         }}>
           <div style={{
-            fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             letterSpacing: "0.10em", color: S.pass, marginBottom: 6,
           }}>
             ATTESTATION
           </div>
           <div style={{
-            fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.6,
+            fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.6,
           }}>
             {regulatory.attestation}
           </div>
         </div>
         <div style={{
           marginTop: 10,
-          fontFamily: S.fontUI, fontSize: 10, color: S.secondary,
+          fontFamily: S.fontUI, fontSize: 12, color: S.secondary,
           fontStyle: "italic",
         }}>
           {regulatory.worm_note}
@@ -905,13 +908,13 @@ function CommitteePackInner() {
           flexWrap: "wrap" as const, gap: 8,
         }}>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+            fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
             letterSpacing: "0.06em",
           }}>
             ORDR TERMINAL  ·  ENGINE v{meta.engine_version}  ·  RUN {shortId(runId)}
           </span>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+            fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
           }}>
             Generated {fmtTs(meta.created_at)}
           </span>
@@ -946,6 +949,8 @@ export default function CommitteePackPage() {
   const _planAllowed = usePlanRedirect("professional");
   if (!_planAllowed) return null;
   return (
+
+    <PageShell icon={FileText} title="Committee Pack" breadcrumb={["Dashboard", "Committee Pack"]} noPadding>
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       <div style={{ flex: 1, overflowY: "auto" }}>
         <Suspense fallback={
@@ -955,7 +960,7 @@ export default function CommitteePackPage() {
           }}>
             <div style={{
               fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-              fontSize: 11, color: "var(--text-secondary)",
+              fontSize: 12, color: "var(--text-secondary)",
             }}>
               Loading…
             </div>
@@ -966,5 +971,7 @@ export default function CommitteePackPage() {
       </div>
       <HelpPanel config={COMMITTEE_PACK_HELP} storageKey="committee-pack" />
     </div>
-  );
+  
+    </PageShell>
+    );
 }

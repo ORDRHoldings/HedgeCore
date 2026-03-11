@@ -25,6 +25,9 @@ import { dashboardFetch } from "@/lib/api/dashboardClient";
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { LINEAGE_HELP } from "@/lib/help/lineage";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Globe } from "lucide-react";
+
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -92,7 +95,7 @@ function Badge({ text, color }: { text: string; color: string }) {
   return (
     <span style={{
       fontFamily:    S.fontMono,
-      fontSize:      9,
+      fontSize: 12,
       fontWeight:    700,
       letterSpacing: "0.07em",
       color,
@@ -112,10 +115,10 @@ function FieldRow({ label, value }: { label: string; value: unknown }) {
   if (value === null || value === undefined || value === "") return null;
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, padding: "3px 0", borderBottom: `1px solid ${S.soft}` }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.06em", color: S.tertiary, flexShrink: 0 }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em", color: S.tertiary, flexShrink: 0 }}>
         {label.toUpperCase()}
       </span>
-      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.primary, textAlign: "right", wordBreak: "break-all" as const, lineHeight: 1.4 }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, textAlign: "right", wordBreak: "break-all" as const, lineHeight: 1.4 }}>
         {String(value)}
       </span>
     </div>
@@ -163,7 +166,7 @@ function NodeCard({
           alignItems:     "center",
           justifyContent: "center",
           fontFamily:     S.fontMono,
-          fontSize:       9,
+          fontSize: 12,
           fontWeight:     700,
           color:          meta.color,
           letterSpacing:  "0.04em",
@@ -171,7 +174,7 @@ function NodeCard({
         }}>
           {meta.icon}
         </div>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.06em", color: meta.color, fontWeight: 700 }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em", color: meta.color, fontWeight: 700 }}>
           {meta.label.toUpperCase()}
         </span>
       </div>
@@ -179,7 +182,7 @@ function NodeCard({
       {/* Label */}
       <div style={{
         fontFamily:    S.fontMono,
-        fontSize:      11,
+        fontSize: 12,
         fontWeight:    700,
         color:         S.primary,
         marginBottom:  4,
@@ -201,7 +204,7 @@ function NodeCard({
           bottom:     6,
           right:      8,
           fontFamily: S.fontMono,
-          fontSize:   8,
+          fontSize: 12,
           color:      meta.color,
           fontWeight: 700,
           letterSpacing: "0.06em",
@@ -226,7 +229,7 @@ function EdgeConnector({ label }: { label: string }) {
       flexShrink: 0,
     }}>
       <div style={{ width: 40, height: 1, background: S.rim }} />
-      <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.05em", whiteSpace: "nowrap" as const }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.05em", whiteSpace: "nowrap" as const }}>
         {label}
       </span>
       <div style={{ width: 40, height: 1, background: S.rim }} />
@@ -267,10 +270,10 @@ function DetailPanel({ node }: { node: LineageNode }) {
         alignItems:   "center",
         gap:          8,
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: meta.color }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: meta.color }}>
           {meta.label.toUpperCase()}
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.primary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>
           {node.label}
         </span>
         <div style={{ marginLeft: "auto" }}>
@@ -301,7 +304,7 @@ function DetailPanel({ node }: { node: LineageNode }) {
               href={href}
               style={{
                 fontFamily:    S.fontMono,
-                fontSize:      9,
+                fontSize: 12,
                 fontWeight:    700,
                 letterSpacing: "0.06em",
                 color:         meta.color,
@@ -440,7 +443,7 @@ function LineageContent() {
   if (authLoading) {
     return (
       <div style={{ background: S.bgDeep, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>AUTHENTICATING…</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>AUTHENTICATING…</span>
       </div>
     );
   }
@@ -452,23 +455,23 @@ function LineageContent() {
 
       {/* ── Page header ── */}
       <div style={{ height: 44, padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-        <Link href="/position-desk" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2, letterSpacing: "0.04em" }}>
+        <Link href="/position-desk" style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2, letterSpacing: "0.04em" }}>
           ← POSITION DESK
         </Link>
         <span style={{ color: S.rim }}>|</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.primary }}>POSITION LINEAGE</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, border: `1px solid ${S.soft}`, padding: "1px 5px", borderRadius: 2, letterSpacing: "0.06em" }}>PROVENANCE GRAPH</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.primary }}>POSITION LINEAGE</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, border: `1px solid ${S.soft}`, padding: "1px 5px", borderRadius: 2, letterSpacing: "0.06em" }}>PROVENANCE GRAPH</span>
         {positionId && <Badge text={posId8} color={S.cyan} />}
         {lineage && <Badge text={lineage.summary.execution_status} color={statusColor(lineage.summary.execution_status)} />}
         <div style={{ flex: 1 }} />
         {/* Refresh button */}
         <button onClick={() => { setLineage(null); setIntegrityStatus("UNKNOWN"); setRefreshKey(k => k + 1); }}
-          style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, borderRadius: 2, padding: "4px 12px", cursor: "pointer" }}>
+          style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, borderRadius: 2, padding: "4px 12px", cursor: "pointer" }}>
           ↻ REFRESH
         </button>
         {/* Integrity status display */}
         {lineage && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
             color: integrityStatus === "VERIFIED" ? S.pass : integrityStatus === "FAILED" ? S.fail : S.tertiary,
             background: integrityStatus === "VERIFIED" ? `color-mix(in srgb, ${S.pass} 10%, transparent)` : integrityStatus === "FAILED" ? `color-mix(in srgb, ${S.fail} 10%, transparent)` : S.bgSub,
             border: `1px solid ${integrityStatus === "VERIFIED" ? S.pass : integrityStatus === "FAILED" ? S.fail : S.rim}`,
@@ -480,11 +483,11 @@ function LineageContent() {
         {/* Export evidence */}
         {lineage && (
           <button onClick={handleExportEvidence}
-            style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, borderRadius: 2, padding: "4px 12px", cursor: "pointer" }}>
+            style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`, borderRadius: 2, padding: "4px 12px", cursor: "pointer" }}>
             EXPORT JSON
           </button>
         )}
-        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{renderTs}</span>
+        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{renderTs}</span>
       </div>
 
       {/* ── KPI strip ── */}
@@ -499,7 +502,7 @@ function LineageContent() {
             { label: "INTEGRITY", value: integrityStatus, color: integrityStatus === "VERIFIED" ? S.pass : integrityStatus === "FAILED" ? S.fail : S.tertiary },
           ].map(({ label, value, color }, i, arr) => (
             <div key={label} style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "0 20px", borderRight: i < arr.length - 1 ? `1px solid ${S.rim}` : "none" }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.09em" }}>{label}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.09em" }}>{label}</span>
               <span style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color, lineHeight: 1 }}>{value}</span>
             </div>
           ))}
@@ -519,7 +522,7 @@ function LineageContent() {
                 borderLeft: `3px solid ${S.amber}`, borderRadius: 2,
                 padding: "14px 18px", marginBottom: 20,
               }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, marginBottom: 6 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, marginBottom: 6 }}>
                   SELECT A POSITION TO TRACE
                 </div>
                 <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.6 }}>
@@ -532,7 +535,7 @@ function LineageContent() {
                 <div style={{
                   display: "flex", alignItems: "center", gap: 10,
                   padding: "10px 16px", borderBottom: `1px solid ${S.rim}`,
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" as const,
                 }}>
                   Positions
@@ -544,7 +547,7 @@ function LineageContent() {
                     onChange={e => setPosSearch(e.target.value)}
                     placeholder="SEARCH…"
                     style={{
-                      fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.06em",
+                      fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em",
                       color: S.primary, background: S.bgSub, border: `1px solid ${S.rim}`,
                       borderRadius: 2, padding: "3px 8px", outline: "none", width: 140,
                     }}
@@ -552,7 +555,7 @@ function LineageContent() {
                 </div>
 
                 {posLoading && (
-                  <div style={{ padding: "32px 16px", textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                  <div style={{ padding: "32px 16px", textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                     Loading positions…
                   </div>
                 )}
@@ -571,7 +574,7 @@ function LineageContent() {
                     borderBottom: `1px solid ${S.soft}`, background: S.bgSub,
                   }}>
                     {["RECORD ID", "ENTITY", "CCY", "STATUS"].map(h => (
-                      <span key={h} style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.07em", color: S.tertiary, fontWeight: 600 }}>{h}</span>
+                      <span key={h} style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.07em", color: S.tertiary, fontWeight: 600 }}>{h}</span>
                     ))}
                   </div>
                 )}
@@ -589,16 +592,16 @@ function LineageContent() {
                     onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, ${S.cyan} 5%, transparent)`)}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                   >
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, letterSpacing: "0.06em" }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, letterSpacing: "0.06em" }}>
                       {p.record_id}
                     </span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                       {p.entity ?? "—"}
                     </span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber }}>
                       {p.currency}
                     </span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       {p.execution_status}
                     </span>
                   </Link>
@@ -610,7 +613,7 @@ function LineageContent() {
           {/* ── Loading ── */}
           {positionId && loading && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.1em" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em" }}>
                 LOADING LINEAGE…
               </span>
             </div>
@@ -622,7 +625,7 @@ function LineageContent() {
               background: S.bgPanel, border: `1px solid ${S.rim}`, borderLeft: `3px solid ${S.fail}`,
               borderRadius: 2, padding: "16px 20px", maxWidth: 600,
             }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.fail, marginBottom: 6 }}>FAILED TO LOAD LINEAGE</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.fail, marginBottom: 6 }}>FAILED TO LOAD LINEAGE</div>
               <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{error}</div>
             </div>
           )}
@@ -642,7 +645,7 @@ function LineageContent() {
                 gap:          10,
                 flexWrap:     "wrap" as const,
               }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.cyan }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.cyan }}>
                   AUDIT PROVENANCE CHAIN
                 </span>
                 <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
@@ -687,7 +690,7 @@ function LineageContent() {
                 </div>
 
                 {sortedNodes.length === 0 && (
-                  <div style={{ textAlign: "center", padding: "40px 0", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                  <div style={{ textAlign: "center", padding: "40px 0", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                     NO LINEAGE DATA AVAILABLE
                   </div>
                 )}
@@ -698,7 +701,7 @@ function LineageContent() {
                 <div>
                   <div style={{
                     fontFamily:    S.fontMono,
-                    fontSize:      9,
+                    fontSize: 12,
                     fontWeight:    700,
                     letterSpacing: "0.08em",
                     color:         S.tertiary,
@@ -715,7 +718,7 @@ function LineageContent() {
               {lineage.edges.length > 0 && (
                 <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 2, overflow: "hidden" }}>
                   <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.bgSub }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
                       LINEAGE EDGES — {lineage.edges.length} RELATIONS
                     </span>
                   </div>
@@ -723,7 +726,7 @@ function LineageContent() {
                     <thead>
                       <tr style={{ borderBottom: `1px solid ${S.soft}`, background: S.bgSub }}>
                         {["FROM", "RELATION", "TO"].map(h => (
-                          <th key={h} style={{ padding: "6px 14px", textAlign: "left", fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.07em", color: S.tertiary, fontWeight: 600 }}>{h}</th>
+                          <th key={h} style={{ padding: "6px 14px", textAlign: "left", fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.07em", color: S.tertiary, fontWeight: 600 }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -735,13 +738,13 @@ function LineageContent() {
                           <tr key={i} style={{ borderBottom: `1px solid ${S.soft}`, cursor: "pointer" }}
                             onClick={() => setSelectedId(edge.from)}
                           >
-                            <td style={{ padding: "6px 14px", fontFamily: S.fontMono, fontSize: 10, color: fromNode ? getNodeMeta(fromNode.type).color : S.secondary }}>
+                            <td style={{ padding: "6px 14px", fontFamily: S.fontMono, fontSize: 12, color: fromNode ? getNodeMeta(fromNode.type).color : S.secondary }}>
                               {fromNode ? fromNode.label : edge.from.slice(0, 16)}
                             </td>
                             <td style={{ padding: "6px 14px" }}>
                               <Badge text={edge.label} color={S.tertiary} />
                             </td>
-                            <td style={{ padding: "6px 14px", fontFamily: S.fontMono, fontSize: 10, color: toNode ? getNodeMeta(toNode.type).color : S.secondary }}>
+                            <td style={{ padding: "6px 14px", fontFamily: S.fontMono, fontSize: 12, color: toNode ? getNodeMeta(toNode.type).color : S.secondary }}>
                               {toNode ? toNode.label : edge.to.slice(0, 16)}
                             </td>
                           </tr>
@@ -766,7 +769,7 @@ function LineageContent() {
         borderTop:      `1px solid ${S.rim}`,
         flexShrink:     0,
       }}>
-        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.06em" }}>
+        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>
           {renderTs} &middot; ORDR LINEAGE VIEWER &middot; PROVENANCE
         </span>
       </footer>
@@ -778,6 +781,8 @@ export default function LineagePage() {
   const _planAllowed = usePlanRedirect("enterprise");
   if (!_planAllowed) return null;
   return (
+
+    <PageShell icon={Globe} title="Position Lineage" breadcrumb={["Dashboard", "Lineage"]} noPadding>
     <div style={{ display: 'flex', minHeight: '100vh' }}>
 
     <Suspense
@@ -799,5 +804,7 @@ export default function LineagePage() {
 
     <HelpPanelV2 module={LINEAGE_HELP} storageKey="lineage" />
     </div>
-  );
+  
+    </PageShell>
+    );
 }

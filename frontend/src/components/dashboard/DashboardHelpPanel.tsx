@@ -19,7 +19,7 @@ const S = {
 } as const;
 
 const PIPELINE_STEPS = [
-  { n: 1, label: "Position Ingestion",    sub: "CSV / ERP / API",     path: "/input",       color: S.cyan  },
+  { n: 1, label: "Position Ingestion",    sub: "CSV / ERP / API",     path: "/position-desk",       color: S.cyan  },
   { n: 2, label: "Policy Assignment",     sub: "Template selection",  path: "/policies",    color: S.cyan  },
   { n: 3, label: "Sandbox Simulation",    sub: "Run engine",          path: "/sandbox",     color: S.amber },
   { n: 4, label: "Results Analysis",      sub: "R² · MTM · DVO1",  path: "/results",     color: S.amber },
@@ -82,7 +82,7 @@ const QUICK_LINKS = [
   { label: "Execution",      path: "/hedge-desk",     Icon: Rocket        },
   { label: "Sandbox",        path: "/sandbox",       Icon: FlaskConical  },
   { label: "Reports",        path: "/reports",       Icon: FileBarChart  },
-  { label: "FX Rates",       path: "/currency-fx",   Icon: Globe2        },
+  { label: "FX Rates",       path: "/market-overview",   Icon: Globe2        },
   { label: "Audit Trail",    path: "/audit-trail",   Icon: BookOpen      },
   { label: "Polisophic",     path: "/polisophic",    Icon: Landmark      },
   { label: "Connectors",     path: "/connectors",    Icon: Cpu           },

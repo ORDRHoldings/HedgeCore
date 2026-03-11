@@ -20,6 +20,9 @@ import HelpPanel from "@/components/layout/HelpPanel";
 import { CONNECTORS_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { LayoutDashboard } from "lucide-react";
+
 // ── Hydration-safe timestamp ───────────────────────────────────────────────
 function useRenderTs(): string {
   const [renderTs, setRenderTs] = useState("");
@@ -55,7 +58,7 @@ function Badge({ label, color }: { label: string; color: string }) {
     <span
       style={{
         fontFamily:    S.fontMono,
-        fontSize:      9,
+        fontSize: 12,
         fontWeight:    700,
         letterSpacing: "0.08em",
         color,
@@ -479,7 +482,7 @@ export default function AccountingConnectionPage() {
   };
   const panelHeadingStyle: React.CSSProperties = {
     fontFamily:    S.fontMono,
-    fontSize:      10,
+    fontSize: 12,
     fontWeight:    700,
     letterSpacing: "0.1em",
     color:         S.tertiary,
@@ -489,6 +492,8 @@ export default function AccountingConnectionPage() {
   //  Render
   // ══════════════════════════════════════════════════════════════════════════
   return (
+
+    <PageShell icon={LayoutDashboard} title="Accounting Connection" breadcrumb={["Connectors", "Accounting"]} noPadding>
     <div style={{ display: "flex", minHeight: "100vh" }}>
     <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, display: "flex", flexDirection: "column", flex: 1 }}>
 
@@ -511,7 +516,7 @@ export default function AccountingConnectionPage() {
               alignItems: "center",
               gap:        5,
               fontFamily: S.fontMono,
-              fontSize:   10,
+              fontSize: 12,
               color:      S.tertiary,
               background: "transparent",
               border:     "none",
@@ -525,7 +530,7 @@ export default function AccountingConnectionPage() {
           <span style={{ color: S.soft }}>/</span>
           <span style={{
             fontFamily:    S.fontMono,
-            fontSize:      11,
+            fontSize: 12,
             fontWeight:    700,
             letterSpacing: "0.1em",
             color:         S.primary,
@@ -535,7 +540,7 @@ export default function AccountingConnectionPage() {
           <span style={{ color: S.soft }}>&middot;</span>
           <span style={{
             fontFamily:    S.fontMono,
-            fontSize:      10,
+            fontSize: 12,
             letterSpacing: "0.06em",
             color:         S.tertiary,
           }}>
@@ -543,7 +548,7 @@ export default function AccountingConnectionPage() {
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {renderTs}
           </span>
         </div>
@@ -557,7 +562,7 @@ export default function AccountingConnectionPage() {
           <div style={{ marginBottom: 10 }}>
             <span style={{
               fontFamily:    S.fontMono,
-              fontSize:      10,
+              fontSize: 12,
               fontWeight:    700,
               letterSpacing: "0.1em",
               color:         S.tertiary,
@@ -567,7 +572,7 @@ export default function AccountingConnectionPage() {
             </span>
             <span style={{
               fontFamily:    S.fontMono,
-              fontSize:      10,
+              fontSize: 12,
               color:         S.tertiary,
               marginLeft:    10,
               opacity:       0.6,
@@ -638,7 +643,7 @@ export default function AccountingConnectionPage() {
                   </div>
 
                   {/* Description */}
-                  <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: "1.5" }}>
+                  <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: "1.5" }}>
                     {sys.description}
                   </span>
 
@@ -658,7 +663,7 @@ export default function AccountingConnectionPage() {
                       disabled={st === "connecting"}
                       style={{
                         fontFamily:    S.fontMono,
-                        fontSize:      10,
+                        fontSize: 12,
                         fontWeight:    600,
                         letterSpacing: "0.06em",
                         color:         st === "connected"
@@ -703,11 +708,11 @@ export default function AccountingConnectionPage() {
               borderBottom:  `1px solid ${S.rim}`,
               paddingBottom: 8,
             }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
                 CONFIGURATION
               </span>
               <span style={{ color: S.soft }}>&middot;</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.06em", color: S.cyan }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em", color: S.cyan }}>
                 {activeSystem.name.toUpperCase()}
               </span>
               {isConnected && activeDetails && (
@@ -735,24 +740,24 @@ export default function AccountingConnectionPage() {
                       gap:                 "8px 12px",
                       alignItems:         "baseline",
                     }}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.04em" }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.04em" }}>
                         CONNECTED AS
                       </span>
                       <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, fontWeight: 500 }}>
                         {activeDetails.connectedAs}
                       </span>
 
-                      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.04em" }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.04em" }}>
                         TENANT ID
                       </span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                         {activeDetails.tenantId}
                       </span>
 
-                      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.04em" }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.04em" }}>
                         TOKEN EXPIRES
                       </span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                         {activeDetails.expiresAt}
                       </span>
                     </div>
@@ -762,7 +767,7 @@ export default function AccountingConnectionPage() {
                         onClick={() => handleConnect(selectedSystem)}
                         style={{
                           fontFamily:    S.fontMono,
-                          fontSize:      10,
+                          fontSize: 12,
                           fontWeight:    600,
                           letterSpacing: "0.06em",
                           color:         S.cyan,
@@ -779,7 +784,7 @@ export default function AccountingConnectionPage() {
                         onClick={() => handleDisconnect(selectedSystem)}
                         style={{
                           fontFamily:    S.fontMono,
-                          fontSize:      10,
+                          fontSize: 12,
                           fontWeight:    600,
                           letterSpacing: "0.06em",
                           color:         S.fail,
@@ -811,10 +816,10 @@ export default function AccountingConnectionPage() {
                       borderRadius: "50%",
                       animation:    "spin 0.8s linear infinite",
                     }} />
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.amber, letterSpacing: "0.06em" }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, letterSpacing: "0.06em" }}>
                       AWAITING AUTHORIZATION&hellip;
                     </span>
-                    <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
                       Complete the OAuth flow in the popup window to continue.
                     </span>
                   </div>
@@ -838,7 +843,7 @@ export default function AccountingConnectionPage() {
                       }}>
                         Authenticate via {activeSystem.authType} to begin importing foreign-currency invoices.
                       </span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                         A secure popup will open. No passwords are stored by ORDR.
                       </span>
                     </div>
@@ -846,7 +851,7 @@ export default function AccountingConnectionPage() {
                       onClick={() => handleConnect(selectedSystem)}
                       style={{
                         fontFamily:    S.fontMono,
-                        fontSize:      11,
+                        fontSize: 12,
                         fontWeight:    700,
                         letterSpacing: "0.08em",
                         color:         S.bgDeep,
@@ -860,7 +865,7 @@ export default function AccountingConnectionPage() {
                       CONNECT {activeSystem.name.toUpperCase()}
                     </button>
                     {activeStatus === "error" && (
-                      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail }}>
                         Authorization failed or was cancelled. Try again.
                       </span>
                     )}
@@ -882,7 +887,7 @@ export default function AccountingConnectionPage() {
                   <div>
                     <span style={{
                       fontFamily:    S.fontMono,
-                      fontSize:      10,
+                      fontSize: 12,
                       color:         S.tertiary,
                       letterSpacing: "0.04em",
                       display:       "block",
@@ -902,7 +907,7 @@ export default function AccountingConnectionPage() {
                               gap:        5,
                               cursor:     "pointer",
                               fontFamily: S.fontUI,
-                              fontSize:   11,
+                              fontSize: 12,
                               color:      checked ? S.primary : S.secondary,
                               userSelect: "none",
                             }}
@@ -924,7 +929,7 @@ export default function AccountingConnectionPage() {
                   <div>
                     <span style={{
                       fontFamily:    S.fontMono,
-                      fontSize:      10,
+                      fontSize: 12,
                       color:         S.tertiary,
                       letterSpacing: "0.04em",
                       display:       "block",
@@ -944,7 +949,7 @@ export default function AccountingConnectionPage() {
                               gap:        5,
                               cursor:     "pointer",
                               fontFamily: S.fontMono,
-                              fontSize:   11,
+                              fontSize: 12,
                               color:      checked ? S.primary : S.secondary,
                               userSelect: "none",
                             }}
@@ -966,7 +971,7 @@ export default function AccountingConnectionPage() {
                   <div>
                     <span style={{
                       fontFamily:    S.fontMono,
-                      fontSize:      10,
+                      fontSize: 12,
                       color:         S.tertiary,
                       letterSpacing: "0.04em",
                       display:       "block",
@@ -981,7 +986,7 @@ export default function AccountingConnectionPage() {
                         onChange={e => setDateFrom(e.target.value)}
                         style={{
                           fontFamily:   S.fontMono,
-                          fontSize:     11,
+                          fontSize: 12,
                           color:        S.primary,
                           background:   S.bgSub,
                           border:       `1px solid ${S.rim}`,
@@ -991,14 +996,14 @@ export default function AccountingConnectionPage() {
                           colorScheme:  "dark",
                         }}
                       />
-                      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>TO</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>TO</span>
                       <input
                         type="date"
                         value={dateTo}
                         onChange={e => setDateTo(e.target.value)}
                         style={{
                           fontFamily:   S.fontMono,
-                          fontSize:     11,
+                          fontSize: 12,
                           color:        S.primary,
                           background:   S.bgSub,
                           border:       `1px solid ${S.rim}`,
@@ -1041,7 +1046,7 @@ export default function AccountingConnectionPage() {
                         transition:   "left 0.2s, background 0.2s",
                       }} />
                     </button>
-                    <span style={{ fontFamily: S.fontUI, fontSize: 11, color: foreignOnly ? S.primary : S.secondary }}>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: foreignOnly ? S.primary : S.secondary }}>
                       Foreign currency transactions only
                     </span>
                   </div>
@@ -1053,7 +1058,7 @@ export default function AccountingConnectionPage() {
                       disabled={importing || selectedDocs.length === 0 || selectedCurrencies.length === 0}
                       style={{
                         fontFamily:    S.fontMono,
-                        fontSize:      11,
+                        fontSize: 12,
                         fontWeight:    700,
                         letterSpacing: "0.08em",
                         color:         (importing || selectedDocs.length === 0 || selectedCurrencies.length === 0)
@@ -1076,7 +1081,7 @@ export default function AccountingConnectionPage() {
                     {importResult && (
                       <div style={{
                         fontFamily:  S.fontMono,
-                        fontSize:    11,
+                        fontSize: 12,
                         color:       S.pass,
                         background:  `color-mix(in srgb, ${S.pass} 10%, transparent)`,
                         border:      `1px solid color-mix(in srgb, ${S.pass} 25%, transparent)`,
@@ -1096,7 +1101,7 @@ export default function AccountingConnectionPage() {
                     {importError && (
                       <div style={{
                         fontFamily:  S.fontMono,
-                        fontSize:    11,
+                        fontSize: 12,
                         color:       S.fail,
                         background:  `color-mix(in srgb, ${S.fail} 10%, transparent)`,
                         border:      `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`,
@@ -1117,7 +1122,7 @@ export default function AccountingConnectionPage() {
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={panelHeadingStyle}>INVOICE FIELD MAPPING</span>
                   <span style={{ color: S.soft }}>&middot;</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                     {activeSystem.name} &rarr; ORDR TradeRow
                   </span>
                 </div>
@@ -1129,7 +1134,7 @@ export default function AccountingConnectionPage() {
                       alignItems:    "center",
                       gap:           4,
                       fontFamily:    S.fontMono,
-                      fontSize:      10,
+                      fontSize: 12,
                       fontWeight:    600,
                       letterSpacing: "0.06em",
                       color:         S.secondary,
@@ -1147,7 +1152,7 @@ export default function AccountingConnectionPage() {
                     onClick={saveMappings}
                     style={{
                       fontFamily:    S.fontMono,
-                      fontSize:      10,
+                      fontSize: 12,
                       fontWeight:    600,
                       letterSpacing: "0.06em",
                       color:         mappingSaved ? S.pass : S.cyan,
@@ -1165,7 +1170,7 @@ export default function AccountingConnectionPage() {
               </div>
 
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 11 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 12 }}>
                   <thead>
                     <tr style={{ background: S.bgSub }}>
                       {["SOURCE FIELD", "ORDR FIELD", "TRANSFORM", "STATUS", ""].map((h, i) => (
@@ -1173,7 +1178,7 @@ export default function AccountingConnectionPage() {
                           padding:       "7px 12px",
                           textAlign:     "left",
                           fontFamily:    S.fontMono,
-                          fontSize:      9,
+                          fontSize: 12,
                           fontWeight:    700,
                           letterSpacing: "0.1em",
                           color:         S.tertiary,
@@ -1207,7 +1212,7 @@ export default function AccountingConnectionPage() {
                               placeholder="e.g. InvoiceNumber"
                               style={{
                                 fontFamily:   S.fontMono,
-                                fontSize:     11,
+                                fontSize: 12,
                                 color:        S.primary,
                                 background:   S.bgSub,
                                 border:       `1px solid ${S.rim}`,
@@ -1225,7 +1230,7 @@ export default function AccountingConnectionPage() {
                               onChange={e => updateMappingRow(m.id, "ordrField", e.target.value)}
                               style={{
                                 fontFamily:   S.fontMono,
-                                fontSize:     11,
+                                fontSize: 12,
                                 color:        m.ordrField ? S.primary : S.tertiary,
                                 background:   S.bgSub,
                                 border:       `1px solid ${S.rim}`,
@@ -1248,7 +1253,7 @@ export default function AccountingConnectionPage() {
                               onChange={e => updateMappingRow(m.id, "transform", e.target.value)}
                               style={{
                                 fontFamily:   S.fontMono,
-                                fontSize:     11,
+                                fontSize: 12,
                                 color:        S.secondary,
                                 background:   S.bgSub,
                                 border:       `1px solid ${S.rim}`,
@@ -1299,7 +1304,7 @@ export default function AccountingConnectionPage() {
 
               {fieldMappings.length === 0 && (
                 <div style={{ padding: "20px 14px", textAlign: "center" }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                     No mapping rows. Click ADD ROW to create one.
                   </span>
                 </div>
@@ -1311,20 +1316,20 @@ export default function AccountingConnectionPage() {
               <div style={panelHeaderStyle}>
                 <span style={panelHeadingStyle}>IMPORT HISTORY</span>
                 <span style={{ color: S.soft }}>&middot;</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                   ACCOUNTING connector runs
                 </span>
               </div>
 
               {runHistory.length === 0 ? (
                 <div style={{ padding: "24px 14px", textAlign: "center" }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                     No imports yet. Connect an accounting system and run your first import.
                   </span>
                 </div>
               ) : (
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 11 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 12 }}>
                     <thead>
                       <tr style={{ background: S.bgSub }}>
                         {["RUN ID", "TYPE", "STATUS", "ROWS", "OK", "ERR", "STARTED AT"].map(h => (
@@ -1332,7 +1337,7 @@ export default function AccountingConnectionPage() {
                             padding:       "7px 12px",
                             textAlign:     "left",
                             fontFamily:    S.fontMono,
-                            fontSize:      9,
+                            fontSize: 12,
                             fontWeight:    700,
                             letterSpacing: "0.1em",
                             color:         S.tertiary,
@@ -1361,7 +1366,7 @@ export default function AccountingConnectionPage() {
                                 : `color-mix(in srgb, ${S.bgSub} 40%, transparent)`,
                             }}
                           >
-                            <td style={{ padding: "6px 12px", color: S.tertiary, fontSize: 10 }}>
+                            <td style={{ padding: "6px 12px", color: S.tertiary, fontSize: 12 }}>
                               {run.id.slice(0, 8)}&hellip;
                             </td>
                             <td style={{ padding: "6px 12px", color: S.secondary }}>
@@ -1379,7 +1384,7 @@ export default function AccountingConnectionPage() {
                             <td style={{ padding: "6px 12px", color: run.error_count > 0 ? S.fail : S.tertiary }}>
                               {run.error_count}
                             </td>
-                            <td style={{ padding: "6px 12px", color: S.secondary, fontSize: 10 }}>
+                            <td style={{ padding: "6px 12px", color: S.secondary, fontSize: 12 }}>
                               {run.started_at.replace("T", " ").slice(0, 16)} UTC
                             </td>
                           </tr>
@@ -1406,10 +1411,10 @@ export default function AccountingConnectionPage() {
         justifyContent: "space-between",
         flexShrink:     0,
       }}>
-        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           {renderTs}
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           ORDR &middot; Accounting Systems
         </span>
       </div>
@@ -1420,5 +1425,7 @@ export default function AccountingConnectionPage() {
     </div>
     <HelpPanel config={CONNECTORS_HELP} storageKey="accounting-connection" />
     </div>
-  );
+  
+    </PageShell>
+    );
 }

@@ -54,6 +54,9 @@ import ApiKeyManagementTab from "./components/tabs/ApiKeyManagementTab";
 import OrganisationTab  from "./components/tabs/OrganisationTab";
 import AuditTrailTab    from "./components/tabs/AuditTrailTab";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Settings } from "lucide-react";
+
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
   const [ts, setTs] = useState("");
@@ -77,7 +80,7 @@ function ToastStack({ toasts }: { toasts: Toast[] }) {
           fontFamily: S.fontUI, fontSize: 12, color: S.primary,
           boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
         }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: t.kind === "success" ? S.pass : S.fail, marginRight: 8 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: t.kind === "success" ? S.pass : S.fail, marginRight: 8 }}>
             {t.kind === "success" ? "✓" : "✗"}
           </span>
           {t.msg}
@@ -152,7 +155,7 @@ function SettingsPageInner() {
   if (authLoading) {
     return (
       <div style={{ background: S.bgDeep, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.1em" }}>AUTHENTICATING…</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em" }}>AUTHENTICATING…</span>
       </div>
     );
   }
@@ -217,7 +220,7 @@ function SettingsPageInner() {
           height: 32, display: "flex", alignItems: "center", justifyContent: "center",
           borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
         }}>
-          <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.05em" }}>
+          <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.05em" }}>
             {renderTs} · ORDR Settings · {user?.email ?? ""}
           </span>
         </div>
@@ -230,12 +233,16 @@ function SettingsPageInner() {
 
 export default function SettingsPage() {
   return (
+
+    <PageShell icon={Settings} title="Settings" breadcrumb={["Dashboard", "Settings"]} noPadding>
     <Suspense fallback={
       <div style={{ background: "var(--bg-deep,#0D0F11)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 11, color: "var(--text-tertiary,#6B7280)", letterSpacing: "0.1em" }}>LOADING…</span>
+        <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, color: "var(--text-tertiary,#6B7280)", letterSpacing: "0.1em" }}>LOADING…</span>
       </div>
     }>
       <SettingsPageInner />
     </Suspense>
-  );
+  
+    </PageShell>
+    );
 }

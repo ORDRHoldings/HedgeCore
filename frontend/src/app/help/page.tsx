@@ -6,6 +6,9 @@ import { useAuth } from "@/lib/authContext";
 import type { GuideDoc, GuideLevel, GuideSection, GuideBlock, GuideCallout, GuideFormula, GuideTable, GuideFieldDict } from "@/lib/help/guides/types";
 import { GUIDE_LEVEL_META, computeVerifiedStats } from "@/lib/help/guides/types";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { HelpCircle } from "lucide-react";
+
 // ── Guide data import (graceful fallback) ──────────────────────────────────────
 let GUIDES: GuideDoc[] = [];
 try {
@@ -46,13 +49,13 @@ const S = {
 const GUIDE_NAV: Array<{ id: string; title: string; icon: string; path: string }> = [
   { id: "getting-started",    title: "Getting Started",         icon: "🚀", path: "/dashboard" },
   { id: "dashboard-widgets",  title: "Dashboard & Widgets",     icon: "⬡",  path: "/dashboard" },
-  { id: "data-ingestion",     title: "Data Ingestion",          icon: "⬆",  path: "/input" },
+  { id: "data-ingestion",     title: "Data Ingestion",          icon: "⬆",  path: "/position-desk" },
   { id: "position-desk",      title: "Position Desk",           icon: "📋", path: "/position-desk" },
   { id: "policy-engine",      title: "Policy Engine",           icon: "⚙",  path: "/policies" },
   { id: "sandbox-simulation", title: "Sandbox & Simulation",    icon: "🧪", path: "/sandbox" },
   { id: "execution-pipeline", title: "Execution Pipeline",      icon: "▶",  path: "/hedge-desk" },
   { id: "execution-bridge",   title: "Execution Bridge",        icon: "⇄",  path: "/execution" },
-  { id: "fx-rates",           title: "FX Rates",                icon: "₿",  path: "/currency-fx" },
+  { id: "fx-rates",           title: "FX Rates",                icon: "₿",  path: "/market-overview" },
   { id: "polisophic",         title: "Polisophic Risk Intel",   icon: "🌍", path: "/polisophic" },
   { id: "governance",         title: "Governance & Audit",      icon: "🔒", path: "/audit-trail" },
   { id: "troubleshooting",    title: "Troubleshooting",         icon: "⚠",  path: "/help" },
@@ -62,11 +65,11 @@ const GUIDE_NAV: Array<{ id: string; title: string; icon: string; path: string }
 
 const QUICK_LINKS = [
   { label: "Dashboard",          path: "/dashboard" },
-  { label: "Position Desk",      path: "/input" },
+  { label: "Position Desk",      path: "/position-desk" },
   { label: "Policy Engine",      path: "/policies" },
   { label: "Sandbox",            path: "/sandbox" },
   { label: "Execution",          path: "/hedge-desk" },
-  { label: "FX Rates",           path: "/currency-fx" },
+  { label: "FX Rates",           path: "/market-overview" },
   { label: "Audit Trail",        path: "/audit-trail" },
   { label: "HedgeWiki",          path: "/hedgewiki" },
 ];
@@ -119,7 +122,7 @@ function CalloutBox({ callout }: { callout: GuideCallout }) {
       gap: 10,
       alignItems: "flex-start",
     }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: cs.labelColor, letterSpacing: "0.08em", marginTop: 2, flexShrink: 0 }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: cs.labelColor, letterSpacing: "0.08em", marginTop: 2, flexShrink: 0 }}>
         {cs.label}
       </span>
       <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.6 }}>
@@ -155,7 +158,7 @@ function StepsList({ steps }: { steps: Array<{ n: number; label: string; detail:
             alignItems: "center",
             justifyContent: "center",
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             color: S.cyan,
             background: S.bgDeep,
             zIndex: 1,
@@ -188,7 +191,7 @@ function FormulaCard({ formula }: { formula: GuideFormula }) {
       padding: "14px 18px",
       marginBottom: 12,
     }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, letterSpacing: "0.08em", marginBottom: 8, textTransform: "uppercase" }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, letterSpacing: "0.08em", marginBottom: 8, textTransform: "uppercase" }}>
         {formula.label}
       </div>
       <div style={{ fontFamily: S.fontMono, fontSize: 18, fontWeight: 700, color: S.primary, marginBottom: 10, letterSpacing: "0.02em" }}>
@@ -198,7 +201,7 @@ function FormulaCard({ formula }: { formula: GuideFormula }) {
         {formula.explanation}
       </div>
       {formula.source && (
-        <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 4 }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 4 }}>
           Source: {formula.source}
         </div>
       )}
@@ -219,7 +222,7 @@ function DataTable({ table }: { table: GuideTable }) {
                 background: `color-mix(in srgb, var(--accent-cyan) 12%, var(--bg-panel))`,
                 color: S.cyan,
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: "0.07em",
                 textTransform: "uppercase",
@@ -266,7 +269,7 @@ function FieldDict({ fields }: { fields: GuideFieldDict[] }) {
                 background: `color-mix(in srgb, var(--accent-cyan) 12%, var(--bg-panel))`,
                 color: S.cyan,
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: "0.07em",
                 textTransform: "uppercase",
@@ -281,11 +284,11 @@ function FieldDict({ fields }: { fields: GuideFieldDict[] }) {
         <tbody>
           {fields.map((f, ri) => (
             <tr key={ri} style={{ background: ri % 2 === 0 ? S.bgPanel : S.bgSub }}>
-              <td style={{ padding: "6px 10px", fontFamily: S.fontMono, fontSize: 11, color: S.cyan, border: `1px solid ${S.soft}`, whiteSpace: "nowrap" }}>{f.name}</td>
-              <td style={{ padding: "6px 10px", fontFamily: S.fontMono, fontSize: 11, color: S.secondary, border: `1px solid ${S.soft}`, whiteSpace: "nowrap" }}>{f.type}</td>
-              <td style={{ padding: "6px 10px", fontFamily: S.fontMono, fontSize: 11, color: S.amber, border: `1px solid ${S.soft}` }}>{f.constraints ?? "—"}</td>
+              <td style={{ padding: "6px 10px", fontFamily: S.fontMono, fontSize: 12, color: S.cyan, border: `1px solid ${S.soft}`, whiteSpace: "nowrap" }}>{f.name}</td>
+              <td style={{ padding: "6px 10px", fontFamily: S.fontMono, fontSize: 12, color: S.secondary, border: `1px solid ${S.soft}`, whiteSpace: "nowrap" }}>{f.type}</td>
+              <td style={{ padding: "6px 10px", fontFamily: S.fontMono, fontSize: 12, color: S.amber, border: `1px solid ${S.soft}` }}>{f.constraints ?? "—"}</td>
               <td style={{ padding: "6px 10px", color: S.secondary, border: `1px solid ${S.soft}`, lineHeight: 1.5 }}>{f.meaning}</td>
-              <td style={{ padding: "6px 10px", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, border: `1px solid ${S.soft}` }}>{f.example}</td>
+              <td style={{ padding: "6px 10px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, border: `1px solid ${S.soft}` }}>{f.example}</td>
             </tr>
           ))}
         </tbody>
@@ -306,7 +309,7 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
         padding: "4px 12px",
         borderBottom: `1px solid ${S.rim}`,
         fontFamily: S.fontMono,
-        fontSize: 10,
+        fontSize: 12,
         color: S.tertiary,
         letterSpacing: "0.06em",
         textTransform: "uppercase",
@@ -417,7 +420,7 @@ function SectionCard({
             padding: "2px 4px",
             color: S.tertiary,
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
           }}
           onMouseEnter={e => (e.currentTarget.style.color = S.cyan)}
           onMouseLeave={e => (e.currentTarget.style.color = S.tertiary)}
@@ -437,26 +440,26 @@ function SectionCard({
         {section.verified ? (
           <span style={{
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             color: "#4ade80",
             letterSpacing: "0.06em",
             display: "flex",
             alignItems: "center",
             gap: 4,
           }}>
-            <span style={{ fontSize: 9 }}>✓</span> VERIFIED
+            <span style={{ fontSize: 12 }}>✓</span> VERIFIED
           </span>
         ) : (
           <span style={{
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             color: S.amber,
             letterSpacing: "0.06em",
             display: "flex",
             alignItems: "center",
             gap: 4,
           }}>
-            <span style={{ fontSize: 9 }}>⚠</span> UNVERIFIED
+            <span style={{ fontSize: 12 }}>⚠</span> UNVERIFIED
           </span>
         )}
       </div>
@@ -480,7 +483,7 @@ function SectionCard({
               background: S.bgDeep,
               border: `1px solid ${S.rim}`,
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: S.tertiary,
               letterSpacing: "0.04em",
             }}>
@@ -677,12 +680,12 @@ function HelpPageContent() {
           <div style={{ flex: 1 }} />
           {/* Active guide indicator */}
           {activeGuide && (
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.06em" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>
               {GUIDE_NAV.find(g => g.id === activeGuideId)?.icon ?? ""}{" "}
               {activeGuide.title.toUpperCase()}
             </span>
           )}
-          <span style={{ color: S.rim, fontSize: 10 }}>·</span>
+          <span style={{ color: S.rim, fontSize: 12 }}>·</span>
           <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary }}>{renderTs}</span>
         </header>
 
@@ -707,7 +710,7 @@ function HelpPageContent() {
             <div style={{ padding: "14px 14px 8px", borderBottom: `1px solid ${S.soft}` }}>
               <div style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.tertiary,
                 letterSpacing: "0.09em",
                 textTransform: "uppercase",
@@ -724,7 +727,7 @@ function HelpPageContent() {
                   width: "100%",
                   padding: "5px 10px",
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: S.primary,
                   background: S.bgSub,
                   border: `1px solid ${S.soft}`,
@@ -750,7 +753,7 @@ function HelpPageContent() {
                         flex: 1,
                         padding: "4px 0",
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: isActive ? 700 : 400,
                         color: isActive ? meta.color : S.tertiary,
                         background: isActive ? meta.bg : "transparent",
@@ -770,7 +773,7 @@ function HelpPageContent() {
                 <div style={{
                   marginTop: 5,
                   fontFamily: S.fontMono,
-                  fontSize: 10,
+                  fontSize: 12,
                   color: GUIDE_LEVEL_META[levelHover].color,
                   letterSpacing: "0.04em",
                 }}>
@@ -785,7 +788,7 @@ function HelpPageContent() {
                 <div style={{
                   padding: "12px 16px",
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: S.tertiary,
                   letterSpacing: "0.04em",
                 }}>
@@ -843,7 +846,7 @@ function HelpPageContent() {
               <div style={{
                 padding: "0 14px 6px",
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.tertiary,
                 letterSpacing: "0.09em",
                 textTransform: "uppercase",
@@ -860,7 +863,7 @@ function HelpPageContent() {
                     textAlign: "left",
                     padding: "5px 14px",
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     color: S.tertiary,
                     background: "transparent",
                     cursor: "pointer",
@@ -889,7 +892,7 @@ function HelpPageContent() {
               <div style={{ padding: "48px 0", textAlign: "center" }}>
                 <div style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: S.tertiary,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
@@ -902,7 +905,7 @@ function HelpPageContent() {
                     {GUIDE_NAV.find(g => g.id === activeGuideId)?.title ?? activeGuideId}
                   </strong> has not been written yet.
                 </div>
-                <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                   Guide data is loaded from <code>@/lib/help/guides</code>
                 </div>
               </div>
@@ -928,7 +931,7 @@ function HelpPageContent() {
                         </h1>
                         <span style={{
                           fontFamily: S.fontMono,
-                          fontSize: 10,
+                          fontSize: 12,
                           color: S.tertiary,
                           border: `1px solid ${S.soft}`,
                           padding: "2px 7px",
@@ -956,7 +959,7 @@ function HelpPageContent() {
                           gap: 6,
                           padding: "5px 14px",
                           fontFamily: S.fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                           letterSpacing: "0.06em",
                           color: S.cyan,
                           background: "color-mix(in srgb, var(--accent-cyan) 8%, transparent)",
@@ -978,7 +981,7 @@ function HelpPageContent() {
                   border: `1px solid ${S.rim}`,
                 }}>
                   <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 8 }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.07em", marginRight: 8 }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.07em", marginRight: 8 }}>
                       DETAIL LEVEL
                     </span>
                     {(["L1","L2","L3","L4","L5"] as GuideLevel[]).map(level => {
@@ -995,7 +998,7 @@ function HelpPageContent() {
                             gap: 5,
                             padding: "4px 10px",
                             fontFamily: S.fontMono,
-                            fontSize: 11,
+                            fontSize: 12,
                             color: isActive ? meta.color : S.tertiary,
                             background: isActive ? meta.bg : "transparent",
                             border: `1px solid ${isActive ? meta.color : S.soft}`,
@@ -1006,7 +1009,7 @@ function HelpPageContent() {
                           {level}
                           {count > 0 && (
                             <span style={{
-                              fontSize: 9,
+                              fontSize: 12,
                               color: isActive ? meta.color : S.tertiary,
                               opacity: 0.8,
                             }}>
@@ -1017,7 +1020,7 @@ function HelpPageContent() {
                       );
                     })}
                   </div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 11, color: GUIDE_LEVEL_META[activeLevel].color, letterSpacing: "0.04em" }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: GUIDE_LEVEL_META[activeLevel].color, letterSpacing: "0.04em" }}>
                     Showing {activeLevel} — {GUIDE_LEVEL_META[activeLevel].description}{" "}
                     <span style={{ color: S.tertiary }}>({GUIDE_LEVEL_META[activeLevel].audience})</span>
                   </div>
@@ -1033,7 +1036,7 @@ function HelpPageContent() {
                   }}>
                     <div style={{
                       fontFamily: S.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       color: S.tertiary,
                       letterSpacing: "0.09em",
                       textTransform: "uppercase",
@@ -1057,7 +1060,7 @@ function HelpPageContent() {
                             textAlign: "left",
                           }}
                         >
-                          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, minWidth: 20 }}>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, minWidth: 20 }}>
                             {String(i + 1).padStart(2, "0")}
                           </span>
                           <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}
@@ -1068,9 +1071,9 @@ function HelpPageContent() {
                           </span>
                           <span style={{ marginLeft: "auto" }}>
                             {s.verified ? (
-                              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: "#4ade80" }}>✓</span>
+                              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: "#4ade80" }}>✓</span>
                             ) : (
-                              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.amber }}>⚠</span>
+                              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber }}>⚠</span>
                             )}
                           </span>
                         </button>
@@ -1087,7 +1090,7 @@ function HelpPageContent() {
                   }}>
                     <div style={{
                       fontFamily: S.fontMono,
-                      fontSize: 11,
+                      fontSize: 12,
                       color: S.tertiary,
                       letterSpacing: "0.08em",
                       textTransform: "uppercase",
@@ -1098,7 +1101,7 @@ function HelpPageContent() {
                     <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary }}>
                       No {activeLevel} content for this guide yet.
                     </div>
-                    <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                    <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       Try switching to a different level.
                     </div>
                   </div>
@@ -1137,7 +1140,7 @@ function HelpPageContent() {
             <div style={{ marginBottom: 16 }}>
               <div style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.tertiary,
                 letterSpacing: "0.09em",
                 textTransform: "uppercase",
@@ -1152,12 +1155,12 @@ function HelpPageContent() {
                   { label: "Platform",    color: S.tertiary,  status: PLATFORM_VERSION },
                 ].map(row => (
                   <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                       {row.label}
                     </span>
                     <span style={{
                       fontFamily: S.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       color: row.color,
                       display: "flex",
                       alignItems: "center",
@@ -1188,7 +1191,7 @@ function HelpPageContent() {
                 <div style={{ marginBottom: 16 }}>
                   <div style={{
                     fontFamily: S.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: S.tertiary,
                     letterSpacing: "0.09em",
                     textTransform: "uppercase",
@@ -1214,7 +1217,7 @@ function HelpPageContent() {
                       transition: "width 300ms ease",
                     }} />
                   </div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                     Last Reviewed: {activeGuide.lastReviewed}
                   </div>
                 </div>
@@ -1226,7 +1229,7 @@ function HelpPageContent() {
             <div style={{ marginBottom: 16 }}>
               <div style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.tertiary,
                 letterSpacing: "0.09em",
                 textTransform: "uppercase",
@@ -1242,7 +1245,7 @@ function HelpPageContent() {
                   padding: "7px 12px",
                   marginBottom: 10,
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   letterSpacing: "0.05em",
                   color: S.cyan,
                   background: "color-mix(in srgb, var(--accent-cyan) 8%, transparent)",
@@ -1264,7 +1267,7 @@ function HelpPageContent() {
                       textAlign: "left",
                       padding: "4px 2px",
                       fontFamily: S.fontUI,
-                      fontSize: 11,
+                      fontSize: 12,
                       color: S.tertiary,
                       background: "transparent",
                       cursor: "pointer",
@@ -1284,7 +1287,7 @@ function HelpPageContent() {
             <div>
               <div style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.tertiary,
                 letterSpacing: "0.09em",
                 textTransform: "uppercase",
@@ -1303,7 +1306,7 @@ function HelpPageContent() {
                       display: "block",
                       padding: "4px 2px",
                       fontFamily: S.fontUI,
-                      fontSize: 11,
+                      fontSize: 12,
                       color: S.tertiary,
                       textDecoration: "none",
                     }}
@@ -1350,6 +1353,8 @@ function HelpPageContent() {
 // ── Suspense boundary (Next.js 15 requirement for useSearchParams) ─────────────
 export default function HelpPage() {
   return (
+
+    <PageShell icon={HelpCircle} title="Help Center" breadcrumb={["Dashboard", "Help"]} noPadding>
     <Suspense fallback={
       <div style={{
         background: "var(--bg-deep)",
@@ -1360,7 +1365,7 @@ export default function HelpPage() {
       }}>
         <span style={{
           fontFamily: "IBM Plex Mono, monospace",
-          fontSize: 11,
+          fontSize: 12,
           color: "var(--text-tertiary)",
           letterSpacing: "0.1em",
         }}>
@@ -1370,5 +1375,7 @@ export default function HelpPage() {
     }>
       <HelpPageContent />
     </Suspense>
-  );
+  
+    </PageShell>
+    );
 }

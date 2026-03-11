@@ -19,7 +19,7 @@ const S = {
 } as const;
 
 const ACTIONS = [
-  { label: "Add Position", icon: Plus, href: "/input", desc: "Enter new MXN exposure" },
+  { label: "Add Position", icon: Plus, href: "/position-desk", desc: "Enter new MXN exposure" },
   { label: "Run Hedge Calc", icon: Play, href: "/hedge-desk", desc: "Calculate optimal hedge" },
   { label: "View Positions", icon: List, href: "/position-desk", desc: "All open exposures" },
   { label: "Approve Pending", icon: CheckCircle, href: "/hedge-desk", desc: "Review & execute" },
@@ -40,7 +40,7 @@ export default function SmbQuickActions() {
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 600,
           letterSpacing: "0.1em",
           color: S.tertiary,
@@ -89,7 +89,7 @@ export default function SmbQuickActions() {
               >
                 {a.label}
               </span>
-              <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>
+              <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                 {a.desc}
               </span>
             </div>

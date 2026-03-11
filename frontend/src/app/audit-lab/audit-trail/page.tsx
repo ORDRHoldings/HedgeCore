@@ -7,7 +7,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import { Search, Download, ShieldCheck } from "lucide-react";
+import { Search, Download, ShieldCheck, Microscope } from "lucide-react";
+import { PageShell } from "@/components/layout/PageShell";
 
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -74,7 +75,7 @@ function eventTypeBadge(type: string) {
     S.tertiary;
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
       color, background: `color-mix(in srgb, ${color} 10%, transparent)`,
       padding: "2px 8px", borderRadius: 2, letterSpacing: "0.04em",
     }}>
@@ -140,11 +141,12 @@ export default function AuditTrailPage() {
   }, [events, typeFilter, search]);
 
   return (
-    <div style={{ minHeight: "100vh", background: S.bgDeep, padding: "28px 40px", fontFamily: S.fontUI }}>
+    <PageShell icon={Microscope} title="Audit Trail" breadcrumb={["Audit Lab", "Audit Trail"]}>
+      <div style={{ fontFamily: S.fontUI }}>
       {/* Breadcrumb + header */}
       <div style={{ marginBottom: 24 }}>
         <div style={{
-          fontFamily: S.fontMono, fontSize: 10, color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
           letterSpacing: "0.1em", marginBottom: 6,
         }}>
           <a href="/audit-lab" style={{ color: S.cyan, textDecoration: "none" }}>AUDIT LAB</a>
@@ -249,7 +251,7 @@ export default function AuditTrailPage() {
               <tr style={{ background: S.bgSub }}>
                 {["Timestamp", "Event Type", "Description", "Entity Type", "Actor", "Hash"].map(h => (
                   <th key={h} style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     letterSpacing: "0.08em", color: S.tertiary, textAlign: "left",
                     padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase",
                   }}>
@@ -317,6 +319,7 @@ export default function AuditTrailPage() {
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </PageShell>
   );
 }

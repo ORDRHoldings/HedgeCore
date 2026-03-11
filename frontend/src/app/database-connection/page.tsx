@@ -7,6 +7,9 @@ import HelpPanel from "@/components/layout/HelpPanel";
 import { DATABASE_CONNECTION_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { LayoutDashboard } from "lucide-react";
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DbDriver = "PostgreSQL" | "MySQL" | "Microsoft SQL Server" | "Oracle" | "SAP HANA" | "Snowflake" | "Redshift";
 type ConnectionStatus = "disconnected" | "testing" | "connected" | "failed";
@@ -465,6 +468,8 @@ export default function DatabaseConnectionPage() {
   if (!isAuthenticated) return null;
 
   return (
+
+    
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <div style={{
         background: S.bgDeep,
@@ -475,7 +480,7 @@ export default function DatabaseConnectionPage() {
         flex: 1,
       }}>
         {/* Header */}
-        <Header onBack={() => router.push("/input")} connectionStatus={connectionStatus} />
+        <Header onBack={() => router.push("/position-desk")} connectionStatus={connectionStatus} />
 
         {/* Tab Navigation */}
         <TabNav
@@ -574,7 +579,9 @@ export default function DatabaseConnectionPage() {
 
       <HelpPanel config={DATABASE_CONNECTION_HELP} storageKey="database-connection" />
     </div>
-  );
+  
+    
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2900,6 +2907,8 @@ function Footer() {
   }, []);
 
   return (
+    <PageShell icon={LayoutDashboard} title="Database Connection" breadcrumb={["Connectors", "Database"]} noPadding>
+
     <footer style={{
       height: 32,
       display: "flex",
@@ -2918,5 +2927,7 @@ function Footer() {
         {clock} — ORDR Terminal · Database Connection Module · 4-Level Architecture
       </span>
     </footer>
+  
+    </PageShell>
   );
 }

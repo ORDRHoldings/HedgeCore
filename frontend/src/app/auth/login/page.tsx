@@ -706,7 +706,7 @@ export default function LoginPage() {
         .login-telemetry {
           position: fixed;
           font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
-          font-size: 9px;
+          font-size: 12px;
           color: #94A3B8;
           opacity: 0.5;
           pointer-events: none;

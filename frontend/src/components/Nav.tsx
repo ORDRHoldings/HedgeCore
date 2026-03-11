@@ -19,8 +19,8 @@ export default function Nav() {
           <Link href="/hedges" className="text-sm text-gray-600 hover:text-gray-900">
             Hedges
           </Link>
-          <Link href="/currency-fx" className="text-sm text-blue-600 hover:text-blue-900 font-medium">
-            Currency FX (Old Engine)
+          <Link href="/market-overview" className="text-sm text-blue-600 hover:text-blue-900 font-medium">
+            Market Overview
           </Link>
           <Link href="/api-health" className="text-sm text-gray-600 hover:text-gray-900">
             API Health

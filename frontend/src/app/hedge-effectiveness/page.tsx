@@ -15,6 +15,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Play } from "lucide-react";
+
 // ── Design tokens ──────────────────────────────────────────────────────────
 const S = {
   mono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -92,7 +95,7 @@ export default function HedgeEffectivenessPage() {
             width: 28, height: 28, border: `2px solid ${S.rim}`, borderTopColor: S.cyan,
             borderRadius: "50%", animation: "spin 0.8s linear infinite",
           }} />
-          <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, letterSpacing: "0.1em" }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, letterSpacing: "0.1em" }}>
             LOADING
           </span>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
@@ -321,6 +324,8 @@ function HedgeEffectivenessInner() {
   const ineffectiveCount = runs.filter((r) => !r.overall_effective).length;
 
   return (
+
+    
     <div style={{ height: "100%", display: "flex", flexDirection: "column", background: S.deep }}>
       {/* ── Header ──────────────────────────────────────────────── */}
       <div style={{
@@ -349,7 +354,7 @@ function HedgeEffectivenessInner() {
             </div>
             <div style={{ flex: 1 }} />
             <span style={{
-              fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em",
               padding: "4px 12px", borderRadius: 3,
               background: "rgba(28,98,242,0.06)", color: HEX.cyan,
               border: "1px solid rgba(28,98,242,0.12)",
@@ -376,7 +381,7 @@ function HedgeEffectivenessInner() {
               borderRight: i < 3 ? `1px solid ${S.rim}` : "none",
               background: S.panel,
             }}>
-              <div style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 4 }}>
+              <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 4 }}>
                 {kpi.label}
               </div>
               <div style={{
@@ -396,7 +401,7 @@ function HedgeEffectivenessInner() {
               key={t.key}
               onClick={() => switchTab(t.key)}
               style={{
-                fontFamily: S.mono, fontSize: 10, fontWeight: tab === t.key ? 700 : 500,
+                fontFamily: S.mono, fontSize: 12, fontWeight: tab === t.key ? 700 : 500,
                 letterSpacing: "0.1em", color: tab === t.key ? HEX.cyan : S.text3,
                 padding: "8px 16px", background: "transparent", border: "none",
                 borderBottom: tab === t.key ? `2px solid ${HEX.cyan}` : "2px solid transparent",
@@ -451,7 +456,7 @@ function HedgeEffectivenessInner() {
               width: 28, height: 28, border: `2px solid ${S.rim}`, borderTopColor: S.cyan,
               borderRadius: "50%", animation: "spin 0.8s linear infinite",
             }} />
-            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>LOADING DATA</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>LOADING DATA</span>
             <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
           </div>
         ) : tab === "overview" ? (
@@ -487,7 +492,9 @@ function HedgeEffectivenessInner() {
         )}
       </div>
     </div>
-  );
+  
+    
+    );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -540,7 +547,7 @@ function OverviewTab({
               <button
                 onClick={() => onSwitchTab("upload")}
                 style={{
-                  fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                  fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                   padding: "10px 24px", borderRadius: 4, cursor: "pointer",
                   background: HEX.cyan, color: "#fff", border: "none",
                   boxShadow: "0 2px 8px rgba(28,98,242,0.2)",
@@ -554,7 +561,7 @@ function OverviewTab({
               <button
                 onClick={() => onSwitchTab("datasets")}
                 style={{
-                  fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                  fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                   padding: "10px 24px", borderRadius: 4, cursor: "pointer",
                   background: "transparent", color: HEX.cyan,
                   border: `1px solid rgba(28,98,242,0.25)`,
@@ -594,7 +601,7 @@ function OverviewTab({
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <span style={{ fontFamily: S.mono, fontSize: 15, fontWeight: 800, color: S.text1, letterSpacing: "0.04em" }}>{s.std}</span>
             <span style={{
-              fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.14em",
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em",
               padding: "2px 8px", borderRadius: 2, background: S.sub, color: S.text3,
             }}>
               {s.tag}
@@ -604,7 +611,7 @@ function OverviewTab({
             {s.desc}
           </p>
           <div style={{
-            fontFamily: S.mono, fontSize: 9, fontWeight: 600, color: s.color,
+            fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: s.color,
             letterSpacing: "0.1em", display: "flex", alignItems: "center", gap: 6,
           }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -632,11 +639,11 @@ function OverviewTab({
             background: lastRun.overall_effective ? HEX.green : HEX.red,
           }} />
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
               LATEST ASSESSMENT
             </span>
             <span style={{
-              fontFamily: S.mono, fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
+              fontFamily: S.mono, fontSize: 12, fontWeight: 800, letterSpacing: "0.12em",
               padding: "3px 10px", borderRadius: 3,
               background: lastRun.overall_effective ? HEX.greenBg : HEX.redBg,
               color: lastRun.overall_effective ? HEX.green : HEX.red,
@@ -652,11 +659,11 @@ function OverviewTab({
           <div style={{ fontFamily: S.ui, fontSize: 14, fontWeight: 600, color: S.text1 }}>
             {lastRun.dataset_name}
             {lastRun.currency_pair && (
-              <span style={{ fontFamily: S.mono, fontSize: 11, color: HEX.cyan, marginLeft: 8 }}>{lastRun.currency_pair}</span>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan, marginLeft: 8 }}>{lastRun.currency_pair}</span>
             )}
           </div>
           <div style={{
-            fontFamily: S.mono, fontSize: 11, color: S.text3, marginTop: 6,
+            fontFamily: S.mono, fontSize: 12, color: S.text3, marginTop: 6,
             display: "flex", gap: 16, flexWrap: "wrap",
           }}>
             <span>{lastRun.standard}</span>
@@ -711,7 +718,7 @@ function DatasetsTab({
         gap: 8, padding: "0 20px",
       }}>
         {["DATASET", "PERIODS", "HEDGE TYPE", "SOURCE", "CREATED", ""].map((h) => (
-          <span key={h} style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+          <span key={h} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
             {h}
           </span>
         ))}
@@ -732,29 +739,29 @@ function DatasetsTab({
               {ds.name}
             </div>
             {ds.currency_pair && (
-              <span style={{ fontFamily: S.mono, fontSize: 10, color: HEX.cyan }}>{ds.currency_pair}</span>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{ds.currency_pair}</span>
             )}
           </div>
           <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.text2 }}>
             {ds.period_count}
           </span>
-          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
             {ds.hedge_type.replace(/_/g, " ").toUpperCase()}
           </span>
           <span style={{
-            fontFamily: S.mono, fontSize: 9, fontWeight: 600, letterSpacing: "0.08em",
+            fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em",
             padding: "2px 6px", borderRadius: 2, background: S.sub, color: S.text3,
           }}>
             {ds.source.toUpperCase()}
           </span>
-          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
             {ds.created_at ? new Date(ds.created_at).toLocaleDateString() : "\u2014"}
           </span>
           <button
             onClick={() => onRunAssessment(ds.id)}
             disabled={submitting}
             style={{
-              fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
               padding: "7px 16px", borderRadius: 3, cursor: submitting ? "not-allowed" : "pointer",
               background: HEX.cyan, color: "#fff", border: "none",
               opacity: submitting ? 0.5 : 1,
@@ -815,7 +822,7 @@ function UploadTab({
   };
 
   const labelStyle: React.CSSProperties = {
-    fontFamily: S.mono, fontSize: 8, fontWeight: 700,
+    fontFamily: S.mono, fontSize: 12, fontWeight: 700,
     letterSpacing: "0.14em", color: S.text3, marginBottom: 6, display: "block",
   };
 
@@ -828,7 +835,7 @@ function UploadTab({
             key={m}
             onClick={() => setMode(m)}
             style={{
-              fontFamily: S.mono, fontSize: 10, fontWeight: mode === m ? 700 : 500,
+              fontFamily: S.mono, fontSize: 12, fontWeight: mode === m ? 700 : 500,
               letterSpacing: "0.1em", padding: "8px 20px", borderRadius: 4,
               cursor: "pointer",
               background: mode === m ? "rgba(28,98,242,0.06)" : "transparent",
@@ -893,7 +900,7 @@ function UploadTab({
           padding: 28, background: S.panel, borderRadius: 6, border: `1px solid ${S.rim}`,
         }}>
           <div style={{
-            fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3,
+            fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
             letterSpacing: "0.14em", marginBottom: 14,
             display: "flex", alignItems: "center", gap: 8,
           }}>
@@ -903,9 +910,9 @@ function UploadTab({
             UPLOAD CSV FILE
           </div>
           <p style={{ fontFamily: S.ui, fontSize: 12, color: S.text3, margin: "0 0 16px", lineHeight: 1.6 }}>
-            CSV must contain columns: <code style={{ fontFamily: S.mono, fontSize: 11, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>hedged_item_fv_change</code>,{" "}
-            <code style={{ fontFamily: S.mono, fontSize: 11, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>instrument_fv_change</code>.
-            Optional: <code style={{ fontFamily: S.mono, fontSize: 11, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>period_date</code>.
+            CSV must contain columns: <code style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>hedged_item_fv_change</code>,{" "}
+            <code style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>instrument_fv_change</code>.
+            Optional: <code style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, background: S.sub, padding: "1px 4px", borderRadius: 2 }}>period_date</code>.
           </p>
 
           {/* Drop zone */}
@@ -926,7 +933,7 @@ function UploadTab({
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={csvFile ? HEX.cyan : HEX.text3} strokeWidth="1.5" style={{ marginBottom: 8 }}>
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
               </svg>
-              <div style={{ fontFamily: S.mono, fontSize: 11, color: csvFile ? HEX.cyan : S.text3 }}>
+              <div style={{ fontFamily: S.mono, fontSize: 12, color: csvFile ? HEX.cyan : S.text3 }}>
                 {csvFile ? csvFile.name : "Click to select CSV file"}
               </div>
             </label>
@@ -936,7 +943,7 @@ function UploadTab({
             onClick={handleCsvUpload}
             disabled={submitting || !csvFile}
             style={{
-              fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
               padding: "10px 28px", borderRadius: 4,
               background: csvFile ? HEX.cyan : S.sub, color: csvFile ? "#fff" : S.text3,
               border: "none", cursor: csvFile && !submitting ? "pointer" : "not-allowed",
@@ -955,7 +962,7 @@ function UploadTab({
             display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14,
           }}>
             <span style={{
-              fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3,
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
               letterSpacing: "0.14em", display: "flex", alignItems: "center", gap: 8,
             }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={HEX.cyan} strokeWidth="2">
@@ -964,7 +971,7 @@ function UploadTab({
               FAIR VALUE CHANGES ({formPeriods.length} PERIODS)
             </span>
             <button onClick={addPeriod} style={{
-              fontFamily: S.mono, fontSize: 9, fontWeight: 700, padding: "5px 12px",
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700, padding: "5px 12px",
               borderRadius: 3, background: S.sub, color: S.text2,
               border: `1px solid ${S.rim}`, cursor: "pointer",
               display: "flex", alignItems: "center", gap: 4,
@@ -986,7 +993,7 @@ function UploadTab({
             marginBottom: 6, padding: "0 4px",
           }}>
             {["#", "DATE (OPTIONAL)", "HEDGED ITEM \u0394FV", "INSTRUMENT \u0394FV", ""].map((h) => (
-              <span key={h} style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+              <span key={h} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
                 {h}
               </span>
             ))}
@@ -998,14 +1005,14 @@ function UploadTab({
               display: "grid", gridTemplateColumns: "48px 1fr 1fr 1fr 32px", gap: 8,
               marginBottom: 6, alignItems: "center",
             }}>
-              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.text3, textAlign: "center" }}>
+              <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.text3, textAlign: "center" }}>
                 {i + 1}
               </span>
               <input
                 value={p.period_date}
                 onChange={(e) => updatePeriod(i, "period_date", e.target.value)}
                 placeholder="2025-01-31"
-                style={{ ...inputStyle, fontSize: 11, padding: "6px 10px" }}
+                style={{ ...inputStyle, fontSize: 12, padding: "6px 10px" }}
                 onFocus={(e) => e.currentTarget.style.borderColor = HEX.cyan}
                 onBlur={(e) => e.currentTarget.style.borderColor = HEX.border}
               />
@@ -1013,7 +1020,7 @@ function UploadTab({
                 value={p.hedged_item_fv_change}
                 onChange={(e) => updatePeriod(i, "hedged_item_fv_change", e.target.value)}
                 placeholder="e.g. -15000"
-                style={{ ...inputStyle, fontSize: 11, padding: "6px 10px" }}
+                style={{ ...inputStyle, fontSize: 12, padding: "6px 10px" }}
                 onFocus={(e) => e.currentTarget.style.borderColor = HEX.cyan}
                 onBlur={(e) => e.currentTarget.style.borderColor = HEX.border}
               />
@@ -1021,7 +1028,7 @@ function UploadTab({
                 value={p.instrument_fv_change}
                 onChange={(e) => updatePeriod(i, "instrument_fv_change", e.target.value)}
                 placeholder="e.g. 14200"
-                style={{ ...inputStyle, fontSize: 11, padding: "6px 10px" }}
+                style={{ ...inputStyle, fontSize: 12, padding: "6px 10px" }}
                 onFocus={(e) => e.currentTarget.style.borderColor = HEX.cyan}
                 onBlur={(e) => e.currentTarget.style.borderColor = HEX.border}
               />
@@ -1049,7 +1056,7 @@ function UploadTab({
               onClick={handleSubmit}
               disabled={submitting}
               style={{
-                fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                 padding: "11px 28px", borderRadius: 4,
                 background: HEX.cyan, color: "#fff", border: "none",
                 cursor: submitting ? "not-allowed" : "pointer",
@@ -1095,6 +1102,8 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   }
 
   return (
+    <PageShell icon={Play} title="Hedge Effectiveness" breadcrumb={["Dashboard", "Hedge Effectiveness"]} noPadding>
+
     <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 1100 }}>
       {/* Header */}
       <div style={{
@@ -1102,7 +1111,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
         gap: 8, padding: "0 20px",
       }}>
         {["DATASET", "STANDARD", "D.O. RATIO", "R\u00B2", "VERDICT", "HASH", "DATE"].map((h) => (
-          <span key={h} style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+          <span key={h} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
             {h}
           </span>
         ))}
@@ -1134,26 +1143,26 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
               {r.dataset_name}
             </div>
             {r.currency_pair && (
-              <span style={{ fontFamily: S.mono, fontSize: 10, color: HEX.cyan }}>{r.currency_pair}</span>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{r.currency_pair}</span>
             )}
           </div>
-          <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2, display: "flex", alignItems: "center" }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, display: "flex", alignItems: "center" }}>
             {r.standard}
           </span>
           <span style={{
-            fontFamily: S.mono, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center",
+            fontFamily: S.mono, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center",
             color: r.dollar_offset_ratio != null && r.dollar_offset_ratio >= 0.80 && r.dollar_offset_ratio <= 1.25 ? HEX.green : S.text2,
           }}>
             {r.dollar_offset_ratio != null ? r.dollar_offset_ratio.toFixed(4) : "\u2014"}
           </span>
           <span style={{
-            fontFamily: S.mono, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center",
+            fontFamily: S.mono, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center",
             color: r.regression_r_squared != null && r.regression_r_squared >= 0.80 ? HEX.green : S.text2,
           }}>
             {r.regression_r_squared != null ? r.regression_r_squared.toFixed(4) : "\u2014"}
           </span>
           <span style={{
-            fontFamily: S.mono, fontSize: 9, fontWeight: 800, letterSpacing: "0.1em",
+            fontFamily: S.mono, fontSize: 12, fontWeight: 800, letterSpacing: "0.1em",
             display: "flex", alignItems: "center",
           }}>
             <span style={{
@@ -1165,14 +1174,16 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
               {r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"}
             </span>
           </span>
-          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, display: "flex", alignItems: "center" }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, display: "flex", alignItems: "center" }}>
             {r.run_hash?.slice(0, 10)}...
           </span>
-          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, display: "flex", alignItems: "center" }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, display: "flex", alignItems: "center" }}>
             {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
           </span>
         </div>
       ))}
     </div>
+  
+    </PageShell>
   );
 }

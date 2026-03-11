@@ -8,6 +8,9 @@ import { GUIDES } from "@/lib/help/guides";
 import type { GuideDoc } from "@/lib/help/guides/types";
 import { generateDiagnosticsBundle } from "@/lib/support/diagnostics";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { HelpCircle } from "lucide-react";
+
 // ── Style constants ────────────────────────────────────────────────────────────
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -173,7 +176,7 @@ function GuideCard({ guide, onEscalate }: { guide: GuideDoc; onEscalate: (g: Gui
               key={l}
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: levelColor[l],
                 border: `1px solid ${levelColor[l]}`,
                 borderRadius: 3,
@@ -191,7 +194,7 @@ function GuideCard({ guide, onEscalate }: { guide: GuideDoc; onEscalate: (g: Gui
           onClick={() => router.push(`/help?guide=${guide.id}`)}
           style={{
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             color: S.cyan,
             background: "transparent",
             border: `1px solid ${S.cyan}`,
@@ -207,7 +210,7 @@ function GuideCard({ guide, onEscalate }: { guide: GuideDoc; onEscalate: (g: Gui
           onClick={() => onEscalate(guide)}
           style={{
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             color: S.tertiary,
             background: "transparent",
             border: `1px solid ${S.soft}`,
@@ -248,7 +251,7 @@ function TicketRow({ ticket }: { ticket: SupportTicket }) {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               color: severityColor(ticket.severity),
               border: `1px solid ${severityColor(ticket.severity)}`,
               borderRadius: 3,
@@ -263,7 +266,7 @@ function TicketRow({ ticket }: { ticket: SupportTicket }) {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               color: statusColor(ticket.status),
               border: `1px solid ${statusColor(ticket.status)}`,
               borderRadius: 3,
@@ -286,7 +289,7 @@ function TicketRow({ ticket }: { ticket: SupportTicket }) {
           <td colSpan={6} style={{ padding: "14px 16px" }}>
             {ticket.description && (
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 4 }}>DESCRIPTION</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 4 }}>DESCRIPTION</div>
                 <p style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
                   {ticket.description}
                 </p>
@@ -294,7 +297,7 @@ function TicketRow({ ticket }: { ticket: SupportTicket }) {
             )}
             {ticket.events && ticket.events.length > 0 && (
               <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>EVENTS</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 8 }}>EVENTS</div>
                 {ticket.events.map((ev, i) => (
                   <div
                     key={i}
@@ -305,10 +308,10 @@ function TicketRow({ ticket }: { ticket: SupportTicket }) {
                       borderTop: i > 0 ? `1px solid ${S.soft}` : "none",
                     }}
                   >
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, minWidth: 80 }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, minWidth: 80 }}>
                       {new Date(ev.ts).toLocaleTimeString()}
                     </span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, minWidth: 80 }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, minWidth: 80 }}>
                       {ev.actor}
                     </span>
                     <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
@@ -447,7 +450,7 @@ function SupportPageInner() {
   const branchCode = user?.branch?.code ?? undefined;
 
   return (
-    <div style={{ minHeight: "100vh", background: S.bgDeep, display: "flex" }}>
+    <div style={{ display: "flex", minHeight: "100vh", background: S.bgDeep }}>
 
       {/* LEFT SIDEBAR */}
       <div
@@ -467,7 +470,7 @@ function SupportPageInner() {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               color: S.tertiary,
               letterSpacing: "0.12em",
@@ -580,7 +583,7 @@ function SupportPageInner() {
                   padding: "16px",
                 }}
               >
-                <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 8 }}>
                   {stat.label}
                 </div>
                 <div
@@ -703,7 +706,7 @@ function SupportPageInner() {
               )}
 
               {diagStatus === "failed" && (
-                <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.fail, letterSpacing: "0.06em" }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail, letterSpacing: "0.06em" }}>
                   Generation failed
                 </span>
               )}
@@ -715,7 +718,7 @@ function SupportPageInner() {
                 <pre
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     color: S.secondary,
                     background: S.bgSub,
                     border: `1px solid ${S.rim}`,
@@ -848,7 +851,7 @@ function SupportPageInner() {
                           style={{
                             padding: "10px 12px",
                             fontFamily: S.fontMono,
-                            fontSize: 10,
+                            fontSize: 12,
                             color: S.tertiary,
                             letterSpacing: "0.08em",
                             textAlign: "left",
@@ -892,7 +895,7 @@ function SupportPageInner() {
           {/* Quick links */}
           <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6, overflow: "hidden" }}>
             <div style={{ padding: "12px 14px", borderBottom: `1px solid ${S.soft}` }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
                 QUICK LINKS
               </span>
             </div>
@@ -929,7 +932,7 @@ function SupportPageInner() {
           {/* Severity guide */}
           <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6, overflow: "hidden" }}>
             <div style={{ padding: "12px 14px", borderBottom: `1px solid ${S.soft}` }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
                 SEVERITY GUIDE
               </span>
             </div>
@@ -946,7 +949,7 @@ function SupportPageInner() {
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         color: row.color,
                         letterSpacing: "0.06em",
                         fontWeight: 700,
@@ -954,7 +957,7 @@ function SupportPageInner() {
                     >
                       {row.severity} {row.label}
                     </span>
-                    <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                       {row.response}
                     </span>
                   </div>
@@ -966,7 +969,7 @@ function SupportPageInner() {
           {/* Backend health */}
           <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 6, overflow: "hidden" }}>
             <div style={{ padding: "12px 14px", borderBottom: `1px solid ${S.soft}` }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.1em" }}>
                 BACKEND HEALTH
               </span>
             </div>
@@ -1008,6 +1011,8 @@ function SupportPageInner() {
 
 export default function SupportPage() {
   return (
+    <PageShell icon={HelpCircle} title="Support" breadcrumb={["Help","Support"]}>
+
     <Suspense
       fallback={
         <div
@@ -1028,5 +1033,7 @@ export default function SupportPage() {
     >
       <SupportPageInner />
     </Suspense>
+  
+    </PageShell>
   );
 }

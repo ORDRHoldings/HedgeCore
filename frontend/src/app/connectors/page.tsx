@@ -28,6 +28,9 @@ import type { ConnectorRun } from "../../api/connectorClient";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { CONNECTORS_HELP } from "@/lib/helpContent";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { LayoutDashboard } from "lucide-react";
+
 // ── Hydration-safe timestamp ───────────────────────────────────────────────────
 function useRenderTs(): string {
   const [ts, setTs] = useState("");
@@ -95,7 +98,7 @@ const CONNECTOR_DEFS: Omit<ConnectorState, "status" | "lastSync" | "recordsToday
     label:         "CSV / Excel Upload",
     description:   "Manual bulk import of trade positions from CSV or XLSX files. Supports custom column mapping, header detection, validation, and transformation rules.",
     icon:          "📂",
-    href:          "/input?tab=upload",
+    href:          "/position-desk",
     fieldCoverage: 100,
     systems:       ["CSV", "Excel", "XLSX", "Google Sheets export"],
     storageKey:    "ordr_csv_uploads",
@@ -155,7 +158,7 @@ function FieldCoverageBar({ pct, color }: { pct: number; color: string }) {
       }}>
         <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 2 }} />
       </div>
-      <span style={{ fontFamily: S.fontMono, fontSize: 10, color, minWidth: 32 }}>{pct}%</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color, minWidth: 32 }}>{pct}%</span>
     </div>
   );
 }
@@ -167,14 +170,14 @@ function KpiCard({ label, value, sub, color }: { label: string; value: string; s
       borderLeft: `3px solid ${color}`, borderRadius: 3,
       padding: "12px 16px",
     }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, marginBottom: 4 }}>
         {label}
       </div>
       <div style={{ fontFamily: S.fontMono, fontSize: 22, fontWeight: 700, color: S.primary, lineHeight: 1 }}>
         {value}
       </div>
       {sub && (
-        <div style={{ fontFamily: S.fontUI, fontSize: 10, color: S.tertiary, marginTop: 3 }}>{sub}</div>
+        <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 3 }}>{sub}</div>
       )}
     </div>
   );
@@ -246,9 +249,13 @@ export default function ConnectorsPage() {
 
   if (authLoading) {
     return (
+
+    
       <div style={{ background: S.bgDeep, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.1em" }}>LOADING…</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em" }}>LOADING…</span>
       </div>
+    
+    
     );
   }
 
@@ -263,16 +270,16 @@ export default function ConnectorsPage() {
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.primary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.primary }}>
             CONNECTORS
           </span>
           <span style={{ color: S.rim }}>|</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.06em", color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em", color: S.tertiary }}>
             DATA PIPELINE HUB
           </span>
           {errorCount > 0 && (
             <span style={{
-              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.fail,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.fail,
               background: `color-mix(in srgb, ${S.fail} 10%, transparent)`,
               border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`,
               padding: "1px 6px", borderRadius: 2, letterSpacing: "0.06em",
@@ -283,13 +290,13 @@ export default function ConnectorsPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <a href="/import-history" style={{
-            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
             color: S.cyan, textDecoration: "none",
             border: `1px solid ${S.cyan}40`, borderRadius: 2, padding: "5px 12px",
           }}>
             IMPORT HISTORY →
           </a>
-          <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {renderTs}
           </span>
         </div>
@@ -309,7 +316,7 @@ export default function ConnectorsPage() {
 
         {/* Connector cards */}
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.09em", color: S.tertiary, marginBottom: 12 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.09em", color: S.tertiary, marginBottom: 12 }}>
             CONNECTOR STATUS
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
@@ -338,14 +345,14 @@ export default function ConnectorsPage() {
                           <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary }}>
                             {conn.label}
                           </div>
-                          <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, marginTop: 2, lineHeight: 1.4 }}>
+                          <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginTop: 2, lineHeight: 1.4 }}>
                             {conn.description.slice(0, 80)}…
                           </div>
                         </div>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
                         <span style={{
-                          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                           letterSpacing: "0.06em", color: statusColor,
                           background: `color-mix(in srgb, ${statusColor} 10%, transparent)`,
                           border: `1px solid color-mix(in srgb, ${statusColor} 25%, transparent)`,
@@ -353,7 +360,7 @@ export default function ConnectorsPage() {
                         }}>
                           {STATUS_LABELS[conn.status]}
                         </span>
-                        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                           {isExpanded ? "▲ COLLAPSE" : "▼ DETAILS"}
                         </span>
                       </div>
@@ -365,17 +372,17 @@ export default function ConnectorsPage() {
                       paddingTop: 10, borderTop: `1px solid ${S.soft}`,
                     }}>
                       <div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginBottom: 2, letterSpacing: "0.07em" }}>LAST SYNC</div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 2, letterSpacing: "0.07em" }}>LAST SYNC</div>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                           {conn.lastSync ? new Date(conn.lastSync).toLocaleString() : "Never"}
                         </div>
                       </div>
                       <div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginBottom: 2, letterSpacing: "0.07em" }}>RECORDS TODAY</div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{conn.recordsToday.toLocaleString()}</div>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 2, letterSpacing: "0.07em" }}>RECORDS TODAY</div>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{conn.recordsToday.toLocaleString()}</div>
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginBottom: 4, letterSpacing: "0.07em" }}>FIELD COVERAGE</div>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 4, letterSpacing: "0.07em" }}>FIELD COVERAGE</div>
                         <FieldCoverageBar
                           pct={conn.fieldCoverage}
                           color={conn.fieldCoverage >= 90 ? S.pass : conn.fieldCoverage >= 70 ? S.amber : S.fail}
@@ -388,18 +395,18 @@ export default function ConnectorsPage() {
                   {isExpanded && (
                     <div style={{ borderTop: `1px solid ${S.rim}`, padding: "14px 16px", background: S.bgSub }}>
                       {/* Description */}
-                      <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.6, marginBottom: 12 }}>
+                      <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.6, marginBottom: 12 }}>
                         {conn.description}
                       </div>
                       {/* Supported systems */}
                       <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary, marginBottom: 6 }}>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary, marginBottom: 6 }}>
                           SUPPORTED SYSTEMS
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                           {conn.systems.map(sys => (
                             <span key={sys} style={{
-                              fontFamily: S.fontMono, fontSize: 9, color: S.secondary,
+                              fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
                               background: S.bgPanel, border: `1px solid ${S.rim}`,
                               padding: "2px 7px", borderRadius: 2,
                             }}>
@@ -415,7 +422,7 @@ export default function ConnectorsPage() {
                           border: `1px solid ${S.amber}30`,
                           borderLeft: `3px solid ${S.amber}`,
                           borderRadius: 2, padding: "8px 12px", marginBottom: 12,
-                          fontFamily: S.fontUI, fontSize: 11, color: S.secondary,
+                          fontFamily: S.fontUI, fontSize: 12, color: S.secondary,
                         }}>
                           This connector is not yet configured. Click Configure to set up credentials and field mappings.
                         </div>
@@ -426,7 +433,7 @@ export default function ConnectorsPage() {
                           border: `1px solid ${S.fail}30`,
                           borderLeft: `3px solid ${S.fail}`,
                           borderRadius: 2, padding: "8px 12px", marginBottom: 12,
-                          fontFamily: S.fontUI, fontSize: 11, color: S.secondary,
+                          fontFamily: S.fontUI, fontSize: 12, color: S.secondary,
                         }}>
                           Connector is reporting an error. Check credentials, network access, and field mapping schema.
                         </div>
@@ -436,7 +443,7 @@ export default function ConnectorsPage() {
                         <a
                           href={conn.href}
                           style={{
-                            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                             color: "#000", background: S.cyan,
                             border: "none", borderRadius: 2, padding: "6px 14px",
                             textDecoration: "none", display: "inline-block",
@@ -447,7 +454,7 @@ export default function ConnectorsPage() {
                         <a
                           href="/import-history"
                           style={{
-                            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                             color: S.secondary, background: "transparent",
                             border: `1px solid ${S.rim}`, borderRadius: 2, padding: "6px 14px",
                             textDecoration: "none", display: "inline-block",
@@ -467,7 +474,7 @@ export default function ConnectorsPage() {
         {/* Field mapping health matrix */}
         <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 3, marginBottom: 20, overflow: "hidden" }}>
           <div style={{ padding: "10px 16px", borderBottom: `1px solid ${S.rim}` }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
               FIELD MAPPING COVERAGE
             </span>
           </div>
@@ -478,10 +485,10 @@ export default function ConnectorsPage() {
                 return (
                   <div key={conn.type}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>{conn.label}</span>
+                      <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{conn.label}</span>
                     </div>
                     <FieldCoverageBar pct={conn.fieldCoverage} color={color} />
-                    <div style={{ fontFamily: S.fontUI, fontSize: 10, color: S.tertiary, marginTop: 3 }}>
+                    <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 3 }}>
                       {conn.fieldCoverage >= 90
                         ? "All required fields mapped"
                         : conn.fieldCoverage >= 70
@@ -501,7 +508,7 @@ export default function ConnectorsPage() {
             padding: "10px 16px", borderBottom: `1px solid ${S.rim}`,
             display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap",
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
               RECENT CONNECTOR RUNS
             </span>
             {/* Filter chips */}
@@ -511,7 +518,7 @@ export default function ConnectorsPage() {
                   key={f}
                   onClick={() => setFilterType(f)}
                   style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.05em",
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em",
                     color: filterType === f ? "#000" : S.tertiary,
                     background: filterType === f ? S.cyan : "transparent",
                     border: `1px solid ${filterType === f ? S.cyan : S.rim}`,
@@ -522,23 +529,23 @@ export default function ConnectorsPage() {
                 </button>
               ))}
             </div>
-            <a href="/import-history" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, textDecoration: "none" }}>
+            <a href="/import-history" style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, textDecoration: "none" }}>
               FULL HISTORY →
             </a>
           </div>
 
           {/* Run table */}
           {runsLoading ? (
-            <div style={{ padding: "32px", textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+            <div style={{ padding: "32px", textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               LOADING RUNS…
             </div>
           ) : runsError ? (
             <div style={{ padding: "16px", background: `color-mix(in srgb, ${S.amber} 5%, transparent)`, borderLeft: `3px solid ${S.amber}`, margin: 12, borderRadius: 2 }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber }}>⚠ Could not load connector runs — {runsError}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber }}>⚠ Could not load connector runs — {runsError}</span>
             </div>
           ) : filteredRuns.length === 0 ? (
             <div style={{ padding: "40px", textAlign: "center" }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                 No runs found for selected filter.
               </div>
               <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 6 }}>
@@ -551,7 +558,7 @@ export default function ConnectorsPage() {
                 <tr style={{ borderBottom: `1px solid ${S.rim}` }}>
                   {["RUN ID", "CONNECTOR", "STARTED", "DURATION", "RECORDS", "STATUS", "TRIGGERED BY"].map(h => (
                     <th key={h} style={{
-                      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em",
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
                       color: S.tertiary, padding: "7px 12px", textAlign: "left", whiteSpace: "nowrap",
                     }}>
                       {h}
@@ -569,28 +576,30 @@ export default function ConnectorsPage() {
                     : run.status === "RUNNING" ? S.cyan
                     : S.amber;
                   return (
+                    <PageShell icon={LayoutDashboard} title="Connectors" breadcrumb={["Dashboard", "Connectors"]} noPadding>
+
                     <tr key={run.id} style={{
                       borderBottom: `1px solid ${S.soft}`,
                       background: i % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.bgSub} 40%, transparent)`,
                     }}>
-                      <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.cyan }}>
+                      <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>
                         {run.id.slice(0, 10)}…
                       </td>
-                      <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                      <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                         {run.connector_type ?? "—"}
                       </td>
-                      <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.secondary, whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.secondary, whiteSpace: "nowrap" }}>
                         {new Date(run.started_at).toLocaleString()}
                       </td>
-                      <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                      <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                         {dur}
                       </td>
-                      <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                      <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                         {run.total_rows.toLocaleString()}
                       </td>
                       <td style={{ padding: "8px 12px" }}>
                         <span style={{
-                          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                           color: statusColor,
                           background: `color-mix(in srgb, ${statusColor} 10%, transparent)`,
                           border: `1px solid color-mix(in srgb, ${statusColor} 25%, transparent)`,
@@ -599,10 +608,12 @@ export default function ConnectorsPage() {
                           {run.status}
                         </span>
                       </td>
-                      <td style={{ padding: "8px 12px", fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>
+                      <td style={{ padding: "8px 12px", fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
                         {run.triggered_by}
                       </td>
                     </tr>
+                  
+                    </PageShell>
                   );
                 })}
               </tbody>
@@ -613,7 +624,7 @@ export default function ConnectorsPage() {
         {/* Quick action strip */}
         <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
           {[
-            { label: "UPLOAD CSV FILE",     href: "/input?tab=upload",       color: S.cyan   },
+            { label: "UPLOAD CSV FILE",     href: "/position-desk",       color: S.cyan   },
             { label: "CONFIGURE DATABASE",  href: "/database-connection",    color: S.cyan   },
             { label: "SETUP ERP",           href: "/erp-integration",        color: S.amber  },
             { label: "CONNECT ACCOUNTING",  href: "/accounting-connection",  color: S.pass   },
@@ -624,7 +635,7 @@ export default function ConnectorsPage() {
               key={a.label}
               href={a.href}
               style={{
-                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                 color: a.color, textDecoration: "none",
                 border: `1px solid ${a.color}40`, borderRadius: 2,
                 padding: "6px 14px",
@@ -642,7 +653,7 @@ export default function ConnectorsPage() {
         height: 32, display: "flex", alignItems: "center", justifyContent: "center",
         borderTop: `1px solid ${S.rim}`, background: S.bgPanel,
       }}>
-        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.05em" }}>
+        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.05em" }}>
           {renderTs} · ORDR Connectors Hub · {connectors.filter(c => c.status !== "NOT_CONFIGURED").length}/{CONNECTOR_DEFS.length} configured
         </span>
       </div>

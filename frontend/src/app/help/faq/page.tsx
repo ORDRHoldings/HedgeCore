@@ -6,6 +6,9 @@ import { useAuth } from "@/lib/authContext";
 import { GUIDES } from "@/lib/help/guides";
 import type { GuideSection, GuideBlock, GuideCallout } from "@/lib/help/guides/types";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { HelpCircle } from "lucide-react";
+
 // ── Style constants ────────────────────────────────────────────────────────────
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -93,7 +96,7 @@ function renderBlock(block: GuideBlock, idx: number) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: "0.1em",
             color: cs.labelColor,
@@ -168,7 +171,7 @@ function AccordionItem({ section, idx }: { section: GuideSection; idx: number })
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: S.pass,
               border: `1px solid ${S.pass}`,
               borderRadius: 3,
@@ -209,18 +212,7 @@ function FaqPageInner() {
 
   if (!faqGuide) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: S.bgDeep,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: S.fontUI,
-          color: S.tertiary,
-          fontSize: 14,
-        }}
-      >
+      <div style={{ minHeight: "100vh", background: S.bgDeep, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: S.fontMono, fontSize: 13, color: S.tertiary }}>
         FAQ guide not found.
       </div>
     );
@@ -246,7 +238,7 @@ function FaqPageInner() {
             onClick={() => router.push("/help")}
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               color: S.tertiary,
               background: "none",
               border: "none",
@@ -257,8 +249,8 @@ function FaqPageInner() {
           >
             DOCUMENTATION
           </button>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>›</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, letterSpacing: "0.05em" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>›</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, letterSpacing: "0.05em" }}>
             FAQ
           </span>
         </div>
@@ -290,7 +282,7 @@ function FaqPageInner() {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               color: S.tertiary,
               border: `1px solid ${S.soft}`,
               borderRadius: 3,
@@ -339,7 +331,7 @@ function FaqPageInner() {
           <p
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               color: S.tertiary,
               letterSpacing: "0.06em",
               marginBottom: 24,
@@ -390,6 +382,8 @@ function FaqPageInner() {
 
 export default function FaqPage() {
   return (
+    <PageShell icon={HelpCircle} title="FAQ" breadcrumb={["Help","FAQ"]}>
+
     <Suspense
       fallback={
         <div
@@ -410,5 +404,7 @@ export default function FaqPage() {
     >
       <FaqPageInner />
     </Suspense>
+  
+    </PageShell>
   );
 }

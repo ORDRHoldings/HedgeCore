@@ -20,6 +20,9 @@ import { RESULTS_HELP } from "@/lib/helpContent";
 import WorkflowBreadcrumb from "@/components/layout/WorkflowBreadcrumb";
 import WorkflowGuide from "@/components/layout/WorkflowGuide";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { FileText } from "lucide-react";
+
 // ── Committee Pack: Top-level module navigation ───────────────────────────────
 const TOP_LEVEL_SECTIONS = [
   { key: 'execution',     label: 'Execution Desk',    icon: '⬡' },
@@ -80,6 +83,8 @@ export default function ResultsPage() {
 
   if (!result) {
     return (
+
+    
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <div className="w-12 h-12 rounded-full border border-[var(--border-rim)] flex items-center justify-center mb-4 text-[var(--text-tertiary)] text-xl">
           ◈
@@ -95,6 +100,8 @@ export default function ResultsPage() {
           Go to Input Page
         </Link>
       </div>
+    
+    
     );
   }
 
@@ -175,7 +182,7 @@ export default function ResultsPage() {
           </div>
           <div className="no-print flex items-center gap-2">
             <Link
-              href="/input"
+              href="/position-desk"
               className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium border border-[var(--border-rim)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-tertiary)] transition-colors"
               style={{ fontFamily: 'var(--font-terminal, var(--font-ui))' }}
             >
@@ -196,6 +203,8 @@ export default function ResultsPage() {
             const isActive = activeSection === section.key;
             const showBadge = section.key === 'notifications' && alertCount > 0;
             return (
+              <PageShell icon={FileText} title="Results" breadcrumb={["Dashboard", "Results"]} noPadding>
+
               <button
                 key={section.key}
                 onClick={() => handleSectionChange(section.key)}
@@ -215,6 +224,8 @@ export default function ResultsPage() {
                   </span>
                 )}
               </button>
+            
+              </PageShell>
             );
           })}
         </div>
@@ -367,7 +378,7 @@ export default function ResultsPage() {
           gap: 10px;
         }
         .cp-section-index {
-          font-size: 10px;
+          font-size: 12px;
           font-family: var(--font-mono);
           color: var(--text-tertiary);
           letter-spacing: 0.1em;
@@ -382,7 +393,7 @@ export default function ResultsPage() {
           margin: 0;
         }
         .cp-badge {
-          font-size: 9px;
+          font-size: 12px;
           font-family: var(--font-mono);
           color: var(--text-tertiary);
           border: 1px solid var(--border-rim);

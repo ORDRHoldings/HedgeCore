@@ -19,6 +19,9 @@ import HelpPanel from "@/components/layout/HelpPanel";
 import { IMPORT_HISTORY_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { LayoutDashboard } from "lucide-react";
+
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const S = {
   bgDeep: "var(--bg-deep)",
@@ -111,13 +114,13 @@ function copyToClipboard(text: string) {
 function TopBar({ totalRuns, loading, onBack, onRefresh }: { totalRuns: number; loading: boolean; onBack: () => void; onRefresh: () => void }) {
   return (
     <header style={{ display: "flex", alignItems: "center", gap: 10, height: 44, flexShrink: 0, padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}` }}>
-      <button onClick={onBack} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer" }}>← Position Desk</button>
+      <button onClick={onBack} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, background: "transparent", border: `1px solid ${S.rim}`, padding: "2px 8px", cursor: "pointer" }}>← Position Desk</button>
       <span style={{ color: S.rim }}>|</span>
       <span style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary }}>Import History</span>
-      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, border: `1px solid ${S.rim}`, padding: "1px 5px" }}>INGESTION AUDIT</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, border: `1px solid ${S.rim}`, padding: "1px 5px" }}>INGESTION AUDIT</span>
       <div style={{ flex: 1 }} />
-      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{totalRuns} runs</span>
-      <button onClick={onRefresh} disabled={loading} title="Refresh" style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, background: "transparent", border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`, padding: "2px 8px", cursor: loading ? "not-allowed" : "pointer" }}>↻ Refresh</button>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{totalRuns} runs</span>
+      <button onClick={onRefresh} disabled={loading} title="Refresh" style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, background: "transparent", border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`, padding: "2px 8px", cursor: loading ? "not-allowed" : "pointer" }}>↻ Refresh</button>
     </header>
   );
 }
@@ -211,16 +214,16 @@ function FilterBar({
 }: FilterBarProps) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 20px", background: S.bgPanel, borderBottom: `1px solid ${S.soft}`, flexShrink: 0, flexWrap: "wrap" }}>
-      <input type="date" value={dateFrom} onChange={(e) => onDateFromChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }} />
-      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>—</span>
-      <input type="date" value={dateTo} onChange={(e) => onDateToChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }} />
-      <select value={status} onChange={(e) => onStatusChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }}>
+      <input type="date" value={dateFrom} onChange={(e) => onDateFromChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 12, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }} />
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>—</span>
+      <input type="date" value={dateTo} onChange={(e) => onDateToChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 12, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }} />
+      <select value={status} onChange={(e) => onStatusChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 12, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }}>
         <option value="ALL">ALL STATUS</option>
         <option value="COMPLETED">COMPLETED</option>
         <option value="FAILED">FAILED</option>
         <option value="RUNNING">RUNNING</option>
       </select>
-      <select value={connectorType} onChange={(e) => onConnectorTypeChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }}>
+      <select value={connectorType} onChange={(e) => onConnectorTypeChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 12, padding: "3px 8px", background: S.bgSub, color: S.primary, border: `1px solid ${S.rim}`, outline: "none" }}>
         <option value="ALL">ALL TYPES</option>
         <option value="UPLOAD_CSV">CSV</option>
         <option value="UPLOAD_EXCEL">EXCEL</option>
@@ -229,8 +232,8 @@ function FilterBar({
         <option value="ACCOUNTING">ACCOUNTING</option>
       </select>
       <div style={{ flex: 1 }} />
-      <input type="text" placeholder="Search filename or run ID…" value={search} onChange={(e) => onSearchChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 11, padding: "3px 10px", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, outline: "none", width: 240 }} />
-      <button onClick={onExport} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", color: S.amber, background: "transparent", border: `1px solid color-mix(in srgb, ${S.amber} 35%, transparent)`, padding: "3px 10px", cursor: "pointer" }}>↓ CSV</button>
+      <input type="text" placeholder="Search filename or run ID…" value={search} onChange={(e) => onSearchChange(e.target.value)} style={{ fontFamily: S.fontMono, fontSize: 12, padding: "3px 10px", background: S.bgSub, border: `1px solid ${S.rim}`, color: S.primary, outline: "none", width: 240 }} />
+      <button onClick={onExport} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: S.amber, background: "transparent", border: `1px solid color-mix(in srgb, ${S.amber} 35%, transparent)`, padding: "3px 10px", cursor: "pointer" }}>↓ CSV</button>
     </div>
   );
 }
@@ -1065,17 +1068,7 @@ export default function ImportHistoryPage() {
 
   if (authLoading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "100vh",
-          background: S.bgDeep,
-          color: S.tertiary,
-          fontFamily: S.fontMono,
-        }}
-      >
+      <div style={{ minHeight: "100vh", background: S.bgDeep, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: S.fontUI, fontSize: 13, color: S.tertiary }}>
         Loading...
       </div>
     );
@@ -1086,6 +1079,8 @@ export default function ImportHistoryPage() {
   }
 
   return (
+    <PageShell icon={LayoutDashboard} title="Import History" breadcrumb={["Dashboard","Import History"]}>
+
     <div style={{ display: 'flex', minHeight: '100vh' }}>
 
     <>
@@ -1147,7 +1142,7 @@ export default function ImportHistoryPage() {
         {/* Table column header — matches position-desk header row pattern */}
         <div style={{ display: "grid", gridTemplateColumns: "32px 90px 1fr 100px 80px 52px 52px 52px 80px 90px 70px", padding: "5px 20px", background: S.bgSub, borderBottom: `1px solid ${S.soft}`, flexShrink: 0 }}>
           {["", "RUN ID", "FILE / SOURCE", "TYPE", "STATUS", "ROWS", "OK", "ERR", "RATE", "STARTED", "DURATION"].map((col) => (
-            <span key={col} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700 }}>{col}</span>
+            <span key={col} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", fontWeight: 700 }}>{col}</span>
           ))}
         </div>
 
@@ -1181,7 +1176,7 @@ export default function ImportHistoryPage() {
           {loading && runs.length === 0 ? (
             <SkeletonTable />
           ) : error || filteredRuns.length === 0 ? (
-            <EmptyStateView onUploadClick={() => router.push("/input")} />
+            <EmptyStateView onUploadClick={() => router.push("/position-desk")} />
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", background: S.bgPanel }}>
               <tbody>
@@ -1203,13 +1198,13 @@ export default function ImportHistoryPage() {
         {/* Pagination Footer */}
         {!loading && filteredRuns.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 20px", background: S.bgPanel, borderTop: `1px solid ${S.soft}`, flexShrink: 0 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredRuns.length)} of {filteredRuns.length.toLocaleString()}
             </span>
             <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={{ fontFamily: S.fontMono, fontSize: 9, padding: "2px 8px", background: "transparent", color: page === 1 ? S.tertiary : S.secondary, border: `1px solid ${S.rim}`, cursor: page === 1 ? "not-allowed" : "pointer" }}>← PREV</button>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, padding: "2px 6px" }}>pg {page}/{totalPages}</span>
-              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ fontFamily: S.fontMono, fontSize: 9, padding: "2px 8px", background: "transparent", color: page === totalPages ? S.tertiary : S.secondary, border: `1px solid ${S.rim}`, cursor: page === totalPages ? "not-allowed" : "pointer" }}>NEXT →</button>
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={{ fontFamily: S.fontMono, fontSize: 12, padding: "2px 8px", background: "transparent", color: page === 1 ? S.tertiary : S.secondary, border: `1px solid ${S.rim}`, cursor: page === 1 ? "not-allowed" : "pointer" }}>← PREV</button>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, padding: "2px 6px" }}>pg {page}/{totalPages}</span>
+              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ fontFamily: S.fontMono, fontSize: 12, padding: "2px 8px", background: "transparent", color: page === totalPages ? S.tertiary : S.secondary, border: `1px solid ${S.rim}`, cursor: page === totalPages ? "not-allowed" : "pointer" }}>NEXT →</button>
             </div>
           </div>
         )}
@@ -1218,5 +1213,7 @@ export default function ImportHistoryPage() {
   
     <HelpPanel config={IMPORT_HISTORY_HELP} storageKey="import-history" />
     </div>
+  
+    </PageShell>
   );
 }

@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Printer } from "lucide-react";
+import { Printer, Globe } from "lucide-react"
 import HelpPanel from "@/components/layout/HelpPanel";
 import { HEDGEWIKI_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
+
+import { PageShell } from "@/components/layout/PageShell";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -397,6 +399,8 @@ export default function HedgeWiki() {
   const entry = ENTRIES[activeEntry] ?? Object.values(ENTRIES)[0];
 
   return (
+
+    <PageShell icon={Globe} title="HedgeWiki" breadcrumb={["Dashboard", "HedgeWiki"]} noPadding>
     <div style={{ display: 'flex', minHeight: '100vh' }}>
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary, flex: 1 }}>
 
@@ -561,7 +565,7 @@ export default function HedgeWiki() {
                     border: `1px solid ${S.rim}`,
                     color: S.secondary,
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     padding: "3px 8px",
                     cursor: "pointer",
                     borderRadius: 2,
@@ -681,5 +685,7 @@ export default function HedgeWiki() {
     </div>
     <HelpPanel config={HEDGEWIKI_HELP} storageKey="hedgewiki" />
     </div>
-  );
+  
+    </PageShell>
+    );
 }

@@ -105,7 +105,7 @@ const NAV_ITEMS: NavItem[] = [
     description: "Org, limits, API keys", permission: "admin.manage_company",
   },
   {
-    id: "ingestion", label: "Ingest Data", shortcut: "I", route: "/input",
+    id: "ingestion", label: "Ingest Data", shortcut: "I", route: "/position-desk",
     Icon: LayoutDashboard, color: "#22D3EE", glow: "rgba(34,211,238,0.15)",
     description: "CSV, XLSX, ERP import", permission: "trades.create",
   },
@@ -145,13 +145,13 @@ export default function CommandHubWidget({ token, user, onRemove }: Props) {
           <LayoutDashboard size={10} color="#fff" />
         </div>
         <span style={{
-          fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
           letterSpacing: "0.08em", color: S.primary, textTransform: "uppercase",
         }}>
           Command Hub
         </span>
         <span style={{
-          fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
           letterSpacing: "0.06em",
         }}>
           {items.length} MODULES
@@ -217,7 +217,7 @@ export default function CommandHubWidget({ token, user, onRemove }: Props) {
                   <item.Icon size={14} color={item.color} />
                 </div>
                 <span style={{
-                  fontFamily: S.fontMono, fontSize: 8, color: isHovered ? item.color : S.tertiary,
+                  fontFamily: S.fontMono, fontSize: 12, color: isHovered ? item.color : S.tertiary,
                   letterSpacing: "0.08em", fontWeight: 700,
                   background: isHovered
                     ? `color-mix(in srgb, ${item.color} 10%, transparent)`
@@ -231,7 +231,7 @@ export default function CommandHubWidget({ token, user, onRemove }: Props) {
 
               {/* Label */}
               <div style={{
-                fontFamily: S.fontUI, fontSize: 11, fontWeight: 700,
+                fontFamily: S.fontUI, fontSize: 12, fontWeight: 700,
                 color: S.primary, lineHeight: 1.2, letterSpacing: "0.01em",
               }}>
                 {item.label}
@@ -239,7 +239,7 @@ export default function CommandHubWidget({ token, user, onRemove }: Props) {
 
               {/* Description */}
               <div style={{
-                fontFamily: S.fontMono, fontSize: 8.5, color: S.tertiary,
+                fontFamily: S.fontMono, fontSize: 12.5, color: S.tertiary,
                 lineHeight: 1.3, letterSpacing: "0.02em",
               }}>
                 {item.description}

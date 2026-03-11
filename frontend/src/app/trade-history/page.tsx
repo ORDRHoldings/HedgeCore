@@ -5,6 +5,9 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Clock } from "lucide-react";
+
 // ─── Design tokens ───────────────────────────────────────────────────────────
 const S = {
   fontMono:  "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -275,7 +278,7 @@ export default function TradeHistoryPage() {
 
   const thCell: React.CSSProperties = {
     fontFamily: S.fontMono,
-    fontSize: 9,
+    fontSize: 12,
     color: S.tertiary,
     textTransform: "uppercase",
     letterSpacing: "0.1em",
@@ -285,16 +288,7 @@ export default function TradeHistoryPage() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: S.bgDeep,
-        color: S.primary,
-        fontFamily: S.fontUI,
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <PageShell icon={Clock} title="Trade History" breadcrumb={["Dashboard","Trade History"]}>
       {/* ── 1. HEADER BAR (44px) ─────────────────────────────────────────── */}
       <div style={headerBar}>
         {/* Back */}
@@ -302,7 +296,7 @@ export default function TradeHistoryPage() {
           onClick={() => router.push("/dashboard")}
           style={{
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             color: S.tertiary,
             background: "none",
             border: "none",
@@ -334,7 +328,7 @@ export default function TradeHistoryPage() {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 9,
+            fontSize: 12,
             letterSpacing: "0.08em",
             color: S.cyan,
             border: `1px solid color-mix(in srgb, ${S.cyan} 40%, transparent)`,
@@ -353,7 +347,7 @@ export default function TradeHistoryPage() {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               letterSpacing: "0.08em",
               color: S.amber,
               border: `1px solid color-mix(in srgb, ${S.amber} 50%, transparent)`,
@@ -377,7 +371,7 @@ export default function TradeHistoryPage() {
           }}
           style={{
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             color: S.secondary,
             background: "transparent",
             border: `1px solid ${S.rim}`,
@@ -403,7 +397,7 @@ export default function TradeHistoryPage() {
                 onClick={() => setStatusFilter(tab)}
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 9,
+                  fontSize: 12,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
                   color: active ? S.cyan : S.tertiary,
@@ -430,7 +424,7 @@ export default function TradeHistoryPage() {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             color: S.tertiary,
             marginRight: 16,
             whiteSpace: "nowrap",
@@ -445,7 +439,7 @@ export default function TradeHistoryPage() {
           onChange={(e) => setSortKey(e.target.value as SortKey)}
           style={{
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             color: S.secondary,
             background: S.bgPanel,
             border: `1px solid ${S.rim}`,
@@ -474,7 +468,7 @@ export default function TradeHistoryPage() {
             { label: "FIRST-PASS RATE",  value: `${complianceRate.toFixed(0)}%`,                                    color: complianceRate > 90 ? S.green : S.amber },
           ].map(stat => (
             <div key={stat.label} style={{ padding: "10px 14px", background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 4 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase" }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase" }}>
                 {stat.label}
               </div>
               <div style={{ fontFamily: S.fontMono, fontSize: 18, fontWeight: 700, color: stat.color, marginTop: 4 }}>
@@ -489,7 +483,7 @@ export default function TradeHistoryPage() {
             onClick={handleVerifyIntegrity}
             disabled={integrityStatus === "checking"}
             style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 600,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
               color: S.cyan, background: "transparent",
               border: `1px solid rgba(0,255,255,0.3)`, padding: "5px 12px",
               cursor: integrityStatus === "checking" ? "wait" : "pointer", letterSpacing: "0.06em",
@@ -497,9 +491,9 @@ export default function TradeHistoryPage() {
           >
             🔗 VERIFY HASH CHAIN INTEGRITY
           </button>
-          {integrityStatus === "checking" && <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>Verifying hash chain...</span>}
-          {integrityStatus === "valid"    && <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.green }}>✓ Hash chain integrity verified — all records authentic</span>}
-          {integrityStatus === "broken"   && <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.red }}>✕ Hash chain integrity violation detected</span>}
+          {integrityStatus === "checking" && <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>Verifying hash chain...</span>}
+          {integrityStatus === "valid"    && <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.green }}>✓ Hash chain integrity verified — all records authentic</span>}
+          {integrityStatus === "broken"   && <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.red }}>✕ Hash chain integrity violation detected</span>}
         </div>
       </div>
 
@@ -510,7 +504,7 @@ export default function TradeHistoryPage() {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               color: S.tertiary,
               textAlign: "center",
               padding: 60,
@@ -526,7 +520,7 @@ export default function TradeHistoryPage() {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               color: S.red,
               padding: "12px 20px",
               background: `color-mix(in srgb, ${S.red} 8%, transparent)`,
@@ -576,7 +570,7 @@ export default function TradeHistoryPage() {
               onClick={() => router.push("/hedge-desk")}
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: "0.08em",
                 padding: "7px 18px",
                 background: S.cyan,
@@ -679,7 +673,7 @@ export default function TradeHistoryPage() {
                       <div
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: S.cyan,
                           letterSpacing: "0.04em",
                         }}
@@ -689,7 +683,7 @@ export default function TradeHistoryPage() {
                       <div
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 9,
+                          fontSize: 12,
                           color: S.tertiary,
                           marginTop: 1,
                         }}
@@ -707,7 +701,7 @@ export default function TradeHistoryPage() {
                       <div
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: S.secondary,
                         }}
                       >
@@ -717,7 +711,7 @@ export default function TradeHistoryPage() {
                         <div
                           style={{
                             fontFamily: S.fontMono,
-                            fontSize: 9,
+                            fontSize: 12,
                             color: S.tertiary,
                             marginTop: 1,
                             overflow: "hidden",
@@ -735,7 +729,7 @@ export default function TradeHistoryPage() {
                       <span
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: ccy ? S.primary : S.tertiary,
                           letterSpacing: "0.06em",
                         }}
@@ -749,7 +743,7 @@ export default function TradeHistoryPage() {
                       <span
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 9,
+                          fontSize: 12,
                           letterSpacing: "0.08em",
                           textTransform: "uppercase",
                           color: sc,
@@ -766,7 +760,7 @@ export default function TradeHistoryPage() {
                       <span
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 9,
+                          fontSize: 12,
                           letterSpacing: "0.06em",
                           color: risk.color,
                         }}
@@ -780,7 +774,7 @@ export default function TradeHistoryPage() {
                       <div
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: S.secondary,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -792,7 +786,7 @@ export default function TradeHistoryPage() {
                       <div
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 9,
+                          fontSize: 12,
                           color: S.tertiary,
                           marginTop: 1,
                         }}
@@ -806,7 +800,7 @@ export default function TradeHistoryPage() {
                       <div
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: S.secondary,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -819,7 +813,7 @@ export default function TradeHistoryPage() {
                         <div
                           style={{
                             fontFamily: S.fontMono,
-                            fontSize: 9,
+                            fontSize: 12,
                             color: S.tertiary,
                             marginTop: 1,
                           }}
@@ -834,7 +828,7 @@ export default function TradeHistoryPage() {
                       <span
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                           color:
                             p.actual_fill_rate !== null ? S.primary : S.tertiary,
                         }}
@@ -850,7 +844,7 @@ export default function TradeHistoryPage() {
                       <span
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: slipColor,
                         }}
                       >
@@ -865,7 +859,7 @@ export default function TradeHistoryPage() {
                       <span
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 10,
+                          fontSize: 12,
                           color: S.tertiary,
                         }}
                       >
@@ -879,6 +873,6 @@ export default function TradeHistoryPage() {
           </table>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

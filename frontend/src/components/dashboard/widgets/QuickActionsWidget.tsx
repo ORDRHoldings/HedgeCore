@@ -38,10 +38,10 @@ interface Action {
 }
 
 const ACTIONS: Action[] = [
-  { label: "Position Desk",      permission: "trades.create",                Icon: FileText,     route: "/input"       },
+  { label: "Position Desk",      permission: "trades.create",                Icon: FileText,     route: "/position-desk"       },
   { label: "Policy Engine",      permission: "policy.view",                   Icon: CheckSquare,  route: "/policies"    },
   { label: "Run Execution",      permission: "calculate.run_sandbox",         Icon: Zap,          route: "/hedge-desk"   },
-  { label: "Analysis",           permission: "hedges.view",                   Icon: BarChart2,    route: "/currency-fx" },
+  { label: "Analysis",           permission: "hedges.view",                   Icon: BarChart2,    route: "/market-overview" },
   { label: "View Reports",       permission: "reports.view_own_branch",       Icon: CheckSquare,  route: "/reports"     },
   { label: "Governance Wiki",    permission: "policy.view",                   Icon: Search,       route: "/hedgewiki"   },
 ];

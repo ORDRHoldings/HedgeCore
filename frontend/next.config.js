@@ -14,10 +14,31 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      { source: "/execution-desk", destination: "/hedge-desk", permanent: false },
-      { source: "/currency-fx", destination: "/fx-market", permanent: false },
-      { source: "/hedges", destination: "/position-desk", permanent: false },
+      { source: "/execution-desk", destination: "/hedge-desk", permanent: true },
+      { source: "/currency-fx", destination: "/market-overview", permanent: true },
+      { source: "/hedges", destination: "/position-desk", permanent: true },
+      { source: "/input", destination: "/position-desk", permanent: true },
+      { source: "/upload-csv", destination: "/position-desk", permanent: true },
+      { source: "/calculate", destination: "/hedge-desk", permanent: true },
+      { source: "/policy-desk", destination: "/policies", permanent: true },
+      { source: "/saved-policies", destination: "/policies", permanent: true },
+      { source: "/policy-dashboard", destination: "/policies", permanent: true },
+      { source: "/execution", destination: "/hedge-desk", permanent: true },
+      { source: "/decision-desk", destination: "/hedge-desk", permanent: true },
+      { source: "/fx-market", destination: "/market-overview", permanent: true },
+      { source: "/market-intelligence", destination: "/market-overview", permanent: true },
+      { source: "/execution-history", destination: "/trade-history", permanent: true },
+      { source: "/access-control", destination: "/settings", permanent: true },
     ];
+  },
+  async headers() {
+    return [{
+      source: "/market-overview",
+      headers: [{
+        key: "Content-Security-Policy",
+        value: "frame-src 'self' https://s.tradingview.com https://www.tradingview.com",
+      }],
+    }];
   },
   async rewrites() {
     // DEV ONLY: proxy /api/v1/* to local backend.

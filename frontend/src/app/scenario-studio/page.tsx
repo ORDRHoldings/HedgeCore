@@ -15,6 +15,9 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import dynamic from "next/dynamic";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Zap } from "lucide-react";
+
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 // ── Design Tokens ─────────────────────────────────────────────────────────
@@ -268,6 +271,8 @@ export default function ScenarioStudioPage() {
   const mc = result?.monte_carlo;
 
   return (
+
+    
     <div style={{ height: "100%", display: "flex", flexDirection: "column", background: S.deep }}>
       {/* Header */}
       <div style={{ flexShrink: 0, background: S.panel, borderBottom: `1px solid ${S.rim}` }}>
@@ -292,7 +297,7 @@ export default function ScenarioStudioPage() {
             </div>
             <div style={{ flex: 1 }} />
             <span style={{
-              fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em",
               padding: "4px 12px", borderRadius: 3,
               background: "rgba(28,98,242,0.06)", color: HEX.cyan,
               border: "1px solid rgba(28,98,242,0.12)",
@@ -309,7 +314,7 @@ export default function ScenarioStudioPage() {
           background: S.sub, borderRadius: 6, border: `1px solid ${S.rim}`,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+            <label style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
               RUN
             </label>
             <select
@@ -317,7 +322,7 @@ export default function ScenarioStudioPage() {
               onChange={(e) => setSelectedRunId(e.target.value)}
               disabled={loadingRuns}
               style={{
-                fontFamily: S.mono, fontSize: 11, padding: "4px 8px",
+                fontFamily: S.mono, fontSize: 12, padding: "4px 8px",
                 border: `1px solid ${S.rim}`, borderRadius: 3,
                 background: S.panel, color: S.text1, outline: "none",
                 minWidth: 200,
@@ -343,14 +348,14 @@ export default function ScenarioStudioPage() {
           <div style={{ width: 1, height: 20, background: S.rim }} />
 
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+            <label style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
               SIMULATIONS
             </label>
             <select
               value={numSims}
               onChange={(e) => setNumSims(parseInt(e.target.value))}
               style={{
-                fontFamily: S.mono, fontSize: 11, padding: "4px 8px",
+                fontFamily: S.mono, fontSize: 12, padding: "4px 8px",
                 border: `1px solid ${S.rim}`, borderRadius: 3,
                 background: S.panel, color: S.text1, outline: "none",
               }}
@@ -362,14 +367,14 @@ export default function ScenarioStudioPage() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+            <label style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
               HORIZON
             </label>
             <select
               value={horizon}
               onChange={(e) => setHorizon(parseInt(e.target.value))}
               style={{
-                fontFamily: S.mono, fontSize: 11, padding: "4px 8px",
+                fontFamily: S.mono, fontSize: 12, padding: "4px 8px",
                 border: `1px solid ${S.rim}`, borderRadius: 3,
                 background: S.panel, color: S.text1, outline: "none",
               }}
@@ -381,7 +386,7 @@ export default function ScenarioStudioPage() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+            <label style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
               SEED
             </label>
             <input
@@ -389,7 +394,7 @@ export default function ScenarioStudioPage() {
               onChange={(e) => setSeed(e.target.value)}
               placeholder="random"
               style={{
-                fontFamily: S.mono, fontSize: 11, padding: "4px 8px",
+                fontFamily: S.mono, fontSize: 12, padding: "4px 8px",
                 border: `1px solid ${S.rim}`, borderRadius: 3,
                 background: S.panel, color: S.text1, outline: "none",
                 width: 60,
@@ -403,7 +408,7 @@ export default function ScenarioStudioPage() {
             onClick={runAnalysis}
             disabled={running || !selectedRunId || loadingRuns}
             style={{
-              fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
               padding: "8px 24px", borderRadius: 4,
               background: running ? S.sub : HEX.cyan, color: running ? S.text3 : "#fff",
               border: "none", cursor: running || !selectedRunId ? "not-allowed" : "pointer",
@@ -449,7 +454,7 @@ export default function ScenarioStudioPage() {
                 padding: "10px 14px", background: S.panel,
                 borderRight: i < 4 ? `1px solid ${S.rim}` : "none",
               }}>
-                <div style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 3 }}>
+                <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 3 }}>
                   {kpi.label}
                 </div>
                 <div style={{ fontFamily: S.mono, fontSize: 18, fontWeight: 700, color: kpi.color || S.text1 }}>
@@ -467,7 +472,7 @@ export default function ScenarioStudioPage() {
               key={t.key}
               onClick={() => setTab(t.key)}
               style={{
-                fontFamily: S.mono, fontSize: 10, fontWeight: tab === t.key ? 700 : 500,
+                fontFamily: S.mono, fontSize: 12, fontWeight: tab === t.key ? 700 : 500,
                 letterSpacing: "0.1em", color: tab === t.key ? HEX.cyan : S.text3,
                 padding: "8px 16px", background: "transparent", border: "none",
                 borderBottom: tab === t.key ? `2px solid ${HEX.cyan}` : "2px solid transparent",
@@ -513,7 +518,9 @@ export default function ScenarioStudioPage() {
         )}
       </div>
     </div>
-  );
+  
+    
+    );
 }
 
 // ── Empty State ───────────────────────────────────────────────────────
@@ -557,18 +564,18 @@ function SimulationTab({ mc }: { mc: MonteCarloResult | null }) {
         background: S.panel, border: `1px solid ${S.rim}`,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
             P&L PERCENTILE DISTRIBUTION — HEDGED vs UNHEDGED
           </span>
           <div style={{ flex: 1 }} />
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <div style={{ width: 10, height: 10, background: HEX.cyan, borderRadius: 2 }} />
-              <span style={{ fontFamily: S.mono, fontSize: 8, color: S.text3 }}>Hedged</span>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>Hedged</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <div style={{ width: 10, height: 10, background: HEX.text3, borderRadius: 2, opacity: 0.5 }} />
-              <span style={{ fontFamily: S.mono, fontSize: 8, color: S.text3 }}>Unhedged</span>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>Unhedged</span>
             </div>
           </div>
         </div>
@@ -579,7 +586,7 @@ function SimulationTab({ mc }: { mc: MonteCarloResult | null }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
         {/* Hedged stats */}
         <div style={{ padding: 20, borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
-          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.14em", marginBottom: 12 }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.14em", marginBottom: 12 }}>
             HEDGED PORTFOLIO
           </div>
           {[
@@ -589,15 +596,15 @@ function SimulationTab({ mc }: { mc: MonteCarloResult | null }) {
             { label: "Best Case", value: fmtUsd(mc.best_hedged_pnl), color: HEX.green },
           ].map((s) => (
             <div key={s.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{s.label}</span>
-              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: s.color || S.text2 }}>{s.value}</span>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>{s.label}</span>
+              <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: s.color || S.text2 }}>{s.value}</span>
             </div>
           ))}
         </div>
 
         {/* Unhedged stats */}
         <div style={{ padding: 20, borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
-          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 12 }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 12 }}>
             UNHEDGED PORTFOLIO
           </div>
           {[
@@ -606,32 +613,32 @@ function SimulationTab({ mc }: { mc: MonteCarloResult | null }) {
             { label: "Worst Case", value: fmtUsd(mc.worst_unhedged_pnl), color: HEX.red },
           ].map((s) => (
             <div key={s.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>{s.label}</span>
-              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: s.color || S.text2 }}>{s.value}</span>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>{s.label}</span>
+              <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: s.color || S.text2 }}>{s.value}</span>
             </div>
           ))}
         </div>
 
         {/* Hedge benefit */}
         <div style={{ padding: 20, borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
-          <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.green, letterSpacing: "0.14em", marginBottom: 12 }}>
+          <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: HEX.green, letterSpacing: "0.14em", marginBottom: 12 }}>
             HEDGE BENEFIT
           </div>
           <div style={{ textAlign: "center", marginBottom: 12 }}>
             <div style={{ fontFamily: S.mono, fontSize: 36, fontWeight: 800, color: HEX.green }}>
               {mc.hedge_benefit_pct.toFixed(1)}%
             </div>
-            <div style={{ fontFamily: S.mono, fontSize: 10, color: S.text3, marginTop: 4 }}>
+            <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, marginTop: 4 }}>
               LOSS REDUCTION
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>Mean Benefit</span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: HEX.green }}>{fmtUsd(mc.hedge_benefit_mean)}</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>Mean Benefit</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: HEX.green }}>{fmtUsd(mc.hedge_benefit_mean)}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>Simulations</span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: S.text2 }}>{mc.simulation_count.toLocaleString()}</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>Simulations</span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.text2 }}>{mc.simulation_count.toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -648,20 +655,20 @@ function PercentileChart({ hedged, unhedged, labels }: { hedged: number[]; unhed
       backgroundColor: "#FFFFFFEE",
       borderColor: HEX.border,
       borderWidth: 1,
-      textStyle: { color: HEX.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
     },
     grid: { left: 56, right: 20, top: 20, bottom: 32, containLabel: false },
     xAxis: {
       type: "category" as const,
       data: labels,
-      axisLabel: { color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace" },
+      axisLabel: { color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
       axisLine: { lineStyle: { color: HEX.border } },
       axisTick: { show: false },
     },
     yAxis: {
       type: "value" as const,
       axisLabel: {
-        color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace",
         formatter: (v: number) => Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}K` : v.toFixed(0),
       },
       splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.5 } },
@@ -723,7 +730,7 @@ function StressTab({ stress }: { stress: StressResult | null }) {
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
         <div>
-          <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: HEX.red, letterSpacing: "0.12em" }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: HEX.red, letterSpacing: "0.12em" }}>
             WORST CASE: {stress.worst_case_scenario.toUpperCase()}
           </span>
           <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: HEX.red, marginLeft: 12 }}>
@@ -737,7 +744,7 @@ function StressTab({ stress }: { stress: StressResult | null }) {
         padding: "20px 24px", borderRadius: 6, marginBottom: 20,
         background: S.panel, border: `1px solid ${S.rim}`,
       }}>
-        <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+        <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
           STRESS SCENARIO IMPACT (POST-HEDGE LOSS)
         </span>
         <StressWaterfallChart scenarios={scenarios} />
@@ -804,7 +811,7 @@ function StressTab({ stress }: { stress: StressResult | null }) {
                   { label: "Margin impact", value: fmtUsd(sc.margin_impact_usd) },
                 ].map((m) => (
                   <div key={m.label}>
-                    <div style={{ fontFamily: S.mono, fontSize: 8, color: S.text3, letterSpacing: "0.1em", marginBottom: 2 }}>
+                    <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, letterSpacing: "0.1em", marginBottom: 2 }}>
                       {m.label.toUpperCase()}
                     </div>
                     <div style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 700, color: m.color || S.text2 }}>
@@ -824,7 +831,7 @@ function StressTab({ stress }: { stress: StressResult | null }) {
 function ShockPill({ label, value }: { label: string; value: string }) {
   return (
     <span style={{
-      fontFamily: S.mono, fontSize: 8, fontWeight: 700, letterSpacing: "0.08em",
+      fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
       padding: "2px 8px", borderRadius: 2, background: S.sub, color: S.text2,
       border: `1px solid ${S.rim}`,
     }}>
@@ -846,7 +853,7 @@ function StressWaterfallChart({ scenarios }: { scenarios: StressScenarioImpact[]
       backgroundColor: "#FFFFFFEE",
       borderColor: HEX.border,
       borderWidth: 1,
-      textStyle: { color: HEX.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
       formatter: (params: Array<{ seriesName: string; value: number }>) => {
         return params.map(p => `<b>${p.seriesName}</b>: ${fmtUsd(p.value)}`).join("<br/>");
       },
@@ -855,14 +862,14 @@ function StressWaterfallChart({ scenarios }: { scenarios: StressScenarioImpact[]
     xAxis: {
       type: "category" as const,
       data: labels,
-      axisLabel: { color: HEX.text3, fontSize: 8, fontFamily: "'IBM Plex Mono', monospace", rotate: 20 },
+      axisLabel: { color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", rotate: 20 },
       axisLine: { lineStyle: { color: HEX.border } },
       axisTick: { show: false },
     },
     yAxis: {
       type: "value" as const,
       axisLabel: {
-        color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace",
         formatter: (v: number) => Math.abs(v) >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${(v / 1_000).toFixed(0)}K`,
       },
       splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.5 } },
@@ -917,7 +924,7 @@ function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
         padding: 24, borderRadius: 6, marginBottom: 20,
         background: S.panel, border: `1px solid ${S.rim}`,
       }}>
-        <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+        <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
           VALUE AT RISK BY CONFIDENCE LEVEL
         </span>
         <VaRConfidenceChart varResults={mc.var_results} />
@@ -928,7 +935,7 @@ function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
         padding: 24, borderRadius: 6, marginBottom: 20,
         background: S.panel, border: `1px solid ${S.rim}`,
       }}>
-        <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", display: "block", marginBottom: 14 }}>
+        <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", display: "block", marginBottom: 14 }}>
           CONFIDENCE LEVEL DETAIL
         </span>
         <div style={{
@@ -936,7 +943,7 @@ function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
           gap: 8, padding: "8px 16px", background: S.sub, borderRadius: 4, marginBottom: 8,
         }}>
           {["CONFIDENCE", "HEDGED VaR", "UNHEDGED VaR", "HEDGED CVaR", "UNHEDGED CVaR"].map((h) => (
-            <span key={h} style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+            <span key={h} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
               {h}
             </span>
           ))}
@@ -949,16 +956,16 @@ function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
             <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text1 }}>
               {(v.confidence * 100).toFixed(1)}%
             </span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: HEX.cyan }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: HEX.cyan }}>
               {fmtUsd(v.hedged_var)}
             </span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2 }}>
               {fmtUsd(v.unhedged_var)}
             </span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: HEX.red }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: HEX.red }}>
               {fmtUsd(v.hedged_cvar)}
             </span>
-            <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2 }}>
               {fmtUsd(v.unhedged_cvar)}
             </span>
           </div>
@@ -970,7 +977,7 @@ function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
         padding: 24, borderRadius: 6,
         background: S.panel, border: `1px solid ${S.rim}`,
       }}>
-        <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", display: "block", marginBottom: 14 }}>
+        <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", display: "block", marginBottom: 14 }}>
           P&L PERCENTILE DISTRIBUTION
         </span>
         <div style={{
@@ -978,7 +985,7 @@ function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
           gap: 8, padding: "8px 16px", background: S.sub, borderRadius: 4, marginBottom: 8,
         }}>
           {["PERCENTILE", "HEDGED P&L", "UNHEDGED P&L"].map((h) => (
-            <span key={h} style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+            <span key={h} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
               {h}
             </span>
           ))}
@@ -995,13 +1002,13 @@ function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
               borderBottom: `1px solid ${S.soft}`,
               background: p === 1 || p === 5 ? "rgba(220,38,38,0.02)" : p === 50 ? "rgba(28,98,242,0.02)" : "transparent",
             }}>
-              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: p <= 5 ? HEX.red : p >= 95 ? HEX.green : S.text2 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: p <= 5 ? HEX.red : p >= 95 ? HEX.green : S.text2 }}>
                 P{p}
               </span>
-              <span style={{ fontFamily: S.mono, fontSize: 11, color: hVal < 0 ? HEX.red : HEX.green }}>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: hVal < 0 ? HEX.red : HEX.green }}>
                 {fmtUsd(hVal)}
               </span>
-              <span style={{ fontFamily: S.mono, fontSize: 11, color: uVal < 0 ? HEX.red : HEX.green }}>
+              <span style={{ fontFamily: S.mono, fontSize: 12, color: uVal < 0 ? HEX.red : HEX.green }}>
                 {fmtUsd(uVal)}
               </span>
             </div>
@@ -1024,7 +1031,7 @@ function VaRConfidenceChart({ varResults }: { varResults: VaRResult[] }) {
       backgroundColor: "#FFFFFFEE",
       borderColor: HEX.border,
       borderWidth: 1,
-      textStyle: { color: HEX.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
       formatter: (params: Array<{ seriesName: string; value: number }>) => {
         return params.map(p => `<b>${p.seriesName}</b>: ${fmtUsd(p.value)}`).join("<br/>");
       },
@@ -1033,14 +1040,14 @@ function VaRConfidenceChart({ varResults }: { varResults: VaRResult[] }) {
     xAxis: {
       type: "category" as const,
       data: labels,
-      axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      axisLabel: { color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
       axisLine: { lineStyle: { color: HEX.border } },
       axisTick: { show: false },
     },
     yAxis: {
       type: "value" as const,
       axisLabel: {
-        color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace",
         formatter: (v: number) => Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}K` : v.toFixed(0),
       },
       splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const, opacity: 0.5 } },
@@ -1095,7 +1102,7 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
                 padding: "16px 20px", borderRadius: 6,
                 background: S.panel, border: `1px solid ${S.rim}`,
               }}>
-                <div style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 6 }}>
+                <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 6 }}>
                   {kpi.label}
                 </div>
                 <div style={{ fontFamily: S.mono, fontSize: 24, fontWeight: 800, color: kpi.color }}>
@@ -1111,7 +1118,7 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
               padding: "20px 24px", borderRadius: 6, marginBottom: 20,
               background: S.panel, border: `1px solid ${S.rim}`,
             }}>
-              <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+              <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
                 MARGINAL CONTRIBUTION TO RISK (MCTR)
               </span>
               <RiskContributionChart contributions={fcov.risk_contributions} />
@@ -1123,7 +1130,7 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
             padding: 24, borderRadius: 6,
             background: S.panel, border: `1px solid ${S.rim}`,
           }}>
-            <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", display: "block", marginBottom: 14 }}>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", display: "block", marginBottom: 14 }}>
               FACTOR RISK DECOMPOSITION
             </span>
             <div style={{
@@ -1131,7 +1138,7 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
               gap: 8, padding: "8px 16px", background: S.sub, borderRadius: 4, marginBottom: 8,
             }}>
               {["FACTOR", "WEIGHT", "MCTR", "% VARIANCE"].map((h) => (
-                <span key={h} style={{ fontFamily: S.mono, fontSize: 8, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+                <span key={h} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
                   {h}
                 </span>
               ))}
@@ -1141,13 +1148,13 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
                 display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr",
                 gap: 8, padding: "8px 16px", borderBottom: `1px solid ${S.soft}`,
               }}>
-                <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600, color: HEX.cyan }}>
+                <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: HEX.cyan }}>
                   {rc.factor}
                 </span>
-                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2 }}>
                   {pct(rc.weight)}
                 </span>
-                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text2 }}>
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2 }}>
                   {rc.mctr.toFixed(6)}
                 </span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1161,7 +1168,7 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
                       background: HEX.cyan,
                     }} />
                   </div>
-                  <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2, minWidth: 36 }}>
+                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, minWidth: 36 }}>
                     {pct(rc.pct_of_variance)}
                   </span>
                 </div>
@@ -1180,19 +1187,19 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
           background: S.sub, border: `1px solid ${S.rim}`,
           display: "flex", alignItems: "center", gap: 20,
         }}>
-          <span style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
             MC STATS
           </span>
-          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2 }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2 }}>
             \u03BC(hedged) = {fmtUsd(mc.mean_hedged_pnl)}
           </span>
-          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2 }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2 }}>
             \u03C3(hedged) = {fmtUsd(mc.std_hedged_pnl)}
           </span>
-          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2 }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2 }}>
             \u03BC(unhedged) = {fmtUsd(mc.mean_unhedged_pnl)}
           </span>
-          <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text2 }}>
+          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2 }}>
             \u03C3(unhedged) = {fmtUsd(mc.std_unhedged_pnl)}
           </span>
         </div>
@@ -1210,13 +1217,13 @@ function RiskContributionChart({ contributions }: { contributions: RiskContribut
       backgroundColor: "#FFFFFFEE",
       borderColor: HEX.border,
       borderWidth: 1,
-      textStyle: { color: HEX.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
     },
     grid: { left: 80, right: 20, top: 20, bottom: 32, containLabel: false },
     xAxis: {
       type: "value" as const,
       axisLabel: {
-        color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        color: HEX.text3, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace",
         formatter: (v: number) => `${(v * 100).toFixed(0)}%`,
       },
       max: 1,
@@ -1225,7 +1232,7 @@ function RiskContributionChart({ contributions }: { contributions: RiskContribut
     yAxis: {
       type: "category" as const,
       data: contributions.map(c => c.factor),
-      axisLabel: { color: HEX.text2, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+      axisLabel: { color: HEX.text2, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
       axisLine: { show: false },
       axisTick: { show: false },
     },
@@ -1246,7 +1253,7 @@ function RiskContributionChart({ contributions }: { contributions: RiskContribut
       },
       label: {
         show: true, position: "right" as const,
-        fontSize: 9, fontFamily: "'IBM Plex Mono', monospace",
+        fontSize: 12, fontFamily: "'IBM Plex Mono', monospace",
         color: HEX.text3,
         formatter: (p: { value: number }) => `${(p.value * 100).toFixed(1)}%`,
       },
@@ -1259,6 +1266,8 @@ function RiskContributionChart({ contributions }: { contributions: RiskContribut
 // ── No Data State ─────────────────────────────────────────────────────
 function NoData({ label }: { label: string }) {
   return (
+    <PageShell icon={Zap} title="Scenario Studio" breadcrumb={["Dashboard", "Scenario Studio"]} noPadding>
+
     <div style={{
       padding: 60, textAlign: "center",
       display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
@@ -1270,5 +1279,7 @@ function NoData({ label }: { label: string }) {
         {label}
       </span>
     </div>
+  
+    </PageShell>
   );
 }

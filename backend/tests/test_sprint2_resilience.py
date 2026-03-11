@@ -407,11 +407,12 @@ class TestWidgetErrorBoundaryStructure:
             source = f.read()
         assert "Retry" in source or "retry" in source.lower()
 
-    def test_dashboard_wraps_widgets_with_error_boundary(self):
+    def test_dashboard_uses_mission_control_layout(self):
+        """Dashboard uses Mission Control (PageShell + KpiStrip) instead of widget grid."""
         dashboard_path = os.path.join(
             PROJECT_ROOT, "frontend", "src", "app", "dashboard", "page.tsx"
         )
         with open(dashboard_path, "r", encoding="utf-8") as f:
             source = f.read()
-        assert "WidgetErrorBoundary" in source
-        assert "import WidgetErrorBoundary" in source
+        assert "PageShell" in source
+        assert "KpiStrip" in source

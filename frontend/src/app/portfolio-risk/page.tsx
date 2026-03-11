@@ -37,6 +37,9 @@ import type { BucketResult, ScenarioTotalResult } from "../../api/types";
 import HelpPanel from "../../components/layout/HelpPanel";
 import { PORTFOLIO_RISK_HELP } from "../../lib/helpContent";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { BarChart3 } from "lucide-react";
+
 const RISK_API = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"}/v1/risk`;
 
 function riskApiKey(): string {
@@ -602,6 +605,8 @@ export default function PortfolioRisk() {
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
+
+    <PageShell icon={BarChart3} title="Portfolio Risk" breadcrumb={["Dashboard", "Portfolio Risk"]} noPadding>
     <div style={{
       minHeight: "100%", display: "flex", flexDirection: "column",
       background: S.bgDeep, fontFamily: S.fontUI, color: S.primary,
@@ -1639,5 +1644,7 @@ export default function PortfolioRisk() {
         )}
       </footer>
     </div>
-  );
+  
+    </PageShell>
+    );
 }

@@ -123,7 +123,7 @@ const PRODUCTS: Product[] = [
     badge: "INSTITUTIONAL",
     badgeColor: "#F44336",
     icon: <Banknote size={20} />,
-    href: "/currency-fx",
+    href: "/market-overview",
     gated: true,
   },
   {
@@ -364,7 +364,7 @@ export default function LandingPage() {
             <span
               style={{
                 fontFamily: FONT_MONO,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 500,
                 color: C.textDim,
                 letterSpacing: "0.12em",
@@ -548,7 +548,7 @@ export default function LandingPage() {
           <span
             style={{
               fontFamily: FONT_MONO,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               color: C.accentBlue,
               letterSpacing: "0.2em",
@@ -623,7 +623,7 @@ export default function LandingPage() {
           <span
             style={{
               fontFamily: FONT_MONO,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               color: C.accentBlue,
               letterSpacing: "0.2em",
@@ -752,7 +752,7 @@ export default function LandingPage() {
                 <div
                   style={{
                     fontFamily: FONT_MONO,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 600,
                     color: C.textDim,
                     letterSpacing: "0.12em",
@@ -816,7 +816,7 @@ export default function LandingPage() {
         <div
           style={{
             fontFamily: FONT_MONO,
-            fontSize: 11,
+            fontSize: 12,
             color: "rgba(84, 91, 105, 0.6)",
             letterSpacing: "0.04em",
           }}
@@ -895,7 +895,7 @@ function ProductCard({ product, isMobile }: { product: Product; isMobile: boolea
         <span
           style={{
             fontFamily: FONT_MONO,
-            fontSize: 9,
+            fontSize: 12,
             fontWeight: 700,
             color: badgeColor,
             background: `${badgeColor}18`,

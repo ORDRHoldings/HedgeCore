@@ -10,6 +10,9 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import dynamic from "next/dynamic";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Microscope } from "lucide-react";
+
 const CsvPreview = dynamic(() => import("@/components/audit-lab/CsvPreview"), { ssr: false });
 
 const S = {
@@ -31,7 +34,7 @@ const S = {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase", marginBottom: 6 }}>
+    <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase", marginBottom: 6 }}>
       {children}
     </div>
   );
@@ -156,11 +159,11 @@ function AuditLabUploadPageInner() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: S.bgDeep, padding: "32px 40px", fontFamily: S.fontUI }}>
+    <PageShell icon={Microscope} title="Upload Dataset" breadcrumb={["Audit Lab","Upload"]}>
 
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
-        <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>
           <a href="/audit-lab" style={{ color: S.cyan, textDecoration: "none" }}>AUDIT LAB</a>
           {" / "}
           <span>UPLOAD</span>
@@ -181,10 +184,10 @@ function AuditLabUploadPageInner() {
               width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
               background: phase === p ? S.cyan : (["upload","run","done"].indexOf(phase) > i ? S.green : S.bgSub),
               border: `1px solid ${phase === p ? S.cyan : S.soft}`,
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
               color: phase === p ? S.bgPanel : (["upload","run","done"].indexOf(phase) > i ? S.bgPanel : S.tertiary),
             }}>{i + 1}</div>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: phase === p ? 700 : 400, color: phase === p ? S.primary : S.tertiary, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: phase === p ? 700 : 400, color: phase === p ? S.primary : S.tertiary, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               {p === "upload" ? "Upload CSV" : p === "run" ? "Configure & Run" : "Done"}
             </span>
             {i < 2 && <span style={{ color: S.soft, fontSize: 16 }}>›</span>}
@@ -195,7 +198,7 @@ function AuditLabUploadPageInner() {
       <div style={{ maxWidth: 680 }}>
         {/* Error banner */}
         {error && (
-          <div style={{ background: `color-mix(in srgb, ${S.red} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.red} 30%, transparent)`, padding: "10px 16px", marginBottom: 16, fontFamily: S.fontMono, fontSize: 11, color: S.red }}>
+          <div style={{ background: `color-mix(in srgb, ${S.red} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${S.red} 30%, transparent)`, padding: "10px 16px", marginBottom: 16, fontFamily: S.fontMono, fontSize: 12, color: S.red }}>
             {error}
           </div>
         )}
@@ -226,14 +229,14 @@ function AuditLabUploadPageInner() {
                 {file ? (
                   <div>
                     <div style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: S.cyan }}>{file.name}</div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 4 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 4 }}>
                       {(file.size / 1024).toFixed(1)} KB — click to change
                     </div>
                   </div>
                 ) : (
                   <div>
                     <div style={{ fontFamily: S.fontUI, fontSize: 14, color: S.secondary }}>Drag & drop CSV file here</div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 4 }}>or click to browse</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 4 }}>or click to browse</div>
                   </div>
                 )}
               </div>
@@ -278,8 +281,8 @@ function AuditLabUploadPageInner() {
           <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "24px 28px", display: "flex", flexDirection: "column", gap: 18 }}>
             {uploadResult && (
               <div style={{ background: `color-mix(in srgb, ${S.green} 6%, transparent)`, border: `1px solid color-mix(in srgb, ${S.green} 25%, transparent)`, padding: "12px 16px" }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.green, marginBottom: 4 }}>DATASET UPLOADED SUCCESSFULLY</div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.green, marginBottom: 4 }}>DATASET UPLOADED SUCCESSFULLY</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                   {(uploadResult as Record<string,number>).row_count} rows parsed · {((uploadResult as Record<string,string[]>).currency_pairs_detected ?? []).join(", ")}
                 </div>
               </div>
@@ -287,7 +290,7 @@ function AuditLabUploadPageInner() {
 
             <div>
               <Label>Dataset ID</Label>
-              <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, padding: "8px 12px", background: S.bgSub, border: `1px solid ${S.soft}` }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, padding: "8px 12px", background: S.bgSub, border: `1px solid ${S.soft}` }}>
                 {datasetId}
               </div>
             </div>
@@ -300,7 +303,7 @@ function AuditLabUploadPageInner() {
                     key={src}
                     onClick={() => setBenchmarkSource(src)}
                     style={{
-                      fontFamily: S.fontMono, fontSize: 11, fontWeight: benchmarkSource === src ? 700 : 400,
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: benchmarkSource === src ? 700 : 400,
                       color: benchmarkSource === src ? S.bgPanel : S.secondary,
                       background: benchmarkSource === src ? S.cyan : "transparent",
                       border: `1px solid ${benchmarkSource === src ? S.cyan : S.rim}`,
@@ -311,7 +314,7 @@ function AuditLabUploadPageInner() {
                   </button>
                 ))}
               </div>
-              <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, marginTop: 6 }}>
+              <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 6 }}>
                 {benchmarkSource === "market_snapshot"
                   ? "Uses stored market snapshots as the benchmark mid-rate for markup calculation."
                   : "Uses a fixed budget rate as the reference baseline for unhedged impact."}
@@ -340,6 +343,6 @@ function AuditLabUploadPageInner() {
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

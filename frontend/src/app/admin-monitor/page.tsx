@@ -14,6 +14,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { PageShell } from "@/components/layout/PageShell";
+import { Monitor } from "lucide-react";
 
 // ── Design Tokens ────────────────────────────────────────────────────────────
 const T = {
@@ -185,7 +187,7 @@ function MetricCard({ label, value, sub, color }: {
     }}>
       <div style={{
         fontFamily: T.fontMono,
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: 600,
         letterSpacing: "0.14em",
         color: T.textDim,
@@ -206,7 +208,7 @@ function MetricCard({ label, value, sub, color }: {
       {sub && (
         <div style={{
           fontFamily: T.fontUI,
-          fontSize: 11,
+          fontSize: 12,
           color: T.textFaint,
           marginTop: 4,
         }}>
@@ -237,7 +239,7 @@ function PanelHeader({ title, icon, count, action }: {
       <span style={{ fontSize: 16 }}>{icon}</span>
       <span style={{
         fontFamily: T.fontMono,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
         letterSpacing: "0.12em",
         color: T.textDim,
@@ -249,7 +251,7 @@ function PanelHeader({ title, icon, count, action }: {
       {count !== undefined && (
         <span style={{
           fontFamily: T.fontMono,
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 600,
           color: T.cyan,
           background: T.cyanDim,
@@ -389,7 +391,7 @@ export default function AdminMonitorPage() {
       }}>
         <span style={{ fontSize: 48, opacity: 0.3 }}>&#x26D4;</span>
         <span style={{ fontSize: 13, letterSpacing: "0.1em" }}>SUPERUSER ACCESS REQUIRED</span>
-        <span style={{ fontSize: 11, color: T.textFaint }}>This page is restricted to platform administrators</span>
+        <span style={{ fontSize: 12, color: T.textFaint }}>This page is restricted to platform administrators</span>
       </div>
     );
   }
@@ -401,7 +403,7 @@ export default function AdminMonitorPage() {
   const totalEngines = engines.length;
 
   return (
-    <>
+    <PageShell icon={Monitor} title="Admin Monitor" breadcrumb={["Dashboard", "Admin Monitor"]} noPadding>
       <style>{`
         @keyframes nocPulse {
           0%, 100% { opacity: 1; }
@@ -421,8 +423,6 @@ export default function AdminMonitorPage() {
       `}</style>
 
       <div style={{
-        minHeight: "100vh",
-        background: T.bgDeep,
         color: T.text,
         fontFamily: T.fontUI,
         position: "relative",
@@ -472,7 +472,7 @@ export default function AdminMonitorPage() {
               </div>
               <div style={{
                 fontFamily: T.fontMono,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 500,
                 letterSpacing: "0.2em",
                 color: T.textFaint,
@@ -489,7 +489,7 @@ export default function AdminMonitorPage() {
               <StatusDot status={health?.status === "ok" ? "online" : "degraded"} />
               <span style={{
                 fontFamily: T.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: "0.1em",
                 color: health?.status === "ok" ? T.green : T.amber,
@@ -501,7 +501,7 @@ export default function AdminMonitorPage() {
             {/* Last refresh */}
             <span style={{
               fontFamily: T.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: T.textFaint,
             }}>
               {lastRefresh.toLocaleTimeString()} UTC
@@ -512,7 +512,7 @@ export default function AdminMonitorPage() {
               onClick={() => { setLoading(true); fetchAll(); }}
               style={{
                 fontFamily: T.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: "0.08em",
                 color: T.blue,
@@ -569,7 +569,7 @@ export default function AdminMonitorPage() {
               <PanelHeader title="Service Status" icon="&#x1F6E0;" count={services.length} />
               <div style={{ padding: 0 }}>
                 {services.length === 0 ? (
-                  <div style={{ padding: 24, textAlign: "center", color: T.textFaint, fontFamily: T.fontMono, fontSize: 11 }}>
+                  <div style={{ padding: 24, textAlign: "center", color: T.textFaint, fontFamily: T.fontMono, fontSize: 12 }}>
                     Loading services...
                   </div>
                 ) : (
@@ -597,14 +597,14 @@ export default function AdminMonitorPage() {
                           {svc.name}
                         </div>
                         {svc.details && (
-                          <div style={{ fontFamily: T.fontUI, fontSize: 10, color: T.textFaint, marginTop: 1 }}>
+                          <div style={{ fontFamily: T.fontUI, fontSize: 12, color: T.textFaint, marginTop: 1 }}>
                             {svc.details}
                           </div>
                         )}
                       </div>
                       <span style={{
                         fontFamily: T.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 600,
                         letterSpacing: "0.06em",
                         color: serviceColor(svc.status),
@@ -613,7 +613,7 @@ export default function AdminMonitorPage() {
                         {svc.status}
                       </span>
                       {svc.uptime_seconds !== undefined && (
-                        <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textFaint }}>
+                        <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint }}>
                           {formatUptime(svc.uptime_seconds)}
                         </span>
                       )}
@@ -622,7 +622,7 @@ export default function AdminMonitorPage() {
                           onClick={() => handleRestart("cache")}
                           disabled={restartLoading === "cache"}
                           style={{
-                            fontFamily: T.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.06em",
+                            fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
                             color: T.amber, background: T.amberDim,
                             border: `1px solid rgba(245,158,11,0.2)`, borderRadius: 4, padding: "3px 8px",
                             cursor: restartLoading === "cache" ? "wait" : "pointer",
@@ -637,7 +637,7 @@ export default function AdminMonitorPage() {
                           onClick={() => handleRestart("scheduler")}
                           disabled={restartLoading === "scheduler"}
                           style={{
-                            fontFamily: T.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.06em",
+                            fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
                             color: T.amber, background: T.amberDim,
                             border: `1px solid rgba(245,158,11,0.2)`, borderRadius: 4, padding: "3px 8px",
                             cursor: restartLoading === "scheduler" ? "wait" : "pointer",
@@ -660,10 +660,10 @@ export default function AdminMonitorPage() {
                 {funnel.map((step, i) => (
                   <div key={step.label} style={{ marginBottom: i < funnel.length - 1 ? 12 : 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.text }}>
+                      <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.text }}>
                         {step.label}
                       </span>
-                      <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.textDim }}>
+                      <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textDim }}>
                         {step.count} ({step.pct}%)
                       </span>
                     </div>
@@ -688,7 +688,7 @@ export default function AdminMonitorPage() {
                   </div>
                 ))}
                 {funnel.length === 0 && (
-                  <div style={{ textAlign: "center", color: T.textFaint, fontFamily: T.fontMono, fontSize: 11, padding: 16 }}>
+                  <div style={{ textAlign: "center", color: T.textFaint, fontFamily: T.fontMono, fontSize: 12, padding: 16 }}>
                     No funnel data
                   </div>
                 )}
@@ -714,9 +714,9 @@ export default function AdminMonitorPage() {
                   position: "sticky",
                   top: 0,
                 }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", color: T.textFaint, textTransform: "uppercase" }}>Table</span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", color: T.textFaint, textTransform: "uppercase", textAlign: "right" }}>Rows</span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", color: T.textFaint, textTransform: "uppercase", textAlign: "right" }}>Last Insert</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: T.textFaint, textTransform: "uppercase" }}>Table</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: T.textFaint, textTransform: "uppercase", textAlign: "right" }}>Rows</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: T.textFaint, textTransform: "uppercase", textAlign: "right" }}>Last Insert</span>
                 </div>
                 {tables.map((t, i) => (
                   <div
@@ -743,7 +743,7 @@ export default function AdminMonitorPage() {
                     </span>
                     <span style={{
                       fontFamily: T.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       color: T.textFaint,
                       textAlign: "right",
                     }}>
@@ -752,7 +752,7 @@ export default function AdminMonitorPage() {
                   </div>
                 ))}
                 {tables.length === 0 && (
-                  <div style={{ padding: 24, textAlign: "center", color: T.textFaint, fontFamily: T.fontMono, fontSize: 11 }}>
+                  <div style={{ padding: 24, textAlign: "center", color: T.textFaint, fontFamily: T.fontMono, fontSize: 12 }}>
                     Loading table stats...
                   </div>
                 )}
@@ -768,7 +768,7 @@ export default function AdminMonitorPage() {
                 action={
                   <span style={{
                     fontFamily: T.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: wiredCount === totalEngines ? T.green : T.amber,
                   }}>
                     {wiredCount}/{totalEngines} wired
@@ -792,7 +792,7 @@ export default function AdminMonitorPage() {
                     <StatusDot status={eng.status} />
                     <span style={{
                       fontFamily: T.fontMono,
-                      fontSize: 11,
+                      fontSize: 12,
                       color: T.text,
                       flex: 1,
                     }}>
@@ -801,7 +801,7 @@ export default function AdminMonitorPage() {
                     {eng.imported_by && (
                       <span style={{
                         fontFamily: T.fontMono,
-                        fontSize: 9,
+                        fontSize: 12,
                         color: T.textFaint,
                         maxWidth: 140,
                         overflow: "hidden",
@@ -813,7 +813,7 @@ export default function AdminMonitorPage() {
                     )}
                     <span style={{
                       fontFamily: T.fontMono,
-                      fontSize: 9,
+                      fontSize: 12,
                       fontWeight: 600,
                       letterSpacing: "0.06em",
                       color: eng.status === "wired" ? T.green : T.textFaint,
@@ -826,7 +826,7 @@ export default function AdminMonitorPage() {
                   </div>
                 ))}
                 {engines.length === 0 && (
-                  <div style={{ padding: 24, textAlign: "center", color: T.textFaint, fontFamily: T.fontMono, fontSize: 11 }}>
+                  <div style={{ padding: 24, textAlign: "center", color: T.textFaint, fontFamily: T.fontMono, fontSize: 12 }}>
                     Loading engine modules...
                   </div>
                 )}
@@ -868,7 +868,7 @@ export default function AdminMonitorPage() {
                     >
                       <span style={{
                         fontFamily: T.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         color: T.red,
                         flex: 1,
                       }}>
@@ -886,7 +886,7 @@ export default function AdminMonitorPage() {
                         {err.count}
                       </span>
                       {err.latest && (
-                        <span style={{ fontFamily: T.fontMono, fontSize: 9, color: T.textFaint }}>
+                        <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint }}>
                           {timeAgo(err.latest)}
                         </span>
                       )}
@@ -916,7 +916,7 @@ export default function AdminMonitorPage() {
                     {/* Event type badge */}
                     <span style={{
                       fontFamily: T.fontMono,
-                      fontSize: 9,
+                      fontSize: 12,
                       fontWeight: 600,
                       letterSpacing: "0.04em",
                       color: evt.event_type?.includes("error") || evt.event_type?.includes("fail")
@@ -952,17 +952,17 @@ export default function AdminMonitorPage() {
                       </div>
                       <div style={{ display: "flex", gap: 12, marginTop: 2 }}>
                         {evt.actor_email && (
-                          <span style={{ fontFamily: T.fontMono, fontSize: 9, color: T.textFaint }}>
+                          <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint }}>
                             {evt.actor_email}
                           </span>
                         )}
                         {evt.company_name && (
-                          <span style={{ fontFamily: T.fontMono, fontSize: 9, color: T.textFaint }}>
+                          <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint }}>
                             {evt.company_name}
                           </span>
                         )}
                         {evt.hash && (
-                          <span style={{ fontFamily: T.fontMono, fontSize: 9, color: T.textFaint, opacity: 0.6 }}>
+                          <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint, opacity: 0.6 }}>
                             #{evt.hash}
                           </span>
                         )}
@@ -971,7 +971,7 @@ export default function AdminMonitorPage() {
 
                     <span style={{
                       fontFamily: T.fontMono,
-                      fontSize: 9,
+                      fontSize: 12,
                       color: T.textFaint,
                       whiteSpace: "nowrap",
                       flexShrink: 0,
@@ -981,7 +981,7 @@ export default function AdminMonitorPage() {
                   </div>
                 ))}
                 {activity.length === 0 && (
-                  <div style={{ padding: 32, textAlign: "center", color: T.textFaint, fontFamily: T.fontMono, fontSize: 11 }}>
+                  <div style={{ padding: 32, textAlign: "center", color: T.textFaint, fontFamily: T.fontMono, fontSize: 12 }}>
                     No activity yet
                   </div>
                 )}
@@ -1001,22 +1001,22 @@ export default function AdminMonitorPage() {
             animation: "fadeSlideUp 700ms ease-out",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textFaint }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint }}>
                 ORDR Terminal v1.0.0
               </span>
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textFaint }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint }}>
                 {health?.timestamp ? `Server: ${new Date(health.timestamp).toISOString()}` : ""}
               </span>
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textFaint }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint }}>
                 {health?.python_version ? `Python ${health.python_version}` : ""}
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.textFaint }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.textFaint }}>
                 Logged in as: {user.email}
               </span>
               <span style={{
-                fontFamily: T.fontMono, fontSize: 9, fontWeight: 600,
+                fontFamily: T.fontMono, fontSize: 12, fontWeight: 600,
                 color: T.amber, background: T.amberDim,
                 padding: "2px 6px", borderRadius: 3,
               }}>
@@ -1027,6 +1027,6 @@ export default function AdminMonitorPage() {
 
         </div>
       </div>
-    </>
+    </PageShell>
   );
 }

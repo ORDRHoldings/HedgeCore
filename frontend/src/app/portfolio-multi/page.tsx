@@ -5,6 +5,9 @@ import { useAuth } from "../../lib/authContext";
 import { PAIR_REGISTRY, GROUP_LABELS, getPairsByGroup, type PairGroup } from "../../constants/pairRegistry";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { BarChart3 } from "lucide-react";
+
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
   fontUI:   "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -34,16 +37,16 @@ function GroupCard({ group }: { group: PairGroup }) {
         background: S.sub, display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan }}>
             {GROUP_LABELS[group]}
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {pairs.length} pairs
           </span>
         </div>
         {ndfCount > 0 && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.amber,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.amber,
             padding: "2px 7px", border: `1px solid ${S.amber}`, borderRadius: 2,
             background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
           }}>
@@ -56,7 +59,7 @@ function GroupCard({ group }: { group: PairGroup }) {
           <tr style={{ background: S.sub }}>
             {["Pair", "Settlement", "Spot Ref", "1M Vol", "ADV"].map(h => (
               <th key={h} style={{
-                padding: "7px 14px", fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                padding: "7px 14px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                 color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`,
               }}>{h}</th>
             ))}
@@ -70,7 +73,7 @@ function GroupCard({ group }: { group: PairGroup }) {
                   <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan }}>{p.label}</span>
                   {p.isNdf && (
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: 9, color: S.amber,
+                      fontFamily: S.fontMono, fontSize: 12, color: S.amber,
                       padding: "1px 5px", border: `1px solid ${S.amber}`, borderRadius: 2,
                     }}>NDF</span>
                   )}
@@ -109,6 +112,8 @@ export default function PortfolioMultiPage() {
   const allDeliverable = PAIR_REGISTRY.filter(p => !p.isNdf).length;
 
   return (
+
+    <PageShell icon={BarChart3} title="Multi-Currency Portfolio" breadcrumb={["Dashboard", "Portfolio"]} noPadding>
     <div style={{ height: "100%", display: "flex", flexDirection: "column", fontFamily: S.fontUI }}>
       {/* Header */}
       <div style={{
@@ -116,10 +121,10 @@ export default function PortfolioMultiPage() {
         padding: "0 20px", height: 48, flexShrink: 0,
         display: "flex", alignItems: "center", gap: 14,
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: S.cyan }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.cyan }}>
           MULTI-PAIR PORTFOLIO
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           {PAIR_REGISTRY.length} pairs · {allNdf} NDF · {allDeliverable} Deliverable
         </span>
         <div style={{ flex: 1 }} />
@@ -146,9 +151,9 @@ export default function PortfolioMultiPage() {
             padding: "12px 18px", borderRight: `1px solid ${S.rim}`,
             display: "flex", flexDirection: "column", gap: 3,
           }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>{label}</div>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>{label}</div>
             <div style={{ fontFamily: S.fontMono, fontSize: 18, fontWeight: 700, color: S.primary }}>{value}</div>
-            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>{sub}</div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{sub}</div>
           </div>
         ))}
       </div>
@@ -157,7 +162,7 @@ export default function PortfolioMultiPage() {
       <div style={{ display: "flex", borderBottom: `1px solid ${S.rim}`, background: S.sub, flexShrink: 0 }}>
         {(["ALL", ...GROUPS] as Array<PairGroup | "ALL">).map(g => (
           <button key={g} onClick={() => setActiveGroup(g)} style={{
-            fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             padding: "0 18px", height: 38, border: "none",
             borderBottom: activeGroup === g ? `2px solid ${S.cyan}` : "2px solid transparent",
             background: "transparent",
@@ -178,7 +183,7 @@ export default function PortfolioMultiPage() {
         {/* Legend */}
         <div style={{
           padding: "12px 16px", background: S.sub, border: `1px solid ${S.soft}`, borderRadius: 3,
-          fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.8,
+          fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, lineHeight: 1.8,
         }}>
           <strong style={{ color: S.secondary }}>Settlement Types:</strong>{" "}
           <span style={{ color: S.green }}>DELIVERABLE</span> — physical FX exchange on value date.{" "}
@@ -187,5 +192,7 @@ export default function PortfolioMultiPage() {
         </div>
       </div>
     </div>
-  );
+  
+    </PageShell>
+    );
 }

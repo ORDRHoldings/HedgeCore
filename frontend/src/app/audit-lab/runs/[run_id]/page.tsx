@@ -10,6 +10,9 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import dynamic from "next/dynamic";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Microscope } from "lucide-react";
+
 const MarkupByMonthChart = dynamic(() => import("@/components/audit-lab/MarkupByMonthChart"), { ssr: false });
 const RateScatterChart = dynamic(() => import("@/components/audit-lab/RateScatterChart"), { ssr: false });
 const CounterpartyMatrix = dynamic(() => import("@/components/audit-lab/CounterpartyMatrix"), { ssr: false });
@@ -93,13 +96,13 @@ interface RunDetail {
 function KpiCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
     <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "16px 20px" }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase", marginBottom: 6 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase", marginBottom: 6 }}>
         {label}
       </div>
       <div style={{ fontFamily: S.fontMono, fontSize: 22, fontWeight: 700, color: color ?? S.primary, letterSpacing: "-0.02em" }}>
         {value}
       </div>
-      {sub && <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, marginTop: 3 }}>{sub}</div>}
+      {sub && <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 3 }}>{sub}</div>}
     </div>
   );
 }
@@ -194,11 +197,11 @@ export default function AuditRunDetailPage() {
   const s = run.summary;
 
   return (
-    <div style={{ minHeight: "100vh", background: S.bgDeep, padding: "28px 40px", fontFamily: S.fontUI }}>
+    <PageShell icon={Microscope} title="Audit Run Detail" breadcrumb={["Audit Lab","Run Detail"]}>
 
       {/* Breadcrumb + header */}
       <div style={{ marginBottom: 24 }}>
-        <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 6 }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 6 }}>
           <a href="/audit-lab" style={{ color: S.cyan, textDecoration: "none" }}>AUDIT LAB</a>
           {" / "}
           <span>RUN {run_id.slice(0, 12)}…</span>
@@ -208,7 +211,7 @@ export default function AuditRunDetailPage() {
             <h1 style={{ fontFamily: S.fontMono, fontSize: 18, fontWeight: 700, color: S.primary, margin: 0 }}>
               Audit Analysis Report
             </h1>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 4 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 4 }}>
               v{run.methodology_version} · {new Date(run.created_at).toLocaleString()} · {run.status}
             </div>
           </div>
@@ -217,7 +220,7 @@ export default function AuditRunDetailPage() {
               onClick={handleExport}
               disabled={exporting}
               style={{
-                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                 color: S.primary, background: S.bgPanel,
                 border: `1px solid ${S.rim}`, padding: "8px 16px", cursor: "pointer", borderRadius: 2,
               }}
@@ -228,7 +231,7 @@ export default function AuditRunDetailPage() {
               onClick={handleBoardSummary}
               disabled={exportingBoard}
               style={{
-                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                 color: S.primary, background: S.bgPanel,
                 border: `1px solid ${S.rim}`, padding: "8px 16px", cursor: "pointer", borderRadius: 2,
               }}
@@ -239,7 +242,7 @@ export default function AuditRunDetailPage() {
               onClick={handleXlsxExport}
               disabled={exportingXlsx}
               style={{
-                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                 color: S.primary, background: S.bgPanel,
                 border: `1px solid ${S.rim}`, padding: "8px 16px", cursor: "pointer", borderRadius: 2,
               }}
@@ -280,7 +283,7 @@ export default function AuditRunDetailPage() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
-                fontFamily: S.fontMono, fontSize: 11, fontWeight: activeTab === tab ? 700 : 400,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: activeTab === tab ? 700 : 400,
                 color: activeTab === tab ? S.cyan : S.secondary,
                 background: "transparent", border: "none",
                 borderBottom: `2px solid ${activeTab === tab ? S.cyan : "transparent"}`,
@@ -300,22 +303,22 @@ export default function AuditRunDetailPage() {
             <thead>
               <tr style={{ background: S.bgSub }}>
                 {["Type", "Pair", "Severity", "Amount (USD)", "Narrative"].map(h => (
-                  <th key={h} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>
+                  <th key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {run.findings.map(f => (
                 <tr key={f.id} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 10, color: S.cyan }}>{f.finding_type}</td>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>{f.currency_pair ?? "—"}</td>
+                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>{f.finding_type}</td>
+                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{f.currency_pair ?? "—"}</td>
                   <td style={{ padding: "10px 16px" }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: SevColor(f.severity), background: `color-mix(in srgb, ${SevColor(f.severity)} 10%, transparent)`, padding: "2px 8px", borderRadius: 2 }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: SevColor(f.severity), background: `color-mix(in srgb, ${SevColor(f.severity)} 10%, transparent)`, padding: "2px 8px", borderRadius: 2 }}>
                       {f.severity}
                     </span>
                   </td>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: f.amount_usd > 0 ? S.red : S.green }}>{fmt(f.amount_usd)}</td>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontUI, fontSize: 11, color: S.secondary, maxWidth: 400 }}>{f.narrative}</td>
+                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: f.amount_usd > 0 ? S.red : S.green }}>{fmt(f.amount_usd)}</td>
+                  <td style={{ padding: "10px 16px", fontFamily: S.fontUI, fontSize: 12, color: S.secondary, maxWidth: 400 }}>{f.narrative}</td>
                 </tr>
               ))}
               {run.findings.length === 0 && (
@@ -329,12 +332,12 @@ export default function AuditRunDetailPage() {
         {activeTab === "pairs" && (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead><tr style={{ background: S.bgSub }}>
-              {["Currency Pair", "Markup Cost (USD)"].map(h => <th key={h} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>)}
+              {["Currency Pair", "Markup Cost (USD)"].map(h => <th key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>)}
             </tr></thead>
             <tbody>
               {Object.entries(run.markup_by_pair).sort(([, a], [, b]) => b - a).map(([pair, usd]) => (
                 <tr key={pair} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 11, color: S.primary, fontWeight: 600 }}>{pair}</td>
+                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.primary, fontWeight: 600 }}>{pair}</td>
                   <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 13, color: S.red, fontWeight: 700 }}>{fmt(usd)}</td>
                 </tr>
               ))}
@@ -347,7 +350,7 @@ export default function AuditRunDetailPage() {
           <div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr style={{ background: S.bgSub }}>
-                {["Counterparty", "Markup Cost (USD)"].map(h => <th key={h} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>)}
+                {["Counterparty", "Markup Cost (USD)"].map(h => <th key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>)}
               </tr></thead>
               <tbody>
                 {Object.entries(run.markup_by_counterparty).sort(([, a], [, b]) => b - a).map(([cp, usd]) => (
@@ -381,7 +384,7 @@ export default function AuditRunDetailPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead><tr style={{ background: S.bgSub }}>
                     {["#", "Date", "Pair", "Sold", "Bought", "Rate", "Benchmark", "Markup", "Direction", "Counterparty"].map(h => (
-                      <th key={h} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>
+                      <th key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "8px 12px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
@@ -390,18 +393,18 @@ export default function AuditRunDetailPage() {
                       const dirColor = dir === "ADVERSE" ? S.red : dir === "FAVORABLE" ? S.green : S.tertiary;
                       return (
                         <tr key={t.id as string} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{t.row_index as number}</td>
-                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>{(t.trade_date as string) ?? "—"}</td>
-                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.cyan }}>{(t.currency_sold as string) ?? ""}{(t.currency_bought as string) ?? ""}</td>
-                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>{t.amount_sold != null ? Number(t.amount_sold).toLocaleString() : "—"}</td>
-                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>{t.amount_bought != null ? Number(t.amount_bought).toLocaleString() : "—"}</td>
-                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>{t.effective_rate != null ? Number(t.effective_rate).toFixed(6) : "—"}</td>
-                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, color: S.amber }}>{t.benchmark_rate != null ? Number(t.benchmark_rate).toFixed(6) : "—"}</td>
-                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: dirColor }}>{t.markup_cost_usd != null ? fmt(Number(t.markup_cost_usd)) : "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{t.row_index as number}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{(t.trade_date as string) ?? "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>{(t.currency_sold as string) ?? ""}{(t.currency_bought as string) ?? ""}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{t.amount_sold != null ? Number(t.amount_sold).toLocaleString() : "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{t.amount_bought != null ? Number(t.amount_bought).toLocaleString() : "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{t.effective_rate != null ? Number(t.effective_rate).toFixed(6) : "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, color: S.amber }}>{t.benchmark_rate != null ? Number(t.benchmark_rate).toFixed(6) : "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: dirColor }}>{t.markup_cost_usd != null ? fmt(Number(t.markup_cost_usd)) : "—"}</td>
                           <td style={{ padding: "8px 12px" }}>
-                            {dir && <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: dirColor, background: `color-mix(in srgb, ${dirColor} 10%, transparent)`, padding: "2px 6px", borderRadius: 2 }}>{dir}</span>}
+                            {dir && <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: dirColor, background: `color-mix(in srgb, ${dirColor} 10%, transparent)`, padding: "2px 6px", borderRadius: 2 }}>{dir}</span>}
                           </td>
-                          <td style={{ padding: "8px 12px", fontFamily: S.fontUI, fontSize: 10, color: S.secondary }}>{(t.counterparty as string) ?? "—"}</td>
+                          <td style={{ padding: "8px 12px", fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{(t.counterparty as string) ?? "—"}</td>
                         </tr>
                       );
                     })}
@@ -415,7 +418,7 @@ export default function AuditRunDetailPage() {
         {/* Evidence rail tab */}
         {activeTab === "evidence" && (
           <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase", marginBottom: 4 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase", marginBottom: 4 }}>
               SHA-256 Evidence Chain
             </div>
             {[
@@ -425,16 +428,16 @@ export default function AuditRunDetailPage() {
               { label: "DATASET ID", value: run.dataset_id, color: S.tertiary },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ background: S.bgSub, padding: "10px 14px", border: `1px solid ${S.soft}` }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color, marginBottom: 3 }}>{label}</div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, wordBreak: "break-all" }}>{value}</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color, marginBottom: 3 }}>{label}</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, wordBreak: "break-all" }}>{value}</div>
               </div>
             ))}
-            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, marginTop: 4, padding: "8px 12px", background: `color-mix(in srgb, ${S.amber} 5%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)` }}>
+            <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 4, padding: "8px 12px", background: `color-mix(in srgb, ${S.amber} 5%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)` }}>
               DISCLAIMER: Unhedged variance figures are reference-baseline analytical what-ifs. They are not factual loss claims. Markup and fee figures reflect computed transaction costs vs. market benchmark rates.
             </div>
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

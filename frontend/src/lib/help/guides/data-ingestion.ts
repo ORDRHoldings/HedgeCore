@@ -5,7 +5,7 @@ export const DATA_INGESTION: GuideDoc = {
   title: "Data Ingestion",
   summary:
     "How to load FX exposure positions into ORDR Terminal: CSV upload, manual entry, ERP connector, field validation requirements, and the audit trail created for each import.",
-  path: "/upload-csv",
+  path: "/position-desk",
   icon: "Upload",
   lastReviewed: "2026-02-28",
   relatedIds: ["position-desk", "policy-engine", "getting-started"],
@@ -26,7 +26,7 @@ export const DATA_INGESTION: GuideDoc = {
           table: {
             headers: ["Ingestion Method", "Path", "Best For"],
             rows: [
-              ["CSV Upload", "/upload-csv", "Batch imports from treasury systems, spreadsheets, or ERP exports"],
+              ["CSV Upload", "/position-desk", "Batch imports from treasury systems, spreadsheets, or ERP exports"],
               ["Manual Entry", "/position-desk → New Position", "Individual positions, ad-hoc additions, corrections"],
               ["ERP / API Connector", "/connectors", "Scheduled automated sync from SAP, Oracle NetSuite, or generic SQL"],
             ],

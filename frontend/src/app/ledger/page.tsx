@@ -15,6 +15,9 @@ import type { LedgerEntry } from "../../api/pipelineTypes";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { LEDGER_HELP } from "@/lib/helpContent";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Globe } from "lucide-react";
+
 export default function LedgerListPage() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -84,6 +87,8 @@ export default function LedgerListPage() {
   );
 
   return (
+
+    <PageShell icon={Globe} title="Ledger" breadcrumb={["Dashboard", "Ledger"]} noPadding>
     <div style={{ display: 'flex', minHeight: '100vh' }}>
 
     <div className="max-w-6xl mx-auto p-4 space-y-4">
@@ -120,5 +125,7 @@ export default function LedgerListPage() {
   
     <HelpPanel config={LEDGER_HELP} storageKey="ledger" />
     </div>
-  );
+  
+    </PageShell>
+    );
 }

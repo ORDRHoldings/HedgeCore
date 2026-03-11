@@ -11,9 +11,11 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, Activity } from "lucide-react";
+import { RefreshCw, Activity, BarChart3 } from "lucide-react"
 import { useAuth } from "@/lib/authContext";
 import TradingViewEmbed from "@/components/execution/TradingViewEmbed";
+
+import { PageShell } from "@/components/layout/PageShell";
 
 // ---------------------------------------------------------------------------
 // Design tokens
@@ -197,7 +199,7 @@ function PairRow({ pair, quote, selected, onSelect }: PairRowProps) {
         alignItems:     "center",
         justifyContent: "center",
         fontFamily:     S.fontMono,
-        fontSize:       10,
+        fontSize: 12,
         fontWeight:     700,
         color:          selected ? "#000" : S.secondary,
         flexShrink:     0,
@@ -230,7 +232,7 @@ function PairRow({ pair, quote, selected, onSelect }: PairRowProps) {
         </div>
         <div style={{
           fontFamily: S.fontMono,
-          fontSize:   11,
+          fontSize: 12,
           color:      pctColor,
           marginTop:  1,
         }}>
@@ -252,7 +254,7 @@ function StatTile({ label, value, color }: { label: string; value: string; color
     }}>
       <div style={{
         fontFamily:    S.fontMono,
-        fontSize:      10,
+        fontSize: 12,
         color:         S.tertiary,
         letterSpacing: "0.1em",
         marginBottom:  4,
@@ -311,6 +313,8 @@ export default function FxMarketPage() {
 
   if (isLoading || !user) {
     return (
+
+    
       <div style={{
         display:        "flex",
         alignItems:     "center",
@@ -323,6 +327,8 @@ export default function FxMarketPage() {
       }}>
         AUTHENTICATING...
       </div>
+    
+    
     );
   }
 
@@ -353,6 +359,8 @@ export default function FxMarketPage() {
     : null;
 
   return (
+    <PageShell icon={BarChart3} title="FX Rates" breadcrumb={["Dashboard", "FX Rates"]} noPadding>
+
     <div style={{
       display:    "flex",
       flexDirection: "column",
@@ -413,7 +421,7 @@ export default function FxMarketPage() {
           <Activity size={10} color={S.green} />
           <span style={{
             fontFamily:    S.fontMono,
-            fontSize:      10,
+            fontSize: 12,
             fontWeight:    700,
             color:         S.green,
             letterSpacing: "0.1em",
@@ -430,7 +438,7 @@ export default function FxMarketPage() {
             background:    "rgba(0,212,255,0.08)",
             border:        `1px solid rgba(0,212,255,0.25)`,
             fontFamily:    S.fontMono,
-            fontSize:      10,
+            fontSize: 12,
             fontWeight:    600,
             color:         S.cyan,
             letterSpacing: "0.08em",
@@ -444,7 +452,7 @@ export default function FxMarketPage() {
             background:    "rgba(251,191,36,0.08)",
             border:        `1px solid rgba(251,191,36,0.3)`,
             fontFamily:    S.fontMono,
-            fontSize:      10,
+            fontSize: 12,
             fontWeight:    600,
             color:         S.amber,
             letterSpacing: "0.08em",
@@ -478,7 +486,7 @@ export default function FxMarketPage() {
           minWidth:      70,
           textAlign:     "right",
         }}>
-          {utcTime} <span style={{ color: S.tertiary, fontWeight: 400, fontSize: 11 }}>UTC</span>
+          {utcTime} <span style={{ color: S.tertiary, fontWeight: 400, fontSize: 12 }}>UTC</span>
         </span>
       </div>
 
@@ -511,7 +519,7 @@ export default function FxMarketPage() {
           }}>
             <span style={{
               fontFamily:    S.fontMono,
-              fontSize:      11,
+              fontSize: 12,
               fontWeight:    700,
               color:         S.secondary,
               letterSpacing: "0.1em",
@@ -523,7 +531,7 @@ export default function FxMarketPage() {
             {lastFetchLabel && (
               <span style={{
                 fontFamily: S.fontMono,
-                fontSize:   10,
+                fontSize: 12,
                 color:      S.tertiary,
                 marginRight: 10,
               }}>
@@ -577,7 +585,7 @@ export default function FxMarketPage() {
           }}>
             <span style={{
               fontFamily: S.fontMono,
-              fontSize:   10,
+              fontSize: 12,
               color:      S.tertiary,
             }}>
               {hasKey ? "Prices via Finnhub · OANDA feed" : "Chart only · No API key configured"}
@@ -630,7 +638,7 @@ export default function FxMarketPage() {
             }}>
               <span style={{
                 fontFamily:    S.fontMono,
-                fontSize:      11,
+                fontSize: 12,
                 fontWeight:    700,
                 color:         S.secondary,
                 letterSpacing: "0.1em",
@@ -639,7 +647,7 @@ export default function FxMarketPage() {
               </span>
               <span style={{
                 fontFamily: S.fontMono,
-                fontSize:   11,
+                fontSize: 12,
                 color:      S.tertiary,
               }}>
                 {selectedPair.base} / {selectedPair.quote}
@@ -647,7 +655,7 @@ export default function FxMarketPage() {
               <div style={{ flex: 1 }} />
               <span style={{
                 fontFamily:    S.fontMono,
-                fontSize:      10,
+                fontSize: 12,
                 color:         S.tertiary,
                 letterSpacing: "0.06em",
               }}>
@@ -673,7 +681,7 @@ export default function FxMarketPage() {
               }}>
                 <div style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      10,
+                  fontSize: 12,
                   color:         S.tertiary,
                   letterSpacing: "0.1em",
                   marginBottom:  4,
@@ -703,5 +711,7 @@ export default function FxMarketPage() {
         }
       `}</style>
     </div>
+  
+    </PageShell>
   );
 }

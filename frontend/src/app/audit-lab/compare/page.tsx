@@ -9,6 +9,8 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
+import { PageShell } from "@/components/layout/PageShell";
+import { Microscope } from "lucide-react";
 
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -86,7 +88,7 @@ function CompareKpiCard({
   return (
     <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "16px 20px" }}>
       <div style={{
-        fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
         letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10,
       }}>
         {label}
@@ -95,7 +97,7 @@ function CompareKpiCard({
         {values.map((v, i) => (
           <div key={i} style={{ flex: 1 }}>
             <div style={{
-              fontFamily: S.fontMono, fontSize: 9, fontWeight: 600,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
               color: S.tertiary, marginBottom: 2,
             }}>
               RUN {i + 1}
@@ -185,7 +187,7 @@ function AuditLabComparePageInner() {
   if (error) {
     return (
       <div style={{ minHeight: "100vh", background: S.bgDeep, padding: "32px 40px", fontFamily: S.fontUI }}>
-        <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 6 }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 6 }}>
           <a href="/audit-lab" style={{ color: S.cyan, textDecoration: "none" }}>AUDIT LAB</a>
           {" / "}
           <span>COMPARE</span>
@@ -217,11 +219,12 @@ function AuditLabComparePageInner() {
   ).sort();
 
   return (
-    <div style={{ minHeight: "100vh", background: S.bgDeep, padding: "28px 40px", fontFamily: S.fontUI }}>
+    <PageShell icon={Microscope} title="Run Comparison" breadcrumb={["Audit Lab", "Compare"]}>
+      <div style={{ fontFamily: S.fontUI }}>
       {/* Breadcrumb + header */}
       <div style={{ marginBottom: 24 }}>
         <div style={{
-          fontFamily: S.fontMono, fontSize: 10, color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
           letterSpacing: "0.1em", marginBottom: 6,
         }}>
           <a href="/audit-lab" style={{ color: S.cyan, textDecoration: "none" }}>AUDIT LAB</a>
@@ -248,7 +251,7 @@ function AuditLabComparePageInner() {
             borderTop: `2px solid ${i === 0 ? S.cyan : S.amber}`,
           }}>
             <div style={{
-              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
               letterSpacing: "0.1em", color: i === 0 ? S.cyan : S.amber,
               textTransform: "uppercase", marginBottom: 4,
             }}>
@@ -260,7 +263,7 @@ function AuditLabComparePageInner() {
             >
               {r.run_id.slice(0, 12)}...
             </a>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 2 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 2 }}>
               v{r.methodology_version} {"\u00B7"} {new Date(r.created_at).toLocaleDateString()} {"\u00B7"} {r.status}
             </div>
           </div>
@@ -307,7 +310,7 @@ function AuditLabComparePageInner() {
               <thead>
                 <tr style={{ background: S.bgSub }}>
                   <th style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     letterSpacing: "0.08em", color: S.tertiary, textAlign: "left",
                     padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase",
                   }}>
@@ -315,7 +318,7 @@ function AuditLabComparePageInner() {
                   </th>
                   {runs.map((r, i) => (
                     <th key={r.run_id} style={{
-                      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                       letterSpacing: "0.08em", color: i === 0 ? S.cyan : S.amber,
                       textAlign: "right", padding: "10px 16px",
                       borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase",
@@ -325,7 +328,7 @@ function AuditLabComparePageInner() {
                   ))}
                   {runs.length >= 2 && (
                     <th style={{
-                      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                       letterSpacing: "0.08em", color: S.tertiary, textAlign: "right",
                       padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase",
                     }}>
@@ -391,6 +394,7 @@ function AuditLabComparePageInner() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PageShell>
   );
 }

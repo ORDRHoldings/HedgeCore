@@ -25,6 +25,8 @@ import {
   Minus,
 } from "lucide-react";
 
+import { PageShell } from "@/components/layout/PageShell";
+
 // ── Design tokens ────────────────────────────────────────────────────────────
 const S = {
   fontUI: "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -233,7 +235,7 @@ function TickerRibbon({ quotes }: { quotes: SectorQuote[] }) {
               <span
                 style={{
                   fontFamily: S.fontUI,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: S.tertiary,
                 }}
               >
@@ -333,7 +335,7 @@ function FXCard({ rate }: { rate: FXRate }) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 600,
             padding: "2px 6px",
             borderRadius: 3,
@@ -402,7 +404,7 @@ function FXCard({ rate }: { rate: FXRate }) {
             <span
               style={{
                 fontFamily: S.fontUI,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.tertiary,
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
@@ -424,7 +426,7 @@ function FXCard({ rate }: { rate: FXRate }) {
             <span
               style={{
                 fontFamily: S.fontUI,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.tertiary,
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
@@ -447,7 +449,7 @@ function FXCard({ rate }: { rate: FXRate }) {
           <span
             style={{
               fontFamily: S.fontUI,
-              fontSize: 10,
+              fontSize: 12,
               color: S.tertiary,
               textTransform: "uppercase",
               letterSpacing: "0.06em",
@@ -565,7 +567,7 @@ function SectorGrid({ quotes }: { quotes: SectorQuote[] }) {
               <span
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   color: up ? S.green : S.red,
                 }}
@@ -577,7 +579,7 @@ function SectorGrid({ quotes }: { quotes: SectorQuote[] }) {
             <span
               style={{
                 fontFamily: S.fontUI,
-                fontSize: 11,
+                fontSize: 12,
                 color: S.tertiary,
               }}
             >
@@ -605,7 +607,7 @@ function SectorGrid({ quotes }: { quotes: SectorQuote[] }) {
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: S.tertiary,
                   }}
                 >
@@ -656,7 +658,7 @@ function MarketHealthBar({
           <span
             style={{
               fontFamily: S.fontUI,
-              fontSize: 11,
+              fontSize: 12,
               color: S.tertiary,
               textTransform: "uppercase",
               letterSpacing: "0.05em",
@@ -683,11 +685,11 @@ function MarketHealthBar({
                   flexShrink: 0,
                 }}
               />
-              <span style={{ color: S.secondary, fontSize: 11 }}>
+              <span style={{ color: S.secondary, fontSize: 12 }}>
                 {p.name}
               </span>
               {p.latency_ms != null && (
-                <span style={{ color: S.tertiary, fontSize: 10 }}>
+                <span style={{ color: S.tertiary, fontSize: 12 }}>
                   {p.latency_ms.toFixed(0)}ms
                 </span>
               )}
@@ -697,7 +699,7 @@ function MarketHealthBar({
       ) : (
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <WifiOff size={12} style={{ color: S.tertiary }} />
-          <span style={{ color: S.tertiary, fontSize: 11 }}>
+          <span style={{ color: S.tertiary, fontSize: 12 }}>
             No provider data
           </span>
         </div>
@@ -717,7 +719,7 @@ function MarketHealthBar({
             style={{
               padding: "2px 8px",
               borderRadius: 3,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 600,
               background: "rgba(5,150,105,0.1)",
               color: S.green,
@@ -730,7 +732,7 @@ function MarketHealthBar({
               style={{
                 padding: "2px 8px",
                 borderRadius: 3,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 background: "rgba(217,119,6,0.1)",
                 color: S.amber,
@@ -752,7 +754,7 @@ function MarketHealthBar({
           alignItems: "center",
           gap: 4,
           color: S.tertiary,
-          fontSize: 11,
+          fontSize: 12,
         }}
       >
         <Clock size={12} />
@@ -772,7 +774,7 @@ function MarketHealthBar({
           border: `1px solid ${S.rim}`,
           background: S.bgSub,
           fontFamily: S.fontMono,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 600,
           color: S.secondary,
           cursor: refreshing ? "not-allowed" : "pointer",
@@ -850,7 +852,7 @@ function CarryScorecard({
           background: S.bgSub,
           borderBottom: `1px solid ${S.rim}`,
           fontFamily: S.fontMono,
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 600,
           color: S.tertiary,
           textTransform: "uppercase",
@@ -1079,15 +1081,7 @@ export default function MarketIntelligencePage() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "100vh",
-        background: S.bgDeep,
-        fontFamily: S.fontUI,
-      }}
-    >
+    <PageShell icon={BarChart3} title="Market Intelligence" breadcrumb={["Dashboard","Market Intelligence"]}>
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div
         style={{
@@ -1117,7 +1111,7 @@ export default function MarketIntelligencePage() {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               padding: "2px 8px",
               borderRadius: 3,
@@ -1281,6 +1275,6 @@ export default function MarketIntelligencePage() {
           50% { opacity: 0.5; }
         }
       `}</style>
-    </div>
+    </PageShell>
   );
 }

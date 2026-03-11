@@ -24,6 +24,9 @@ import type { TraceEvent } from "../../api/types";
 import HelpPanel from "../../components/layout/HelpPanel";
 import { RUN_VIEWER_HELP } from "../../lib/helpContent";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Globe } from "lucide-react";
+
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -81,7 +84,7 @@ function Badge({ text, color }: { text: string; color: string }) {
   return (
     <span style={{
       fontFamily:    S.fontMono,
-      fontSize:      9,
+      fontSize: 12,
       fontWeight:    700,
       letterSpacing: "0.08em",
       color,
@@ -109,14 +112,14 @@ function HashRow({ label, hash, color }: { label: string; hash: string | undefin
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "7px 0", borderBottom: `1px solid ${S.soft}` }}>
       <div style={{ width: 130, flexShrink: 0 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.07em", color: S.tertiary, textTransform: "uppercase" as const }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.07em", color: S.tertiary, textTransform: "uppercase" as const }}>
           {label}
         </span>
       </div>
       <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
         <span style={{
           fontFamily:  S.fontMono,
-          fontSize:    10,
+          fontSize: 12,
           color,
           wordBreak:   "break-all" as const,
           letterSpacing: "0.03em",
@@ -129,7 +132,7 @@ function HashRow({ label, hash, color }: { label: string; hash: string | undefin
             onClick={handleCopy}
             style={{
               fontFamily:   S.fontMono,
-              fontSize:     8,
+              fontSize: 12,
               fontWeight:   600,
               letterSpacing:"0.06em",
               color:        copied ? S.bgPanel : S.tertiary,
@@ -180,7 +183,7 @@ function TraceStepCard({ event, index, total }: { event: TraceEvent; index: numb
         alignItems:      "center",
         justifyContent:  "center",
         fontFamily:      S.fontMono,
-        fontSize:        11,
+        fontSize: 12,
         fontWeight:      700,
         color:           meta.color,
         flexShrink:      0,
@@ -201,19 +204,19 @@ function TraceStepCard({ event, index, total }: { event: TraceEvent; index: numb
       }}>
         {/* Step header */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" as const }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: meta.color }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: meta.color }}>
             {event.step}
           </span>
-          <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
             {meta.phase}
           </span>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               {fmtTimestamp(event.timestamp)}
             </span>
             <span style={{
               fontFamily:   S.fontMono,
-              fontSize:     9,
+              fontSize: 12,
               color:        S.tertiary,
               border:       `1px solid ${S.soft}`,
               padding:      "0 4px",
@@ -234,7 +237,7 @@ function TraceStepCard({ event, index, total }: { event: TraceEvent; index: numb
           <details style={{ marginTop: 8 }}>
             <summary style={{
               fontFamily:   S.fontMono,
-              fontSize:     9,
+              fontSize: 12,
               color:        S.tertiary,
               cursor:       "pointer",
               letterSpacing:"0.06em",
@@ -243,7 +246,7 @@ function TraceStepCard({ event, index, total }: { event: TraceEvent; index: numb
             </summary>
             <pre style={{
               fontFamily:  S.fontMono,
-              fontSize:    10,
+              fontSize: 12,
               color:       S.secondary,
               background:  S.bgDeep,
               border:      `1px solid ${S.soft}`,
@@ -323,7 +326,7 @@ function RunViewerContent() {
   if (authLoading) {
     return (
       <div style={{ background: S.bgDeep, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>AUTHENTICATING…</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>AUTHENTICATING…</span>
       </div>
     );
   }
@@ -345,18 +348,18 @@ function RunViewerContent() {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Link
             href="/position-desk"
-            style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2 }}
+            style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2 }}
           >
             ← Position Desk
           </Link>
           <span style={{ color: S.soft }}>·</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
             RUN VIEWER
           </span>
           {runId && (
             <>
               <span style={{ color: S.soft }}>·</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.purple, letterSpacing: "0.06em" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.purple, letterSpacing: "0.06em" }}>
                 {runId8}
               </span>
             </>
@@ -370,12 +373,12 @@ function RunViewerContent() {
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {renderTs}
           </span>
           <Link
-            href="/execution-history"
-            style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2 }}
+            href="/trade-history"
+            style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2 }}
           >
             Data Pipeline Log →
           </Link>
@@ -391,7 +394,7 @@ function RunViewerContent() {
             borderLeft: `3px solid ${S.amber}`, borderRadius: 2, padding: "16px 20px",
             marginBottom: 24,
           }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, marginBottom: 6 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, marginBottom: 6 }}>
               SELECT A RUN TO INSPECT
             </div>
             <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.6 }}>
@@ -406,7 +409,7 @@ function RunViewerContent() {
             <div style={{
               display: "flex", alignItems: "center", gap: 10,
               padding: "10px 16px", borderBottom: `1px solid ${S.rim}`,
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
               letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" as const,
             }}>
               Recent Runs
@@ -415,7 +418,7 @@ function RunViewerContent() {
             </div>
 
             {runsLoading && (
-              <div style={{ padding: "32px 16px", textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+              <div style={{ padding: "32px 16px", textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                 Loading runs…
               </div>
             )}
@@ -444,19 +447,19 @@ function RunViewerContent() {
                 onMouseEnter={e => (e.currentTarget.style.background = `color-mix(in srgb, ${S.cyan} 5%, transparent)`)}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               >
-                <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.purple, letterSpacing: "0.06em" }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.purple, letterSpacing: "0.06em" }}>
                   {r.run_id.slice(0, 8).toUpperCase()}
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginLeft: 8 }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginLeft: 8 }}>
                     {r.run_id.slice(8, 16).toUpperCase()}…
                   </span>
                 </span>
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, textAlign: "right" as const }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, textAlign: "right" as const }}>
                   {r.trade_count} TRADES
                 </span>
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.amber, textAlign: "right" as const }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, textAlign: "right" as const }}>
                   {r.hedge_count} BUCKETS
                 </span>
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                   {r.created_at ? new Date(r.created_at).toISOString().replace("T", " ").slice(0, 19) + " UTC" : "—"}
                 </span>
               </Link>
@@ -468,7 +471,7 @@ function RunViewerContent() {
       {/* ── Loading ── */}
       {runId && loading && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 24px" }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.1em" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em" }}>
             LOADING RUN {runId8}…
           </span>
         </div>
@@ -484,7 +487,7 @@ function RunViewerContent() {
             borderRadius: 2,
             padding:    "16px 20px",
           }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: S.fail, marginBottom: 6 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.fail, marginBottom: 6 }}>
               FAILED TO LOAD RUN
             </div>
             <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{error}</div>
@@ -493,7 +496,7 @@ function RunViewerContent() {
               style={{
                 marginTop:    12,
                 fontFamily:   S.fontMono,
-                fontSize:     10,
+                fontSize: 12,
                 fontWeight:   600,
                 letterSpacing:"0.06em",
                 color:        S.cyan,
@@ -534,14 +537,14 @@ function RunViewerContent() {
                 padding:    "12px 16px",
                 borderRadius: 2,
               }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary, marginBottom: 6 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary, marginBottom: 6 }}>
                   {k.label}
                 </div>
                 <div style={{ fontFamily: S.fontMono, fontSize: k.label === "CREATED" ? 11 : 18, fontWeight: 700, color: k.color, lineHeight: 1.2 }}>
                   {k.value}
                 </div>
                 {k.full && (
-                  <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginTop: 3, wordBreak: "break-all" as const }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 3, wordBreak: "break-all" as const }}>
                     {k.full}
                   </div>
                 )}
@@ -571,7 +574,7 @@ function RunViewerContent() {
                   justifyContent: "space-between",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
                       ED-01
                     </span>
                     <span style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary }}>
@@ -596,7 +599,7 @@ function RunViewerContent() {
                   <span style={{ fontFamily: S.fontMono, color: S.purple }}>{runId8}</span>.
                   {stagesWithData > 0 && (
                     <> Click{" "}
-                      <span style={{ fontFamily: S.fontMono, color: S.amber, fontSize: 10 }}>STEP DATA</span>
+                      <span style={{ fontFamily: S.fontMono, color: S.amber, fontSize: 12 }}>STEP DATA</span>
                       {" "}on any stage to expand the raw engine payload.
                     </>
                   )}
@@ -609,7 +612,7 @@ function RunViewerContent() {
                       textAlign:  "center",
                       padding:    "40px 0",
                       fontFamily: S.fontMono,
-                      fontSize:   11,
+                      fontSize: 12,
                       color:      S.tertiary,
                       letterSpacing: "0.06em",
                     }}>
@@ -650,7 +653,7 @@ function RunViewerContent() {
                   alignItems:   "center",
                   gap:          8,
                 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
                     ED-02
                   </span>
                   <span style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary }}>
@@ -663,7 +666,7 @@ function RunViewerContent() {
                   borderBottom: `1px solid ${S.soft}`,
                   background:   `color-mix(in srgb, ${S.pass} 4%, transparent)`,
                   fontFamily:   S.fontUI,
-                  fontSize:     11,
+                  fontSize: 12,
                   color:        S.secondary,
                   lineHeight:   1.5,
                 }}>
@@ -685,18 +688,18 @@ function RunViewerContent() {
                       {envelope.engine_version && (
                         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0" }}>
                           <div style={{ width: 130, flexShrink: 0 }}>
-                            <span style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.07em", color: S.tertiary }}>
+                            <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.07em", color: S.tertiary }}>
                               ENGINE_VER
                             </span>
                           </div>
-                          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.primary }}>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>
                             {envelope.engine_version}
                           </span>
                         </div>
                       )}
                     </>
                   ) : (
-                    <div style={{ padding: "20px 0", textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                    <div style={{ padding: "20px 0", textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       No RunEnvelope stored for this run.
                     </div>
                   )}
@@ -718,7 +721,7 @@ function RunViewerContent() {
                   alignItems:   "center",
                   gap:          8,
                 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
                     ED-03
                   </span>
                   <span style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary }}>
@@ -741,7 +744,7 @@ function RunViewerContent() {
                         border:       `1px solid color-mix(in srgb, ${S.pass} 20%, transparent)`,
                         borderRadius: 2,
                         fontFamily:   S.fontUI,
-                        fontSize:     11,
+                        fontSize: 12,
                         color:        S.pass,
                       }}>
                         ✓ Policy config at this revision is immutable (WORM). The same policy_revision_id
@@ -756,7 +759,7 @@ function RunViewerContent() {
                       color:      S.secondary,
                       lineHeight: 1.6,
                     }}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.amber, fontWeight: 700, letterSpacing: "0.06em" }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, fontWeight: 700, letterSpacing: "0.06em" }}>
                         NOT PINNED
                       </span>
                       <br />
@@ -776,10 +779,10 @@ function RunViewerContent() {
                 borderRadius: 2,
                 padding:      "12px 14px",
               }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, marginBottom: 6 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.amber, marginBottom: 6 }}>
                   AUDIT NOTE — IFRS 9 / EMIR
                 </div>
-                <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.6 }}>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.6 }}>
                   This run record is append-only (WORM). The RunEnvelope hash chain constitutes
                   the prospective documentation trail required under IAS 39 / IFRS 9 §B6.4.
                   Retain this record per your hedge accounting policy.
@@ -793,7 +796,7 @@ function RunViewerContent() {
                   style={{
                     display:       "block",
                     fontFamily:    S.fontMono,
-                    fontSize:      10,
+                    fontSize: 12,
                     fontWeight:    700,
                     letterSpacing: "0.07em",
                     color:         S.bgPanel,
@@ -811,7 +814,7 @@ function RunViewerContent() {
                   style={{
                     display:       "block",
                     fontFamily:    S.fontMono,
-                    fontSize:      10,
+                    fontSize: 12,
                     fontWeight:    600,
                     letterSpacing: "0.07em",
                     color:         S.secondary,
@@ -830,7 +833,7 @@ function RunViewerContent() {
                   style={{
                     display:       "block",
                     fontFamily:    S.fontMono,
-                    fontSize:      10,
+                    fontSize: 12,
                     fontWeight:    700,
                     letterSpacing: "0.07em",
                     color:         S.bgDeep,
@@ -861,7 +864,7 @@ function RunViewerContent() {
         borderTop:      `1px solid ${S.rim}`,
         flexShrink:     0,
       }}>
-        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.06em" }}>
+        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>
           {renderTs} &middot; ORDR RUN VIEWER &middot; AUDIT TRAIL
         </span>
       </div>
@@ -873,6 +876,8 @@ export default function RunViewerPage() {
   const _planAllowed = usePlanRedirect("enterprise");
   if (!_planAllowed) return null;
   return (
+
+    <PageShell icon={Globe} title="Run Viewer" breadcrumb={["Dashboard", "Run Viewer"]} noPadding>
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
       <div style={{ flex: 1, overflowY: "auto" }}>
         <Suspense
@@ -894,5 +899,7 @@ export default function RunViewerPage() {
       </div>
       <HelpPanel config={RUN_VIEWER_HELP} storageKey="run-viewer" />
     </div>
-  );
+  
+    </PageShell>
+    );
 }

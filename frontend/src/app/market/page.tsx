@@ -212,7 +212,7 @@ function MarketPageInner() {
         <span
           style={{
             fontFamily: FONT_MONO,
-            fontSize: 9,
+            fontSize: 12,
             fontWeight: 700,
             color: "#26A69A",
             background: "rgba(38, 166, 154, 0.15)",
@@ -263,7 +263,7 @@ function MarketPageInner() {
               onClick={() => setInterval(tf.value)}
               style={{
                 fontFamily: FONT_MONO,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: interval === tf.value ? 700 : 500,
                 padding: "4px 10px",
                 borderRadius: 4,
@@ -282,7 +282,7 @@ function MarketPageInner() {
         <div style={{ flex: 1 }} />
 
         {/* Bar count */}
-        <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: "#545B69" }}>
+        <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: "#545B69" }}>
           {bars.length} bars
         </span>
 
@@ -291,7 +291,7 @@ function MarketPageInner() {
           onClick={refetch}
           style={{
             fontFamily: FONT_MONO,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             padding: "4px 12px",
             borderRadius: 6,

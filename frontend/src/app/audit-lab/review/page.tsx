@@ -10,15 +10,15 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import {
-  ClipboardCheck,
+import { ClipboardCheck,
   CheckCircle2,
   XCircle,
   AlertTriangle,
   Inbox,
   BarChart3,
-  Hash,
-} from "lucide-react";
+  Hash, Microscope } from "lucide-react"
+
+import { PageShell } from "@/components/layout/PageShell";
 
 /* ── Style tokens ─────────────────────────────────────────────────────────── */
 
@@ -195,20 +195,13 @@ export default function AuditLabReviewPage() {
   ];
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: S.bgDeep,
-        padding: "28px 40px",
-        fontFamily: S.fontUI,
-      }}
-    >
+    <PageShell icon={Microscope} title="Review Queue" breadcrumb={["Audit Lab","Review Queue"]}>
       {/* ── Breadcrumb + header ─────────────────────────────────────────── */}
       <div style={{ marginBottom: 24 }}>
         <div
           style={{
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             color: S.tertiary,
             letterSpacing: "0.1em",
             marginBottom: 6,
@@ -287,7 +280,7 @@ export default function AuditLabReviewPage() {
             <div
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 700,
                 color: S.tertiary,
                 letterSpacing: "0.08em",
@@ -327,7 +320,7 @@ export default function AuditLabReviewPage() {
             <div
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 700,
                 color: S.tertiary,
                 letterSpacing: "0.08em",
@@ -372,7 +365,7 @@ export default function AuditLabReviewPage() {
             <div
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 700,
                 color: S.tertiary,
                 letterSpacing: "0.08em",
@@ -491,7 +484,7 @@ export default function AuditLabReviewPage() {
                     key={h}
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 9,
+                      fontSize: 12,
                       fontWeight: 700,
                       letterSpacing: "0.08em",
                       color: S.tertiary,
@@ -651,7 +644,7 @@ export default function AuditLabReviewPage() {
                         disabled={isResolving}
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: 700,
                           letterSpacing: "0.06em",
                           color: S.green,
@@ -674,7 +667,7 @@ export default function AuditLabReviewPage() {
                         disabled={isResolving}
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: 700,
                           letterSpacing: "0.06em",
                           color: S.red,
@@ -738,6 +731,6 @@ export default function AuditLabReviewPage() {
           </table>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

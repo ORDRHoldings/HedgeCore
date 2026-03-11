@@ -93,7 +93,7 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
         <span
           style={{
             fontFamily:    S.fontMono,
-            fontSize:      10,
+            fontSize: 12,
             color:         S.primary,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
@@ -141,7 +141,7 @@ export default function PolisophicMiniWidget({ token, onRemove }: Props) {
               message="Select a hedge policy template to activate it for your branch."
               action={{
                 label: "Select Policy",
-                onClick: () => router.push("/input"),
+                onClick: () => router.push("/position-desk"),
               }}
             />
           </div>

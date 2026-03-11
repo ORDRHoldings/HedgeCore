@@ -146,7 +146,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
             background: S.bgSub,
             borderBottom: `1px solid ${S.rim}`,
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 600,
             letterSpacing: "0.08em",
             color: S.tertiary,
@@ -190,18 +190,18 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
             </div>
           ) : sorted.length === 0 ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: "48px 24px" }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.amber, textTransform: "uppercase" as const }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.amber, textTransform: "uppercase" as const }}>
                 No Eligible Positions
               </div>
               <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, textAlign: "center" as const, lineHeight: 1.6, maxWidth: 380 }}>
-                No positions have status <span style={{ fontFamily: S.fontMono, color: S.cyan, fontSize: 11 }}>POLICY_ASSIGNED</span> or <span style={{ fontFamily: S.fontMono, color: S.cyan, fontSize: 11 }}>READY_TO_EXECUTE</span>.
+                No positions have status <span style={{ fontFamily: S.fontMono, color: S.cyan, fontSize: 12 }}>POLICY_ASSIGNED</span> or <span style={{ fontFamily: S.fontMono, color: S.cyan, fontSize: 12 }}>READY_TO_EXECUTE</span>.
                 Assign a hedge policy to positions before running the execution pipeline.
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                <a href="/policy-desk" style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", color: S.bgPanel, background: S.cyan, padding: "5px 14px", borderRadius: 2, textDecoration: "none" }}>
+                <a href="/policies?tab=assign" style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", color: S.bgPanel, background: S.cyan, padding: "5px 14px", borderRadius: 2, textDecoration: "none" }}>
                   Go to Policy Desk
                 </a>
-                <a href="/position-desk" style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", color: S.primary, background: "transparent", border: `1px solid ${S.rim}`, padding: "5px 14px", borderRadius: 2, textDecoration: "none" }}>
+                <a href="/position-desk" style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", color: S.primary, background: "transparent", border: `1px solid ${S.rim}`, padding: "5px 14px", borderRadius: 2, textDecoration: "none" }}>
                   View Positions
                 </a>
               </div>
@@ -241,7 +241,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 11,
+                      fontSize: 12,
                       color: S.secondary,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -252,7 +252,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
                   </span>
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       color: S.secondary,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -264,7 +264,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600,
                       color: S.primary,
                     }}
@@ -274,7 +274,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 500,
                       textAlign: "right",
                       color: isAR ? S.pass : S.amber,
@@ -285,7 +285,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 11,
+                      fontSize: 12,
                       color: S.tertiary,
                     }}
                   >
@@ -294,7 +294,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 600,
                       color: isAR ? S.pass : S.amber,
                       letterSpacing: "0.06em",
@@ -305,7 +305,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       color: S.tertiary,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -336,7 +336,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               color: S.tertiary,
             }}
           >
@@ -353,7 +353,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
               border: "none",
               borderRadius: 4,
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               letterSpacing: "0.10em",
               cursor: selected.size > 0 ? "pointer" : "not-allowed",
@@ -387,7 +387,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: "0.12em",
               color: S.tertiary,
@@ -411,7 +411,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               color: S.tertiary,
               marginTop: 4,
             }}
@@ -430,7 +430,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: "0.12em",
               color: S.tertiary,
@@ -444,7 +444,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
             <div
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 11,
+                fontSize: 12,
                 color: S.tertiary,
               }}
             >
@@ -475,12 +475,12 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         color: S.secondary,
                       }}
                     >
                       {fmtNum.format(notional)}{" "}
-                      <span style={{ color: S.tertiary, fontSize: 10 }}>
+                      <span style={{ color: S.tertiary, fontSize: 12 }}>
                         {fmtPct.format(pct)}
                       </span>
                     </span>
@@ -520,7 +520,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: "0.12em",
               color: S.tertiary,
@@ -544,7 +544,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 11,
+                      fontSize: 12,
                       color: S.secondary,
                     }}
                   >
@@ -576,7 +576,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: "0.12em",
               color: S.tertiary,
@@ -600,7 +600,7 @@ export default function StepReview({ positions, loading, onProceed }: Props) {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               color: S.tertiary,
               marginTop: 2,
             }}

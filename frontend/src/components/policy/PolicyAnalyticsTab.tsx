@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * /policy-dashboard — Policy Decision Surface
+ * PolicyAnalyticsTab — Policy Decision Surface (tab component)
  *
- * Unified institutional home for policy governance. Displays the active policy,
- * effectiveness scoring, position assignment overview, provenance, and quick
- * navigation to related operational surfaces.
+ * Extracted from /policy-dashboard for use in the unified /policies tabbed layout.
+ * Displays the active policy, effectiveness scoring, position assignment overview,
+ * provenance, and quick navigation to related operational surfaces.
  */
 
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -136,7 +136,7 @@ function postureBadgeColor(posture: string | undefined): string {
 }
 
 // ── Page component ──────────────────────────────────────────────────────────
-export default function PolicyDashboardPage() {
+export default function PolicyAnalyticsTab() {
   const { token, user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -366,7 +366,7 @@ export default function PolicyDashboardPage() {
                 positions.
               </div>
               <button
-                onClick={() => router.push("/policies")}
+                onClick={() => router.push("/policies?tab=library")}
                 style={{
                   fontFamily: S.fontMono,
                   fontSize: 12,
@@ -416,7 +416,7 @@ export default function PolicyDashboardPage() {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 600,
                       letterSpacing: "0.08em",
                       padding: "2px 8px",
@@ -431,7 +431,7 @@ export default function PolicyDashboardPage() {
                   <span
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 600,
                       letterSpacing: "0.08em",
                       padding: "2px 8px",
@@ -447,7 +447,7 @@ export default function PolicyDashboardPage() {
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 600,
                         letterSpacing: "0.08em",
                         padding: "2px 8px",
@@ -478,7 +478,7 @@ export default function PolicyDashboardPage() {
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 600,
                     letterSpacing: "0.1em",
                     color: S.tertiary,
@@ -531,7 +531,7 @@ export default function PolicyDashboardPage() {
                       <div
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: 600,
                           letterSpacing: "0.08em",
                           color: S.tertiary,
@@ -556,7 +556,7 @@ export default function PolicyDashboardPage() {
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: S.tertiary,
                     marginTop: 8,
                     letterSpacing: "0.02em",
@@ -589,7 +589,7 @@ export default function PolicyDashboardPage() {
                     <div
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 600,
                         letterSpacing: "0.08em",
                         color: effectivenessColor,
@@ -602,7 +602,7 @@ export default function PolicyDashboardPage() {
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     color: S.tertiary,
                     marginBottom: 4,
                   }}
@@ -612,7 +612,7 @@ export default function PolicyDashboardPage() {
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     color: S.tertiary,
                   }}
                 >
@@ -682,7 +682,7 @@ export default function PolicyDashboardPage() {
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 600,
                     letterSpacing: "0.08em",
                     color: S.tertiary,
@@ -730,7 +730,7 @@ export default function PolicyDashboardPage() {
               <div
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   letterSpacing: "0.1em",
                   color: S.tertiary,
@@ -820,7 +820,7 @@ export default function PolicyDashboardPage() {
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 600,
                     letterSpacing: "0.1em",
                     color: S.tertiary,
@@ -874,7 +874,7 @@ export default function PolicyDashboardPage() {
                       <span
                         style={{
                           fontFamily: S.fontMono,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: S.secondary,
                         }}
                       >
@@ -896,7 +896,7 @@ export default function PolicyDashboardPage() {
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: S.tertiary,
                     marginTop: 10,
                     opacity: 0.7,
@@ -920,7 +920,7 @@ export default function PolicyDashboardPage() {
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 600,
                     letterSpacing: "0.1em",
                     color: S.tertiary,
@@ -980,7 +980,7 @@ export default function PolicyDashboardPage() {
               <div
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   letterSpacing: "0.1em",
                   color: S.tertiary,
@@ -1048,7 +1048,7 @@ export default function PolicyDashboardPage() {
               <div
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   letterSpacing: "0.1em",
                   color: S.tertiary,
@@ -1075,11 +1075,11 @@ export default function PolicyDashboardPage() {
                     value={activeInstance.id.slice(0, 16)}
                   />
                   <button
-                    onClick={() => router.push("/policies")}
+                    onClick={() => router.push("/policies?tab=library")}
                     style={{
                       marginTop: 8,
                       fontFamily: S.fontMono,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600,
                       letterSpacing: "0.06em",
                       color: S.cyan,
@@ -1122,7 +1122,7 @@ export default function PolicyDashboardPage() {
               <div
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   letterSpacing: "0.1em",
                   color: S.tertiary,
@@ -1141,11 +1141,11 @@ export default function PolicyDashboardPage() {
               >
                 <ActionButton
                   label="CHANGE POLICY"
-                  onClick={() => router.push("/policies")}
+                  onClick={() => router.push("/policies?tab=library")}
                 />
                 <ActionButton
                   label="ASSIGN POSITIONS"
-                  onClick={() => router.push("/policy-desk")}
+                  onClick={() => router.push("/policies?tab=assign")}
                 />
                 <ActionButton
                   label="BUILD NEW"
@@ -1169,7 +1169,7 @@ export default function PolicyDashboardPage() {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: "0.1em",
               color: S.tertiary,
@@ -1229,7 +1229,7 @@ export default function PolicyDashboardPage() {
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 600,
                         letterSpacing: "0.06em",
                         color: S.secondary,
@@ -1284,7 +1284,7 @@ export default function PolicyDashboardPage() {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               letterSpacing: "0.1em",
               color: S.tertiary,
               marginBottom: 4,
@@ -1297,7 +1297,7 @@ export default function PolicyDashboardPage() {
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: S.tertiary,
               opacity: 0.6,
             }}
@@ -1326,7 +1326,7 @@ function DetailRow({
       <div
         style={{
           fontFamily: S.fontMono,
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 600,
           letterSpacing: "0.06em",
           color: S.tertiary,
@@ -1363,7 +1363,7 @@ function MetaCell({ label, value }: { label: string; value: string }) {
       <div
         style={{
           fontFamily: S.fontMono,
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 600,
           letterSpacing: "0.06em",
           color: S.tertiary,
@@ -1399,7 +1399,7 @@ function ProvenanceRow({ label, value }: { label: string; value: string }) {
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: 11,
+          fontSize: 12,
           color: S.tertiary,
         }}
       >
@@ -1408,7 +1408,7 @@ function ProvenanceRow({ label, value }: { label: string; value: string }) {
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 600,
           color: S.secondary,
         }}
@@ -1435,7 +1435,7 @@ function ActionButton({
         justifyContent: "space-between",
         width: "100%",
         fontFamily: S.fontMono,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 600,
         letterSpacing: "0.06em",
         color: S.primary,

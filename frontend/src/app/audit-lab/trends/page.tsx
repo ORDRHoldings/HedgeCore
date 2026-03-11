@@ -8,9 +8,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Microscope } from "lucide-react"
 import dynamic from "next/dynamic";
 import type { EChartsOption } from "echarts";
+
+import { PageShell } from "@/components/layout/PageShell";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -309,11 +311,11 @@ export default function AuditLabTrendsPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: S.bgDeep, padding: "28px 40px", fontFamily: S.fontUI }}>
+    <PageShell icon={Microscope} title="Audit Trends" breadcrumb={["Audit Lab","Trends"]}>
       {/* Breadcrumb + header */}
       <div style={{ marginBottom: 24 }}>
         <div style={{
-          fontFamily: S.fontMono, fontSize: 10, color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
           letterSpacing: "0.1em", marginBottom: 6,
         }}>
           <a href="/audit-lab" style={{ color: S.cyan, textDecoration: "none" }}>AUDIT LAB</a>
@@ -419,6 +421,6 @@ export default function AuditLabTrendsPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

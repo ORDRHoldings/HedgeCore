@@ -6,23 +6,27 @@
 
 @layer base {
   :root {
-    /* ── Light Alabaster Palette ── */
-    --bg-deep: #F8FAFC;
-    --bg-sub: #F1F5F9;
-    --bg-panel: #FFFFFF;
-    --border-rim: #E2E8F0;
-    --border-soft: #CBD5E1;
+    /* ── Dark Monochrome Palette ── */
+    --bg-deep: #111827;
+    --bg-sub: #293548;
+    --bg-panel: #1F2937;
+    --bg-sidebar: #0B1120;
+    --border-rim: #374151;
+    --border-soft: #1F2937;
+    --accent-blue: #1C62F2;
+    --accent-blue-dim: rgba(28, 98, 242, 0.10);
     --accent-cyan: #1C62F2;
     --accent-indigo: #4F46E5;
     --accent-amber: #D97706;
     --accent-red: #DC2626;
     --accent-green: #059669;
-    --text-primary: #0F172A;
-    --text-secondary: #334155;
-    --text-tertiary: #94A3B8;
+    --text-primary: #E5E7EB;
+    --text-secondary: #9CA3AF;
+    --text-tertiary: #6B7280;
+    --text-disabled: #374151;
     --font-heading: 'Manrope', sans-serif;
-    --font-ui: 'Inter', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-ui: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
     --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 12px;
@@ -54,18 +58,18 @@
     --terminal-space-6: 24px;
     --terminal-space-8: 32px;
 
-    /* Colors - Light Institutional Theme */
-    --terminal-bg: #F8FAFC;
-    --terminal-topbar-bg: #FFFFFF;
-    --terminal-rail-bg: #F1F5F9;
-    --terminal-workspace-bg: #F8FAFC;
-    --terminal-panel-bg: #FFFFFF;
-    --terminal-border: #E2E8F0;
-    --terminal-hover-bg: #EFF6FF;
+    /* Colors - Dark Institutional Theme */
+    --terminal-bg: #111827;
+    --terminal-topbar-bg: #1F2937;
+    --terminal-rail-bg: #0B1120;
+    --terminal-workspace-bg: #111827;
+    --terminal-panel-bg: #1F2937;
+    --terminal-border: #374151;
+    --terminal-hover-bg: rgba(28, 98, 242, 0.08);
 
-    --terminal-text-primary: #0F172A;
-    --terminal-text-secondary: #334155;
-    --terminal-text-tertiary: #94A3B8;
+    --terminal-text-primary: #E5E7EB;
+    --terminal-text-secondary: #9CA3AF;
+    --terminal-text-tertiary: #6B7280;
 
     --terminal-accent: #1C62F2;
     --terminal-success: #059669;
@@ -81,11 +85,11 @@
     --terminal-rightrail-width: 360px;
 
     /* Pipeline state colors */
-    --state-sandbox-bg: #F1F5F9;
-    --state-sandbox-border: #94A3B8;
-    --state-staging-bg: #FFFBEB;
+    --state-sandbox-bg: #1F2937;
+    --state-sandbox-border: #6B7280;
+    --state-staging-bg: rgba(217, 119, 6, 0.08);
     --state-staging-border: #D97706;
-    --state-ledger-bg: #EFF6FF;
+    --state-ledger-bg: rgba(28, 98, 242, 0.08);
     --state-ledger-border: #1C62F2;
 
     /* Status semantic */
@@ -116,6 +120,11 @@
 
   .font-mono, code, pre {
     font-family: var(--font-mono) !important;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
   }
 
   @keyframes fadeIn {

@@ -24,6 +24,9 @@ import ExportTab from "../../../components/ledger/ExportTab";
 import ProvenanceTab from "../../../components/ledger/ProvenanceTab";
 import AnchorTab from "../../../components/ledger/AnchorTab";
 
+import { PageShell } from "@/components/layout/PageShell";
+import { Globe } from "lucide-react";
+
 export default function LedgerDetailPage() {
   const params = useParams<{ ledger_id: string }>();
   const ledger_id = params?.ledger_id ?? "";
@@ -57,15 +60,21 @@ export default function LedgerDetailPage() {
 
   if (ledgerLoading || !currentLedger) {
     return (
+
+    
       <div className="p-8">
         <EmptyState type="loading" message="Loading ledger entry…" />
       </div>
+    
+    
     );
   }
 
   const l = currentLedger;
 
   return (
+    <PageShell icon={Globe} title="Ledger Detail" breadcrumb={["Dashboard", "Ledger", "Detail"]} noPadding>
+
     <div className="h-full flex">
       {/* Left Rail */}
       <aside className="w-[25%] min-w-[260px] border-r border-[var(--border-rim)] bg-[var(--bg-panel)] overflow-auto">
@@ -137,5 +146,7 @@ export default function LedgerDetailPage() {
         ]}
       />
     </div>
+  
+    </PageShell>
   );
 }

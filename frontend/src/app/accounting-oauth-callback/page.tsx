@@ -46,7 +46,7 @@ function CallbackContent() {
         textAlign:    "center",
       }}
     >
-      <div style={{ fontSize: 9, letterSpacing: "0.1em", color: "#64748b", marginBottom: 14 }}>
+      <div style={{ fontSize: 12, letterSpacing: "0.1em", color: "#64748b", marginBottom: 14 }}>
         ORDR TERMINAL · ACCOUNTING CONNECTION
       </div>
 
@@ -56,14 +56,14 @@ function CallbackContent() {
         Connected Successfully
       </div>
 
-      <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 24, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 24, lineHeight: 1.6 }}>
         <span style={{ color }}>{displayName}</span> has been connected to ORDR.
         This window will close automatically.
       </div>
 
       <span
         style={{
-          fontSize:      9,
+          fontSize: 12,
           letterSpacing: "0.08em",
           fontWeight:    700,
           color,
@@ -93,7 +93,7 @@ export default function AccountingOAuthCallbackPage() {
       }}
     >
       <Suspense fallback={
-        <div style={{ color: "#64748b", fontSize: 11, letterSpacing: "0.08em" }}>
+        <div style={{ color: "#64748b", fontSize: 12, letterSpacing: "0.08em" }}>
           CONNECTING…
         </div>
       }>

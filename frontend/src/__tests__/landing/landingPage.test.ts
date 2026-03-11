@@ -112,13 +112,13 @@ describe("Landing Page structure", () => {
       { title: "Portfolio Risk", href: "/portfolio-risk" },
       { title: "Scenario Studio", href: "/scenario-studio" },
       { title: "Sandbox", href: "/sandbox" },
-      { title: "Currency Desk", href: "/currency-fx" },
+      { title: "Currency Desk", href: "/market-overview" },
       { title: "Treasury Desk", href: "/hedge-desk" },
       { title: "HedgeWiki", href: "/methodology" },
     ];
     expect(links.find((l) => l.title === "ORDR Market")?.href).toBe("/market");
     expect(links.find((l) => l.title === "ORDR Terminal")?.href).toBe("/auth/login");
-    expect(links.find((l) => l.title === "Currency Desk")?.href).toBe("/currency-fx");
+    expect(links.find((l) => l.title === "Currency Desk")?.href).toBe("/market-overview");
     expect(links.find((l) => l.title === "Treasury Desk")?.href).toBe("/hedge-desk");
     expect(links.find((l) => l.title === "HedgeWiki")?.href).toBe("/methodology");
   });
