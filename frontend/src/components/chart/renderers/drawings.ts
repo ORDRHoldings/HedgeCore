@@ -114,6 +114,37 @@ export interface Drawing {
   // Gann
   gannShowAngles?: boolean;
   gannShowPriceTime?: boolean;
+  // Phase 1 — Line tool innovations
+  eventType?: "NFP" | "CPI" | "FOMC" | "CB_MEETING" | "EARNINGS";
+  confluenceZoneEnabled?: boolean;
+  rRatios?: number[];
+  // Phase 2 — Channel innovations
+  fibSubdivisions?: boolean;
+  showMeanReversionZone?: boolean;
+  // Phase 5 — Elliott Wave
+  waveDegree?: "grand_supercycle" | "supercycle" | "cycle" | "primary" | "intermediate" | "minor" | "minute" | "minuette" | "sub_minuette";
+  waveLabeling?: "roman" | "arabic" | "lowercase";
+  // Phase 6 — Shape innovations
+  atrCircleEnabled?: boolean;
+  atrPeriod?: number;
+  phiEllipse?: boolean;
+  formationTag?: "ASCENDING" | "DESCENDING" | "SYMMETRICAL" | "WEDGE" | "PENNANT";
+  tradeDirection?: "LONG" | "SHORT";
+  tradeUnits?: number;
+  sentimentTag?: "BULLISH" | "BEARISH" | "NEUTRAL";
+  measuredArcMode?: boolean;
+  // Phase 7 — Measurement/Annotation innovations
+  hedgeCostBps?: number;
+  scenarioBranches?: { label: string; probability: number; endIndex: number; endPrice: number }[];
+  institutionalTag?: "RISK" | "SIGNAL" | "REVIEW" | "APPROVED" | "BLOCKED";
+  teamRole?: "ANALYST" | "RISK" | "TRADER" | "COMPLIANCE";
+  alertEnabled?: boolean;
+  alertTriggered?: boolean;
+  policyLinkForwardRate?: number;
+  policyLinkHedgeRatio?: number;
+  signalStrength?: number;
+  eventTaxonomy?: "NFP" | "CPI" | "FOMC" | "ECB" | "BOJ" | "BOE" | "RBA" | "SNB" | "TRADE_ENTRY" | "TRADE_EXIT" | "POSITION_OPEN" | "POSITION_CLOSE";
+  atrMultiple?: number;
 }
 
 export type RectLabelPosition =
@@ -796,7 +827,27 @@ export function drawDrawings(
       case "horizontal": drawHorizontalDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered); break;
       case "fibonacci": drawFibonacciDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered); break;
       case "rectangle": drawRectangleDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars); break;
-      default: drawGenericDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars); break;
+      default: {
+        drawGenericDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars);
+        // Stats box for all generic tools (mirrors trendline behavior)
+        const anyStatEnabled = d.stats.showPrice || d.stats.showPercent || d.stats.showPips ||
+          d.stats.showBars || d.stats.showDateRange || d.stats.showAngle;
+        if (anyStatEnabled && (d.stats.alwaysShow || isSelected) && bars && bars.length > 0 && d.points.length >= 2) {
+          const computed = computeDrawingStats(d, bars, pair, layout, viewport, scale);
+          const { startIndex, endIndex, priceMin, priceMax } = viewport;
+          const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
+          const midX = (
+            indexToX(d.points[0].index, startIndex, endIndex, chartLeft, chartWidth) +
+            indexToX(d.points[1].index, startIndex, endIndex, chartLeft, chartWidth)
+          ) / 2;
+          const midY = (
+            priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight, scale) +
+            priceToY(d.points[1].price, priceMin, priceMax, mainTop, mainHeight, scale)
+          ) / 2;
+          drawStatsBox(ctx, computed, d.stats, midX, midY, d.color);
+        }
+        break;
+      }
     }
   }
 }
