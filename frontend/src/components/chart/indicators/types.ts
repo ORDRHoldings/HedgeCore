@@ -97,3 +97,20 @@ export interface PivotPointData {
   s2: number;
   s3: number;
 }
+
+export interface SuperTrendPoint { t: number; value: number; direction: "up" | "down"; }
+export interface ChandelierPoint { t: number; longStop: number; shortStop: number; }
+export interface ChandeKrollPoint { t: number; stop1: number; stop2: number; }
+export interface AlligatorPoint { t: number; jaw: number; teeth: number; lips: number; }
+export interface ZigzagPoint { t: number; price: number; barIndex: number; direction: "up" | "down"; }
+export interface FibLevel { ratio: number; price: number; label: string; }
+export interface AutoFibData { t: number; high: number; low: number; levels: FibLevel[]; isUptrend: boolean; }
+export interface MARibbonData { period: number; color: string; points: IndicatorPoint[]; }
+export interface BullBearPoint { t: number; bull: number; bear: number; }
+export interface KlingerPoint { t: number; kvo: number; signal: number; }
+export interface PPOPoint { t: number; ppo: number; signal: number; histogram: number; }
+export interface RVIPoint { t: number; rvi: number; signal: number; }
+export interface SMIPoint { t: number; smi: number; signal: number; }
+export interface TSIPoint { t: number; tsi: number; signal: number; }
+export interface VortexPoint { t: number; viPlus: number; viMinus: number; }
+export interface AroonPoint { t: number; up: number; down: number; oscillator: number; }

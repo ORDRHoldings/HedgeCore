@@ -4,6 +4,13 @@ import type {
   MACDPoint,
   IchimokuPoint,
   PivotPointData,
+  SuperTrendPoint,
+  ChandelierPoint,
+  ChandeKrollPoint,
+  AlligatorPoint,
+  ZigzagPoint,
+  AutoFibData,
+  MARibbonData,
 } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
 import type { PriceScale } from "../core/data";
@@ -499,4 +506,230 @@ export function drawPivotPoints(
   drawPivotLine(pivots.s1, "S1", "#26A69A", true);
   drawPivotLine(pivots.s2, "S2", "#26A69A", true);
   drawPivotLine(pivots.s3, "S3", "#26A69A", true);
+}
+
+// ── SuperTrend overlay ────────────────────────────────
+
+export function drawSuperTrend(
+  ctx: CanvasRenderingContext2D,
+  points: SuperTrendPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  scale: PriceScale = "linear",
+): void {
+  if (points.length < 2) return;
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth, mainTop, mainHeight } = layout;
+  ctx.lineWidth = 2;
+  let lastX = 0, lastY = 0, lastDir: "up" | "down" | null = null;
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(pt.value, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    const color = pt.direction === "up" ? "#26A69A" : "#EF5350";
+    if (lastDir !== null && lastDir === pt.direction) {
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+    lastX = x; lastY = y; lastDir = pt.direction;
+  }
+}
+
+// ── Chandelier Exit overlay ───────────────────────────
+
+export function drawChandelierExit(
+  ctx: CanvasRenderingContext2D,
+  points: ChandelierPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  scale: PriceScale = "linear",
+): void {
+  if (points.length < 2) return;
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth, mainTop, mainHeight } = layout;
+  // Draw longStop (green dashed)
+  ctx.strokeStyle = "#26A69A"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+  ctx.beginPath(); let s1 = false;
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(pt.longStop, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    if (!s1) { ctx.moveTo(x, y); s1 = true; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  // Draw shortStop (red dashed)
+  ctx.strokeStyle = "#EF5350"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+  ctx.beginPath(); let s2 = false;
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(pt.shortStop, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    if (!s2) { ctx.moveTo(x, y); s2 = true; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ── Chande Kroll Stop overlay ─────────────────────────
+
+export function drawChandeKrollStop(
+  ctx: CanvasRenderingContext2D,
+  points: ChandeKrollPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  scale: PriceScale = "linear",
+): void {
+  if (points.length < 2) return;
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth, mainTop, mainHeight } = layout;
+  // Draw stop1 (green dotted)
+  ctx.strokeStyle = "#26A69A"; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]);
+  ctx.beginPath(); let s1 = false;
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(pt.stop1, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    if (!s1) { ctx.moveTo(x, y); s1 = true; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  // Draw stop2 (red dotted)
+  ctx.strokeStyle = "#EF5350"; ctx.lineWidth = 1.5; ctx.setLineDash([2, 3]);
+  ctx.beginPath(); let s2 = false;
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(pt.stop2, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    if (!s2) { ctx.moveTo(x, y); s2 = true; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ── Williams Alligator overlay ────────────────────────
+
+export function drawAlligator(
+  ctx: CanvasRenderingContext2D,
+  points: AlligatorPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  scale: PriceScale = "linear",
+): void {
+  if (points.length < 2) return;
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth, mainTop, mainHeight } = layout;
+  // Jaw — blue dashed [8,5]
+  ctx.strokeStyle = "#2962FF"; ctx.lineWidth = 1.5; ctx.setLineDash([8, 5]);
+  ctx.beginPath(); let j = false;
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(pt.jaw, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    if (!j) { ctx.moveTo(x, y); j = true; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  // Teeth — red dashed [5,3]
+  ctx.strokeStyle = "#EF5350"; ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
+  ctx.beginPath(); let t = false;
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(pt.teeth, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    if (!t) { ctx.moveTo(x, y); t = true; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  // Lips — green solid
+  ctx.strokeStyle = "#26A69A"; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+  ctx.beginPath(); let l = false;
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(pt.lips, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    if (!l) { ctx.moveTo(x, y); l = true; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+// ── ZigZag overlay ────────────────────────────────────
+
+export function drawZigzag(
+  ctx: CanvasRenderingContext2D,
+  points: ZigzagPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  scale: PriceScale = "linear",
+): void {
+  if (points.length < 2) return;
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth, mainTop, mainHeight } = layout;
+  ctx.strokeStyle = "#FFD54F"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); let started = false;
+  for (const pt of points) {
+    const idx = pt.barIndex;
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(pt.price, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+// ── Auto Fibonacci overlay ────────────────────────────
+
+export function drawAutoFib(
+  ctx: CanvasRenderingContext2D,
+  data: AutoFibData,
+  layout: ChartLayout,
+  viewport: Viewport,
+  scale: PriceScale = "linear",
+): void {
+  if (!data) return;
+  const { chartLeft, chartWidth, mainTop, mainHeight } = layout;
+  const fibColors = ["#9598A1", "#FFD54F", "#FF9800", "#F06292", "#26A69A", "#42A5F5", "#7E57C2"];
+  data.levels.forEach((lvl, i) => {
+    const y = priceToY(lvl.price, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    if (y < mainTop || y > mainTop + mainHeight) return;
+    const color = fibColors[i % fibColors.length];
+    ctx.strokeStyle = color; ctx.lineWidth = 0.8; ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(chartLeft, y);
+    ctx.lineTo(chartLeft + chartWidth, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Label
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = color; ctx.textAlign = "right";
+    ctx.fillText(`${lvl.label} ${lvl.price.toFixed(4)}`, chartLeft + chartWidth - 4, y - 2);
+  });
+}
+
+// ── MA Ribbon overlay ─────────────────────────────────
+
+export function drawMARibbon(
+  ctx: CanvasRenderingContext2D,
+  ribbons: MARibbonData[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  scale: PriceScale = "linear",
+): void {
+  for (const ribbon of ribbons) {
+    if (ribbon.points.length < 2) continue;
+    drawIndicatorLine(ctx, ribbon.points, bars, layout, viewport, ribbon.color, 1, scale);
+  }
 }

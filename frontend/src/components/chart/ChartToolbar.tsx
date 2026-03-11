@@ -49,6 +49,14 @@ const MA_ITEMS: DropdownItem[] = [
   { key: "hma9", label: "HMA 9", color: "#00E676" },
   { key: "tema20", label: "TEMA 20", color: "#FF4081" },
   { key: "vwap", label: "VWAP", color: THEME.vwapColor },
+  { key: "wma", label: "WMA 20", color: "#FF9800" },
+  { key: "smma", label: "SMMA 20", color: "#FF7043" },
+  { key: "alma", label: "ALMA 21", color: "#AB47BC" },
+  { key: "dema", label: "DEMA 20", color: "#26C6DA" },
+  { key: "lsma", label: "LSMA 25", color: "#66BB6A" },
+  { key: "mcginley", label: "McGinley 14", color: "#FFA726" },
+  { key: "vwma", label: "VWMA 20", color: "#EC407A" },
+  { key: "maRibbon", label: "MA Ribbon", color: "#EF5350" },
 ];
 
 const BAND_ITEMS: DropdownItem[] = [
@@ -56,6 +64,13 @@ const BAND_ITEMS: DropdownItem[] = [
   { key: "keltner", label: "Keltner Channel", color: THEME.kcLine },
   { key: "ichimoku", label: "Ichimoku Cloud", color: "#2962FF" },
   { key: "donchian", label: "Donchian Channel", color: "#00BCD4" },
+  { key: "envelope", label: "Envelope (20,2.5%)", color: "#78909C" },
+  { key: "supertrend", label: "SuperTrend (10,3)", color: "#26A69A" },
+  { key: "chandelierExit", label: "Chandelier Exit", color: "#26A69A" },
+  { key: "chandeKrollStop", label: "Chande Kroll Stop", color: "#EF5350" },
+  { key: "alligator", label: "Alligator", color: "#2962FF" },
+  { key: "zigzag", label: "ZigZag", color: "#FFD54F" },
+  { key: "autoFib", label: "Auto Fibonacci", color: "#26A69A" },
 ];
 
 const OSCILLATOR_ITEMS: DropdownItem[] = [
@@ -66,6 +81,30 @@ const OSCILLATOR_ITEMS: DropdownItem[] = [
   { key: "williamsR", label: "Williams %R", color: "#FF6D00", isSubPane: true },
   { key: "cci", label: "CCI (20)", color: "#2196F3", isSubPane: true },
   { key: "adx", label: "ADX (14)", color: "#787B86", isSubPane: true },
+  { key: "ao", label: "Awesome Oscillator", color: "#26A69A", isSubPane: true },
+  { key: "bop", label: "Balance of Power", color: "#9E9E9E", isSubPane: true },
+  { key: "bullBearPower", label: "Bull Bear Power", color: "#26A69A", isSubPane: true },
+  { key: "cmo", label: "CMO (14)", color: "#FF6D00", isSubPane: true },
+  { key: "choppiness", label: "Choppiness (14)", color: "#9E9E9E", isSubPane: true },
+  { key: "connorsRSI", label: "Connors RSI", color: "#7B1FA2", isSubPane: true },
+  { key: "dpo", label: "DPO (21)", color: "#FF4081", isSubPane: true },
+  { key: "fisher", label: "Fisher Transform", color: "#E91E63", isSubPane: true },
+  { key: "klinger", label: "Klinger Oscillator", color: "#2196F3", isSubPane: true },
+  { key: "kst", label: "KST", color: "#FF9800", isSubPane: true },
+  { key: "massIndex", label: "Mass Index", color: "#9C27B0", isSubPane: true },
+  { key: "momentum", label: "Momentum (10)", color: "#26C6DA", isSubPane: true },
+  { key: "ppo", label: "PPO", color: "#2962FF", isSubPane: true },
+  { key: "roc", label: "ROC (9)", color: "#00BCD4", isSubPane: true },
+  { key: "rvi", label: "Relative Vigor Index", color: "#26C6DA", isSubPane: true },
+  { key: "trix", label: "TRIX (18)", color: "#FF4081", isSubPane: true },
+  { key: "tsi", label: "TSI", color: "#7B1FA2", isSubPane: true },
+  { key: "ultimateOscillator", label: "Ultimate Oscillator", color: "#FF9800", isSubPane: true },
+  { key: "vortex", label: "Vortex (14)", color: "#26C6DA", isSubPane: true },
+  { key: "aroon", label: "Aroon (25)", color: "#26C6DA", isSubPane: true },
+  { key: "bbPercentB", label: "BB %B", color: "#2196F3", isSubPane: true },
+  { key: "bbWidth", label: "BB Width", color: "#FF9800", isSubPane: true },
+  { key: "histVol", label: "Historical Volatility", color: "#7B1FA2", isSubPane: true },
+  { key: "correlation", label: "Correlation Coeff", color: "#26A69A", isSubPane: true },
 ];
 
 const VOLUME_ITEMS: DropdownItem[] = [
@@ -73,6 +112,13 @@ const VOLUME_ITEMS: DropdownItem[] = [
   { key: "obv", label: "OBV", color: "#FF9800", isSubPane: true },
   { key: "mfi", label: "MFI (14)", color: "#E040FB", isSubPane: true },
   { key: "cmf", label: "CMF (20)", color: "#00BCD4", isSubPane: true },
+  { key: "adl", label: "Acc/Dist Line", color: "#FF9800", isSubPane: true },
+  { key: "cvd", label: "Cumulative Vol Delta", color: "#26C6DA", isSubPane: true },
+  { key: "cvi", label: "Chaikin Volatility", color: "#FF6D00", isSubPane: true },
+  { key: "netVolume", label: "Net Volume", color: "#26A69A", isSubPane: true },
+  { key: "pvt", label: "Price Vol Trend", color: "#E91E63", isSubPane: true },
+  { key: "volumeOscillator", label: "Volume Oscillator", color: "#FF9800", isSubPane: true },
+  { key: "adr", label: "Avg Daily Range", color: "#FFD54F", isSubPane: true },
 ];
 
 const SMART_ITEMS: DropdownItem[] = [
