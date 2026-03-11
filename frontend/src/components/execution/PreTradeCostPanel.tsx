@@ -33,14 +33,14 @@ export default function PreTradeCostPanel({ positions, calcResult }: PreTradeCos
           display: "flex", alignItems: "center", gap: 8, width: "100%",
           padding: "10px 0", background: "transparent", border: "none", cursor: "pointer",
           fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-          fontSize: 10, fontWeight: 600, letterSpacing: "0.10em",
+          fontSize: 12, fontWeight: 600, letterSpacing: "0.10em",
           color: "var(--text-tertiary)", textTransform: "uppercase",
         }}
       >
         <span style={{ transition: "transform 0.15s", transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
         PRE-TRADE COST ANALYSIS
         <span style={{
-          fontSize: 9, padding: "1px 5px",
+          fontSize: 12, padding: "1px 5px",
           border: "1px solid rgba(245,158,11,0.3)",
           background: "rgba(245,158,11,0.06)",
           color: "var(--accent-amber)", letterSpacing: "0.06em",

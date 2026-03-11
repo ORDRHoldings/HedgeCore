@@ -29,7 +29,7 @@ export default function SecretField({ label, hint, value, placeholder, onChange 
           type="button"
           onClick={() => setShow(p => !p)}
           style={{
-            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             color: S.secondary, background: S.bgSub,
             border: `1px solid ${S.rim}`, borderRadius: 2,
             padding: "6px 10px", cursor: "pointer", flexShrink: 0,
@@ -40,7 +40,7 @@ export default function SecretField({ label, hint, value, placeholder, onChange 
         </button>
         {value && (
           <div style={{
-            fontFamily: S.fontMono, fontSize: 10, color: S.pass,
+            fontFamily: S.fontMono, fontSize: 12, color: S.pass,
             background: "rgba(16,185,129,0.08)", border: `1px solid rgba(16,185,129,0.2)`,
             borderRadius: 2, padding: "6px 8px", display: "flex", alignItems: "center",
             gap: 4, flexShrink: 0,

@@ -285,7 +285,7 @@ function SectionHeader({
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{
-          fontFamily: S.fontMono, fontSize: 9, color,
+          fontFamily: S.fontMono, fontSize: 12, color,
           fontWeight: 700, letterSpacing: "0.08em",
           background: `color-mix(in srgb, ${color} 12%, transparent)`,
           border: `1px solid ${color}`,
@@ -293,11 +293,11 @@ function SectionHeader({
         }}>
           {level}
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.primary, letterSpacing: "0.05em" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary, letterSpacing: "0.05em" }}>
           {num} — {title.toUpperCase()}
         </span>
       </div>
-      <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
         {open ? "▲" : "▼"}
       </span>
     </div>
@@ -321,7 +321,7 @@ function CorrelationBar({
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, width: 80, flexShrink: 0 }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, width: 80, flexShrink: 0 }}>
         {label}
       </span>
       <svg width={barW} height={14} style={{ flexShrink: 0 }}>
@@ -441,13 +441,13 @@ export function AICommentaryPanel({
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             color: S.cyan, letterSpacing: "0.1em",
           }}>
             AI COMMENTARY
           </span>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 10,
+            fontFamily: S.fontMono, fontSize: 12,
             color: S.tertiary, letterSpacing: "0.04em",
           }}>
             ANALYTICAL ONLY — NOT INVESTMENT ADVICE
@@ -455,13 +455,13 @@ export function AICommentaryPanel({
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9,
+            fontFamily: S.fontMono, fontSize: 12,
             color: S.tertiary,
           }}>
             SCENARIO: {scenarioLabel.toUpperCase()}
           </span>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9,
+            fontFamily: S.fontMono, fontSize: 12,
             color: shock < 0 ? S.red : S.green,
             fontWeight: 700,
           }}>
@@ -524,13 +524,13 @@ export function AICommentaryPanel({
                     border: `1px solid ${S.soft}`,
                     borderRadius: 3,
                   }}>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                       {label}
                     </div>
                     <div style={{ fontFamily: S.fontMono, fontSize: 16, fontWeight: 700, color }}>
                       {value}
                     </div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 2 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 2 }}>
                       {sub}
                     </div>
                   </div>
@@ -580,7 +580,7 @@ export function AICommentaryPanel({
                 padding: "10px 14px",
               }}>
                 <div style={{
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase",
                   marginBottom: 8,
                 }}>
@@ -615,7 +615,7 @@ export function AICommentaryPanel({
                   }}>
                     <div>
                       <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{label}</span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginLeft: 8 }}>{sub}</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginLeft: 8 }}>{sub}</span>
                     </div>
                     <span style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color }}>{value}</span>
                   </div>
@@ -666,7 +666,7 @@ export function AICommentaryPanel({
                 padding: "12px 14px",
               }}>
                 <div style={{
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   color: S.tertiary, letterSpacing: "0.08em",
                   textTransform: "uppercase", marginBottom: 10,
                 }}>
@@ -711,7 +711,7 @@ export function AICommentaryPanel({
                 padding: "10px 14px",
               }}>
                 <div style={{
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   color: S.tertiary, letterSpacing: "0.08em",
                   textTransform: "uppercase", marginBottom: 8,
                 }}>
@@ -752,7 +752,7 @@ export function AICommentaryPanel({
                   }}>
                     <div>
                       <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{label}</span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginLeft: 8 }}>[{ref}]</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginLeft: 8 }}>[{ref}]</span>
                     </div>
                     <span style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color }}>{value}</span>
                   </div>
@@ -790,7 +790,7 @@ export function AICommentaryPanel({
                 padding: "10px 14px",
               }}>
                 <div style={{
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   color: S.amber, letterSpacing: "0.08em", textTransform: "uppercase",
                   marginBottom: 8,
                 }}>
@@ -830,7 +830,7 @@ export function AICommentaryPanel({
                   padding: "10px 14px",
                 }}>
                   <div style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     color: S.amber, letterSpacing: "0.08em", textTransform: "uppercase",
                     marginBottom: 8,
                   }}>
@@ -863,7 +863,7 @@ export function AICommentaryPanel({
                 padding: "10px 14px",
               }}>
                 <div style={{
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase",
                   marginBottom: 8,
                 }}>
@@ -915,11 +915,11 @@ export function AICommentaryPanel({
                   }}>
                     <div>
                       <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{label}</span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginLeft: 8 }}>{sub}</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginLeft: 8 }}>{sub}</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color }}>{value}</span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>[{ref}]</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>[{ref}]</span>
                     </div>
                   </div>
                 ))}
@@ -966,7 +966,7 @@ export function AICommentaryPanel({
                     <div style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color: S.primary, marginBottom: 2 }}>
                       {historicalMatch.name}
                     </div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       {historicalMatch.period}
                     </div>
                   </div>
@@ -1007,7 +1007,7 @@ export function AICommentaryPanel({
                       background: `color-mix(in srgb, ${S.rim} 20%, transparent)`,
                       borderRadius: 2,
                     }}>
-                      <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                      <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                         {label}
                       </div>
                       <div style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color }}>
@@ -1020,7 +1020,7 @@ export function AICommentaryPanel({
                 {/* Best instruments */}
                 <div style={{ marginBottom: 10 }}>
                   <div style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     color: S.tertiary, letterSpacing: "0.08em",
                     textTransform: "uppercase", marginBottom: 6,
                   }}>
@@ -1029,7 +1029,7 @@ export function AICommentaryPanel({
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {historicalMatch.best_instruments.map((inst) => (
                       <span key={inst} style={{
-                        fontFamily: S.fontMono, fontSize: 11,
+                        fontFamily: S.fontMono, fontSize: 12,
                         color: S.cyan,
                         background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`,
                         border: `1px solid ${S.cyan}`,
@@ -1070,10 +1070,10 @@ export function AICommentaryPanel({
                   borderRadius: 2,
                   borderLeft: `2px solid ${S.cyan}`,
                 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.04em" }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.04em" }}>
                     ACADEMIC REFERENCE:{" "}
                   </span>
-                  <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, fontStyle: "italic" }}>
+                  <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, fontStyle: "italic" }}>
                     {historicalMatch.academic_ref}
                   </span>
                 </div>
@@ -1084,7 +1084,7 @@ export function AICommentaryPanel({
                 <button
                   onClick={() => setShowAllCrises(!showAllCrises)}
                   style={{
-                    fontFamily: S.fontMono, fontSize: 10,
+                    fontFamily: S.fontMono, fontSize: 12,
                     color: S.cyan, background: "transparent",
                     border: `1px solid ${S.soft}`, borderRadius: 2,
                     padding: "4px 12px", cursor: "pointer",
@@ -1110,7 +1110,7 @@ export function AICommentaryPanel({
                         <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, color: S.secondary }}>
                           {crisis.name}
                         </div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                           {crisis.period} · Vol peak: {crisis.vol_spike}% · Recovery: {crisis.recovery_months}mo
                         </div>
                       </div>
@@ -1137,7 +1137,7 @@ export function AICommentaryPanel({
           borderRadius: 3,
         }}>
           <p style={{
-            fontFamily: S.fontMono, fontSize: 10, color: S.tertiary,
+            fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
             lineHeight: 1.6, margin: 0, letterSpacing: "0.02em",
           }}>
             <strong style={{ color: S.amber }}>DISCLAIMER:</strong>{" "}

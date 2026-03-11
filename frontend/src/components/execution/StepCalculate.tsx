@@ -291,7 +291,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
         background: S.bgSub, borderBottom: `1px solid ${S.rim}`,
         flexShrink: 0, flexWrap: "wrap",
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
           {positions.length} position{positions.length !== 1 ? "s" : ""} selected
         </span>
         <span style={{ width: 1, height: 14, background: S.soft, flexShrink: 0 }} />
@@ -300,13 +300,13 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
             display: "inline-flex", alignItems: "center", height: 22,
             padding: "0 8px", borderRadius: 3, background: S.bgDeep,
             border: `1px solid ${S.soft}`, fontFamily: S.fontMono,
-            fontSize: 10, fontWeight: 600, color: S.primary, letterSpacing: "0.04em",
+            fontSize: 12, fontWeight: 600, color: S.primary, letterSpacing: "0.04em",
           }}>
             {posGroup.length} {ccy}
           </span>
         ))}
         <span style={{ width: 1, height: 14, background: S.soft, flexShrink: 0 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           {currencyGroups.length} currency group{currencyGroups.length !== 1 ? "s" : ""}
           {" · "}separate engine run per currency
         </span>
@@ -315,7 +315,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
       {/* ═══ Market Data + Engine Control ═══ */}
       <div style={{ padding: "12px 16px", borderBottom: `1px solid ${S.rim}`, flexShrink: 0 }}>
         {marketLoading ? (
-          <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.amber, marginBottom: 14 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, marginBottom: 14 }}>
             ⟳ Fetching market data for {currencyGroups.map(([c]) => c).join(", ")}...
           </div>
         ) : (
@@ -338,15 +338,15 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
                     background: S.bgDeep, border: `1px solid ${S.soft}`,
                   }}>
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                       color: S.cyan, letterSpacing: "0.04em",
                     }}>
                       {cr.currency}
                     </span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       {pairLabel}:
                     </span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, color: S.primary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, color: S.primary }}>
                       {fmtDec.format(cr.market.spot_rate)}
                     </span>
                     <span style={{
@@ -358,7 +358,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
                     }}>
                       {isLive ? "LIVE" : "IND"}
                     </span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       {fwdCount}fwd
                     </span>
                   </div>
@@ -375,7 +375,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
                 border: "1px solid var(--accent-amber)",
                 color: "var(--accent-amber)",
                 fontFamily: S.fontMono,
-                fontSize: 11,
+                fontSize: 12,
                 padding: "8px 16px",
               }}>
                 ⚠ MARKET DATA: FALLBACK — Live rates unavailable, using last-known prices. Review spot rates before approving.
@@ -391,11 +391,11 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
             padding: "7px 12px", marginBottom: 12,
             background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4,
           }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>QUEUED INPUT</span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.primary, fontWeight: 600 }}>{positions.length} position{positions.length !== 1 ? "s" : ""}</span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.soft }}>·</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>QUEUED INPUT</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, fontWeight: 600 }}>{positions.length} position{positions.length !== 1 ? "s" : ""}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.soft }}>·</span>
             {currencyGroups.map(([ccy, grp]) => (
-              <span key={ccy} style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, fontWeight: 600 }}>
+              <span key={ccy} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, fontWeight: 600 }}>
                 {ccy} {fmtNum.format(grp.reduce((s, p) => s + p.amount, 0))}
               </span>
             ))}
@@ -430,7 +430,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
           <div style={{
             marginTop: 12, padding: "10px 14px", background: "rgba(239,68,68,0.08)",
             border: `1px solid ${S.fail}`, borderRadius: 4,
-            fontFamily: S.fontMono, fontSize: 11, color: S.fail, lineHeight: 1.5,
+            fontFamily: S.fontMono, fontSize: 12, color: S.fail, lineHeight: 1.5,
           }}>
             {globalError}
           </div>
@@ -451,7 +451,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
               background: S.bgSub, border: `1px solid ${S.rim}`,
             }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                 letterSpacing: "0.12em", color: S.cyan, marginBottom: 10,
                 textTransform: "uppercase" as const,
               }}>
@@ -477,7 +477,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
         <button onClick={onBack} style={{
           height: 36, padding: "0 20px", background: "transparent",
           color: S.tertiary, border: `1px solid ${S.soft}`, borderRadius: 4,
-          fontFamily: S.fontMono, fontSize: 11, fontWeight: 600,
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
           letterSpacing: "0.08em", cursor: "pointer",
         }}>
           &#9666; BACK TO REVIEW
@@ -496,7 +496,7 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
             background: allDone && allValidationPassed ? S.pass : S.bgSub,
             color: allDone && allValidationPassed ? S.bgDeep : S.tertiary,
             border: "none", borderRadius: 4, fontFamily: S.fontMono,
-            fontSize: 11, fontWeight: 700, letterSpacing: "0.10em",
+            fontSize: 12, fontWeight: 700, letterSpacing: "0.10em",
             cursor: allDone && allValidationPassed ? "pointer" : "not-allowed",
             opacity: allDone && allValidationPassed ? 1 : 0.5,
           }}
@@ -522,14 +522,14 @@ export default function StepCalculate({ positions, token, onApprove, onBack }: P
 function SummaryKPI({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
     <div>
-      <div style={{ fontFamily: "var(--font-terminal-mono)", fontSize: 8, color: "var(--text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 2 }}>
+      <div style={{ fontFamily: "var(--font-terminal-mono)", fontSize: 12, color: "var(--text-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 2 }}>
         {label}
       </div>
       <div style={{ fontFamily: "var(--font-terminal-mono)", fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
         {value}
       </div>
       {unit && (
-        <div style={{ fontFamily: "var(--font-terminal-mono)", fontSize: 8, color: "var(--text-tertiary)" }}>
+        <div style={{ fontFamily: "var(--font-terminal-mono)", fontSize: 12, color: "var(--text-tertiary)" }}>
           {unit}
         </div>
       )}
@@ -564,32 +564,32 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
         }}>
           {cr.currency}
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           {pairLabel}
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
           {cr.positions.length} pos · {fmtNum.format(totalNotional)} {cr.currency}
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           spot: {fmtDec.format(cr.market.spot_rate)}
         </span>
         <div style={{ flex: 1 }} />
 
         {/* Status badge */}
         {cr.status === "pending" && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.08em" }}>PENDING</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}>PENDING</span>
         )}
         {cr.status === "running" && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.amber, letterSpacing: "0.08em" }}>⟳ COMPUTING...</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, letterSpacing: "0.08em" }}>⟳ COMPUTING...</span>
         )}
         {cr.status === "done" && validationPassed && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, color: S.pass, letterSpacing: "0.08em" }}>✓ PASS</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.pass, letterSpacing: "0.08em" }}>✓ PASS</span>
         )}
         {cr.status === "done" && !validationPassed && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, color: S.fail, letterSpacing: "0.08em" }}>✗ FAIL</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.fail, letterSpacing: "0.08em" }}>✗ FAIL</span>
         )}
         {cr.status === "error" && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, color: S.fail, letterSpacing: "0.08em" }}>✗ ERROR</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.fail, letterSpacing: "0.08em" }}>✗ ERROR</span>
         )}
       </div>
 
@@ -597,7 +597,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
       {cr.error && (
         <div style={{
           padding: "8px 14px", background: "rgba(239,68,68,0.06)",
-          fontFamily: S.fontMono, fontSize: 10, color: S.fail, lineHeight: 1.5,
+          fontFamily: S.fontMono, fontSize: 12, color: S.fail, lineHeight: 1.5,
         }}>
           {cr.error}
         </div>
@@ -609,7 +609,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
           {/* Run ID */}
           {cr.result.run_id && (
             <div style={{
-              padding: "6px 14px", fontFamily: S.fontMono, fontSize: 8,
+              padding: "6px 14px", fontFamily: S.fontMono, fontSize: 12,
               color: S.tertiary, letterSpacing: "0.06em",
             }}>
               RUN: {cr.result.run_id.slice(0, 12).toUpperCase()}
@@ -626,7 +626,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
             <div style={{
               margin: "4px 14px", padding: "6px 10px", borderRadius: 3,
               background: "rgba(239,68,68,0.06)", border: `1px solid ${S.fail}`,
-              fontFamily: S.fontMono, fontSize: 9, color: S.fail,
+              fontFamily: S.fontMono, fontSize: 12, color: S.fail,
             }}>
               {cr.result.validation_report.errors.map((e, i) => (
                 <div key={i}>[{e.code}] {e.message}</div>
@@ -643,7 +643,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
                 gridTemplateColumns: "90px 110px 90px 110px 100px 80px 80px 70px",
                 alignItems: "center", height: 28, padding: "0 6px",
                 background: S.bgDeep, borderBottom: `1px solid ${S.rim}`,
-                fontFamily: S.fontMono, fontSize: 8, fontWeight: 600,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
                 letterSpacing: "0.08em", color: S.tertiary,
                 textTransform: "uppercase" as const,
               }}>
@@ -663,7 +663,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
                     display: "grid",
                     gridTemplateColumns: "90px 110px 90px 110px 100px 80px 80px 70px",
                     alignItems: "center", height: 30, padding: "0 6px",
-                    borderBottom: `1px solid ${S.soft}`, fontFamily: S.fontMono, fontSize: 10,
+                    borderBottom: `1px solid ${S.soft}`, fontFamily: S.fontMono, fontSize: 12,
                     opacity: b.suppressed ? 0.4 : 1,
                   }}>
                     <span style={{ color: S.primary, fontWeight: 600 }}>{b.bucket}</span>
@@ -672,7 +672,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
                       {b.action_direction ? (
                         <span style={{
                           display: "inline-block", padding: "1px 5px", borderRadius: 2,
-                          fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                          fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                           background: isSell ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.12)",
                           color: isSell ? S.fail : S.pass,
                           border: `1px solid ${isSell ? S.fail : S.pass}`,
@@ -685,7 +685,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
                     <span style={{ textAlign: "right", color: S.secondary }}>${fmtUsd.format(b.action_usd)}</span>
                     <span style={{ textAlign: "right", color: S.tertiary }}>{fmtDec.format(b.forward_rate)}</span>
                     <span style={{ textAlign: "right", color: b.friction_usd > 0 ? S.amber : S.tertiary }}>${fmtUsd.format(b.friction_usd)}</span>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: b.suppressed ? S.amber : S.pass }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: b.suppressed ? S.amber : S.pass }}>
                       {b.suppressed ? "SKIP" : "ACT"}
                     </span>
                   </div>
@@ -699,9 +699,9 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
                   gridTemplateColumns: "90px 110px 90px 110px 100px 80px 80px 70px",
                   alignItems: "center", height: 32, padding: "0 6px",
                   background: S.bgSub, borderTop: `2px solid ${S.rim}`,
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                 }}>
-                  <span style={{ fontSize: 10, letterSpacing: "0.08em", color: S.tertiary }}>TOTAL</span>
+                  <span style={{ fontSize: 12, letterSpacing: "0.08em", color: S.tertiary }}>TOTAL</span>
                   <span style={{ textAlign: "right", color: S.primary }}>{fmtNum.format(summary.total_commercial_exposure_mxn)}</span>
                   <span />
                   <span style={{ textAlign: "right", color: S.primary }}>{fmtNum.format(summary.total_action_mxn)}</span>
@@ -718,7 +718,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
           {scenarios.length > 0 && (
             <div style={{ padding: "10px 14px 0" }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 10, fontWeight: 600,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
                 letterSpacing: "0.10em", color: S.tertiary, marginBottom: 4,
                 textTransform: "uppercase" as const,
               }}>
@@ -730,7 +730,7 @@ function CurrencyResultCard({ cr }: { cr: CurrencyCalcResult }) {
                     display: "inline-flex", alignItems: "center", gap: 4,
                     padding: "2px 6px", borderRadius: 3,
                     background: S.bgDeep, border: `1px solid ${S.soft}`,
-                    fontFamily: S.fontMono, fontSize: 9,
+                    fontFamily: S.fontMono, fontSize: 12,
                   }}>
                     <span style={{ color: sc.sigma < 0 ? S.fail : sc.sigma > 0 ? S.pass : S.primary, fontWeight: 600 }}>
                       {sc.sigma > 0 ? "+" : ""}{sc.sigma}σ

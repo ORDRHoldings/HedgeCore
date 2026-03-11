@@ -35,12 +35,12 @@ export default function ConcentrationPanel({ concentration }: Props) {
   return (
     <div>
       <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
           Concentration Limits
         </span>
         {hasBreach != null && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             color: hasBreach ? S.red : S.green,
             padding: "2px 8px", borderRadius: 2,
             border: `1px solid ${hasBreach ? S.red : S.green}`,
@@ -55,7 +55,7 @@ export default function ConcentrationPanel({ concentration }: Props) {
           <thead>
             <tr style={{ background: S.sub }}>
               {["Instrument", "Allocation", "Limit", "Status"].map(h => (
-                <th key={h} style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
+                <th key={h} style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -69,7 +69,7 @@ export default function ConcentrationPanel({ concentration }: Props) {
                   <td style={{ padding: "9px 14px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{(c.limit * 100).toFixed(0)}%</td>
                   <td style={{ padding: "9px 14px" }}>
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: statusColor,
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: statusColor,
                       padding: "2px 7px", borderRadius: 2, border: `1px solid ${statusColor}`,
                       background: `color-mix(in srgb, ${statusColor} 10%, transparent)`,
                     }}>\u25cf {c.status}</span>

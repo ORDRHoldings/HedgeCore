@@ -8,11 +8,11 @@ export default function Field({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <label style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary }}>
+        <label style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary }}>
           {label}
         </label>
         {hint && (
-          <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.tertiary }}>{hint}</span>
+          <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>{hint}</span>
         )}
       </div>
       {children}

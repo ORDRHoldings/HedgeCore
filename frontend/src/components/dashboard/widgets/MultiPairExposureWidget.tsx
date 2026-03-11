@@ -85,27 +85,27 @@ export default function MultiPairExposureWidget({ token, user, onRemove }: Widge
         borderBottom: `1px solid ${S.rim}`, background: S.sub,
         cursor: "grab",
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.12em", color: S.tertiary }}>⬡</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.12em", color: S.tertiary }}>⬡</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
           Multi-Pair Exposure
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, padding: "1px 5px", border: `1px solid ${S.soft}`, borderRadius: 2 }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, padding: "1px 5px", border: `1px solid ${S.soft}`, borderRadius: 2 }}>
           DEMO
         </span>
         <div style={{ flex: 1 }} />
         {lastUpdated && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {lastUpdated.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
         <button onClick={loadData} title="Refresh" style={{
           background: "transparent", border: "none", cursor: "pointer",
-          fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, padding: "0 4px",
+          fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, padding: "0 4px",
         }}>↻</button>
         {onRemove && (
           <button onClick={onRemove} style={{
             background: "transparent", border: "none", cursor: "pointer",
-            fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, padding: "0 4px",
+            fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, padding: "0 4px",
           }}>✕</button>
         )}
       </div>
@@ -117,17 +117,17 @@ export default function MultiPairExposureWidget({ token, user, onRemove }: Widge
           display: "flex", alignItems: "center", gap: 14,
         }}>
           <div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>TOTAL EXPOSURE</div>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>TOTAL EXPOSURE</div>
             <div style={{ fontFamily: S.fontMono, fontSize: 16, fontWeight: 700, color: S.primary }}>
               ${(totalExposure / 1_000_000).toFixed(1)}M
             </div>
           </div>
           <div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>PAIRS</div>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>PAIRS</div>
             <div style={{ fontFamily: S.fontMono, fontSize: 16, fontWeight: 700, color: S.cyan }}>{exposures.length}</div>
           </div>
           <div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>NDF PAIRS</div>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>NDF PAIRS</div>
             <div style={{ fontFamily: S.fontMono, fontSize: 16, fontWeight: 700, color: S.amber }}>{exposures.filter(e => e.is_ndf).length}</div>
           </div>
         </div>
@@ -155,21 +155,21 @@ export default function MultiPairExposureWidget({ token, user, onRemove }: Widge
                   display: "flex", flexDirection: "column", gap: 4,
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.cyan, width: 64 }}>{e.label}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, width: 64 }}>{e.label}</span>
                     {e.is_ndf && (
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: 8, color: S.amber,
+                        fontFamily: S.fontMono, fontSize: 12, color: S.amber,
                         padding: "1px 4px", border: `1px solid ${S.amber}`, borderRadius: 2,
                       }}>NDF</span>
                     )}
                     <div style={{ flex: 1, height: 6, background: S.sub, borderRadius: 2, overflow: "hidden" }}>
                       <div style={{ width: `${barPct}%`, height: "100%", background: S.cyan, opacity: 0.6, borderRadius: 2 }} />
                     </div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, width: 60, textAlign: "right" }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, width: 60, textAlign: "right" }}>
                       ${(e.exposure_usd / 1_000_000).toFixed(1)}M
                     </span>
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: hedgeColor,
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: hedgeColor,
                       width: 40, textAlign: "right",
                     }}>
                       {e.hedge_pct}%
@@ -185,7 +185,7 @@ export default function MultiPairExposureWidget({ token, user, onRemove }: Widge
       {/* Footer */}
       <div style={{
         padding: "5px 12px", borderTop: `1px solid ${S.soft}`,
-        fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
         display: "flex", justifyContent: "space-between", flexShrink: 0,
       }}>
         <span>Hedge %: <span style={{ color: S.green }}>≥80% ✓</span></span>

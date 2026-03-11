@@ -44,7 +44,7 @@ function MethodologyNote({ formula }: { formula: string }) {
       onClick={() => setExpanded(!expanded)}
       style={{
         fontFamily: S.fontMono,
-        fontSize: 10,
+        fontSize: 12,
         color: S.tertiary,
         marginTop: 6,
         padding: "3px 8px",
@@ -101,7 +101,7 @@ export function WaterfallChart({ bars, title = "P&L Waterfall" }: { bars: Waterf
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
         {title.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -114,7 +114,7 @@ export function WaterfallChart({ bars, title = "P&L Waterfall" }: { bars: Waterf
         {[minVal, (minVal + maxVal) / 2, maxVal].map((v, i) => (
           <text key={i} x={PAD.left - 6} y={toY(v) + 4}
             textAnchor="end" fill={S.tertiary}
-            style={{ fontFamily: S.fontMono, fontSize: 9 }}
+            style={{ fontFamily: S.fontMono, fontSize: 12 }}
           >
             {fmt(v)}
           </text>
@@ -145,7 +145,7 @@ export function WaterfallChart({ bars, title = "P&L Waterfall" }: { bars: Waterf
                 x={x + barW / 2} y={y - 3}
                 textAnchor="middle"
                 fill={barColor(b)}
-                style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: "bold" }}
+                style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: "bold" }}
               >
                 {fmt(b.value)}
               </text>
@@ -154,7 +154,7 @@ export function WaterfallChart({ bars, title = "P&L Waterfall" }: { bars: Waterf
                 x={x + barW / 2} y={H - PAD.bottom + 14}
                 textAnchor="middle"
                 fill={S.tertiary}
-                style={{ fontFamily: S.fontMono, fontSize: 8 }}
+                style={{ fontFamily: S.fontMono, fontSize: 12 }}
                 transform={`rotate(-25, ${x + barW / 2}, ${H - PAD.bottom + 14})`}
               >
                 {b.label.slice(0, 10)}
@@ -184,27 +184,27 @@ export function DV01LadderChart({ entries, title = "DV01 Ladder" }: { entries: D
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()} — DV01 $ PER 1BP RATE MOVE
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
-        <text x={PAD.left - 4} y={18} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 8 }}>BUCKET</text>
+        <text x={PAD.left - 4} y={18} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>BUCKET</text>
         {entries.map((e, i) => {
           const y = PAD.top + i * 32;
           const barLen = (Math.abs(e.dv01) / maxDv01) * chartW;
           const isNeg = e.dv01 < 0;
           return (
             <g key={i}>
-              <text x={PAD.left - 6} y={y + 11} textAnchor="end" fill={S.secondary} style={{ fontFamily: S.fontMono, fontSize: 10 }}>{e.bucket}</text>
+              <text x={PAD.left - 6} y={y + 11} textAnchor="end" fill={S.secondary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>{e.bucket}</text>
               <rect x={PAD.left} y={y} width={barLen} height={20} fill={isNeg ? S.red : S.green} opacity={0.8} rx={2} />
-              <text x={PAD.left + barLen + 5} y={y + 13} fill={isNeg ? S.red : S.green} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: "bold" }}>
+              <text x={PAD.left + barLen + 5} y={y + 13} fill={isNeg ? S.red : S.green} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: "bold" }}>
                 {isNeg ? "−" : "+"}${Math.abs(e.dv01).toFixed(0)}
               </text>
             </g>
           );
         })}
         {/* Total */}
-        <text x={PAD.left} y={H - 4} fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 8 }}>
+        <text x={PAD.left} y={H - 4} fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
           TOTAL DV01: {fmt(entries.reduce((s, e) => s + e.dv01, 0), 0)}
         </text>
       </svg>
@@ -237,7 +237,7 @@ export function CorrelationHeatmap({ matrix, title = "Correlation Matrix" }: { m
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -248,7 +248,7 @@ export function CorrelationHeatmap({ matrix, title = "Correlation Matrix" }: { m
             y={LABEL_W - 6}
             textAnchor="middle"
             fill={S.secondary}
-            style={{ fontFamily: S.fontMono, fontSize: 9 }}
+            style={{ fontFamily: S.fontMono, fontSize: 12 }}
           >{lbl}</text>
         ))}
         {/* Rows */}
@@ -263,7 +263,7 @@ export function CorrelationHeatmap({ matrix, title = "Correlation Matrix" }: { m
                     x={LABEL_W - 5} y={y + CELL / 2 + 4}
                     textAnchor="end"
                     fill={S.secondary}
-                    style={{ fontFamily: S.fontMono, fontSize: 9 }}
+                    style={{ fontFamily: S.fontMono, fontSize: 12 }}
                   >{matrix.labels[i]}</text>
                 )}
                 <rect x={x + 1} y={y + 1} width={CELL - 2} height={CELL - 2} fill={corrColor(v)} rx={2} />
@@ -271,14 +271,14 @@ export function CorrelationHeatmap({ matrix, title = "Correlation Matrix" }: { m
                   x={x + CELL / 2} y={y + CELL / 2 + 4}
                   textAnchor="middle"
                   fill={Math.abs(v) > 0.5 ? "#fff" : S.secondary}
-                  style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: "bold" }}
+                  style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: "bold" }}
                 >{v.toFixed(2)}</text>
               </g>
             );
           })
         ))}
       </svg>
-      <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginTop: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 4 }}>
         DCC-GARCH correlations · Crisis correlations collapse toward +1.0 · Per ISDA SIMM v2.6
       </div>
     </div>
@@ -339,7 +339,7 @@ export function EfficientFrontierChart({
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()} — RISK/RETURN OPTIMISATION
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -350,7 +350,7 @@ export function EfficientFrontierChart({
           return (
             <g key={t}>
               <line x1={PAD.left} y1={y} x2={PAD.left + chartW} y2={y} stroke={S.soft} strokeWidth={0.5} />
-              <text x={PAD.left - 5} y={y + 3} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 8 }}>
+              <text x={PAD.left - 5} y={y + 3} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
                 {val.toFixed(1)}%
               </text>
             </g>
@@ -362,14 +362,14 @@ export function EfficientFrontierChart({
           return (
             <g key={t}>
               <line x1={x} y1={PAD.top} x2={x} y2={PAD.top + chartH} stroke={S.soft} strokeWidth={0.5} />
-              <text x={x} y={PAD.top + chartH + 14} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 8 }}>
+              <text x={x} y={PAD.top + chartH + 14} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
                 {val.toFixed(1)}%
               </text>
             </g>
           );
         })}
         {/* Axis labels */}
-        <text x={PAD.left + chartW / 2} y={H - 4} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 9 }}>
+        <text x={PAD.left + chartW / 2} y={H - 4} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
           PORTFOLIO RISK (σ annualised)
         </text>
         {/* Frontier curve */}
@@ -381,7 +381,7 @@ export function EfficientFrontierChart({
           return (
             <g key={i}>
               <circle cx={x} cy={y} r={6} fill={c} opacity={0.85} />
-              <text x={x + 9} y={y + 3} fill={c} style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: "bold" }}>
+              <text x={x + 9} y={y + 3} fill={c} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: "bold" }}>
                 {p.label}
               </text>
             </g>
@@ -401,7 +401,7 @@ export function EfficientFrontierChart({
         ].map(l => (
           <div key={l.type} style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: dotColor(l.type) }} />
-            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>{l.label}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{l.label}</span>
           </div>
         ))}
       </div>
@@ -463,7 +463,7 @@ export function HedgeGauge({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 2 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 2 }}>
         {label.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -501,12 +501,12 @@ export function HedgeGauge({
           {(ratio * 100).toFixed(0)}%
         </text>
         {/* Min/max labels */}
-        <text x={CX - R - 5} y={CY + 14} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 8 }}>0%</text>
-        <text x={CX + R + 5} y={CY + 14} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 8 }}>100%</text>
+        <text x={CX - R - 5} y={CY + 14} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>0%</text>
+        <text x={CX + R + 5} y={CY + 14} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>100%</text>
         {/* IFRS 9 label */}
-        <text x={CX} y={CY + 14} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 8 }}>IFRS 9.6.4.1</text>
+        <text x={CX} y={CY + 14} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>IFRS 9.6.4.1</text>
       </svg>
-      <div style={{ fontFamily: S.fontMono, fontSize: 9, color: needleColor, fontWeight: 700, marginTop: -4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, color: needleColor, fontWeight: 700, marginTop: -4 }}>
         {pct >= 0.8 ? "✓ EFFECTIVE" : pct >= 0.5 ? "⚠ PARTIAL" : "✗ INEFFECTIVE"}
       </div>
     </div>
@@ -557,7 +557,7 @@ export function ScenarioHeatmap({
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -565,13 +565,13 @@ export function ScenarioHeatmap({
         {carryShocks.map((cs, j) => (
           <text key={j} x={LABEL_W + j * CELL_W + CELL_W / 2} y={16}
             textAnchor="middle" fill={S.tertiary}
-            style={{ fontFamily: S.fontMono, fontSize: 8 }}
+            style={{ fontFamily: S.fontMono, fontSize: 12 }}
           >{cs > 0 ? "+" : ""}{cs}%</text>
         ))}
         {/* Carry shock label */}
         <text x={LABEL_W + carryShocks.length * CELL_W / 2} y={H - 4}
           textAnchor="middle" fill={S.tertiary}
-          style={{ fontFamily: S.fontMono, fontSize: 8 }}
+          style={{ fontFamily: S.fontMono, fontSize: 12 }}
         >{carryLabel}</text>
         {/* Cells */}
         {spotShocks.map((ss, i) =>
@@ -585,7 +585,7 @@ export function ScenarioHeatmap({
                 {j === 0 && (
                   <text x={LABEL_W - 5} y={y + CELL_H / 2 + 4}
                     textAnchor="end" fill={S.tertiary}
-                    style={{ fontFamily: S.fontMono, fontSize: 8 }}
+                    style={{ fontFamily: S.fontMono, fontSize: 12 }}
                   >{ss > 0 ? "+" : ""}{ss}%</text>
                 )}
                 <rect x={x + 1} y={y + 1} width={CELL_W - 2} height={CELL_H - 2}
@@ -593,7 +593,7 @@ export function ScenarioHeatmap({
                 <text x={x + CELL_W / 2} y={y + CELL_H / 2 + 4}
                   textAnchor="middle"
                   fill={Math.abs(pnl) > (maxPnl - minPnl) * 0.4 ? "#fff" : S.secondary}
-                  style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: "bold" }}
+                  style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: "bold" }}
                 >
                   {fmt(pnl)}
                 </text>
@@ -605,7 +605,7 @@ export function ScenarioHeatmap({
         <text
           x={8} y={LABEL_H + spotShocks.length * CELL_H / 2 + 4}
           textAnchor="middle" fill={S.tertiary}
-          style={{ fontFamily: S.fontMono, fontSize: 8 }}
+          style={{ fontFamily: S.fontMono, fontSize: 12 }}
           transform={`rotate(-90, 8, ${LABEL_H + spotShocks.length * CELL_H / 2 + 4})`}
         >{spotLabel}</text>
       </svg>
@@ -653,7 +653,7 @@ export function FanChart({ points, title = "Forward Rate Fan Chart" }: { points:
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -663,7 +663,7 @@ export function FanChart({ points, title = "Forward Rate Fan Chart" }: { points:
           return (
             <g key={t}>
               <line x1={PAD.left} y1={PAD.top + t * chartH} x2={PAD.left + chartW} y2={PAD.top + t * chartH} stroke={S.soft} strokeWidth={0.5} />
-              <text x={PAD.left - 5} y={PAD.top + (1 - t) * chartH + 4} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 8 }}>
+              <text x={PAD.left - 5} y={PAD.top + (1 - t) * chartH + 4} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
                 {v.toFixed(2)}
               </text>
             </g>
@@ -683,7 +683,7 @@ export function FanChart({ points, title = "Forward Rate Fan Chart" }: { points:
           <text key={i}
             x={toX(i)} y={PAD.top + chartH + 14}
             textAnchor="middle" fill={S.tertiary}
-            style={{ fontFamily: S.fontMono, fontSize: 8 }}
+            style={{ fontFamily: S.fontMono, fontSize: 12 }}
           >{p.period.slice(2)}</text>
         ))}
         {/* P90/P10 labels */}
@@ -697,20 +697,20 @@ export function FanChart({ points, title = "Forward Rate Fan Chart" }: { points:
       <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <div style={{ width: 12, height: 3, background: S.cyan }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>Median (P50)</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>Median (P50)</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <div style={{ width: 12, height: 8, background: S.cyan, opacity: 0.2 }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>P25–P75 band</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>P25–P75 band</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <div style={{ width: 12, height: 8, background: S.cyan, opacity: 0.1 }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>P10–P90 band</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>P10–P90 band</span>
         </div>
         {points.some(p => p.actual !== undefined) && (
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <div style={{ width: 12, height: 2, background: S.amber }} />
-            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>Actual</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>Actual</span>
           </div>
         )}
       </div>
@@ -763,7 +763,7 @@ export function LossVsHedgeRatioScatter({
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 4 }}>
         {title.toUpperCase()}
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
@@ -773,7 +773,7 @@ export function LossVsHedgeRatioScatter({
           return (
             <g key={t}>
               <line x1={PAD.left} y1={PAD.top + (1 - t) * chartH} x2={PAD.left + chartW} y2={PAD.top + (1 - t) * chartH} stroke={S.soft} strokeWidth={0.5} />
-              <text x={PAD.left - 5} y={PAD.top + (1 - t) * chartH + 4} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 8 }}>
+              <text x={PAD.left - 5} y={PAD.top + (1 - t) * chartH + 4} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
                 {fmt(l)}
               </text>
             </g>
@@ -783,12 +783,12 @@ export function LossVsHedgeRatioScatter({
         {[0, 0.25, 0.5, 0.75, 1.0].map(r => (
           <g key={r}>
             <line x1={toX(r)} y1={PAD.top} x2={toX(r)} y2={PAD.top + chartH} stroke={S.soft} strokeWidth={0.5} />
-            <text x={toX(r)} y={PAD.top + chartH + 14} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 8 }}>
+            <text x={toX(r)} y={PAD.top + chartH + 14} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
               {(r * 100).toFixed(0)}%
             </text>
           </g>
         ))}
-        <text x={PAD.left + chartW / 2} y={H - 6} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 9 }}>HEDGE RATIO</text>
+        <text x={PAD.left + chartW / 2} y={H - 6} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>HEDGE RATIO</text>
         {/* Curve */}
         <path d={curvePath} fill="none" stroke={S.cyan} strokeWidth={1.5} opacity={0.5} />
         {/* Current ratio line */}
@@ -797,7 +797,7 @@ export function LossVsHedgeRatioScatter({
           x2={toX(currentRatio)} y2={PAD.top + chartH}
           stroke={S.amber} strokeWidth={1.5} strokeDasharray="4,3"
         />
-        <text x={toX(currentRatio) + 4} y={PAD.top + 10} fill={S.amber} style={{ fontFamily: S.fontMono, fontSize: 8 }}>
+        <text x={toX(currentRatio) + 4} y={PAD.top + 10} fill={S.amber} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
           CURRENT {(currentRatio * 100).toFixed(0)}%
         </text>
         {/* Points */}
@@ -808,7 +808,7 @@ export function LossVsHedgeRatioScatter({
             <g key={i}>
               <circle cx={x} cy={y} r={p.isOptimal ? 6 : 4} fill={c} opacity={0.85} />
               {p.label && (
-                <text x={x + 8} y={y + 3} fill={c} style={{ fontFamily: S.fontMono, fontSize: 8 }}>{p.label}</text>
+                <text x={x + 8} y={y + 3} fill={c} style={{ fontFamily: S.fontMono, fontSize: 12 }}>{p.label}</text>
               )}
             </g>
           );
@@ -860,7 +860,7 @@ export function StressTornadoChart({
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
         {title.toUpperCase()}
       </div>
       <div style={{ overflowX: "auto" }}>
@@ -871,7 +871,7 @@ export function StressTornadoChart({
             return (
               <g key={t}>
                 <line x1={x} y1={TOP_PAD - 4} x2={x} y2={TOP_PAD + sorted.length * ROW_H} stroke={S.soft} strokeWidth={0.5} />
-                <text x={x} y={TOP_PAD - 10} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 11 }}>
+                <text x={x} y={TOP_PAD - 10} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
                   {fmt(v)}
                 </text>
               </g>
@@ -891,18 +891,18 @@ export function StressTornadoChart({
             const sc = b.shock < 0 ? S.red : S.green;
             return (
               <g key={idx}>
-                <text x={LEFT_PAD - 10} y={y + barH + 6} textAnchor="end" fill={S.secondary} style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 600 }}>
+                <text x={LEFT_PAD - 10} y={y + barH + 6} textAnchor="end" fill={S.secondary} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600 }}>
                   {b.label.length > 18 ? b.label.slice(0, 16) + "…" : b.label}
                 </text>
-                <text x={LEFT_PAD - 10} y={y + barH + 19} textAnchor="end" fill={sc} style={{ fontFamily: S.fontMono, fontSize: 11 }}>
+                <text x={LEFT_PAD - 10} y={y + barH + 19} textAnchor="end" fill={sc} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
                   {b.shock > 0 ? "+" : ""}{(b.shock * 100).toFixed(1)}%
                 </text>
                 <rect x={ux1} y={barY1} width={uw} height={barH} fill={uc} opacity={0.82} rx={2} />
-                <text x={b.unhedgedPnl >= 0 ? ux2 + 5 : ux1 - 5} y={barY1 + barH / 2 + 4} textAnchor={b.unhedgedPnl >= 0 ? "start" : "end"} fill={uc} style={{ fontFamily: S.fontMono, fontSize: 11 }}>
+                <text x={b.unhedgedPnl >= 0 ? ux2 + 5 : ux1 - 5} y={barY1 + barH / 2 + 4} textAnchor={b.unhedgedPnl >= 0 ? "start" : "end"} fill={uc} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
                   {fmt(b.unhedgedPnl)}
                 </text>
                 <rect x={hx1} y={barY1 + barH + 3} width={hw} height={barH} fill={S.cyan} opacity={0.8} rx={2} />
-                <text x={b.hedgedPnl >= 0 ? hx2 + 5 : hx1 - 5} y={barY1 + barH + 3 + barH / 2 + 4} textAnchor={b.hedgedPnl >= 0 ? "start" : "end"} fill={S.cyan} style={{ fontFamily: S.fontMono, fontSize: 11 }}>
+                <text x={b.hedgedPnl >= 0 ? hx2 + 5 : hx1 - 5} y={barY1 + barH + 3 + barH / 2 + 4} textAnchor={b.hedgedPnl >= 0 ? "start" : "end"} fill={S.cyan} style={{ fontFamily: S.fontMono, fontSize: 12 }}>
                   {fmt(b.hedgedPnl)}
                 </text>
                 <line x1={LEFT_PAD} y1={y + ROW_H} x2={LEFT_PAD + chartW} y2={y + ROW_H} stroke={S.soft} strokeWidth={0.4} />
@@ -911,11 +911,11 @@ export function StressTornadoChart({
           })}
           <g transform={`translate(${LEFT_PAD + 8}, ${svgH - BOT_PAD + 10})`}>
             <rect width={12} height={10} fill={S.red} opacity={0.82} rx={1} />
-            <text x={16} y={9} fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 11 }}>Unhedged P&amp;L</text>
+            <text x={16} y={9} fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>Unhedged P&amp;L</text>
             <rect x={130} width={12} height={10} fill={S.cyan} opacity={0.8} rx={1} />
-            <text x={146} y={9} fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 11 }}>Hedged P&amp;L</text>
+            <text x={146} y={9} fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>Hedged P&amp;L</text>
           </g>
-          <text x={LEFT_PAD + chartW / 2} y={svgH - 6} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 11 }}>P&amp;L (USD)</text>
+          <text x={LEFT_PAD + chartW / 2} y={svgH - 6} textAnchor="middle" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>P&amp;L (USD)</text>
         </svg>
       </div>
     </div>
@@ -962,7 +962,7 @@ export function TermStructureSurface({
 
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
         {title.toUpperCase()} — SPOT: {spot.toFixed(4)}
       </div>
       <div style={{ overflowX: "auto" }}>
@@ -971,7 +971,7 @@ export function TermStructureSurface({
             const x = LABEL_W + j * CELL_W + CELL_W / 2;
             return (
               <text key={j} x={x} y={HEADER_H - 8} textAnchor="start" fill={S.secondary}
-                style={{ fontFamily: S.fontMono, fontSize: 11 }}
+                style={{ fontFamily: S.fontMono, fontSize: 12 }}
                 transform={`rotate(-40, ${x}, ${HEADER_H - 8})`}>
                 {sc.slice(0, 16)}
               </text>
@@ -988,7 +988,7 @@ export function TermStructureSurface({
                 {j === 0 && <text x={LABEL_W - 6} y={y + CELL_H / 2 + 5} textAnchor="end" fill={S.secondary} style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 600 }}>{tenor}</text>}
                 <rect x={x + 1} y={y + 1} width={CELL_W - 2} height={CELL_H - 2} fill={cellBg(rate)} rx={2} />
                 <text x={x + CELL_W / 2} y={y + CELL_H / 2 - 2} textAnchor="middle" fill={tc(rate)} style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: "bold" }}>{rate.toFixed(4)}</text>
-                <text x={x + CELL_W / 2} y={y + CELL_H / 2 + 14} textAnchor="middle" fill={tc(rate)} style={{ fontFamily: S.fontMono, fontSize: 11, opacity: 0.85 }}>{fmtBps(carry)}</text>
+                <text x={x + CELL_W / 2} y={y + CELL_H / 2 + 14} textAnchor="middle" fill={tc(rate)} style={{ fontFamily: S.fontMono, fontSize: 12, opacity: 0.85 }}>{fmtBps(carry)}</text>
               </g>
             );
           }))}
@@ -1000,8 +1000,8 @@ export function TermStructureSurface({
             </linearGradient>
           </defs>
           <rect x={LABEL_W} y={H - 12} width={scenarios.length * CELL_W * 0.7} height={8} fill="url(#termLegend2)" rx={3} />
-          <text x={LABEL_W} y={H - 14} fill={S.red} style={{ fontFamily: S.fontMono, fontSize: 11 }}>DISCOUNT</text>
-          <text x={LABEL_W + scenarios.length * CELL_W * 0.7} y={H - 14} textAnchor="end" fill={S.green} style={{ fontFamily: S.fontMono, fontSize: 11 }}>PREMIUM</text>
+          <text x={LABEL_W} y={H - 14} fill={S.red} style={{ fontFamily: S.fontMono, fontSize: 12 }}>DISCOUNT</text>
+          <text x={LABEL_W + scenarios.length * CELL_W * 0.7} y={H - 14} textAnchor="end" fill={S.green} style={{ fontFamily: S.fontMono, fontSize: 12 }}>PREMIUM</text>
         </svg>
       </div>
     </div>
@@ -1038,7 +1038,7 @@ export function GreeksRadarChart({ data, title = "Greeks Radar" }: { data: Greek
   }
   return (
     <div style={{ display: "inline-block" }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
         {title.toUpperCase()}
       </div>
       <svg width={SIZE} height={SIZE} style={{ display: "block" }}>
@@ -1100,14 +1100,14 @@ export function VaRConeChart({ data, title = "VaR Cone" }: { data: VaRConeData; 
   const bBot = pts.map((p, i) => `L ${toX(pts.length - 1 - i).toFixed(1)} ${toY(pts[pts.length - 1 - i].var95).toFixed(1)}`).join(" ");
   return (
     <div>
-      <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 6 }}>
         {title.toUpperCase()} — √T SCALING · ANNUAL VOL {(data.vol * 100).toFixed(1)}%
       </div>
       <svg width={W} height={H} style={{ display: "block" }}>
         {[0, 0.25, 0.5, 0.75, 1.0].map(t => (
           <g key={t}>
             <line x1={PAD.left} y1={PAD.top + (1 - t) * chartH} x2={PAD.left + chartW} y2={PAD.top + (1 - t) * chartH} stroke={S.soft} strokeWidth={0.5} />
-            <text x={PAD.left - 8} y={PAD.top + (1 - t) * chartH + 4} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 11 }}>{fmt(t * maxV)}</text>
+            <text x={PAD.left - 8} y={PAD.top + (1 - t) * chartH + 4} textAnchor="end" fill={S.tertiary} style={{ fontFamily: S.fontMono, fontSize: 12 }}>{fmt(t * maxV)}</text>
           </g>
         ))}
         {horizons.map((h, i) => (
@@ -1138,7 +1138,7 @@ export function VaRConeChart({ data, title = "VaR Cone" }: { data: VaRConeData; 
         ].map((l, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 18, height: 3, background: (l as { dashed?: boolean }).dashed ? "transparent" : l.color, borderTop: (l as { dashed?: boolean }).dashed ? `2px dashed ${l.color}` : "none" }} />
-            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>{l.label}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{l.label}</span>
           </div>
         ))}
       </div>

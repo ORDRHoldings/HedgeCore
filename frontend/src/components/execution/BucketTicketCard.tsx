@@ -129,7 +129,7 @@ export default function BucketTicketCard({ bucket, mapping, worstCase, runId, ba
               <span style={{
                 display: "inline-flex", alignItems: "center",
                 fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-                fontSize: 9, fontWeight: 700,
+                fontSize: 12, fontWeight: 700,
                 color: "var(--accent-amber)",
                 padding: "2px 6px",
                 border: "1px solid var(--accent-amber)",

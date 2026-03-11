@@ -235,7 +235,7 @@ export default function PhaseExecute({
       }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>STEP 6 OF 7</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>STEP 6 OF 7</span>
             <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
             <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.primary }}>EXECUTION CONFIRMATION</span>
           </div>
@@ -246,11 +246,11 @@ export default function PhaseExecute({
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "color-mix(in srgb, var(--status-pass,#22c55e) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--status-pass,#22c55e) 25%, transparent)", padding: "4px 12px", borderRadius: 2 }}>
             <ShieldCheckIcon size={12} color={T.green} />
-            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.green, letterSpacing: "0.1em" }}>RISK: APPROVE</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.green, letterSpacing: "0.1em" }}>RISK: APPROVE</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "color-mix(in srgb, var(--accent-cyan) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--accent-cyan) 25%, transparent)", padding: "4px 12px", borderRadius: 2 }}>
             <UserCheckIcon size={12} color={T.cyan} />
-            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.cyan, letterSpacing: "0.1em" }}>4-EYES: {governanceMode === "team" ? "MAKER" : "SOLO"}</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.cyan, letterSpacing: "0.1em" }}>4-EYES: {governanceMode === "team" ? "MAKER" : "SOLO"}</span>
           </div>
         </div>
       </div>
@@ -289,7 +289,7 @@ export default function PhaseExecute({
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <ActivityIcon size={12} color={T.cyan} />
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>
                 LIVE MARKET SNAPSHOT
               </span>
             </div>
@@ -298,7 +298,7 @@ export default function PhaseExecute({
                 <LoaderIcon size={10} color={T.tertiary} style={{ animation: "spin 1s linear infinite" }} />
               ) : (
                 <span style={{
-                  fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+                  fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                   color: srcLive ? T.green : T.amber,
                   background: srcLive ? "color-mix(in srgb, var(--status-pass,#22c55e) 10%, transparent)" : "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
                   border: srcLive ? "1px solid color-mix(in srgb, var(--status-pass,#22c55e) 25%, transparent)" : "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
@@ -308,7 +308,7 @@ export default function PhaseExecute({
                 </span>
               )}
               {snapTs && !snapLoading && (
-                <span style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary }}>
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>
                   as of {snapTs}
                 </span>
               )}
@@ -329,13 +329,13 @@ export default function PhaseExecute({
                   borderBottom: `1px solid ${T.soft}`,
                   minWidth: 130,
                 }}>
-                  <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary, letterSpacing: "0.12em", marginBottom: 4 }}>
+                  <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.12em", marginBottom: 4 }}>
                     {r.symbol}
                   </div>
                   <div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: T.primary, marginBottom: 2 }}>
                     {r.mid.toFixed(4)}
                   </div>
-                  <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary }}>
+                  <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>
                     {r.bid.toFixed(4)} / {r.ask.toFixed(4)}
                   </div>
                 </div>
@@ -361,17 +361,17 @@ export default function PhaseExecute({
                 background: T.bgPanel,
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, letterSpacing: "0.08em" }}>SPOT USDMXN</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.08em" }}>SPOT USDMXN</span>
                   <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.primary }}>{spotMxn.mid.toFixed(4)}</span>
                 </div>
                 <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, letterSpacing: "0.08em" }}>FWD RATE USED</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.08em" }}>FWD RATE USED</span>
                   <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.cyan }}>{fwdUsed.toFixed(4)}</span>
                 </div>
                 <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, letterSpacing: "0.08em" }}>FWD PREMIUM</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.08em" }}>FWD PREMIUM</span>
                   <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: premAmt >= 0 ? T.green : T.red }}>
                     {premAmt >= 0 ? "+" : ""}{premAmt.toFixed(4)} ({premium}%)
                   </span>
@@ -384,8 +384,8 @@ export default function PhaseExecute({
         {/* ── TRADE TICKETS — fixed table ─────────────────────────────── */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>TRADE TICKETS</span>
-            <span style={{ fontFamily: T.fontMono, fontSize: 10, background: T.soft, color: T.tertiary, padding: "1px 7px", borderRadius: 10 }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>TRADE TICKETS</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, background: T.soft, color: T.tertiary, padding: "1px 7px", borderRadius: 10 }}>
               {buckets.length > 0 ? `${buckets.length} LEG${buckets.length !== 1 ? "S" : ""}` : "NO ACTIVE LEGS"}
             </span>
           </div>
@@ -408,7 +408,7 @@ export default function PhaseExecute({
                 {["#","INSTRUMENT","DIRECTION","CNTRTS","FWD RATE","NOTIONAL","TOTAL USD","MARGIN","COST","EFF%"].map((h, i) => (
                   <div key={h} style={{
                     padding: "8px 6px",
-                    fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
+                    fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em",
                     color: T.tertiary, textAlign: i === 0 ? "center" : "left",
                     whiteSpace: "nowrap",
                   }}>{h}</div>
@@ -436,11 +436,11 @@ export default function PhaseExecute({
                       <div style={{ padding: "12px 6px", fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, textAlign: "center" }}>{i + 1}</div>
                       <div style={{ padding: "12px 6px" }}>
                         <div style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.primary }}>{m.spec.symbol}</div>
-                        <div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, marginTop: 2 }}>{m.spec.name}</div>
+                        <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, marginTop: 2 }}>{m.spec.name}</div>
                       </div>
                       <div style={{ padding: "12px 6px" }}>
                         <span style={{
-                          fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                          fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                           color: m.side === "SELL" ? T.red : T.cyan,
                           background: m.side === "SELL" ? "color-mix(in srgb, var(--accent-red,#DC2626) 10%, transparent)" : "color-mix(in srgb, var(--accent-cyan) 10%, transparent)",
                           border: m.side === "SELL" ? "1px solid color-mix(in srgb, var(--accent-red,#DC2626) 25%, transparent)" : "1px solid color-mix(in srgb, var(--accent-cyan) 25%, transparent)",
@@ -451,7 +451,7 @@ export default function PhaseExecute({
                       <div style={{ padding: "12px 6px", fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.cyan }}>{fmtRate(displayRate)}</div>
                       <div style={{ padding: "12px 6px" }}>
                         <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.primary }}>{fmt(m.notional)}</div>
-                        <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary, marginTop: 1 }}>{m.currency} · {fmt(m.spec.contract_size)}/ct</div>
+                        <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, marginTop: 1 }}>{m.currency} · {fmt(m.spec.contract_size)}/ct</div>
                       </div>
                       <div style={{ padding: "12px 6px", fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.primary }}>{fmtUsd(b.action_usd)}</div>
                       <div style={{ padding: "12px 6px", fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.amber }}>{fmtUsd(m.margin)}</div>
@@ -473,7 +473,7 @@ export default function PhaseExecute({
                       background: i % 2 === 0 ? T.bgPanel : T.bgSub,
                       borderTop: `1px solid ${T.soft}`,
                     }}>
-                      <span style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary, marginRight: 4 }}>
+                      <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, marginRight: 4 }}>
                         TICK {m.spec.tick_size} · TICK VALUE ${m.spec.tick_value} · CONTRACT {fmt(m.spec.contract_size)} {m.currency}
                       </span>
                       <div style={{ flex: 1 }} />
@@ -481,7 +481,7 @@ export default function PhaseExecute({
                         onClick={() => openIbkr(m.spec, m.side, m.contracts, displayRate)}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 5,
-                          fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                          fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                           color: T.royal, background: "color-mix(in srgb,#1C62F2 8%,transparent)",
                           border: "1px solid color-mix(in srgb,#1C62F2 25%,transparent)",
                           padding: "4px 10px", borderRadius: 2, cursor: "pointer",
@@ -493,7 +493,7 @@ export default function PhaseExecute({
                         onClick={() => copyRow(b, i)}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 5,
-                          fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                          fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                           color: isCopied ? T.green : T.tertiary,
                           background: "transparent", border: `1px solid ${T.soft}`,
                           padding: "4px 10px", borderRadius: 2, cursor: "pointer",
@@ -557,7 +557,7 @@ export default function PhaseExecute({
               ["EST TOTAL COST",   fmtUsd(totals.cost),            T.secondary],
             ] as const).map(([label, value, color], idx) => (
               <div key={label} style={{ padding: "14px 18px", borderRight: idx < 3 ? `1px solid ${T.soft}` : "none" }}>
-                <div style={{ fontFamily: T.fontMono, fontSize: 10, letterSpacing: "0.12em", color: T.tertiary, marginBottom: 6 }}>{label}</div>
+                <div style={{ fontFamily: T.fontMono, fontSize: 12, letterSpacing: "0.12em", color: T.tertiary, marginBottom: 6 }}>{label}</div>
                 <div style={{ fontFamily: T.fontMono, fontSize: 20, fontWeight: 700, color }}>{value}</div>
               </div>
             ))}
@@ -572,7 +572,7 @@ export default function PhaseExecute({
             borderRadius: 4, padding: "14px 16px", marginBottom: 16,
           }}>
             <div style={{
-              fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+              fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em",
               color: T.amber, marginBottom: 10,
             }}>
               BEFORE CONFIRMING, VERIFY:

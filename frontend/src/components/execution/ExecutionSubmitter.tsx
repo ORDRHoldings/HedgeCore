@@ -324,7 +324,7 @@ export default function ExecutionSubmitter({
         onClick={() => setCollapsed(p => !p)}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
             ORDER SUBMISSION &amp; STATUS TRACKER
           </span>
           {/* KPI chips */}
@@ -336,7 +336,7 @@ export default function ExecutionSubmitter({
             { label: "CANCELLED", val: cancelled, color: S.amber  },
           ].filter(c => c.val > 0).map(c => (
             <span key={c.label} style={{
-              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: c.color,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: c.color,
               background: `color-mix(in srgb, ${c.color} 10%, transparent)`,
               border: `1px solid color-mix(in srgb, ${c.color} 25%, transparent)`,
               padding: "1px 6px", borderRadius: 2, letterSpacing: "0.05em",
@@ -346,7 +346,7 @@ export default function ExecutionSubmitter({
           ))}
           {avgSlippage !== null && (
             <span style={{
-              fontFamily: S.fontMono, fontSize: 9, color: Math.abs(avgSlippage) > 5 ? S.amber : S.pass,
+              fontFamily: S.fontMono, fontSize: 12, color: Math.abs(avgSlippage) > 5 ? S.amber : S.pass,
             }}>
               AVG SLIPPAGE: {avgSlippage > 0 ? "+" : ""}{avgSlippage.toFixed(1)} bps
             </span>
@@ -354,11 +354,11 @@ export default function ExecutionSubmitter({
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {!authReady && (
-            <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.amber }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.amber }}>
               AWAITING PRE-FLIGHT AUTH
             </span>
           )}
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {collapsed ? "▼ EXPAND" : "▲ COLLAPSE"}
           </span>
         </div>
@@ -368,7 +368,7 @@ export default function ExecutionSubmitter({
         <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
           {/* Mode selector */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary }}>
               SUBMIT VIA
             </span>
             {(["IBKR_TWS", "FX_DESK", "MANUAL"] as SubmitMode[]).map(m => (
@@ -376,7 +376,7 @@ export default function ExecutionSubmitter({
                 key={m}
                 onClick={e => { e.stopPropagation(); setMode(m); }}
                 style={{
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em",
                   color: mode === m ? "#000" : S.secondary,
                   background: mode === m ? S.cyan : "transparent",
                   border: `1px solid ${mode === m ? S.cyan : S.rim}`,
@@ -387,12 +387,12 @@ export default function ExecutionSubmitter({
               </button>
             ))}
             {mode === "FX_DESK" && !fxDeskEmail && (
-              <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.amber }}>
+              <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.amber }}>
                 ⚠ Set FX desk email in Settings → Execution
               </span>
             )}
             {mode === "IBKR_TWS" && !ibkrAccountId && (
-              <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.amber }}>
+              <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.amber }}>
                 ⚠ Set IBKR account ID in Settings → Execution
               </span>
             )}
@@ -421,14 +421,14 @@ export default function ExecutionSubmitter({
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                     {/* Order ID */}
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, minWidth: 180 }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, minWidth: 180 }}>
                       {order.orderId}
                     </span>
 
                     {/* Symbol + side */}
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+                        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                         color: order.side === "BUY" ? S.pass : S.fail,
                         background: `color-mix(in srgb, ${order.side === "BUY" ? S.pass : S.fail} 10%, transparent)`,
                         border: `1px solid color-mix(in srgb, ${order.side === "BUY" ? S.pass : S.fail} 25%, transparent)`,
@@ -436,27 +436,27 @@ export default function ExecutionSubmitter({
                       }}>
                         {order.side}
                       </span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.primary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>
                         {order.ibkr_symbol ?? m?.tradingview_symbol ?? order.bucket}
                       </span>
                       {order.contracts && (
-                        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                           {order.contracts} contracts
                         </span>
                       )}
-                      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                         {fmtUsd(Math.abs(order.notional_usd))}
                       </span>
                     </div>
 
                     {/* Forward rate */}
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       FWD {order.forward_rate.toFixed(4)}
                     </span>
 
                     {/* Fill info */}
                     {order.fillPrice && (
-                      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: order.slippage_bps !== null && Math.abs(order.slippage_bps) > 5 ? S.amber : S.pass }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: order.slippage_bps !== null && Math.abs(order.slippage_bps) > 5 ? S.amber : S.pass }}>
                         FILL {order.fillPrice.toFixed(4)}
                         {order.slippage_bps !== null && ` (${order.slippage_bps > 0 ? "+" : ""}${order.slippage_bps.toFixed(1)} bps)`}
                       </span>
@@ -465,7 +465,7 @@ export default function ExecutionSubmitter({
                     {/* Status badge */}
                     <span style={{ flex: 1 }} />
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                       color: statusColor,
                       background: `color-mix(in srgb, ${statusColor} 10%, transparent)`,
                       border: `1px solid color-mix(in srgb, ${statusColor} 25%, transparent)`,
@@ -476,7 +476,7 @@ export default function ExecutionSubmitter({
 
                     {/* Timestamps */}
                     {order.submittedAt && (
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, whiteSpace: "nowrap" }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, whiteSpace: "nowrap" }}>
                         {new Date(order.submittedAt).toLocaleTimeString()}
                       </span>
                     )}
@@ -487,7 +487,7 @@ export default function ExecutionSubmitter({
                         <button
                           onClick={() => handleSubmit(order, m)}
                           style={{
-                            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
+                            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em",
                             color: "#000", background: S.cyan, border: "none",
                             borderRadius: 2, padding: "4px 10px", cursor: "pointer",
                             whiteSpace: "nowrap",
@@ -500,7 +500,7 @@ export default function ExecutionSubmitter({
                         <button
                           onClick={() => setFillModal({ orderId: order.orderId, fillPrice: "", fillNotional: "", notes: "" })}
                           style={{
-                            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
+                            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em",
                             color: S.pass, background: "transparent",
                             border: `1px solid ${S.pass}`, borderRadius: 2,
                             padding: "4px 10px", cursor: "pointer",
@@ -513,7 +513,7 @@ export default function ExecutionSubmitter({
                         <button
                           onClick={() => handleMarkSettled(order.orderId)}
                           style={{
-                            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
+                            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em",
                             color: "#10B981", background: "transparent",
                             border: `1px solid #10B981`, borderRadius: 2,
                             padding: "4px 10px", cursor: "pointer",
@@ -526,7 +526,7 @@ export default function ExecutionSubmitter({
                         <button
                           onClick={() => handleCancel(order.orderId)}
                           style={{
-                            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em",
+                            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em",
                             color: S.fail, background: "transparent",
                             border: `1px solid ${S.fail}40`, borderRadius: 2,
                             padding: "4px 10px", cursor: "pointer",
@@ -540,7 +540,7 @@ export default function ExecutionSubmitter({
 
                   {/* Notes */}
                   {order.notes && (
-                    <div style={{ marginTop: 4, fontFamily: S.fontUI, fontSize: 10, color: S.tertiary }}>
+                    <div style={{ marginTop: 4, fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                       {order.notes}
                     </div>
                   )}
@@ -555,7 +555,7 @@ export default function ExecutionSubmitter({
               background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 2,
               padding: "10px 14px",
             }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary, marginBottom: 8 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary, marginBottom: 8 }}>
                 FILL RECONCILIATION
               </div>
               <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
@@ -580,7 +580,7 @@ export default function ExecutionSubmitter({
                   },
                 ].map(k => (
                   <div key={k.label}>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.07em", marginBottom: 2 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.07em", marginBottom: 2 }}>
                       {k.label}
                     </div>
                     <div style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color: k.color }}>
@@ -612,13 +612,13 @@ export default function ExecutionSubmitter({
               }}
               onClick={e => e.stopPropagation()}
             >
-              <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.primary, marginBottom: 16 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary, marginBottom: 16 }}>
                 MARK FILLED — {order.orderId}
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div>
-                  <label style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em" }}>
+                  <label style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em" }}>
                     FILL PRICE
                   </label>
                   <input
@@ -637,7 +637,7 @@ export default function ExecutionSubmitter({
                     const slip = ((fp - order.forward_rate) / order.forward_rate) * 10_000;
                     const adj = order.side === "SELL" ? -slip : slip;
                     return (
-                      <div style={{ fontFamily: S.fontMono, fontSize: 10, color: Math.abs(adj) > 5 ? S.amber : S.pass, marginTop: 3 }}>
+                      <div style={{ fontFamily: S.fontMono, fontSize: 12, color: Math.abs(adj) > 5 ? S.amber : S.pass, marginTop: 3 }}>
                         Slippage: {adj > 0 ? "+" : ""}{adj.toFixed(1)} bps vs forward rate {order.forward_rate.toFixed(4)}
                       </div>
                     );
@@ -645,7 +645,7 @@ export default function ExecutionSubmitter({
                 </div>
 
                 <div>
-                  <label style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em" }}>
+                  <label style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em" }}>
                     FILL NOTIONAL (USD) — leave blank for full fill
                   </label>
                   <input
@@ -662,7 +662,7 @@ export default function ExecutionSubmitter({
                 </div>
 
                 <div>
-                  <label style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em" }}>
+                  <label style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.secondary, display: "block", marginBottom: 4, letterSpacing: "0.06em" }}>
                     NOTES (OPTIONAL)
                   </label>
                   <input
@@ -683,7 +683,7 @@ export default function ExecutionSubmitter({
                     onClick={handleMarkFilled}
                     disabled={!fillModal.fillPrice}
                     style={{
-                      flex: 1, fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                      flex: 1, fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                       color: "#000", background: fillModal.fillPrice ? S.pass : S.tertiary,
                       border: "none", borderRadius: 2, padding: "8px",
                       cursor: fillModal.fillPrice ? "pointer" : "not-allowed",
@@ -694,7 +694,7 @@ export default function ExecutionSubmitter({
                   <button
                     onClick={() => setFillModal(null)}
                     style={{
-                      fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                       color: S.secondary, background: "transparent",
                       border: `1px solid ${S.rim}`, borderRadius: 2, padding: "8px 16px",
                       cursor: "pointer",

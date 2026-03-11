@@ -53,7 +53,7 @@ function UrgencyChip({ urgency }: { urgency: ApprovalItem["urgency"] }) {
     <span
       style={{
         fontFamily: S.fontMono,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 600,
         color: c.color,
         background: c.bg,
@@ -101,7 +101,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
   const monoNote = (color: string): React.CSSProperties => ({
     padding: "18px 14px",
     fontFamily: S.fontMono,
-    fontSize: 11,
+    fontSize: 12,
     color,
   });
 
@@ -138,7 +138,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             color: S.primary,
             letterSpacing: "0.09em",
@@ -156,7 +156,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
               background: S.fail,
               color: "#fff",
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               borderRadius: "50%",
               minWidth: 18,
@@ -234,7 +234,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
                       padding: "6px 12px",
                       textAlign: "left",
                       fontFamily: S.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 600,
                       color: S.tertiary,
                       letterSpacing: "0.07em",
@@ -261,7 +261,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         color: S.cyan,
                         letterSpacing: "0.04em",
                       }}
@@ -275,7 +275,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
                     <code
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         color: S.secondary,
                         background: S.bgSub,
                         border: `1px solid ${S.soft}`,
@@ -301,7 +301,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
 
                   {/* Notional */}
                   <td style={{ padding: "8px 12px", whiteSpace: "nowrap" }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>
                       ${(item.notional / 1_000_000).toFixed(1)}M
                     </span>
                   </td>
@@ -317,7 +317,7 @@ export default function PendingApprovalsWidget({ token, user, onRemove }: Props)
                       onClick={() => router.push("/staging")}
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         color: S.cyan,
                         background: "transparent",
                         border: `1px solid ${S.cyan}`,

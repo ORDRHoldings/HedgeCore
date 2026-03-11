@@ -88,10 +88,10 @@ export default function HedgeAccountingPanel({ buckets }: HedgeAccountingPanelPr
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 11, fontFamily: S.fontMono, color: S.textTertiary, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+        <span style={{ fontSize: 12, fontFamily: S.fontMono, color: S.textTertiary, letterSpacing: "0.1em", textTransform: "uppercase" }}>
           HEDGE EFFECTIVENESS ASSESSMENT
         </span>
-        <span style={{ fontSize: 10, fontFamily: S.fontMono, color: S.textTertiary }}>
+        <span style={{ fontSize: 12, fontFamily: S.fontMono, color: S.textTertiary }}>
           ASC 815 / IAS 39
         </span>
       </div>
@@ -106,13 +106,13 @@ export default function HedgeAccountingPanel({ buckets }: HedgeAccountingPanelPr
         border: `1px solid ${S.soft}`,
         borderRadius: 4,
       }}>
-        <span style={{ fontSize: 10, fontFamily: S.fontMono, color: S.textTertiary }}>
+        <span style={{ fontSize: 12, fontFamily: S.fontMono, color: S.textTertiary }}>
           HIGHLY EFFECTIVE BAND:
         </span>
-        <span style={{ fontSize: 10, fontFamily: S.fontMono, color: S.cyan, fontWeight: 600 }}>
+        <span style={{ fontSize: 12, fontFamily: S.fontMono, color: S.cyan, fontWeight: 600 }}>
           0.80 – 1.25
         </span>
-        <span style={{ fontSize: 10, fontFamily: S.fontMono, color: S.textTertiary, marginLeft: "auto" }}>
+        <span style={{ fontSize: 12, fontFamily: S.fontMono, color: S.textTertiary, marginLeft: "auto" }}>
           Prospective test (structural)
         </span>
       </div>
@@ -145,7 +145,7 @@ export default function HedgeAccountingPanel({ buckets }: HedgeAccountingPanelPr
                   <th key={h} style={{
                     padding: "6px 10px",
                     textAlign: h === "BUCKET" ? "left" : "right",
-                    fontSize: 10,
+                    fontSize: 12,
                     color: S.textTertiary,
                     letterSpacing: "0.08em",
                     fontWeight: 500,
@@ -186,7 +186,7 @@ export default function HedgeAccountingPanel({ buckets }: HedgeAccountingPanelPr
                     </td>
                     <td style={{ padding: "7px 10px", textAlign: "right" }}>
                       <span style={{
-                        fontSize: 10,
+                        fontSize: 12,
                         color: statusColor(row.status),
                         letterSpacing: "0.06em",
                         fontWeight: 600,
@@ -216,7 +216,7 @@ export default function HedgeAccountingPanel({ buckets }: HedgeAccountingPanelPr
                     —
                   </td>
                   <td style={{ padding: "7px 10px", textAlign: "right" }}>
-                    <span style={{ fontSize: 10, color: S.textTertiary, letterSpacing: "0.06em" }}>
+                    <span style={{ fontSize: 12, color: S.textTertiary, letterSpacing: "0.06em" }}>
                       SUPPRESSED
                     </span>
                   </td>
@@ -244,7 +244,7 @@ export default function HedgeAccountingPanel({ buckets }: HedgeAccountingPanelPr
           buckets within ASC 815 effectiveness corridor (0.80–1.25)
         </span>
         {suppressedBuckets.length > 0 && (
-          <span style={{ fontSize: 10, fontFamily: S.fontMono, color: S.textTertiary, marginLeft: "auto" }}>
+          <span style={{ fontSize: 12, fontFamily: S.fontMono, color: S.textTertiary, marginLeft: "auto" }}>
             {suppressedBuckets.length} suppressed (excluded)
           </span>
         )}
@@ -252,7 +252,7 @@ export default function HedgeAccountingPanel({ buckets }: HedgeAccountingPanelPr
 
       {/* Disclosure note */}
       <div style={{
-        fontSize: 10,
+        fontSize: 12,
         fontFamily: S.fontMono,
         color: S.textTertiary,
         borderLeft: `2px solid ${S.rim}`,

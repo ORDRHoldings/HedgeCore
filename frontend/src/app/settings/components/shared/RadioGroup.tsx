@@ -41,7 +41,7 @@ export default function RadioGroup<T extends string | number>({ name, value, opt
               {opt.label}
             </div>
             {opt.desc && (
-              <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>{opt.desc}</div>
+              <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>{opt.desc}</div>
             )}
           </div>
         </label>

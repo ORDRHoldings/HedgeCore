@@ -477,7 +477,7 @@ export default function PhaseReview({
         flexShrink:     0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>
+          <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>
             STEP 5 OF 7
           </span>
           <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
@@ -489,7 +489,7 @@ export default function PhaseReview({
           {/* Run ID badge */}
           <span style={{
             fontFamily:    T.fontMono,
-            fontSize:      10,
+            fontSize: 12,
             letterSpacing: "0.06em",
             color:         T.cyan,
             padding:       "3px 10px",
@@ -513,12 +513,12 @@ export default function PhaseReview({
               ? <CheckCircleIcon size={12} color={verdictColor} />
               : <AlertTriangleIcon size={12} color={verdictColor} />
             }
-            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: verdictColor, letterSpacing: "0.10em" }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: verdictColor, letterSpacing: "0.10em" }}>
               {verdictLabel}
             </span>
           </div>
           {submitted && (
-            <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.green, letterSpacing: "0.10em" }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.green, letterSpacing: "0.10em" }}>
               SUBMITTED
             </span>
           )}
@@ -743,14 +743,14 @@ export default function PhaseReview({
                         border:       `1px solid color-mix(in srgb, ${isSell ? T.red : T.green} 30%, transparent)`,
                         borderRadius:  2,
                         fontFamily:    T.fontMono,
-                        fontSize:      10,
+                        fontSize: 12,
                         fontWeight:    700,
                         letterSpacing: "0.06em",
                         color:         isSell ? T.red : T.green,
                       }}>
                         {isSell ? "SELL" : "BUY"}
                       </span>
-                      <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary }}>
+                      <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>
                         {isSell ? "/ BUY USD" : "/ SELL USD"}
                       </span>
                     </div>

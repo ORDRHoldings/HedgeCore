@@ -191,10 +191,10 @@ function DataRow({ label, value, sub, color }: { label: string; value: string; s
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "5px 0", borderBottom: `1px solid ${S.soft}` }}>
       <div>
-        <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>{label}</span>
-        {sub && <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginLeft: 6 }}>{sub}</span>}
+        <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{label}</span>
+        {sub && <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginLeft: 6 }}>{sub}</span>}
       </div>
-      <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: color ?? S.primary }}>{value}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: color ?? S.primary }}>{value}</span>
     </div>
   );
 }
@@ -251,10 +251,10 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
         padding: "8px 14px", borderBottom: `1px solid ${S.rim}`,
         background: `color-mix(in srgb, ${S.sub} 60%, transparent)`,
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan }}>
           ◈ REGULATORY CAPITAL ENGINE
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           Basel III BCBS 279 · BCBS 457 · ISDA SIMM v2.6
         </span>
       </div>
@@ -263,7 +263,7 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
       <div style={{ display: "flex", borderBottom: `1px solid ${S.rim}`, background: S.sub }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             padding: "7px 14px", border: "none",
             borderBottom: activeTab === t.id ? `2px solid ${S.cyan}` : "2px solid transparent",
             background: "transparent",
@@ -278,14 +278,14 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
         {/* SA-CCR */}
         {activeTab === "sa-ccr" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Standardised Approach for Counterparty Credit Risk (SA-CCR) per BCBS 279 (2014).
               Replaced IMM/CEM for FX derivatives. Exposure At Default (EAD) = α × (RC + PFE) where α = 1.4.
               FX Supervisory Factor = 4% per BCBS 279 §165–170.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}`, padding: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>SA-CCR COMPUTATION</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>SA-CCR COMPUTATION</div>
                 <DataRow label="Adjusted Notional" sub="BCBS §166" value={fmt(notionalUSD)} />
                 <DataRow label="Replacement Cost (RC)" sub="MTM basis" value={fmt(saccr.replacementCost)} />
                 <DataRow label="Potential Future Exposure" sub="PFE = SF × MF × AN" value={fmt(saccr.pfe)} color={S.amber} />
@@ -294,7 +294,7 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
                 <DataRow label="Risk-Weighted Asset" sub="RWA = EAD×100%" value={fmt(saccr.rwa)} />
               </div>
               <div style={{ background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}`, padding: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>CAPITAL REQUIREMENTS</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>CAPITAL REQUIREMENTS</div>
                 <DataRow label="Pillar 1 Minimum (8%)" sub="CCR capital charge" value={fmt(saccr.capitalCharge)} color={S.red} />
                 <DataRow label="Capital Conservation Buffer" sub="+ 2.5%" value={fmt(saccr.capitalCharge * 0.3125)} color={S.amber} />
                 <DataRow label="Total CCR Capital" sub="8% + 2.5% = 10.5%" value={fmt(saccr.capitalCharge * 1.3125)} color={S.red} />
@@ -304,7 +304,7 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
               </div>
             </div>
             <div style={{ marginTop: 10, padding: "6px 10px", background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                 BCBS 279 (2014) · SA-CCR FX Add-On: SF_FX = 4% for single-currency pair · Maturity Factor = √(min(M,1yr)/1yr) · Alpha = 1.4 (conservative, BCBS §74)
               </div>
             </div>
@@ -315,10 +315,10 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
         {activeTab === "cva" && (
           <div>
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>Counterparty Rating:</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>Counterparty Rating:</span>
               {(["IG", "HY"] as const).map(r => (
                 <button key={r} onClick={() => setCounterpartyRating(r)} style={{
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   padding: "3px 10px", borderRadius: 2,
                   border: counterpartyRating === r ? `1px solid ${S.cyan}` : `1px solid ${S.rim}`,
                   background: counterpartyRating === r ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : S.sub,
@@ -327,13 +327,13 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
                 }}>{r === "IG" ? "Investment Grade (wi = 0.7%)" : "High Yield (wi = 1.5%)"}</button>
               ))}
             </div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               CVA Capital Charge per Basel III §75 (Standardised method). CVA arises from mark-to-market losses
               due to deterioration in counterparty creditworthiness. Mandatory for OTC derivatives under Dodd-Frank §731 and EMIR Art. 11.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}`, padding: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>CVA CALCULATION</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>CVA CALCULATION</div>
                 <DataRow label="EAD (from SA-CCR)" value={fmt(saccr.ead)} />
                 <DataRow label="Supervisory Weight wi" sub={counterpartyRating} value={counterpartyRating === "IG" ? "0.70%" : "1.50%"} />
                 <DataRow label="CVA Charge (99.9% CI)" value={fmt(cva.cvaCharge)} color={S.red} />
@@ -342,7 +342,7 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
                 <DataRow label="Stressed CVA (×1.25)" sub="BCBS 189" value={fmt(cva.stressedCVA)} color={S.red} />
               </div>
               <div style={{ background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}`, padding: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>REGULATORY CONTEXT</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>REGULATORY CONTEXT</div>
                 {[
                   ["Framework", "Basel III §75 · BCBS 189 (2011)"],
                   ["Mandatory Since", "January 2013 (EU/US)"],
@@ -361,13 +361,13 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
         {/* ISDA SIMM */}
         {activeTab === "isda-simm" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               ISDA Standard Initial Margin Model (SIMM) v2.6 (September 2023). Required for uncleared OTC derivatives under BCBS-IOSCO IM framework.
               Phase-in complete for all entities with ≥$8B AANA (September 2022). FX category: EMEA EM = Category 3, risk weight 7.4%.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}`, padding: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>SIMM CALCULATION</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>SIMM CALCULATION</div>
                 <DataRow label="FX Delta Sensitivity" sub="s_k = notional/spot" value={fmt(simm.fxDelta)} />
                 <DataRow label="Risk Weight (Cat 3 EM)" sub="SIMM §D.1.2 = 7.4%" value="7.40%" />
                 <DataRow label="FX Vega" sub="Forwards: zero" value="—" color={S.tertiary} />
@@ -376,7 +376,7 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
                 <DataRow label="Portfolio IM (×0.6 net)" sub="~40% netting benefit" value={fmt(simm.portfolioIM)} color={S.amber} />
               </div>
               <div style={{ background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}`, padding: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>SIMM PARAMETERS</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>SIMM PARAMETERS</div>
                 {[
                   ["Model Version", "ISDA SIMM v2.6 (Sep 2023)"],
                   ["FX Category", "Cat 3: EMEA EM (incl. MXN, BRL, ZAR)"],
@@ -392,7 +392,7 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
               </div>
             </div>
             <div style={{ marginTop: 10, padding: "6px 10px", background: `color-mix(in srgb, ${S.amber} 6%, transparent)`, borderRadius: 3, border: `1px solid ${S.amber}` }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.amber }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber }}>
                 ⚠ SIMM PHASE-IN: Entities with AANA {'<'} $50B may have reduced IM requirements or bilateral threshold agreements. CCP-cleared derivatives: IM set by CCP rulebook (typically LCH/CME model).
               </span>
             </div>
@@ -403,10 +403,10 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
         {activeTab === "leverage" && (
           <div>
             <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>G-SIB Buffer:</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>G-SIB Buffer:</span>
               {[0.01, 0.015, 0.02, 0.025, 0.035].map(buf => (
                 <button key={buf} onClick={() => setGsibBuffer(buf)} style={{
-                  fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   padding: "2px 8px", borderRadius: 2,
                   border: gsibBuffer === buf ? `1px solid ${S.cyan}` : `1px solid ${S.rim}`,
                   background: gsibBuffer === buf ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : S.sub,
@@ -415,12 +415,12 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
                 }}>{(buf * 100).toFixed(1)}%</button>
               ))}
             </div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Basel III Leverage Ratio = Tier 1 Capital / Total Exposure. Minimum 3% for all banks; G-SIBs face additional buffers (1.0–3.5%). FX derivatives contribute to leverage exposure via SA-CCR EAD (CRR §429 / Basel III §32).
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}`, padding: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>LEVERAGE RATIO</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>LEVERAGE RATIO</div>
                 <DataRow label="Tier 1 Capital (est.)" value={fmt(tier1)} />
                 <DataRow label="Leverage Exposure" sub="Incl. SA-CCR EAD" value={fmt(leverage.leverageExposure)} />
                 <DataRow label="Leverage Ratio" value={(leverage.ratio * 100).toFixed(2) + "%" } color={leverage.compliant ? S.green : S.red} />
@@ -429,7 +429,7 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
                 <DataRow label="Compliant" value={leverage.compliant ? "YES" : "BREACH"} color={leverage.compliant ? S.green : S.red} />
               </div>
               <div style={{ background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}`, padding: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>G-SIB BUFFERS</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>G-SIB BUFFERS</div>
                 {[
                   ["Bucket 1 (lowest)", "1.0%", "HSBC, BNP Paribas, etc."],
                   ["Bucket 2", "1.5%", "Barclays, Deutsche Bank"],
@@ -438,14 +438,14 @@ export default function RegulatoryCapital({ sandboxResult, spot = 18.97 }: Regul
                   ["Bucket 5 (highest)", "3.5%", "JPMorgan Chase"],
                 ].map(([bkt, buf, ex]) => (
                   <div key={bkt} style={{ display: "grid", gridTemplateColumns: "100px 40px 1fr", gap: 6, padding: "4px 0", borderBottom: `1px solid ${S.soft}` }}>
-                    <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary }}>{bkt}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.cyan }}>{buf}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{ex}</span>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{bkt}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan }}>{buf}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{ex}</span>
                   </div>
                 ))}
               </div>
             </div>
-            <div style={{ marginTop: 10, fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+            <div style={{ marginTop: 10, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               Basel III Leverage Ratio Framework (BCBS, 2014, revised 2017) · CRR §429 (EU) · US Basel III Final Rule (2013) · NSFR: Net Stable Funding Ratio (BCBS, 2014)
             </div>
           </div>

@@ -100,11 +100,11 @@ export default function EconCalendarWidget({ onRemove }: Props) {
       <div className="widget-drag-handle" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, cursor: "grab" }}>
         <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <Calendar size={12} color={S.cyan} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, flex: 1, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, flex: 1, textTransform: "uppercase" }}>
           Economic Calendar
         </span>
         {lastFetch && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{lastFetch}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{lastFetch}</span>
         )}
         <button onClick={fetchCalendar} disabled={fetching} title="Refresh" style={{ background: "transparent", border: "none", cursor: fetching ? "default" : "pointer", padding: 2, display: "flex", alignItems: "center", opacity: fetching ? 0.4 : 1 }}>
           <RefreshCw size={11} color={S.tertiary} />
@@ -119,18 +119,18 @@ export default function EconCalendarWidget({ onRemove }: Props) {
       {/* Body */}
       <div style={{ flex: 1, overflowY: "auto" }}>
         {fetching && events.length === 0 ? (
-          <div style={{ padding: 24, textAlign: "center", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <div style={{ padding: 24, textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             LOADING…
           </div>
         ) : error ? (
           <div style={{ padding: 24, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.red }}>ERROR</span>
-            <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, textAlign: "center" }}>{error}</span>
-            <button onClick={fetchCalendar} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}`, padding: "3px 10px", cursor: "pointer" }}>RETRY</button>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.red }}>ERROR</span>
+            <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, textAlign: "center" }}>{error}</span>
+            <button onClick={fetchCalendar} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}`, padding: "3px 10px", cursor: "pointer" }}>RETRY</button>
           </div>
         ) : grouped.length === 0 ? (
           <div style={{ padding: 24, textAlign: "center" }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>NO EVENTS IN NEXT 7 DAYS</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>NO EVENTS IN NEXT 7 DAYS</span>
           </div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -138,7 +138,7 @@ export default function EconCalendarWidget({ onRemove }: Props) {
               <tr style={{ background: S.bgSub }}>
                 {["Time", "Country", "Event", "Impact", "Actual", "Est", "Prev"].map((h) => (
                   <th key={h} style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                     color: S.tertiary, textTransform: "uppercase", textAlign: "left",
                     padding: "5px 8px", borderBottom: `1px solid ${S.rim}`, whiteSpace: "nowrap",
                   }}>{h}</th>
@@ -152,7 +152,7 @@ export default function EconCalendarWidget({ onRemove }: Props) {
                   <tr key={`hdr-${day}`} style={{ background: `color-mix(in srgb, ${S.bgSub} 70%, transparent)` }}>
                     <td colSpan={7} style={{
                       padding: "5px 8px",
-                      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                       color: S.cyan,
                       borderBottom: `1px solid ${S.soft}`,
                     }}>
@@ -166,33 +166,33 @@ export default function EconCalendarWidget({ onRemove }: Props) {
                         borderBottom: `1px solid ${S.soft}`,
                         background: idx % 2 === 0 ? "transparent" : `color-mix(in srgb, ${S.bgSub} 30%, transparent)`,
                       }}>
-                        <td style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 10, color: S.secondary, whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 12, color: S.secondary, whiteSpace: "nowrap" }}>
                           {formatTime(ev.time)}
                         </td>
-                        <td style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary, whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary, whiteSpace: "nowrap" }}>
                           {ev.country}
                         </td>
-                        <td style={{ padding: "6px 8px", fontFamily: S.fontUI, fontSize: 11, color: S.primary, maxWidth: 180 }}>
+                        <td style={{ padding: "6px 8px", fontFamily: S.fontUI, fontSize: 12, color: S.primary, maxWidth: 180 }}>
                           <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {ev.event}
                           </span>
                         </td>
                         <td style={{ padding: "6px 8px" }}>
                           <span style={{
-                            fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+                            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                             color: imp.color,
                             background: `color-mix(in srgb, ${imp.color} 12%, transparent)`,
                             border: `1px solid color-mix(in srgb, ${imp.color} 30%, transparent)`,
                             padding: "1px 4px", borderRadius: 2,
                           }}>{imp.label}</span>
                         </td>
-                        <td style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 10, color: ev.actual ? S.primary : S.tertiary, fontWeight: ev.actual ? 700 : 400 }}>
+                        <td style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 12, color: ev.actual ? S.primary : S.tertiary, fontWeight: ev.actual ? 700 : 400 }}>
                           {ev.actual ?? "—"}
                         </td>
-                        <td style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                        <td style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                           {ev.estimate ?? "—"}
                         </td>
-                        <td style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                        <td style={{ padding: "6px 8px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                           {ev.prev ?? "—"}
                         </td>
                       </tr>
@@ -208,7 +208,7 @@ export default function EconCalendarWidget({ onRemove }: Props) {
       {/* Footer */}
       <div style={{
         padding: "5px 10px", borderTop: `1px solid ${S.soft}`, background: S.bgSub,
-        fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
         display: "flex", justifyContent: "space-between",
       }}>
         <span>Finnhub · 7-day economic calendar</span>

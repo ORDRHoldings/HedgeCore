@@ -38,7 +38,7 @@ export default function NotificationsTab({ s, set }: Props) {
                 <div style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 600, color: s[item.key] ? S.primary : S.secondary }}>
                   {item.label}
                 </div>
-                <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>{item.desc}</div>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>{item.desc}</div>
               </div>
             </label>
           ))}
@@ -71,10 +71,10 @@ export default function NotificationsTab({ s, set }: Props) {
       </div>
 
       <div style={{ background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 2, padding: "12px 14px" }}>
-        <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary, marginBottom: 6 }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary, marginBottom: 6 }}>
           WEBHOOK PAYLOAD SCHEMA
         </div>
-        <pre style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, margin: 0, lineHeight: 1.6, overflowX: "auto" }}>
+        <pre style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, margin: 0, lineHeight: 1.6, overflowX: "auto" }}>
 {`{
   "event":     "HEDGE_RATIO_BREACH",
   "severity":  "WARNING",

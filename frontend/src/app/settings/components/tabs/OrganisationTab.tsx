@@ -92,10 +92,10 @@ export default function OrganisationTab({ token }: Props) {
     }
   };
 
-  if (loading) return <div style={{ padding: "40px 0", textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.09em" }}>LOADING…</div>;
+  if (loading) return <div style={{ padding: "40px 0", textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.09em" }}>LOADING…</div>;
 
   if (error) return (
-    <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid ${S.fail}`, borderLeft: `3px solid ${S.fail}`, borderRadius: 2, padding: "12px 16px", fontFamily: S.fontMono, fontSize: 11, color: S.fail }}>
+    <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid ${S.fail}`, borderLeft: `3px solid ${S.fail}`, borderRadius: 2, padding: "12px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.fail }}>
       ✗ {error}
     </div>
   );
@@ -118,16 +118,16 @@ export default function OrganisationTab({ token }: Props) {
         <SectionHeader label="Company Identity" />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary }}>COMPANY NAME</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary }}>COMPANY NAME</span>
             <span style={{ fontFamily: S.fontUI, fontSize: 13, color: S.primary }}>{company?.name ?? "—"}</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary }}>SLUG</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary }}>SLUG</span>
             <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>{company?.slug ?? "—"}</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary }}>COMPANY ID</span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{company?.id ?? "—"}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: S.secondary }}>COMPANY ID</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{company?.id ?? "—"}</span>
           </div>
         </div>
       </div>
@@ -137,9 +137,9 @@ export default function OrganisationTab({ token }: Props) {
         <SectionHeader label="Governance Mode" />
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary }}>CURRENT:</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>CURRENT:</span>
             <span style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.09em",
               color: company?.governance_mode === "team" ? S.cyan : S.amber,
               background: company?.governance_mode === "team"
                 ? `color-mix(in srgb, ${S.cyan} 10%, transparent)`
@@ -151,7 +151,7 @@ export default function OrganisationTab({ token }: Props) {
             </span>
             {!editing && (
               <button onClick={() => setEditing(true)} style={{
-                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                 color: S.secondary, background: "transparent", border: `1px solid ${S.rim}`,
                 borderRadius: 2, padding: "4px 10px", cursor: "pointer",
               }}>
@@ -174,7 +174,7 @@ export default function OrganisationTab({ token }: Props) {
                     <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: govMode === m ? S.cyan : S.primary }}>
                       {m === "team" ? "TEAM (4-EYES)" : "SOLO (SELF-APPROVE)"}
                     </div>
-                    <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>
+                    <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                       {m === "team"
                         ? "Proposer cannot approve their own submissions — requires a second approver."
                         : "Single-user approval flow — proposer may self-approve. Use for demo or single-operator setups."}
@@ -184,14 +184,14 @@ export default function OrganisationTab({ token }: Props) {
               ))}
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={handleSave} disabled={saving} style={{
-                  fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
                   color: "#000", background: saving ? S.tertiary : S.cyan, border: "none", borderRadius: 2,
                   padding: "7px 18px", cursor: saving ? "wait" : "pointer",
                 }}>
                   {saving ? "SAVING…" : "SAVE"}
                 </button>
                 <button onClick={() => setEditing(false)} style={{
-                  fontFamily: S.fontMono, fontSize: 10, color: S.secondary, background: "transparent",
+                  fontFamily: S.fontMono, fontSize: 12, color: S.secondary, background: "transparent",
                   border: `1px solid ${S.rim}`, borderRadius: 2, padding: "7px 14px", cursor: "pointer",
                 }}>
                   CANCEL
@@ -211,9 +211,9 @@ export default function OrganisationTab({ token }: Props) {
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {branches.map(b => (
               <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "8px 12px" }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.cyan, minWidth: 60 }}>{b.code}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, minWidth: 60 }}>{b.code}</span>
                 <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary }}>{b.name}</span>
-                <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginLeft: "auto" }}>{b.id.slice(0, 8)}…</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginLeft: "auto" }}>{b.id.slice(0, 8)}…</span>
               </div>
             ))}
           </div>

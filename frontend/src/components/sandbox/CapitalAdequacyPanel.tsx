@@ -47,11 +47,11 @@ export default function CapitalAdequacyPanel({ capitalAdequacy }: Props) {
   return (
     <div>
       <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
           Capital Adequacy (SA-CCR / Basel III)
         </span>
         {overall && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: statusColor, padding: "2px 8px", border: `1px solid ${statusColor}`, borderRadius: 2 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: statusColor, padding: "2px 8px", border: `1px solid ${statusColor}`, borderRadius: 2 }}>
             \u25cf {overall}
           </span>
         )}

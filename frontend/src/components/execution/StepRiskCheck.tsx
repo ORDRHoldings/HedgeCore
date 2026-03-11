@@ -279,7 +279,7 @@ export default function StepRiskCheck({
             <span
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: "0.06em",
                 color: S.cyan,
@@ -290,7 +290,7 @@ export default function StepRiskCheck({
             <span
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.tertiary,
               }}
             >
@@ -370,7 +370,7 @@ export default function StepRiskCheck({
               style={{
                 padding: "12px 16px 8px",
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: "0.12em",
                 color: S.tertiary,
@@ -385,7 +385,7 @@ export default function StepRiskCheck({
                 style={{
                   padding: "20px 16px",
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: S.tertiary,
                   letterSpacing: "0.06em",
                 }}
@@ -405,7 +405,7 @@ export default function StepRiskCheck({
                     background: S.bgSub,
                     borderBottom: `1px solid ${S.soft}`,
                     fontFamily: S.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 600,
                     letterSpacing: "0.08em",
                     color: S.tertiary,
@@ -431,7 +431,7 @@ export default function StepRiskCheck({
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 600,
                         color: S.primary,
                       }}
@@ -441,7 +441,7 @@ export default function StepRiskCheck({
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 700,
                         textAlign: "center",
                         color: statusColor(check.status),
@@ -453,7 +453,7 @@ export default function StepRiskCheck({
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         color: S.secondary,
                         lineHeight: 1.4,
                       }}
@@ -472,7 +472,7 @@ export default function StepRiskCheck({
               style={{
                 padding: "12px 16px 8px",
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: "0.12em",
                 color: S.tertiary,
@@ -487,7 +487,7 @@ export default function StepRiskCheck({
                 style={{
                   padding: "20px 16px",
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: S.tertiary,
                   letterSpacing: "0.06em",
                 }}
@@ -518,7 +518,7 @@ export default function StepRiskCheck({
                     <div
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 600,
                         letterSpacing: "0.10em",
                         color: S.tertiary,
@@ -554,7 +554,7 @@ export default function StepRiskCheck({
                     <div
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 600,
                         letterSpacing: "0.10em",
                         color: S.tertiary,
@@ -589,7 +589,7 @@ export default function StepRiskCheck({
                     <div
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 600,
                         letterSpacing: "0.10em",
                         color: S.tertiary,
@@ -627,7 +627,7 @@ export default function StepRiskCheck({
                     <div
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 600,
                         letterSpacing: "0.10em",
                         color: S.tertiary,
@@ -657,7 +657,7 @@ export default function StepRiskCheck({
                     style={{
                       padding: "8px 16px 12px",
                       fontFamily: S.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       color: S.tertiary,
                     }}
                   >
@@ -682,7 +682,7 @@ export default function StepRiskCheck({
             style={{
               padding: "12px 16px 8px",
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: "0.12em",
               color: S.tertiary,
@@ -697,7 +697,7 @@ export default function StepRiskCheck({
               style={{
                 padding: "20px 16px",
                 fontFamily: S.fontMono,
-                fontSize: 11,
+                fontSize: 12,
                 color: S.tertiary,
                 letterSpacing: "0.06em",
               }}
@@ -719,7 +719,7 @@ export default function StepRiskCheck({
                   <div
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 600,
                       letterSpacing: "0.10em",
                       color: S.tertiary,
@@ -746,7 +746,7 @@ export default function StepRiskCheck({
                   <div
                     style={{
                       fontFamily: S.fontMono,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 600,
                       letterSpacing: "0.10em",
                       color: S.tertiary,
@@ -772,7 +772,7 @@ export default function StepRiskCheck({
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: S.tertiary,
                   }}
                 >
@@ -794,7 +794,7 @@ export default function StepRiskCheck({
                     background: S.bgSub,
                     borderBottom: `1px solid ${S.rim}`,
                     fontFamily: S.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 600,
                     letterSpacing: "0.08em",
                     color: S.tertiary,
@@ -823,7 +823,7 @@ export default function StepRiskCheck({
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         color: S.secondary,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -835,7 +835,7 @@ export default function StepRiskCheck({
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 600,
                         color: S.primary,
                       }}
@@ -845,7 +845,7 @@ export default function StepRiskCheck({
                         <span
                           style={{
                             marginLeft: 6,
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: 700,
                             padding: "1px 4px",
                             borderRadius: 2,
@@ -860,7 +860,7 @@ export default function StepRiskCheck({
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         textAlign: "right",
                         color: r.shocked ? S.fail : S.tertiary,
                       }}
@@ -872,7 +872,7 @@ export default function StepRiskCheck({
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 600,
                         textAlign: "right",
                         color: r.pnlImpact < 0 ? S.fail : r.pnlImpact > 0 ? S.pass : S.tertiary,
@@ -884,7 +884,7 @@ export default function StepRiskCheck({
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 11,
+                        fontSize: 12,
                         textAlign: "right",
                         color: r.percentageImpact < 0 ? S.fail : r.percentageImpact > 0 ? S.pass : S.tertiary,
                       }}
@@ -923,7 +923,7 @@ export default function StepRiskCheck({
             border: `1px solid ${S.soft}`,
             borderRadius: 4,
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             letterSpacing: "0.08em",
             cursor: "pointer",
@@ -934,7 +934,7 @@ export default function StepRiskCheck({
         </button>
         {/* Backend risk verdict */}
         {phase === "done" && (
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, color: backendVerdict === "REJECT" ? S.fail : backendVerdict === "APPROVE" ? S.pass : S.amber, marginRight: "auto", display: "flex", alignItems: "center", gap: 4 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: backendVerdict === "REJECT" ? S.fail : backendVerdict === "APPROVE" ? S.pass : S.amber, marginRight: "auto", display: "flex", alignItems: "center", gap: 4 }}>
             {backendCheckError ? (
               <span style={{ color: S.amber }}>&#9888; GATE: OFFLINE (client-only)</span>
             ) : backendVerdict ? (
@@ -957,7 +957,7 @@ export default function StepRiskCheck({
             border: "none",
             borderRadius: 4,
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: "0.10em",
             cursor:

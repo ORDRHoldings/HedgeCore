@@ -36,7 +36,7 @@ export default function NettingSummaryPanel({ currencyNetting }: Props) {
   return (
     <div>
       <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
           Currency Netting Summary
         </span>
         {nettingBenefit != null && (
@@ -50,7 +50,7 @@ export default function NettingSummaryPanel({ currencyNetting }: Props) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0, borderBottom: `1px solid ${S.rim}` }}>
           {[["Total Gross", totalGross], ["Total Net", totalNet ?? 0], ["Netting Benefit", nettingBenefit ?? 0]].map(([label, value]) => (
             <div key={label as string} style={{ padding: "10px 14px", borderRight: `1px solid ${S.soft}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>{label as string}</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 4 }}>{label as string}</div>
               <div style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color: label === "Netting Benefit" ? S.green : S.primary }}>
                 ${(value as number).toLocaleString("en", { maximumFractionDigits: 0 })}
               </div>
@@ -64,7 +64,7 @@ export default function NettingSummaryPanel({ currencyNetting }: Props) {
           <thead>
             <tr style={{ background: S.sub }}>
               {["Pair", "Gross", "Net", "Netting Ratio"].map(h => (
-                <th key={h} style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
+                <th key={h} style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
               ))}
             </tr>
           </thead>

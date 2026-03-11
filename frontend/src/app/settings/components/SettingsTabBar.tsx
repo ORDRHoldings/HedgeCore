@@ -53,7 +53,7 @@ export default function SettingsTabBar({ activeTab, onTabChange }: Props) {
                 {t.label}
                 {t.badge && (
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     color: active ? S.cyan : S.tertiary,
                     background: active ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : S.bgSub,
                     border: `1px solid ${active ? S.cyan : S.rim}`,

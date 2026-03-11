@@ -38,7 +38,7 @@ function fmt(n: number, dp = 0): string {
 function MetricCell({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "8px 10px", background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}` }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" }}>{label}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" }}>{label}</span>
       <span style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, color: color ?? S.primary }}>{value}</span>
     </div>
   );
@@ -282,10 +282,10 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
         padding: "8px 14px", borderBottom: `1px solid ${S.rim}`,
         background: `color-mix(in srgb, ${S.sub} 60%, transparent)`,
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan }}>
           ◈ RISK ATTRIBUTION ENGINE
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           IFRS 9 · BCBS 457 · FAS 133 Compliant
         </span>
       </div>
@@ -294,7 +294,7 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
       <div style={{ display: "flex", borderBottom: `1px solid ${S.rim}`, background: S.sub }}>
         {VIEWS.map(v => (
           <button key={v.id} onClick={() => setActiveView(v.id)} style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             padding: "7px 14px",
             border: "none",
             borderBottom: activeView === v.id ? `2px solid ${S.cyan}` : "2px solid transparent",
@@ -311,7 +311,7 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
         {/* WATERFALL */}
         {activeView === "waterfall" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Attribution from gross commercial exposure to net hedged P&L. Reflects natural netting, hedge coverage, and frictional costs.
               Methodology: IFRS 9.6.4.1 cash flow hedge accounting framework.
             </p>
@@ -328,13 +328,13 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
         {/* DV01 LADDER */}
         {activeView === "dv01" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               DV01 (Dollar Value of 01) shows USD sensitivity per 1 basis-point move in forward rates. Per BCBS 457 FRTB sensitivity-based method (SBM).
               Negative DV01 = short rates (payer position). Total portfolio DV01 = sum of bucket DV01s.
             </p>
             <DV01LadderChart entries={dv01Entries} title="DV01 per Maturity Bucket" />
             <div style={{ marginTop: 12, padding: "8px 12px", background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 6 }}>PORTFOLIO SUMMARY</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 6 }}>PORTFOLIO SUMMARY</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                 <MetricCell label="Total DV01" value={fmt(dv01Entries.reduce((s, e) => s + e.dv01, 0))} color={S.amber} />
                 <MetricCell label="Notional Adj." value={fmt(dv01Entries.reduce((s, e) => s + e.notional, 0))} color={S.cyan} />
@@ -347,7 +347,7 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
         {/* GREEKS */}
         {activeView === "greeks" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Analytical risk sensitivities (Greeks) for the FX forward portfolio. Forward positions have delta and theta but no gamma/vega.
               These measures align with ISDA SIMM v2.6 delta/vega sensitivity calculations.
             </p>
@@ -359,7 +359,7 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
               <MetricCell label="Rho ρ / 1%r" value={fmt(greeks.rho)} color={S.green} />
             </div>
             <div style={{ background: S.sub, border: `1px solid ${S.soft}`, borderRadius: 3, padding: 12 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>INTERPRETATION</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>INTERPRETATION</div>
               {[
                 ["Delta (Δ)", `A $1 move in USD/${notional > 0 ? "CCY" : "CCY"} changes portfolio value by ${fmt(greeks.delta, 0)}`, greeks.delta !== 0 ? S.cyan : S.tertiary],
                 ["Theta (Θ)", `Time decay: portfolio loses ${fmt(Math.abs(greeks.theta))} per calendar day from carry erosion`, Math.abs(greeks.theta) > 500 ? S.amber : S.tertiary],
@@ -367,12 +367,12 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
                 ["Gamma/Vega", "Zero for vanilla forwards/NDFs — optionality required for non-zero values", S.tertiary],
               ].map(([k, v, c]) => (
                 <div key={k as string} style={{ display: "flex", gap: 12, marginBottom: 6 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.secondary, minWidth: 80 }}>{k}</span>
-                  <span style={{ fontFamily: S.fontUI, fontSize: 11, color: c as string }}>{v}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.secondary, minWidth: 80 }}>{k}</span>
+                  <span style={{ fontFamily: S.fontUI, fontSize: 12, color: c as string }}>{v}</span>
                 </div>
               ))}
             </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginTop: 8 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 8 }}>
               Per ISDA SIMM v2.6 (September 2023) · FX delta bucket: EMEA EM · Risk weight: 15% · Correlation: 0.5 intra-bucket
             </div>
           </div>
@@ -384,7 +384,7 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               {(["normal", "crisis"] as const).map(m => (
                 <button key={m} onClick={() => setCorrMode(m)} style={{
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   padding: "4px 12px", borderRadius: 2,
                   border: corrMode === m ? `1px solid ${S.cyan}` : `1px solid ${S.rim}`,
                   background: corrMode === m ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : S.sub,
@@ -395,7 +395,7 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
                 </button>
               ))}
             </div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               {corrMode === "normal"
                 ? "Normal market correlations (DCC-GARCH 252-day window). EM currencies show moderate positive correlation (0.5–0.65)."
                 : "Crisis correlations collapse to near-unity for EM currencies — the 'correlation breakdown' phenomenon documented in GFC 2008, COVID 2020. Per Longin & Solnik (2001) — correlations increase in bear markets."}
@@ -403,14 +403,14 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
             <CorrelationHeatmap matrix={corrMatrix} title={corrMode === "normal" ? "Normal Regime Correlations" : "Crisis Regime Correlations (GFC/COVID calibrated)"} />
             <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <div style={{ padding: "8px 10px", background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}` }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginBottom: 4 }}>DIVERSIFICATION BENEFIT</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 4 }}>DIVERSIFICATION BENEFIT</div>
                 <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: corrMode === "normal" ? S.green : S.red }}>
                   {corrMode === "normal" ? "25–40% VaR reduction" : "< 5% VaR reduction — near-perfect co-movement"}
                 </div>
               </div>
               <div style={{ padding: "8px 10px", background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}` }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginBottom: 4 }}>MODEL RISK</div>
-                <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.amber }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 4 }}>MODEL RISK</div>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.amber }}>
                   {corrMode === "normal" ? "Standard DCC-GARCH. Pro-cyclical during stress." : "Worst-case: assume ρ=1 for EM pairs during crisis."}
                 </div>
               </div>
@@ -421,7 +421,7 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
         {/* FAN CHART */}
         {activeView === "fan" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Forward rate distribution using geometric Brownian motion with constant vol (σ = 12% annualised).
               Confidence bands show P10/P25/P50/P75/P90 percentiles. Used for hedge effectiveness prospective testing per IFRS 9.6.4.4.
             </p>
@@ -431,7 +431,7 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
               <MetricCell label="P10 6-Month" value={fanPoints[fanPoints.length - 1]?.p10.toFixed(2) ?? "—"} color={S.red} />
               <MetricCell label="P90 6-Month" value={fanPoints[fanPoints.length - 1]?.p90.toFixed(2) ?? "—"} color={S.green} />
             </div>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginTop: 8 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 8 }}>
               Prospective effectiveness test: hedge must achieve 80–125% offset per IFRS 9.6.4.1 · GBM: dS = S(μdt + σdW)
             </div>
           </div>
@@ -440,7 +440,7 @@ export default function RiskAttributionPanel({ sandboxResult, spot = 18.97 }: Ri
         {/* LOSS CURVE */}
         {activeView === "loss-curve" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Expected portfolio loss vs hedge ratio for a −15% spot shock scenario. Shows the optimal hedge ratio
               that minimises total cost (unhedged loss + hedge friction). Policy band shown as amber reference line.
             </p>

@@ -90,7 +90,7 @@ export default function HedgeErrorBanner({ error, onRetry, onReconnect, onGoBack
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
         <span style={{
           fontFamily: S.fontMono,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 700,
           letterSpacing: "0.06em",
           color: S.primary,
@@ -114,7 +114,7 @@ export default function HedgeErrorBanner({ error, onRetry, onReconnect, onGoBack
           alignItems: "center",
           gap: 5,
           fontFamily: S.fontMono,
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 700,
           letterSpacing: "0.08em",
           color: S.cyan,

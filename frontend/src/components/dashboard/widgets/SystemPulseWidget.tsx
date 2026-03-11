@@ -319,13 +319,13 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
             System Pulse
           </div>
           {data && (
-            <div style={{ fontFamily: S.fontUI, fontSize: 9, color: S.tertiary, marginTop: 2 }}>
+            <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 2 }}>
               {data.is_company_wide ? data.company_name : `${data.company_name} · ${data.branch_name}`}
               {" "}· <span style={{ color: S.cyan }}>{data.role}</span>
             </div>
           )}
           {isLoading && !data && (
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginTop: 2 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 2 }}>
               {phase === "retrying" ? `RETRY ${retryCount}/${MAX_RETRIES}` : "CONNECTING..."}
             </div>
           )}
@@ -382,7 +382,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
             </div>
             <div>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                 color: S.secondary, letterSpacing: "0.08em", marginBottom: 6,
               }}>
                 {phase === "retrying" ? `RETRY ${retryCount} / ${MAX_RETRIES}` : "CONNECTING TO HEDGECORE"}
@@ -391,7 +391,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
                 <PulseDots color={S.cyan} />
               </div>
               <div style={{
-                fontFamily: S.fontUI, fontSize: 11, color: S.tertiary,
+                fontFamily: S.fontUI, fontSize: 12, color: S.tertiary,
                 lineHeight: 1.6, maxWidth: 260,
               }}>
                 {phase === "retrying"
@@ -402,7 +402,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
             </div>
             {phase === "retrying" && (
               <div style={{
-                fontFamily: S.fontMono, fontSize: 9, color: S.amber,
+                fontFamily: S.fontMono, fontSize: 12, color: S.amber,
                 letterSpacing: "0.06em", padding: "4px 12px",
                 background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
                 border: `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
@@ -429,13 +429,13 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
               <WifiOff size={22} color={S.amber} />
             </div>
             <div style={{
-              fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
               color: S.amber, letterSpacing: "0.08em",
             }}>
               BACKEND OFFLINE
             </div>
             <div style={{
-              fontFamily: S.fontUI, fontSize: 11, color: S.tertiary,
+              fontFamily: S.fontUI, fontSize: 12, color: S.tertiary,
               lineHeight: 1.6, maxWidth: 270,
             }}>
               Could not reach the HedgeCore API after {MAX_RETRIES} attempts.
@@ -444,7 +444,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
             <button
               onClick={handleRefresh}
               style={{
-                fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em",
                 padding: "7px 18px", cursor: "pointer",
                 background: `color-mix(in srgb, ${S.cyan} 12%, transparent)`,
                 border: `1px solid color-mix(in srgb, ${S.cyan} 30%, transparent)`,
@@ -455,7 +455,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
               RETRY CONNECTION
             </button>
             <div style={{
-              fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+              fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
               letterSpacing: "0.04em",
             }}>
               {user?.email ?? "demo"} · {MAX_RETRIES} retries exhausted
@@ -480,7 +480,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
               }}>
                 <Zap size={11} color={healthColor} fill={healthColor} />
                 <span style={{
-                  fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+                  fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                   letterSpacing: "0.1em", textTransform: "uppercase",
                 }}>
                   System Health Score
@@ -492,7 +492,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
               {/* Total exposure below gauge */}
               <div style={{ textAlign: "center", marginTop: -4 }}>
                 <div style={{
-                  fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+                  fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                   letterSpacing: "0.1em", marginBottom: 2,
                   display: "flex", alignItems: "center", gap: 4, justifyContent: "center",
                 }}>
@@ -506,7 +506,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
                 }}>
                   {formatCompact(kpis.total_exposure_usd)}
                 </div>
-                <div style={{ fontFamily: S.fontUI, fontSize: 9, color: S.tertiary, marginTop: 4 }}>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 4 }}>
                   {data?.is_company_wide ? "Company-wide" : data?.branch_name} · {data?.branch_currency} basis
                 </div>
               </div>
@@ -526,17 +526,17 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
                     <Shield size={10} color={healthColor} />
-                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.08em" }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}>
                       HEDGE COVERAGE
                     </span>
                   </div>
-                  <div style={{ fontFamily: S.fontUI, fontSize: 9, color: healthColor, fontWeight: 600 }}>
+                  <div style={{ fontFamily: S.fontUI, fontSize: 12, color: healthColor, fontWeight: 600 }}>
                     {kpis.hedge_coverage_pct >= 70 ? "Above threshold"
                       : kpis.hedge_coverage_pct >= 50 ? "Near threshold"
                       : kpis.hedge_coverage_pct > 0 ? "Below threshold"
                       : "No hedges yet"}
                   </div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginTop: 2 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 2 }}>
                     Target: ≥ 70%
                   </div>
                 </div>
@@ -549,7 +549,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
                   <FileText size={10} color={S.cyan} />
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.08em" }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}>
                     ACTIVE PROPOSALS
                   </span>
                 </div>
@@ -568,7 +568,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
                     }} />
                   ))}
                   {kpis.active_proposals === 0 && (
-                    <span style={{ fontFamily: S.fontUI, fontSize: 9, color: S.tertiary }}>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                       No active proposals
                     </span>
                   )}
@@ -579,7 +579,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
               <div style={{ padding: "14px 16px", borderRight: `1px solid ${S.soft}`, borderBottom: `1px solid ${S.soft}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
                   <Clock size={10} color={kpis.pending_approvals > 0 ? S.amber : S.green} />
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.08em" }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}>
                     PENDING APPROVALS
                   </span>
                 </div>
@@ -600,7 +600,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
                       }} />
                     ))}
                   </div>
-                  <span style={{ fontFamily: S.fontUI, fontSize: 9, color: S.tertiary }}>
+                  <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                     {kpis.pending_approvals === 0 ? "Queue clear" : "4-eyes review"}
                   </span>
                 </div>
@@ -610,7 +610,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
               <div style={{ padding: "14px 16px", borderBottom: `1px solid ${S.soft}` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
                   <AlertTriangle size={10} color={kpis.open_alerts > 0 ? S.amber : S.green} />
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.08em" }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}>
                     OPEN ALERTS
                   </span>
                 </div>
@@ -621,7 +621,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
                 }}>
                   {kpis.open_alerts}
                 </div>
-                <div style={{ fontFamily: S.fontUI, fontSize: 9, color: S.tertiary }}>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                   {kpis.open_alerts === 0 ? "✓ No issues detected" : "⚠ Requires attention"}
                 </div>
               </div>
@@ -630,7 +630,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
             {/* Pipeline Funnel */}
             <div style={{ padding: "14px 16px", background: S.bgSub, borderTop: `1px solid ${S.soft}` }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+                fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                 letterSpacing: "0.08em", marginBottom: 10,
                 display: "flex", alignItems: "center", gap: 6,
               }}>
@@ -692,7 +692,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
                   borderRadius: 4, display: "flex", alignItems: "center", gap: 8,
                 }}>
                   <Database size={9} color={S.cyan} style={{ opacity: 0.7 }} />
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                     {kpis.team_size} TEAM MEMBER{kpis.team_size !== 1 ? "S" : ""} ·{" "}
                     LEVEL {data?.hierarchy_level} ACCESS ·{" "}
                     {data?.role?.replace(/_/g, " ").toUpperCase()}
@@ -707,7 +707,7 @@ export default function SystemPulseWidget({ token, user, onRemove }: Props) {
       {/* ── Footer ─────────────────────────────────────────────────────── */}
       <div style={{
         padding: "8px 14px", borderTop: `1px solid ${S.soft}`, background: S.bgDeep,
-        fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
         display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

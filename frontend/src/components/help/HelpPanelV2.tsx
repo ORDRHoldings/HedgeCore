@@ -113,7 +113,7 @@ function CalloutBox({ callout }: { callout: Callout }) {
     }}>
       <div style={{
         fontFamily:    S.fontMono,
-        fontSize:      8,
+        fontSize: 12,
         fontWeight:    700,
         color:         color,
         letterSpacing: "0.10em",
@@ -121,7 +121,7 @@ function CalloutBox({ callout }: { callout: Callout }) {
       }}>{calloutPrefix(callout.type)}</div>
       <p style={{
         fontFamily: S.fontUI,
-        fontSize:   10,
+        fontSize: 12,
         color:      S.secondary,
         lineHeight: 1.55,
         margin:     0,
@@ -147,7 +147,7 @@ function CodeRefs({ refs }: { refs: CodeRef[] }) {
           title={ref.symbol ? `${ref.file}  ${ref.symbol}` : ref.file}
           style={{
             fontFamily:    S.fontMono,
-            fontSize:      9,
+            fontSize: 12,
             color:         S.tertiary,
             background:    S.bgSub,
             border:        `1px solid ${S.soft}`,
@@ -174,7 +174,7 @@ function SectionBody({ section }: { section: HelpV2Section }) {
       {section.type === "text" && section.content && (
         <p style={{
           fontFamily: S.fontUI,
-          fontSize:   11,
+          fontSize: 12,
           color:      S.secondary,
           lineHeight: 1.7,
           margin:     0,
@@ -194,7 +194,7 @@ function SectionBody({ section }: { section: HelpV2Section }) {
               <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 3 }}>
                 <span style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      10,
+                  fontSize: 12,
                   fontWeight:    700,
                   color:         S.cyan,
                   letterSpacing: "0.04em",
@@ -202,7 +202,7 @@ function SectionBody({ section }: { section: HelpV2Section }) {
                 {v.type && (
                   <span style={{
                     fontFamily:    S.fontMono,
-                    fontSize:      9,
+                    fontSize: 12,
                     color:         S.tertiary,
                     letterSpacing: "0.04em",
                   }}>{v.type}</span>
@@ -210,19 +210,19 @@ function SectionBody({ section }: { section: HelpV2Section }) {
               </div>
               <p style={{
                 fontFamily: S.fontUI,
-                fontSize:   10,
+                fontSize: 12,
                 color:      S.secondary,
                 lineHeight: 1.55,
                 margin:     "0 0 4px",
               }}>{v.description}</p>
               {v.example && (
                 <div style={{ display: "flex", gap: 4, alignItems: "baseline", marginTop: 2 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, flexShrink: 0 }}>e.g.</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.amber }}>{v.example}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, flexShrink: 0 }}>e.g.</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber }}>{v.example}</span>
                 </div>
               )}
               {v.source && (
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginTop: 2 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 2 }}>
                   ← {v.source}
                 </div>
               )}
@@ -247,7 +247,7 @@ function SectionBody({ section }: { section: HelpV2Section }) {
                   alignItems:     "center",
                   justifyContent: "center",
                   fontFamily:     S.fontMono,
-                  fontSize:       9,
+                  fontSize: 12,
                   fontWeight:     700,
                   color:          S.cyan,
                   flexShrink:     0,
@@ -257,13 +257,13 @@ function SectionBody({ section }: { section: HelpV2Section }) {
                 )}
               </div>
               <div style={{ paddingBottom: i < section.steps!.length - 1 ? 10 : 0, paddingTop: 1 }}>
-                <div style={{ fontFamily: S.fontUI, fontSize: 11, fontWeight: 600, color: S.primary, marginBottom: 2 }}>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 600, color: S.primary, marginBottom: 2 }}>
                   {step.link
                     ? <a href={step.link} style={{ color: S.cyan, textDecoration: "none" }}>{step.label} →</a>
                     : step.label
                   }
                 </div>
-                <p style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary, lineHeight: 1.55, margin: 0 }}>
+                <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.55, margin: 0 }}>
                   {step.description}
                 </p>
               </div>
@@ -278,7 +278,7 @@ function SectionBody({ section }: { section: HelpV2Section }) {
           <div style={{ marginBottom: 10 }}>
             <div style={{
               fontFamily:    S.fontMono,
-              fontSize:      9,
+              fontSize: 12,
               color:         S.cyan,
               letterSpacing: "0.07em",
               marginBottom:  4,
@@ -294,14 +294,14 @@ function SectionBody({ section }: { section: HelpV2Section }) {
               }} />
             </div>
           </div>
-          <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.6, margin: "0 0 10px" }}>
+          <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.6, margin: "0 0 10px" }}>
             {section.pipelinePos.description}
           </p>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
             {section.pipelinePos.prev ? (
               <a href={section.pipelinePos.prev.href} style={{
                 fontFamily:     S.fontMono,
-                fontSize:       9,
+                fontSize: 12,
                 color:          S.tertiary,
                 textDecoration: "none",
                 border:         `1px solid ${S.rim}`,
@@ -311,7 +311,7 @@ function SectionBody({ section }: { section: HelpV2Section }) {
             {section.pipelinePos.next && (
               <a href={section.pipelinePos.next.href} style={{
                 fontFamily:     S.fontMono,
-                fontSize:       9,
+                fontSize: 12,
                 color:          S.cyan,
                 textDecoration: "none",
                 border:         `1px solid ${S.cyan}`,
@@ -327,8 +327,8 @@ function SectionBody({ section }: { section: HelpV2Section }) {
         <dl style={{ margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           {section.glossary.map(g => (
             <div key={g.term} style={{ borderLeft: `2px solid ${S.cyan}`, paddingLeft: 8 }}>
-              <dt style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.cyan, marginBottom: 2 }}>{g.term}</dt>
-              <dd style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary, lineHeight: 1.55, margin: 0 }}>{g.definition}</dd>
+              <dt style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, marginBottom: 2 }}>{g.term}</dt>
+              <dd style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.55, margin: 0 }}>{g.definition}</dd>
             </div>
           ))}
         </dl>
@@ -345,7 +345,7 @@ function SectionBody({ section }: { section: HelpV2Section }) {
             }}>
               <div style={{
                 fontFamily:    S.fontMono,
-                fontSize:      9,
+                fontSize: 12,
                 color:         S.cyan,
                 letterSpacing: "0.10em",
                 marginBottom:  4,
@@ -362,7 +362,7 @@ function SectionBody({ section }: { section: HelpV2Section }) {
               }}>{f.latex}</div>
               <p style={{
                 fontFamily: S.fontUI,
-                fontSize:   10,
+                fontSize: 12,
                 color:      S.secondary,
                 lineHeight: 1.55,
                 margin:     "0 0 4px",
@@ -370,7 +370,7 @@ function SectionBody({ section }: { section: HelpV2Section }) {
               {f.source && (
                 <div style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      9,
+                  fontSize: 12,
                   color:         S.tertiary,
                   letterSpacing: "0.04em",
                   marginTop:     2,
@@ -423,7 +423,7 @@ function LevelSelector({ selected, onChange }: LevelSelectorProps) {
               borderBottom:  active ? `2px solid ${meta.color}` : "2px solid transparent",
               cursor:        "pointer",
               fontFamily:    S.fontMono,
-              fontSize:      10,
+              fontSize: 12,
               fontWeight:    active ? 700 : 500,
               color:         active ? meta.color : S.tertiary,
               letterSpacing: "0.06em",
@@ -518,7 +518,7 @@ function SectionItem({ section, isExpanded, onToggle }: SectionItemProps) {
         {/* Title */}
         <span style={{
           fontFamily: S.fontUI,
-          fontSize:   11,
+          fontSize: 12,
           fontWeight: 600,
           color:      isExpanded ? S.cyan : S.primary,
           flex:       1,
@@ -528,7 +528,7 @@ function SectionItem({ section, isExpanded, onToggle }: SectionItemProps) {
         {/* Level badge */}
         <span style={{
           fontFamily:    S.fontMono,
-          fontSize:      8,
+          fontSize: 12,
           fontWeight:    700,
           color:         levelMeta.color,
           background:    levelMeta.bg,
@@ -541,7 +541,7 @@ function SectionItem({ section, isExpanded, onToggle }: SectionItemProps) {
         {section.verified ? (
           <span style={{
             fontFamily:    S.fontMono,
-            fontSize:      8,
+            fontSize: 12,
             fontWeight:    700,
             color:         S.pass,
             background:    "rgba(74,222,128,0.08)",
@@ -552,7 +552,7 @@ function SectionItem({ section, isExpanded, onToggle }: SectionItemProps) {
         ) : (
           <span style={{
             fontFamily:    S.fontMono,
-            fontSize:      8,
+            fontSize: 12,
             fontWeight:    700,
             color:         S.amber,
             background:    "rgba(245,158,11,0.08)",
@@ -566,7 +566,7 @@ function SectionItem({ section, isExpanded, onToggle }: SectionItemProps) {
         <AnchorCopyButton anchor={section.anchor} />
 
         {/* Chevron */}
-        <span style={{ color: S.tertiary, fontSize: 9, fontFamily: S.fontMono, flexShrink: 0 }}>
+        <span style={{ color: S.tertiary, fontSize: 12, fontFamily: S.fontMono, flexShrink: 0 }}>
           {isExpanded ? "▲" : "▼"}
         </span>
       </button>
@@ -680,7 +680,7 @@ export default function HelpPanelV2({
         justifyContent: "center",
         color:          open ? S.tertiary : "#FFFFFF",
         fontFamily:     S.fontMono,
-        fontSize:       10,
+        fontSize: 12,
         fontWeight:     open ? undefined : 700,
         writingMode:    "vertical-rl",
         letterSpacing:  "0.08em",
@@ -756,7 +756,7 @@ export default function HelpPanelV2({
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
                 <span style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      9,
+                  fontSize: 12,
                   letterSpacing: "0.10em",
                   color:         S.cyan,
                   fontWeight:    700,
@@ -764,7 +764,7 @@ export default function HelpPanelV2({
                 <span style={{ color: S.rim }}>·</span>
                 <span style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      9,
+                  fontSize: 12,
                   letterSpacing: "0.07em",
                   color:         S.tertiary,
                 }}>ORDR PLATFORM</span>
@@ -779,7 +779,7 @@ export default function HelpPanelV2({
               {module.pageSubtitle && (
                 <div style={{
                   fontFamily:    S.fontMono,
-                  fontSize:      9,
+                  fontSize: 12,
                   color:         S.tertiary,
                   letterSpacing: "0.06em",
                   marginTop:     3,
@@ -799,7 +799,7 @@ export default function HelpPanelV2({
             }}>
               <span style={{
                 fontFamily:    S.fontMono,
-                fontSize:      9,
+                fontSize: 12,
                 color:         LEVEL_META[level].color,
                 letterSpacing: "0.06em",
               }}>
@@ -826,7 +826,7 @@ export default function HelpPanelV2({
                   border:        `1px solid ${S.rim}`,
                   padding:       "5px 9px",
                   fontFamily:    S.fontMono,
-                  fontSize:      11,
+                  fontSize: 12,
                   color:         S.primary,
                   outline:       "none",
                 }}
@@ -842,7 +842,7 @@ export default function HelpPanelV2({
                 <div style={{
                   padding:    "24px 14px",
                   fontFamily: S.fontMono,
-                  fontSize:   10,
+                  fontSize: 12,
                   color:      S.tertiary,
                   textAlign:  "center",
                   letterSpacing: "0.06em",
@@ -871,7 +871,7 @@ export default function HelpPanelV2({
             }}>
               <div style={{
                 fontFamily:    S.fontMono,
-                fontSize:      9,
+                fontSize: 12,
                 color:         S.tertiary,
                 letterSpacing: "0.06em",
                 marginBottom:  3,
@@ -882,7 +882,7 @@ export default function HelpPanelV2({
                 href="/hedgewiki"
                 style={{
                   fontFamily:     S.fontMono,
-                  fontSize:       9,
+                  fontSize: 12,
                   color:          S.cyan,
                   textDecoration: "none",
                   letterSpacing:  "0.06em",

@@ -29,7 +29,7 @@ function CostRow({ label, value, unit, accent }: { label: string; value: string;
       <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{label}</span>
       <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
         <span style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: accent ?? S.primary }}>{value}</span>
-        {unit && <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{unit}</span>}
+        {unit && <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{unit}</span>}
       </div>
     </div>
   );
@@ -69,7 +69,7 @@ export default function TransactionCostPanel({ transactionCosts }: Props) {
   return (
     <div>
       <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
           Transaction Cost Analysis
         </span>
       </div>

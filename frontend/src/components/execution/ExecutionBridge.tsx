@@ -355,7 +355,7 @@ export default function ExecutionBridge({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
               ED-00A
             </span>
             <span style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 700, color: S.primary }}>
@@ -363,7 +363,7 @@ export default function ExecutionBridge({
             </span>
             <span style={{
               fontFamily:   S.fontMono,
-              fontSize:     9,
+              fontSize: 12,
               fontWeight:   700,
               letterSpacing:"0.08em",
               color:        authStatusColor,
@@ -374,11 +374,11 @@ export default function ExecutionBridge({
             }}>
               {authStatusLabel}
             </span>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               {checkItems.filter(c => c.checked).length}/{checkItems.length} items confirmed
             </span>
           </div>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {prefightOpen ? '▲' : '▼'}
           </span>
         </button>
@@ -422,12 +422,12 @@ export default function ExecutionBridge({
                   <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.primary, fontWeight: item.autoChecked ? 400 : 500 }}>
                     {item.label}
                     {item.autoChecked && (
-                      <span style={{ marginLeft: 6, fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>
+                      <span style={{ marginLeft: 6, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>
                         AUTO
                       </span>
                     )}
                   </div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 1 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 1 }}>
                     {item.detail}
                   </div>
                 </div>
@@ -442,10 +442,10 @@ export default function ExecutionBridge({
               border:       `1px solid color-mix(in srgb, ${S.amber} 20%, transparent)`,
               borderRadius: 2,
               fontFamily:   S.fontUI,
-              fontSize:     11,
+              fontSize: 12,
               color:        S.secondary,
             }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.amber, fontWeight: 700, letterSpacing: "0.06em", marginRight: 8 }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, fontWeight: 700, letterSpacing: "0.06em", marginRight: 8 }}>
                 REGULATORY
               </span>
               This authorization checklist is an internal control record. It does not substitute for compliance sign-off required under EMIR Art. 11, Dodd-Frank §731, or applicable local regulations. Retain this record for audit purposes per IFRS 9 §B6.5.
@@ -467,7 +467,7 @@ export default function ExecutionBridge({
       }}>
         {/* Sigma selector */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary, fontWeight: 700 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary, fontWeight: 700 }}>
             STRESS SCENARIO
           </span>
           <div style={{ display: "flex", gap: 4 }}>
@@ -477,7 +477,7 @@ export default function ExecutionBridge({
                 onClick={() => handleSigmaChange(p.value)}
                 style={{
                   fontFamily:   S.fontMono,
-                  fontSize:     10,
+                  fontSize: 12,
                   fontWeight:   stressSigma === p.value ? 700 : 400,
                   letterSpacing:"0.04em",
                   color:        stressSigma === p.value ? S.bgPanel : S.secondary,
@@ -493,7 +493,7 @@ export default function ExecutionBridge({
               </button>
             ))}
           </div>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             (worst-case scenario for each ticket)
           </span>
         </div>
@@ -502,7 +502,7 @@ export default function ExecutionBridge({
 
         {/* Instrument toggle */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary, fontWeight: 700 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary, fontWeight: 700 }}>
             INSTRUMENT
           </span>
           <div style={{ display: "flex", gap: 4 }}>
@@ -512,7 +512,7 @@ export default function ExecutionBridge({
                 onClick={() => handleInstrumentChange(type)}
                 style={{
                   fontFamily:   S.fontMono,
-                  fontSize:     10,
+                  fontSize: 12,
                   fontWeight:   instrumentType === type ? 700 : 400,
                   color:        instrumentType === type ? S.bgPanel : S.secondary,
                   background:   instrumentType === type ? S.cyan : "transparent",
@@ -538,7 +538,7 @@ export default function ExecutionBridge({
           <span className="text-[10px] font-mono text-[var(--text-tertiary)] border border-[var(--border-rim)] px-1.5 py-0.5">Run {runId.slice(0, 8)}…</span>
           <span style={{
             fontFamily:   S.fontMono,
-            fontSize:     9,
+            fontSize: 12,
             fontWeight:   700,
             letterSpacing:"0.08em",
             color:        authStatusColor,
@@ -595,16 +595,16 @@ export default function ExecutionBridge({
             cursor:      "pointer",
           }}
         >
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
             ED-00B
           </span>
           <span style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 600, color: S.secondary }}>
             Execution Session Log
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {execLog.length} entr{execLog.length === 1 ? 'y' : 'ies'}
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginLeft: "auto" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginLeft: "auto" }}>
             {logOpen ? '▲' : '▼'}
           </span>
         </button>
@@ -615,10 +615,10 @@ export default function ExecutionBridge({
             overflowY: "auto",
           }}>
             {execLog.length === 0 ? (
-              <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>No entries yet.</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>No entries yet.</div>
             ) : (
               execLog.map((entry, i) => (
-                <div key={i} style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, lineHeight: 1.6 }}>
+                <div key={i} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, lineHeight: 1.6 }}>
                   {entry}
                 </div>
               ))

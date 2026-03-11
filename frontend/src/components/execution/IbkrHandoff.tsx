@@ -153,11 +153,11 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                 <span style={{ fontFamily: S.fontUI, fontSize: 14, fontWeight: 700, color: S.primary }}>
                   IBKR Execution Handoff
                 </span>
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, border: `1px solid ${S.soft}`, padding: "1px 6px", borderRadius: 2 }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, border: `1px solid ${S.soft}`, padding: "1px 6px", borderRadius: 2 }}>
                   {baseCcy} · {bucket.bucket}
                 </span>
                 {!hasAction && (
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.amber, background: `color-mix(in srgb, ${S.amber} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`, padding: "1px 6px", borderRadius: 2 }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, background: `color-mix(in srgb, ${S.amber} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`, padding: "1px 6px", borderRadius: 2 }}>
                     NO ACTION
                   </span>
                 )}
@@ -183,7 +183,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                   onClick={() => setActiveTab(tab.key)}
                   style={{
                     fontFamily:   S.fontMono,
-                    fontSize:     11,
+                    fontSize: 12,
                     fontWeight:   activeTab === tab.key ? 700 : 400,
                     color:        activeTab === tab.key ? S.cyan : S.secondary,
                     background:   "transparent",
@@ -211,7 +211,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                   ) : mapping.ibkr_symbol ? (
                     <>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary, fontWeight: 700 }}>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary, fontWeight: 700 }}>
                           EXCHANGE-LISTED FUTURES — TWS / CLIENT PORTAL
                         </div>
                         <ol style={{ paddingLeft: 18, color: S.secondary, lineHeight: 1.7, margin: 0 }}>
@@ -246,7 +246,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                         href="https://www.interactivebrokers.com/en/trading/futures.php"
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ fontFamily: S.fontMono, fontSize: 11, color: S.cyan, textDecoration: "none" }}
+                        style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, textDecoration: "none" }}
                       >
                         → IBKR Futures Products Page ↗
                       </a>
@@ -257,7 +257,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                   ) : (
                     <>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.08em", color: S.tertiary, fontWeight: 700 }}>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary, fontWeight: 700 }}>
                           OTC NDF / FX FORWARD — FX DESK
                         </div>
                         <p style={{ color: S.secondary, lineHeight: 1.7 }}>
@@ -320,7 +320,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                       onClick={handleCopyJson}
                       style={{
                         fontFamily:   S.fontMono,
-                        fontSize:     11,
+                        fontSize: 12,
                         fontWeight:   700,
                         letterSpacing:"0.06em",
                         color:        copiedJson ? S.bgPanel : S.cyan,
@@ -338,7 +338,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                       href="https://www.interactivebrokers.com/api/doc.html#tag/Order/paths/~1iserver~1account~1{accountId}~1orders/post"
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, textDecoration: "none", display: "flex", alignItems: "center" }}
+                      style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textDecoration: "none", display: "flex", alignItems: "center" }}
                     >
                       → IBKR API Docs ↗
                     </a>
@@ -371,7 +371,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                     onClick={handleCopyFix}
                     style={{
                       fontFamily:   S.fontMono,
-                      fontSize:     11,
+                      fontSize: 12,
                       fontWeight:   700,
                       letterSpacing:"0.06em",
                       color:        copiedFix ? S.bgPanel : S.cyan,
@@ -386,7 +386,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                   >
                     {copiedFix ? '✓ COPIED' : 'COPY FIX'}
                   </button>
-                  <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, background: S.bgDeep, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "8px 12px" }}>
+                  <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, background: S.bgDeep, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "8px 12px" }}>
                     Note: FIX sessions require prior configuration with your prime broker / IBKR FIX gateway. Contact IBKR for FIX connectivity setup.
                   </div>
                 </div>
@@ -402,7 +402,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                       </div>
                       <div style={{
                         fontFamily:  S.fontMono,
-                        fontSize:    11,
+                        fontSize: 12,
                         color:       S.cyan,
                         background:  S.bgDeep,
                         border:      `1px solid ${S.rim}`,
@@ -417,7 +417,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                           onClick={() => window.open(fxTraderUrl, '_blank', 'noopener,noreferrer')}
                           style={{
                             fontFamily:   S.fontMono,
-                            fontSize:     11,
+                            fontSize: 12,
                             fontWeight:   700,
                             letterSpacing:"0.06em",
                             color:        S.bgPanel,
@@ -431,7 +431,7 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
                           OPEN IN IBKR FXTRADER ↗
                         </button>
                       </div>
-                      <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, background: S.bgDeep, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "8px 12px" }}>
+                      <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, background: S.bgDeep, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "8px 12px" }}>
                         Advisory: This deep-link is constructed from HedgeCalc instrument mapping. Verify the pair, side, and notional in IBKR before submitting any order. Deep-link parameters are indicative only.
                       </div>
                     </>
@@ -467,14 +467,14 @@ export default function IbkrHandoff({ mapping, bucket, baseCcy = 'MXN', runId = 
               justifyContent: "space-between",
               alignItems: "center",
             }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                 Run {runId8} · Bucket {bucket.bucket} · {baseCcy}
               </span>
               <button
                 onClick={() => setShowModal(false)}
                 style={{
                   fontFamily:   S.fontMono,
-                  fontSize:     11,
+                  fontSize: 12,
                   fontWeight:   600,
                   letterSpacing:"0.06em",
                   color:        S.secondary,

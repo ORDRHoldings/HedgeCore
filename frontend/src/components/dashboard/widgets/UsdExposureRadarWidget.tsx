@@ -178,7 +178,7 @@ function RadarChart({
 
       {labels.map(({ b, lx, ly, ta, color }, i) => (
         <g key={i}>
-          <text x={lx} y={ly + 3} textAnchor={ta} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: color, fontWeight: 700, letterSpacing: "0.05em" }}>
+          <text x={lx} y={ly + 3} textAnchor={ta} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, fill: color, fontWeight: 700, letterSpacing: "0.05em" }}>
             {b.label}
           </text>
           <text x={lx} y={ly + 13} textAnchor={ta} style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 7.5, fill: color, opacity: 0.8 }}>
@@ -187,7 +187,7 @@ function RadarChart({
         </g>
       ))}
 
-      <text x={cx} y={cy - 6} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, fill: "#22D3EE", fontWeight: 700, letterSpacing: "0.08em" }}>USD</text>
+      <text x={cx} y={cy - 6} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, fill: "#22D3EE", fontWeight: 700, letterSpacing: "0.08em" }}>USD</text>
       <text x={cx} y={cy + 6} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 7, fill: "rgba(255,255,255,0.3)" }}>STRENGTH</text>
     </svg>
   );
@@ -361,7 +361,7 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
         </div>
         <span
           style={{
-            fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             letterSpacing: "0.08em", color: S.primary, textTransform: "uppercase",
           }}
         >
@@ -373,7 +373,7 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
         {!loading && liveDxy && (
           <span
             style={{
-              fontFamily: S.fontMono, fontSize: 8,
+              fontFamily: S.fontMono, fontSize: 12,
               color: S.green,
               background: `color-mix(in srgb, ${S.green} 10%, transparent)`,
               border: `1px solid color-mix(in srgb, ${S.green} 25%, transparent)`,
@@ -388,7 +388,7 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
         {!loading && strengthBars.length > 0 && (
           <span
             style={{
-              fontFamily: S.fontMono, fontSize: 8,
+              fontFamily: S.fontMono, fontSize: 12,
               color: avgStrength >= 0 ? S.green : S.red,
               background: `color-mix(in srgb, ${avgStrength >= 0 ? S.green : S.red} 10%, transparent)`,
               border: `1px solid color-mix(in srgb, ${avgStrength >= 0 ? S.green : S.red} 25%, transparent)`,
@@ -399,7 +399,7 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
           </span>
         )}
 
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           {time.slice(11, 16)} UTC
         </span>
         {onRemove && (
@@ -423,7 +423,7 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
               onClick={() => setActiveView(v.key)}
               style={{
                 flex: 1, padding: "6px 10px",
-                fontFamily: S.fontMono, fontSize: 9,
+                fontFamily: S.fontMono, fontSize: 12,
                 letterSpacing: "0.06em", fontWeight: 700, cursor: "pointer",
                 color: isActive ? S.cyan : S.tertiary,
                 background: isActive ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : "transparent",
@@ -448,7 +448,7 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
         {error && !loading && (
           <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
             <DollarSign size={28} color={S.cyan} style={{ opacity: 0.4 }} />
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary, letterSpacing: "0.04em", fontWeight: 600 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, letterSpacing: "0.04em", fontWeight: 600 }}>
               MARKET DATA UNAVAILABLE
             </div>
           </div>
@@ -483,13 +483,13 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-                          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.08em" }}>{m.label}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}>{m.label}</span>
                           <TIcon size={9} color={tColor} />
                         </div>
                         <div style={{ fontFamily: S.fontMono, fontSize: 18, fontWeight: 700, color: m.color, lineHeight: 1, marginBottom: 3 }}>
                           {m.value}
                         </div>
-                        <div style={{ fontFamily: S.fontUI, fontSize: 9, color: S.tertiary, lineHeight: 1.3 }}>
+                        <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, lineHeight: 1.3 }}>
                           {m.subValue}
                         </div>
                       </div>
@@ -509,7 +509,7 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
                   }}
                 >
                   {["PAIR", "SPOT", "24H %", "1M VOL", "FWD PTS", "CARRY"].map((h) => (
-                    <span key={h} style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.06em" }}>{h}</span>
+                    <span key={h} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>{h}</span>
                   ))}
                 </div>
 
@@ -523,19 +523,19 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
                       background: i % 2 === 0 ? "transparent" : S.bgSub,
                     }}
                   >
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.cyan }}>{cp.pair}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary }}>{cp.spot}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan }}>{cp.pair}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{cp.spot}</span>
                     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: cp.change24h >= 0 ? S.green : S.red }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: cp.change24h >= 0 ? S.green : S.red }}>
                         {cp.change24h >= 0 ? "+" : ""}{cp.change24h.toFixed(2)}%
                       </span>
                       <div style={{ height: 2, width: "100%", background: S.bgDeep, overflow: "hidden", borderRadius: 1 }}>
                         <div style={{ height: "100%", width: `${Math.min(Math.abs(cp.change24h) * 40, 100)}%`, background: cp.change24h >= 0 ? S.green : S.red }} />
                       </div>
                     </div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary }}>{cp.vol1m}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary }}>{cp.forwardPts}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.amber, fontWeight: 600 }}>{cp.carryBps}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{cp.vol1m}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{cp.forwardPts}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, fontWeight: 600 }}>{cp.carryBps}</span>
                   </div>
                 ))}
               </div>
@@ -546,7 +546,7 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
               <div style={{ padding: "12px 14px" }}>
                 <div
                   style={{
-                    fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+                    fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                     letterSpacing: "0.08em", marginBottom: 14,
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                   }}
@@ -569,12 +569,12 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
                       <div key={sb.label}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, alignItems: "center" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.secondary, width: 28 }}>{sb.label}</span>
-                            <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>{sb.vs}</span>
+                            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.secondary, width: 28 }}>{sb.label}</span>
+                            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{sb.vs}</span>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                             {isPositive ? <ArrowUpRight size={10} color={S.green} /> : <ArrowDownRight size={10} color={S.red} />}
-                            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: barColor }}>
+                            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: barColor }}>
                               {sb.strength > 0 ? "+" : ""}{sb.strength}
                             </span>
                           </div>
@@ -605,9 +605,9 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, padding: "6px 0", borderTop: `1px solid ${S.soft}` }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.red, letterSpacing: "0.06em" }}>◀ USD WEAK</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>NEUTRAL</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.green, letterSpacing: "0.06em" }}>USD STRONG ▶</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.red, letterSpacing: "0.06em" }}>◀ USD WEAK</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>NEUTRAL</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.green, letterSpacing: "0.06em" }}>USD STRONG ▶</span>
                 </div>
               </div>
             )}
@@ -619,7 +619,7 @@ export default function UsdExposureRadarWidget({ onRemove }: Props) {
       <div
         style={{
           padding: "5px 12px", borderTop: `1px solid ${S.soft}`, background: S.bgSub,
-          fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+          fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
           display: "flex", justifyContent: "space-between", flexShrink: 0,
         }}
       >

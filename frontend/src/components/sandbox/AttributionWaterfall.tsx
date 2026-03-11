@@ -37,7 +37,7 @@ export default function AttributionWaterfall({ navAttribution }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
       <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>NAV Attribution Waterfall</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>NAV Attribution Waterfall</span>
         <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: total >= 0 ? S.green : S.red }}>
           {total >= 0 ? "+" : ""}{total.toLocaleString("en", { maximumFractionDigits: 0 })} USD
         </span>
@@ -73,7 +73,7 @@ export default function AttributionWaterfall({ navAttribution }: Props) {
                     opacity: 0.6,
                   }} />
                 </div>
-                <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: isPos ? S.green : S.red, width: 80, textAlign: "right" }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: isPos ? S.green : S.red, width: 80, textAlign: "right" }}>
                   {isPos ? "+" : ""}{f.contribution.toLocaleString("en", { maximumFractionDigits: 0 })}
                 </span>
               </div>

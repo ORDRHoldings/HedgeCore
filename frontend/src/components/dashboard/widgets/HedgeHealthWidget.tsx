@@ -132,7 +132,7 @@ export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
         <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <Shield size={13} color={S.cyan} style={{ flexShrink: 0 }} />
         <span style={{
-          fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
           letterSpacing: "0.08em", color: S.primary, textTransform: "uppercase", flex: 1,
         }}>
           Hedge Health
@@ -140,7 +140,7 @@ export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
 
         {overallScore !== null && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.06em",
+            fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em",
             color: scoreColor, fontWeight: 700,
           }}>
             SCORE: {overallScore}/100
@@ -170,13 +170,13 @@ export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
               marginBottom: 10, borderRadius: 3,
             }}>
               <div style={{
-                fontFamily: S.fontMono, fontSize: 10, color: S.cyan,
+                fontFamily: S.fontMono, fontSize: 12, color: S.cyan,
                 letterSpacing: "0.06em", fontWeight: 700, marginBottom: 4,
               }}>
                 SETUP CHECKLIST
               </div>
               <div style={{
-                fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.5,
+                fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5,
               }}>
                 Complete these steps to activate your hedge dashboard and see live health metrics.
               </div>
@@ -193,7 +193,7 @@ export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
                     width: 22, height: 22, borderRadius: "50%",
                     border: `1.5px solid ${S.rim}`, display: "flex",
                     alignItems: "center", justifyContent: "center",
-                    fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, fontWeight: 700,
                     flexShrink: 0,
                   }}>
                     {i + 1}
@@ -201,13 +201,13 @@ export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
 
                   <div style={{ flex: 1 }}>
                     <div style={{
-                      fontFamily: S.fontMono, fontSize: 10, color: S.primary,
+                      fontFamily: S.fontMono, fontSize: 12, color: S.primary,
                       letterSpacing: "0.04em", fontWeight: 600,
                     }}>
                       {m.label}
                     </div>
                     <div style={{
-                      fontFamily: S.fontUI, fontSize: 10, color: S.tertiary, marginTop: 1,
+                      fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 1,
                     }}>
                       {m.detail}
                     </div>
@@ -242,7 +242,7 @@ export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
                     {overallScore}
                   </span>
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+                    fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                     letterSpacing: "0.08em", marginTop: 2,
                   }}>
                     HEALTH
@@ -261,13 +261,13 @@ export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
                       display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3,
                     }}>
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: 9, color: S.secondary,
+                        fontFamily: S.fontMono, fontSize: 12, color: S.secondary,
                         letterSpacing: "0.06em",
                       }}>
                         {m.label}
                       </span>
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: 9, color: barColor, fontWeight: 700,
+                        fontFamily: S.fontMono, fontSize: 12, color: barColor, fontWeight: 700,
                       }}>
                         {m.value}%
                       </span>
@@ -279,7 +279,7 @@ export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
                       }} />
                     </div>
                     <div style={{
-                      fontFamily: S.fontUI, fontSize: 9, color: S.tertiary, marginTop: 2,
+                      fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 2,
                     }}>
                       {m.detail}
                     </div>
@@ -294,7 +294,7 @@ export default function HedgeHealthWidget({ token, user, onRemove }: Props) {
       {/* Footer */}
       <div style={{
         padding: "5px 12px", borderTop: `1px solid ${S.soft}`, background: S.bgSub,
-        fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
         display: "flex", justifyContent: "space-between", flexShrink: 0,
       }}>
         <span>Composite health across 5 dimensions</span>

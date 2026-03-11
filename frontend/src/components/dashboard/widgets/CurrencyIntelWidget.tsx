@@ -302,7 +302,7 @@ function CompareBar({
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: 9,
+          fontSize: 12,
           fontWeight: 700,
           color: active ? color : S.tertiary,
           width: 28,
@@ -336,7 +336,7 @@ function CompareBar({
       <span
         style={{
           fontFamily: S.fontMono,
-          fontSize: 8,
+          fontSize: 12,
           color: active ? color : S.tertiary,
           fontWeight: active ? 700 : 400,
           width: 22,
@@ -460,7 +460,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: "0.08em",
             color: S.primary,
@@ -473,7 +473,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 8,
+            fontSize: 12,
             letterSpacing: "0.1em",
             color: newsLoaded ? S.green : S.tertiary,
             background: `color-mix(in srgb, ${newsLoaded ? S.green : S.tertiary} 10%, transparent)`,
@@ -494,7 +494,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
           onClick={() => setShowCompare((p) => !p)}
           style={{
             fontFamily: S.fontMono,
-            fontSize: 8,
+            fontSize: 12,
             letterSpacing: "0.08em",
             color: showCompare ? S.cyan : S.tertiary,
             background: showCompare
@@ -513,7 +513,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               color: S.amber,
               letterSpacing: "0.06em",
             }}
@@ -562,7 +562,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
               style={{
                 padding: "6px 14px",
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: "0.08em",
                 fontWeight: 700,
                 cursor: "pointer",
@@ -607,7 +607,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
               <div
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 8,
+                  fontSize: 12,
                   color: S.tertiary,
                   letterSpacing: "0.1em",
                   marginBottom: 10,
@@ -642,7 +642,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
               <div
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 8,
+                  fontSize: 12,
                   color: S.tertiary,
                   letterSpacing: "0.1em",
                   marginBottom: 10,
@@ -706,7 +706,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 9,
+                    fontSize: 12,
                     fontWeight: 700,
                     color: risk.color,
                     letterSpacing: "0.08em",
@@ -738,7 +738,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 9,
+                    fontSize: 12,
                     fontWeight: 700,
                     color: vol.color,
                     letterSpacing: "0.08em",
@@ -791,7 +791,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                 <div
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 9,
+                    fontSize: 12,
                     color: S.tertiary,
                     marginTop: 1,
                   }}
@@ -812,7 +812,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
                     color: S.primary,
                   }}
@@ -822,7 +822,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 8,
+                    fontSize: 12,
                     fontWeight: 700,
                     color:
                       intel.rateDirection === "hawkish"
@@ -944,7 +944,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
               }}
             >
               <span
-                style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.08em" }}
+                style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}
               >
                 CURRENT ACCOUNT
               </span>
@@ -958,7 +958,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
               >
                 {intel.currentAccount}
               </span>
-              <span style={{ fontFamily: S.fontUI, fontSize: 9, color: S.tertiary }}>
+              <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                 % of GDP
               </span>
             </div>
@@ -968,7 +968,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
               <div
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 8,
+                  fontSize: 12,
                   color: S.tertiary,
                   letterSpacing: "0.1em",
                   marginBottom: 6,
@@ -1005,7 +1005,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                         }}
                       >
                         <ArrowRight size={8} color={S.cyan} style={{ flexShrink: 0, marginTop: 2 }} />
-                        <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.4 }}>
+                        <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.4 }}>
                           {h}
                         </span>
                       </div>
@@ -1040,7 +1040,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
                               </span>
                               <ExternalLink size={7} color={S.tertiary} style={{ marginLeft: "auto" }} />
                             </div>
-                            <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.4 }}>
+                            <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.4 }}>
                               {a.headline}
                             </span>
                           </div>
@@ -1060,7 +1060,7 @@ export default function CurrencyIntelWidget({ token, user, onRemove }: Props) {
           borderTop: `1px solid ${S.soft}`,
           background: S.bgSub,
           fontFamily: S.fontMono,
-          fontSize: 8,
+          fontSize: 12,
           color: S.tertiary,
           display: "flex",
           justifyContent: "space-between",

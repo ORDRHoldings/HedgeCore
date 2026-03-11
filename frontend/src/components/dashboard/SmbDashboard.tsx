@@ -100,7 +100,7 @@ export default function SmbDashboard({ token, user }: Props) {
             borderRadius: 2,
             cursor: "pointer",
             fontFamily: S.fontMono,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 500,
             color: S.secondary,
             letterSpacing: "0.04em",
@@ -119,7 +119,7 @@ export default function SmbDashboard({ token, user }: Props) {
               animation: "pulse 2s infinite",
             }}
           />
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             LIVE
           </span>
         </div>
@@ -177,11 +177,11 @@ export default function SmbDashboard({ token, user }: Props) {
           gap: 8,
         }}
       >
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.04em" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.04em" }}>
           ORDR Lite · Solo Mode · USD/MXN
         </span>
         <span style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           {ts}
         </span>
       </div>

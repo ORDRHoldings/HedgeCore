@@ -101,7 +101,7 @@ export default function ProgressBar({
                 ) : (
                   <span style={{
                     fontFamily: HD.fontMono,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 700,
                     color: circleColor,
                     lineHeight: 1,
@@ -115,7 +115,7 @@ export default function ProgressBar({
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
                 <span style={{
                   fontFamily: HD.fontMono,
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: labelWeight,
                   color: labelColor,
                   letterSpacing: "0.08em",
@@ -130,7 +130,7 @@ export default function ProgressBar({
                   return sub ? (
                     <span style={{
                       fontFamily: HD.fontMono,
-                      fontSize: 9,
+                      fontSize: 12,
                       fontWeight: 400,
                       color: HD.secondary,
                       letterSpacing: "0.04em",

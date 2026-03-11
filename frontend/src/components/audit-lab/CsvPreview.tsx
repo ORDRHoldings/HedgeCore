@@ -162,7 +162,7 @@ export default function CsvPreview({ file }: CsvPreviewProps) {
       {/* Column mapping badges */}
       <div>
         <div style={{
-          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
           letterSpacing: "0.1em", color: S.tertiary,
           textTransform: "uppercase", marginBottom: 8,
         }}>
@@ -213,7 +213,7 @@ export default function CsvPreview({ file }: CsvPreviewProps) {
       {/* Detected headers */}
       <div>
         <div style={{
-          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
           letterSpacing: "0.1em", color: S.tertiary,
           textTransform: "uppercase", marginBottom: 6,
         }}>
@@ -239,7 +239,7 @@ export default function CsvPreview({ file }: CsvPreviewProps) {
       {/* Sample rows table */}
       <div>
         <div style={{
-          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
           letterSpacing: "0.1em", color: S.tertiary,
           textTransform: "uppercase", marginBottom: 6,
         }}>
@@ -254,7 +254,7 @@ export default function CsvPreview({ file }: CsvPreviewProps) {
                   const isRequired = (REQUIRED_COLUMNS as readonly string[]).includes(normalized);
                   return (
                     <th key={i} style={{
-                      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                       letterSpacing: "0.08em",
                       color: isRequired ? S.cyan : S.tertiary,
                       textAlign: "left", padding: "8px 12px",

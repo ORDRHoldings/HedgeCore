@@ -80,14 +80,14 @@ export default function FxNewsWidget({ onRemove }: Props) {
       <div className="widget-drag-handle" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, cursor: "grab" }}>
         <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <Newspaper size={12} color={S.cyan} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, flex: 1, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, flex: 1, textTransform: "uppercase" }}>
           FX News
         </span>
         {lastFetch && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{lastFetch}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{lastFetch}</span>
         )}
         <span style={{
-          fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, letterSpacing: "0.08em",
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
           color: S.green,
           background: "color-mix(in srgb, var(--status-pass,#34d399) 10%, transparent)",
           border: "1px solid color-mix(in srgb, var(--status-pass,#34d399) 30%, transparent)",
@@ -106,18 +106,18 @@ export default function FxNewsWidget({ onRemove }: Props) {
       {/* Body */}
       <div style={{ flex: 1, overflowY: "auto" }}>
         {fetching && articles.length === 0 ? (
-          <div style={{ padding: 24, textAlign: "center", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <div style={{ padding: 24, textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             LOADING…
           </div>
         ) : error ? (
           <div style={{ padding: 24, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.red }}>ERROR</span>
-            <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, textAlign: "center" }}>{error}</span>
-            <button onClick={fetchNews} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}`, padding: "3px 10px", cursor: "pointer" }}>RETRY</button>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.red }}>ERROR</span>
+            <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, textAlign: "center" }}>{error}</span>
+            <button onClick={fetchNews} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}`, padding: "3px 10px", cursor: "pointer" }}>RETRY</button>
           </div>
         ) : displayed.length === 0 ? (
           <div style={{ padding: 24, textAlign: "center" }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>NO FX NEWS AVAILABLE</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>NO FX NEWS AVAILABLE</span>
           </div>
         ) : (
           <div>
@@ -149,11 +149,11 @@ export default function FxNewsWidget({ onRemove }: Props) {
                       {article.headline}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.cyan, fontWeight: 700 }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, fontWeight: 700 }}>
                         {article.source}
                       </span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>·</span>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>·</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                         {article.datetime > 0 ? relativeTime(article.datetime) : "—"}
                       </span>
                     </div>
@@ -172,7 +172,7 @@ export default function FxNewsWidget({ onRemove }: Props) {
         borderTop: `1px solid ${S.soft}`,
         background: S.bgSub,
         fontFamily: S.fontMono,
-        fontSize: 9,
+        fontSize: 12,
         color: S.tertiary,
         display: "flex",
         justifyContent: "space-between",

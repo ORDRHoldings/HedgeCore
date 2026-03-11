@@ -44,13 +44,13 @@ export default function GuidedEmptyState({
         />
       </div>
       <span style={{
-        fontFamily: S.fontMono, fontSize: 11, fontWeight: 600,
+        fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
         letterSpacing: "0.06em", color: S.secondary,
       }}>
         {title}
       </span>
       <span style={{
-        fontFamily: S.fontUI, fontSize: 11, lineHeight: 1.6,
+        fontFamily: S.fontUI, fontSize: 12, lineHeight: 1.6,
         color: S.tertiary, maxWidth: 260,
       }}>
         {description}
@@ -60,7 +60,7 @@ export default function GuidedEmptyState({
           onClick={cta.onClick}
           style={{
             marginTop: 4,
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 600,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
             letterSpacing: "0.1em", textTransform: "uppercase",
             color: S.cyan, background: "transparent",
             border: `1px solid ${S.cyan}`, padding: "5px 14px",

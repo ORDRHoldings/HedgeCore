@@ -815,14 +815,14 @@ export default function CrisisScenarioLibrary({ onSelect, selectedId }: CrisisSc
         background: `color-mix(in srgb, ${S.sub} 60%, transparent)`,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.amber }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.amber }}>
             ⚡ CRISIS SCENARIO LIBRARY
           </span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             — {CRISIS_SCENARIOS.length - 1} historical crises · academic-grade data
           </span>
         </div>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           IFRS 9 · BCBS 457 · ISDA SIMM 2.6
         </span>
       </div>
@@ -832,7 +832,7 @@ export default function CrisisScenarioLibrary({ onSelect, selectedId }: CrisisSc
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {REGIONS.map(r => (
             <button key={r.id} onClick={() => setFilter(r.id)} style={{
-              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
               padding: "3px 10px", borderRadius: 2,
               border: filter === r.id ? `1px solid ${S.cyan}` : `1px solid ${S.soft}`,
               background: filter === r.id ? `color-mix(in srgb, ${S.cyan} 10%, transparent)` : "transparent",
@@ -845,7 +845,7 @@ export default function CrisisScenarioLibrary({ onSelect, selectedId }: CrisisSc
             onChange={e => setSearch(e.target.value)}
             placeholder="Search crises, currencies…"
             style={{
-              fontFamily: S.fontMono, fontSize: 11, color: S.primary,
+              fontFamily: S.fontMono, fontSize: 12, color: S.primary,
               background: S.sub, border: `1px solid ${S.rim}`, borderRadius: 2,
               padding: "3px 8px", width: 200, outline: "none",
               marginLeft: "auto",
@@ -879,34 +879,34 @@ export default function CrisisScenarioLibrary({ onSelect, selectedId }: CrisisSc
                   cursor: "pointer",
                 }} onClick={() => setExpanded(isExpanded ? null : crisis.id)}>
                   <div>
-                    <div style={{ fontFamily: S.fontUI, fontSize: 11, fontWeight: 600, color: S.primary }}>{crisis.shortName}</div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{crisis.period}</div>
+                    <div style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 600, color: S.primary }}>{crisis.shortName}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{crisis.period}</div>
                   </div>
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     padding: "2px 5px", borderRadius: 2,
                     background: `color-mix(in srgb, ${severityColor(crisis.severity)} 12%, transparent)`,
                     color: severityColor(crisis.severity),
                     textAlign: "center",
                   }}>{crisis.severity}</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: crisis.fxShock < 0 ? S.red : S.green }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: crisis.fxShock < 0 ? S.red : S.green }}>
                     {crisis.fxShock > 0 ? "+" : ""}{crisis.fxShock.toFixed(0)}%
                   </span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: crisis.equityShock < 0 ? S.amber : S.green }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: crisis.equityShock < 0 ? S.amber : S.green }}>
                     EQ {crisis.equityShock > 0 ? "+" : ""}{crisis.equityShock.toFixed(0)}%
                   </span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                     VIX {crisis.volSpike}
                   </span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{crisis.region}</span>
-                  <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{crisis.region}</span>
+                  <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
                     {crisis.primaryCurrencies.slice(0, 4).join(" · ")}
                   </span>
                   {onSelect && (
                     <button
                       onClick={e => { e.stopPropagation(); onSelect(crisis); }}
                       style={{
-                        fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                         padding: "3px 8px", borderRadius: 2,
                         border: `1px solid ${isSelected ? S.cyan : S.rim}`,
                         background: isSelected ? `color-mix(in srgb, ${S.cyan} 15%, transparent)` : S.sub,
@@ -925,12 +925,12 @@ export default function CrisisScenarioLibrary({ onSelect, selectedId }: CrisisSc
                     display: "flex", flexDirection: "column", gap: 8,
                     background: `color-mix(in srgb, ${S.sub} 40%, transparent)`,
                   }}>
-                    <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: 0, lineHeight: 1.6 }}>
+                    <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: 0, lineHeight: 1.6 }}>
                       {crisis.description}
                     </p>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                       <div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 4 }}>STRESS PARAMETERS</div>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 4 }}>STRESS PARAMETERS</div>
                         {[
                           ["Spot Shock", `${crisis.stressParams.spotShock.toFixed(1)}%`],
                           ["Vol Spike", `+${crisis.stressParams.volShock.toFixed(0)}%`],
@@ -939,35 +939,35 @@ export default function CrisisScenarioLibrary({ onSelect, selectedId }: CrisisSc
                           ["Carry Destroy", `${crisis.stressParams.carryDestruction.toFixed(0)}%`],
                         ].map(([k, v]) => (
                           <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                            <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{k}</span>
-                            <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.primary }}>{v}</span>
+                            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{k}</span>
+                            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{v}</span>
                           </div>
                         ))}
                       </div>
                       <div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 4 }}>HEDGE EFFECTIVENESS</div>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 4 }}>HEDGE EFFECTIVENESS</div>
                         {[
                           ["NDF", crisis.hedgeEffectiveness.ndf],
                           ["FWD", crisis.hedgeEffectiveness.fwd],
                           ["Options", crisis.hedgeEffectiveness.option],
                         ].map(([k, v]) => (
                           <div key={k as string} style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                            <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{k}</span>
-                            <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: (v as number) >= 90 ? S.green : (v as number) >= 80 ? S.amber : S.red }}>{(v as number).toFixed(1)}%</span>
+                            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{k}</span>
+                            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: (v as number) >= 90 ? S.green : (v as number) >= 80 ? S.amber : S.red }}>{(v as number).toFixed(1)}%</span>
                           </div>
                         ))}
                       </div>
                       <div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 4 }}>KEY DRIVERS</div>
+                        <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 4 }}>KEY DRIVERS</div>
                         {crisis.keyDrivers.slice(0, 3).map((d, i) => (
-                          <div key={i} style={{ fontFamily: S.fontUI, fontSize: 9, color: S.secondary, marginBottom: 2, lineHeight: 1.4 }}>• {d}</div>
+                          <div key={i} style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginBottom: 2, lineHeight: 1.4 }}>• {d}</div>
                         ))}
                       </div>
                     </div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, borderTop: `1px solid ${S.soft}`, paddingTop: 6 }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, borderTop: `1px solid ${S.soft}`, paddingTop: 6 }}>
                       📚 {crisis.academicRef}
                     </div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       ⚖️ {crisis.regulatoryContext}
                     </div>
                   </div>
@@ -977,7 +977,7 @@ export default function CrisisScenarioLibrary({ onSelect, selectedId }: CrisisSc
           })}
         </div>
 
-        <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, paddingTop: 4, borderTop: `1px solid ${S.soft}` }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, paddingTop: 4, borderTop: `1px solid ${S.soft}` }}>
           Stress parameters calibrated per BCBS 457 (2019) stressed VaR methodology · ISDA SIMM v2.6 delta/vega sensitivities · IMF EM Vulnerability Indicators
         </div>
       </div>

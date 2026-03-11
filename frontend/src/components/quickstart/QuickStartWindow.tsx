@@ -117,7 +117,7 @@ function ReadinessBadge({ status }: { status: Readiness }) {
     <span style={{
       ...style,
       fontFamily:    S.fontMono,
-      fontSize:      9,
+      fontSize: 12,
       fontWeight:    700,
       letterSpacing: "0.07em",
       padding:       "2px 6px",
@@ -172,7 +172,7 @@ function KpiStrip({ summary, loading }: { summary: OnboardingSummary; loading: b
         >
           <div style={{
             fontFamily:    S.fontMono,
-            fontSize:      8,
+            fontSize: 12,
             letterSpacing: "0.10em",
             color:         S.tertiary,
             fontWeight:    700,
@@ -191,7 +191,7 @@ function KpiStrip({ summary, loading }: { summary: OnboardingSummary; loading: b
           {card.sub && (
             <div style={{
               fontFamily:    S.fontMono,
-              fontSize:      9,
+              fontSize: 12,
               color:         S.tertiary,
               letterSpacing: "0.05em",
             }}>
@@ -293,7 +293,7 @@ function WorkflowStep({
           alignItems:     "center",
           justifyContent: "center",
           fontFamily:     S.fontMono,
-          fontSize:       11,
+          fontSize: 12,
           fontWeight:     700,
           color:          blocked ? S.tertiary : S.cyan,
           flexShrink:     0,
@@ -327,7 +327,7 @@ function WorkflowStep({
           {/* Description */}
           <p style={{
             fontFamily: S.fontUI,
-            fontSize:   10,
+            fontSize: 12,
             color:      S.secondary,
             lineHeight: 1.55,
             margin:     "0 0 8px",
@@ -344,7 +344,7 @@ function WorkflowStep({
               aria-disabled={blocked}
               style={{
                 fontFamily:     S.fontMono,
-                fontSize:       9,
+                fontSize: 12,
                 letterSpacing:  "0.06em",
                 fontWeight:     600,
                 color:          blocked ? S.tertiary : S.cyan,
@@ -366,7 +366,7 @@ function WorkflowStep({
               aria-label={`Help for step ${step.number}: ${step.title}`}
               style={{
                 fontFamily:     S.fontMono,
-                fontSize:       9,
+                fontSize: 12,
                 color:          S.tertiary,
                 background:     "transparent",
                 border:         `1px solid ${S.soft}`,
@@ -507,7 +507,7 @@ export default function QuickStartWindow({ token, user }: QuickStartWindowProps)
         <div>
           <div style={{
             fontFamily:    S.fontMono,
-            fontSize:      9,
+            fontSize: 12,
             letterSpacing: "0.12em",
             color:         S.cyan,
             fontWeight:    700,
@@ -534,7 +534,7 @@ export default function QuickStartWindow({ token, user }: QuickStartWindowProps)
             border:         `1px solid ${S.rim}`,
             cursor:         "pointer",
             fontFamily:     S.fontMono,
-            fontSize:       9,
+            fontSize: 12,
             color:          S.tertiary,
             letterSpacing:  "0.07em",
             padding:        "4px 8px",
@@ -561,7 +561,7 @@ export default function QuickStartWindow({ token, user }: QuickStartWindowProps)
       }}>
         <span style={{
           fontFamily:    S.fontMono,
-          fontSize:      8,
+          fontSize: 12,
           letterSpacing: "0.12em",
           color:         S.tertiary,
           fontWeight:    700,
@@ -605,7 +605,7 @@ export default function QuickStartWindow({ token, user }: QuickStartWindowProps)
             border:         "none",
             cursor:         dismissing ? "not-allowed" : "pointer",
             fontFamily:     S.fontMono,
-            fontSize:       9,
+            fontSize: 12,
             color:          S.tertiary,
             letterSpacing:  "0.06em",
             padding:        0,
@@ -621,7 +621,7 @@ export default function QuickStartWindow({ token, user }: QuickStartWindowProps)
             background:   "transparent",
             lineHeight:   "10px",
             textAlign:    "center",
-            fontSize:     8,
+            fontSize: 12,
             color:        S.tertiary,
           }}>
             □
@@ -637,7 +637,7 @@ export default function QuickStartWindow({ token, user }: QuickStartWindowProps)
             border:        `1px solid ${S.rim}`,
             cursor:        "pointer",
             fontFamily:    S.fontMono,
-            fontSize:      9,
+            fontSize: 12,
             color:         S.tertiary,
             letterSpacing: "0.07em",
             padding:       "4px 10px",

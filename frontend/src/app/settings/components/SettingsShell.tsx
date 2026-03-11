@@ -21,16 +21,16 @@ export default function SettingsShell({
       display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.primary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.primary }}>
           SETTINGS
         </span>
         <span style={{ color: S.rim }}>|</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, letterSpacing: "0.06em", color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em", color: S.tertiary }}>
           ORDR TERMINAL · CONFIGURATION
         </span>
         {isDirty && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em",
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
             color: S.amber,
             background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
             border: `1px solid color-mix(in srgb, ${S.amber} 25%, transparent)`,
@@ -43,14 +43,14 @@ export default function SettingsShell({
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {lastSaved && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             Last saved: {lastSaved.replace("T", " ").slice(0, 16)} UTC
           </span>
         )}
         <button
           onClick={onToggleLog}
           style={{
-            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
             color: S.secondary, background: "transparent",
             border: `1px solid ${S.rim}`, borderRadius: 2,
             padding: "5px 12px", cursor: "pointer",
@@ -61,7 +61,7 @@ export default function SettingsShell({
         <button
           onClick={onReset}
           style={{
-            fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
             color: S.fail, background: "transparent",
             border: `1px solid ${S.fail}40`, borderRadius: 2,
             padding: "5px 12px", cursor: "pointer",
@@ -73,7 +73,7 @@ export default function SettingsShell({
           onClick={onSave}
           disabled={saving || !isDirty}
           style={{
-            fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
             color: "#000", background: saving || !isDirty ? S.tertiary : S.cyan,
             border: "none", borderRadius: 2, padding: "5px 18px",
             cursor: saving || !isDirty ? "not-allowed" : "pointer",

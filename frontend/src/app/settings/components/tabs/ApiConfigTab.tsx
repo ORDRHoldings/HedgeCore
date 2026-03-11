@@ -31,15 +31,15 @@ function ConnectivityChecker({ apiUrl }: { apiUrl: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
       <button onClick={check} disabled={status === "checking"} style={{
-        fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
         color: "#000", background: status === "checking" ? S.tertiary : S.cyan,
         border: "none", borderRadius: 2, padding: "7px 16px",
         cursor: status === "checking" ? "wait" : "pointer",
       }}>
         {status === "checking" ? "CHECKING…" : "TEST CONNECTION"}
       </button>
-      {status === "ok"   && <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.pass }}>✓ CONNECTED — {latency}ms</span>}
-      {status === "fail" && <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.fail }}>✗ UNREACHABLE — check URL and CORS headers</span>}
+      {status === "ok"   && <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.pass }}>✓ CONNECTED — {latency}ms</span>}
+      {status === "fail" && <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail }}>✗ UNREACHABLE — check URL and CORS headers</span>}
     </div>
   );
 }
@@ -54,9 +54,9 @@ export default function ApiConfigTab({ s, set }: Props) {
         border: `1px solid color-mix(in srgb, ${S.fail} 20%, transparent)`,
         borderLeft: `3px solid ${S.fail}`,
         borderRadius: 2, padding: "10px 14px",
-        fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.5,
+        fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5,
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.fail, marginRight: 6, letterSpacing: "0.07em" }}>SECURITY</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.fail, marginRight: 6, letterSpacing: "0.07em" }}>SECURITY</span>
         API keys are stored in localStorage for demo mode. In production, keys are stored in the backend secrets vault
         (HashiCorp Vault / AWS Secrets Manager) and never transmitted to the browser.
       </div>

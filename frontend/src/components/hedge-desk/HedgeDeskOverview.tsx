@@ -113,7 +113,7 @@ export default function HedgeDeskOverview({ token, user, onStartRun }: Props) {
     <div style={{ height: "100%", overflowY: "auto", padding: "32px 28px", display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
           HEDGE DESK
         </span>
         <span style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary }}>
@@ -132,7 +132,7 @@ export default function HedgeDeskOverview({ token, user, onStartRun }: Props) {
         }}>
           <AlertTriangleIcon size={16} color={S.amber} style={{ flexShrink: 0 }} />
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.amber }}>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.amber }}>
               DRAFT IN PROGRESS
             </span>
             <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
@@ -145,7 +145,7 @@ export default function HedgeDeskOverview({ token, user, onStartRun }: Props) {
           <button
             onClick={dismissDraft}
             style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.08em",
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em",
               color: S.tertiary, background: "transparent",
               border: `1px solid ${S.rim}`, padding: "6px 12px",
               cursor: "pointer", borderRadius: 2,
@@ -156,7 +156,7 @@ export default function HedgeDeskOverview({ token, user, onStartRun }: Props) {
           <button
             onClick={onStartRun}
             style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
               color: "#fff", background: S.cyan,
               border: `1px solid ${S.cyan}`, padding: "6px 14px",
               cursor: "pointer", borderRadius: 2,
@@ -218,7 +218,7 @@ export default function HedgeDeskOverview({ token, user, onStartRun }: Props) {
 
       {/* Recent Runs */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary }}>
           RECENT RUNS
         </span>
 
@@ -255,13 +255,13 @@ export default function HedgeDeskOverview({ token, user, onStartRun }: Props) {
               }}
             >
               <ClockIcon size={14} color={S.tertiary} style={{ flexShrink: 0 }} />
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary, flexShrink: 0 }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, flexShrink: 0 }}>
                 {runId.slice(0, 8)}
               </span>
               <RunStatusBadge status={status} />
               <div style={{ flex: 1 }} />
               {run.created_at && (
-                <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                   {formatRunDate(run.created_at)}
                 </span>
               )}
@@ -283,7 +283,7 @@ function StatCard({ label, value, color, loaded }: { label: string; value: numbe
       background: S.bgPanel,
       display: "flex", flexDirection: "column", gap: 6,
     }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", color: S.tertiary }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", color: S.tertiary }}>
         {label}
       </span>
       <span style={{ fontFamily: S.fontMono, fontSize: 20, fontWeight: 700, color: loaded ? color : S.tertiary }}>
@@ -303,7 +303,7 @@ function RunStatusBadge({ status }: { status: string }) {
 
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
       color, textTransform: "uppercase",
       background: `color-mix(in srgb, ${color} 8%, transparent)`,
       border: `1px solid color-mix(in srgb, ${color} 25%, transparent)`,

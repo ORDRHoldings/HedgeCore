@@ -64,7 +64,7 @@ export default function PairSelector({ value, onChange }: Props) {
         <span style={{ color: S.cyan }}>{selected?.label ?? value}</span>
         {isNdf && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             color: S.amber, padding: "1px 5px",
             border: `1px solid ${S.amber}`, borderRadius: 2,
             background: `color-mix(in srgb, ${S.amber} 10%, transparent)`,
@@ -72,12 +72,12 @@ export default function PairSelector({ value, onChange }: Props) {
         )}
         {isEm && !isNdf && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             color: S.secondary, padding: "1px 5px",
             border: `1px solid ${S.soft}`, borderRadius: 2,
           }}>EM</span>
         )}
-        <span style={{ color: S.tertiary, fontSize: 10 }}>{open ? "▲" : "▼"}</span>
+        <span style={{ color: S.tertiary, fontSize: 12 }}>{open ? "▲" : "▼"}</span>
       </button>
 
       {/* Dropdown */}
@@ -94,7 +94,7 @@ export default function PairSelector({ value, onChange }: Props) {
               <div key={group}>
                 <div style={{
                   padding: "7px 12px 4px",
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   letterSpacing: "0.1em", color: S.tertiary,
                   textTransform: "uppercase",
                   borderTop: group !== "G10" ? `1px solid ${S.soft}` : undefined,
@@ -124,12 +124,12 @@ export default function PairSelector({ value, onChange }: Props) {
                     <span style={{ flex: 1, fontWeight: p.id === value ? 700 : 400 }}>
                       {p.label}
                     </span>
-                    <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.tertiary }}>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
                       {p.demoSpot.toLocaleString("en", { maximumFractionDigits: 4, minimumFractionDigits: 2 })}
                     </span>
                     {p.isNdf && (
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: 9, color: S.amber,
+                        fontFamily: S.fontMono, fontSize: 12, color: S.amber,
                         padding: "1px 4px", border: `1px solid ${S.amber}`, borderRadius: 2,
                         background: `color-mix(in srgb, ${S.amber} 8%, transparent)`,
                       }}>NDF</span>

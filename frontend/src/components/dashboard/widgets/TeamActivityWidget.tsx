@@ -54,7 +54,7 @@ function moduleChipStyle(mod: string): React.CSSProperties {
   const color = MAP[mod] ?? S.tertiary;
   return {
     fontFamily: S.fontMono,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: 600,
     color,
     border: "1px solid "+color,
@@ -80,7 +80,7 @@ function Initials({ name }: { name: string }) {
     <span
       style={{
         fontFamily: S.fontMono,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 700,
         color: S.cyan,
         background: "rgba(6,182,212,0.1)",
@@ -137,13 +137,13 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
   const monoNote = (color: string): React.CSSProperties => ({
     padding: "18px 14px",
     fontFamily: S.fontMono,
-    fontSize: 11,
+    fontSize: 12,
     color,
   });
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     fontFamily: S.fontMono,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: active ? 700 : 400,
     color: active ? S.cyan : S.tertiary,
     background: active ? "rgba(6,182,212,0.1)" : "transparent",
@@ -187,7 +187,7 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             color: S.primary,
             letterSpacing: "0.09em",
@@ -201,7 +201,7 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 9,
+            fontSize: 12,
             color: S.tertiary,
             background: S.bgDeep,
             border: `1px solid ${S.soft}`,
@@ -309,8 +309,8 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
                     <span style={{ fontWeight: 600, color: S.primary, fontSize: 12 }}>
                       {item.user_name}
                     </span>
-                    <span style={{ color: S.tertiary, fontSize: 11 }}>&#183;</span>
-                    <span style={{ color: S.secondary, fontSize: 11 }}>
+                    <span style={{ color: S.tertiary, fontSize: 12 }}>&#183;</span>
+                    <span style={{ color: S.secondary, fontSize: 12 }}>
                       {item.action}
                     </span>
                   </div>
@@ -326,7 +326,7 @@ export default function TeamActivityWidget({ token, user, onRemove }: Props) {
                   suppressHydrationWarning
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 9,
+                    fontSize: 12,
                     color: S.tertiary,
                     whiteSpace: "nowrap",
                     flexShrink: 0,

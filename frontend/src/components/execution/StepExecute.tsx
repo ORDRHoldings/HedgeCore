@@ -404,10 +404,10 @@ export default function StepExecute({
           flexShrink: 0,
         }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "var(--accent-cyan)" }}>
+            <span style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: "var(--accent-cyan)" }}>
               STEP 5 — EXECUTE
             </span>
-            <span style={{ fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)", fontSize: 11, color: "var(--text-secondary)" }}>
+            <span style={{ fontFamily: "var(--font-terminal,'IBM Plex Sans',sans-serif)", fontSize: 12, color: "var(--text-secondary)" }}>
               Review execution legs, then submit for checker approval.
             </span>
           </div>
@@ -416,7 +416,7 @@ export default function StepExecute({
             onClick={handleSubmitForApproval}
             style={{
               fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               letterSpacing: "0.06em",
               padding: "8px 24px",
@@ -432,7 +432,7 @@ export default function StepExecute({
 
       {/* ═══ Error banner ═══ */}
       {submitPhase === "error" && submitError && (
-        <div style={{ padding: "12px 16px", background: "rgba(239,68,68,0.08)", borderBottom: `1px solid ${S.fail}`, flexShrink: 0, fontFamily: S.fontMono, fontSize: 11, color: S.fail }}>
+        <div style={{ padding: "12px 16px", background: "rgba(239,68,68,0.08)", borderBottom: `1px solid ${S.fail}`, flexShrink: 0, fontFamily: S.fontMono, fontSize: 12, color: S.fail }}>
           ERROR: {submitError}
         </div>
       )}
@@ -443,7 +443,7 @@ export default function StepExecute({
         {/* ─── AWAITING APPROVAL panel (shown after successful submission) ─── */}
         {submitPhase === "submitted" && (
           <div style={{ margin: "16px 16px 0", padding: "28px 24px", background: S.bgPanel, border: `2px solid ${S.cyan}`, borderRadius: 8, overflow: "hidden" }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: S.cyan, textTransform: "uppercase", marginBottom: 6 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: S.cyan, textTransform: "uppercase", marginBottom: 6 }}>
               PROPOSALS SUBMITTED
             </div>
             <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, marginBottom: 20 }}>
@@ -451,7 +451,7 @@ export default function StepExecute({
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
                 PROPOSAL IDs ({createdProposalIds.length})
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -459,11 +459,11 @@ export default function StepExecute({
                   createdProposalIds.map((id) => (
                     <div key={id} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, padding: "6px 10px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 3 }}>
                       {id.slice(0, 8).toUpperCase()}
-                      <span style={{ color: S.tertiary, fontSize: 10, marginLeft: 8 }}>{id}</span>
+                      <span style={{ color: S.tertiary, fontSize: 12, marginLeft: 8 }}>{id}</span>
                     </div>
                   ))
                 ) : (
-                  <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                     {positions.length} proposal{positions.length !== 1 ? "s" : ""} created (IDs not returned by server)
                   </div>
                 )}
@@ -489,7 +489,7 @@ export default function StepExecute({
                 height: 36, padding: "0 20px", marginTop: 8,
                 background: "transparent", color: S.secondary,
                 border: `1px solid ${S.soft}`, borderRadius: 4,
-                fontFamily: S.fontMono, fontSize: 10,
+                fontFamily: S.fontMono, fontSize: 12,
                 cursor: "pointer",
               }}
             >
@@ -503,13 +503,13 @@ export default function StepExecute({
           <div style={{ margin: "16px 16px 0", padding: 0, background: S.bgPanel, border: `1px solid ${S.soft}`, borderRadius: 8, overflow: "hidden" }}>
             {/* Header */}
             <div style={{ padding: "16px 20px", background: S.bgSub, borderBottom: `1px solid ${S.soft}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: S.primary, textTransform: "uppercase", marginBottom: 8 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.primary, textTransform: "uppercase", marginBottom: 8 }}>
                 EXECUTION LEGS
               </div>
               {isDefaultIbkrAccount && (
-                <div style={{ margin: "12px 0", padding: "10px 14px", background: "rgba(231,76,60,0.08)", border: "1px solid #E74C3C", borderRadius: 4, fontFamily: S.fontMono, fontSize: 10, color: "#E74C3C", display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ margin: "12px 0", padding: "10px 14px", background: "rgba(231,76,60,0.08)", border: "1px solid #E74C3C", borderRadius: 4, fontFamily: S.fontMono, fontSize: 12, color: "#E74C3C", display: "flex", alignItems: "center", gap: 6 }}>
                   &#9888; IBKR account not configured — JSON/FIX export disabled. Configure in Settings → Execution.
-                  <a href="/settings" style={{ color: "#1C62F2", marginLeft: "auto", textDecoration: "none", fontSize: 10 }}>Open Settings →</a>
+                  <a href="/settings" style={{ color: "#1C62F2", marginLeft: "auto", textDecoration: "none", fontSize: 12 }}>Open Settings →</a>
                 </div>
               )}
               {aggregatedOrders.map((agg, i) => (
@@ -536,7 +536,7 @@ export default function StepExecute({
                   </span>
                 ))}
               </div>
-              <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, marginTop: 6 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 6 }}>
                 {aggregatedOrders.map((agg, i) => (
                   <div key={i}>
                     {fmtNum.format(agg.contractSize)} {agg.currency}/contract &middot; Total: {fmtNum.format(agg.totalNotional)} {agg.currency} &middot; From {agg.ticketCount} position{agg.ticketCount !== 1 ? "s" : ""}
@@ -552,7 +552,7 @@ export default function StepExecute({
                 style={{
                   flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   background: "transparent", color: S.secondary, border: `1px solid ${S.soft}`, borderRadius: 4,
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
                   cursor: "pointer", transition: "all 0.15s",
                 }}
               >
@@ -568,7 +568,7 @@ export default function StepExecute({
                 style={{
                   flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   background: "transparent", color: S.cyan, border: `1px solid ${S.cyan}`, borderRadius: 4,
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
                   cursor: "pointer", transition: "all 0.15s",
                 }}
               >
@@ -584,7 +584,7 @@ export default function StepExecute({
                 style={{
                   flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   background: "transparent", color: S.secondary, border: `1px solid ${S.soft}`, borderRadius: 4,
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
                   cursor: "pointer", transition: "all 0.15s",
                 }}
               >
@@ -618,7 +618,7 @@ export default function StepExecute({
                 style={{
                   flex: 1, height: 36, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   background: "transparent", color: S.tertiary, border: `1px solid ${S.soft}`, borderRadius: 4,
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
                   cursor: "pointer", transition: "all 0.15s",
                 }}
               >
@@ -635,7 +635,7 @@ export default function StepExecute({
         {/* ─── Hedge Economics Panel ─── */}
         {submitPhase !== "submitted" && hedgeEcon && (
           <div style={{ margin: "16px 16px 0", padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 12 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 12 }}>
               HEDGE ECONOMICS
             </div>
 
@@ -661,14 +661,14 @@ export default function StepExecute({
             {/* Scenario table */}
             {hedgeEcon.scenarios.length > 0 && (
               <>
-                <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 6 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase", marginBottom: 6 }}>
                   STRESS SCENARIO ANALYSIS
                 </div>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 10 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: S.fontMono, fontSize: 12 }}>
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${S.soft}` }}>
                       {["Scenario", "Shocked Spot", "Unhedged P&L", "Hedged P&L", "Hedge Benefit"].map((h) => (
-                        <th key={h} style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, fontSize: 10, letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" }}>
+                        <th key={h} style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, fontSize: 12, letterSpacing: "0.08em", color: S.tertiary, textTransform: "uppercase" }}>
                           {h}
                         </th>
                       ))}
@@ -694,10 +694,10 @@ export default function StepExecute({
         {/* ─── Audit Trail Reference ─── */}
         {submitPhase !== "submitted" && auditRef && (
           <div style={{ margin: "12px 16px 0", padding: "10px 16px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 8 }}>
               AUDIT TRAIL REFERENCE
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 20, fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 20, fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
               <span>Run: <span style={{ color: S.primary }}>{auditRef.runId.slice(0, 12)}...</span></span>
               <span>Engine: <span style={{ color: S.primary }}>{auditRef.engineVersion}</span></span>
               <span>Buckets: <span style={{ color: S.primary }}>{auditRef.bucketCount}</span></span>
@@ -713,7 +713,7 @@ export default function StepExecute({
                 <div style={{ marginTop: 16, border: `1px solid ${S.soft}`, borderRadius: 4, overflow: "hidden" }}>
                   <button
                     onClick={() => setShowTraceLite((v) => !v)}
-                    style={{ width: "100%", padding: "10px 14px", background: S.bgSub, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.08em" }}
+                    style={{ width: "100%", padding: "10px 14px", background: S.bgSub, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}
                   >
                     <span>EXECUTION TRACE (STAGE-BY-STAGE)</span>
                     <span>{showTraceLite ? "▲" : "▼"}</span>
@@ -722,9 +722,9 @@ export default function StepExecute({
                     <div style={{ padding: "8px 0" }}>
                       {((calcResult as unknown as { trace_lite: { stages: { name: string; duration_ms: number; status: string }[] } }).trace_lite.stages).map((stage, i) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 14px", borderBottom: `1px solid ${S.soft}` }}>
-                          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.primary }}>{stage.name}</span>
-                          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{stage.duration_ms}ms</span>
-                          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: stage.status === "OK" ? S.pass : S.fail }}>{stage.status}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{stage.name}</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{stage.duration_ms}ms</span>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: stage.status === "OK" ? S.pass : S.fail }}>{stage.status}</span>
                         </div>
                       ))}
                     </div>
@@ -734,7 +734,7 @@ export default function StepExecute({
 
         {/* ─── Section 1: Contract Tickets (individual positions) ─── */}
         <div style={{ padding: "12px 16px 0" }}>
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
             CONTRACT TICKETS ({tickets.length})
           </div>
 
@@ -762,16 +762,16 @@ export default function StepExecute({
                       {ticket.contractName}
                     </span>
                     {!isFutures && (
-                      <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 3, fontSize: 10, fontFamily: S.fontMono, fontWeight: 700, letterSpacing: "0.08em", background: "rgba(0,255,255,0.10)", color: S.cyan, border: `1px solid ${S.cyan}` }}>
+                      <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 3, fontSize: 12, fontFamily: S.fontMono, fontWeight: 700, letterSpacing: "0.08em", background: "rgba(0,255,255,0.10)", color: S.cyan, border: `1px solid ${S.cyan}` }}>
                         VIA OTC COUNTERPARTY
                       </span>
                     )}
                   </div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, marginBottom: 10 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 10 }}>
                     @ {fmtDec.format(ticket.estimatedRate)} &middot; {ticket.settlementMonth} &middot; {ticket.exchange}
                   </div>
                   <div style={{ height: 1, background: S.soft, marginBottom: 10 }} />
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontFamily: S.fontMono, fontSize: 10, color: S.secondary, lineHeight: 1.6 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontFamily: S.fontMono, fontSize: 12, color: S.secondary, lineHeight: 1.6 }}>
                     {isFutures && <span>{fmtNum.format(ticket.contractSize)} {ticket.currency}/contract</span>}
                     {isFutures && (<><span style={{ color: S.soft }}>&middot;</span><span>Covers: <span style={{ color: S.primary, fontWeight: 600 }}>{fmtNum.format(ticket.totalCovered)} {ticket.currency}</span></span></>)}
                     {!isFutures && <span>Notional: <span style={{ color: S.primary, fontWeight: 600 }}>{fmtNum.format(ticket.notional)} {ticket.currency}</span></span>}
@@ -791,7 +791,7 @@ export default function StepExecute({
 
         {/* ─── Section 2: Execution Summary ─── */}
         <div style={{ margin: "16px 16px 0", padding: "14px 16px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 4 }}>
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.12em", color: S.tertiary, textTransform: "uppercase", marginBottom: 10 }}>
             EXECUTION SUMMARY
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "baseline" }}>
@@ -822,7 +822,7 @@ export default function StepExecute({
                 >
                   SUBMIT FOR CHECKER APPROVAL →
                 </button>
-                <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, marginTop: 8 }}>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 8 }}>
                   This will create {positions.length} proposal{positions.length !== 1 ? "s" : ""} pending checker approval.
                 </div>
               </>
@@ -841,7 +841,7 @@ export default function StepExecute({
 
             {submitPhase === "error" && (
               <div>
-                <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.fail, marginBottom: 8 }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail, marginBottom: 8 }}>
                   ERROR: {submitError}
                 </div>
                 <button
@@ -868,13 +868,13 @@ export default function StepExecute({
             height: 36, padding: "0 20px", background: "transparent",
             color: submitPhase === "submitting" ? S.soft : S.tertiary,
             border: `1px solid ${S.soft}`, borderRadius: 4,
-            fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em",
             cursor: submitPhase === "submitting" ? "not-allowed" : "pointer", transition: "all 0.15s",
           }}
         >
           &#9666; BACK TO RISK CHECK
         </button>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.06em" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>
           RUN: {runId.slice(0, 12)}...
         </span>
       </div>
@@ -886,7 +886,7 @@ export default function StepExecute({
 function SummaryCell({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div>
-      <div style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 10, fontWeight: 600, letterSpacing: "0.10em", color: "var(--text-tertiary)", textTransform: "uppercase" as const, marginBottom: 4 }}>
+      <div style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 12, fontWeight: 600, letterSpacing: "0.10em", color: "var(--text-tertiary)", textTransform: "uppercase" as const, marginBottom: 4 }}>
         {label}
       </div>
       <div style={{ fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", fontSize: 14, fontWeight: 700, color: color ?? "var(--text-primary)" }}>

@@ -146,7 +146,7 @@ export default function UsersRolesTab({ token }: Props) {
 
   /* ── Styles ──────────────────────────────────────────────────────────── */
   const th: React.CSSProperties = {
-    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.09em",
+    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.09em",
     color: S.tertiary, textTransform: "uppercase", padding: "6px 10px",
     borderBottom: `1px solid ${S.rim}`, textAlign: "left",
   };
@@ -156,17 +156,17 @@ export default function UsersRolesTab({ token }: Props) {
   };
 
   if (loading) return (
-    <div style={{ padding: "40px 0", textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.09em" }}>
+    <div style={{ padding: "40px 0", textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.09em" }}>
       LOADING USERS…
     </div>
   );
 
   if (error) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid ${S.fail}`, borderLeft: `3px solid ${S.fail}`, borderRadius: 2, padding: "12px 16px", fontFamily: S.fontMono, fontSize: 11, color: S.fail }}>
+      <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid ${S.fail}`, borderLeft: `3px solid ${S.fail}`, borderRadius: 2, padding: "12px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.fail }}>
         ✗ {error}
       </div>
-      <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, padding: "0 4px" }}>
+      <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, padding: "0 4px" }}>
         Admin role required. Ensure you are authenticated as an admin user.
       </div>
     </div>
@@ -196,13 +196,13 @@ export default function UsersRolesTab({ token }: Props) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
-                fontFamily: S.fontUI, fontSize: 11, color: S.primary,
+                fontFamily: S.fontUI, fontSize: 12, color: S.primary,
                 background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 2,
                 padding: "5px 10px", outline: "none", width: 200,
               }}
             />
             <button onClick={() => load(page)} style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.cyan,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan,
               background: "transparent", border: `1px solid ${S.cyan}40`, borderRadius: 2,
               padding: "4px 10px", cursor: "pointer",
             }}>↻</button>
@@ -230,16 +230,16 @@ export default function UsersRolesTab({ token }: Props) {
                 const pending = pendingRole[u.id];
                 return (
                   <tr key={u.id}>
-                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 11 }}>
+                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 12 }}>
                       {u.email}
-                      <span style={{ display: "block", fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginTop: 1 }}>
+                      <span style={{ display: "block", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 1 }}>
                         {u.id.slice(0, 8)}…
                       </span>
                     </td>
 
                     <td style={{ ...td, maxWidth: 220 }}>
                       {u.roles.length === 0 ? (
-                        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>— no role —</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>— no role —</span>
                       ) : (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                           {u.roles.map(r => {
@@ -247,7 +247,7 @@ export default function UsersRolesTab({ token }: Props) {
                             return (
                               <span key={r} style={{
                                 display: "inline-flex", alignItems: "center", gap: 4,
-                                fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                                 color: rc,
                                 background: `color-mix(in srgb, ${rc} 10%, transparent)`,
                                 border: `1px solid color-mix(in srgb, ${rc} 25%, transparent)`,
@@ -258,7 +258,7 @@ export default function UsersRolesTab({ token }: Props) {
                                   onClick={() => handleRemove(u.id, r)}
                                   disabled={assigning === u.id}
                                   title={`Remove ${r}`}
-                                  style={{ fontFamily: S.fontMono, fontSize: 10, color: rc, background: "transparent", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, opacity: 0.8 }}
+                                  style={{ fontFamily: S.fontMono, fontSize: 12, color: rc, background: "transparent", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, opacity: 0.8 }}
                                 >×</button>
                               </span>
                             );
@@ -268,7 +268,7 @@ export default function UsersRolesTab({ token }: Props) {
                     </td>
 
                     <td style={td}>
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: u.is_active ? S.pass : S.tertiary }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: u.is_active ? S.pass : S.tertiary }}>
                         {u.is_active ? "● ACTIVE" : "○ INACTIVE"}
                       </span>
                     </td>
@@ -280,7 +280,7 @@ export default function UsersRolesTab({ token }: Props) {
                           onChange={e => setPendingRole(prev => ({ ...prev, [u.id]: e.target.value }))}
                           disabled={assigning === u.id}
                           style={{
-                            fontFamily: S.fontUI, fontSize: 11, color: S.primary,
+                            fontFamily: S.fontUI, fontSize: 12, color: S.primary,
                             background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 2,
                             padding: "4px 6px", outline: "none",
                           }}
@@ -294,7 +294,7 @@ export default function UsersRolesTab({ token }: Props) {
                         </select>
                         {pending && (
                           <button onClick={() => handleAssign(u.id)} disabled={assigning === u.id} style={{
-                            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                             color: "#000", background: assigning === u.id ? S.tertiary : S.cyan,
                             border: "none", borderRadius: 2, padding: "4px 10px",
                             cursor: assigning === u.id ? "wait" : "pointer",
@@ -314,13 +314,13 @@ export default function UsersRolesTab({ token }: Props) {
         {totalPages > 1 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 10 }}>
             <button disabled={page <= 1} onClick={() => goPage(page - 1)} style={{
-              fontFamily: S.fontMono, fontSize: 10, color: page <= 1 ? S.tertiary : S.secondary,
+              fontFamily: S.fontMono, fontSize: 12, color: page <= 1 ? S.tertiary : S.secondary,
               background: "transparent", border: `1px solid ${S.rim}`, borderRadius: 2,
               padding: "4px 10px", cursor: page <= 1 ? "not-allowed" : "pointer",
             }}>← PREV</button>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{page} / {totalPages}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{page} / {totalPages}</span>
             <button disabled={page >= totalPages} onClick={() => goPage(page + 1)} style={{
-              fontFamily: S.fontMono, fontSize: 10, color: page >= totalPages ? S.tertiary : S.secondary,
+              fontFamily: S.fontMono, fontSize: 12, color: page >= totalPages ? S.tertiary : S.secondary,
               background: "transparent", border: `1px solid ${S.rim}`, borderRadius: 2,
               padding: "4px 10px", cursor: page >= totalPages ? "not-allowed" : "pointer",
             }}>NEXT →</button>
@@ -347,32 +347,32 @@ export default function UsersRolesTab({ token }: Props) {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.primary }}>{r.name}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{r.name}</span>
                     <span style={{
-                      fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em",
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
                       color: lc, background: `color-mix(in srgb, ${lc} 10%, transparent)`,
                       border: `1px solid ${lc}30`, borderRadius: 2, padding: "1px 5px",
                     }}>L{r.hierarchy_level}</span>
                   </div>
                   {r.description && (
-                    <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, marginBottom: 6, lineHeight: 1.4 }}>
+                    <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginBottom: 6, lineHeight: 1.4 }}>
                       {r.description}
                     </div>
                   )}
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {r.is_system && (
-                      <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.cyan, background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`, border: `1px solid ${S.cyan}25`, padding: "1px 5px", borderRadius: 2 }}>SYS</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, background: `color-mix(in srgb, ${S.cyan} 8%, transparent)`, border: `1px solid ${S.cyan}25`, padding: "1px 5px", borderRadius: 2 }}>SYS</span>
                     )}
                     {perms.length > 0 && (
-                      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{perms.length} perms</span>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{perms.length} perms</span>
                     )}
-                    <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{isExp ? "▲" : "▼"}</span>
+                    <span style={{ marginLeft: "auto", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{isExp ? "▲" : "▼"}</span>
                   </div>
                   {isExp && perms.length > 0 && (
                     <div style={{ marginTop: 8, borderTop: `1px solid ${S.soft}`, paddingTop: 8, display: "flex", flexWrap: "wrap", gap: 3 }}>
                       {perms.map(p => (
                         <span key={p.codename} style={{
-                          fontFamily: S.fontMono, fontSize: 8, color: S.tertiary,
+                          fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                           background: S.bgPanel, border: `1px solid ${S.soft}`,
                           padding: "1px 4px", borderRadius: 2,
                         }}>{p.codename}</span>
@@ -387,8 +387,8 @@ export default function UsersRolesTab({ token }: Props) {
       )}
 
       {/* Footer */}
-      <div style={{ background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "10px 14px", fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.6 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.secondary, marginRight: 6, letterSpacing: "0.07em" }}>RBAC</span>
+      <div style={{ background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "10px 14px", fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, lineHeight: 1.6 }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.secondary, marginRight: 6, letterSpacing: "0.07em" }}>RBAC</span>
         Roles are bounded by your own hierarchy_level. You cannot assign a role with a higher level than your own.
         Click a role card to expand its permission set. Role changes are effective immediately and audit-logged.
       </div>

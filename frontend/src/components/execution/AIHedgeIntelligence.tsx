@@ -63,14 +63,14 @@ export default function AIHedgeIntelligence({ positions, calcResult, riskVerdict
         style={{
           display: "flex", alignItems: "center", gap: 8, width: "100%",
           padding: "12px 0", background: "transparent", border: "none", cursor: "pointer",
-          fontFamily: S.fontMono, fontSize: 10, fontWeight: 600,
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
           letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase",
         }}
       >
         <span style={{ transition: "transform 0.15s", transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
         AI HEDGE INTELLIGENCE
         <span style={{
-          fontSize: 9, padding: "1px 5px",
+          fontSize: 12, padding: "1px 5px",
           border: "1px solid rgba(245,158,11,0.3)",
           background: "rgba(245,158,11,0.06)",
           color: S.amber, letterSpacing: "0.06em",

@@ -178,10 +178,10 @@ function SliderInput({ label, value, min, max, step, onChange, format }: {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <label style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+        <label style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em", textTransform: "uppercase" }}>
           {label}
         </label>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.primary }}>{format(value)}</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{format(value)}</span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
@@ -189,8 +189,8 @@ function SliderInput({ label, value, min, max, step, onChange, format }: {
         style={{ width: "100%", accentColor: S.cyan }}
       />
       <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>{format(min)}</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>{format(max)}</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{format(min)}</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{format(max)}</span>
       </div>
     </div>
   );
@@ -259,9 +259,9 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
     return (
       <div style={{ flex: 1, background: S.sub, border: `1px solid ${r.policyCompliant ? S.soft : S.amber}`, borderRadius: 4, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.cyan }}>{label}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan }}>{label}</span>
           <span style={{
-            fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             padding: "2px 6px", borderRadius: 2,
             background: `color-mix(in srgb, ${r.policyCompliant ? S.green : S.amber} 15%, transparent)`,
             color: r.policyCompliant ? S.green : S.amber,
@@ -277,8 +277,8 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
             ["IFRS 9", r.ifrs9Effective ? "EFFECTIVE" : "FAIL", r.ifrs9Effective ? S.green : S.red],
           ].map(([k, v, c]) => (
             <div key={k as string} style={{ display: "flex", flexDirection: "column", gap: 2, padding: "6px 8px", background: S.panel, borderRadius: 2, border: `1px solid ${S.soft}` }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, textTransform: "uppercase" }}>{k}</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: c as string }}>{v}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textTransform: "uppercase" }}>{k}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: c as string }}>{v}</span>
             </div>
           ))}
         </div>
@@ -294,14 +294,14 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
         padding: "8px 14px", borderBottom: `1px solid ${S.rim}`,
         background: `color-mix(in srgb, ${S.sub} 60%, transparent)`,
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan }}>
           ◈ WHAT-IF BUILDER
         </span>
         <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={() => setCompareMode(!compareMode)}
             style={{
-              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
               padding: "3px 10px", borderRadius: 2,
               border: `1px solid ${compareMode ? S.green : S.rim}`,
               background: compareMode ? `color-mix(in srgb, ${S.green} 10%, transparent)` : S.sub,
@@ -316,7 +316,7 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
       <div style={{ display: "flex", borderBottom: `1px solid ${S.rim}`, background: S.sub }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             padding: "7px 14px", border: "none",
             borderBottom: activeTab === t.id ? `2px solid ${S.cyan}` : "2px solid transparent",
             background: "transparent",
@@ -333,7 +333,7 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
           <div style={{ display: "flex", gap: 16 }}>
             {/* Controls */}
             <div style={{ flex: "0 0 240px", display: "flex", flexDirection: "column", gap: 14 }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>SCENARIO PARAMETERS</div>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, letterSpacing: "0.08em" }}>SCENARIO PARAMETERS</div>
               <SliderInput label="Net Notional (M)" value={scenario.notional} min={1_000_000} max={100_000_000} step={1_000_000}
                 onChange={setField("notional")} format={v => "$" + (v / 1e6).toFixed(0) + "M"} />
               <SliderInput label="Spot Rate" value={scenario.spot} min={1} max={200} step={0.01}
@@ -361,7 +361,7 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
         {/* CONSTRAINTS TAB */}
         {activeTab === "constraints" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Policy compliance checklist for current scenario parameters. All ERROR-level rules must pass before execution tickets can be generated.
               WARN-level items require confirmation. Based on ISDA SIMM v2.6 and internal policy limits.
             </p>
@@ -374,13 +374,13 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
                   border: `1px solid ${c.pass ? S.soft : (c.severity === "ERROR" ? S.red : S.amber)}`,
                   alignItems: "center",
                 }}>
-                  <span style={{ fontFamily: S.fontUI, fontSize: 11, fontWeight: 500, color: S.primary }}>{c.rule}</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>{c.threshold}</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: c.pass ? S.green : (c.severity === "ERROR" ? S.red : S.amber) }}>
+                  <span style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 500, color: S.primary }}>{c.rule}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{c.threshold}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: c.pass ? S.green : (c.severity === "ERROR" ? S.red : S.amber) }}>
                     Value: {c.value}
                   </span>
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     padding: "2px 6px", borderRadius: 2, textAlign: "center",
                     background: `color-mix(in srgb, ${c.pass ? S.green : (c.severity === "ERROR" ? S.red : S.amber)} 15%, transparent)`,
                     color: c.pass ? S.green : (c.severity === "ERROR" ? S.red : S.amber),
@@ -391,7 +391,7 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
               ))}
             </div>
             <div style={{ marginTop: 10, padding: "8px 12px", background: S.sub, borderRadius: 3, border: `1px solid ${S.soft}` }}>
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                 Policy rules per: IFRS 9.6.4.1 (effectiveness) · Board mandate (hedge ratios) · ISDA SIMM v2.6 (min size) · Internal treasury policy (spread budget)
               </div>
             </div>
@@ -401,7 +401,7 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
         {/* HEATMAP TAB */}
         {activeTab === "heatmap" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Two-dimensional scenario matrix: spot shock (rows) × carry shock (columns). Shows net portfolio P&L for each combination.
               Red = losses, Green = gains. Current exposure: {(scenario.notional / 1e6).toFixed(1)}M at spot {scenario.spot.toFixed(2)}.
             </p>
@@ -411,7 +411,7 @@ export default function WhatIfBuilder({ sandboxResult, defaultPolicy = DEFAULT_P
               spotLabel="SPOT SHOCK %"
               carryLabel="CARRY SHOCK %"
             />
-            <div style={{ marginTop: 10, fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+            <div style={{ marginTop: 10, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               Assumes: {(scenario.hedgeRatio * 100).toFixed(0)}% hedge ratio · {scenario.spreadBps.toFixed(1)} bps spread · {scenario.carryBpsPerMonth} bps/month carry · {scenario.buckets} buckets
             </div>
           </div>

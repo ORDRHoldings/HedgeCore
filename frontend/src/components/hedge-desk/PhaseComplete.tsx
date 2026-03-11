@@ -270,13 +270,13 @@ export default function PhaseComplete({
             <div style={{ fontFamily: T.fontMono, fontSize: 16, fontWeight: 700, letterSpacing: "0.12em", color: T.green }}>
               HEDGE EXECUTION CONFIRMED
             </div>
-            <div style={{ fontFamily: T.fontMono, fontSize: 11, color: T.secondary, marginTop: 2 }}>
+            <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary, marginTop: 2 }}>
               {completedAt}
             </div>
           </div>
           <div style={{ flex: 1 }} />
           <span style={{
-            fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+            fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
             color: T.green,
             background: `color-mix(in srgb, ${T.green} 12%, transparent)`,
             border: `1px solid color-mix(in srgb, ${T.green} 30%, transparent)`,
@@ -285,7 +285,7 @@ export default function PhaseComplete({
             HEDGED
           </span>
           <span style={{
-            fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+            fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
             color: T.cyan,
             background: `color-mix(in srgb, ${T.cyan} 10%, transparent)`,
             border: `1px solid color-mix(in srgb, ${T.cyan} 25%, transparent)`,
@@ -296,8 +296,8 @@ export default function PhaseComplete({
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary, letterSpacing: "0.06em" }}>RUN</span>
-            <code style={{ fontFamily: T.fontMono, fontSize: 11, color: T.primary }}>{runId.slice(0, 12)}</code>
+            <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.06em" }}>RUN</span>
+            <code style={{ fontFamily: T.fontMono, fontSize: 12, color: T.primary }}>{runId.slice(0, 12)}</code>
           </div>
           <span style={{ width: 1, height: 12, background: T.soft, display: "inline-block" }} />
           <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.primary }}>
@@ -328,7 +328,7 @@ export default function PhaseComplete({
           padding: "16px 18px",
         }}>
           <div style={{
-            fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
+            fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em",
             color: T.tertiary, marginBottom: 12,
           }}>
             EXECUTION SUMMARY
@@ -336,7 +336,7 @@ export default function PhaseComplete({
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {/* WHAT */}
             <div style={{ display: "flex", gap: 10 }}>
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.tertiary, width: 60, flexShrink: 0, paddingTop: 2 }}>WHAT</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.tertiary, width: 60, flexShrink: 0, paddingTop: 2 }}>WHAT</span>
               <span style={{ fontFamily: T.fontUI, fontSize: 13, color: T.primary, lineHeight: "1.5" }}>
                 {positions.length} position{positions.length !== 1 ? "s" : ""} totaling{" "}
                 <span style={{ fontFamily: T.fontMono, fontWeight: 700 }}>{fmt(totalExposure)}</span>{" "}
@@ -347,7 +347,7 @@ export default function PhaseComplete({
             {/* AT WHAT RATE */}
             {(fillData?.fillPrice || buckets.length > 0) && (
               <div style={{ display: "flex", gap: 10 }}>
-                <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.tertiary, width: 60, flexShrink: 0, paddingTop: 2 }}>RATE</span>
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.tertiary, width: 60, flexShrink: 0, paddingTop: 2 }}>RATE</span>
                 <span style={{ fontFamily: T.fontUI, fontSize: 13, color: T.primary, lineHeight: "1.5" }}>
                   {fillData?.fillPrice
                     ? <>Fill price <span style={{ fontFamily: T.fontMono, fontWeight: 700, color: T.cyan }}>{fillData.fillPrice.toFixed(4)}</span></>
@@ -361,7 +361,7 @@ export default function PhaseComplete({
             {/* UNTIL WHEN */}
             {earliestMaturity !== "—" && (
               <div style={{ display: "flex", gap: 10 }}>
-                <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.tertiary, width: 60, flexShrink: 0, paddingTop: 2 }}>TENOR</span>
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.tertiary, width: 60, flexShrink: 0, paddingTop: 2 }}>TENOR</span>
                 <span style={{ fontFamily: T.fontUI, fontSize: 13, color: T.primary, lineHeight: "1.5" }}>
                   Covering maturities {maturityWindow}.
                 </span>
@@ -369,7 +369,7 @@ export default function PhaseComplete({
             )}
             {/* GOVERNANCE */}
             <div style={{ display: "flex", gap: 10 }}>
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, color: T.tertiary, width: 60, flexShrink: 0, paddingTop: 2 }}>GOV</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.tertiary, width: 60, flexShrink: 0, paddingTop: 2 }}>GOV</span>
               <span style={{ fontFamily: T.fontUI, fontSize: 13, color: T.primary, lineHeight: "1.5" }}>
                 {governanceMode === "team" ? "Team governance (4-eyes)" : "Solo governance mode"}.{" "}
                 {proposalCount} proposal{proposalCount !== 1 ? "s" : ""} filed and executed.
@@ -397,7 +397,7 @@ export default function PhaseComplete({
             ["MATURITY WINDOW", maturityWindow,                                      T.primary],
           ] as const).map(([label, value, color]) => (
             <div key={label} style={{ padding: "14px 16px", background: T.bgSub }}>
-              <div style={{ fontFamily: T.fontMono, fontSize: 10, letterSpacing: "0.12em", color: T.tertiary, marginBottom: 6 }}>{label}</div>
+              <div style={{ fontFamily: T.fontMono, fontSize: 12, letterSpacing: "0.12em", color: T.tertiary, marginBottom: 6 }}>{label}</div>
               <div style={{ fontFamily: T.fontMono, fontSize: 18, fontWeight: 700, color }}>{value}</div>
             </div>
           ))}
@@ -408,10 +408,10 @@ export default function PhaseComplete({
           <div style={{ background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 4, overflow: "hidden" }}>
             <div style={{ padding: "8px 14px", background: T.bgDeep, borderBottom: `1px solid ${T.soft}`, display: "flex", alignItems: "center", gap: 8 }}>
               <LayersIcon size={12} color={T.tertiary} />
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: T.tertiary }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: T.tertiary }}>
                 EXECUTION LEGS
               </span>
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, background: T.soft, color: T.tertiary, padding: "1px 7px", borderRadius: 10 }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, background: T.soft, color: T.tertiary, padding: "1px 7px", borderRadius: 10 }}>
                 {buckets.length}
               </span>
             </div>
@@ -425,7 +425,7 @@ export default function PhaseComplete({
               {["BUCKET", "DIRECTION", "CONTRACTS", "FWD RATE", "NOTIONAL"].map(h => (
                 <div key={h} style={{
                   padding: "7px 6px",
-                  fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: T.tertiary,
+                  fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: T.tertiary,
                 }}>{h}</div>
               ))}
             </div>
@@ -446,7 +446,7 @@ export default function PhaseComplete({
                   <div style={{ padding: "8px 6px", fontFamily: T.fontMono, fontSize: 12, color: T.primary }}>{b.bucket ?? `Bucket ${i + 1}`}</div>
                   <div style={{ padding: "8px 6px" }}>
                     <span style={{
-                      fontFamily: T.fontMono, fontSize: 10, fontWeight: 700,
+                      fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
                       color: side === "SELL" ? T.red : T.cyan,
                       padding: "1px 6px", borderRadius: 2,
                       background: side === "SELL"
@@ -475,7 +475,7 @@ export default function PhaseComplete({
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <ShieldCheckIcon size={12} color={T.tertiary} />
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: T.tertiary }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: T.tertiary }}>
                 POLICY & AUDIT TRAIL
               </span>
             </div>
@@ -485,40 +485,40 @@ export default function PhaseComplete({
             <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "10px 14px" }}>
               {policyInstanceId && (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary }}>POLICY INSTANCE</span>
-                  <code style={{ fontFamily: T.fontMono, fontSize: 10, color: T.secondary }}>{policyInstanceId}</code>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>POLICY INSTANCE</span>
+                  <code style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary }}>{policyInstanceId}</code>
                 </div>
               )}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary }}>CALCULATION RUN ID</span>
-                <code style={{ fontFamily: T.fontMono, fontSize: 10, color: T.secondary }}>{runId}</code>
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>CALCULATION RUN ID</span>
+                <code style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary }}>{runId}</code>
               </div>
               {runEnvelope && (
                 <>
                   {typeof runEnvelope.engine_version === "string" && (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary }}>ENGINE VERSION</span>
-                      <code style={{ fontFamily: T.fontMono, fontSize: 10, color: T.secondary }}>{runEnvelope.engine_version as string}</code>
+                      <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>ENGINE VERSION</span>
+                      <code style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary }}>{runEnvelope.engine_version as string}</code>
                     </div>
                   )}
                   {typeof runEnvelope.input_hash === "string" && (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary }}>INPUT HASH</span>
-                      <code style={{ fontFamily: T.fontMono, fontSize: 10, color: T.secondary }}>{(runEnvelope.input_hash as string).slice(0, 16)}...</code>
+                      <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>INPUT HASH</span>
+                      <code style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary }}>{(runEnvelope.input_hash as string).slice(0, 16)}...</code>
                     </div>
                   )}
                   {typeof runEnvelope.output_hash === "string" && (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary }}>OUTPUT HASH</span>
-                      <code style={{ fontFamily: T.fontMono, fontSize: 10, color: T.secondary }}>{(runEnvelope.output_hash as string).slice(0, 16)}...</code>
+                      <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>OUTPUT HASH</span>
+                      <code style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary }}>{(runEnvelope.output_hash as string).slice(0, 16)}...</code>
                     </div>
                   )}
                 </>
               )}
               {fillData?.proposalIds.map((id, i) => (
                 <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.tertiary }}>PROPOSAL {i + 1}</span>
-                  <code style={{ fontFamily: T.fontMono, fontSize: 10, color: T.secondary }}>{id}</code>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>PROPOSAL {i + 1}</span>
+                  <code style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary }}>{id}</code>
                 </div>
               ))}
             </div>
@@ -529,7 +529,7 @@ export default function PhaseComplete({
         {Object.keys(currencyBreakdown).length > 1 && (
           <div style={{ background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 4, overflow: "hidden" }}>
             <div style={{ padding: "8px 14px", background: T.bgDeep, borderBottom: `1px solid ${T.soft}` }}>
-              <span style={{ fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: T.tertiary }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: T.tertiary }}>
                 NOTIONAL BY CURRENCY
               </span>
             </div>
@@ -602,7 +602,7 @@ export default function PhaseComplete({
         {/* ── 8. Next Actions — 3-column layout ─────────────────────────── */}
         <div>
           <div style={{
-            fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
+            fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em",
             color: T.tertiary, marginBottom: 10,
           }}>
             NEXT ACTIONS

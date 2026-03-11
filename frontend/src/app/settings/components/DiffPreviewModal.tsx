@@ -23,7 +23,7 @@ export default function DiffPreviewModal({ open, fields, onConfirm, onCancel, sa
         borderRadius: 4, padding: 28, width: 560, maxHeight: "80vh", overflow: "auto",
         boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
       }}>
-        <div style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", color: S.primary, marginBottom: 4 }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.09em", color: S.primary, marginBottom: 4 }}>
           CONFIRM GOVERNED SETTINGS CHANGE
         </div>
         <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, marginBottom: 20 }}>
@@ -39,11 +39,11 @@ export default function DiffPreviewModal({ open, fields, onConfirm, onCancel, sa
                 background: "var(--bg-sub,#1A1D21)", border: "1px solid var(--border-soft,#1F2228)",
                 borderRadius: 2, padding: "8px 12px",
               }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, marginBottom: 4 }}>{f.label}</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, marginBottom: 4 }}>{f.label}</div>
                 <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 11, color: "var(--accent-red,#EF4444)", textDecoration: "line-through" }}>{f.before}</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>→</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 11, color: "var(--status-pass,#10B981)", fontWeight: 700 }}>{f.after}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: "var(--accent-red,#EF4444)", textDecoration: "line-through" }}>{f.before}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>→</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: "var(--status-pass,#10B981)", fontWeight: 700 }}>{f.after}</span>
                 </div>
               </div>
             ))}
@@ -55,7 +55,7 @@ export default function DiffPreviewModal({ open, fields, onConfirm, onCancel, sa
             onClick={onConfirm}
             disabled={saving || changed.length === 0}
             style={{
-              fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
               color: "#000", background: saving || changed.length === 0 ? S.tertiary : S.cyan,
               border: "none", borderRadius: 2, padding: "8px 22px",
               cursor: saving || changed.length === 0 ? "not-allowed" : "pointer",
@@ -67,7 +67,7 @@ export default function DiffPreviewModal({ open, fields, onConfirm, onCancel, sa
             onClick={onCancel}
             disabled={saving}
             style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
               color: S.secondary, background: "transparent",
               border: "1px solid var(--border-rim,#2A2D34)", borderRadius: 2, padding: "8px 18px", cursor: "pointer",
             }}

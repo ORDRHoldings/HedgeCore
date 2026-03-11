@@ -98,7 +98,7 @@ export default function WorkflowBreadcrumb({ active, pipelinePhase }: Props) {
                   : "2px solid transparent",
                 cursor: isDone || isActive ? "pointer" : "default",
                 fontFamily: FM,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: isActive ? 700 : 500,
                 letterSpacing: "0.12em",
                 color,
@@ -135,7 +135,7 @@ export default function WorkflowBreadcrumb({ active, pipelinePhase }: Props) {
               <span
                 style={{
                   fontFamily: FM,
-                  fontSize: 10,
+                  fontSize: 12,
                   color: MUTED,
                   padding: "0 2px",
                   userSelect: "none",
@@ -154,7 +154,7 @@ export default function WorkflowBreadcrumb({ active, pipelinePhase }: Props) {
         <span
           style={{
             fontFamily: FM,
-            fontSize: 9,
+            fontSize: 12,
             fontWeight: 600,
             letterSpacing: "0.08em",
             color: MUTED,
@@ -167,7 +167,7 @@ export default function WorkflowBreadcrumb({ active, pipelinePhase }: Props) {
           onClick={() => router.push("/dashboard")}
           style={{
             fontFamily: FM,
-            fontSize: 9,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: "0.10em",
             color: GREEN,

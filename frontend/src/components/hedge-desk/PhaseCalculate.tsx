@@ -318,7 +318,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
 
         {/* Step header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
+          <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
             STEP 3 OF 7 — CALCULATE
           </span>
           <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
@@ -373,7 +373,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 14 }}>
             {Object.entries(currencyAgg).map(([ccy, { count, total }]) => (
               <div key={ccy} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>
+                <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, letterSpacing: "0.1em" }}>
                   {ccy} ({count})
                 </span>
                 <span style={{ fontFamily: HD.fontMono, fontSize: 14, fontWeight: 700, color: HD.primary }}>
@@ -401,7 +401,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
           {marketLoading ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <LoaderIcon size={14} color={HD.slate} style={{ animation: "spin 1s linear infinite" }} />
-              <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.tertiary }}>Fetching live rates...</span>
+              <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary }}>Fetching live rates...</span>
             </div>
           ) : marketSnapshot ? (() => {
             const spot = marketSnapshot.spot_rate as number;
@@ -415,10 +415,10 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
                 <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-end" }}>
                   {/* Spot */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{pair} SPOT</span>
+                    <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, letterSpacing: "0.1em" }}>{pair} SPOT</span>
                     <span style={{ fontFamily: HD.fontMono, fontSize: 18, fontWeight: 700, color: HD.primary }}>{fmt(spot)}</span>
                     {asOf && (
-                      <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary }}>
+                      <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary }}>
                         as of {new Date(asOf).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     )}
@@ -427,9 +427,9 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
                   {/* Forward buckets */}
                   {fwdEntries.map(([bucket, pts]) => (
                     <div key={bucket} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{bucket}</span>
+                      <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, letterSpacing: "0.1em" }}>{bucket}</span>
                       <span style={{ fontFamily: HD.fontMono, fontSize: 14, fontWeight: 600, color: HD.primary }}>{fmt(spot + pts)}</span>
-                      <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: pts >= 0 ? HD.emerald : HD.red }}>
+                      <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: pts >= 0 ? HD.emerald : HD.red }}>
                         {pts >= 0 ? "+" : ""}{fmt(pts)} pts
                       </span>
                     </div>
@@ -462,16 +462,16 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
             );
           })() : (
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.amber }}>
+              <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.amber }}>
                 Market data unavailable
               </span>
               {marketError && (
-                <span style={{ fontFamily: HD.fontUI, fontSize: 11, color: HD.tertiary }}>{marketError.message}</span>
+                <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.tertiary }}>{marketError.message}</span>
               )}
               <button
                 onClick={loadMarket}
                 style={{
-                  fontFamily: HD.fontMono, fontSize: 9, letterSpacing: "0.08em",
+                  fontFamily: HD.fontMono, fontSize: 12, letterSpacing: "0.08em",
                   color: HD.cyan, background: "none",
                   border: `1px solid ${HD.soft}`, padding: "4px 10px",
                   cursor: "pointer", borderRadius: 3,
@@ -495,7 +495,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
           {policyLoading ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <LoaderIcon size={14} color={HD.slate} style={{ animation: "spin 1s linear infinite" }} />
-              <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.tertiary }}>Loading policy...</span>
+              <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary }}>Loading policy...</span>
             </div>
           ) : (
             <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
@@ -539,7 +539,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
               display: "flex", alignItems: "center", gap: 8,
             }}>
               <ZapIcon size={13} color={HD.emerald} />
-              <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.emerald }}>
+              <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.emerald }}>
                 RECOMMENDATION PREVIEW
               </span>
             </div>
@@ -646,7 +646,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
           onClick={onBack}
           style={{
             display: "flex", alignItems: "center", gap: 4,
-            fontFamily: HD.fontMono, fontSize: 10, letterSpacing: "0.06em",
+            fontFamily: HD.fontMono, fontSize: 12, letterSpacing: "0.06em",
             color: HD.slate, background: "none",
             border: `1px solid ${HD.rim}`, padding: "8px 14px",
             cursor: "pointer", borderRadius: 3,
@@ -659,25 +659,25 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
         <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}>
           {/* Loading indicators */}
           {marketLoading && (
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.slate, display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.slate, display: "flex", alignItems: "center", gap: 4 }}>
               <LoaderIcon size={10} style={{ animation: "spin 1s linear infinite" }} />
               MARKET
             </span>
           )}
           {policyLoading && (
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.slate, display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.slate, display: "flex", alignItems: "center", gap: 4 }}>
               <LoaderIcon size={10} style={{ animation: "spin 1s linear infinite" }} />
               POLICY
             </span>
           )}
           {isReady && !calculating && !calcDone && (
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.emerald, display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.emerald, display: "flex", alignItems: "center", gap: 4 }}>
               <CheckCircleIcon size={10} />
               READY
             </span>
           )}
           {calcDone && (
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.emerald, display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.emerald, display: "flex", alignItems: "center", gap: 4 }}>
               <CheckCircleIcon size={10} />
               CALCULATION COMPLETE
             </span>
@@ -691,7 +691,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
             disabled={calculating}
             style={{
               display: "flex", alignItems: "center", gap: 4,
-              fontFamily: HD.fontMono, fontSize: 10, letterSpacing: "0.06em",
+              fontFamily: HD.fontMono, fontSize: 12, letterSpacing: "0.06em",
               color: HD.slate, background: "none",
               border: `1px solid ${HD.rim}`, padding: "8px 14px",
               cursor: calculating ? "not-allowed" : "pointer", borderRadius: 3,
@@ -709,7 +709,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
             disabled={!canRun}
             style={{
               display: "flex", alignItems: "center", gap: 8,
-              fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+              fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
               color: "#ffffff",
               background: canRun ? HD.royal : HD.slate,
               border: "none", padding: "10px 28px",
@@ -726,7 +726,7 @@ export default function PhaseCalculate({ positions, token, onComplete, onBack, i
             onClick={handleProceedToRisk}
             style={{
               display: "flex", alignItems: "center", gap: 8,
-              fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+              fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
               color: "#ffffff",
               background: HD.royal,
               border: "none", padding: "10px 28px",
@@ -771,11 +771,11 @@ function SummaryCard({ icon: Icon, title, badge, badgeColor, children }: {
         borderRadius: "6px 6px 0 0",
       }}>
         <Icon size={13} color={HD.tertiary} />
-        <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
+        <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
           {title}
         </span>
         <span style={{
-          fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+          fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
           color: badgeColor,
           background: `color-mix(in srgb, ${badgeColor} 10%, transparent)`,
           border: `1px solid color-mix(in srgb, ${badgeColor} 30%, transparent)`,
@@ -794,7 +794,7 @@ function SummaryCard({ icon: Icon, title, badge, badgeColor, children }: {
 function PolicyField({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{label}</span>
+      <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, letterSpacing: "0.1em" }}>{label}</span>
       <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 600, color: HD.primary }}>{value}</span>
     </div>
   );
@@ -803,7 +803,7 @@ function PolicyField({ label, value }: { label: string; value: string }) {
 function PreviewMetric({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{label}</span>
+      <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, letterSpacing: "0.1em" }}>{label}</span>
       <span style={{ fontFamily: HD.fontMono, fontSize: 18, fontWeight: 700, color: HD.primary }}>{value}</span>
     </div>
   );
@@ -839,7 +839,7 @@ function AssumptionsBlock({ marketAsOf, spreadBps, minTradeSizeUsd }: {
         }}
       >
         {open ? <ChevronDownIcon size={12} color={HD.slate} /> : <ChevronRightIcon size={12} color={HD.slate} />}
-        <span style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
+        <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
           ASSUMPTIONS
         </span>
       </button>
@@ -885,7 +885,7 @@ function PositionDetailList({ positions }: { positions: PositionRow[] }) {
           borderRadius: "4px 4px 0 0",
         }}>
           {["ENTITY", "CCY", "AMOUNT", "DATE"].map(h => (
-            <span key={h} style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 600, color: HD.tertiary, letterSpacing: "0.08em" }}>{h}</span>
+            <span key={h} style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 600, color: HD.tertiary, letterSpacing: "0.08em" }}>{h}</span>
           ))}
         </div>
 
@@ -898,10 +898,10 @@ function PositionDetailList({ positions }: { positions: PositionRow[] }) {
             borderTop: `1px solid ${HD.soft}`,
             background: i % 2 === 0 ? HD.bgPanel : HD.bgSub,
           }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.secondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.entity}</span>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.cyan }}>{p.currency}</span>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.primary }}>{fmtInt(p.amount ?? 0)}</span>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary }}>{p.value_date}</span>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.secondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.entity}</span>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.cyan }}>{p.currency}</span>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.primary }}>{fmtInt(p.amount ?? 0)}</span>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary }}>{p.value_date}</span>
           </div>
         ))}
       </div>
@@ -910,7 +910,7 @@ function PositionDetailList({ positions }: { positions: PositionRow[] }) {
         <button
           onClick={() => setExpanded(e => !e)}
           style={{
-            fontFamily: HD.fontMono, fontSize: 9, letterSpacing: "0.06em",
+            fontFamily: HD.fontMono, fontSize: 12, letterSpacing: "0.06em",
             color: HD.cyan, background: "none",
             border: "none", padding: "6px 0",
             cursor: "pointer",

@@ -45,7 +45,7 @@ export default function CorrelationHeatmap({ factorCovariance }: Props) {
     // Fallback: render key-value table
     return (
       <div style={{ padding: "12px 14px" }}>
-        <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 10 }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 10 }}>
           FACTOR COVARIANCE
         </div>
         {Object.entries(factorCovariance).slice(0, 10).map(([k, v]) => (
@@ -62,15 +62,15 @@ export default function CorrelationHeatmap({ factorCovariance }: Props) {
 
   return (
     <div style={{ padding: "12px 14px", overflowX: "auto" }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 10 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, marginBottom: 10 }}>
         CORRELATION MATRIX
       </div>
-      <table style={{ borderCollapse: "collapse", fontSize: 11 }}>
+      <table style={{ borderCollapse: "collapse", fontSize: 12 }}>
         <thead>
           <tr>
             <th style={{ padding: "4px 8px", fontFamily: S.fontMono, color: S.tertiary }} />
             {labels.map(l => (
-              <th key={l} style={{ padding: "4px 8px", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, fontWeight: 700, textAlign: "center" }}>
+              <th key={l} style={{ padding: "4px 8px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, fontWeight: 700, textAlign: "center" }}>
                 {l.slice(0, 6)}
               </th>
             ))}
@@ -79,13 +79,13 @@ export default function CorrelationHeatmap({ factorCovariance }: Props) {
         <tbody>
           {matrix.map((row, i) => (
             <tr key={i}>
-              <td style={{ padding: "4px 8px", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, fontWeight: 700, whiteSpace: "nowrap" }}>
+              <td style={{ padding: "4px 8px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, fontWeight: 700, whiteSpace: "nowrap" }}>
                 {labels[i]?.slice(0, 8)}
               </td>
               {row.map((v, j) => (
                 <td key={j} style={{
                   padding: "4px 8px", textAlign: "center",
-                  fontFamily: S.fontMono, fontSize: 11, fontWeight: 600,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
                   color: S.primary,
                   background: corrColor(v),
                   borderRadius: 2,
@@ -99,11 +99,11 @@ export default function CorrelationHeatmap({ factorCovariance }: Props) {
         </tbody>
       </table>
       <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.tertiary }}>Scale:</span>
+        <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>Scale:</span>
         {[[-1, "\u22121.0"], [-0.5, "\u22120.5"], [0, "0.0"], [0.5, "+0.5"], [1, "+1.0"]].map(([v, label]) => (
           <div key={label} style={{ display: "flex", alignItems: "center", gap: 3 }}>
             <div style={{ width: 14, height: 14, background: corrColor(v as number), borderRadius: 2 }} />
-            <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{label}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{label}</span>
           </div>
         ))}
       </div>

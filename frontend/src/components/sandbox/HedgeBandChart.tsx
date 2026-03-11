@@ -39,11 +39,11 @@ export default function HedgeBandChart({ hedgeBands }: Props) {
   return (
     <div>
       <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
           Hedge Bands (IFRS 9: {(bandMin*100).toFixed(0)}%\u2013{(bandMax*100).toFixed(0)}%)
         </span>
         {overall && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: statusColor, padding: "2px 8px", border: `1px solid ${statusColor}`, borderRadius: 2 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: statusColor, padding: "2px 8px", border: `1px solid ${statusColor}`, borderRadius: 2 }}>
             \u25cf {overall}
           </span>
         )}
@@ -59,7 +59,7 @@ export default function HedgeBandChart({ hedgeBands }: Props) {
               padding: "8px 12px", marginBottom: 6, border: `1px solid ${S.amber}`, borderRadius: 3,
               background: `color-mix(in srgb, ${S.amber} 6%, transparent)`,
             }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.amber }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber }}>
                 {v.bucket}: {(v.ratio * 100).toFixed(1)}% \u2014 {v.band}
               </span>
             </div>

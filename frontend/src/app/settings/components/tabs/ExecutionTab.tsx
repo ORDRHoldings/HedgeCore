@@ -32,7 +32,7 @@ export default function ExecutionTab({ s, set, lastModifiedAt, lastModifiedBy }:
         <div style={{ display: "flex", gap: 8 }}>
           {(["NDF", "FWD", "FUTURES"] as const).map(p => (
             <button key={p} onClick={() => u("default_product")(p)} style={{
-              fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.05em",
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.05em",
               color: s.default_product === p ? "#000" : S.secondary,
               background: s.default_product === p ? S.cyan : "transparent",
               border: `1px solid ${s.default_product === p ? S.cyan : S.rim}`,
@@ -42,7 +42,7 @@ export default function ExecutionTab({ s, set, lastModifiedAt, lastModifiedBy }:
             </button>
           ))}
         </div>
-        <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, marginTop: 6 }}>
+        <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 6 }}>
           {s.default_product === "NDF"     && "Non-Deliverable Forward — cash-settled, used for restricted currencies (MXN, BRL, CLP, COP)."}
           {s.default_product === "FWD"     && "Deliverable Forward — physical settlement, used for G10 currencies (EUR, GBP, JPY, CHF)."}
           {s.default_product === "FUTURES" && "CME/COMEX listed futures — exchange-cleared, daily margin settlement, 27-currency coverage."}
@@ -65,7 +65,7 @@ export default function ExecutionTab({ s, set, lastModifiedAt, lastModifiedBy }:
                 <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: s.stress_sigma === opt.val ? S.cyan : S.primary }}>
                   {opt.label}
                 </div>
-                <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>{opt.desc}</div>
+                <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>{opt.desc}</div>
               </div>
             </label>
           ))}

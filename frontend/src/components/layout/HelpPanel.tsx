@@ -157,7 +157,7 @@ export default function HelpPanel({
         justifyContent: "center",
         color:          open ? S.tertiary : "#FFFFFF",
         fontFamily:     S.fontMono,
-        fontSize:       10,
+        fontSize: 12,
         fontWeight:     open ? undefined : 700,
         writingMode:    "vertical-rl" as const,
         letterSpacing:  "0.08em",
@@ -214,7 +214,7 @@ export default function HelpPanel({
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
               <span style={{
                 fontFamily:    S.fontMono,
-                fontSize:      9,
+                fontSize: 12,
                 letterSpacing: "0.10em",
                 color:         S.cyan,
                 fontWeight:    700,
@@ -222,7 +222,7 @@ export default function HelpPanel({
               <span style={{ color: S.rim }}>·</span>
               <span style={{
                 fontFamily:    S.fontMono,
-                fontSize:      9,
+                fontSize: 12,
                 letterSpacing: "0.07em",
                 color:         S.tertiary,
               }}>ORDR PLATFORM</span>
@@ -235,7 +235,7 @@ export default function HelpPanel({
               lineHeight:  1.2,
             }}>{config.pageTitle}</div>
             {config.pageSubtitle && (
-              <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em", marginTop: 3 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em", marginTop: 3 }}>
                 {config.pageSubtitle}
               </div>
             )}
@@ -268,13 +268,13 @@ export default function HelpPanel({
                   )}
                   <span style={{
                     fontFamily:    S.fontUI,
-                    fontSize:      11,
+                    fontSize: 12,
                     fontWeight:    600,
                     color:         expandedSection === section.id ? S.cyan : S.primary,
                     flex:          1,
                     lineHeight:    1.3,
                   }}>{section.title}</span>
-                  <span style={{ color: S.tertiary, fontSize: 10, fontFamily: S.fontMono }}>
+                  <span style={{ color: S.tertiary, fontSize: 12, fontFamily: S.fontMono }}>
                     {expandedSection === section.id ? "▲" : "▼"}
                   </span>
                 </button>
@@ -287,7 +287,7 @@ export default function HelpPanel({
                     {section.type === "text" && section.content && (
                       <p style={{
                         fontFamily:  S.fontUI,
-                        fontSize:    11,
+                        fontSize: 12,
                         color:       S.secondary,
                         lineHeight:  1.7,
                         margin:      0,
@@ -307,7 +307,7 @@ export default function HelpPanel({
                             <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 3 }}>
                               <span style={{
                                 fontFamily:    S.fontMono,
-                                fontSize:      10,
+                                fontSize: 12,
                                 fontWeight:    700,
                                 color:         S.cyan,
                                 letterSpacing: "0.04em",
@@ -315,7 +315,7 @@ export default function HelpPanel({
                               {v.type && (
                                 <span style={{
                                   fontFamily:    S.fontMono,
-                                  fontSize:      9,
+                                  fontSize: 12,
                                   color:         S.tertiary,
                                   letterSpacing: "0.04em",
                                 }}>{v.type}</span>
@@ -323,19 +323,19 @@ export default function HelpPanel({
                             </div>
                             <p style={{
                               fontFamily: S.fontUI,
-                              fontSize:   10,
+                              fontSize: 12,
                               color:      S.secondary,
                               lineHeight: 1.55,
                               margin:     "0 0 4px",
                             }}>{v.description}</p>
                             {v.example && (
                               <div style={{ display: "flex", gap: 4, alignItems: "baseline", marginTop: 2 }}>
-                                <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, flexShrink: 0 }}>e.g.</span>
-                                <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.amber }}>{v.example}</span>
+                                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, flexShrink: 0 }}>e.g.</span>
+                                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber }}>{v.example}</span>
                               </div>
                             )}
                             {v.source && (
-                              <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginTop: 2 }}>
+                              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 2 }}>
                                 ← {v.source}
                               </div>
                             )}
@@ -356,7 +356,7 @@ export default function HelpPanel({
                                 background:   `color-mix(in srgb, ${S.cyan} 15%, transparent)`,
                                 border:       `1px solid ${S.cyan}`,
                                 display:      "flex", alignItems: "center", justifyContent: "center",
-                                fontFamily:   S.fontMono, fontSize: 9, fontWeight: 700, color: S.cyan,
+                                fontFamily:   S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan,
                                 flexShrink:   0,
                               }}>{step.step}</div>
                               {i < section.steps!.length - 1 && (
@@ -365,13 +365,13 @@ export default function HelpPanel({
                             </div>
                             {/* Step content */}
                             <div style={{ paddingBottom: i < section.steps!.length - 1 ? 10 : 0, paddingTop: 1 }}>
-                              <div style={{ fontFamily: S.fontUI, fontSize: 11, fontWeight: 600, color: S.primary, marginBottom: 2 }}>
+                              <div style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 600, color: S.primary, marginBottom: 2 }}>
                                 {step.link
                                   ? <a href={step.link} style={{ color: S.cyan, textDecoration: "none" }}>{step.label} →</a>
                                   : step.label
                                 }
                               </div>
-                              <p style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary, lineHeight: 1.55, margin: 0 }}>
+                              <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.55, margin: 0 }}>
                                 {step.description}
                               </p>
                             </div>
@@ -386,7 +386,7 @@ export default function HelpPanel({
                         {/* Position indicator */}
                         <div style={{ marginBottom: 10 }}>
                           <div style={{
-                            fontFamily:    S.fontMono, fontSize: 9, color: S.cyan,
+                            fontFamily:    S.fontMono, fontSize: 12, color: S.cyan,
                             letterSpacing: "0.07em", marginBottom: 4,
                           }}>{section.pipelinePos.label}</div>
                           {/* Progress bar */}
@@ -398,20 +398,20 @@ export default function HelpPanel({
                             }} />
                           </div>
                         </div>
-                        <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.6, margin: "0 0 10px" }}>
+                        <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.6, margin: "0 0 10px" }}>
                           {section.pipelinePos.description}
                         </p>
                         {/* Prev / Next nav */}
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
                           {section.pipelinePos.prev ? (
                             <a href={section.pipelinePos.prev.href} style={{
-                              fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+                              fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
                               textDecoration: "none", border: `1px solid ${S.rim}`, padding: "3px 7px",
                             }}>← {section.pipelinePos.prev.label}</a>
                           ) : <div />}
                           {section.pipelinePos.next && (
                             <a href={section.pipelinePos.next.href} style={{
-                              fontFamily: S.fontMono, fontSize: 9, color: S.cyan,
+                              fontFamily: S.fontMono, fontSize: 12, color: S.cyan,
                               textDecoration: "none", border: `1px solid ${S.cyan}`, padding: "3px 7px",
                             }}>{section.pipelinePos.next.label} →</a>
                           )}
@@ -424,8 +424,8 @@ export default function HelpPanel({
                       <dl style={{ margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                         {section.glossary.map(g => (
                           <div key={g.term} style={{ borderLeft: `2px solid ${S.cyan}`, paddingLeft: 8 }}>
-                            <dt style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.cyan, marginBottom: 2 }}>{g.term}</dt>
-                            <dd style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary, lineHeight: 1.55, margin: 0 }}>{g.definition}</dd>
+                            <dt style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, marginBottom: 2 }}>{g.term}</dt>
+                            <dd style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.55, margin: 0 }}>{g.definition}</dd>
                           </div>
                         ))}
                       </dl>
@@ -442,7 +442,7 @@ export default function HelpPanel({
                           }}>
                             <div style={{
                               fontFamily:    S.fontMono,
-                              fontSize:      9,
+                              fontSize: 12,
                               color:         S.cyan,
                               letterSpacing: "0.10em",
                               marginBottom:  4,
@@ -459,7 +459,7 @@ export default function HelpPanel({
                             }}>{f.latex}</div>
                             <p style={{
                               fontFamily: S.fontUI,
-                              fontSize:   10,
+                              fontSize: 12,
                               color:      S.secondary,
                               lineHeight: 1.55,
                               margin:     "0 0 4px",
@@ -467,7 +467,7 @@ export default function HelpPanel({
                             {f.source && (
                               <div style={{
                                 fontFamily:    S.fontMono,
-                                fontSize:      9,
+                                fontSize: 12,
                                 color:         S.tertiary,
                                 letterSpacing: "0.04em",
                                 marginTop:     2,
@@ -493,11 +493,11 @@ export default function HelpPanel({
             background: S.bgSub,
             flexShrink: 0,
           }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>
               ORDR · HedgeCore v1.0 · IFRS 9 Compliant
             </div>
             <a href="/hedgewiki" style={{
-              fontFamily:    S.fontMono, fontSize: 9, color: S.cyan,
+              fontFamily:    S.fontMono, fontSize: 12, color: S.cyan,
               textDecoration: "none", letterSpacing: "0.06em",
             }}>
               Open HedgeWiki for full documentation →

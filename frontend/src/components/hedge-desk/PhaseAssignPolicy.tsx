@@ -321,7 +321,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
         borderBottom: `1px solid ${HD.rim}`,
         flexShrink: 0,
       }}>
-        <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: HD.tertiary }}>STEP 2 OF 7</span>
+        <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: HD.tertiary }}>STEP 2 OF 7</span>
         <span style={{ width: 1, height: 14, background: HD.soft, display: "inline-block" }} />
         <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: HD.primary }}>ASSIGN POLICY</span>
       </div>
@@ -339,14 +339,14 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
         {allAssigned ? (
           <>
             <CheckCircleIcon size={14} color={HD.emerald} />
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: HD.emerald }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: HD.emerald }}>
               ALL {localPositions.length} POSITIONS HAVE POLICIES ASSIGNED
             </span>
           </>
         ) : (
           <>
             <AlertCircleIcon size={14} color={HD.amber} />
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: HD.amber }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: HD.amber }}>
               {unassigned.length} OF {localPositions.length} POSITIONS NEED A POLICY
             </span>
           </>
@@ -360,7 +360,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
         {loading && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: 40 }}>
             <LoaderIcon size={16} color={HD.slate} style={{ animation: "spin 1s linear infinite" }} />
-            <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.tertiary }}>LOADING POLICIES...</span>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary }}>LOADING POLICIES...</span>
           </div>
         )}
 
@@ -371,9 +371,9 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
             border: `1px solid ${HD.red}`, background: `color-mix(in srgb, ${HD.red} 5%, ${HD.bgPanel})`, borderRadius: 4,
           }}>
             <XIcon size={14} color={HD.red} />
-            <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.red, flex: 1 }}>Failed to load policies</span>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.red, flex: 1 }}>Failed to load policies</span>
             <button onClick={loadData} style={{
-              fontFamily: HD.fontMono, fontSize: 9, color: HD.cyan, background: "none",
+              fontFamily: HD.fontMono, fontSize: 12, color: HD.cyan, background: "none",
               border: `1px solid ${HD.soft}`, padding: "4px 10px", cursor: "pointer", borderRadius: 3,
               display: "flex", alignItems: "center", gap: 4,
             }}>
@@ -396,7 +396,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
               }}>
                 <AlertTriangleIcon size={14} color={HD.amber} style={{ marginTop: 2, flexShrink: 0 }} />
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: HD.amber }}>
+                  <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: HD.amber }}>
                     MIXED-POLICY BASKET ({policyAnalysis.count} POLICIES)
                   </span>
                   <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>
@@ -415,20 +415,20 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                 padding: "8px 14px", background: HD.bgSub,
                 borderBottom: `1px solid ${HD.soft}`, borderRadius: "6px 6px 0 0",
               }}>
-                <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
+                <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
                   POSITIONS
                 </span>
                 <div style={{ display: "flex", gap: 8 }}>
                   {unassigned.length > 0 && (
                     <button onClick={selectAllUnassigned} style={{
-                      fontFamily: HD.fontMono, fontSize: 9, color: HD.cyan, background: "none",
+                      fontFamily: HD.fontMono, fontSize: 12, color: HD.cyan, background: "none",
                       border: `1px solid ${HD.soft}`, padding: "3px 8px", cursor: "pointer", borderRadius: 2,
                     }}>
                       SELECT ALL UNASSIGNED
                     </button>
                   )}
                   <button onClick={selectAll} style={{
-                    fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, background: "none",
+                    fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, background: "none",
                     border: `1px solid ${HD.soft}`, padding: "3px 8px", cursor: "pointer", borderRadius: 2,
                   }}>
                     SELECT ALL
@@ -445,7 +445,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                 borderBottom: `1px solid ${HD.soft}`,
               }}>
                 {["", "ENTITY", "CCY", "AMOUNT", "STATUS"].map(h => (
-                  <span key={h} style={{ fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: HD.tertiary }}>{h}</span>
+                  <span key={h} style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: HD.tertiary }}>{h}</span>
                 ))}
               </div>
 
@@ -482,7 +482,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                       <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.primary, display: "flex", alignItems: "center" }}>{p.currency}</span>
                       <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.primary, display: "flex", alignItems: "center" }}>{fmt(p.amount ?? 0)}</span>
                       <span style={{
-                        fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                        fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                         color: statusColor, display: "flex", alignItems: "center",
                       }}>
                         {statusLabel}
@@ -512,11 +512,11 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                   borderRadius: "6px 6px 0 0",
                 }}>
                   <ZapIcon size={13} color={HD.emerald} />
-                  <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.emerald }}>
+                  <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.emerald }}>
                     RECOMMENDED
                   </span>
                   <span style={{
-                    fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700,
+                    fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700,
                     color: confidenceColor(recommendation.confidence),
                     background: `color-mix(in srgb, ${confidenceColor(recommendation.confidence)} 12%, transparent)`,
                     border: `1px solid color-mix(in srgb, ${confidenceColor(recommendation.confidence)} 30%, transparent)`,
@@ -526,7 +526,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                   </span>
                   {recommendedEffectiveness && (
                     <span style={{
-                      fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700,
+                      fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700,
                       color: badgeColor(recommendedEffectiveness.badge),
                       marginLeft: "auto",
                     }}>
@@ -542,12 +542,12 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                       </span>
                       <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>{recommendation.name}</span>
                     </div>
-                    <span style={{ fontFamily: HD.fontUI, fontSize: 11, color: HD.tertiary }}>{recommendation.reason}</span>
+                    <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.tertiary }}>{recommendation.reason}</span>
                   </div>
                   <button
                     onClick={() => setSelectedTemplateId(recommendation.templateId)}
                     style={{
-                      fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                      fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                       color: selectedTemplateId === recommendation.templateId ? "#fff" : HD.emerald,
                       background: selectedTemplateId === recommendation.templateId ? HD.emerald : "transparent",
                       border: `1px solid ${HD.emerald}`,
@@ -577,7 +577,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                   borderRadius: "6px 6px 0 0",
                 }}>
                   <ShieldIcon size={13} color={HD.cyan} />
-                  <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
+                  <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
                     ACTIVE POLICY
                   </span>
                 </div>
@@ -593,7 +593,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                   <button
                     onClick={() => setSelectedTemplateId(activePolicy.template_id)}
                     style={{
-                      fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                      fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                       color: selectedTemplateId === activePolicy.template_id ? "#fff" : HD.cyan,
                       background: selectedTemplateId === activePolicy.template_id ? HD.cyan : "transparent",
                       border: `1px solid ${HD.cyan}`,
@@ -648,10 +648,10 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                 borderRadius: "6px 6px 0 0",
               }}>
                 <ShieldIcon size={13} color={HD.tertiary} />
-                <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
+                <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
                   ALL TEMPLATES
                 </span>
-                <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.slate }}>({templates.length})</span>
+                <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.slate }}>({templates.length})</span>
               </div>
 
               {/* Category tabs */}
@@ -663,7 +663,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                       key={tab}
                       onClick={() => setCategoryTab(tab)}
                       style={{
-                        fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                        fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                         color: active ? HD.cyan : HD.tertiary,
                         background: active ? `color-mix(in srgb, ${HD.cyan} 6%, ${HD.bgPanel})` : "transparent",
                         border: "none",
@@ -687,7 +687,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Search templates..."
                     style={{
-                      fontFamily: HD.fontMono, fontSize: 11, color: HD.primary,
+                      fontFamily: HD.fontMono, fontSize: 12, color: HD.primary,
                       background: "transparent", border: "none", outline: "none",
                       padding: "6px 0", width: "100%",
                     }}
@@ -704,7 +704,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
               <div style={{ maxHeight: 260, overflowY: "auto" }}>
                 {filteredTemplates.length === 0 && (
                   <div style={{ padding: "20px 14px", textAlign: "center" }}>
-                    <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.tertiary }}>No templates match</span>
+                    <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary }}>No templates match</span>
                   </div>
                 )}
                 {filteredTemplates.map((t, i) => {
@@ -730,7 +730,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                         {isFav && <StarIcon size={10} color={HD.amber} fill={HD.amber} />}
                       </span>
                       <span style={{
-                        fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.04em",
+                        fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.04em",
                         color: isSelected ? HD.royal : HD.cyan,
                         display: "flex", alignItems: "center",
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -738,22 +738,22 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                         [{t.short_name}]
                       </span>
                       <span style={{
-                        fontFamily: HD.fontUI, fontSize: 11, color: HD.primary,
+                        fontFamily: HD.fontUI, fontSize: 12, color: HD.primary,
                         display: "flex", alignItems: "center",
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                       }}>
                         {t.name}
                       </span>
-                      <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.secondary, display: "flex", alignItems: "center" }}>
+                      <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.secondary, display: "flex", alignItems: "center" }}>
                         {t.risk_posture}
                       </span>
-                      <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.primary, display: "flex", alignItems: "center" }}>
+                      <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.primary, display: "flex", alignItems: "center" }}>
                         {conf}/{fcst}%
                       </span>
-                      <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.secondary, display: "flex", alignItems: "center" }}>
+                      <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.secondary, display: "flex", alignItems: "center" }}>
                         {t.config?.execution_product ?? "NDF"}
                       </span>
-                      <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary, display: "flex", alignItems: "center" }}>
+                      <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, display: "flex", alignItems: "center" }}>
                         {t.config?.cost_assumptions?.spread_bps ?? 0}bp
                       </span>
                     </div>
@@ -772,11 +772,11 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                 padding: "14px 18px",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, color: HD.primary }}>
+                  <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, color: HD.primary }}>
                     [{selectedTemplate.short_name}] {selectedTemplate.name}
                   </span>
                   <span style={{
-                    fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700,
+                    fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700,
                     color: badgeColor(selectedEffectiveness.badge),
                     background: `color-mix(in srgb, ${badgeColor(selectedEffectiveness.badge)} 12%, transparent)`,
                     border: `1px solid color-mix(in srgb, ${badgeColor(selectedEffectiveness.badge)} 30%, transparent)`,
@@ -807,7 +807,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
                 border: `1px solid ${HD.red}`, background: `color-mix(in srgb, ${HD.red} 5%, ${HD.bgPanel})`, borderRadius: 4,
               }}>
                 <AlertCircleIcon size={14} color={HD.red} />
-                <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.red, flex: 1 }}>{assignError}</span>
+                <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.red, flex: 1 }}>{assignError}</span>
                 <button onClick={() => setAssignError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: HD.tertiary }}>
                   <XIcon size={12} />
                 </button>
@@ -829,7 +829,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
           onClick={onBack}
           style={{
             display: "flex", alignItems: "center", gap: 4,
-            fontFamily: HD.fontMono, fontSize: 10, letterSpacing: "0.06em",
+            fontFamily: HD.fontMono, fontSize: 12, letterSpacing: "0.06em",
             color: HD.slate, background: "none",
             border: `1px solid ${HD.rim}`, padding: "8px 14px",
             cursor: "pointer", borderRadius: 3,
@@ -840,7 +840,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
         </button>
 
         <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.secondary }}>
+          <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.secondary }}>
             {assigned.length} / {localPositions.length} ASSIGNED
           </span>
         </div>
@@ -852,7 +852,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
             disabled={assigning}
             style={{
               display: "flex", alignItems: "center", gap: 8,
-              fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+              fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
               color: "#ffffff",
               background: !assigning ? HD.royal : HD.slate,
               border: "none", padding: "10px 24px",
@@ -875,7 +875,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
             onClick={handleProceed}
             style={{
               display: "flex", alignItems: "center", gap: 8,
-              fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+              fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
               color: "#ffffff",
               background: HD.royal,
               border: "none", padding: "10px 24px",
@@ -901,7 +901,7 @@ export default function PhaseAssignPolicy({ positions, token, onComplete, onBack
 function PolicyField({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{label}</span>
+      <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, letterSpacing: "0.1em" }}>{label}</span>
       <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 600, color: HD.primary }}>{value}</span>
     </div>
   );

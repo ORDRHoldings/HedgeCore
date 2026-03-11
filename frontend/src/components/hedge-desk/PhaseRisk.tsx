@@ -213,7 +213,7 @@ export default function PhaseRisk({
         }}>
           <InfoIcon size={18} color={HD.amber} />
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: HD.amber }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.amber }}>
               RISK EVALUATION BYPASSED
             </span>
             <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
@@ -283,7 +283,7 @@ export default function PhaseRisk({
 
         {/* Step header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
+          <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
             STEP 4 OF 7 — RISK
           </span>
           <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
@@ -345,7 +345,7 @@ export default function PhaseRisk({
           </div>
           {riskData?.decision_hash && (
             <span style={{
-              fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary,
+              fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary,
               background: HD.bgSub, padding: "2px 6px", borderRadius: 2,
               border: `1px solid ${HD.soft}`,
             }}
@@ -382,7 +382,7 @@ export default function PhaseRisk({
               borderBottom: `1px solid ${HD.soft}`,
             }}>
               <ClipboardCheckIcon size={13} color={HD.tertiary} />
-              <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
+              <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
                 CONSTRAINTS EVALUATED
               </span>
             </div>
@@ -394,7 +394,7 @@ export default function PhaseRisk({
                     {check.label}
                   </span>
                   <span style={{
-                    fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                    fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                     color: check.status === "PASS" ? HD.emerald
                       : check.status === "CONDITION" ? HD.amber
                       : check.status === "FAIL" ? HD.red
@@ -449,7 +449,7 @@ export default function PhaseRisk({
           }}>
             <UsersIcon size={14} color={HD.cyan} style={{ marginTop: 2, flexShrink: 0 }} />
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
+              <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.cyan }}>
                 GOVERNANCE IMPLICATIONS
               </span>
               {govMode === "team" ? (
@@ -486,7 +486,7 @@ export default function PhaseRisk({
                 background: HD.soft,
                 display: "inline-block",
               }} />
-              <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
+              <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.tertiary }}>
                 QUANTITATIVE RISK ANALYSIS
               </span>
               <span style={{
@@ -523,7 +523,7 @@ export default function PhaseRisk({
           onClick={onBack}
           style={{
             display: "flex", alignItems: "center", gap: 4,
-            fontFamily: HD.fontMono, fontSize: 10, letterSpacing: "0.06em",
+            fontFamily: HD.fontMono, fontSize: 12, letterSpacing: "0.06em",
             color: HD.slate, background: "none",
             border: `1px solid ${HD.rim}`, padding: "8px 14px",
             cursor: "pointer", borderRadius: 3,
@@ -535,19 +535,19 @@ export default function PhaseRisk({
 
         <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}>
           {loading && (
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.slate, display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.slate, display: "flex", alignItems: "center", gap: 4 }}>
               <LoaderIcon size={10} style={{ animation: "spin 1s linear infinite" }} />
               EVALUATING
             </span>
           )}
           {!loading && isPassed && (
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.emerald, display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.emerald, display: "flex", alignItems: "center", gap: 4 }}>
               <CheckCircleIcon size={10} />
               {isConditions ? "CONDITIONAL PASS" : "PASSED"}
             </span>
           )}
           {!loading && isRejected && (
-            <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.red, display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.red, display: "flex", alignItems: "center", gap: 4 }}>
               <XCircleIcon size={10} />
               REJECTED
             </span>
@@ -560,7 +560,7 @@ export default function PhaseRisk({
             onClick={runRiskCheck}
             style={{
               display: "flex", alignItems: "center", gap: 4,
-              fontFamily: HD.fontMono, fontSize: 10, letterSpacing: "0.06em",
+              fontFamily: HD.fontMono, fontSize: 12, letterSpacing: "0.06em",
               color: HD.slate, background: "none",
               border: `1px solid ${HD.rim}`, padding: "8px 14px",
               cursor: "pointer", borderRadius: 3,
@@ -576,7 +576,7 @@ export default function PhaseRisk({
           disabled={!canProceed}
           style={{
             fontFamily: HD.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: "0.1em",
             color: canProceed ? "#ffffff" : HD.slate,
@@ -610,7 +610,7 @@ function ConstraintStatusIcon({ status }: { status: ConstraintCheck["status"] })
     <span style={{
       width: 14, height: 14,
       display: "inline-flex", alignItems: "center", justifyContent: "center",
-      fontFamily: HD.fontMono, fontSize: 10, color: HD.slate,
+      fontFamily: HD.fontMono, fontSize: 12, color: HD.slate,
     }}>
       --
     </span>
@@ -637,15 +637,15 @@ function RiskItemList({ title, items, color, icon: Icon }: {
         display: "flex", alignItems: "center", gap: 6,
       }}>
         <Icon size={12} color={color} />
-        <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color }}>
+        <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color }}>
           {title}
         </span>
-        <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary }}>({items.length})</span>
+        <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary }}>({items.length})</span>
       </div>
       <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
         {items.map((item, i) => (
           <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, marginTop: 2, flexShrink: 0 }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, marginTop: 2, flexShrink: 0 }}>
               {String(i + 1).padStart(2, "0")}
             </span>
             <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary, lineHeight: 1.5 }}>

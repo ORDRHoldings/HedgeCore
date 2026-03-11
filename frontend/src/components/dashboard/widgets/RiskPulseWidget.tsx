@@ -114,18 +114,18 @@ function FactorRow({ f, regColor }: { f: RiskFactor; regColor: string }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 64px 36px 52px 28px 36px", alignItems: "center", gap: 4, padding: "3px 0", borderBottom: `1px solid ${S.soft}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.04em" }}>{f.label}</span>
-        <span style={{ fontSize: 8, color: trendColor }}>{trendSymbol}</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.04em" }}>{f.label}</span>
+        <span style={{ fontSize: 12, color: trendColor }}>{trendSymbol}</span>
       </div>
-      <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.primary, textAlign: "right" }}>{f.display}</span>
-      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: zColor, textAlign: "right", fontWeight: Math.abs(f.zscore) > 2 ? 700 : 400 }}>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, textAlign: "right" }}>{f.display}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: zColor, textAlign: "right", fontWeight: Math.abs(f.zscore) > 2 ? 700 : 400 }}>
         {f.zscore > 0 ? "+" : ""}{f.zscore.toFixed(1)}
       </span>
       <div style={{ display: "flex", justifyContent: "center" }}>
         <ImpactBar impact={f.impact} color={f.impact > 0.6 ? S.red : f.impact > 0.35 ? S.amber : regColor} />
       </div>
-      <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, textAlign: "right" }}>{(f.weight * 100).toFixed(0)}%</span>
-      <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary, textAlign: "right" }}>{(f.contribution * 10).toFixed(1)}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textAlign: "right" }}>{(f.weight * 100).toFixed(0)}%</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, textAlign: "right" }}>{(f.contribution * 10).toFixed(1)}</span>
     </div>
   );
 }
@@ -142,16 +142,16 @@ function GeoAlertPanel({ geo }: { geo: GeoIntelligence }) {
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         {isAlert && <Zap size={11} color={color} />}
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color, letterSpacing: "0.1em", flex: 1 }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color, letterSpacing: "0.1em", flex: 1 }}>
           {isAlert ? "GEO ALERT" : "GEO INTELLIGENCE"}
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: color, border: `1px solid ${color}`, padding: "1px 5px", borderRadius: 2 }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: color, border: `1px solid ${color}`, padding: "1px 5px", borderRadius: 2 }}>
           {geo.source === "claude" ? "CLAUDE" : "RULE"}
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color }}>
           {geo.geo_risk_score.toFixed(1)}/10
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           {geo.regime.toUpperCase()}
         </span>
       </div>
@@ -161,8 +161,8 @@ function GeoAlertPanel({ geo }: { geo: GeoIntelligence }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {geo.top_events.map((ev, i) => (
             <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color, flexShrink: 0, marginTop: 1 }}>{"▸"}</span>
-              <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.primary, lineHeight: 1.4 }}>{ev}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color, flexShrink: 0, marginTop: 1 }}>{"▸"}</span>
+              <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary, lineHeight: 1.4 }}>{ev}</span>
             </div>
           ))}
         </div>
@@ -170,20 +170,20 @@ function GeoAlertPanel({ geo }: { geo: GeoIntelligence }) {
 
       {/* Market implications */}
       {geo.market_implications && (
-        <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: 0, lineHeight: 1.5 }}>
+        <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: 0, lineHeight: 1.5 }}>
           {geo.market_implications}
         </p>
       )}
 
       {/* Oil / USD signals */}
       <div style={{ display: "flex", gap: 10 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: geo.oil_impact === "bullish" ? S.red : S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: geo.oil_impact === "bullish" ? S.red : S.tertiary }}>
           OIL {oilIcon} {geo.oil_impact.toUpperCase()}
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: geo.usd_impact === "strengthening" ? S.green : S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: geo.usd_impact === "strengthening" ? S.green : S.tertiary }}>
           USD {usdIcon} {geo.usd_impact.toUpperCase()}
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, marginLeft: "auto" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginLeft: "auto" }}>
           conf: {geo.confidence}
         </span>
       </div>
@@ -193,17 +193,17 @@ function GeoAlertPanel({ geo }: { geo: GeoIntelligence }) {
 
 function NewsTab({ items }: { items: PulseNewsItem[] }) {
   if (items.length === 0) {
-    return <div style={{ padding: "10px 0", textAlign: "center" }}><span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>NO ITEMS</span></div>;
+    return <div style={{ padding: "10px 0", textAlign: "center" }}><span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>NO ITEMS</span></div>;
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
       {items.slice(0, 5).map((item) => (
         <a key={item.id} href={item.url || "#"} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "block" }}>
           <div style={{ padding: "4px 0", borderBottom: `1px solid ${S.soft}` }}>
-            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.primary, lineHeight: 1.35, marginBottom: 2 }}>{item.headline}</div>
+            <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary, lineHeight: 1.35, marginBottom: 2 }}>{item.headline}</div>
             <div style={{ display: "flex", gap: 8 }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.cyan }}>{item.source}</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{relTime(item.datetime)}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>{item.source}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{relTime(item.datetime)}</span>
             </div>
           </div>
         </a>
@@ -288,18 +288,18 @@ export default function RiskPulseWidget({ onRemove }: Props) {
       <div className="widget-drag-handle" style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, cursor: "grab" }}>
         <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, flexShrink: 0, userSelect: "none" }}>⠿</span>
         <AlertTriangle size={11} color={S.amber} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, flex: 1, textTransform: "uppercase" }}>Risk Pulse</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, flex: 1, textTransform: "uppercase" }}>Risk Pulse</span>
         {snapshot && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: qualColor, border: `1px solid ${qualColor}`, padding: "1px 5px", borderRadius: 2 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: qualColor, border: `1px solid ${qualColor}`, padding: "1px 5px", borderRadius: 2 }}>
             {snapshot.quality}
           </span>
         )}
         {geo && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: geo.source === "claude" ? S.cyan : S.tertiary, border: `1px solid currentColor`, padding: "1px 5px", borderRadius: 2 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: geo.source === "claude" ? S.cyan : S.tertiary, border: `1px solid currentColor`, padding: "1px 5px", borderRadius: 2 }}>
             {geo.source === "claude" ? "CLAUDE" : "RULE"}
           </span>
         )}
-        {lastFetch && <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>{lastFetch}</span>}
+        {lastFetch && <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{lastFetch}</span>}
         <button onClick={fetchAll} disabled={fetching} title="Refresh" style={{ background: "transparent", border: "none", cursor: fetching ? "default" : "pointer", padding: 2, display: "flex", alignItems: "center", opacity: fetching ? 0.4 : 1 }}>
           <RefreshCw size={10} color={S.tertiary} />
         </button>
@@ -315,13 +315,13 @@ export default function RiskPulseWidget({ onRemove }: Props) {
 
         {error ? (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.red }}>FETCH ERROR</span>
-            <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, textAlign: "center" }}>{error}</span>
-            <button onClick={fetchAll} style={{ fontFamily: S.fontMono, fontSize: 9, color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}`, padding: "3px 10px", cursor: "pointer" }}>RETRY</button>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.red }}>FETCH ERROR</span>
+            <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, textAlign: "center" }}>{error}</span>
+            <button onClick={fetchAll} style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, background: "transparent", border: `1px solid ${S.cyan}`, padding: "3px 10px", cursor: "pointer" }}>RETRY</button>
           </div>
         ) : !snapshot ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.1em" }}>LOADING…</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em" }}>LOADING…</span>
           </div>
         ) : (
           <>
@@ -335,16 +335,16 @@ export default function RiskPulseWidget({ onRemove }: Props) {
                   <span style={{ fontFamily: S.fontMono, fontSize: 40, fontWeight: 800, color: regColor, lineHeight: 1, letterSpacing: "-0.02em" }}>
                     {snapshot.score.toFixed(1)}
                   </span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>/10</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>/10</span>
                   {snapshot.deltaScore !== null && (
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: snapshot.deltaScore > 0 ? S.red : snapshot.deltaScore < 0 ? S.green : S.tertiary, border: "1px solid currentColor", padding: "1px 5px", borderRadius: 2 }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: snapshot.deltaScore > 0 ? S.red : snapshot.deltaScore < 0 ? S.green : S.tertiary, border: "1px solid currentColor", padding: "1px 5px", borderRadius: 2 }}>
                       {snapshot.deltaScore > 0 ? "+" : ""}{snapshot.deltaScore.toFixed(1)}
                     </span>
                   )}
                 </div>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: `color-mix(in srgb, ${regColor} 12%, transparent)`, border: `1px solid ${regColor}`, borderRadius: 3, padding: "3px 8px", width: "fit-content" }}>
                   <span style={{ width: 5, height: 5, borderRadius: "50%", background: regColor, flexShrink: 0 }} />
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: regColor, letterSpacing: "0.1em" }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: regColor, letterSpacing: "0.1em" }}>
                     {regime.toUpperCase()}
                   </span>
                 </div>
@@ -377,10 +377,10 @@ export default function RiskPulseWidget({ onRemove }: Props) {
               </div>
               {snapshot.factors.map((f) => <FactorRow key={f.id} f={f} regColor={regColor} />)}
               <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                   geo intel: <span style={{ color: geo ? REGIME_COLOR[geo.regime] : S.secondary }}>{geo?.geo_risk_score.toFixed(1) ?? "—"}/10</span>
                 </span>
-                <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                   high-impact events: <span style={{ color: snapshot.highImpactEvents > 0 ? S.red : S.secondary }}>{snapshot.highImpactEvents}</span>
                 </span>
               </div>
@@ -389,13 +389,13 @@ export default function RiskPulseWidget({ onRemove }: Props) {
             {/* ── Global News Feed ─────────────────────────────────────────── */}
             <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 10 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em" }}>GLOBAL NEWS</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em" }}>GLOBAL NEWS</span>
                 <div style={{ display: "flex", gap: 2 }}>
                   {(["geo","macro","cb"] as const).map((tab) => {
                     const count = articles.filter((a) => a.tab === tab).length;
                     const isActive = activeTab === tab;
                     return (
-                      <button key={tab} onClick={() => setActiveTab(tab)} style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: isActive ? 700 : 400, color: isActive ? S.primary : S.tertiary, background: isActive ? S.bgSub : "transparent", border: `1px solid ${isActive ? S.rim : "transparent"}`, padding: "2px 7px", borderRadius: 2, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      <button key={tab} onClick={() => setActiveTab(tab)} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: isActive ? 700 : 400, color: isActive ? S.primary : S.tertiary, background: isActive ? S.bgSub : "transparent", border: `1px solid ${isActive ? S.rim : "transparent"}`, padding: "2px 7px", borderRadius: 2, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                         {tab.toUpperCase()}{count > 0 && <span style={{ color: isActive ? S.cyan : S.tertiary }}> ({count})</span>}
                       </button>
                     );
@@ -409,25 +409,25 @@ export default function RiskPulseWidget({ onRemove }: Props) {
             {insight && (
               <div style={{ borderTop: `1px solid ${S.soft}`, paddingTop: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em" }}>AI INSIGHT</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em" }}>AI INSIGHT</span>
                   <span style={{ fontFamily: S.fontMono, fontSize: 7, color: insight.ai_assisted ? S.cyan : S.tertiary, border: `1px solid currentColor`, padding: "1px 4px", borderRadius: 2 }}>
                     {insight.ai_assisted ? "CLAUDE" : "RULE"}
                   </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, background: S.bgDeep, border: `1px solid ${S.soft}`, borderRadius: 4, padding: "8px 10px" }}>
                   <div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.08em" }}>WHAT CHANGED</span>
-                    <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "3px 0 0", lineHeight: 1.5 }}>{insight.summary}</p>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, letterSpacing: "0.08em" }}>WHAT CHANGED</span>
+                    <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "3px 0 0", lineHeight: 1.5 }}>{insight.summary}</p>
                   </div>
                   <div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.08em" }}>WHY IT MATTERS</span>
-                    <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "3px 0 0", lineHeight: 1.5 }}>{insight.rationale}</p>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, letterSpacing: "0.08em" }}>WHY IT MATTERS</span>
+                    <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "3px 0 0", lineHeight: 1.5 }}>{insight.rationale}</p>
                   </div>
                   <div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.cyan, letterSpacing: "0.08em" }}>WATCHLIST 24H</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, letterSpacing: "0.08em" }}>WATCHLIST 24H</span>
                     <ul style={{ margin: "3px 0 0", padding: "0 0 0 14px" }}>
                       {insight.watchlist.map((item, i) => (
-                        <li key={i} style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.5 }}>{item}</li>
+                        <li key={i} style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5 }}>{item}</li>
                       ))}
                     </ul>
                   </div>

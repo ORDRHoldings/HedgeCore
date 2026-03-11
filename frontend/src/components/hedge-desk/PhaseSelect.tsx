@@ -97,7 +97,7 @@ export default function PhaseSelect({ token, onComplete }: PhaseSelectProps) {
         borderBottom: `1px solid ${HD.rim}`,
         flexShrink: 0,
       }}>
-        <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: HD.tertiary }}>STEP 1 OF 7</span>
+        <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: HD.tertiary }}>STEP 1 OF 7</span>
         <span style={{ width: 1, height: 14, background: HD.soft, display: "inline-block" }} />
         <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: HD.primary }}>SELECT POSITIONS</span>
       </div>
@@ -127,7 +127,7 @@ export default function PhaseSelect({ token, onComplete }: PhaseSelectProps) {
               onClick={() => setMode(tab.key)}
               style={{
                 fontFamily: HD.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 700,
                 letterSpacing: "0.08em",
                 color: active ? HD.cyan : HD.tertiary,
@@ -179,15 +179,15 @@ export default function PhaseSelect({ token, onComplete }: PhaseSelectProps) {
       }}>
         <div style={{ flex: 1, display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>BASKET</span>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, letterSpacing: "0.1em" }}>BASKET</span>
             <span style={{ fontFamily: HD.fontMono, fontSize: 16, fontWeight: 700, color: basket.length > 0 ? HD.royal : HD.slate }}>
               {basket.length}
-              <span style={{ fontSize: 11, color: HD.tertiary }}> position{basket.length !== 1 ? "s" : ""}</span>
+              <span style={{ fontSize: 12, color: HD.tertiary }}> position{basket.length !== 1 ? "s" : ""}</span>
             </span>
           </div>
           {Object.entries(currencySummary).map(([ccy, total]) => (
             <div key={ccy} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.1em" }}>{ccy}</span>
+              <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, letterSpacing: "0.1em" }}>{ccy}</span>
               <span style={{ fontFamily: HD.fontMono, fontSize: 14, fontWeight: 600, color: HD.primary }}>
                 {fmt(total)}
               </span>
@@ -197,7 +197,7 @@ export default function PhaseSelect({ token, onComplete }: PhaseSelectProps) {
             <button
               onClick={clearBasket}
               style={{
-                fontFamily: HD.fontMono, fontSize: 9, fontWeight: 600, letterSpacing: "0.06em",
+                fontFamily: HD.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
                 color: HD.tertiary, background: "transparent",
                 border: `1px solid ${HD.rim}`, padding: "4px 10px",
                 cursor: "pointer", borderRadius: 2,
@@ -213,7 +213,7 @@ export default function PhaseSelect({ token, onComplete }: PhaseSelectProps) {
           disabled={basket.length === 0}
           style={{
             fontFamily: HD.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: "0.1em",
             color: basket.length > 0 ? "#ffffff" : HD.slate,
@@ -294,7 +294,7 @@ function SelectExistingTab({ token, basket, onToggle, onToggleAll }: {
         borderBottom: `1px solid ${HD.soft}`,
         flexShrink: 0,
       }}>
-        <span style={{ fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: HD.cyan }}>
+        <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: HD.cyan }}>
           {positions.filter(p => basketIds.has(p.id)).length} of {positions.length} ELIGIBLE
         </span>
         <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
@@ -327,7 +327,7 @@ function SelectExistingTab({ token, basket, onToggle, onToggleAll }: {
           </div>
           {["ENTITY", "STATUS", "CCY", "AMOUNT", "VALUE DATE"].map(h => (
             <span key={h} style={{
-              fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700,
+              fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700,
               letterSpacing: "0.1em", color: HD.tertiary,
             }}>
               {h}
@@ -339,7 +339,7 @@ function SelectExistingTab({ token, basket, onToggle, onToggleAll }: {
         {loading && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: 40 }}>
             <LoaderIcon size={16} color={HD.slate} style={{ animation: "spin 1s linear infinite" }} />
-            <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.tertiary }}>LOADING POSITIONS...</span>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary }}>LOADING POSITIONS...</span>
           </div>
         )}
 
@@ -395,7 +395,7 @@ function SelectExistingTab({ token, basket, onToggle, onToggleAll }: {
                 {p.entity}
               </span>
               <span style={{
-                fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700,
+                fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700,
                 color: st.color, display: "flex", alignItems: "center",
                 letterSpacing: "0.06em",
               }}>
@@ -407,7 +407,7 @@ function SelectExistingTab({ token, basket, onToggle, onToggleAll }: {
               <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.primary, display: "flex", alignItems: "center" }}>
                 {fmt(p.amount ?? 0)}
               </span>
-              <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.secondary, display: "flex", alignItems: "center" }}>
+              <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.secondary, display: "flex", alignItems: "center" }}>
                 {p.value_date}
               </span>
             </div>
@@ -522,7 +522,7 @@ function ManualEntryTab({ token, onCreated }: {
   });
 
   const labelStyle: React.CSSProperties = {
-    fontFamily: HD.fontMono, fontSize: 9, fontWeight: 700,
+    fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700,
     letterSpacing: "0.1em", color: HD.tertiary, marginBottom: 4,
   };
 
@@ -539,10 +539,10 @@ function ManualEntryTab({ token, onCreated }: {
           borderRadius: 3,
         }}>
           <CheckIcon size={14} color={HD.green} />
-          <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.green }}>
+          <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.green }}>
             Position created and added to basket
           </span>
-          <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.tertiary, marginLeft: "auto" }}>
+          <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, marginLeft: "auto" }}>
             {savedCount} added this session
           </span>
         </div>
@@ -558,7 +558,7 @@ function ManualEntryTab({ token, onCreated }: {
           borderRadius: 3,
         }}>
           <XIcon size={14} color={HD.red} />
-          <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.red, flex: 1 }}>
+          <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.red, flex: 1 }}>
             {apiError}
           </span>
           <button
@@ -584,7 +584,7 @@ function ManualEntryTab({ token, onCreated }: {
             placeholder="INV-2026-001"
             style={inputStyle("record_id")}
           />
-          {fieldErrors.record_id && <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.red, marginTop: 2 }}>{fieldErrors.record_id}</span>}
+          {fieldErrors.record_id && <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.red, marginTop: 2 }}>{fieldErrors.record_id}</span>}
         </div>
 
         {/* Entity */}
@@ -596,7 +596,7 @@ function ManualEntryTab({ token, onCreated }: {
             placeholder="LatAm Corp SA"
             style={inputStyle("entity")}
           />
-          {fieldErrors.entity && <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.red, marginTop: 2 }}>{fieldErrors.entity}</span>}
+          {fieldErrors.entity && <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.red, marginTop: 2 }}>{fieldErrors.entity}</span>}
         </div>
 
         {/* Flow Type */}
@@ -638,7 +638,7 @@ function ManualEntryTab({ token, onCreated }: {
             step="1"
             style={inputStyle("amount")}
           />
-          {fieldErrors.amount && <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.red, marginTop: 2 }}>{fieldErrors.amount}</span>}
+          {fieldErrors.amount && <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.red, marginTop: 2 }}>{fieldErrors.amount}</span>}
         </div>
 
         {/* Value Date */}
@@ -651,7 +651,7 @@ function ManualEntryTab({ token, onCreated }: {
             min={today}
             style={inputStyle("value_date")}
           />
-          {fieldErrors.value_date && <span style={{ fontFamily: HD.fontMono, fontSize: 10, color: HD.red, marginTop: 2 }}>{fieldErrors.value_date}</span>}
+          {fieldErrors.value_date && <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.red, marginTop: 2 }}>{fieldErrors.value_date}</span>}
         </div>
 
         {/* Status */}
@@ -685,7 +685,7 @@ function ManualEntryTab({ token, onCreated }: {
           onClick={handleSubmit}
           disabled={saving}
           style={{
-            fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+            fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
             padding: "9px 24px",
             color: saving ? HD.tertiary : "#fff",
             background: saving ? "transparent" : HD.cyan,
@@ -822,7 +822,7 @@ function UploadTab({ token, onImported }: {
         <div style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
           Accepted: <span style={{ color: HD.cyan }}>.csv</span> and <span style={{ color: HD.cyan }}>.xlsx</span>
         </div>
-        <div style={{ fontFamily: HD.fontUI, fontSize: 11, color: HD.tertiary, marginTop: 4 }}>
+        <div style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.tertiary, marginTop: 4 }}>
           Required columns: record_id · entity · flow_type · currency · amount · value_date
         </div>
       </div>
@@ -837,7 +837,7 @@ function UploadTab({ token, onImported }: {
           borderRadius: 3,
         }}>
           <span style={{
-            fontFamily: HD.fontMono, fontSize: 9, letterSpacing: "0.06em",
+            fontFamily: HD.fontMono, fontSize: 12, letterSpacing: "0.06em",
             padding: "2px 6px",
             border: `1px solid ${isExcel ? HD.amber : HD.cyan}`,
             color: isExcel ? HD.amber : HD.cyan,
@@ -847,7 +847,7 @@ function UploadTab({ token, onImported }: {
           <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.primary, flex: 1 }}>
             {file.name}
           </span>
-          <span style={{ fontFamily: HD.fontUI, fontSize: 11, color: HD.tertiary }}>
+          <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.tertiary }}>
             {(file.size / 1024).toFixed(1)} KB
           </span>
           <button
@@ -867,7 +867,7 @@ function UploadTab({ token, onImported }: {
             onClick={handleCommit}
             disabled={uploading}
             style={{
-              fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+              fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
               padding: "9px 24px",
               color: uploading ? HD.tertiary : "#fff",
               background: uploading ? "transparent" : HD.cyan,
@@ -889,7 +889,7 @@ function UploadTab({ token, onImported }: {
           padding: "10px 14px",
           border: `1px solid ${HD.red}`,
           background: `color-mix(in srgb, ${HD.red} 5%, ${HD.bgPanel})`,
-          fontFamily: HD.fontMono, fontSize: 11, color: HD.red,
+          fontFamily: HD.fontMono, fontSize: 12, color: HD.red,
           borderRadius: 3,
         }}>
           {error}
@@ -933,10 +933,10 @@ function ImportResultBanner({ run, onDismiss }: { run: ConnectorRun; onDismiss: 
         padding: "8px 14px",
         borderBottom: `1px solid ${color}`,
       }}>
-        <span style={{ fontFamily: HD.fontMono, fontSize: 11, letterSpacing: "0.08em", color }}>
+        <span style={{ fontFamily: HD.fontMono, fontSize: 12, letterSpacing: "0.08em", color }}>
           {success ? "IMPORT COMPLETE" : partial ? "IMPORT PARTIAL" : "IMPORT FAILED"}
         </span>
-        <span style={{ fontFamily: HD.fontUI, fontSize: 11, color: HD.secondary }}>
+        <span style={{ fontFamily: HD.fontUI, fontSize: 12, color: HD.secondary }}>
           {run.created_ok}/{run.total_rows} rows created
           {run.error_count > 0 && ` · ${run.error_count} errors`}
         </span>
@@ -953,7 +953,7 @@ function ImportResultBanner({ run, onDismiss }: { run: ConnectorRun; onDismiss: 
           ["Run", run.id.slice(0, 8) + "…"],
         ] as const).map(([label, val]) => (
           <div key={label} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 9, color: HD.tertiary, letterSpacing: "0.08em" }}>{label}</span>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary, letterSpacing: "0.08em" }}>{label}</span>
             <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.primary }}>{val}</span>
           </div>
         ))}

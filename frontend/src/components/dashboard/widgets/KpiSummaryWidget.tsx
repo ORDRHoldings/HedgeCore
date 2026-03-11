@@ -122,7 +122,7 @@ export default function KpiSummaryWidget({
         <span
           style={{
             fontFamily:    S.fontMono,
-            fontSize:      11,
+            fontSize: 12,
             fontWeight:    600,
             letterSpacing: "0.08em",
             color:         S.textPrimary,
@@ -136,7 +136,7 @@ export default function KpiSummaryWidget({
           <span
             style={{
               fontFamily:    S.fontMono,
-              fontSize:      9,
+              fontSize: 12,
               fontWeight:    600,
               letterSpacing: "0.1em",
               color:         S.accentCyan,
@@ -204,13 +204,13 @@ export default function KpiSummaryWidget({
                 borderRadius: 3,
               }}>
                 <span style={{
-                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 600,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
                   letterSpacing: "0.1em", color: S.accentCyan,
                 }}>
                   SETUP REQUIRED
                 </span>
                 <span style={{
-                  fontFamily: S.fontUI, fontSize: 10, color: S.textTertiary,
+                  fontFamily: S.fontUI, fontSize: 12, color: S.textTertiary,
                 }}>
                   Register FX positions to populate these metrics
                 </span>

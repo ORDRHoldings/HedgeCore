@@ -86,7 +86,7 @@ const DEFAULT_ANSWERS: QuestionnaireAnswers = {
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <span style={{
-      fontFamily: S.fontMono, fontSize: 9, fontWeight: 600,
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
       letterSpacing: "0.08em", color: S.textTertiary,
       textTransform: "uppercase" as const, display: "block", marginBottom: 5,
     }}>
@@ -108,7 +108,7 @@ function Select({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{
-        fontFamily: S.fontMono, fontSize: 11, color: S.textPrimary,
+        fontFamily: S.fontMono, fontSize: 12, color: S.textPrimary,
         background: S.bgPanel, border: `1px solid ${S.border}`, borderRadius: 3,
         padding: "6px 8px", width: "100%", outline: "none",
       }}
@@ -138,7 +138,7 @@ function RadioGroup({
             type="button"
             onClick={() => onChange(o.value)}
             style={{
-              flex: 1, fontFamily: S.fontMono, fontSize: 10, fontWeight: active ? 700 : 400,
+              flex: 1, fontFamily: S.fontMono, fontSize: 12, fontWeight: active ? 700 : 400,
               color: active ? S.cyan : S.textSecondary,
               background: active ? `${S.cyan}12` : "transparent",
               border: `1px solid ${active ? S.cyan : S.border}`,
@@ -162,7 +162,7 @@ function PolicyParamChip({ label, value }: { label: string; value: string }) {
       padding: "6px 10px", background: S.bgDeep, border: `1px solid ${S.border}`,
       borderRadius: 3, minWidth: 80,
     }}>
-      <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.textTertiary, letterSpacing: "0.07em", textTransform: "uppercase" as const }}>{label}</span>
+      <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.textTertiary, letterSpacing: "0.07em", textTransform: "uppercase" as const }}>{label}</span>
       <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan }}>{value}</span>
     </div>
   );
@@ -236,7 +236,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
       }}>
         <Sparkles size={13} style={{ color: S.cyan, flexShrink: 0 }} />
         <span style={{
-          fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
           letterSpacing: "0.08em", color: S.textPrimary, textTransform: "uppercase" as const,
         }}>
           AI Policy Builder
@@ -247,7 +247,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
             <div key={s} style={{
               width: 18, height: 18, borderRadius: "50%", display: "flex",
               alignItems: "center", justifyContent: "center",
-              fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
               background: step >= s ? `${S.cyan}20` : "transparent",
               border: `1px solid ${step >= s ? S.cyan : S.border}`,
               color: step >= s ? S.cyan : S.textTertiary,
@@ -257,7 +257,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
           ))}
         </div>
         <div style={{ flex: 1 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.textTertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.textTertiary }}>
           {step === 1 ? "Company Profile" : step === 2 ? "Risk Preferences" : "AI Analysis"}
         </span>
         <button
@@ -285,7 +285,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                 value={answers.industry}
                 onChange={(e) => set("industry", e.target.value)}
                 style={{
-                  fontFamily: S.fontMono, fontSize: 11, color: S.textPrimary,
+                  fontFamily: S.fontMono, fontSize: 12, color: S.textPrimary,
                   background: S.bgPanel, border: `1px solid ${S.border}`,
                   borderRadius: 3, padding: "6px 8px", width: "100%",
                 }}
@@ -320,7 +320,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                   value={answers.annual_fx_volume_usd}
                   onChange={(e) => set("annual_fx_volume_usd", Math.max(0, +e.target.value || 0))}
                   style={{
-                    fontFamily: S.fontMono, fontSize: 11, color: S.textPrimary,
+                    fontFamily: S.fontMono, fontSize: 12, color: S.textPrimary,
                     background: S.bgPanel, border: `1px solid ${S.border}`,
                     borderRadius: 3, padding: "6px 8px", width: "100%",
                   }}
@@ -334,7 +334,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                   value={answers.primary_currency_pair}
                   onChange={(e) => set("primary_currency_pair", e.target.value.toUpperCase())}
                   style={{
-                    fontFamily: S.fontMono, fontSize: 11, color: S.textPrimary,
+                    fontFamily: S.fontMono, fontSize: 12, color: S.textPrimary,
                     background: S.bgPanel, border: `1px solid ${S.border}`,
                     borderRadius: 3, padding: "6px 8px", width: "100%",
                   }}
@@ -363,7 +363,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                 onChange={(e) => set("hedge_objective", e.target.value)}
                 rows={2}
                 style={{
-                  fontFamily: S.fontUI, fontSize: 11, color: S.textPrimary,
+                  fontFamily: S.fontUI, fontSize: 12, color: S.textPrimary,
                   background: S.bgPanel, border: `1px solid ${S.border}`,
                   borderRadius: 3, padding: "6px 8px", width: "100%",
                   resize: "vertical" as const, outline: "none",
@@ -378,7 +378,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                 disabled={!canProceed1}
                 style={{
                   display: "flex", alignItems: "center", gap: 5,
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   letterSpacing: "0.06em", color: canProceed1 ? S.cyan : S.textTertiary,
                   background: canProceed1 ? `${S.cyan}15` : "transparent",
                   border: `1px solid ${canProceed1 ? S.cyan : S.border}`,
@@ -434,7 +434,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
               />
               <div style={{
                 display: "flex", justifyContent: "space-between",
-                fontFamily: S.fontMono, fontSize: 9, color: S.textTertiary, marginTop: 2,
+                fontFamily: S.fontMono, fontSize: 12, color: S.textTertiary, marginTop: 2,
               }}>
                 <span>1 month</span>
                 <span>12 months</span>
@@ -448,7 +448,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                 onClick={() => setStep(1)}
                 style={{
                   display: "flex", alignItems: "center", gap: 5,
-                  fontFamily: S.fontMono, fontSize: 10,
+                  fontFamily: S.fontMono, fontSize: 12,
                   color: S.textSecondary, background: "transparent",
                   border: `1px solid ${S.border}`,
                   borderRadius: 3, padding: "7px 14px", cursor: "pointer",
@@ -462,7 +462,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                 disabled={!canProceed2}
                 style={{
                   display: "flex", alignItems: "center", gap: 5,
-                  fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                  fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                   letterSpacing: "0.06em", color: canProceed2 ? S.cyan : S.textTertiary,
                   background: canProceed2 ? `${S.cyan}15` : "transparent",
                   border: `1px solid ${canProceed2 ? S.cyan : S.border}`,
@@ -487,10 +487,10 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                 gap: 10, padding: "24px 0",
               }}>
                 <Sparkles size={22} style={{ color: S.cyan, opacity: 0.8 }} />
-                <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.textSecondary }}>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary }}>
                   Analysing your company profile…
                 </span>
-                <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.textTertiary }}>
+                <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.textTertiary }}>
                   Generating tailored hedge policy
                 </span>
               </div>
@@ -499,7 +499,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
             {/* Error */}
             {status === "error" && (
               <div style={{ padding: "16px", textAlign: "center" as const }}>
-                <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.red }}>
+                <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.red }}>
                   Analysis failed. Please try again.
                 </span>
               </div>
@@ -515,7 +515,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                     padding: "5px 10px", background: `${S.amber}12`,
                     border: `1px solid ${S.amber}44`, borderRadius: 3,
                   }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.amber, letterSpacing: "0.06em" }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.amber, letterSpacing: "0.06em" }}>
                       NEAREST MATCH — AI key not configured; closest preset selected
                     </span>
                   </div>
@@ -527,7 +527,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                     border: `1px solid ${S.cyan}44`, borderRadius: 3,
                   }}>
                     <Sparkles size={10} style={{ color: S.cyan }} />
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.cyan, letterSpacing: "0.06em" }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, letterSpacing: "0.06em" }}>
                       AI-GENERATED — tailored to your profile
                     </span>
                   </div>
@@ -538,7 +538,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                   <div style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: S.textPrimary }}>
                     {result.suggested.name}
                   </div>
-                  <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.textSecondary, marginTop: 4, lineHeight: 1.5 }}>
+                  <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.textSecondary, marginTop: 4, lineHeight: 1.5 }}>
                     {result.suggested.description}
                   </div>
                 </div>
@@ -580,17 +580,17 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                   padding: "10px 12px", background: S.bgDeep,
                   border: `1px solid ${S.border}`, borderRadius: 3,
                 }}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.textTertiary, letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 5 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.textTertiary, letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 5 }}>
                     Rationale
                   </div>
-                  <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.textSecondary, lineHeight: 1.6 }}>
+                  <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.textSecondary, lineHeight: 1.6 }}>
                     {result.explanation}
                   </div>
                 </div>
 
                 {/* Save error */}
                 {saveErr && (
-                  <div style={{ fontFamily: S.fontUI, fontSize: 10, color: S.red }}>{saveErr}</div>
+                  <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.red }}>{saveErr}</div>
                 )}
 
                 {/* Saved confirmation */}
@@ -601,7 +601,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                     border: `1px solid ${S.green}44`, borderRadius: 3,
                   }}>
                     <Check size={11} style={{ color: S.green }} />
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.green, letterSpacing: "0.06em" }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.green, letterSpacing: "0.06em" }}>
                       SAVED — policy template created in your company account
                     </span>
                   </div>
@@ -613,7 +613,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                     type="button"
                     onClick={() => setStep(2)}
                     style={{
-                      fontFamily: S.fontMono, fontSize: 10, color: S.textSecondary,
+                      fontFamily: S.fontMono, fontSize: 12, color: S.textSecondary,
                       background: "transparent", border: `1px solid ${S.border}`,
                       borderRadius: 3, padding: "7px 12px", cursor: "pointer",
                     }}
@@ -627,7 +627,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                       onClick={handleSave}
                       style={{
                         display: "flex", alignItems: "center", gap: 5,
-                        fontFamily: S.fontMono, fontSize: 10, fontWeight: 600,
+                        fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
                         letterSpacing: "0.06em", color: S.purple,
                         background: `${S.purple}12`, border: `1px solid ${S.purple}55`,
                         borderRadius: 3, padding: "7px 12px", cursor: "pointer",
@@ -642,7 +642,7 @@ export default function PolicyAIBuilder({ onApply, onClose, token }: PolicyAIBui
                     onClick={handleApply}
                     style={{
                       display: "flex", alignItems: "center", gap: 5,
-                      fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                       letterSpacing: "0.06em", color: S.cyan,
                       background: `${S.cyan}18`, border: `1px solid ${S.cyan}`,
                       borderRadius: 3, padding: "7px 14px", cursor: "pointer",

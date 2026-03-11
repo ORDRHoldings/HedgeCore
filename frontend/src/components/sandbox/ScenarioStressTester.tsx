@@ -199,7 +199,7 @@ function ConfigInput({
       <label
         style={{
           fontFamily: S.fontMono,
-          fontSize: 9,
+          fontSize: 12,
           fontWeight: 600,
           letterSpacing: "0.08em",
           color: S.tertiary,
@@ -210,7 +210,7 @@ function ConfigInput({
       </label>
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
         {prefix && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {prefix}
           </span>
         )}
@@ -237,7 +237,7 @@ function ConfigInput({
           }}
         />
         {suffix && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {suffix}
           </span>
         )}
@@ -264,7 +264,7 @@ function ScenarioChip({
       onClick={onClick}
       style={{
         fontFamily: S.fontMono,
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 700,
         letterSpacing: "0.04em",
         padding: "3px 9px",
@@ -406,7 +406,7 @@ export default function ScenarioStressTester({
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               letterSpacing: "0.1em",
               color: S.cyan,
@@ -418,7 +418,7 @@ export default function ScenarioStressTester({
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               color: S.tertiary,
               letterSpacing: "0.06em",
             }}
@@ -431,7 +431,7 @@ export default function ScenarioStressTester({
             onClick={() => setSelectedIds(new Set())}
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               color: S.tertiary,
               background: "none",
               border: "none",
@@ -497,7 +497,7 @@ export default function ScenarioStressTester({
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: "0.1em",
               color: S.tertiary,
@@ -524,7 +524,7 @@ export default function ScenarioStressTester({
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: "0.1em",
               color: S.tertiary,
@@ -551,7 +551,7 @@ export default function ScenarioStressTester({
           <div
             style={{
               fontFamily: S.fontMono,
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: "0.1em",
               color: S.tertiary,
@@ -580,12 +580,12 @@ export default function ScenarioStressTester({
                 outline: "none",
               }}
             />
-            <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>%</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>%</span>
             <button
               onClick={addCustom}
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 padding: "4px 12px",
@@ -643,7 +643,7 @@ export default function ScenarioStressTester({
                   key={h}
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 9,
+                    fontSize: 12,
                     fontWeight: 700,
                     letterSpacing: "0.08em",
                     color: S.tertiary,
@@ -670,7 +670,7 @@ export default function ScenarioStressTester({
                 <span
                   style={{
                     fontFamily: S.fontUI,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 500,
                     color: S.primary,
                   }}
@@ -681,7 +681,7 @@ export default function ScenarioStressTester({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
                     color: r.shock < 0 ? S.red : S.green,
                   }}
@@ -692,7 +692,7 @@ export default function ScenarioStressTester({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     color: S.secondary,
                   }}
                 >
@@ -701,7 +701,7 @@ export default function ScenarioStressTester({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 600,
                     color: pnlColor(r.unhedgedPnl),
                   }}
@@ -711,7 +711,7 @@ export default function ScenarioStressTester({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 600,
                     color: pnlColor(r.hedgedPnl),
                   }}
@@ -721,7 +721,7 @@ export default function ScenarioStressTester({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 600,
                     color: r.hedgeBenefit > 0 ? S.green : S.amber,
                   }}
@@ -731,7 +731,7 @@ export default function ScenarioStressTester({
                 <span
                   style={{
                     fontFamily: S.fontMono,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
                     color:
                       r.efficiency >= 70
@@ -758,7 +758,7 @@ export default function ScenarioStressTester({
                 }}
               >
                 <span
-                  style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}
+                  style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}
                 >
                   WORST UNHEDGED:{" "}
                   <span style={{ color: pnlColor(Math.min(...results.map((r) => r.unhedgedPnl))), fontWeight: 700 }}>
@@ -766,7 +766,7 @@ export default function ScenarioStressTester({
                   </span>
                 </span>
                 <span
-                  style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}
+                  style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}
                 >
                   WORST HEDGED:{" "}
                   <span style={{ color: pnlColor(Math.min(...results.map((r) => r.hedgedPnl))), fontWeight: 700 }}>
@@ -774,7 +774,7 @@ export default function ScenarioStressTester({
                   </span>
                 </span>
                 <span
-                  style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.06em" }}
+                  style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}
                 >
                   AVG EFFICIENCY:{" "}
                   <span style={{ color: S.cyan, fontWeight: 700 }}>
@@ -790,7 +790,7 @@ export default function ScenarioStressTester({
           <p
             style={{
               fontFamily: S.fontMono,
-              fontSize: 10,
+              fontSize: 12,
               color: S.tertiary,
               letterSpacing: "0.04em",
               textAlign: "center",

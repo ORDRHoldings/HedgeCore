@@ -164,7 +164,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
             border: `1px solid ${HD.rim}`, borderRadius: 4,
             background: "color-mix(in srgb, var(--accent-amber) 4%, var(--bg-panel))",
           }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: HD.amber }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: HD.amber }}>
               DRAFT IN PROGRESS
             </span>
             <span style={{ fontFamily: HD.fontUI, fontSize: 13, color: HD.secondary, textAlign: "center", lineHeight: 1.6 }}>
@@ -178,7 +178,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
               <button
                 onClick={dismissDraft}
                 style={{
-                  fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                  fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                   color: HD.tertiary, background: "transparent",
                   border: `1px solid ${HD.rim}`, padding: "7px 16px",
                   cursor: "pointer", borderRadius: 2,
@@ -194,7 +194,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
                   clearDraft(userId);
                 }}
                 style={{
-                  fontFamily: HD.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                  fontFamily: HD.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                   color: "#fff", background: HD.cyan,
                   border: `1px solid ${HD.cyan}`, padding: "7px 16px",
                   cursor: "pointer", borderRadius: 2,
@@ -350,7 +350,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
         {/* Safety fallback */}
         {phase > 6 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-            <span style={{ fontFamily: HD.fontMono, fontSize: 11, color: HD.tertiary }}>
+            <span style={{ fontFamily: HD.fontMono, fontSize: 12, color: HD.tertiary }}>
               PIPELINE COMPLETE
             </span>
           </div>

@@ -154,7 +154,7 @@ export default function ApiKeyManagementTab({ token }: Props) {
 
   /* ── Styles ──────────────────────────────────────────────────────────── */
   const th: React.CSSProperties = {
-    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.09em",
+    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.09em",
     color: S.tertiary, textTransform: "uppercase", padding: "6px 10px",
     borderBottom: `1px solid ${S.rim}`, textAlign: "left",
   };
@@ -185,7 +185,7 @@ export default function ApiKeyManagementTab({ token }: Props) {
           borderLeft: `3px solid ${S.pass}`,
           borderRadius: 2, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10,
         }}>
-          <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.pass, letterSpacing: "0.09em" }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.pass, letterSpacing: "0.09em" }}>
             KEY CREATED — COPY NOW · SHOWN ONCE ONLY
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -197,7 +197,7 @@ export default function ApiKeyManagementTab({ token }: Props) {
               {createdKey}
             </code>
             <button onClick={() => handleCopy(createdKey)} style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
               color: copied ? S.pass : S.secondary, background: S.bgSub,
               border: `1px solid ${copied ? S.pass : S.rim}`, borderRadius: 2, padding: "8px 12px",
               cursor: "pointer", flexShrink: 0,
@@ -205,14 +205,14 @@ export default function ApiKeyManagementTab({ token }: Props) {
               {copied ? "COPIED ✓" : "COPY"}
             </button>
             <button onClick={() => setCreatedKey(null)} style={{
-              fontFamily: S.fontMono, fontSize: 11, color: S.tertiary,
+              fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
               background: "transparent", border: `1px solid ${S.rim}`, borderRadius: 2,
               padding: "8px 10px", cursor: "pointer", flexShrink: 0,
             }}>✕</button>
           </div>
-          <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.amber, lineHeight: 1.5 }}>
+          <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.amber, lineHeight: 1.5 }}>
             ⚠ Store this key in a secrets manager immediately. It cannot be recovered after closing this banner.
-            Use as: <code style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan }}>Authorization: Bearer {createdKey.slice(0, 20)}…</code>
+            Use as: <code style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>Authorization: Bearer {createdKey.slice(0, 20)}…</code>
           </div>
         </div>
       )}
@@ -223,12 +223,12 @@ export default function ApiKeyManagementTab({ token }: Props) {
           <SectionHeader label={`Platform API Keys (HK_live_)`} />
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={loadKeys} style={{
-              fontFamily: S.fontMono, fontSize: 10, color: S.cyan,
+              fontFamily: S.fontMono, fontSize: 12, color: S.cyan,
               background: "transparent", border: `1px solid ${S.cyan}40`, borderRadius: 2,
               padding: "4px 10px", cursor: "pointer",
             }}>↻</button>
             <button onClick={() => setShowCreate(p => !p)} style={{
-              fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
               color: "#000", background: S.cyan, border: "none", borderRadius: 2,
               padding: "5px 14px", cursor: "pointer",
             }}>+ GENERATE KEY</button>
@@ -243,17 +243,17 @@ export default function ApiKeyManagementTab({ token }: Props) {
             borderRadius: 2, padding: "12px 16px", marginBottom: 10,
             display: "flex", flexDirection: "column", gap: 6,
           }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.amber, letterSpacing: "0.08em" }}>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.amber, letterSpacing: "0.08em" }}>
               API KEY AUTH REQUIRED
             </div>
-            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.6 }}>
-              The key management endpoint (<code style={{ fontFamily: S.fontMono, fontSize: 10 }}>POST /api/admin/api-keys</code>) requires an
-              existing <code style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan }}>HK_live_</code> API key in the Authorization header — not a JWT session token.
+            <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.6 }}>
+              The key management endpoint (<code style={{ fontFamily: S.fontMono, fontSize: 12 }}>POST /api/admin/api-keys</code>) requires an
+              existing <code style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>HK_live_</code> API key in the Authorization header — not a JWT session token.
               This is by design: API keys for service integrations are provisioned via the API itself, not the browser UI.
             </div>
-            <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>
+            <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
               To create the first key, use the backend admin CLI or the Swagger UI at{" "}
-              <code style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan }}>/api/docs</code>.
+              <code style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>/api/docs</code>.
             </div>
           </div>
         )}
@@ -267,7 +267,7 @@ export default function ApiKeyManagementTab({ token }: Props) {
             borderRadius: 2, padding: "14px 16px", marginBottom: 10,
             display: "flex", flexDirection: "column", gap: 10,
           }}>
-            <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.cyan, letterSpacing: "0.09em" }}>NEW API KEY</div>
+            <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, letterSpacing: "0.09em" }}>NEW API KEY</div>
             <div style={{ display: "flex", gap: 8 }}>
               <input
                 value={newName}
@@ -281,27 +281,27 @@ export default function ApiKeyManagementTab({ token }: Props) {
                 onKeyDown={e => e.key === "Enter" && handleCreate()}
               />
               <button onClick={handleCreate} disabled={creating} style={{
-                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                 color: "#000", background: creating ? S.tertiary : S.cyan, border: "none", borderRadius: 2,
                 padding: "6px 18px", cursor: creating ? "wait" : "pointer",
               }}>
                 {creating ? "CREATING…" : "CREATE"}
               </button>
               <button onClick={() => { setShowCreate(false); setNewName(""); setCreateErr(null); }} style={{
-                fontFamily: S.fontMono, fontSize: 10, color: S.secondary, background: "transparent",
+                fontFamily: S.fontMono, fontSize: 12, color: S.secondary, background: "transparent",
                 border: `1px solid ${S.rim}`, borderRadius: 2, padding: "6px 12px", cursor: "pointer",
               }}>CANCEL</button>
             </div>
-            {createErr && <div style={{ fontFamily: S.fontMono, fontSize: 10, color: S.fail }}>✗ {createErr}</div>}
+            {createErr && <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.fail }}>✗ {createErr}</div>}
           </div>
         )}
 
         {loading ? (
-          <div style={{ textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, padding: "24px 0", letterSpacing: "0.09em" }}>
+          <div style={{ textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, padding: "24px 0", letterSpacing: "0.09em" }}>
             LOADING…
           </div>
         ) : error ? (
-          <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid ${S.fail}`, borderLeft: `3px solid ${S.fail}`, borderRadius: 2, padding: "12px 16px", fontFamily: S.fontMono, fontSize: 11, color: S.fail }}>
+          <div style={{ background: `color-mix(in srgb, ${S.fail} 8%, transparent)`, border: `1px solid ${S.fail}`, borderLeft: `3px solid ${S.fail}`, borderRadius: 2, padding: "12px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.fail }}>
             ✗ {error}
           </div>
         ) : !authError && (
@@ -327,18 +327,18 @@ export default function ApiKeyManagementTab({ token }: Props) {
                 ) : keys.map(k => (
                   <tr key={k.id}>
                     <td style={td}>{k.name ?? <span style={{ color: S.tertiary }}>—</span>}</td>
-                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 10, color: S.cyan }}>
+                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>
                       HK_live_{k.key_id.slice(0, 10)}…
                     </td>
-                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, whiteSpace: "nowrap" }}>
+                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, whiteSpace: "nowrap" }}>
                       {new Date(k.created_at).toLocaleDateString("en-GB")}
                     </td>
-                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, whiteSpace: "nowrap" }}>
+                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, whiteSpace: "nowrap" }}>
                       {k.last_used_at ? new Date(k.last_used_at).toLocaleDateString("en-GB") : "Never"}
                     </td>
                     <td style={td}>
                       <span style={{
-                        fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                        fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                         color: k.status === "active" ? S.pass : S.tertiary,
                       }}>
                         {k.status === "active" ? "● ACTIVE" : "○ REVOKED"}
@@ -350,7 +350,7 @@ export default function ApiKeyManagementTab({ token }: Props) {
                           onClick={() => handleRevoke(k.key_id)}
                           disabled={revoking === k.key_id}
                           style={{
-                            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.06em",
+                            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
                             color: S.fail, background: `color-mix(in srgb, ${S.fail} 8%, transparent)`,
                             border: `1px solid color-mix(in srgb, ${S.fail} 25%, transparent)`,
                             borderRadius: 2, padding: "3px 9px", cursor: revoking === k.key_id ? "wait" : "pointer",
@@ -373,14 +373,14 @@ export default function ApiKeyManagementTab({ token }: Props) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <SectionHeader label="API Key Access Log" />
           <button onClick={loadAudit} style={{
-            fontFamily: S.fontMono, fontSize: 10, color: S.cyan,
+            fontFamily: S.fontMono, fontSize: 12, color: S.cyan,
             background: "transparent", border: `1px solid ${S.cyan}40`, borderRadius: 2,
             padding: "4px 10px", cursor: "pointer",
           }}>↻</button>
         </div>
 
         {auditLoading ? (
-          <div style={{ textAlign: "center", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, padding: "16px 0", letterSpacing: "0.09em" }}>
+          <div style={{ textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, padding: "16px 0", letterSpacing: "0.09em" }}>
             LOADING…
           </div>
         ) : (
@@ -404,22 +404,22 @@ export default function ApiKeyManagementTab({ token }: Props) {
                   </tr>
                 ) : auditLog.map(a => (
                   <tr key={a.id}>
-                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, whiteSpace: "nowrap" }}>
+                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, whiteSpace: "nowrap" }}>
                       {a.created_at.replace("T", " ").slice(0, 16)}
                     </td>
-                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 10, color: S.cyan }}>
+                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>
                       {a.api_key_id ? a.api_key_id.slice(0, 10) + "…" : "—"}
                     </td>
-                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 10, color: S.secondary }}>
+                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
                       {a.path ?? "—"}
                     </td>
-                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 10 }}>
+                    <td style={{ ...td, fontFamily: S.fontMono, fontSize: 12 }}>
                       {a.method ?? "—"}
                     </td>
                     <td style={td}>
                       {a.status_code && (
                         <span style={{
-                          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                           color: a.status_code < 300 ? S.pass : a.status_code < 500 ? S.amber : S.fail,
                         }}>
                           {a.status_code}
@@ -435,10 +435,10 @@ export default function ApiKeyManagementTab({ token }: Props) {
       </div>
 
       {/* Security footer */}
-      <div style={{ background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "10px 14px", fontFamily: S.fontUI, fontSize: 11, color: S.tertiary, lineHeight: 1.6 }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.secondary, marginRight: 6, letterSpacing: "0.07em" }}>SECURITY</span>
+      <div style={{ background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 2, padding: "10px 14px", fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, lineHeight: 1.6 }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.secondary, marginRight: 6, letterSpacing: "0.07em" }}>SECURITY</span>
         Keys are stored as Argon2id hashes — the full value is shown once at creation. Pass in the{" "}
-        <code style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan }}>Authorization: Bearer HK_live_…</code> header.
+        <code style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>Authorization: Bearer HK_live_…</code> header.
         Rotate every 90 days per NIST SP 800-57. Revoke immediately if compromised.
       </div>
     </div>

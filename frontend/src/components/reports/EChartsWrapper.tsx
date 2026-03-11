@@ -49,12 +49,12 @@ class ChartErrorBoundary extends React.Component<
           background: "var(--bg-sub)",
           gap: 8,
         }}>
-          <span style={{ fontSize: 11, fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", color: "var(--text-tertiary)" }}>
+          <span style={{ fontSize: 12, fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)", color: "var(--text-tertiary)" }}>
             Chart failed to render
           </span>
           <button
             style={{
-              fontSize: 10, fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
+              fontSize: 12, fontFamily: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
               border: "1px solid var(--border-rim)", background: "none",
               color: "var(--accent-cyan)", padding: "4px 10px", cursor: "pointer",
             }}
@@ -117,14 +117,14 @@ function hGrad(leftHex: string, rightHex: string) {
 }
 
 // ── Shared axis/tooltip defaults ──────────────────────────────────────────────
-const AXIS_LABEL = { color: C.text3, fontSize: 10, fontFamily: "monospace" };
+const AXIS_LABEL = { color: C.text3, fontSize: 12, fontFamily: "monospace" };
 const SPLIT_LINE = { lineStyle: { color: C.border, type: "dashed" as const, opacity: 0.5 } };
 
 const TOOLTIP_STYLE = {
   backgroundColor: "#1A2535EE",
   borderColor: C.border,
   borderWidth: 1,
-  textStyle: { color: C.text1, fontSize: 11, fontFamily: "monospace" },
+  textStyle: { color: C.text1, fontSize: 12, fontFamily: "monospace" },
   extraCssText: "backdrop-filter: blur(8px); box-shadow: 0 4px 24px #000A",
 };
 
@@ -162,7 +162,7 @@ export function HorizontalStackedBar({
     },
     legend: {
       bottom: 2,
-      textStyle: { color: C.text3, fontSize: 10, fontFamily: "monospace" },
+      textStyle: { color: C.text3, fontSize: 12, fontFamily: "monospace" },
       itemWidth: 12, itemHeight: 8,
       icon: "roundRect",
     },
@@ -184,7 +184,7 @@ export function HorizontalStackedBar({
         emphasis: { itemStyle: { shadowBlur: 14, shadowColor: C.grey + "AA" } },
         label: pEx >= 8 ? {
           show: true, position: "inside" as const,
-          fontSize: 9, color: "#fff", fontFamily: "monospace",
+          fontSize: 12, color: "#fff", fontFamily: "monospace",
           formatter: () => `${pEx}%`,
         } : { show: false },
       },
@@ -202,7 +202,7 @@ export function HorizontalStackedBar({
         emphasis: { itemStyle: { shadowBlur: 18, shadowColor: C.cyan + "AA" } },
         label: pNew >= 8 ? {
           show: true, position: "inside" as const,
-          fontSize: 9, color: "#000", fontFamily: "monospace",
+          fontSize: 12, color: "#000", fontFamily: "monospace",
           formatter: () => `${pNew}%`,
         } : { show: false },
       },
@@ -220,7 +220,7 @@ export function HorizontalStackedBar({
         emphasis: { itemStyle: { shadowBlur: 18, shadowColor: C.amber + "AA" } },
         label: pRes >= 8 ? {
           show: true, position: "inside" as const,
-          fontSize: 9, color: "#000", fontFamily: "monospace",
+          fontSize: 12, color: "#000", fontFamily: "monospace",
           formatter: () => `${pRes}%`,
         } : { show: false },
       },
@@ -279,7 +279,7 @@ export function BucketBarChart({
     yAxis: {
       type: "value",
       name: yLabel,
-      nameTextStyle: { color: C.text3, fontSize: 8, fontFamily: "monospace" },
+      nameTextStyle: { color: C.text3, fontSize: 12, fontFamily: "monospace" },
       axisLabel: {
         ...AXIS_LABEL,
         formatter: (v: number) =>
@@ -398,7 +398,7 @@ export function EChartsWaterfallChart({ steps, height = 240 }: WaterfallChartPro
     xAxis: {
       type: "category",
       data: steps.map(s => s.label),
-      axisLabel: { ...AXIS_LABEL, fontSize: 11 },
+      axisLabel: { ...AXIS_LABEL, fontSize: 12 },
       axisLine: { lineStyle: { color: C.border } },
       axisTick: { show: false },
     },
@@ -433,7 +433,7 @@ export function EChartsWaterfallChart({ steps, height = 240 }: WaterfallChartPro
         label: {
           show: true,
           position: "top" as const,
-          fontSize: 9,
+          fontSize: 12,
           color: C.text3,
           fontFamily: "monospace",
           formatter: (p: unknown) => {
@@ -526,8 +526,8 @@ export function DonutChart({
         rich: {
           score: { fontSize: 32, fontWeight: "bold", color: color, fontFamily: "monospace", lineHeight: 42 },
           pct:   { fontSize: 14, color: color, fontFamily: "monospace" },
-          cls:   { fontSize: 9,  color: C.text3, fontFamily: "monospace", lineHeight: 20 },
-          sub:   { fontSize: 9,  color: C.text3, fontFamily: "monospace", lineHeight: 14 },
+          cls:   { fontSize: 12,  color: C.text3, fontFamily: "monospace", lineHeight: 20 },
+          sub:   { fontSize: 12,  color: C.text3, fontFamily: "monospace", lineHeight: 14 },
         },
         formatter: `{score|${score}}{pct|%}\n{cls|${classification}}\n{sub|${passed}/${total} rules}`,
       },
@@ -581,7 +581,7 @@ export function RadarChart({ dimensions, label = "Risk Posture", height = 280 }:
       radius: "68%",
       axisName: {
         color: C.text2,
-        fontSize: 10,
+        fontSize: 12,
         fontFamily: "monospace",
       },
       splitLine: {

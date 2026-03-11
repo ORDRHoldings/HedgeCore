@@ -113,8 +113,8 @@ export default function FxRatesWidget({ onRemove }: Props) {
         }}
       >
         <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, cursor: "grab", flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.cyan, fontWeight: 700 }}>⊕</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, flex: 1, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, fontWeight: 700 }}>⊕</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, flex: 1, textTransform: "uppercase" }}>
           FX Rates
         </span>
 
@@ -124,11 +124,11 @@ export default function FxRatesWidget({ onRemove }: Props) {
             width: 5, height: 5, borderRadius: "50%",
             background: isLive ? S.green : S.amber, flexShrink: 0,
           }} />
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, color: isLive ? S.green : S.amber, fontWeight: 700 }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: isLive ? S.green : S.amber, fontWeight: 700 }}>
             {isLive ? "LIVE" : dataSource === "fallback" ? "BIS FALLBACK" : "—"}
           </span>
           {lastFetch && (
-            <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{lastFetch}</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{lastFetch}</span>
           )}
         </div>
 
@@ -151,7 +151,7 @@ export default function FxRatesWidget({ onRemove }: Props) {
       {/* Rate table */}
       <div style={{ flex: 1, overflowY: "auto" }}>
         {rows.length === 0 ? (
-          <div style={{ padding: 24, textAlign: "center", fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <div style={{ padding: 24, textAlign: "center", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {fetching ? "LOADING…" : "NO DATA"}
           </div>
         ) : (
@@ -160,7 +160,7 @@ export default function FxRatesWidget({ onRemove }: Props) {
               <tr style={{ background: S.bgSub }}>
                 {["Pair", "Region", "Bid", "Mid", "Ask", "Δ"].map((h) => (
                   <th key={h} style={{
-                    fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
                     color: S.tertiary, textTransform: "uppercase", textAlign: "left",
                     padding: "6px 10px", borderBottom: `1px solid ${S.rim}`,
                   }}>{h}</th>
@@ -193,21 +193,21 @@ export default function FxRatesWidget({ onRemove }: Props) {
                           background: row.source === "fallback" ? S.amber : S.green,
                           flexShrink: 0,
                         }} />
-                        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: row.source === "fallback" ? S.amber : S.green, fontWeight: 700 }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: row.source === "fallback" ? S.amber : S.green, fontWeight: 700 }}>
                           {row.source === "fallback" ? "BIS" : "LIVE"}
                         </span>
                       </div>
                     </td>
-                    <td style={{ padding: "7px 10px", fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>
+                    <td style={{ padding: "7px 10px", fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
                       {row.label}
                     </td>
-                    <td style={{ padding: "7px 10px", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                    <td style={{ padding: "7px 10px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       {row.bid !== null ? row.bid.toFixed(4) : "—"}
                     </td>
                     <td style={{ padding: "7px 10px", fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: S.primary }}>
                       {row.mid !== null ? row.mid.toFixed(4) : "—"}
                     </td>
-                    <td style={{ padding: "7px 10px", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                    <td style={{ padding: "7px 10px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                       {row.ask !== null ? row.ask.toFixed(4) : "—"}
                     </td>
                     <td style={{ padding: "7px 10px" }}>
@@ -215,12 +215,12 @@ export default function FxRatesWidget({ onRemove }: Props) {
                         <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                           {isUp   && <TrendingUp   size={10} color={S.green} />}
                           {isDown && <TrendingDown size={10} color={S.red} />}
-                          <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: isUp ? S.green : isDown ? S.red : S.tertiary }}>
+                          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: isUp ? S.green : isDown ? S.red : S.tertiary }}>
                             {isUp ? "+" : ""}{change.toFixed(3)}%
                           </span>
                         </div>
                       ) : (
-                        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>—</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>—</span>
                       )}
                     </td>
                   </tr>
@@ -234,7 +234,7 @@ export default function FxRatesWidget({ onRemove }: Props) {
       {/* Footer */}
       <div style={{
         padding: "5px 10px", borderTop: `1px solid ${S.soft}`, background: S.bgSub,
-        fontFamily: S.fontMono, fontSize: 9, color: S.tertiary,
+        fontFamily: S.fontMono, fontSize: 12, color: S.tertiary,
         display: "flex", justifyContent: "space-between",
       }}>
         <span>Finnhub · {dataSource === "fallback" ? "BIS Triennial fallback" : "Live forex rates"}</span>

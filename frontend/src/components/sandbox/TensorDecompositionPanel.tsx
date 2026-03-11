@@ -34,11 +34,11 @@ export default function TensorDecompositionPanel({ tensorResult }: Props) {
   return (
     <div>
       <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
           Tensor / Factor Decomposition
         </span>
         {methodology && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{methodology}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{methodology}</span>
         )}
       </div>
 
@@ -46,7 +46,7 @@ export default function TensorDecompositionPanel({ tensorResult }: Props) {
         <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
           {components.map((c, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, width: 24 }}>PC{i+1}</span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, width: 24 }}>PC{i+1}</span>
               <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, width: 120 }}>{c.name}</span>
               <div style={{ flex: 1, height: 16, background: S.sub, borderRadius: 2, position: "relative", overflow: "hidden" }}>
                 <div style={{
@@ -55,7 +55,7 @@ export default function TensorDecompositionPanel({ tensorResult }: Props) {
                   background: S.cyan, opacity: 0.6, borderRadius: 2,
                 }} />
               </div>
-              <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.cyan, width: 50, textAlign: "right" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, width: 50, textAlign: "right" }}>
                 {(c.variance_explained * 100).toFixed(1)}%
               </span>
             </div>

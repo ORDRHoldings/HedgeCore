@@ -35,7 +35,7 @@ export default function ForwardValidationPanel({ forwardValidation }: Props) {
   return (
     <div>
       <div style={{ padding: "8px 14px", borderBottom: `1px solid ${S.rim}`, background: S.panel }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase" }}>
           Forward Rate Validation
         </span>
       </div>
@@ -45,7 +45,7 @@ export default function ForwardValidationPanel({ forwardValidation }: Props) {
           <thead>
             <tr style={{ background: S.sub }}>
               {["Bucket", "Theoretical", "Market", "Delta", "Status"].map(h => (
-                <th key={h} style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
+                <th key={h} style={{ padding: "7px 14px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}` }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -54,12 +54,12 @@ export default function ForwardValidationPanel({ forwardValidation }: Props) {
               const sc = b.status === "PASS" ? S.green : b.status === "WARN" ? S.amber : S.red;
               return (
                 <tr key={i} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                  <td style={{ padding: "8px 14px", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>{b.bucket}</td>
+                  <td style={{ padding: "8px 14px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{b.bucket}</td>
                   <td style={{ padding: "8px 14px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{b.theoretical?.toFixed(4)}</td>
                   <td style={{ padding: "8px 14px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{b.market?.toFixed(4)}</td>
                   <td style={{ padding: "8px 14px", fontFamily: S.fontMono, fontSize: 12, color: Math.abs(b.delta_bps ?? 0) > 5 ? S.amber : S.primary }}>{b.delta_bps?.toFixed(1)} bps</td>
                   <td style={{ padding: "8px 14px" }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: sc, padding: "2px 7px", border: `1px solid ${sc}`, borderRadius: 2 }}>\u25cf {b.status}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: sc, padding: "2px 7px", border: `1px solid ${sc}`, borderRadius: 2 }}>\u25cf {b.status}</span>
                   </td>
                 </tr>
               );

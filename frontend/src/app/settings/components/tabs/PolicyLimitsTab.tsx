@@ -28,9 +28,9 @@ export default function PolicyLimitsTab({ s, set, lastModifiedAt, lastModifiedBy
           border: `1px solid color-mix(in srgb, ${S.amber} 15%, transparent)`,
           borderLeft: `3px solid ${S.amber}`,
           borderRadius: 2, padding: "8px 12px", marginBottom: 16,
-          fontFamily: S.fontUI, fontSize: 11, color: S.secondary, lineHeight: 1.5,
+          fontFamily: S.fontUI, fontSize: 12, color: S.secondary, lineHeight: 1.5,
         }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.amber, marginRight: 6 }}>POLICY ENGINE</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.amber, marginRight: 6 }}>POLICY ENGINE</span>
           These ratios become the default for new policy templates. Override per-template in Saved Policies.
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

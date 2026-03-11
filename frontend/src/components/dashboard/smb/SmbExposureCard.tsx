@@ -108,7 +108,7 @@ export default function SmbExposureCard({ token }: Props) {
             <span
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: "0.1em",
                 color: S.tertiary,

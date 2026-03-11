@@ -91,7 +91,7 @@ export default function SmbRecentActivity({ token }: Props) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             letterSpacing: "0.1em",
             color: S.tertiary,
@@ -130,7 +130,7 @@ export default function SmbRecentActivity({ token }: Props) {
               <span
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: S.tertiary,
                   minWidth: 60,
                   flexShrink: 0,
@@ -141,7 +141,7 @@ export default function SmbRecentActivity({ token }: Props) {
               <span
                 style={{
                   fontFamily: S.fontMono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   color: S.secondary,
                   minWidth: 70,

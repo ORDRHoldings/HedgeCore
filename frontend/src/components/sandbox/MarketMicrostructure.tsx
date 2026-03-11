@@ -219,10 +219,10 @@ export default function MarketMicrostructure({
         padding: "8px 14px", borderBottom: `1px solid ${S.rim}`,
         background: `color-mix(in srgb, ${S.sub} 60%, transparent)`,
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.cyan }}>
           ◈ MARKET MICROSTRUCTURE
         </span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           Kyle (1985) · Almgren-Chriss (2001) · BIS Triennial 2022
         </span>
       </div>
@@ -231,7 +231,7 @@ export default function MarketMicrostructure({
       <div style={{ display: "flex", borderBottom: `1px solid ${S.rim}`, background: S.sub }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+            fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
             padding: "7px 14px", border: "none",
             borderBottom: activeTab === t.id ? `2px solid ${S.cyan}` : "2px solid transparent",
             background: "transparent",
@@ -246,7 +246,7 @@ export default function MarketMicrostructure({
         {/* SPREADS TABLE */}
         {activeTab === "spreads" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Indicative FX forward bid-ask spreads by currency and tenor. Based on BIS 2022 Triennial Survey market depth data.
               Crisis spreads can be 5–20× normal. EM NDF spreads typically 2–5× wider than DM forwards.
             </p>
@@ -259,7 +259,7 @@ export default function MarketMicrostructure({
                 borderRadius: "3px 3px 0 0",
               }}>
                 {["CCY", "PAIR", "SPOT", "O/N+1M", "3M", "6M", "1Y", "LIQ.", "ADV (B)"].map(h => (
-                  <span key={h} style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>{h}</span>
+                  <span key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>{h}</span>
                 ))}
               </div>
               {SPREAD_TABLE.map((e, i) => (
@@ -270,24 +270,24 @@ export default function MarketMicrostructure({
                   borderBottom: `1px solid ${S.soft}`,
                   cursor: "pointer",
                 }} onClick={() => setSelectedCcy(e.currency)}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: e.currency === selectedCcy ? S.cyan : S.primary }}>{e.currency}</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary }}>{e.pair}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: e.currency === selectedCcy ? S.cyan : S.primary }}>{e.currency}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{e.pair}</span>
                   {[e.spot, e.onm, e.m3, e.m6, e.y1].map((bps, j) => (
-                    <span key={j} style={{ fontFamily: S.fontMono, fontSize: 9, color: bps <= 3 ? S.green : bps <= 10 ? S.amber : S.red }}>
+                    <span key={j} style={{ fontFamily: S.fontMono, fontSize: 12, color: bps <= 3 ? S.green : bps <= 10 ? S.amber : S.red }}>
                       {bps.toFixed(1)}
                     </span>
                   ))}
                   <span style={{
-                    fontFamily: S.fontMono, fontSize: 8, fontWeight: 700,
+                    fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                     padding: "1px 4px", borderRadius: 2, textAlign: "center",
                     color: liquidityColor(e.liquidity),
                     background: `color-mix(in srgb, ${liquidityColor(e.liquidity)} 10%, transparent)`,
                   }}>{e.liquidity}</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>${e.dailyVol}B</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>${e.dailyVol}B</span>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+            <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               All spreads in basis points (half-spread). Source: BIS 2022 Triennial Central Bank Survey · Bloomberg FX Desk estimates.
               Crisis spreads expand 5–20×. Spreads shown are normal market conditions.
             </div>
@@ -297,7 +297,7 @@ export default function MarketMicrostructure({
         {/* MARKET IMPACT */}
         {activeTab === "impact" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Kyle's Lambda (1985) market impact model — measures price impact per unit of order flow.
               Price impact = λ × Q where Q = order size. Frazzini, Israel & Moskowitz (2018) empirical estimate:
               temporary impact ≈ 14.2% × σ × √(participation rate).
@@ -311,8 +311,8 @@ export default function MarketMicrostructure({
               ].map((ctrl) => (
                 <div key={ctrl.label} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <label style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, textTransform: "uppercase" }}>{ctrl.label}</label>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary }}>{ctrl.format(ctrl.value)}</span>
+                    <label style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textTransform: "uppercase" }}>{ctrl.label}</label>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{ctrl.format(ctrl.value)}</span>
                   </div>
                   <input type="range" min={ctrl.min} max={ctrl.max} step={ctrl.step} value={ctrl.value}
                     onChange={e => ctrl.onChg(parseFloat(e.target.value))}
@@ -320,12 +320,12 @@ export default function MarketMicrostructure({
                 </div>
               ))}
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <label style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, textTransform: "uppercase" }}>Currency</label>
+                <label style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textTransform: "uppercase" }}>Currency</label>
                 <select
                   value={selectedCcy}
                   onChange={e => setSelectedCcy(e.target.value)}
                   style={{
-                    fontFamily: S.fontMono, fontSize: 11, color: S.primary,
+                    fontFamily: S.fontMono, fontSize: 12, color: S.primary,
                     background: S.sub, border: `1px solid ${S.rim}`, padding: "4px 8px",
                     borderRadius: 2,
                   }}
@@ -337,7 +337,7 @@ export default function MarketMicrostructure({
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ background: S.sub, border: `1px solid ${S.soft}`, borderRadius: 3, padding: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>KYLE'S LAMBDA MODEL</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>KYLE'S LAMBDA MODEL</div>
                 {[
                   ["Order Size", fmt(orderSize)],
                   ["ADV", fmt(advUSD) + "/day"],
@@ -350,13 +350,13 @@ export default function MarketMicrostructure({
                   ["Recommended Slice", fmt(kyle.recommendedSlice)],
                 ].map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: `1px solid ${S.soft}` }}>
-                    <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary }}>{k}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary }}>{v}</span>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{k}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{v}</span>
                   </div>
                 ))}
               </div>
               <div style={{ background: S.sub, border: `1px solid ${S.soft}`, borderRadius: 3, padding: 12 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>TOTAL EXECUTION COST</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary, marginBottom: 8 }}>TOTAL EXECUTION COST</div>
                 {[
                   ["Bid-Ask Spread", (selectedSpread.m3 * 2).toFixed(1) + " bps (2× half-spread)"],
                   ["Market Impact", kyle.priceImpact.toFixed(2) + " bps"],
@@ -368,13 +368,13 @@ export default function MarketMicrostructure({
                   ["Recommendation", orderSize / advUSD > 0.02 ? "SLICE ORDER" : "SINGLE TICKET"],
                 ].map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: `1px solid ${S.soft}` }}>
-                    <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary }}>{k}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary }}>{v}</span>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{k}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{v}</span>
                   </div>
                 ))}
               </div>
             </div>
-            <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+            <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               Model: Kyle (1985) "Continuous Auctions and Insider Trading" Econometrica 53(6) ·
               Frazzini, Israel & Moskowitz (2018) "Trading Costs" SSRN 3229719 ·
               Impact half-life per Bouchaud et al. (2018) "Trades, Quotes and Prices"
@@ -385,7 +385,7 @@ export default function MarketMicrostructure({
         {/* ALMGREN-CHRISS */}
         {activeTab === "almgren" && (
           <div>
-            <p style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
+            <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary, margin: "0 0 12px", lineHeight: 1.6 }}>
               Almgren-Chriss (2001) optimal liquidation trajectory. Minimises: E[cost] + λ × Var[cost].
               Higher risk-aversion (λ) → execute faster (bear higher temporary impact to reduce variance).
               Optimal VWAP schedule shown below.
@@ -394,27 +394,27 @@ export default function MarketMicrostructure({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <label style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>RISK AVERSION λ</label>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary }}>{riskAversion.toFixed(4)}</span>
+                  <label style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>RISK AVERSION λ</label>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{riskAversion.toFixed(4)}</span>
                 </div>
                 <input type="range" min={0.0001} max={0.01} step={0.0001} value={riskAversion}
                   onChange={e => setRiskAversion(parseFloat(e.target.value))}
                   style={{ accentColor: S.cyan }} />
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>0 (cost-only)</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>0.01 (risk-averse)</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>0 (cost-only)</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>0.01 (risk-averse)</span>
                 </div>
               </div>
               <div style={{ background: S.sub, border: `1px solid ${S.soft}`, borderRadius: 3, padding: 10 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginBottom: 4 }}>SUMMARY</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginBottom: 4 }}>SUMMARY</div>
                 {[
                   ["Expected Cost", ac.expectedCost.toFixed(2) + " bps"],
                   ["Optimal Days", ac.optimalDays + " trading days"],
                   ["Trade Profile", riskAversion > 0.005 ? "Front-loaded" : "TWAP/Even"],
                 ].map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.secondary }}>{k}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary }}>{v}</span>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{k}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -424,7 +424,7 @@ export default function MarketMicrostructure({
             <div style={{ maxHeight: 200, overflowY: "auto" }}>
               <div style={{ display: "grid", gridTemplateColumns: "60px 1fr 100px 80px", gap: 6, padding: "4px 8px", background: S.sub, borderRadius: "3px 3px 0 0" }}>
                 {["Period", "Volume Bar", "Qty", "Cumul %"].map(h => (
-                  <span key={h} style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, color: S.tertiary }}>{h}</span>
+                  <span key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.tertiary }}>{h}</span>
                 ))}
               </div>
               {ac.executionSchedule.slice(0, 10).map((row, i) => {
@@ -432,19 +432,19 @@ export default function MarketMicrostructure({
                 const cumPct = row.cumulative / orderSize;
                 return (
                   <div key={i} style={{ display: "grid", gridTemplateColumns: "60px 1fr 100px 80px", gap: 6, padding: "4px 8px", borderBottom: `1px solid ${S.soft}` }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>P{row.interval}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>P{row.interval}</span>
                     <div style={{ alignSelf: "center" }}>
                       <div style={{ height: 8, background: S.rim, borderRadius: 1 }}>
                         <div style={{ height: "100%", width: `${Math.min(100, pct * 100).toFixed(1)}%`, background: S.cyan, borderRadius: 1 }} />
                       </div>
                     </div>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.primary }}>{fmt(row.qty)}</span>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.secondary }}>{(cumPct * 100).toFixed(0)}%</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{fmt(row.qty)}</span>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>{(cumPct * 100).toFixed(0)}%</span>
                   </div>
                 );
               })}
             </div>
-            <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>
+            <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
               Almgren & Chriss (2001) "Optimal Execution of Portfolio Transactions" Journal of Risk 3(2) ·
               Temporary impact: η=14.2% empirical · Permanent impact: γ=7.1% ·
               Optimal decay trajectory: x_j = X × sinh(κ(T-t_j))/sinh(κT)

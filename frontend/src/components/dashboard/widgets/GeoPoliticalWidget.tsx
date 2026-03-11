@@ -96,7 +96,7 @@ function RateBarChart({ banks }: { banks: CentralBankEntry[] }) {
   const sorted = [...banks].sort((a, b) => b.rate - a.rate);
   return (
     <div style={{ padding: "12px 14px" }}>
-      <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
         <span>POLICY RATE COMPARISON</span>
         <span>0% ──── {MAX_RATE}%</span>
       </div>
@@ -108,16 +108,16 @@ function RateBarChart({ banks }: { banks: CentralBankEntry[] }) {
             <div key={cb.bank}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 11 }}>{cb.flag}</span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.primary }}>
+                  <span style={{ fontSize: 12 }}>{cb.flag}</span>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary }}>
                     {cb.bank.split(" ")[0]}
                   </span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     {cb.direction === "hawkish" ? "▲" : cb.direction === "dovish" ? "▼" : "●"} {cb.direction}
                   </span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, color: S.primary, minWidth: 42, textAlign: "right" }}>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.primary, minWidth: 42, textAlign: "right" }}>
                     {cb.rateStr}
                   </span>
                 </div>
@@ -258,17 +258,17 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
       <div className="widget-drag-handle" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: `1px solid ${S.rim}`, background: S.bgDeep, flexShrink: 0, cursor: "grab" }}>
         <span aria-hidden="true" style={{ fontFamily: "monospace", fontSize: 13, color: S.tertiary, flexShrink: 0, lineHeight: 1, userSelect: "none" }}>⠿</span>
         <Globe2 size={13} color={S.cyan} style={{ flexShrink: 0 }} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, textTransform: "uppercase" }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, textTransform: "uppercase" }}>
           Geopolitical &amp; Macro
         </span>
 
         {/* Source badge — Yahoo Finance when live, POLISOPHIC otherwise */}
         {newsLive ? (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.08em", color: S.green, background: `color-mix(in srgb, ${S.green} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${S.green} 25%, transparent)`, borderRadius: 3, padding: "1px 5px" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.08em", color: S.green, background: `color-mix(in srgb, ${S.green} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${S.green} 25%, transparent)`, borderRadius: 3, padding: "1px 5px" }}>
             ● YAHOO FINANCE
           </span>
         ) : (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.1em", color: S.amber, background: `color-mix(in srgb, ${S.amber} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, borderRadius: 3, padding: "1px 5px" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.1em", color: S.amber, background: `color-mix(in srgb, ${S.amber} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${S.amber} 30%, transparent)`, borderRadius: 3, padding: "1px 5px" }}>
             {newsLoading ? "LOADING…" : "POLISOPHIC"}
           </span>
         )}
@@ -277,12 +277,12 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
 
         {/* Macro live badge */}
         {asOf && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 8, color: macroSrc === "live" ? S.green : S.tertiary, background: `color-mix(in srgb, ${macroSrc === "live" ? S.green : S.tertiary} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${macroSrc === "live" ? S.green : S.tertiary} 20%, transparent)`, borderRadius: 3, padding: "1px 5px" }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: macroSrc === "live" ? S.green : S.tertiary, background: `color-mix(in srgb, ${macroSrc === "live" ? S.green : S.tertiary} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${macroSrc === "live" ? S.green : S.tertiary} 20%, transparent)`, borderRadius: 3, padding: "1px 5px" }}>
             {macroSrc === "live" ? "LIVE · " : ""}{asOf}
           </span>
         )}
 
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>{time.slice(11, 16)} UTC</span>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{time.slice(11, 16)} UTC</span>
         {onRemove && (
           <button onClick={onRemove} title="Remove widget" style={{ background: "none", border: "none", cursor: "pointer", color: S.tertiary, display: "flex", alignItems: "center", padding: 2 }}>
             <X size={12} />
@@ -295,9 +295,9 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ flex: 1, padding: "6px 10px", fontFamily: S.fontMono, fontSize: 9, letterSpacing: "0.06em", fontWeight: 700, cursor: "pointer", color: isActive ? S.cyan : S.tertiary, background: isActive ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : "transparent", borderBottom: isActive ? `2px solid ${S.cyan}` : "2px solid transparent", border: "none", borderRight: `1px solid ${S.soft}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ flex: 1, padding: "6px 10px", fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.06em", fontWeight: 700, cursor: "pointer", color: isActive ? S.cyan : S.tertiary, background: isActive ? `color-mix(in srgb, ${S.cyan} 6%, transparent)` : "transparent", borderBottom: isActive ? `2px solid ${S.cyan}` : "2px solid transparent", border: "none", borderRight: `1px solid ${S.soft}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
               {tab.label}
-              <span style={{ fontSize: 8, color: isActive ? S.cyan : S.tertiary, background: isActive ? `color-mix(in srgb, ${S.cyan} 15%, transparent)` : `color-mix(in srgb, ${S.tertiary} 10%, transparent)`, padding: "0 4px", borderRadius: 3, fontWeight: 600 }}>
+              <span style={{ fontSize: 12, color: isActive ? S.cyan : S.tertiary, background: isActive ? `color-mix(in srgb, ${S.cyan} 15%, transparent)` : `color-mix(in srgb, ${S.tertiary} 10%, transparent)`, padding: "0 4px", borderRadius: 3, fontWeight: 600 }}>
                 {tab.count}
               </span>
             </button>
@@ -314,17 +314,17 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
 
             {/* Sub-header */}
             <div style={{ padding: "5px 12px", borderBottom: `1px solid ${S.soft}`, background: S.bgSub, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.07em", color: newsLive ? S.green : S.tertiary }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.07em", color: newsLive ? S.green : S.tertiary }}>
                 {newsLive ? `● LIVE · ${newsCount} articles` : newsLoading ? "○ FETCHING…" : "○ NO DATA"}
               </span>
               {newsFetchedAgo && (
-                <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>· updated {newsFetchedAgo}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>· updated {newsFetchedAgo}</span>
               )}
               <div style={{ flex: 1 }} />
               <button
                 onClick={fetchNews}
                 disabled={newsLoading}
-                style={{ background: "none", border: "none", cursor: newsLoading ? "default" : "pointer", color: S.tertiary, display: "flex", alignItems: "center", gap: 3, padding: 0, fontFamily: S.fontMono, fontSize: 8 }}
+                style={{ background: "none", border: "none", cursor: newsLoading ? "default" : "pointer", color: S.tertiary, display: "flex", alignItems: "center", gap: 3, padding: 0, fontFamily: S.fontMono, fontSize: 12 }}
               >
                 <RefreshCw size={9} color={S.tertiary} style={{ animation: newsLoading ? "spin 1s linear infinite" : "none" }} />
                 REFRESH
@@ -333,7 +333,7 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
 
             {/* News list */}
             {newsLoading && news.length === 0 ? (
-              <div style={{ padding: "24px 14px", fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, textAlign: "center", letterSpacing: "0.08em" }}>
+              <div style={{ padding: "24px 14px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textAlign: "center", letterSpacing: "0.08em" }}>
                 Fetching from Yahoo Finance…
               </div>
             ) : news.length > 0 ? (
@@ -361,17 +361,17 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {/* Meta row */}
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                        <span style={{ fontFamily: S.fontMono, fontSize: 8, fontWeight: 600, color: S.cyan, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, color: S.cyan, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                           {article.publisher}
                         </span>
-                        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>·</span>
-                        <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>{article.ago}</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>·</span>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>{article.ago}</span>
                         <div style={{ flex: 1 }} />
                         <ExternalLink size={8} color={S.tertiary} />
                       </div>
 
                       {/* Headline */}
-                      <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.primary, lineHeight: 1.45, fontWeight: 500 }}>
+                      <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary, lineHeight: 1.45, fontWeight: 500 }}>
                         {article.title}
                       </div>
                     </div>
@@ -379,9 +379,9 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
                 </a>
               ))
             ) : (
-              <div style={{ padding: "20px 14px", fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, textAlign: "center", lineHeight: 1.8, letterSpacing: "0.06em" }}>
+              <div style={{ padding: "20px 14px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textAlign: "center", lineHeight: 1.8, letterSpacing: "0.06em" }}>
                 <div>○ No articles retrieved</div>
-                <div style={{ fontSize: 8, marginTop: 4, opacity: 0.7 }}>Yahoo Finance may be unavailable</div>
+                <div style={{ fontSize: 12, marginTop: 4, opacity: 0.7 }}>Yahoo Finance may be unavailable</div>
               </div>
             )}
           </div>
@@ -391,17 +391,17 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
         {activeTab === "macro" && (
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ padding: "6px 14px", borderBottom: `1px solid ${S.soft}`, background: S.bgSub, display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontFamily: S.fontMono, fontSize: 8, color: macroSrc === "live" ? S.green : S.tertiary, letterSpacing: "0.08em" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: macroSrc === "live" ? S.green : S.tertiary, letterSpacing: "0.08em" }}>
                 {macroSrc === "live" ? "● YAHOO FINANCE" : "○ REFERENCE DATA"}
               </span>
               {asOf && (
-                <span style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary }}>· EOD {asOf}</span>
+                <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>· EOD {asOf}</span>
               )}
               <div style={{ flex: 1 }} />
               <button
                 onClick={fetchMacro}
                 disabled={macroLoading}
-                style={{ background: "none", border: "none", cursor: macroLoading ? "default" : "pointer", color: S.tertiary, display: "flex", alignItems: "center", gap: 3, padding: 0, fontFamily: S.fontMono, fontSize: 8 }}
+                style={{ background: "none", border: "none", cursor: macroLoading ? "default" : "pointer", color: S.tertiary, display: "flex", alignItems: "center", gap: 3, padding: 0, fontFamily: S.fontMono, fontSize: 12 }}
               >
                 <RefreshCw size={9} color={S.tertiary} style={{ animation: macroLoading ? "spin 1s linear infinite" : "none" }} />
                 REFRESH
@@ -422,7 +422,7 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
               return (
                 <div key={m.label} style={{ padding: "10px 14px", borderBottom: i < macroSnapshot.length - 1 ? `1px solid ${S.soft}` : "none", display: "grid", gridTemplateColumns: "90px 1fr 56px", alignItems: "center", gap: 12 }}>
                   <div>
-                    <div style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>{m.label}</div>
+                    <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em", marginBottom: 3 }}>{m.label}</div>
                     <div style={{ fontFamily: S.fontMono, fontSize: 19, fontWeight: 700, color: S.primary, lineHeight: 1, letterSpacing: "-0.01em" }}>{m.display}</div>
                     {m.note && (
                       <div style={{ fontFamily: S.fontMono, fontSize: 7, color: macroSrc === "live" ? S.green : S.tertiary, marginTop: 2, opacity: 0.8 }}>
@@ -434,7 +434,7 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
                     <div style={{ height: 7, background: S.bgDeep, border: `1px solid ${S.soft}`, borderRadius: 4, overflow: "hidden", marginBottom: 5 }}>
                       <div style={{ height: "100%", width: `${barPct}%`, background: `linear-gradient(90deg, ${barColor}, color-mix(in srgb, ${barColor} 55%, transparent))`, borderRadius: 4, transition: "width 600ms ease" }} />
                     </div>
-                    <div style={{ fontFamily: S.fontUI, fontSize: 9, color: S.tertiary, lineHeight: 1.3 }}>{m.context}</div>
+                    <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, lineHeight: 1.3 }}>{m.context}</div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
                     <TIcon size={15} color={tColor} />
@@ -452,7 +452,7 @@ export default function GeoPoliticalWidget({ token: _token, user: _user, onRemov
       </div>
 
       {/* ── Footer ── */}
-      <div style={{ padding: "5px 12px", borderTop: `1px solid ${S.soft}`, background: S.bgSub, fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, display: "flex", justifyContent: "space-between", flexShrink: 0 }}>
+      <div style={{ padding: "5px 12px", borderTop: `1px solid ${S.soft}`, background: S.bgSub, fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, display: "flex", justifyContent: "space-between", flexShrink: 0 }}>
         <span>
           Geo: {newsLive ? "Yahoo Finance" : "Simulated"} · Macro: {macroSrc === "live" ? "Yahoo Finance" : "Reference"}
         </span>

@@ -46,14 +46,14 @@ function KpiTile({ label, value, sub, color }: { label: string; value: string; s
       flexDirection: "column",
       gap: 4,
     }}>
-      <span style={{ fontSize: 10, fontFamily: S.fontMono, color: S.textTertiary, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+      <span style={{ fontSize: 12, fontFamily: S.fontMono, color: S.textTertiary, letterSpacing: "0.08em", textTransform: "uppercase" }}>
         {label}
       </span>
       <span style={{ fontSize: 20, fontFamily: S.fontMono, fontWeight: 700, color: color ?? S.textPrimary, lineHeight: 1.2 }}>
         {value}
       </span>
       {sub && (
-        <span style={{ fontSize: 10, fontFamily: S.fontMono, color: S.textTertiary }}>
+        <span style={{ fontSize: 12, fontFamily: S.fontMono, color: S.textTertiary }}>
           {sub}
         </span>
       )}
@@ -133,10 +133,10 @@ export default function VaRPanel({ extendedData, buckets, scenarioTotals }: VaRP
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 11, fontFamily: S.fontMono, color: S.textTertiary, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+        <span style={{ fontSize: 12, fontFamily: S.fontMono, color: S.textTertiary, letterSpacing: "0.1em", textTransform: "uppercase" }}>
           VaR / CVaR ANALYSIS
         </span>
-        <span style={{ fontSize: 10, fontFamily: S.fontMono, color: S.textTertiary }}>
+        <span style={{ fontSize: 12, fontFamily: S.fontMono, color: S.textTertiary }}>
           {scenarioTotals.length} scenarios
         </span>
       </div>
@@ -171,7 +171,7 @@ export default function VaRPanel({ extendedData, buckets, scenarioTotals }: VaRP
 
       {/* Scenario Loss Bar Chart */}
       <div style={{ background: S.bgDeep, border: `1px solid ${S.soft}`, borderRadius: 4, padding: "12px 12px 4px" }}>
-        <div style={{ fontSize: 10, fontFamily: S.fontMono, color: S.textTertiary, marginBottom: 8, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+        <div style={{ fontSize: 12, fontFamily: S.fontMono, color: S.textTertiary, marginBottom: 8, letterSpacing: "0.08em", textTransform: "uppercase" }}>
           Scenario Loss by Sigma Level (USD)
         </div>
         <BucketBarChart
@@ -183,7 +183,7 @@ export default function VaRPanel({ extendedData, buckets, scenarioTotals }: VaRP
 
       {/* Methodology note */}
       <div style={{
-        fontSize: 10,
+        fontSize: 12,
         fontFamily: S.fontMono,
         color: S.textTertiary,
         borderLeft: `2px solid ${S.rim}`,

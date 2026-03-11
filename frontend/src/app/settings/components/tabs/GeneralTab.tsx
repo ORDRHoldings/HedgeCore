@@ -65,10 +65,10 @@ export default function GeneralTab({ s, set }: Props) {
         borderLeft: `3px solid ${S.cyan}`,
         borderRadius: 2, padding: "10px 14px",
       }}>
-        <div style={{ fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, color: S.cyan, letterSpacing: "0.07em", marginBottom: 3 }}>
+        <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, letterSpacing: "0.07em", marginBottom: 3 }}>
           LOGO UPLOAD
         </div>
-        <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>
+        <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
           Logo upload (PNG/SVG, 2× for HiDPI) will appear on report covers, PDF headers, and the portal footer.
           File upload requires server-side storage — configure via the backend admin panel.
         </div>

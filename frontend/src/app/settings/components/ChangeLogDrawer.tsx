@@ -16,12 +16,12 @@ export default function ChangeLogDrawer({ entries, onClose }: Props) {
         padding: "8px 14px", borderBottom: `1px solid ${S.rim}`,
         display: "flex", justifyContent: "space-between", alignItems: "center",
       }}>
-        <span style={{ fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", color: S.tertiary }}>
           SETTINGS CHANGE LOG
         </span>
         <button
           onClick={onClose}
-          style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}
+          style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, background: "none", border: "none", cursor: "pointer" }}
         >
           CLOSE
         </button>
@@ -32,8 +32,8 @@ export default function ChangeLogDrawer({ entries, onClose }: Props) {
         </div>
       ) : entries.map((e, i) => (
         <div key={i} style={{ padding: "7px 14px", borderBottom: `1px solid ${S.soft}`, display: "flex", gap: 14 }}>
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, flexShrink: 0 }}>{e.ts}</span>
-          <span style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>{e.msg}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, flexShrink: 0 }}>{e.ts}</span>
+          <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{e.msg}</span>
         </div>
       ))}
     </div>

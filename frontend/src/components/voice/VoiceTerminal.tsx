@@ -234,7 +234,7 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
               <span
                 style={{
                   fontFamily: T.mono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: "0.18em",
                   color: T.primary,
@@ -245,7 +245,7 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
               <span
                 style={{
                   fontFamily: T.mono,
-                  fontSize: 9,
+                  fontSize: 12,
                   letterSpacing: "0.1em",
                   color: T.muted,
                 }}
@@ -312,7 +312,7 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                   gap: 8,
                   color: T.muted,
                   fontFamily: T.mono,
-                  fontSize: 11,
+                  fontSize: 12,
                 }}
               >
                 <LoaderIcon
@@ -340,7 +340,7 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                   <span
                     style={{
                       fontFamily: T.mono,
-                      fontSize: 10,
+                      fontSize: 12,
                       color: T.muted,
                       letterSpacing: "0.08em",
                     }}
@@ -404,7 +404,7 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                 <span
                   style={{
                     fontFamily: T.mono,
-                    fontSize: 9,
+                    fontSize: 12,
                     color: T.blue,
                     letterSpacing: "0.1em",
                   }}
@@ -458,7 +458,7 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                   style={{
                     alignSelf: "flex-start",
                     fontFamily: T.mono,
-                    fontSize: 10,
+                    fontSize: 12,
                     letterSpacing: "0.1em",
                     background: T.red,
                     color: "#fff",
@@ -521,7 +521,7 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
               <span
                 style={{
                   fontFamily: T.mono,
-                  fontSize: 10,
+                  fontSize: 12,
                   color: T.muted,
                   letterSpacing: "0.08em",
                   flex: 1,
@@ -560,7 +560,7 @@ export default function VoiceTerminal({ token }: VoiceTerminalProps) {
                 disabled={!textInput.trim() || !inputEnabled}
                 style={{
                   fontFamily: T.mono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: "0.08em",
                   color: "#fff",

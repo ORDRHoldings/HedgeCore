@@ -27,7 +27,7 @@ export default function ToggleSwitch({ checked, onChange, label, desc }: Props) 
           {label}
         </div>
         {desc && (
-          <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.tertiary }}>{desc}</div>
+          <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>{desc}</div>
         )}
       </div>
     </label>

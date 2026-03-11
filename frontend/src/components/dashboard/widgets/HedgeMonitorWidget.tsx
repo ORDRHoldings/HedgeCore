@@ -132,11 +132,11 @@ export default function HedgeMonitorWidget({ token, onRemove }: Props) {
         }}
       >
         <Activity size={14} color={S.green} />
-        <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.primary, flex: 1 }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.primary, flex: 1 }}>
           HEDGE MONITOR
         </span>
         <span style={{
-          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
           color: S.green,
           background: `color-mix(in srgb,${S.green} 12%,transparent)`,
           border: `1px solid color-mix(in srgb,${S.green} 25%,transparent)`,
@@ -155,7 +155,7 @@ export default function HedgeMonitorWidget({ token, onRemove }: Props) {
       <div style={{ flex: 1, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
         {loading ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary, letterSpacing: "0.1em" }}>LOADING...</span>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em" }}>LOADING...</span>
           </div>
         ) : !data ? (
           <GuidedEmptyState
@@ -170,7 +170,7 @@ export default function HedgeMonitorWidget({ token, onRemove }: Props) {
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: `color-mix(in srgb,${pnlColor} 6%,${S.bgSub})`, border: `1px solid color-mix(in srgb,${pnlColor} 20%,transparent)`, borderRadius: 3 }}>
               <PnlIcon size={18} color={pnlColor} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 2 }}>MTM P&L</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 2 }}>MTM P&L</div>
                 <div style={{ fontFamily: S.fontMono, fontSize: 18, fontWeight: 700, color: pnlColor, letterSpacing: "0.04em" }}>
                   {fmtPnl(data.total_mtm_pnl)}
                 </div>
@@ -181,7 +181,7 @@ export default function HedgeMonitorWidget({ token, onRemove }: Props) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {/* Effectiveness */}
               <div style={{ padding: "8px 10px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 3 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>EFFECTIVENESS</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>EFFECTIVENESS</div>
                 <div style={{ fontFamily: S.fontMono, fontSize: 15, fontWeight: 700, color: effColor }}>{fmt(data.effectiveness_score * 100, 0)}%</div>
                 <div style={{ height: 3, borderRadius: 2, background: S.soft, marginTop: 4, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${data.effectiveness_score * 100}%`, background: effColor, borderRadius: 2, transition: "width 400ms ease" }} />
@@ -190,7 +190,7 @@ export default function HedgeMonitorWidget({ token, onRemove }: Props) {
 
               {/* Coverage */}
               <div style={{ padding: "8px 10px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 3 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>COVERAGE</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>COVERAGE</div>
                 <div style={{ fontFamily: S.fontMono, fontSize: 15, fontWeight: 700, color: covColor }}>{fmt(data.coverage_pct * 100, 0)}%</div>
                 <div style={{ height: 3, borderRadius: 2, background: S.soft, marginTop: 4, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${data.coverage_pct * 100}%`, background: covColor, borderRadius: 2, transition: "width 400ms ease" }} />
@@ -199,13 +199,13 @@ export default function HedgeMonitorWidget({ token, onRemove }: Props) {
 
               {/* Active hedges */}
               <div style={{ padding: "8px 10px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 3 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>ACTIVE HEDGES</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>ACTIVE HEDGES</div>
                 <div style={{ fontFamily: S.fontMono, fontSize: 15, fontWeight: 700, color: S.cyan }}>{data.active_hedges}</div>
               </div>
 
               {/* Next roll */}
               <div style={{ padding: "8px 10px", background: S.bgSub, border: `1px solid ${S.soft}`, borderRadius: 3 }}>
-                <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>NEXT ROLL</div>
+                <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.1em", marginBottom: 4 }}>NEXT ROLL</div>
                 <div style={{ fontFamily: S.fontMono, fontSize: 15, fontWeight: 700, color: data.next_roll_days !== null && data.next_roll_days <= 7 ? S.amber : S.primary }}>
                   {data.next_roll_days !== null ? `${data.next_roll_days}d` : "—"}
                 </div>
@@ -222,7 +222,7 @@ export default function HedgeMonitorWidget({ token, onRemove }: Props) {
           display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
           padding: "8px 14px",
           borderTop: `1px solid ${S.soft}`,
-          fontFamily: S.fontMono, fontSize: 10, fontWeight: 600, letterSpacing: "0.08em",
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em",
           color: S.cyan, textDecoration: "none",
           background: "color-mix(in srgb, var(--accent-cyan) 4%, transparent)",
         }}

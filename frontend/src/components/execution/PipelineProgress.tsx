@@ -81,7 +81,7 @@ export default function PipelineProgress({ step, onStepClick }: Props) {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 700,
                   color: isDone ? "var(--bg-deep)" : color,
                   flexShrink: 0,
@@ -93,7 +93,7 @@ export default function PipelineProgress({ step, onStepClick }: Props) {
               <div style={{ textAlign: "left" }}>
                 <div
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: isActive ? 700 : 500,
                     letterSpacing: "0.10em",
                     color,
@@ -104,7 +104,7 @@ export default function PipelineProgress({ step, onStepClick }: Props) {
                 </div>
                 <div
                   style={{
-                    fontSize: 8,
+                    fontSize: 12,
                     color: MUTED,
                     letterSpacing: "0.04em",
                     lineHeight: 1.2,

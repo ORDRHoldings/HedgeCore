@@ -75,14 +75,14 @@ export default function CrisisImpactPanel({ positions, hedgeCoveragePercent }: C
         style={{
           display: "flex", alignItems: "center", gap: 8, width: "100%",
           padding: "10px 0", background: "transparent", border: "none", cursor: "pointer",
-          fontFamily: S.fontMono, fontSize: 10, fontWeight: 600,
+          fontFamily: S.fontMono, fontSize: 12, fontWeight: 600,
           letterSpacing: "0.10em", color: S.tertiary, textTransform: "uppercase",
         }}
       >
         <span style={{ transition: "transform 0.15s", transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
         CRISIS SCENARIO IMPACT
         <span style={{
-          fontSize: 9, padding: "1px 5px",
+          fontSize: 12, padding: "1px 5px",
           border: "1px solid rgba(0,255,255,0.3)",
           background: "rgba(0,255,255,0.06)",
           color: S.cyan, letterSpacing: "0.06em",
@@ -106,10 +106,10 @@ export default function CrisisImpactPanel({ positions, hedgeCoveragePercent }: C
                 background: S.bgSub, border: `1px solid ${S.rim}`, borderRadius: 4,
               }}>
                 <div>
-                  <div style={{ fontFamily: S.fontUI, fontSize: 11, fontWeight: 600, color: S.primary }}>
+                  <div style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 600, color: S.primary }}>
                     {crisis.name}
                   </div>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginTop: 2 }}>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 2 }}>
                     {crisis.period} · Spot shock: {spotShockPct.toFixed(0)}%
                     {crisis.region === "EM" && (
                       <span style={{ marginLeft: 6, color: S.amber }}>EM</span>
@@ -117,18 +117,18 @@ export default function CrisisImpactPanel({ positions, hedgeCoveragePercent }: C
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>UNHEDGED LOSS</div>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>UNHEDGED LOSS</div>
                   <div style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 600, color: S.red }}>{fmtUSD(unhedgedLoss)}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>PROTECTION</div>
+                  <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>PROTECTION</div>
                   <div style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 600, color: S.green }}>+{fmtUSD(protection)}</div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginTop: 10, lineHeight: 1.5 }}>
+          <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 10, lineHeight: 1.5 }}>
             Scenarios calibrated from BIS, IMF WEO, and academic literature.
             Coverage: {(hedgeCoveragePercent * 100).toFixed(0)}%. Unhedged losses are estimates only.
           </div>

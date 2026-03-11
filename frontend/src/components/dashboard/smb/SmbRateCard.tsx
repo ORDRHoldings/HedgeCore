@@ -83,7 +83,7 @@ export default function SmbRateCard({ token }: Props) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             letterSpacing: "0.1em",
             color: S.tertiary,
@@ -94,7 +94,7 @@ export default function SmbRateCard({ token }: Props) {
         </span>
         <span style={{ flex: 1 }} />
         {lastFetch && (
-          <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {lastFetch}
           </span>
         )}
@@ -146,7 +146,7 @@ export default function SmbRateCard({ token }: Props) {
             <span
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: "0.1em",
                 color: S.tertiary,

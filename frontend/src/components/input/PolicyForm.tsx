@@ -58,7 +58,7 @@ export default function PolicyForm({
               alignItems: 'center',
               gap: 5,
               fontFamily: 'var(--font-terminal-mono, monospace)',
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               letterSpacing: '0.06em',
               color: showAIBuilder ? 'var(--accent-cyan)' : 'var(--text-secondary)',

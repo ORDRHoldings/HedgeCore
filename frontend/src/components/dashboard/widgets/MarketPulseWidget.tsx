@@ -145,7 +145,7 @@ function TickerTape({ quotes }: { quotes: QuoteData[] }) {
                 padding: "0 14px",
                 borderRight: `1px solid ${S.soft}`,
                 fontFamily: S.fontMono,
-                fontSize: 9,
+                fontSize: 12,
               }}
             >
               <span style={{ color: S.cyan, fontWeight: 700, letterSpacing: "0.06em" }}>
@@ -272,7 +272,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: "0.08em",
             color: S.primary,
@@ -285,7 +285,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
         <span
           style={{
             fontFamily: S.fontMono,
-            fontSize: 8,
+            fontSize: 12,
             letterSpacing: "0.08em",
             color: S.cyan,
             background: `color-mix(in srgb, ${S.cyan} 10%, transparent)`,
@@ -305,7 +305,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 8,
+              fontSize: 12,
               letterSpacing: "0.08em",
               color: sentimentColor,
               background: `color-mix(in srgb, ${sentimentColor} 10%, transparent)`,
@@ -322,7 +322,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
         {/* Data source badge — only shown when data is loaded */}
         {!loading && (
           <span style={{
-            fontFamily: S.fontMono, fontSize: 8, letterSpacing: "0.08em",
+            fontFamily: S.fontMono, fontSize: 12, letterSpacing: "0.08em",
             color: dataSource === "live" ? S.green : S.amber,
             background: `color-mix(in srgb, ${dataSource === "live" ? S.green : S.amber} 10%, transparent)`,
             border: `1px solid color-mix(in srgb, ${dataSource === "live" ? S.green : S.amber} 25%, transparent)`,
@@ -345,13 +345,13 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
             }}
           />
           <span
-            style={{ fontFamily: S.fontMono, fontSize: 9, color: S.green, fontWeight: 700 }}
+            style={{ fontFamily: S.fontMono, fontSize: 12, color: S.green, fontWeight: 700 }}
           >
             {session}
           </span>
         </div>
 
-        <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary }}>
+        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
           {time.slice(11, 16)} UTC
         </span>
 
@@ -399,7 +399,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
                 flex: 1,
                 padding: "6px 10px",
                 fontFamily: S.fontMono,
-                fontSize: 9,
+                fontSize: 12,
                 letterSpacing: "0.06em",
                 fontWeight: 700,
                 cursor: "pointer",
@@ -419,7 +419,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
               {tab.label}
               <span
                 style={{
-                  fontSize: 8,
+                  fontSize: 12,
                   color: isActive ? S.cyan : S.tertiary,
                   background: isActive
                     ? `color-mix(in srgb, ${S.cyan} 15%, transparent)`
@@ -459,7 +459,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
             <div
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 10,
+                fontSize: 12,
                 color: S.secondary,
                 letterSpacing: "0.04em",
                 fontWeight: 600,
@@ -470,7 +470,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
             <div
               style={{
                 fontFamily: S.fontUI,
-                fontSize: 11,
+                fontSize: 12,
                 color: S.tertiary,
                 lineHeight: 1.5,
                 maxWidth: 260,
@@ -530,7 +530,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
                     <span
                       style={{
                         fontFamily: S.fontMono,
-                        fontSize: 9,
+                        fontSize: 12,
                         color: S.cyan,
                         letterSpacing: "0.08em",
                         fontWeight: 700,
@@ -567,7 +567,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
                         <span
                           style={{
                             fontFamily: S.fontMono,
-                            fontSize: 10,
+                            fontSize: 12,
                             color: changeColor,
                             fontWeight: 700,
                             background: `color-mix(in srgb, ${changeColor} 12%, transparent)`,
@@ -593,7 +593,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
                     <span
                       style={{
                         fontFamily: S.fontUI,
-                        fontSize: 8,
+                        fontSize: 12,
                         color: S.tertiary,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -640,7 +640,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
           }}
         >
           <span
-            style={{ fontFamily: S.fontMono, fontSize: 8, color: S.tertiary, letterSpacing: "0.08em" }}
+            style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.08em" }}
           >
             BREADTH
           </span>
@@ -666,7 +666,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 8,
+              fontSize: 12,
               color: S.green,
               fontWeight: 700,
             }}
@@ -676,7 +676,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
           <span
             style={{
               fontFamily: S.fontMono,
-              fontSize: 8,
+              fontSize: 12,
               color: S.red,
               fontWeight: 700,
             }}
@@ -693,7 +693,7 @@ export default function MarketPulseWidget({ token, user, onRemove }: Props) {
           borderTop: `1px solid ${S.soft}`,
           background: S.bgSub,
           fontFamily: S.fontMono,
-          fontSize: 8,
+          fontSize: 12,
           color: S.tertiary,
           display: "flex",
           justifyContent: "space-between",
