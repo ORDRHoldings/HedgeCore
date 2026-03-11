@@ -3,12 +3,15 @@
  * /chart — ORDR Chart Platform
  *
  * Full-screen Canvas 2D charting with pair selector, timeframe selector,
- * and the ChartEngine component.
+ * ChartEngine, right-side TradingPanel, and bottom StrategyPanel.
  */
-import React, { useState, Suspense } from "react";
+import React, { useState, useCallback, Suspense } from "react";
 import { useAuth } from "@/lib/authContext";
 import { useChartData } from "@/hooks/useChartData";
 import ChartEngine from "@/components/chart/ChartEngine";
+import TradingPanel from "@/components/chart/TradingPanel";
+import StrategyPanel, { StrategyPanelToggle } from "@/components/chart/StrategyPanel";
+import { RefreshCw, Layers } from "lucide-react";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -184,6 +187,15 @@ function ChartPageInner() {
   const [interval, setInterval] = useState("1day");
   const { bars, loading, error, source, refetch } = useChartData(pair, interval, token || "", 1000);
 
+  /* Panel state */
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [bottomPanelOpen, setBottomPanelOpen] = useState(false);
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(200);
+
+  const toggleRight = useCallback(() => setRightPanelOpen((p) => !p), []);
+  const toggleBottom = useCallback(() => setBottomPanelOpen((p) => !p), []);
+  const closeBottom = useCallback(() => setBottomPanelOpen(false), []);
+
   if (!token) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: S.fontMono, color: S.textTertiary }}>
@@ -194,30 +206,31 @@ function ChartPageInner() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: S.bgDeep, overflow: "hidden" }}>
-      {/* ── Top Control Bar ── */}
+      {/* ── Top Control Bar (compact, ~40px) ── */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "8px 16px",
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "4px 12px",
         borderBottom: `1px solid ${S.rim}`,
         background: S.bgPanel,
-        minHeight: 48,
+        height: 40,
+        minHeight: 40,
       }}>
-        {/* Pair Selector with optgroup */}
+        {/* Pair Selector */}
         <select
           value={pair}
           onChange={e => setPair(e.target.value)}
           style={{
             fontFamily: S.fontMono,
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: 700,
-            padding: "4px 8px",
+            padding: "3px 6px",
             border: `1px solid ${S.rim}`,
-            borderRadius: 6,
+            borderRadius: 4,
             background: S.bgPanel,
             color: S.textPrimary,
             cursor: "pointer",
             outline: "none",
-            maxWidth: 180,
+            maxWidth: 160,
           }}
         >
           {ASSET_GROUPS.map((group) => (
@@ -231,24 +244,27 @@ function ChartPageInner() {
           ))}
         </select>
 
+        {/* Separator */}
+        <div style={{ width: 1, height: 20, background: S.rim, flexShrink: 0 }} />
+
         {/* Timeframes */}
-        <div style={{ display: "flex", gap: 2, background: S.bgSub, borderRadius: 6, padding: 2 }}>
+        <div style={{ display: "flex", gap: 1, background: S.bgSub, borderRadius: 4, padding: 1 }}>
           {TIMEFRAMES.map(tf => (
             <button
               key={tf.value}
               onClick={() => setInterval(tf.value)}
               style={{
                 fontFamily: S.fontMono,
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: interval === tf.value ? 700 : 500,
-                padding: "4px 10px",
-                borderRadius: 4,
+                padding: "3px 8px",
+                borderRadius: 3,
                 border: "none",
                 background: interval === tf.value ? S.bgPanel : "transparent",
                 color: interval === tf.value ? S.accent : S.textSecondary,
                 cursor: "pointer",
-                boxShadow: interval === tf.value ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
-                transition: "all 0.15s",
+                transition: "all 0.12s",
+                lineHeight: "16px",
               }}
             >
               {tf.label}
@@ -258,38 +274,70 @@ function ChartPageInner() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Refresh */}
-        <button
-          onClick={refetch}
-          style={{
-            fontFamily: S.fontMono,
-            fontSize: 11,
-            padding: "4px 12px",
-            borderRadius: 6,
-            border: `1px solid ${S.rim}`,
-            background: S.bgPanel,
-            color: S.textSecondary,
-            cursor: "pointer",
-          }}
-        >
-          REFRESH
-        </button>
-
         {/* Bar count */}
         <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.textTertiary }}>
           {bars.length} bars
         </span>
+
+        {/* Separator */}
+        <div style={{ width: 1, height: 20, background: S.rim, flexShrink: 0 }} />
+
+        {/* Refresh */}
+        <button
+          onClick={refetch}
+          title="Refresh data"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 28,
+            height: 28,
+            borderRadius: 4,
+            border: `1px solid ${S.rim}`,
+            background: S.bgPanel,
+            color: S.textSecondary,
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          <RefreshCw size={13} />
+        </button>
       </div>
 
-      {/* ── Chart Area ── */}
-      <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-        <ChartEngine
-          bars={bars}
+      {/* ── Main area: chart + right panel ── */}
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        {/* Chart area (flex column: chart canvas + bottom panel) */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+          {/* Chart canvas */}
+          <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+            <ChartEngine
+              bars={bars}
+              pair={pair}
+              interval={interval}
+              source={source}
+              loading={loading}
+              error={error}
+              onPairChange={setPair}
+            />
+          </div>
+
+          {/* Bottom panel or toggle */}
+          {bottomPanelOpen ? (
+            <StrategyPanel
+              height={bottomPanelHeight}
+              onResize={setBottomPanelHeight}
+              onClose={closeBottom}
+            />
+          ) : (
+            <StrategyPanelToggle onClick={toggleBottom} />
+          )}
+        </div>
+
+        {/* Right panel */}
+        <TradingPanel
+          isOpen={rightPanelOpen}
+          onToggle={toggleRight}
           pair={pair}
-          interval={interval}
-          source={source}
-          loading={loading}
-          error={error}
           onPairChange={setPair}
         />
       </div>

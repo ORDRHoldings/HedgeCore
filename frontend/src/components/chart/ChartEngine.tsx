@@ -77,6 +77,7 @@ import ChartContextMenu from "./ChartContextMenu";
 import ChartIndicatorDialog from "./ChartIndicatorDialog";
 import IndicatorLayers from "./IndicatorLayers";
 import type { OverlayChip, SubPaneChip } from "./IndicatorLayers";
+import { getIndicatorSchema, getDefaultParams, formatIndicatorLabel } from "./core/indicatorSchema";
 
 /* ═══════════════════════════════════════════════════════
    Types & Defaults
@@ -198,9 +199,18 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   const [crosshairMode, setCrosshairMode] = useState<CrosshairMode>("crosshair");
   const [enabledSessions, setEnabledSessions] = useState<string[]>([]);
 
+  // Indicator parameter overrides: { indicatorId: { paramKey: value } }
+  const [indicatorParams, setIndicatorParams] = useState<Record<string, Record<string, number>>>({});
+
   // Undo/redo stack
   const [undoStack, setUndoStack] = useState<Drawing[][]>([]);
   const [redoStack, setRedoStack] = useState<Drawing[][]>([]);
+
+  // Drawing tool refs (avoid stale closures in pointer handlers)
+  const drawingModeRef = useRef<DrawingType | null>(drawingMode);
+  const drawingPointsRef = useRef<{ index: number; price: number }[]>(drawingPoints);
+  useEffect(() => { drawingModeRef.current = drawingMode; }, [drawingMode]);
+  useEffect(() => { drawingPointsRef.current = drawingPoints; }, [drawingPoints]);
 
   // Layout (left toolbar adds 40px)
   const LEFT_TOOLBAR_WIDTH = 40;
@@ -209,44 +219,61 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     [dimensions.w, dimensions.h, activeSubPanes.length],
   );
 
-  // Indicators (memoized)
+  // Helper: get param value with fallback to schema default
+  const p = useCallback((id: string, key: string, fallback: number): number => {
+    return indicatorParams[id]?.[key] ?? fallback;
+  }, [indicatorParams]);
+
+  // Indicators (memoized, driven by indicatorParams)
   const indicators = useMemo((): IndicatorBundle => {
     if (bars.length < 5) return EMPTY_BUNDLE;
 
     const overlayLines: IndicatorBundle["overlayLines"] = [];
-    if (config.sma20) overlayLines.push({ points: computeSMA(bars, 20), color: THEME.sma1Color, label: "SMA(20)" });
-    if (config.sma50) overlayLines.push({ points: computeSMA(bars, 50), color: THEME.sma2Color, label: "SMA(50)" });
-    if (config.sma200) overlayLines.push({ points: computeSMA(bars, 200), color: "#FF5252", label: "SMA(200)" });
-    if (config.ema20) overlayLines.push({ points: computeEMA(bars, 20), color: THEME.emaColor, label: "EMA(20)" });
-    if (config.ema50) overlayLines.push({ points: computeEMA(bars, 50), color: "#00E676", label: "EMA(50)" });
-    if (config.hma9) overlayLines.push({ points: computeHMA(bars, 9), color: "#00E676", label: "HMA(9)" });
-    if (config.tema20) overlayLines.push({ points: computeTEMA(bars, 20), color: "#FF4081", label: "TEMA(20)" });
+    if (config.sma20) overlayLines.push({ points: computeSMA(bars, p("sma20", "period", 20)), color: THEME.sma1Color, label: formatIndicatorLabel("sma20", { period: p("sma20", "period", 20) }) });
+    if (config.sma50) overlayLines.push({ points: computeSMA(bars, p("sma50", "period", 50)), color: THEME.sma2Color, label: formatIndicatorLabel("sma50", { period: p("sma50", "period", 50) }) });
+    if (config.sma200) overlayLines.push({ points: computeSMA(bars, p("sma200", "period", 200)), color: "#FF5252", label: formatIndicatorLabel("sma200", { period: p("sma200", "period", 200) }) });
+    if (config.ema20) overlayLines.push({ points: computeEMA(bars, p("ema20", "period", 20)), color: THEME.emaColor, label: formatIndicatorLabel("ema20", { period: p("ema20", "period", 20) }) });
+    if (config.ema50) overlayLines.push({ points: computeEMA(bars, p("ema50", "period", 50)), color: "#00E676", label: formatIndicatorLabel("ema50", { period: p("ema50", "period", 50) }) });
+    if (config.hma9) overlayLines.push({ points: computeHMA(bars, p("hma9", "period", 9)), color: "#00E676", label: formatIndicatorLabel("hma9", { period: p("hma9", "period", 9) }) });
+    if (config.tema20) overlayLines.push({ points: computeTEMA(bars, p("tema20", "period", 20)), color: "#FF4081", label: formatIndicatorLabel("tema20", { period: p("tema20", "period", 20) }) });
 
     const bandsList: IndicatorBundle["bands"] = [];
-    if (config.bollinger) bandsList.push({ points: computeBollinger(bars), fill: THEME.bbFill, line: THEME.bbLine, label: "BB(20,2)" });
-    if (config.keltner) bandsList.push({ points: computeKeltner(bars), fill: THEME.kcFill, line: THEME.kcLine, label: "KC(20,10)" });
-    if (config.donchian) bandsList.push({ points: computeDonchian(bars, 20), fill: "rgba(0,188,212,0.06)", line: "#00BCD4", label: "DC(20)" });
+    if (config.bollinger) {
+      const bbPeriod = p("bollinger", "period", 20);
+      const bbStdDev = p("bollinger", "stdDev", 2);
+      bandsList.push({ points: computeBollinger(bars, bbPeriod, bbStdDev), fill: THEME.bbFill, line: THEME.bbLine, label: formatIndicatorLabel("bollinger", { period: bbPeriod, stdDev: bbStdDev }) });
+    }
+    if (config.keltner) {
+      const kcEma = p("keltner", "emaPeriod", 20);
+      const kcAtr = p("keltner", "atrPeriod", 10);
+      const kcMult = p("keltner", "multiplier", 1.5);
+      bandsList.push({ points: computeKeltner(bars, kcEma, kcAtr, kcMult), fill: THEME.kcFill, line: THEME.kcLine, label: formatIndicatorLabel("keltner", { emaPeriod: kcEma, atrPeriod: kcAtr, multiplier: kcMult }) });
+    }
+    if (config.donchian) {
+      const dcPeriod = p("donchian", "period", 20);
+      bandsList.push({ points: computeDonchian(bars, dcPeriod), fill: "rgba(0,188,212,0.06)", line: "#00BCD4", label: formatIndicatorLabel("donchian", { period: dcPeriod }) });
+    }
 
     const vwap = config.vwap ? computeVWAP(bars) : [];
-    const ichimoku = config.ichimoku ? computeIchimoku(bars) : [];
-    const parabolicSAR = config.parabolicSAR ? computeParabolicSAR(bars) : [];
+    const ichimoku = config.ichimoku ? computeIchimoku(bars, p("ichimoku", "tenkan", 9), p("ichimoku", "kijun", 26), p("ichimoku", "senkouB", 52)) : [];
+    const parabolicSAR = config.parabolicSAR ? computeParabolicSAR(bars, p("parabolicSAR", "afStart", 0.02), p("parabolicSAR", "afMax", 0.2)) : [];
     const pivotPointsArr = config.pivotPoints ? computePivotPoints(bars) : [];
     const pivotPoints = pivotPointsArr.length > 0 ? pivotPointsArr[pivotPointsArr.length - 1] : null;
-    const volumeProfile = config.volumeProfile ? computeVolumeProfile(bars) : null;
+    const volumeProfile = config.volumeProfile ? computeVolumeProfile(bars, p("volumeProfile", "numLevels", 50)) : null;
 
     const subPaneData: Record<string, unknown> = {};
     for (const sp of activeSubPanes) {
       switch (sp) {
-        case "rsi": subPaneData.rsi = computeRSI(bars); break;
-        case "macd": subPaneData.macd = computeMACD(bars); break;
-        case "stochastic": subPaneData.stochastic = computeStochastic(bars); break;
-        case "stochRSI": subPaneData.stochRSI = computeStochRSI(bars); break;
-        case "williamsR": subPaneData.williamsR = computeWilliamsR(bars); break;
-        case "cci": subPaneData.cci = computeCCI(bars); break;
-        case "adx": subPaneData.adx = computeADX(bars); break;
+        case "rsi": subPaneData.rsi = computeRSI(bars, p("rsi", "period", 14)); break;
+        case "macd": subPaneData.macd = computeMACD(bars, p("macd", "fast", 12), p("macd", "slow", 26), p("macd", "signal", 9)); break;
+        case "stochastic": subPaneData.stochastic = computeStochastic(bars, p("stochastic", "kPeriod", 14), p("stochastic", "dPeriod", 3)); break;
+        case "stochRSI": subPaneData.stochRSI = computeStochRSI(bars, p("stochRSI", "rsiPeriod", 14), p("stochRSI", "stochPeriod", 14), p("stochRSI", "kSmooth", 3), p("stochRSI", "dSmooth", 3)); break;
+        case "williamsR": subPaneData.williamsR = computeWilliamsR(bars, p("williamsR", "period", 14)); break;
+        case "cci": subPaneData.cci = computeCCI(bars, p("cci", "period", 20)); break;
+        case "adx": subPaneData.adx = computeADX(bars, p("adx", "period", 14)); break;
         case "obv": subPaneData.obv = computeOBV(bars); break;
-        case "mfi": subPaneData.mfi = computeMFI(bars); break;
-        case "cmf": subPaneData.cmf = computeCMF(bars); break;
+        case "mfi": subPaneData.mfi = computeMFI(bars, p("mfi", "period", 14)); break;
+        case "cmf": subPaneData.cmf = computeCMF(bars, p("cmf", "period", 20)); break;
       }
     }
 
@@ -255,7 +282,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     const trend = config.trendlines ? detectTrendlines(bars) : [];
 
     return { overlayLines, bands: bandsList, vwap, ichimoku, parabolicSAR, pivotPoints, volumeProfile, subPaneData, sr, fvg, trend };
-  }, [bars, config, activeSubPanes]);
+  }, [bars, config, activeSubPanes, indicatorParams, p]);
 
   // Load drawings
   useEffect(() => {
@@ -437,14 +464,21 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     const zoom = zoomRef.current;
     const rawViewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
 
-    // Apply price axis zoom factor
-    const viewport = priceZoomRef.current !== 1.0
-      ? (() => {
-          const mid = (rawViewport.priceMin + rawViewport.priceMax) / 2;
-          const halfRange = ((rawViewport.priceMax - rawViewport.priceMin) / 2) * priceZoomRef.current;
-          return { ...rawViewport, priceMin: mid - halfRange, priceMax: mid + halfRange };
-        })()
-      : rawViewport;
+    // Apply price axis zoom factor, then vertical price offset
+    const viewport = (() => {
+      let vp = rawViewport;
+      // Price axis zoom (drag-to-scale)
+      if (priceZoomRef.current !== 1.0) {
+        const mid = (vp.priceMin + vp.priceMax) / 2;
+        const halfRange = ((vp.priceMax - vp.priceMin) / 2) * priceZoomRef.current;
+        vp = { ...vp, priceMin: mid - halfRange, priceMax: mid + halfRange };
+      }
+      // Vertical pan offset
+      if (zoom.priceOffset !== 0) {
+        vp = { ...vp, priceMin: vp.priceMin + zoom.priceOffset, priceMax: vp.priceMax + zoom.priceOffset };
+      }
+      return vp;
+    })();
 
     const ch = crosshairRef.current;
 
@@ -569,6 +603,10 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Skip crosshair updates while context menu is open
+    if (contextMenu.open) return;
+
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -586,15 +624,24 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     }
 
     if (zoomRef.current.isDragging) {
-      zoomRef.current = handleDragMove(zoomRef.current, x, layout.chartWidth, bars.length);
+      // Pass Y, mainHeight, and priceRange for vertical panning
+      const vp = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
+      const priceRange = vp.priceMax - vp.priceMin;
+      zoomRef.current = handleDragMove(zoomRef.current, x, layout.chartWidth, bars.length, y, layout.mainHeight, priceRange);
     }
 
     const viewport = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
     const snap = snapToBar(x, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth, bars.length);
     crosshairRef.current = { x, y, visible: true, snapIndex: snap };
-  }, [layout, bars]);
+  }, [layout, bars, contextMenu.open]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    // FIX 2: Dismiss context menu on click and don't propagate
+    if (contextMenu.open) {
+      setContextMenu(prev => ({ ...prev, open: false }));
+      return;
+    }
+
     if (e.button === 2) return; // Right-click handled by context menu
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -620,39 +667,44 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       return;
     }
 
-    // Drawing mode
-    if (drawingMode) {
+    // FIX 3: Drawing mode — read from refs to avoid stale closures
+    const currentDrawingMode = drawingModeRef.current;
+    if (currentDrawingMode) {
       const zoom = zoomRef.current;
       const viewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
       const { startIndex, endIndex, priceMin, priceMax } = viewport;
       const range = endIndex - startIndex || 1;
       const idx = startIndex + ((x - layout.chartLeft) / layout.chartWidth) * range;
       const price = priceMin + ((layout.mainTop + layout.mainHeight - y) / layout.mainHeight) * (priceMax - priceMin);
-      const newPoints = [...drawingPoints, { index: Math.round(idx), price }];
+      const currentPoints = drawingPointsRef.current;
+      const newPoints = [...currentPoints, { index: Math.round(idx), price }];
       setDrawingPoints(newPoints);
+      drawingPointsRef.current = newPoints;
 
-      const neededPoints = drawingMode === "horizontal" ? 1 : 2;
+      const neededPoints = currentDrawingMode === "horizontal" ? 1 : 2;
       if (newPoints.length >= neededPoints) {
         const drawing: Drawing = {
           id: `d_${Date.now()}`,
-          type: drawingMode,
+          type: currentDrawingMode,
           points: newPoints,
-          color: getDefaultColor(drawingMode),
+          color: getDefaultColor(currentDrawingMode),
         };
         const updated = [...drawings, drawing];
         pushDrawingState(updated);
         setDrawingPoints([]);
+        drawingPointsRef.current = [];
         if (activeTool === "crosshair" || activeTool === "cursor") {
           setDrawingMode(null);
+          drawingModeRef.current = null;
         }
       }
       return;
     }
 
-    // Chart pan
-    zoomRef.current = handleDragStart(zoomRef.current, x);
+    // Chart pan — pass Y for vertical panning
+    zoomRef.current = handleDragStart(zoomRef.current, x, y);
     setIsDragging(true);
-  }, [drawingMode, drawingPoints, layout, drawings, pair, bars, dimensions, activeTool, pushDrawingState]);
+  }, [contextMenu.open, layout, drawings, bars, dimensions, activeTool, pushDrawingState]);
 
   const handleMouseUp = useCallback(() => {
     if (axisDragRef.current.isDragging) {
@@ -680,11 +732,19 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     if (zone === "priceAxis") {
       // Auto-fit: reset price zoom to 1.0 (auto-fit from viewport)
       priceZoomRef.current = 1.0;
+      // Also reset vertical pan offset
+      zoomRef.current = { ...zoomRef.current, priceOffset: 0, priceVelocity: 0 };
       return;
     }
     if (zone === "timeAxis") {
       // Reset to show recent bars
       zoomRef.current = createInitialZoomState(bars.length, Math.min(200, bars.length));
+      return;
+    }
+    // Double-click on chart area: reset vertical pan (auto-fit vertical)
+    if (zone === "chart") {
+      zoomRef.current = { ...zoomRef.current, priceOffset: 0, priceVelocity: 0 };
+      priceZoomRef.current = 1.0;
       return;
     }
   }, [bars.length, dimensions, layout]);
@@ -828,24 +888,45 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     ];
     return OVERLAY_KEYS
       .filter((k) => OVERLAY_META[k])
-      .map((k) => ({
-        key: k,
-        label: OVERLAY_META[k].label,
-        color: OVERLAY_META[k].color,
-        enabled: !!config[k],
-      }))
+      .map((k) => {
+        // Use schema-driven label with current params, falling back to static label
+        const schema = getIndicatorSchema(k);
+        const currentParams = indicatorParams[k] ?? {};
+        const mergedParams: Record<string, number> = schema
+          ? Object.fromEntries(schema.params.map((sp) => [sp.key, currentParams[sp.key] ?? (sp.default as number)]))
+          : {};
+        const label = schema && schema.params.length > 0
+          ? formatIndicatorLabel(k, mergedParams)
+          : OVERLAY_META[k].label;
+        return {
+          key: k,
+          label,
+          color: OVERLAY_META[k].color,
+          enabled: !!config[k],
+        };
+      })
       .filter((c) => c.enabled);
-  }, [config]);
+  }, [config, indicatorParams]);
 
   const subPaneChips: SubPaneChip[] = useMemo(() => {
     return activeSubPanes
       .filter((k) => SUBPANE_META[k])
-      .map((k) => ({
-        key: k,
-        label: SUBPANE_META[k].label,
-        color: SUBPANE_META[k].color,
-      }));
-  }, [activeSubPanes]);
+      .map((k) => {
+        const schema = getIndicatorSchema(k);
+        const currentParams = indicatorParams[k] ?? {};
+        const mergedParams: Record<string, number> = schema
+          ? Object.fromEntries(schema.params.map((sp) => [sp.key, currentParams[sp.key] ?? (sp.default as number)]))
+          : {};
+        const label = schema && schema.params.length > 0
+          ? formatIndicatorLabel(k, mergedParams)
+          : SUBPANE_META[k].label;
+        return {
+          key: k,
+          label,
+          color: SUBPANE_META[k].color,
+        };
+      });
+  }, [activeSubPanes, indicatorParams]);
 
   const handleRemoveOverlay = useCallback((key: string) => {
     handleToggle(key);
@@ -854,6 +935,10 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   const handleRemoveSubPane = useCallback((key: string) => {
     handleToggleSubPane(key);
   }, [handleToggleSubPane]);
+
+  const handleIndicatorParamsChange = useCallback((id: string, params: Record<string, number>) => {
+    setIndicatorParams((prev) => ({ ...prev, [id]: params }));
+  }, []);
 
   /* ─── Last bar info ─── */
   const lastBar = bars.length > 0 ? bars[bars.length - 1] : null;
@@ -1016,6 +1101,8 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
             activeSubPanes={subPaneChips}
             onRemoveOverlay={handleRemoveOverlay}
             onRemoveSubPane={handleRemoveSubPane}
+            indicatorParams={indicatorParams}
+            onParamsChange={handleIndicatorParamsChange}
           />
 
           {/* Context Menu (positioned inside canvas container) */}

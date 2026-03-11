@@ -18,10 +18,15 @@ export interface ZoomPanState {
   dragStartX: number;
   dragStartStart: number;
   dragStartEnd: number;
-  // Momentum
+  // Momentum (horizontal)
   velocityX: number;
   lastDragX: number;
   lastDragTime: number;
+  // Vertical panning
+  priceOffset: number;    // Vertical price shift in price units
+  priceVelocity: number;  // Vertical momentum
+  lastDragY: number;      // Last pointer Y for velocity tracking
+  dragStartY: number;     // Pointer Y at drag start
   // Animation flag
   isAnimating: boolean;
 }
@@ -41,16 +46,18 @@ export function createInitialZoomState(barCount: number, visibleBars = 200): Zoo
     targetStart: start, targetEnd: end,
     isDragging: false, dragStartX: 0, dragStartStart: 0, dragStartEnd: 0,
     velocityX: 0, lastDragX: 0, lastDragTime: 0,
+    priceOffset: 0, priceVelocity: 0, lastDragY: 0, dragStartY: 0,
     isAnimating: false,
   };
 }
 
 export function tickAnimation(state: ZoomPanState, barCount: number): ZoomPanState {
   let { startIndex, endIndex, targetStart, targetEnd, velocityX, isDragging } = state;
+  let { priceOffset, priceVelocity } = state;
 
   if (isDragging) return state; // Don't animate during drag
 
-  // Apply momentum
+  // Apply horizontal momentum
   if (Math.abs(velocityX) > VELOCITY_MIN) {
     const range = targetEnd - targetStart;
     const maxEnd = barCount - 1 + range * RIGHT_MARGIN;
@@ -66,6 +73,14 @@ export function tickAnimation(state: ZoomPanState, barCount: number): ZoomPanSta
     velocityX = 0;
   }
 
+  // Apply vertical momentum
+  if (Math.abs(priceVelocity) > VELOCITY_MIN * 0.0001) {
+    priceOffset += priceVelocity;
+    priceVelocity *= VELOCITY_DECAY;
+  } else {
+    priceVelocity = 0;
+  }
+
   // Lerp toward targets
   const factor = Math.abs(velocityX) > VELOCITY_MIN ? LERP_MOMENTUM : LERP_ZOOM;
   const newStart = startIndex + (targetStart - startIndex) * factor;
@@ -73,7 +88,9 @@ export function tickAnimation(state: ZoomPanState, barCount: number): ZoomPanSta
 
   const deltaStart = Math.abs(newStart - targetStart);
   const deltaEnd = Math.abs(newEnd - targetEnd);
-  const stillAnimating = deltaStart > EPSILON || deltaEnd > EPSILON || Math.abs(velocityX) > VELOCITY_MIN;
+  const stillAnimating = deltaStart > EPSILON || deltaEnd > EPSILON
+    || Math.abs(velocityX) > VELOCITY_MIN
+    || Math.abs(priceVelocity) > VELOCITY_MIN * 0.0001;
 
   return {
     ...state,
@@ -81,6 +98,8 @@ export function tickAnimation(state: ZoomPanState, barCount: number): ZoomPanSta
     endIndex: stillAnimating ? newEnd : targetEnd,
     targetStart, targetEnd,
     velocityX,
+    priceOffset,
+    priceVelocity,
     isAnimating: stillAnimating,
   };
 }
@@ -111,21 +130,25 @@ export function handleWheel(
   return { ...state, targetStart: newStart, targetEnd: newEnd, isAnimating: true, velocityX: 0 };
 }
 
-export function handleDragStart(state: ZoomPanState, mouseX: number): ZoomPanState {
+export function handleDragStart(state: ZoomPanState, mouseX: number, mouseY = 0): ZoomPanState {
   return {
     ...state,
     isDragging: true,
     dragStartX: mouseX,
+    dragStartY: mouseY,
     dragStartStart: state.startIndex,
     dragStartEnd: state.endIndex,
     lastDragX: mouseX,
+    lastDragY: mouseY,
     lastDragTime: performance.now(),
     velocityX: 0,
+    priceVelocity: 0,
   };
 }
 
 export function handleDragMove(
   state: ZoomPanState, mouseX: number, chartWidth: number, barCount: number,
+  mouseY = 0, mainHeight = 0, priceRange = 0,
 ): ZoomPanState {
   if (!state.isDragging) return state;
   const range = state.dragStartEnd - state.dragStartStart;
@@ -145,12 +168,26 @@ export function handleDragMove(
   // Only track velocity if enough time has passed (avoid spikes from fast events)
   const vel = dt > 2 ? ((mouseX - state.lastDragX) / chartWidth) * range * (-16 / Math.max(dt, 8)) : state.velocityX;
 
+  // Vertical panning: convert dy pixels to price offset
+  let newPriceOffset = state.priceOffset;
+  let pVel = state.priceVelocity;
+  if (mainHeight > 0 && priceRange > 0) {
+    const dy = mouseY - state.lastDragY;
+    const priceShift = (dy / mainHeight) * priceRange;
+    newPriceOffset += priceShift;
+    // Track vertical velocity
+    pVel = dt > 2 ? ((mouseY - state.lastDragY) / mainHeight) * priceRange * (16 / Math.max(dt, 8)) : state.priceVelocity;
+    pVel = pVel * 0.25 + state.priceVelocity * 0.75;
+  }
+
   return {
     ...state,
     startIndex: newStart, endIndex: newEnd,
     targetStart: newStart, targetEnd: newEnd,
-    lastDragX: mouseX, lastDragTime: now,
+    lastDragX: mouseX, lastDragY: mouseY, lastDragTime: now,
     velocityX: vel * 0.25 + state.velocityX * 0.75, // Gentle velocity tracking
+    priceOffset: newPriceOffset,
+    priceVelocity: pVel,
   };
 }
 
@@ -158,7 +195,7 @@ export function handleDragEnd(state: ZoomPanState): ZoomPanState {
   return {
     ...state,
     isDragging: false,
-    isAnimating: Math.abs(state.velocityX) > VELOCITY_MIN,
+    isAnimating: Math.abs(state.velocityX) > VELOCITY_MIN || Math.abs(state.priceVelocity) > VELOCITY_MIN * 0.0001,
   };
 }
 
@@ -169,7 +206,7 @@ export function fitToVisibleBars(state: ZoomPanState, barCount: number, visibleB
     ...state,
     startIndex: start, endIndex: end,
     targetStart: start, targetEnd: end,
-    velocityX: 0,
+    velocityX: 0, priceOffset: 0, priceVelocity: 0,
     isAnimating: false,
     isDragging: false,
   };

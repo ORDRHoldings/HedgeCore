@@ -64,7 +64,12 @@ function Shell({ children }: { children: ReactNode }) {
   // Public routes: no sidebar, no voice, full viewport
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   if (isPublicRoute) {
-    return <main style={{ height: "100vh", overflow: "hidden" }}>{children}</main>;
+    // Canvas-based routes (chart/market) need overflow hidden; landing page scrolls naturally
+    const isCanvasRoute = pathname === "/market";
+    const publicStyle: React.CSSProperties = isCanvasRoute
+      ? { height: "100vh", overflow: "hidden" }
+      : { minHeight: "100vh" };
+    return <main style={publicStyle}>{children}</main>;
   }
 
   const showPipelineChrome = PIPELINE_PREFIXES.some(

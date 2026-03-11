@@ -5,7 +5,6 @@
 
 describe("Landing Page structure", () => {
   test("FONT constants are defined correctly", () => {
-    // Validate the font tokens used on the landing page
     const FONT_UI = "'IBM Plex Sans', sans-serif";
     const FONT_MONO = "'IBM Plex Mono', monospace";
     const FONT_HEADING = "'Manrope', 'IBM Plex Sans', sans-serif";
@@ -14,42 +13,128 @@ describe("Landing Page structure", () => {
     expect(FONT_HEADING).toContain("Manrope");
   });
 
-  test("feature lists have correct lengths", () => {
-    const FEATURES_MARKET = [
-      "23 technical indicators + auto-detection",
-      "Volume Profile with POC / VAH / VAL",
-      "Real-time FX data across 17 pairs",
-      "Canvas 2D rendering at 60fps",
-      "Drawing tools: trend, fib, S/R, FVG",
-      "No account required",
-    ];
-    const FEATURES_TERMINAL = [
-      "Deterministic hedge calculations",
-      "4-eyes governance with SoD",
-      "WORM audit trail + hash chain",
-      "Policy engine with 60 presets",
-      "IFRS 9 / ASC 815 effectiveness",
-      "Role-based access (9 roles, 41 perms)",
-    ];
-    expect(FEATURES_MARKET).toHaveLength(6);
-    expect(FEATURES_TERMINAL).toHaveLength(6);
+  test("color tokens use dark theme", () => {
+    const C = {
+      bgBase: "#0B1120",
+      bgMid: "#131722",
+      bgCard: "#1E222D",
+      border: "#2A2E39",
+      textPrimary: "#D1D4DC",
+      textMuted: "#787B86",
+      textDim: "#545B69",
+      accentBlue: "#2962FF",
+      accentGreen: "#26A69A",
+      white: "#FFFFFF",
+    };
+    expect(C.bgBase).toBe("#0B1120");
+    expect(C.bgMid).toBe("#131722");
+    expect(C.bgCard).toBe("#1E222D");
+    // All backgrounds should be dark (R < 0x30)
+    expect(parseInt(C.bgBase.slice(1, 3), 16)).toBeLessThan(48);
+    expect(parseInt(C.bgMid.slice(1, 3), 16)).toBeLessThan(48);
+    expect(parseInt(C.bgCard.slice(1, 3), 16)).toBeLessThan(48);
   });
 
-  test("stats data is correct", () => {
+  test("product list has 9 products", () => {
+    const products = [
+      "ORDR Market",
+      "ORDR Terminal",
+      "Polisophic Intelligence",
+      "Portfolio Risk",
+      "Scenario Studio",
+      "Sandbox",
+      "Currency Desk",
+      "Treasury Desk",
+      "HedgeWiki",
+    ];
+    expect(products).toHaveLength(9);
+  });
+
+  test("gated products are Currency Desk and Treasury Desk only", () => {
+    const products = [
+      { title: "ORDR Market", gated: false },
+      { title: "ORDR Terminal", gated: false },
+      { title: "Polisophic Intelligence", gated: false },
+      { title: "Portfolio Risk", gated: false },
+      { title: "Scenario Studio", gated: false },
+      { title: "Sandbox", gated: false },
+      { title: "Currency Desk", gated: true },
+      { title: "Treasury Desk", gated: true },
+      { title: "HedgeWiki", gated: false },
+    ];
+    const gated = products.filter((p) => p.gated);
+    expect(gated).toHaveLength(2);
+    expect(gated.map((p) => p.title)).toEqual(["Currency Desk", "Treasury Desk"]);
+  });
+
+  test("stats data has 5 entries with correct values", () => {
     const STATS = [
       { value: "219", label: "API Endpoints" },
       { value: "41", label: "Engine Modules" },
       { value: "60", label: "Policy Presets" },
       { value: "3,200+", label: "Tests" },
+      { value: "23", label: "Indicators" },
     ];
-    expect(STATS).toHaveLength(4);
+    expect(STATS).toHaveLength(5);
     expect(STATS[0].value).toBe("219");
-    expect(STATS[3].label).toBe("Tests");
+    expect(STATS[4].value).toBe("23");
+    expect(STATS[4].label).toBe("Indicators");
+  });
+
+  test("value propositions have 3 items", () => {
+    const VALUE_PROPS = [
+      { title: "Deterministic Engine" },
+      { title: "Institutional Governance" },
+      { title: "Professional Charting" },
+    ];
+    expect(VALUE_PROPS).toHaveLength(3);
+    expect(VALUE_PROPS[0].title).toBe("Deterministic Engine");
   });
 
   test("background color is the correct dark base", () => {
     const BG = "#0B1120";
     expect(BG).toBe("#0B1120");
+  });
+
+  test("product badges have correct labels", () => {
+    const badges = ["FREE", "FULL ACCESS", "OPEN", "OPEN", "OPEN", "OPEN", "INSTITUTIONAL", "INSTITUTIONAL", "OPEN"];
+    expect(badges.filter((b) => b === "FREE")).toHaveLength(1);
+    expect(badges.filter((b) => b === "FULL ACCESS")).toHaveLength(1);
+    expect(badges.filter((b) => b === "INSTITUTIONAL")).toHaveLength(2);
+    expect(badges.filter((b) => b === "OPEN")).toHaveLength(5);
+  });
+
+  test("product links are correct", () => {
+    const links = [
+      { title: "ORDR Market", href: "/market" },
+      { title: "ORDR Terminal", href: "/auth/login" },
+      { title: "Polisophic Intelligence", href: "/polisophic" },
+      { title: "Portfolio Risk", href: "/portfolio-risk" },
+      { title: "Scenario Studio", href: "/scenario-studio" },
+      { title: "Sandbox", href: "/sandbox" },
+      { title: "Currency Desk", href: "/currency-fx" },
+      { title: "Treasury Desk", href: "/hedge-desk" },
+      { title: "HedgeWiki", href: "/methodology" },
+    ];
+    expect(links.find((l) => l.title === "ORDR Market")?.href).toBe("/market");
+    expect(links.find((l) => l.title === "ORDR Terminal")?.href).toBe("/auth/login");
+    expect(links.find((l) => l.title === "Currency Desk")?.href).toBe("/currency-fx");
+    expect(links.find((l) => l.title === "Treasury Desk")?.href).toBe("/hedge-desk");
+    expect(links.find((l) => l.title === "HedgeWiki")?.href).toBe("/methodology");
+  });
+
+  test("hero has correct main headline and subtitle", () => {
+    const headline = "ORDR";
+    const subtitle = "The Institutional Trading Platform";
+    expect(headline).toBe("ORDR");
+    expect(subtitle).toBe("The Institutional Trading Platform");
+  });
+
+  test("hero tagline is correct", () => {
+    const tagline = "Professional charting, deterministic hedging, and treasury management \u2014 unified.";
+    expect(tagline).toContain("charting");
+    expect(tagline).toContain("hedging");
+    expect(tagline).toContain("treasury");
   });
 });
 
@@ -87,7 +172,6 @@ describe("Market Page constants", () => {
   });
 
   test("default pair is EURUSD", () => {
-    // The page uses useState("EURUSD") as default
     expect(FX_PAIRS).toContain("EURUSD");
   });
 });
@@ -112,12 +196,27 @@ describe("ClientProviders PUBLIC_ROUTES", () => {
   });
 
   test("public route detection is exact match not prefix", () => {
-    // /market-intelligence should NOT match /market
     const isPublic = (path: string) => PUBLIC_ROUTES.includes(path);
     expect(isPublic("/market")).toBe(true);
     expect(isPublic("/market-intelligence")).toBe(false);
     expect(isPublic("/")).toBe(true);
     expect(isPublic("/auth/login")).toBe(false);
+  });
+
+  test("landing page (/) gets scrollable styles, not overflow hidden", () => {
+    // The landing page should scroll naturally
+    const pathname = "/";
+    const isCanvasRoute = pathname === "/market";
+    // Landing page is NOT a canvas route
+    expect(isCanvasRoute).toBe(false);
+    // So it should get minHeight: 100vh (scrollable), not overflow: hidden
+  });
+
+  test("/market gets overflow hidden for canvas", () => {
+    const pathname = "/market";
+    const isCanvasRoute = pathname === "/market";
+    expect(isCanvasRoute).toBe(true);
+    // Canvas routes need overflow hidden
   });
 });
 
@@ -170,17 +269,13 @@ describe("Chart page dark theme", () => {
   });
 
   test("text colors are light-on-dark values", () => {
-    // Primary text should be light
     expect(parseInt(S.textPrimary.slice(1, 3), 16)).toBeGreaterThan(180);
-    // Secondary text should be medium
     expect(parseInt(S.textSecondary.slice(1, 3), 16)).toBeGreaterThan(100);
-    // Tertiary text should be dim
     expect(parseInt(S.textTertiary.slice(1, 3), 16)).toBeGreaterThan(60);
   });
 
   test("border color is dark theme", () => {
     expect(S.rim).toBe("#2A2E39");
-    // Should be dark, not light
     expect(parseInt(S.rim.slice(1, 3), 16)).toBeLessThan(80);
   });
 
@@ -191,9 +286,7 @@ describe("Chart page dark theme", () => {
   test("no light theme values remain", () => {
     const values = Object.values(S);
     for (const v of values) {
-      // No CSS var() references in dark theme tokens
       expect(v).not.toContain("var(");
-      // No light backgrounds
       expect(v).not.toBe("#FFFFFF");
       expect(v).not.toBe("#F8FAFC");
       expect(v).not.toBe("#F1F5F9");

@@ -3,64 +3,146 @@
 /**
  * Landing Page — ORDR Terminal
  *
- * Premium dark landing page with two product cards:
- * - ORDR Market (free, /market)
- * - ORDR Terminal (institutional, /auth/login)
+ * Premium dark institutional landing page with:
+ * - Hero section (100vh) with animated grid + CTAs
+ * - Product ecosystem grid (9 products)
+ * - Why ORDR value props
+ * - Platform stats bar
+ * - Footer
  *
  * No auth context, no sidebar. Pure presentational.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import {
+  BarChart3,
+  Shield,
+  Globe,
+  PieChart,
+  FlaskConical,
+  Box,
+  Banknote,
+  Landmark,
+  BookOpen,
+  ChevronDown,
+  Lock,
+  Zap,
+  Eye,
+  Activity,
+} from "lucide-react";
+
+/* ═══════════════════════════════════════════════════════
+   Design tokens
+   ═══════════════════════════════════════════════════════ */
 
 const FONT_UI = "'IBM Plex Sans', sans-serif";
 const FONT_MONO = "'IBM Plex Mono', monospace";
 const FONT_HEADING = "'Manrope', 'IBM Plex Sans', sans-serif";
 
-const FEATURES_MARKET = [
-  "23 technical indicators + auto-detection",
-  "Volume Profile with POC / VAH / VAL",
-  "Real-time FX data across 17 pairs",
-  "Canvas 2D rendering at 60fps",
-  "Drawing tools: trend, fib, S/R, FVG",
-  "No account required",
-];
+const C = {
+  bgBase: "#0B1120",
+  bgMid: "#131722",
+  bgCard: "#1E222D",
+  border: "#2A2E39",
+  borderSubtle: "rgba(255,255,255,0.06)",
+  textPrimary: "#D1D4DC",
+  textMuted: "#787B86",
+  textDim: "#545B69",
+  accentBlue: "#2962FF",
+  accentGreen: "#26A69A",
+  white: "#FFFFFF",
+} as const;
 
-const FEATURES_TERMINAL = [
-  "Deterministic hedge calculations",
-  "4-eyes governance with SoD",
-  "WORM audit trail + hash chain",
-  "Policy engine with 60 presets",
-  "IFRS 9 / ASC 815 effectiveness",
-  "Role-based access (9 roles, 41 perms)",
-];
+/* ═══════════════════════════════════════════════════════
+   Product data
+   ═══════════════════════════════════════════════════════ */
 
-const FEATURES_POLISOPHIC = [
-  "Geopolitical corridor risk scoring",
-  "Multi-factor country risk analysis",
-  "Real-time risk event monitoring",
-  "Portfolio impact assessment",
-];
+interface Product {
+  title: string;
+  description: string;
+  badge: string;
+  badgeColor: string;
+  icon: React.ReactNode;
+  href: string;
+  gated?: boolean;
+}
 
-const FEATURES_PORTFOLIO = [
-  "Full hedge lifecycle management",
-  "Position desk with readiness KPIs",
-  "7-step execution pipeline",
-  "Portfolio risk analytics",
-];
-
-const FEATURES_SANDBOX = [
-  "Tri-state pipeline: Sandbox to Ledger",
-  "Scenario studio with stress testing",
-  "Policy comparison and backtesting",
-  "Safe experimentation environment",
-];
-
-const FEATURES_WIKI = [
-  "FX hedging knowledge base",
-  "Strategy guides and best practices",
-  "Instrument and product glossary",
-  "Regulatory framework references",
+const PRODUCTS: Product[] = [
+  {
+    title: "ORDR Market",
+    description: "Free charting platform with 23 indicators, Volume Profile, 60fps Canvas 2D engine, and drawing tools.",
+    badge: "FREE",
+    badgeColor: C.accentGreen,
+    icon: <BarChart3 size={20} />,
+    href: "/market",
+  },
+  {
+    title: "ORDR Terminal",
+    description: "Full institutional dashboard with position management, hedge calculation, and governance workflows.",
+    badge: "FULL ACCESS",
+    badgeColor: C.accentBlue,
+    icon: <Shield size={20} />,
+    href: "/auth/login",
+  },
+  {
+    title: "Polisophic Intelligence",
+    description: "Geopolitical risk scoring, corridor analysis, and macro intelligence feeds for FX exposure.",
+    badge: "OPEN",
+    badgeColor: "#E040FB",
+    icon: <Globe size={20} />,
+    href: "/polisophic",
+  },
+  {
+    title: "Portfolio Risk",
+    description: "Multi-position portfolio analysis with factor decomposition, correlation, and VaR analytics.",
+    badge: "OPEN",
+    badgeColor: "#FF9800",
+    icon: <PieChart size={20} />,
+    href: "/portfolio-risk",
+  },
+  {
+    title: "Scenario Studio",
+    description: "Stress testing, historical VaR, configurable shock packs and scenario analysis for hedge strategies.",
+    badge: "OPEN",
+    badgeColor: "#00BCD4",
+    icon: <FlaskConical size={20} />,
+    href: "/scenario-studio",
+  },
+  {
+    title: "Sandbox",
+    description: "Safe calculation environment for testing hedge strategies without production impact.",
+    badge: "OPEN",
+    badgeColor: "#8BC34A",
+    icon: <Box size={20} />,
+    href: "/sandbox",
+  },
+  {
+    title: "Currency Desk",
+    description: "Real-time FX execution, forward curves, and currency management for institutional treasury.",
+    badge: "INSTITUTIONAL",
+    badgeColor: "#F44336",
+    icon: <Banknote size={20} />,
+    href: "/currency-fx",
+    gated: true,
+  },
+  {
+    title: "Treasury Desk",
+    description: "Corporate treasury hedging workflows, maturity management, and accounting integration.",
+    badge: "INSTITUTIONAL",
+    badgeColor: "#F44336",
+    icon: <Landmark size={20} />,
+    href: "/hedge-desk",
+    gated: true,
+  },
+  {
+    title: "HedgeWiki",
+    description: "Comprehensive methodology documentation, whitepapers, and calculation reference library.",
+    badge: "OPEN",
+    badgeColor: "#8BC34A",
+    icon: <BookOpen size={20} />,
+    href: "/methodology",
+  },
 ];
 
 const STATS = [
@@ -68,7 +150,57 @@ const STATS = [
   { value: "41", label: "Engine Modules" },
   { value: "60", label: "Policy Presets" },
   { value: "3,200+", label: "Tests" },
+  { value: "23", label: "Indicators" },
 ];
+
+const VALUE_PROPS = [
+  {
+    icon: <Zap size={28} />,
+    title: "Deterministic Engine",
+    description: "Every calculation is reproducible, auditable, and hash-chained. No black boxes.",
+  },
+  {
+    icon: <Eye size={28} />,
+    title: "Institutional Governance",
+    description: "4-eyes approval, separation of duties, WORM audit trails, and policy-driven hedging.",
+  },
+  {
+    icon: <Activity size={28} />,
+    title: "Professional Charting",
+    description: "TradingView-class charting with 23 indicators, Volume Profile, and Canvas 2D at 60fps.",
+  },
+];
+
+/* ═══════════════════════════════════════════════════════
+   Intersection Observer hook for fade-in
+   ═══════════════════════════════════════════════════════ */
+
+function useFadeIn(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
+      { threshold }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+
+  return { ref, visible };
+}
+
+/* ═══════════════════════════════════════════════════════
+   Main component
+   ═══════════════════════════════════════════════════════ */
 
 export default function LandingPage() {
   const [isMobile, setIsMobile] = useState(false);
@@ -80,668 +212,771 @@ export default function LandingPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  const scrollToProducts = useCallback(() => {
+    const el = document.getElementById("platform");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const productsFade = useFadeIn();
+  const whyFade = useFadeIn();
+  const statsFade = useFadeIn();
+
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: "#0B1120",
-        color: "#E2E8F0",
+        background: C.bgBase,
+        color: C.textPrimary,
         fontFamily: FONT_UI,
-        overflow: "hidden",
+        overflowX: "hidden",
+        overflowY: "auto",
         position: "relative",
       }}
     >
-      {/* Animated gradient background */}
+      {/* ── CSS Animations ── */}
       <style>{`
-        @keyframes gradientMove {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+        @keyframes ordr-grid-fade {
+          0% { opacity: 0.03; }
+          50% { opacity: 0.07; }
+          100% { opacity: 0.03; }
         }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(24px); }
+        @keyframes ordr-hero-in {
+          from { opacity: 0; transform: translateY(32px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes pulseGlow {
-          0%, 100% { opacity: 0.12; }
-          50% { opacity: 0.2; }
+        @keyframes ordr-chevron-bounce {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(8px); }
         }
+        @keyframes ordr-glow {
+          0%, 100% { opacity: 0.08; }
+          50% { opacity: 0.16; }
+        }
+        @keyframes ordr-fade-in-up {
+          from { opacity: 0; transform: translateY(40px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .ordr-card-hover {
+          transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+        }
+        .ordr-card-hover:hover {
+          border-color: rgba(41, 98, 255, 0.3) !important;
+          box-shadow: 0 0 24px rgba(41, 98, 255, 0.08);
+          transform: translateY(-2px);
+        }
+        .ordr-card-gated {
+          transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        .ordr-card-gated:hover {
+          border-color: rgba(244, 67, 54, 0.25) !important;
+          box-shadow: 0 0 16px rgba(244, 67, 54, 0.06);
+        }
+        .ordr-cta-hover {
+          transition: all 0.2s ease;
+        }
+        .ordr-cta-hover:hover {
+          filter: brightness(1.15);
+          transform: translateY(-1px);
+        }
+        html { scroll-behavior: smooth; }
       `}</style>
+
+      {/* ── Animated grid background ── */}
       <div
         style={{
-          position: "absolute",
+          position: "fixed",
           inset: 0,
-          opacity: 0.15,
-          background:
-            "radial-gradient(ellipse at 20% 50%, #1C62F2 0%, transparent 50%), radial-gradient(ellipse at 80% 50%, #26A69A 0%, transparent 50%)",
-          animation: "gradientMove 15s ease infinite",
-          backgroundSize: "200% 200%",
+          backgroundImage:
+            "linear-gradient(rgba(41,98,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(41,98,255,0.04) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+          animation: "ordr-grid-fade 12s ease-in-out infinite",
           pointerEvents: "none",
+          zIndex: 0,
         }}
       />
-      {/* Secondary glow pulse */}
+
+      {/* ── Gradient glow orbs ── */}
       <div
         style={{
-          position: "absolute",
-          top: "20%",
-          left: "50%",
-          width: 600,
-          height: 600,
-          transform: "translateX(-50%)",
+          position: "fixed",
+          top: "-10%",
+          left: "20%",
+          width: 700,
+          height: 700,
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(28, 98, 242, 0.15) 0%, transparent 70%)",
-          animation: "pulseGlow 8s ease-in-out infinite",
+          background: "radial-gradient(circle, rgba(41,98,255,0.12) 0%, transparent 60%)",
+          animation: "ordr-glow 10s ease-in-out infinite",
           pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      <div
+        style={{
+          position: "fixed",
+          top: "30%",
+          right: "10%",
+          width: 500,
+          height: 500,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(38,166,154,0.08) 0%, transparent 60%)",
+          animation: "ordr-glow 14s ease-in-out infinite 3s",
+          pointerEvents: "none",
+          zIndex: 0,
         }}
       />
 
-      {/* ── Nav Bar ── */}
-      <nav
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "20px 32px",
-          maxWidth: 1200,
-          margin: "0 auto",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 22,
-              fontWeight: 700,
-              color: "#FFFFFF",
-              letterSpacing: "0.08em",
-            }}
-          >
-            ORDR
-          </span>
-          <span
-            style={{
-              fontFamily: FONT_MONO,
-              fontSize: 10,
-              fontWeight: 500,
-              color: "#4A5A74",
-              letterSpacing: "0.1em",
-              marginTop: 2,
-            }}
-          >
-            TERMINAL
-          </span>
-        </div>
-        <Link
-          href="/auth/login"
-          style={{
-            fontFamily: FONT_MONO,
-            fontSize: 12,
-            fontWeight: 600,
-            color: "#A0AEC0",
-            textDecoration: "none",
-            padding: "8px 20px",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 8,
-            letterSpacing: "0.06em",
-            transition: "all 0.2s",
-          }}
-        >
-          SIGN IN
-        </Link>
-      </nav>
-
-      {/* ── Hero ── */}
+      {/* ════════════════════════════════════════════════════════
+          SECTION 1 — Hero (100vh)
+          ════════════════════════════════════════════════════════ */}
       <section
         style={{
           position: "relative",
-          zIndex: 10,
-          textAlign: "center",
-          padding: isMobile ? "40px 24px 32px" : "72px 32px 48px",
-          maxWidth: 900,
-          margin: "0 auto",
-          animation: "fadeInUp 0.8s ease-out",
-        }}
-      >
-        <h1
-          style={{
-            fontFamily: FONT_HEADING,
-            fontSize: isMobile ? 32 : 52,
-            fontWeight: 800,
-            lineHeight: 1.1,
-            color: "#FFFFFF",
-            margin: 0,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          The Operating System
-          <br />
-          <span style={{ color: "#1C62F2" }}>for FX Treasury</span>
-        </h1>
-        <p
-          style={{
-            fontFamily: FONT_UI,
-            fontSize: isMobile ? 15 : 18,
-            color: "#7B8BA5",
-            marginTop: 20,
-            lineHeight: 1.6,
-            maxWidth: 640,
-            marginLeft: "auto",
-            marginRight: "auto",
-          }}
-        >
-          Institutional-grade hedge calculation, governance, and audit.
-          Deterministic engine. WORM audit trail. 4-eyes approval.
-          Built for treasurers who need to prove every decision.
-        </p>
-      </section>
-
-      {/* ── Product Cards ── */}
-      <section
-        style={{
-          position: "relative",
-          zIndex: 10,
+          zIndex: 1,
+          minHeight: "100vh",
           display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          gap: 24,
-          padding: isMobile ? "0 24px" : "0 32px",
-          maxWidth: 1080,
-          margin: "0 auto",
-          animation: "fadeInUp 1s ease-out",
+          flexDirection: "column",
         }}
       >
-        {/* ORDR Market Card */}
-        <div
+        {/* Nav */}
+        <nav
           style={{
-            background: "rgba(30, 34, 45, 0.6)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 16,
-            padding: 32,
-            flex: 1,
-            minWidth: isMobile ? "auto" : 320,
-            maxWidth: isMobile ? "none" : 500,
             display: "flex",
-            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: isMobile ? "20px 24px" : "28px 48px",
+            maxWidth: 1280,
+            width: "100%",
+            margin: "0 auto",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            {/* Chart icon (SVG) */}
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: "rgba(38, 166, 154, 0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#26A69A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 3v18h18" />
-                <path d="M7 16l4-8 4 4 6-10" />
-              </svg>
-            </div>
-            <div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.04em" }}>
-                ORDR MARKET
-              </div>
-              <span
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "#26A69A",
-                  background: "rgba(38, 166, 154, 0.15)",
-                  padding: "2px 8px",
-                  borderRadius: 4,
-                  letterSpacing: "0.08em",
-                }}
-              >
-                FREE
-              </span>
-            </div>
-          </div>
-
-          <p style={{ fontFamily: FONT_UI, fontSize: 14, color: "#7B8BA5", lineHeight: 1.6, marginBottom: 24, marginTop: 0 }}>
-            Professional FX charting platform. Canvas 2D engine with institutional
-            indicators, auto-detection, and drawing tools. No account needed.
-          </p>
-
-          <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px 0", flex: 1 }}>
-            {FEATURES_MARKET.map((f) => (
-              <li
-                key={f}
-                style={{
-                  fontFamily: FONT_UI,
-                  fontSize: 13,
-                  color: "#A0AEC0",
-                  padding: "5px 0",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#26A69A", flexShrink: 0 }} />
-                {f}
-              </li>
-            ))}
-          </ul>
-
-          <Link
-            href="/market"
-            style={{
-              display: "block",
-              textAlign: "center",
-              fontFamily: FONT_MONO,
-              fontSize: 13,
-              fontWeight: 700,
-              color: "#FFFFFF",
-              background: "linear-gradient(135deg, #26A69A 0%, #1B8A80 100%)",
-              padding: "12px 24px",
-              borderRadius: 10,
-              textDecoration: "none",
-              letterSpacing: "0.06em",
-              transition: "all 0.2s",
-            }}
-          >
-            OPEN MARKET
-          </Link>
-        </div>
-
-        {/* ORDR Terminal Card */}
-        <div
-          style={{
-            background: "rgba(30, 34, 45, 0.6)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 16,
-            padding: 32,
-            flex: 1,
-            minWidth: isMobile ? "auto" : 320,
-            maxWidth: isMobile ? "none" : 500,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            {/* Shield icon (SVG) */}
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: "rgba(28, 98, 242, 0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1C62F2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <path d="M9 12l2 2 4-4" />
-              </svg>
-            </div>
-            <div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.04em" }}>
-                ORDR TERMINAL
-              </div>
-              <span
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "#1C62F2",
-                  background: "rgba(28, 98, 242, 0.15)",
-                  padding: "2px 8px",
-                  borderRadius: 4,
-                  letterSpacing: "0.08em",
-                }}
-              >
-                INSTITUTIONAL
-              </span>
-            </div>
-          </div>
-
-          <p style={{ fontFamily: FONT_UI, fontSize: 14, color: "#7B8BA5", lineHeight: 1.6, marginBottom: 24, marginTop: 0 }}>
-            Full hedge lifecycle platform. Deterministic engine, tri-state governance
-            pipeline, WORM audit, and policy-driven execution with 4-eyes approval.
-          </p>
-
-          <ul style={{ listStyle: "none", padding: 0, margin: "0 0 28px 0", flex: 1 }}>
-            {FEATURES_TERMINAL.map((f) => (
-              <li
-                key={f}
-                style={{
-                  fontFamily: FONT_UI,
-                  fontSize: 13,
-                  color: "#A0AEC0",
-                  padding: "5px 0",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1C62F2", flexShrink: 0 }} />
-                {f}
-              </li>
-            ))}
-          </ul>
-
-          <Link
-            href="/auth/login"
-            style={{
-              display: "block",
-              textAlign: "center",
-              fontFamily: FONT_MONO,
-              fontSize: 13,
-              fontWeight: 700,
-              color: "#FFFFFF",
-              background: "linear-gradient(135deg, #1C62F2 0%, #1550C8 100%)",
-              padding: "12px 24px",
-              borderRadius: 10,
-              textDecoration: "none",
-              letterSpacing: "0.06em",
-              transition: "all 0.2s",
-            }}
-          >
-            SIGN IN
-          </Link>
-        </div>
-      </section>
-
-      {/* ── Secondary Product Cards ── */}
-      <section
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
-          gap: 16,
-          padding: isMobile ? "32px 24px 0" : "32px 32px 0",
-          maxWidth: 1080,
-          margin: "0 auto",
-          animation: "fadeInUp 1.1s ease-out",
-        }}
-      >
-        {/* Polisophic */}
-        <ProductCard
-          title="POLISOPHIC"
-          badge="GEOPOLITICAL"
-          badgeColor="#E040FB"
-          icon={
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E040FB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M2 12h20" />
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            </svg>
-          }
-          description="Geopolitical risk corridor scoring with multi-factor analysis and portfolio impact assessment."
-          features={FEATURES_POLISOPHIC}
-          href="/auth/login"
-          ctaLabel="SIGN IN TO ACCESS"
-          ctaGradient="linear-gradient(135deg, #E040FB 0%, #AB47BC 100%)"
-          isMobile={isMobile}
-        />
-
-        {/* Hedge Portfolio */}
-        <ProductCard
-          title="HEDGE PORTFOLIO"
-          badge="PORTFOLIO"
-          badgeColor="#FF9800"
-          icon={
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF9800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-              <path d="M8 21h8" />
-              <path d="M12 17v4" />
-              <path d="M7 10l3-3 2 2 5-5" />
-            </svg>
-          }
-          description="Full hedge lifecycle from position entry to execution with 7-step pipeline and risk analytics."
-          features={FEATURES_PORTFOLIO}
-          href="/auth/login"
-          ctaLabel="SIGN IN TO ACCESS"
-          ctaGradient="linear-gradient(135deg, #FF9800 0%, #E65100 100%)"
-          isMobile={isMobile}
-        />
-
-        {/* Simulation & Sandbox */}
-        <ProductCard
-          title="SIMULATION"
-          badge="SANDBOX"
-          badgeColor="#00BCD4"
-          icon={
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00BCD4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-            </svg>
-          }
-          description="Tri-state governance pipeline with scenario studio, stress testing, and safe experimentation."
-          features={FEATURES_SANDBOX}
-          href="/auth/login"
-          ctaLabel="SIGN IN TO ACCESS"
-          ctaGradient="linear-gradient(135deg, #00BCD4 0%, #00838F 100%)"
-          isMobile={isMobile}
-        />
-
-        {/* HedgeWiki */}
-        <ProductCard
-          title="HEDGEWIKI"
-          badge="KNOWLEDGE"
-          badgeColor="#8BC34A"
-          icon={
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8BC34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-              <path d="M8 7h8" />
-              <path d="M8 11h6" />
-            </svg>
-          }
-          description="Comprehensive FX hedging knowledge base with strategy guides, glossary, and regulatory references."
-          features={FEATURES_WIKI}
-          href="https://hedge-wiki.vercel.app/"
-          ctaLabel="OPEN HEDGEWIKI"
-          ctaGradient="linear-gradient(135deg, #8BC34A 0%, #558B2F 100%)"
-          isMobile={isMobile}
-          external
-        />
-      </section>
-
-      {/* ── Stats Bar ── */}
-      <section
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "flex",
-          justifyContent: "center",
-          gap: isMobile ? 16 : 48,
-          flexWrap: "wrap",
-          padding: isMobile ? "48px 24px 24px" : "64px 32px 32px",
-          maxWidth: 1080,
-          margin: "0 auto",
-          animation: "fadeInUp 1.2s ease-out",
-        }}
-      >
-        {STATS.map((s) => (
-          <div key={s.label} style={{ textAlign: "center" }}>
-            <div
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span
               style={{
                 fontFamily: FONT_MONO,
-                fontSize: isMobile ? 24 : 32,
-                fontWeight: 800,
-                color: "#FFFFFF",
-                letterSpacing: "-0.02em",
+                fontSize: 24,
+                fontWeight: 700,
+                color: C.white,
+                letterSpacing: "0.1em",
               }}
             >
-              {s.value}
-            </div>
-            <div
+              ORDR
+            </span>
+            <span
               style={{
                 fontFamily: FONT_MONO,
                 fontSize: 10,
-                fontWeight: 600,
-                color: "#4A5A74",
-                letterSpacing: "0.1em",
-                marginTop: 4,
+                fontWeight: 500,
+                color: C.textDim,
+                letterSpacing: "0.12em",
               }}
             >
-              {s.label.toUpperCase()}
-            </div>
+              TERMINAL
+            </span>
           </div>
-        ))}
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Link
+              href="/market"
+              className="ordr-cta-hover"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 12,
+                fontWeight: 600,
+                color: C.textMuted,
+                textDecoration: "none",
+                padding: "8px 16px",
+                letterSpacing: "0.06em",
+              }}
+            >
+              MARKET
+            </Link>
+            <Link
+              href="/auth/login"
+              className="ordr-cta-hover"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 12,
+                fontWeight: 600,
+                color: C.textPrimary,
+                textDecoration: "none",
+                padding: "8px 20px",
+                border: `1px solid ${C.border}`,
+                borderRadius: 6,
+                letterSpacing: "0.06em",
+              }}
+            >
+              SIGN IN
+            </Link>
+          </div>
+        </nav>
+
+        {/* Hero content */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            padding: isMobile ? "0 24px 80px" : "0 48px 120px",
+            animation: "ordr-hero-in 1s ease-out",
+          }}
+        >
+          <h1
+            style={{
+              fontFamily: FONT_HEADING,
+              fontSize: isMobile ? 48 : 72,
+              fontWeight: 800,
+              lineHeight: 1.05,
+              color: C.white,
+              margin: 0,
+              letterSpacing: "-0.03em",
+            }}
+          >
+            ORDR
+          </h1>
+          <p
+            style={{
+              fontFamily: FONT_HEADING,
+              fontSize: isMobile ? 18 : 24,
+              fontWeight: 600,
+              color: C.textPrimary,
+              margin: "16px 0 0",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            The Institutional Trading Platform
+          </p>
+          <p
+            style={{
+              fontFamily: FONT_UI,
+              fontSize: isMobile ? 14 : 16,
+              color: C.textMuted,
+              margin: "20px 0 0",
+              maxWidth: 560,
+              lineHeight: 1.7,
+            }}
+          >
+            Professional charting, deterministic hedging, and treasury
+            management — unified.
+          </p>
+
+          {/* CTAs */}
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              marginTop: 40,
+              flexWrap: "wrap",
+              justifyContent: "center",
+            }}
+          >
+            <Link
+              href="/market"
+              className="ordr-cta-hover"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 13,
+                fontWeight: 700,
+                color: C.white,
+                background: `linear-gradient(135deg, ${C.accentGreen} 0%, #1B8A80 100%)`,
+                padding: "14px 32px",
+                borderRadius: 8,
+                textDecoration: "none",
+                letterSpacing: "0.06em",
+              }}
+            >
+              LAUNCH ORDR MARKET
+            </Link>
+            <Link
+              href="/auth/login"
+              className="ordr-cta-hover"
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 13,
+                fontWeight: 700,
+                color: C.textPrimary,
+                background: "transparent",
+                padding: "14px 32px",
+                borderRadius: 8,
+                border: `1px solid ${C.border}`,
+                textDecoration: "none",
+                letterSpacing: "0.06em",
+              }}
+            >
+              SIGN IN
+            </Link>
+          </div>
+        </div>
+
+        {/* Scroll indicator */}
+        <div
+          onClick={scrollToProducts}
+          style={{
+            position: "absolute",
+            bottom: 32,
+            left: "50%",
+            transform: "translateX(-50%)",
+            animation: "ordr-chevron-bounce 2s ease-in-out infinite",
+            cursor: "pointer",
+            opacity: 0.4,
+          }}
+        >
+          <ChevronDown size={24} color={C.textMuted} />
+        </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer
+      {/* ════════════════════════════════════════════════════════
+          SECTION 2 — Product Ecosystem
+          ════════════════════════════════════════════════════════ */}
+      <section
+        id="platform"
+        ref={productsFade.ref}
         style={{
           position: "relative",
-          zIndex: 10,
-          textAlign: "center",
-          padding: "40px 32px 32px",
+          zIndex: 1,
+          padding: isMobile ? "80px 24px" : "120px 48px",
+          maxWidth: 1280,
+          margin: "0 auto",
+          opacity: productsFade.visible ? 1 : 0,
+          transform: productsFade.visible ? "translateY(0)" : "translateY(40px)",
+          transition: "opacity 0.8s ease, transform 0.8s ease",
+        }}
+      >
+        {/* Section header */}
+        <div style={{ marginBottom: isMobile ? 40 : 56, textAlign: "center" }}>
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 11,
+              fontWeight: 700,
+              color: C.accentBlue,
+              letterSpacing: "0.2em",
+              display: "block",
+              marginBottom: 12,
+            }}
+          >
+            THE PLATFORM
+          </span>
+          <h2
+            style={{
+              fontFamily: FONT_HEADING,
+              fontSize: isMobile ? 28 : 36,
+              fontWeight: 700,
+              color: C.white,
+              margin: 0,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Everything you need, unified
+          </h2>
+          <p
+            style={{
+              fontFamily: FONT_UI,
+              fontSize: 15,
+              color: C.textMuted,
+              marginTop: 16,
+              maxWidth: 480,
+              marginLeft: "auto",
+              marginRight: "auto",
+              lineHeight: 1.6,
+            }}
+          >
+            From free charting to institutional treasury management.
+            Each module is purpose-built for professional FX workflows.
+          </p>
+        </div>
+
+        {/* Product grid */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile
+              ? "1fr"
+              : "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: 20,
+          }}
+        >
+          {PRODUCTS.map((product) => (
+            <ProductCard key={product.title} product={product} isMobile={isMobile} />
+          ))}
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          SECTION 3 — Why ORDR
+          ════════════════════════════════════════════════════════ */}
+      <section
+        ref={whyFade.ref}
+        style={{
+          position: "relative",
+          zIndex: 1,
+          padding: isMobile ? "80px 24px" : "120px 48px",
+          maxWidth: 1280,
+          margin: "0 auto",
+          opacity: whyFade.visible ? 1 : 0,
+          transform: whyFade.visible ? "translateY(0)" : "translateY(40px)",
+          transition: "opacity 0.8s ease, transform 0.8s ease",
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 40 : 56 }}>
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 11,
+              fontWeight: 700,
+              color: C.accentBlue,
+              letterSpacing: "0.2em",
+              display: "block",
+              marginBottom: 12,
+            }}
+          >
+            WHY ORDR
+          </span>
+          <h2
+            style={{
+              fontFamily: FONT_HEADING,
+              fontSize: isMobile ? 28 : 36,
+              fontWeight: 700,
+              color: C.white,
+              margin: 0,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Built for institutions
+          </h2>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+            gap: 32,
+          }}
+        >
+          {VALUE_PROPS.map((vp) => (
+            <div
+              key={vp.title}
+              style={{
+                textAlign: "center",
+                padding: isMobile ? "32px 24px" : "48px 32px",
+                background: `rgba(30, 34, 45, 0.4)`,
+                border: `1px solid ${C.borderSubtle}`,
+                borderRadius: 16,
+              }}
+            >
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 56,
+                  height: 56,
+                  borderRadius: 14,
+                  background: "rgba(41, 98, 255, 0.08)",
+                  color: C.accentBlue,
+                  marginBottom: 20,
+                }}
+              >
+                {vp.icon}
+              </div>
+              <h3
+                style={{
+                  fontFamily: FONT_HEADING,
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: C.white,
+                  margin: "0 0 12px",
+                }}
+              >
+                {vp.title}
+              </h3>
+              <p
+                style={{
+                  fontFamily: FONT_UI,
+                  fontSize: 14,
+                  color: C.textMuted,
+                  lineHeight: 1.7,
+                  margin: 0,
+                }}
+              >
+                {vp.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          SECTION 4 — Stats Bar
+          ════════════════════════════════════════════════════════ */}
+      <section
+        ref={statsFade.ref}
+        style={{
+          position: "relative",
+          zIndex: 1,
+          padding: isMobile ? "48px 24px" : "64px 48px",
+          maxWidth: 1280,
+          margin: "0 auto",
+          opacity: statsFade.visible ? 1 : 0,
+          transform: statsFade.visible ? "translateY(0)" : "translateY(40px)",
+          transition: "opacity 0.8s ease, transform 0.8s ease",
         }}
       >
         <div
           style={{
-            width: 48,
-            height: 1,
-            background: "rgba(255,255,255,0.08)",
-            margin: "0 auto 20px",
+            display: "flex",
+            justifyContent: "center",
+            gap: isMobile ? 24 : 56,
+            flexWrap: "wrap",
+            padding: isMobile ? "32px 16px" : "40px 48px",
+            background: "rgba(30, 34, 45, 0.4)",
+            border: `1px solid ${C.borderSubtle}`,
+            borderRadius: 16,
           }}
-        />
-        <span
+        >
+          {STATS.map((s, i) => (
+            <div key={s.label} style={{ textAlign: "center", display: "flex", alignItems: "center", gap: isMobile ? 0 : 56 }}>
+              <div>
+                <div
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: isMobile ? 28 : 36,
+                    fontWeight: 800,
+                    color: C.white,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {s.value}
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: C.textDim,
+                    letterSpacing: "0.12em",
+                    marginTop: 6,
+                  }}
+                >
+                  {s.label.toUpperCase()}
+                </div>
+              </div>
+              {/* Divider between stats (not after last) */}
+              {i < STATS.length - 1 && !isMobile && (
+                <div
+                  style={{
+                    width: 1,
+                    height: 40,
+                    background: C.border,
+                    marginLeft: 0,
+                  }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          SECTION 5 — Footer
+          ════════════════════════════════════════════════════════ */}
+      <footer
+        style={{
+          position: "relative",
+          zIndex: 1,
+          textAlign: "center",
+          padding: "64px 32px 40px",
+          borderTop: `1px solid ${C.borderSubtle}`,
+          marginTop: 40,
+        }}
+      >
+        <div
           style={{
             fontFamily: FONT_MONO,
-            fontSize: 10,
-            fontWeight: 600,
-            color: "#2D3A50",
+            fontSize: 14,
+            fontWeight: 700,
+            color: C.textDim,
             letterSpacing: "0.12em",
+            marginBottom: 12,
           }}
         >
           ORDR TERMINAL &mdash; SYNEXIUN
-        </span>
+        </div>
+        <div
+          style={{
+            fontFamily: FONT_UI,
+            fontSize: 13,
+            color: C.textDim,
+            marginBottom: 8,
+          }}
+        >
+          Built for institutional FX treasury management
+        </div>
+        <div
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 11,
+            color: "rgba(84, 91, 105, 0.6)",
+            letterSpacing: "0.04em",
+          }}
+        >
+          &copy; {new Date().getFullYear()} Synexiun. All rights reserved.
+        </div>
       </footer>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════
-   Secondary Product Card Component
+   Product Card Component
    ═══════════════════════════════════════════════════════ */
 
-function ProductCard({
-  title, badge, badgeColor, icon, description, features, href, ctaLabel, ctaGradient, isMobile, external,
-}: {
-  title: string;
-  badge: string;
-  badgeColor: string;
-  icon: React.ReactNode;
-  description: string;
-  features: string[];
-  href: string;
-  ctaLabel: string;
-  ctaGradient: string;
-  isMobile: boolean;
-  external?: boolean;
-}) {
-  const linkProps = external
-    ? { target: "_blank" as const, rel: "noopener noreferrer" }
-    : {};
+function ProductCard({ product, isMobile }: { product: Product; isMobile: boolean }) {
+  const { title, description, badge, badgeColor, icon, href, gated } = product;
 
-  return (
+  const cardContent = (
     <div
+      className={gated ? "ordr-card-gated" : "ordr-card-hover"}
       style={{
-        background: "rgba(30, 34, 45, 0.5)",
+        background: gated
+          ? "rgba(20, 24, 32, 0.5)"
+          : "rgba(30, 34, 45, 0.6)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        border: `1px solid ${C.borderSubtle}`,
         borderRadius: 14,
-        padding: isMobile ? "24px 20px" : "24px 20px",
+        padding: isMobile ? "28px 24px" : "28px 24px",
         display: "flex",
-        flexDirection: "column",
+        flexDirection: "column" as const,
+        height: "100%",
+        opacity: gated ? 0.7 : 1,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            background: `${badgeColor}18`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {icon}
-        </div>
-        <div>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.04em" }}>
-            {title}
-          </div>
-          <span
+      {/* Header row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
             style={{
-              fontFamily: FONT_MONO,
-              fontSize: 9,
-              fontWeight: 700,
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              background: `${badgeColor}14`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               color: badgeColor,
-              background: `${badgeColor}20`,
-              padding: "1px 6px",
-              borderRadius: 3,
-              letterSpacing: "0.08em",
             }}
           >
-            {badge}
-          </span>
+            {icon}
+          </div>
+          <div>
+            <div
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: 14,
+                fontWeight: 700,
+                color: gated ? C.textMuted : C.white,
+                letterSpacing: "0.04em",
+              }}
+            >
+              {title.toUpperCase()}
+            </div>
+          </div>
         </div>
+        {/* Badge */}
+        <span
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 9,
+            fontWeight: 700,
+            color: badgeColor,
+            background: `${badgeColor}18`,
+            padding: "3px 8px",
+            borderRadius: 4,
+            letterSpacing: "0.1em",
+            whiteSpace: "nowrap",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          {gated && <Lock size={9} />}
+          {badge}
+        </span>
       </div>
 
-      <p style={{ fontFamily: FONT_UI, fontSize: 12, color: "#7B8BA5", lineHeight: 1.5, marginBottom: 16, marginTop: 0 }}>
+      {/* Description */}
+      <p
+        style={{
+          fontFamily: FONT_UI,
+          fontSize: 13,
+          color: gated ? C.textDim : C.textMuted,
+          lineHeight: 1.6,
+          margin: "0 0 20px",
+          flex: 1,
+        }}
+      >
         {description}
       </p>
 
-      <ul style={{ listStyle: "none", padding: 0, margin: "0 0 18px 0", flex: 1 }}>
-        {features.map((f) => (
-          <li
-            key={f}
-            style={{
-              fontFamily: FONT_UI,
-              fontSize: 12,
-              color: "#A0AEC0",
-              padding: "3px 0",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <span style={{ width: 5, height: 5, borderRadius: "50%", background: badgeColor, flexShrink: 0 }} />
-            {f}
-          </li>
-        ))}
-      </ul>
-
-      <Link
-        href={href}
-        {...linkProps}
-        style={{
-          display: "block",
-          textAlign: "center",
-          fontFamily: FONT_MONO,
-          fontSize: 11,
-          fontWeight: 700,
-          color: "#FFFFFF",
-          background: ctaGradient,
-          padding: "10px 16px",
-          borderRadius: 8,
-          textDecoration: "none",
-          letterSpacing: "0.06em",
-          transition: "all 0.2s",
-        }}
-      >
-        {ctaLabel}
-      </Link>
+      {/* CTA */}
+      {gated ? (
+        <div
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 12,
+            fontWeight: 600,
+            color: C.textDim,
+            textAlign: "center",
+            padding: "10px 16px",
+            border: `1px solid ${C.border}`,
+            borderRadius: 8,
+            letterSpacing: "0.06em",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          <Lock size={12} />
+          REQUEST ACCESS
+        </div>
+      ) : (
+        <div
+          className="ordr-cta-hover"
+          style={{
+            fontFamily: FONT_MONO,
+            fontSize: 12,
+            fontWeight: 700,
+            color: C.white,
+            textAlign: "center",
+            padding: "10px 16px",
+            background: `linear-gradient(135deg, ${badgeColor} 0%, ${badgeColor}CC 100%)`,
+            borderRadius: 8,
+            letterSpacing: "0.06em",
+          }}
+        >
+          {badge === "FREE" ? "OPEN MARKET" : badge === "FULL ACCESS" ? "SIGN IN" : "EXPLORE"}
+        </div>
+      )}
     </div>
+  );
+
+  if (gated) {
+    return cardContent;
+  }
+
+  return (
+    <Link href={href} style={{ textDecoration: "none", color: "inherit" }}>
+      {cardContent}
+    </Link>
   );
 }
