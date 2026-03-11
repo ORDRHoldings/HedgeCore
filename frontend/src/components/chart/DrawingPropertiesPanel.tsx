@@ -1,10 +1,12 @@
 /**
- * DrawingPropertiesPanel.tsx — Floating panel for editing drawing properties.
- * Appears on right-click of a trendline or other drawing.
- * Dark theme, compact, TradingView-style.
+ * DrawingPropertiesPanel.tsx — Full TradingView-parity properties panel.
+ *
+ * Sections: Style, Extend/Arrows, Text, Statistics, Display, Actions.
+ * Appears on right-click of any drawing. Dark theme, scrollable.
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import type { Drawing, DrawingType } from "./renderers/drawings";
+import type { Drawing, DrawingType, DrawingStats, LineStyle } from "./renderers/drawings";
+import { DEFAULT_STATS } from "./renderers/drawings";
 import { THEME } from "./core/theme";
 
 interface Props {
@@ -14,6 +16,7 @@ interface Props {
   onUpdate: (updated: Drawing) => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onCreateParallel?: () => void;
   onClose: () => void;
 }
 
@@ -24,12 +27,21 @@ const PRESET_COLORS = [
 ];
 
 const LINE_WIDTHS = [0.5, 1, 1.5, 2, 3, 4];
+const LINE_STYLES: LineStyle[] = ["solid", "dashed", "dotted"];
+const FONT_SIZES = [9, 10, 11, 12, 14, 16, 18];
+const STAT_POSITIONS: DrawingStats["position"][] = ["top", "bottom", "left", "right"];
 
-export default function DrawingPropertiesPanel({ drawing, x, y, onUpdate, onDelete, onDuplicate, onClose }: Props) {
+export default function DrawingPropertiesPanel({
+  drawing, x, y, onUpdate, onDelete, onDuplicate, onCreateParallel, onClose,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [label, setLabel] = useState(drawing.label);
+  const [activeTab, setActiveTab] = useState<"style" | "text" | "stats">("style");
 
-  // Position the panel so it doesn't overflow viewport
+  // Keep label in sync if drawing changes externally
+  useEffect(() => { setLabel(drawing.label); }, [drawing.label]);
+
+  // Position panel within viewport
   const [pos, setPos] = useState({ x, y });
   useEffect(() => {
     if (!ref.current) return;
@@ -47,12 +59,8 @@ export default function DrawingPropertiesPanel({ drawing, x, y, onUpdate, onDele
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
-    // Delay to avoid catching the same right-click
     const timer = setTimeout(() => document.addEventListener("mousedown", handler), 50);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("mousedown", handler);
-    };
+    return () => { clearTimeout(timer); document.removeEventListener("mousedown", handler); };
   }, [onClose]);
 
   // Close on Escape
@@ -66,173 +74,331 @@ export default function DrawingPropertiesPanel({ drawing, x, y, onUpdate, onDele
     onUpdate({ ...drawing, ...patch });
   }, [drawing, onUpdate]);
 
+  const updateStats = useCallback((patch: Partial<DrawingStats>) => {
+    update({ stats: { ...(drawing.stats || DEFAULT_STATS), ...patch } });
+  }, [drawing.stats, update]);
+
   const commitLabel = useCallback(() => {
     if (label !== drawing.label) update({ label });
   }, [label, drawing.label, update]);
 
   const isTrendline = drawing.type === "trendline";
-  const showExtend = isTrendline;
-  const showAngleToggle = isTrendline;
 
   return (
     <div
       ref={ref}
       style={{
-        position: "fixed",
-        left: pos.x,
-        top: pos.y,
-        zIndex: 10000,
-        background: "#1E222D",
-        border: `1px solid ${THEME.subPaneBorder}`,
-        borderRadius: 6,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-        minWidth: 220,
-        maxWidth: 280,
-        fontFamily: "'IBM Plex Mono', monospace",
-        fontSize: 11,
-        color: "#D1D4DC",
-        overflow: "hidden",
+        position: "fixed", left: pos.x, top: pos.y, zIndex: 10000,
+        background: "#1E222D", border: `1px solid ${THEME.subPaneBorder}`,
+        borderRadius: 6, boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+        width: 280, maxHeight: 480,
+        fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#D1D4DC",
+        display: "flex", flexDirection: "column", overflow: "hidden",
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* Header */}
       <div style={{
-        padding: "8px 12px",
-        borderBottom: `1px solid ${THEME.subPaneBorder}`,
+        padding: "8px 12px", borderBottom: `1px solid ${THEME.subPaneBorder}`,
         fontWeight: 700, fontSize: 10, textTransform: "uppercase",
         color: THEME.axisText, letterSpacing: 0.5,
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        <span>{getTypeName(drawing.type)} PROPERTIES</span>
-        <button
-          onClick={onClose}
-          style={{
-            background: "none", border: "none", color: THEME.axisText,
-            cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0,
-          }}
-        >
-          &times;
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span>{getTypeName(drawing.type)}</span>
+          {drawing.locked && <span style={{ color: "#FF9800", fontSize: 9 }}>LOCKED</span>}
+        </div>
+        <button onClick={onClose} style={closeBtnS}>&times;</button>
       </div>
 
-      <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-        {/* Label / Name */}
-        <Row label="Label">
-          <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onBlur={commitLabel}
-            onKeyDown={(e) => { if (e.key === "Enter") commitLabel(); }}
-            placeholder="Name this line..."
+      {/* Tabs */}
+      <div style={{ display: "flex", borderBottom: `1px solid ${THEME.subPaneBorder}` }}>
+        {(["style", "text", "stats"] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
             style={{
-              flex: 1, background: "#131722", border: `1px solid ${THEME.subPaneBorder}`,
-              borderRadius: 3, padding: "3px 6px", color: "#D1D4DC",
-              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, outline: "none",
+              flex: 1, padding: "5px 0", border: "none", cursor: "pointer",
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fontWeight: 600,
+              textTransform: "uppercase",
+              background: activeTab === tab ? "#2A2E39" : "transparent",
+              color: activeTab === tab ? "#D1D4DC" : THEME.axisText,
+              borderBottom: activeTab === tab ? `2px solid ${drawing.color}` : "2px solid transparent",
             }}
-          />
-        </Row>
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
 
-        {/* Color */}
-        <Row label="Color">
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-            {PRESET_COLORS.map((c) => (
-              <button
-                key={c}
-                onClick={() => update({ color: c })}
-                style={{
-                  width: 18, height: 18, borderRadius: 3,
-                  background: c, border: drawing.color === c ? "2px solid #D1D4DC" : "1px solid rgba(255,255,255,0.1)",
-                  cursor: "pointer", padding: 0,
-                }}
-              />
-            ))}
-          </div>
-        </Row>
+      {/* Tab content (scrollable) */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
 
-        {/* Line Width */}
-        <Row label="Width">
-          <div style={{ display: "flex", gap: 3 }}>
-            {LINE_WIDTHS.map((w) => (
-              <button
-                key={w}
-                onClick={() => update({ lineWidth: w })}
-                style={{
-                  width: 28, height: 22, borderRadius: 3,
-                  background: drawing.lineWidth === w ? "#2A2E39" : "transparent",
-                  border: drawing.lineWidth === w ? `1px solid ${drawing.color}` : "1px solid rgba(255,255,255,0.05)",
-                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                  padding: 0,
-                }}
-              >
-                <div style={{ width: 16, height: Math.max(1, w), background: drawing.color, borderRadius: 1 }} />
-              </button>
-            ))}
-          </div>
-        </Row>
-
-        {/* Opacity */}
-        <Row label="Opacity">
-          <input
-            type="range"
-            min={0.1}
-            max={1}
-            step={0.05}
-            value={drawing.opacity}
-            onChange={(e) => update({ opacity: parseFloat(e.target.value) })}
-            style={{ flex: 1, accentColor: drawing.color }}
-          />
-          <span style={{ fontSize: 10, color: THEME.axisText, minWidth: 28, textAlign: "right" }}>
-            {Math.round(drawing.opacity * 100)}%
-          </span>
-        </Row>
-
-        {/* Extend Left / Right (trendline only) */}
-        {showExtend && (
-          <Row label="Extend">
-            <div style={{ display: "flex", gap: 6 }}>
-              <ToggleButton
-                active={drawing.extendLeft}
-                onClick={() => update({ extendLeft: !drawing.extendLeft })}
-                label="← LEFT"
-                color={drawing.color}
-              />
-              <ToggleButton
-                active={drawing.extendRight}
-                onClick={() => update({ extendRight: !drawing.extendRight })}
-                label="RIGHT →"
-                color={drawing.color}
-              />
+        {/* ── STYLE TAB ── */}
+        {activeTab === "style" && (<>
+          {/* Color */}
+          <Row label="Color">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              {PRESET_COLORS.map((c) => (
+                <button key={c} onClick={() => update({ color: c })} style={{
+                  width: 18, height: 18, borderRadius: 3, background: c, padding: 0,
+                  border: drawing.color === c ? "2px solid #D1D4DC" : "1px solid rgba(255,255,255,0.1)",
+                  cursor: "pointer",
+                }} />
+              ))}
             </div>
           </Row>
-        )}
 
-        {/* Show Angle (trendline only) */}
-        {showAngleToggle && (
-          <Row label="Angle">
-            <ToggleButton
-              active={drawing.showAngle}
-              onClick={() => update({ showAngle: !drawing.showAngle })}
-              label={drawing.showAngle ? "VISIBLE" : "HIDDEN"}
-              color={drawing.color}
-            />
+          {/* Line Width */}
+          <Row label="Width">
+            <div style={{ display: "flex", gap: 3 }}>
+              {LINE_WIDTHS.map((w) => (
+                <button key={w} onClick={() => update({ lineWidth: w })} style={{
+                  width: 28, height: 22, borderRadius: 3, padding: 0, cursor: "pointer",
+                  background: drawing.lineWidth === w ? "#2A2E39" : "transparent",
+                  border: drawing.lineWidth === w ? `1px solid ${drawing.color}` : "1px solid rgba(255,255,255,0.05)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <div style={{ width: 16, height: Math.max(1, w), background: drawing.color, borderRadius: 1 }} />
+                </button>
+              ))}
+            </div>
           </Row>
-        )}
+
+          {/* Line Style */}
+          <Row label="Style">
+            <div style={{ display: "flex", gap: 3 }}>
+              {LINE_STYLES.map((s) => (
+                <button key={s} onClick={() => update({ lineStyle: s })} style={{
+                  width: 48, height: 22, borderRadius: 3, padding: 0, cursor: "pointer",
+                  background: (drawing.lineStyle || "solid") === s ? "#2A2E39" : "transparent",
+                  border: (drawing.lineStyle || "solid") === s ? `1px solid ${drawing.color}` : "1px solid rgba(255,255,255,0.05)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <svg width="32" height="2" style={{ overflow: "visible" }}>
+                    <line x1="0" y1="1" x2="32" y2="1" stroke={drawing.color} strokeWidth="1.5"
+                      strokeDasharray={s === "dashed" ? "6,4" : s === "dotted" ? "2,2" : "none"} />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          </Row>
+
+          {/* Opacity */}
+          <Row label="Opacity">
+            <input type="range" min={0.1} max={1} step={0.05}
+              value={drawing.opacity} onChange={(e) => update({ opacity: parseFloat(e.target.value) })}
+              style={{ flex: 1, accentColor: drawing.color }} />
+            <span style={{ fontSize: 10, color: THEME.axisText, minWidth: 28, textAlign: "right" }}>
+              {Math.round(drawing.opacity * 100)}%
+            </span>
+          </Row>
+
+          {/* Extend (trendline only) */}
+          {isTrendline && (
+            <Row label="Extend">
+              <div style={{ display: "flex", gap: 4 }}>
+                <Tog active={drawing.extendLeft} onClick={() => update({ extendLeft: !drawing.extendLeft })}
+                  label="\u2190 LEFT" color={drawing.color} />
+                <Tog active={drawing.extendRight} onClick={() => update({ extendRight: !drawing.extendRight })}
+                  label="RIGHT \u2192" color={drawing.color} />
+              </div>
+            </Row>
+          )}
+
+          {/* Arrows (trendline only) */}
+          {isTrendline && (
+            <Row label="Arrows">
+              <div style={{ display: "flex", gap: 4 }}>
+                <Tog active={drawing.arrowLeft || false} onClick={() => update({ arrowLeft: !drawing.arrowLeft })}
+                  label="\u25C0 LEFT" color={drawing.color} />
+                <Tog active={drawing.arrowRight || false} onClick={() => update({ arrowRight: !drawing.arrowRight })}
+                  label="RIGHT \u25B6" color={drawing.color} />
+              </div>
+            </Row>
+          )}
+
+          {/* Display toggles */}
+          <SectionHeader label="Display" />
+          {isTrendline && (
+            <Row label="Angle">
+              <Tog active={drawing.showAngle} onClick={() => update({ showAngle: !drawing.showAngle })}
+                label={drawing.showAngle ? "VISIBLE" : "HIDDEN"} color={drawing.color} />
+            </Row>
+          )}
+          {isTrendline && (
+            <Row label="Mid Pt">
+              <Tog active={drawing.showMidPoint || false} onClick={() => update({ showMidPoint: !drawing.showMidPoint })}
+                label={drawing.showMidPoint ? "VISIBLE" : "HIDDEN"} color={drawing.color} />
+            </Row>
+          )}
+          <Row label="Axis">
+            <Tog active={drawing.showPriceLabels || false} onClick={() => update({ showPriceLabels: !drawing.showPriceLabels })}
+              label={drawing.showPriceLabels ? "PRICES ON" : "PRICES OFF"} color={drawing.color} />
+          </Row>
+          <Row label="Lock">
+            <Tog active={drawing.locked || false} onClick={() => update({ locked: !drawing.locked })}
+              label={drawing.locked ? "LOCKED" : "UNLOCKED"} color={drawing.locked ? "#FF9800" : drawing.color} />
+          </Row>
+
+          {/* Coordinates */}
+          {isTrendline && drawing.points.length >= 2 && (<>
+            <SectionHeader label="Coordinates" />
+            <Row label="P1">
+              <CoordInput value={drawing.points[0].index} onChange={(v) => {
+                const pts = [...drawing.points];
+                pts[0] = { ...pts[0], index: v };
+                update({ points: pts });
+              }} label="Bar" />
+              <CoordInput value={parseFloat(drawing.points[0].price.toFixed(5))} onChange={(v) => {
+                const pts = [...drawing.points];
+                pts[0] = { ...pts[0], price: v };
+                update({ points: pts });
+              }} label="Price" step={0.00001} />
+            </Row>
+            <Row label="P2">
+              <CoordInput value={drawing.points[1].index} onChange={(v) => {
+                const pts = [...drawing.points];
+                pts[1] = { ...pts[1], index: v };
+                update({ points: pts });
+              }} label="Bar" />
+              <CoordInput value={parseFloat(drawing.points[1].price.toFixed(5))} onChange={(v) => {
+                const pts = [...drawing.points];
+                pts[1] = { ...pts[1], price: v };
+                update({ points: pts });
+              }} label="Price" step={0.00001} />
+            </Row>
+          </>)}
+        </>)}
+
+        {/* ── TEXT TAB ── */}
+        {activeTab === "text" && (<>
+          <Row label="Label">
+            <input value={label} onChange={(e) => setLabel(e.target.value)}
+              onBlur={commitLabel} onKeyDown={(e) => { if (e.key === "Enter") commitLabel(); }}
+              placeholder="Name this line..." style={inputS} />
+          </Row>
+          <Row label="Size">
+            <div style={{ display: "flex", gap: 3 }}>
+              {FONT_SIZES.map(s => (
+                <button key={s} onClick={() => update({ labelFontSize: s })} style={{
+                  width: 24, height: 22, borderRadius: 3, padding: 0, cursor: "pointer",
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 9,
+                  background: (drawing.labelFontSize || 11) === s ? "#2A2E39" : "transparent",
+                  border: (drawing.labelFontSize || 11) === s ? `1px solid ${drawing.color}` : "1px solid rgba(255,255,255,0.05)",
+                  color: "#D1D4DC",
+                }}>{s}</button>
+              ))}
+            </div>
+          </Row>
+          <Row label="Format">
+            <div style={{ display: "flex", gap: 4 }}>
+              <Tog active={drawing.labelBold || false} onClick={() => update({ labelBold: !drawing.labelBold })}
+                label="B" color={drawing.color} />
+              <Tog active={drawing.labelItalic || false} onClick={() => update({ labelItalic: !drawing.labelItalic })}
+                label="I" color={drawing.color} />
+            </div>
+          </Row>
+          <Row label="Color">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              <button onClick={() => update({ labelColor: "" })} style={{
+                width: 18, height: 18, borderRadius: 3, padding: 0, cursor: "pointer",
+                background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)`,
+                border: !drawing.labelColor ? "2px solid #D1D4DC" : "1px solid rgba(255,255,255,0.1)",
+              }} title="Use line color" />
+              {PRESET_COLORS.slice(0, 10).map((c) => (
+                <button key={c} onClick={() => update({ labelColor: c })} style={{
+                  width: 18, height: 18, borderRadius: 3, background: c, padding: 0,
+                  border: drawing.labelColor === c ? "2px solid #D1D4DC" : "1px solid rgba(255,255,255,0.1)",
+                  cursor: "pointer",
+                }} />
+              ))}
+            </div>
+          </Row>
+          <Row label="Align">
+            <div style={{ display: "flex", gap: 3 }}>
+              {(["left", "center", "right"] as const).map(a => (
+                <Tog key={a} active={(drawing.labelAlign || "right") === a}
+                  onClick={() => update({ labelAlign: a })}
+                  label={a.toUpperCase()} color={drawing.color} />
+              ))}
+            </div>
+          </Row>
+        </>)}
+
+        {/* ── STATS TAB ── */}
+        {activeTab === "stats" && (<>
+          <Row label="Price">
+            <Tog active={drawing.stats?.showPrice || false} onClick={() => updateStats({ showPrice: !drawing.stats?.showPrice })}
+              label={drawing.stats?.showPrice ? "ON" : "OFF"} color={drawing.color} />
+          </Row>
+          <Row label="%">
+            <Tog active={drawing.stats?.showPercent || false} onClick={() => updateStats({ showPercent: !drawing.stats?.showPercent })}
+              label={drawing.stats?.showPercent ? "ON" : "OFF"} color={drawing.color} />
+          </Row>
+          <Row label="Pips">
+            <Tog active={drawing.stats?.showPips ?? true} onClick={() => updateStats({ showPips: !drawing.stats?.showPips })}
+              label={drawing.stats?.showPips !== false ? "ON" : "OFF"} color={drawing.color} />
+          </Row>
+          <Row label="Bars">
+            <Tog active={drawing.stats?.showBars || false} onClick={() => updateStats({ showBars: !drawing.stats?.showBars })}
+              label={drawing.stats?.showBars ? "ON" : "OFF"} color={drawing.color} />
+          </Row>
+          <Row label="Dates">
+            <Tog active={drawing.stats?.showDateRange || false} onClick={() => updateStats({ showDateRange: !drawing.stats?.showDateRange })}
+              label={drawing.stats?.showDateRange ? "ON" : "OFF"} color={drawing.color} />
+          </Row>
+          <Row label="Angle">
+            <Tog active={drawing.stats?.showAngle || false} onClick={() => updateStats({ showAngle: !drawing.stats?.showAngle })}
+              label={drawing.stats?.showAngle ? "ON" : "OFF"} color={drawing.color} />
+          </Row>
+
+          <SectionHeader label="Options" />
+          <Row label="Always">
+            <Tog active={drawing.stats?.alwaysShow || false} onClick={() => updateStats({ alwaysShow: !drawing.stats?.alwaysShow })}
+              label={drawing.stats?.alwaysShow ? "ALWAYS" : "ON SELECT"} color={drawing.color} />
+          </Row>
+          <Row label="Pos">
+            <div style={{ display: "flex", gap: 3 }}>
+              {STAT_POSITIONS.map(p => (
+                <Tog key={p} active={(drawing.stats?.position || "top") === p}
+                  onClick={() => updateStats({ position: p })}
+                  label={p.toUpperCase()} color={drawing.color} />
+              ))}
+            </div>
+          </Row>
+        </>)}
       </div>
 
-      {/* Actions */}
+      {/* Actions (always visible at bottom) */}
       <div style={{
-        padding: "6px 12px 8px",
-        borderTop: `1px solid ${THEME.subPaneBorder}`,
-        display: "flex", gap: 4,
+        padding: "6px 12px 8px", borderTop: `1px solid ${THEME.subPaneBorder}`,
+        display: "flex", gap: 4, flexWrap: "wrap",
       }}>
         <ActionBtn onClick={onDuplicate} label="CLONE" />
+        {isTrendline && onCreateParallel && (
+          <ActionBtn onClick={onCreateParallel} label="PARALLEL" />
+        )}
         <ActionBtn onClick={onDelete} label="DELETE" danger />
       </div>
     </div>
   );
 }
 
-// ── Helpers ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+//  Sub-components
+// ══════════════════════════════════════════════════════
+
+const closeBtnS: React.CSSProperties = {
+  background: "none", border: "none", color: THEME.axisText,
+  cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0,
+};
+
+const inputS: React.CSSProperties = {
+  flex: 1, background: "#131722", border: `1px solid ${THEME.subPaneBorder}`,
+  borderRadius: 3, padding: "3px 6px", color: "#D1D4DC",
+  fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, outline: "none",
+};
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -243,19 +409,28 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function ToggleButton({ active, onClick, label, color }: { active: boolean; onClick: () => void; label: string; color: string }) {
+function SectionHeader({ label }: { label: string }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fontWeight: 600,
-        padding: "3px 8px", borderRadius: 3,
-        background: active ? `${color}22` : "transparent",
-        border: `1px solid ${active ? color : "rgba(255,255,255,0.1)"}`,
-        color: active ? color : THEME.axisText,
-        cursor: "pointer", textTransform: "uppercase",
-      }}
-    >
+    <div style={{
+      fontSize: 9, fontWeight: 700, color: THEME.axisText, textTransform: "uppercase",
+      letterSpacing: 0.5, marginTop: 4, paddingBottom: 2,
+      borderBottom: `1px solid ${THEME.subPaneBorder}`,
+    }}>
+      {label}
+    </div>
+  );
+}
+
+function Tog({ active, onClick, label, color }: { active: boolean; onClick: () => void; label: string; color: string }) {
+  return (
+    <button onClick={onClick} style={{
+      fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fontWeight: 600,
+      padding: "3px 8px", borderRadius: 3,
+      background: active ? `${color}22` : "transparent",
+      border: `1px solid ${active ? color : "rgba(255,255,255,0.1)"}`,
+      color: active ? color : THEME.axisText,
+      cursor: "pointer", textTransform: "uppercase",
+    }}>
       {label}
     </button>
   );
@@ -263,19 +438,40 @@ function ToggleButton({ active, onClick, label, color }: { active: boolean; onCl
 
 function ActionBtn({ onClick, label, danger }: { onClick: () => void; label: string; danger?: boolean }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        flex: 1, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600,
-        padding: "5px 0", borderRadius: 3,
-        background: danger ? "rgba(239,83,80,0.12)" : "rgba(255,255,255,0.04)",
-        border: `1px solid ${danger ? "rgba(239,83,80,0.3)" : "rgba(255,255,255,0.08)"}`,
-        color: danger ? "#EF5350" : "#D1D4DC",
-        cursor: "pointer", textTransform: "uppercase",
-      }}
-    >
+    <button onClick={onClick} style={{
+      flex: 1, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600,
+      padding: "5px 0", borderRadius: 3, minWidth: 60,
+      background: danger ? "rgba(239,83,80,0.12)" : "rgba(255,255,255,0.04)",
+      border: `1px solid ${danger ? "rgba(239,83,80,0.3)" : "rgba(255,255,255,0.08)"}`,
+      color: danger ? "#EF5350" : "#D1D4DC",
+      cursor: "pointer", textTransform: "uppercase",
+    }}>
       {label}
     </button>
+  );
+}
+
+function CoordInput({ value, onChange, label, step }: {
+  value: number; onChange: (v: number) => void; label: string; step?: number;
+}) {
+  const [val, setVal] = useState(String(value));
+  useEffect(() => { setVal(String(value)); }, [value]);
+  const commit = () => {
+    const n = parseFloat(val);
+    if (!isNaN(n) && n !== value) onChange(n);
+  };
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+      <span style={{ fontSize: 8, color: THEME.axisText }}>{label}</span>
+      <input value={val} onChange={(e) => setVal(e.target.value)}
+        onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") commit(); }}
+        step={step || 1} type="number"
+        style={{
+          width: 60, background: "#131722", border: `1px solid ${THEME.subPaneBorder}`,
+          borderRadius: 2, padding: "2px 4px", color: "#D1D4DC",
+          fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, outline: "none",
+        }} />
+    </div>
   );
 }
 

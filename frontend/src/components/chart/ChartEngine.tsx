@@ -26,7 +26,7 @@ import {
   computeVolumeProfile,
 } from "./indicators";
 import { detectSupportResistance, detectFVG, detectTrendlines } from "./detection";
-import { computeLayout, computeViewport, formatPrice } from "./core/data";
+import { computeLayout, computeViewport, formatPrice, xToIndex, yToPrice, indexToX, priceToY } from "./core/data";
 import type { ChartLayout, SubPaneLayout } from "./core/data";
 import { drawPriceAxis, drawTimeAxis } from "./core/axis";
 import { drawCrosshair, snapToBar } from "./core/crosshair";
@@ -46,9 +46,11 @@ import {
 } from "./renderers/indicators";
 import { drawSRLevels, drawFVGZones, drawTrendlines } from "./renderers/overlays";
 import {
-  drawDrawings, loadDrawings, saveDrawings, getDefaultColor, createDrawing,
-  hitTestDrawings, drawRubberBand,
+  drawDrawings, loadDrawings, saveDrawings, createDrawing,
+  hitTestDrawings, drawRubberBand, drawDrawingPriceLabels,
+  magneticSnap, shiftSnapPoint, createParallelLine,
 } from "./renderers/drawings";
+import type { MagneticSnapResult } from "./renderers/drawings";
 import DrawingPropertiesPanel from "./DrawingPropertiesPanel";
 import type { Drawing, DrawingType } from "./renderers/drawings";
 import {
@@ -220,6 +222,44 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   useEffect(() => { drawingModeRef.current = drawingMode; }, [drawingMode]);
   useEffect(() => { drawingPointsRef.current = drawingPoints; }, [drawingPoints]);
   useEffect(() => { drawingsRef.current = drawings; }, [drawings]);
+
+  // Shift key tracking (for 15° angle snap)
+  const shiftHeldRef = useRef(false);
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => { if (e.key === "Shift") shiftHeldRef.current = true; };
+    const up = (e: KeyboardEvent) => { if (e.key === "Shift") shiftHeldRef.current = false; };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
+  }, []);
+
+  // Drag-to-move drawings
+  const drawingDragRef = useRef<{
+    drawingId: string;
+    part: "body" | "p0" | "p1";
+    startX: number; startY: number;
+    origPoints: { index: number; price: number }[];
+  } | null>(null);
+  const dragOverrideRef = useRef<{ id: string; points: { index: number; price: number }[] } | null>(null);
+  const [isDrawingDragging, setIsDrawingDragging] = useState(false);
+
+  // Magnetic snap indicator for rubber band
+  const magneticSnapResultRef = useRef<MagneticSnapResult | null>(null);
+
+  // Helper: compute active viewport with zoom + price offset
+  const getActiveViewport = useCallback(() => {
+    const rawVp = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
+    let vp = rawVp;
+    if (priceZoomRef.current !== 1.0) {
+      const mid = (vp.priceMin + vp.priceMax) / 2;
+      const halfRange = ((vp.priceMax - vp.priceMin) / 2) * priceZoomRef.current;
+      vp = { ...vp, priceMin: mid - halfRange, priceMax: mid + halfRange };
+    }
+    if (zoomRef.current.priceOffset !== 0) {
+      vp = { ...vp, priceMin: vp.priceMin + zoomRef.current.priceOffset, priceMax: vp.priceMax + zoomRef.current.priceOffset };
+    }
+    return vp;
+  }, [bars]);
 
   // Layout (left toolbar adds 40px)
   const LEFT_TOOLBAR_WIDTH = 40;
@@ -597,8 +637,13 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       }
     }
 
-    // Layer 7: Drawings
-    drawDrawings(ctx, drawings, layout, viewport, pair, priceScale, selectedDrawingId, hoveredDrawingId);
+    // Layer 7: Drawings (apply drag override if active)
+    let renderDrawings = drawings;
+    if (dragOverrideRef.current) {
+      const ov = dragOverrideRef.current;
+      renderDrawings = drawings.map(d => d.id === ov.id ? { ...d, points: ov.points } : d);
+    }
+    drawDrawings(ctx, renderDrawings, layout, viewport, pair, priceScale, selectedDrawingId, hoveredDrawingId, bars);
 
     // Layer 7b: Rubber-band preview (drawing in progress)
     const currentPoints = drawingPointsRef.current;
@@ -606,13 +651,26 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     if (currentMode && currentPoints.length > 0 && ch.visible) {
       const neededPoints = currentMode === "horizontal" ? 1 : 2;
       if (currentPoints.length < neededPoints) {
-        drawRubberBand(ctx, currentPoints[0], ch.x, ch.y, layout, viewport, priceScale, currentMode);
+        let rbx = ch.x, rby = ch.y;
+        // Shift-snap to 15° increments
+        if (shiftHeldRef.current && currentMode !== "horizontal") {
+          const p0 = currentPoints[0];
+          const p0x = indexToX(p0.index, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth);
+          const p0y = priceToY(p0.price, viewport.priceMin, viewport.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+          const snapped = shiftSnapPoint(p0x, p0y, ch.x, ch.y);
+          rbx = snapped.x;
+          rby = snapped.y;
+        }
+        drawRubberBand(ctx, currentPoints[0], rbx, rby, layout, viewport, priceScale, currentMode, undefined, magneticSnapResultRef.current);
       }
     }
 
     // Layer 8: Axes
     drawPriceAxis(ctx, layout, viewport, pair, priceScale, refPrice);
     drawTimeAxis(ctx, layout, viewport, bars, interval);
+
+    // Layer 8b: Drawing price axis labels (on top of axes)
+    drawDrawingPriceLabels(ctx, renderDrawings, layout, viewport, priceScale, selectedDrawingId);
 
     // Layer 9: Crosshair
     drawCrosshair(ctx, ch, layout, viewport, bars, pair, crosshairMode, priceScale, refPrice);
@@ -671,12 +729,56 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     const snap = snapToBar(x, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth, bars.length);
     crosshairRef.current = { x, y, visible: true, snapIndex: snap };
 
+    // Drawing drag-to-move: update override ref for 60fps rendering
+    if (drawingDragRef.current) {
+      const drag = drawingDragRef.current;
+      const vp = getActiveViewport();
+      const dx = x - drag.startX;
+      const dy = y - drag.startY;
+      const dIdx = (dx / layout.chartWidth) * (vp.endIndex - vp.startIndex);
+      const dPrice = -(dy / layout.mainHeight) * (vp.priceMax - vp.priceMin);
+      if (drag.part === "body") {
+        dragOverrideRef.current = {
+          id: drag.drawingId,
+          points: drag.origPoints.map(p => ({ index: Math.round(p.index + dIdx), price: p.price + dPrice })),
+        };
+      } else {
+        const pi = drag.part === "p0" ? 0 : 1;
+        const newPoints = drag.origPoints.map((p, i) => {
+          if (i !== pi) return { ...p };
+          let newIdx = Math.round(p.index + dIdx);
+          let newPrice = p.price + dPrice;
+          if (shiftHeldRef.current && drag.origPoints.length === 2) {
+            const anchor = drag.origPoints[1 - pi];
+            const ax = indexToX(anchor.index, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth);
+            const ay = priceToY(anchor.price, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+            const cx = indexToX(newIdx, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth);
+            const cy = priceToY(newPrice, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+            const snapped = shiftSnapPoint(ax, ay, cx, cy);
+            newIdx = Math.round(xToIndex(snapped.x, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth));
+            newPrice = yToPrice(snapped.y, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+          }
+          return { index: newIdx, price: newPrice };
+        });
+        dragOverrideRef.current = { id: drag.drawingId, points: newPoints };
+      }
+      return;
+    }
+
+    // Update magnetic snap result during drawing mode
+    if (drawingModeRef.current && bars.length > 0) {
+      const vp = getActiveViewport();
+      magneticSnapResultRef.current = magneticSnap(x, y, bars, layout, vp, priceScale);
+    } else {
+      magneticSnapResultRef.current = null;
+    }
+
     // Hit test drawings for hover — only when not in drawing mode and not panning
     if (!drawingModeRef.current && !zoomRef.current.isDragging) {
       const hit = hitTestDrawings(x, y, drawingsRef.current, layout, viewport, priceScale);
       setHoveredDrawingId(hit ? hit.drawingId : null);
     }
-  }, [layout, bars, contextMenu.open, priceScale]);
+  }, [layout, bars, contextMenu.open, priceScale, getActiveViewport]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     // FIX 2: Dismiss context menu on click and don't propagate
@@ -713,14 +815,25 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     // FIX 3: Drawing mode — read from refs to avoid stale closures
     const currentDrawingMode = drawingModeRef.current;
     if (currentDrawingMode) {
-      const zoom = zoomRef.current;
-      const viewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
-      const { startIndex, endIndex, priceMin, priceMax } = viewport;
-      const range = endIndex - startIndex || 1;
-      const idx = startIndex + ((x - layout.chartLeft) / layout.chartWidth) * range;
-      const price = priceMin + ((layout.mainTop + layout.mainHeight - y) / layout.mainHeight) * (priceMax - priceMin);
+      const vp = getActiveViewport();
+      // Magnetic snap to nearest OHLC (pixel coords)
+      const snap = magneticSnap(x, y, bars, layout, vp, priceScale);
+      let idx = snap.index;
+      let price = snap.price;
       const currentPoints = drawingPointsRef.current;
-      const newPoints = [...currentPoints, { index: Math.round(idx), price }];
+      // Shift-snap for second point (angle constraint) — operates in pixel space
+      if (currentPoints.length === 1 && shiftHeldRef.current && currentDrawingMode !== "horizontal") {
+        const anchor = currentPoints[0];
+        const ax = indexToX(anchor.index, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth);
+        const ay = priceToY(anchor.price, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+        const cx = indexToX(idx, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth);
+        const cy = priceToY(price, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+        const snapped = shiftSnapPoint(ax, ay, cx, cy);
+        idx = Math.round(xToIndex(snapped.x, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth));
+        price = yToPrice(snapped.y, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+      }
+      const pt = { index: idx, price };
+      const newPoints = [...currentPoints, pt];
       setDrawingPoints(newPoints);
       drawingPointsRef.current = newPoints;
 
@@ -741,18 +854,28 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       return;
     }
 
-    // Click on chart without drawing mode: hit-test for selection
+    // Click on chart without drawing mode: hit-test for selection + drag-to-move
     {
-      const zoom = zoomRef.current;
-      const viewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
-      const hit = hitTestDrawings(x, y, drawingsRef.current, layout, viewport, priceScale);
+      const vp = getActiveViewport();
+      const hit = hitTestDrawings(x, y, drawingsRef.current, layout, vp, priceScale);
       if (hit) {
         setSelectedDrawingId(hit.drawingId);
-        // Close properties panel if clicking a different drawing
         if (drawingPropsPanel && drawingPropsPanel.drawingId !== hit.drawingId) {
           setDrawingPropsPanel(null);
         }
-        return; // Don't start pan when clicking a drawing
+        // Start drag-to-move if drawing is not locked
+        const targetDrawing = drawingsRef.current.find(d => d.id === hit.drawingId);
+        if (targetDrawing && !targetDrawing.locked) {
+          drawingDragRef.current = {
+            drawingId: hit.drawingId,
+            part: hit.part,
+            startX: x,
+            startY: y,
+            origPoints: targetDrawing.points.map(p => ({ ...p })),
+          };
+          setIsDrawingDragging(true);
+        }
+        return;
       } else {
         setSelectedDrawingId(null);
         setDrawingPropsPanel(null);
@@ -762,16 +885,31 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     // Chart pan — pass Y for vertical panning
     zoomRef.current = handleDragStart(zoomRef.current, x, y);
     setIsDragging(true);
-  }, [contextMenu.open, layout, drawings, bars, dimensions, activeTool, pushDrawingState, priceScale, drawingPropsPanel]);
+  }, [contextMenu.open, layout, drawings, bars, dimensions, activeTool, pushDrawingState, priceScale, drawingPropsPanel, getActiveViewport]);
 
   const handleMouseUp = useCallback(() => {
+    // Commit drawing drag
+    if (drawingDragRef.current && dragOverrideRef.current) {
+      const ov = dragOverrideRef.current;
+      const updated = drawingsRef.current.map(d => d.id === ov.id ? { ...d, points: ov.points } : d);
+      pushDrawingState(updated);
+      drawingDragRef.current = null;
+      dragOverrideRef.current = null;
+      setIsDrawingDragging(false);
+      return;
+    }
+    if (drawingDragRef.current) {
+      // Click without move — just cancel
+      drawingDragRef.current = null;
+      setIsDrawingDragging(false);
+    }
     if (axisDragRef.current.isDragging) {
       axisDragRef.current = endAxisDrag(axisDragRef.current);
       return;
     }
     zoomRef.current = handleDragEnd(zoomRef.current);
     setIsDragging(false);
-  }, []);
+  }, [pushDrawingState]);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -833,6 +971,13 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
 
   const handleMouseLeave = useCallback(() => {
     crosshairRef.current = { ...crosshairRef.current, visible: false };
+    magneticSnapResultRef.current = null;
+    // Cancel drawing drag without committing
+    if (drawingDragRef.current) {
+      drawingDragRef.current = null;
+      dragOverrideRef.current = null;
+      setIsDrawingDragging(false);
+    }
     if (zoomRef.current.isDragging) {
       zoomRef.current = handleDragEnd(zoomRef.current);
       setIsDragging(false);
@@ -845,6 +990,20 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   // Global mouseup
   useEffect(() => {
     const onGlobalUp = () => {
+      // Commit drawing drag on global mouseup
+      if (drawingDragRef.current && dragOverrideRef.current) {
+        const ov = dragOverrideRef.current;
+        const updated = drawingsRef.current.map(d => d.id === ov.id ? { ...d, points: ov.points } : d);
+        pushDrawingState(updated);
+        drawingDragRef.current = null;
+        dragOverrideRef.current = null;
+        setIsDrawingDragging(false);
+        return;
+      }
+      if (drawingDragRef.current) {
+        drawingDragRef.current = null;
+        setIsDrawingDragging(false);
+      }
       if (zoomRef.current.isDragging) {
         zoomRef.current = handleDragEnd(zoomRef.current);
         setIsDragging(false);
@@ -855,7 +1014,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     };
     document.addEventListener("mouseup", onGlobalUp);
     return () => document.removeEventListener("mouseup", onGlobalUp);
-  }, []);
+  }, [pushDrawingState]);
 
   /* ─── Toolbar callbacks ─── */
   const handleToggle = useCallback((key: string) => {
@@ -1149,7 +1308,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
           ref={containerRef}
           style={{
             flex: 1, position: "relative",
-            cursor: drawingMode ? "crosshair" : isDragging ? "grabbing" : hoveredDrawingId ? "pointer" : "crosshair",
+            cursor: isDrawingDragging ? "move" : drawingMode ? "crosshair" : isDragging ? "grabbing" : hoveredDrawingId ? "pointer" : "crosshair",
             overflow: "hidden",
             touchAction: "none",
             userSelect: "none",
@@ -1225,6 +1384,12 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
                   setDrawingPropsPanel(null);
                   setSelectedDrawingId(clone.id);
                 }}
+                onCreateParallel={d.type === "trendline" ? () => {
+                  const parallel = createParallelLine(d, 20);
+                  pushDrawingState([...drawings, parallel]);
+                  setDrawingPropsPanel(null);
+                  setSelectedDrawingId(parallel.id);
+                } : undefined}
                 onClose={() => setDrawingPropsPanel(null)}
               />
             );
