@@ -1,0 +1,165 @@
+/**
+ * Theme Presets — 4 vetted color + typography token sets.
+ * Colors are raw hex for contrast validation. Applied as CSS variables by ThemeProvider.
+ */
+import type { ThemePreset, CuratedAccent } from "./types";
+
+// ── ORDR Default (current production dark) ───────────────────────────────────
+export const ORDR_DEFAULT: ThemePreset = {
+  id:          "ordr-default",
+  name:        "ORDR Default",
+  description: "Current production dark theme",
+  mode:        "dark",
+  colors: {
+    bgDeep:        "#111827",
+    bgPanel:       "#1F2937",
+    bgSub:         "#293548",
+    bgSidebar:     "#0B1120",
+    borderRim:     "#374151",
+    borderSoft:    "#1F2937",
+    textPrimary:   "#E5E7EB",
+    textSecondary: "#9CA3AF",
+    textTertiary:  "#6B7280",
+    textDisabled:  "#374151",
+    accentBlue:    "#1C62F2",
+    accentBlueDim: "rgba(28, 98, 242, 0.10)",
+    accentCyan:    "#1C62F2",
+    accentIndigo:  "#4F46E5",
+    accentAmber:   "#D97706",
+    accentRed:     "#DC2626",
+    accentGreen:   "#059669",
+    statusPass:    "#059669",
+    statusFail:    "#DC2626",
+    statusWarn:    "#D97706",
+    statusPending: "#94A3B8",
+    focusRing:     "#1C62F2",
+    chart1:        "#1C62F2",
+    chart2:        "#059669",
+    chart3:        "#D97706",
+    chart4:        "#4F46E5",
+  },
+};
+
+// ── Institutional Obsidian (Dark) ────────────────────────────────────────────
+export const INSTITUTIONAL_OBSIDIAN: ThemePreset = {
+  id:          "institutional-obsidian",
+  name:        "Institutional Obsidian",
+  description: "Deep dark, minimal glare — ideal for trading floors",
+  mode:        "dark",
+  colors: {
+    bgDeep:        "#121212",
+    bgPanel:       "#1E1E1E",
+    bgSub:         "#2A2A2A",
+    bgSidebar:     "#0E0E0E",
+    borderRim:     "#444444",
+    borderSoft:    "#333333",
+    textPrimary:   "#E0E0E0",
+    textSecondary: "#B0B0B0",
+    textTertiary:  "#787878",
+    textDisabled:  "#444444",
+    accentBlue:    "#64A8F0",
+    accentBlueDim: "rgba(100, 168, 240, 0.10)",
+    accentCyan:    "#64A8F0",
+    accentIndigo:  "#7C7CF0",
+    accentAmber:   "#E5A84B",
+    accentRed:     "#E57373",
+    accentGreen:   "#4CAF50",
+    statusPass:    "#4CAF50",
+    statusFail:    "#E57373",
+    statusWarn:    "#E5A84B",
+    statusPending: "#9E9E9E",
+    focusRing:     "#64A8F0",
+    chart1:        "#64A8F0",
+    chart2:        "#4CAF50",
+    chart3:        "#E5A84B",
+    chart4:        "#7C7CF0",
+  },
+};
+
+// ── Algorithmic Slate (Dark / neutral) ───────────────────────────────────────
+export const ALGORITHMIC_SLATE: ThemePreset = {
+  id:          "algorithmic-slate",
+  name:        "Algorithmic Slate",
+  description: "Neutral mid-dark with cool undertones",
+  mode:        "dark",
+  colors: {
+    bgDeep:        "#2E2E2E",
+    bgPanel:       "#3A3F44",
+    bgSub:         "#454B52",
+    bgSidebar:     "#252525",
+    borderRim:     "#5A6068",
+    borderSoft:    "#4A5058",
+    textPrimary:   "#F4F6F9",
+    textSecondary: "#88A0B9",
+    textTertiary:  "#6B7A8E",
+    textDisabled:  "#4A5058",
+    accentBlue:    "#64A8F0",
+    accentBlueDim: "rgba(100, 168, 240, 0.10)",
+    accentCyan:    "#64A8F0",
+    accentIndigo:  "#807EED",
+    accentAmber:   "#E5A84B",
+    accentRed:     "#E57373",
+    accentGreen:   "#4CAF50",
+    statusPass:    "#4CAF50",
+    statusFail:    "#E57373",
+    statusWarn:    "#E5A84B",
+    statusPending: "#8899AA",
+    focusRing:     "#64A8F0",
+    chart1:        "#7FC8B6",
+    chart2:        "#807EED",
+    chart3:        "#E5A84B",
+    chart4:        "#64A8F0",
+  },
+};
+
+// ── Executive Clarity (Light / low-glare) ────────────────────────────────────
+export const EXECUTIVE_CLARITY: ThemePreset = {
+  id:          "executive-clarity",
+  name:        "Executive Clarity",
+  description: "Light theme with low-glare surfaces — ideal for presentations",
+  mode:        "light",
+  colors: {
+    bgDeep:        "#F4F6F9",
+    bgPanel:       "#FFFFFF",
+    bgSub:         "#EDF0F5",
+    bgSidebar:     "#22263F",
+    borderRim:     "#D1D5DB",
+    borderSoft:    "#E5E7EB",
+    textPrimary:   "#1A1A2E",
+    textSecondary: "#4B5563",
+    textTertiary:  "#9CA3AF",
+    textDisabled:  "#D1D5DB",
+    accentBlue:    "#1C62F2",
+    accentBlueDim: "rgba(28, 98, 242, 0.08)",
+    accentCyan:    "#1C62F2",
+    accentIndigo:  "#4F46E5",
+    accentAmber:   "#B45309",
+    accentRed:     "#D32F2F",
+    accentGreen:   "#388E3C",
+    statusPass:    "#388E3C",
+    statusFail:    "#D32F2F",
+    statusWarn:    "#E5C287",
+    statusPending: "#9CA3AF",
+    focusRing:     "#1C62F2",
+    chart1:        "#1C62F2",
+    chart2:        "#388E3C",
+    chart3:        "#B45309",
+    chart4:        "#4F46E5",
+  },
+};
+
+// ── All presets map ──────────────────────────────────────────────────────────
+export const THEME_PRESETS: Record<string, ThemePreset> = {
+  "ordr-default":           ORDR_DEFAULT,
+  "institutional-obsidian": INSTITUTIONAL_OBSIDIAN,
+  "algorithmic-slate":      ALGORITHMIC_SLATE,
+  "executive-clarity":      EXECUTIVE_CLARITY,
+};
+
+// ── Curated Accent Palette ───────────────────────────────────────────────────
+export const CURATED_ACCENTS: CuratedAccent[] = [
+  { id: "ruddy-blue", label: "Ruddy Blue",  hex: "#64A8F0", dim: "rgba(100, 168, 240, 0.10)" },
+  { id: "violet",     label: "Violet",      hex: "#7C6FF0", dim: "rgba(124, 111, 240, 0.10)" },
+  { id: "emerald",    label: "Emerald",     hex: "#34D399", dim: "rgba(52, 211, 153, 0.10)" },
+  { id: "amber",      label: "Amber",       hex: "#F59E0B", dim: "rgba(245, 158, 11, 0.10)" },
+];

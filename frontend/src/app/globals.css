@@ -849,6 +849,33 @@ button:not(.no-scale):active:not(:disabled) {
   user-select: none;
 }
 
+/* ── Theme Engine: Density + Motion + Numerals ── */
+
+:root {
+  --density-scale: 1;
+  --row-height: 36px;
+  --font-size-base: 13px;
+  --numeric-variant: tabular-nums;
+}
+
+.ordr-reduced-motion *,
+.ordr-reduced-motion *::before,
+.ordr-reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+.ordr-high-contrast {
+  --border-rim: #888888;
+  --text-secondary: #D1D5DB;
+}
+
+.numeric, [data-numeric], .font-mono .numeric {
+  font-variant-numeric: var(--numeric-variant);
+}
+
 /* ── Print overrides for landing page ── */
 @media print {
   .hc-identity-bar,

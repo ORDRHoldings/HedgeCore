@@ -6,6 +6,7 @@
 // ── SettingsTab union ──────────────────────────────────────────────────────────
 export type SettingsTab =
   | "GENERAL"
+  | "APPEARANCE"
   | "POLICY_LIMITS"
   | "EXECUTION"
   | "API_CONFIG"
@@ -180,7 +181,7 @@ export const inputStyle = {
 
 export const monoInputStyle = {
   ...inputStyle,
-  fontFamily: S.fontMono, fontSize: 11,
+  fontFamily: S.fontMono, fontSize: 12,
 };
 
 // ── Tab definition ─────────────────────────────────────────────────────────────
@@ -194,6 +195,7 @@ export interface TabDef {
 export const TABS: TabDef[] = [
   // Group: CONFIGURATION
   { key: "GENERAL",       label: "General",         group: "CONFIG" },
+  { key: "APPEARANCE",    label: "Appearance",      badge: "UX",          group: "CONFIG" },
   { key: "POLICY_LIMITS", label: "Policy Limits",   badge: "⊛ GOVERNED", group: "CONFIG" },
   { key: "EXECUTION",     label: "Execution",        badge: "⊛ GOVERNED", group: "CONFIG" },
   { key: "API_CONFIG",    label: "API & Config",     badge: "KEYS",        group: "CONFIG" },
@@ -209,6 +211,7 @@ export const TABS: TabDef[] = [
 
 // URL hash → tab mapping (backward-compat + new tabs)
 export const HASH_MAP: Record<string, SettingsTab> = {
+  appearance:    "APPEARANCE",
   policy_limits: "POLICY_LIMITS",
   execution:     "EXECUTION",
   api_keys:      "API_CONFIG",

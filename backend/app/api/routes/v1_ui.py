@@ -4,8 +4,8 @@ Tenant-safe, RBAC-gated, deterministic.
 """
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +18,16 @@ from app.models.position import Position
 from app.models.user import User
 
 router = APIRouter(prefix="/v1/ui", tags=["ui"])
+
+# ---------------------------------------------------------------------------
+# Validation constants (appearance)
+# ---------------------------------------------------------------------------
+
+VALID_THEME_IDS = {"ordr-default", "institutional-obsidian", "algorithmic-slate", "executive-clarity"}
+VALID_MODES = {"system", "dark", "light"}
+VALID_ACCENTS = {"ruddy-blue", "violet", "emerald", "amber"}
+VALID_DENSITIES = {"compact", "standard", "spacious"}
+
 # ---------------------------------------------------------------------------
 # Response / Request schemas
 # ---------------------------------------------------------------------------
@@ -39,6 +49,39 @@ class UiPrefsResponse(BaseModel):
     quickstart_dismissed_at: str | None
 class UiPrefsUpdate(BaseModel):
     show_quickstart: bool | None = None
+
+
+class AppearancePrefs(BaseModel):
+    """PATCH body for appearance settings — all fields optional."""
+    theme_id: str | None = None
+    mode_override: str | None = None
+    accent_id: str | None = None
+    density: str | None = None
+    ui_font: str | None = None
+    numeric_font: str | None = None
+    base_font_size: int | None = Field(None, ge=12, le=16)
+    tabular_numerals: bool | None = None
+    reduced_motion: bool | None = None
+    high_contrast: bool | None = None
+    color_plus_icon: bool | None = None
+    template_id: str | None = None
+
+
+class AppearancePrefsResponse(BaseModel):
+    """Full appearance prefs with defaults filled."""
+    theme_id: str = "ordr-default"
+    mode_override: str = "system"
+    accent_id: str = "ruddy-blue"
+    density: str = "standard"
+    ui_font: str = "IBM Plex Sans"
+    numeric_font: str = "IBM Plex Mono"
+    base_font_size: int = 14
+    tabular_numerals: bool = True
+    reduced_motion: bool = False
+    high_contrast: bool = False
+    color_plus_icon: bool = False
+    template_id: str | None = None
+
 # ---------------------------------------------------------------------------
 # Exported pure helpers (testable without DB)
 # ---------------------------------------------------------------------------
@@ -68,6 +111,75 @@ def apply_prefs_update(existing: dict, *, show_quickstart: bool | None = None) -
         if not show_quickstart:
             prefs["quickstart_dismissed_at"] = datetime.now(UTC).isoformat()
     return prefs
+
+
+_APPEARANCE_KEYS = {
+    "theme_id", "mode_override", "accent_id", "density",
+    "ui_font", "numeric_font", "base_font_size",
+    "tabular_numerals", "reduced_motion", "high_contrast",
+    "color_plus_icon", "template_id",
+}
+
+_ENUM_VALIDATORS: dict[str, set[str]] = {
+    "theme_id": VALID_THEME_IDS,
+    "mode_override": VALID_MODES,
+    "accent_id": VALID_ACCENTS,
+    "density": VALID_DENSITIES,
+}
+
+
+def get_appearance_defaults() -> dict:
+    """Returns the canonical default appearance dict."""
+    return {
+        "theme_id": "ordr-default",
+        "mode_override": "system",
+        "accent_id": "ruddy-blue",
+        "density": "standard",
+        "ui_font": "IBM Plex Sans",
+        "numeric_font": "IBM Plex Mono",
+        "base_font_size": 14,
+        "tabular_numerals": True,
+        "reduced_motion": False,
+        "high_contrast": False,
+        "color_plus_icon": False,
+        "template_id": None,
+    }
+
+
+def get_appearance_from_prefs(prefs: dict | None) -> dict:
+    """Extract appearance sub-dict from user prefs, filling defaults."""
+    defaults = get_appearance_defaults()
+    if not prefs:
+        return defaults
+    stored = prefs.get("appearance")
+    if not stored or not isinstance(stored, dict):
+        return defaults
+    # Merge only known keys
+    result = dict(defaults)
+    for key in _APPEARANCE_KEYS:
+        if key in stored and stored[key] is not None:
+            result[key] = stored[key]
+    return result
+
+
+def apply_appearance_update(existing: dict, updates: dict) -> dict:
+    """Merge validated updates into existing appearance dict. Pure function."""
+    result = dict(existing)
+    for key, value in updates.items():
+        if key not in _APPEARANCE_KEYS:
+            continue
+        if value is None:
+            continue
+        # Enum validation — reject invalid values silently
+        if key in _ENUM_VALIDATORS:
+            if value not in _ENUM_VALIDATORS[key]:
+                continue
+        # Font size clamping
+        if key == "base_font_size":
+            value = max(12, min(16, int(value)))
+        result[key] = value
+    return result
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -250,3 +362,33 @@ async def patch_ui_prefs(
         show_quickstart=get_show_quickstart_from_prefs(prefs),
         quickstart_dismissed_at=prefs.get("quickstart_dismissed_at"),
     )
+
+
+@router.get("/appearance", response_model=AppearancePrefsResponse)
+async def get_appearance(
+    current_user: User = Depends(get_current_user),
+) -> AppearancePrefsResponse:
+    """Returns current user's appearance preferences with safe defaults."""
+    prefs = current_user.ui_preferences or {}
+    appearance = get_appearance_from_prefs(prefs)
+    return AppearancePrefsResponse(**appearance)
+
+
+@router.patch("/appearance", response_model=AppearancePrefsResponse)
+async def patch_appearance(
+    body: AppearancePrefs,
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> AppearancePrefsResponse:
+    """Merges appearance preference updates into user.ui_preferences['appearance']."""
+    all_prefs = dict(current_user.ui_preferences or {})
+    existing_appearance = get_appearance_from_prefs(all_prefs)
+    updates = body.model_dump(exclude_none=True)
+    updated_appearance = apply_appearance_update(existing_appearance, updates)
+    all_prefs["appearance"] = updated_appearance
+    current_user.ui_preferences = all_prefs
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
+    final = get_appearance_from_prefs(current_user.ui_preferences or {})
+    return AppearancePrefsResponse(**final)

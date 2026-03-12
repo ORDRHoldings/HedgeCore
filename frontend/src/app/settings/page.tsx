@@ -25,6 +25,7 @@ import { S, DEFAULT_SETTINGS, STORAGE_KEY, HASH_MAP, SettingsTab, AllSettings, T
 
 // Canonical param value for each tab (reverse of HASH_MAP)
 const TAB_TO_PARAM: Partial<Record<SettingsTab, string>> = {
+  APPEARANCE:    "appearance",
   POLICY_LIMITS: "policy_limits",
   EXECUTION:     "execution",
   API_CONFIG:    "api_config",
@@ -53,9 +54,12 @@ import UsersRolesTab    from "./components/tabs/UsersRolesTab";
 import ApiKeyManagementTab from "./components/tabs/ApiKeyManagementTab";
 import OrganisationTab  from "./components/tabs/OrganisationTab";
 import AuditTrailTab    from "./components/tabs/AuditTrailTab";
+import AppearanceTab    from "./components/tabs/AppearanceTab";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { Settings } from "lucide-react";
+
+import { useTheme } from "@/lib/theme/ThemeProvider";
 
 // ── Hydration-safe timestamp hook ─────────────────────────────────────────────
 function useRenderTs(): string {
@@ -93,6 +97,7 @@ function ToastStack({ toasts }: { toasts: Toast[] }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 function SettingsPageInner() {
   const { isAuthenticated, isLoading: authLoading, user, token } = useAuth();
+  const { appearance, setAppearance } = useTheme();
   const router       = useRouter();
   const searchParams = useSearchParams();
   const renderTs     = useRenderTs();
@@ -165,6 +170,7 @@ function SettingsPageInner() {
     const tok = token ?? "";
     switch (activeTab) {
       case "GENERAL":       return <GeneralTab       s={settings.org}           set={org =>           setSettings(p => ({ ...p, org }))} />;
+      case "APPEARANCE":    return <AppearanceTab    appearance={appearance}     onChange={setAppearance} />;
       case "POLICY_LIMITS": return <PolicyLimitsTab  s={settings.policy}        set={policy =>        setSettings(p => ({ ...p, policy }))}
                                      lastModifiedAt={serverMeta.last_modified_at} lastModifiedBy={serverMeta.last_modified_by} />;
       case "EXECUTION":     return <ExecutionTab     s={settings.execution}     set={execution =>     setSettings(p => ({ ...p, execution }))}
@@ -206,11 +212,11 @@ function SettingsPageInner() {
         <SettingsTabBar activeTab={activeTab} onTabChange={handleTabChange} />
 
         {/* Content */}
-        <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 24px 60px", width: "100%" }}>
+        <div style={{ maxWidth: activeTab === "APPEARANCE" ? 1200 : 900, margin: "0 auto", padding: "24px 24px 60px", width: "100%", transition: "max-width 200ms" }}>
           {showLog && (
             <ChangeLogDrawer entries={changeLog} onClose={() => setShowLog(false)} />
           )}
-          <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 3, padding: "24px 28px" }}>
+          <div style={{ background: activeTab === "APPEARANCE" ? "transparent" : S.bgPanel, border: activeTab === "APPEARANCE" ? "none" : `1px solid ${S.rim}`, borderRadius: 3, padding: activeTab === "APPEARANCE" ? 0 : "24px 28px" }}>
             {renderTab()}
           </div>
         </div>
