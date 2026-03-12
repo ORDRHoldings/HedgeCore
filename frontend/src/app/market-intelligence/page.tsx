@@ -12,7 +12,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import {
-  Activity,
   RefreshCw,
   TrendingUp,
   TrendingDown,
@@ -47,7 +46,7 @@ const S = {
 
 // ── FX pair list ─────────────────────────────────────────────────────────────
 /** Supported FX pairs (backend returns all by default). */
-const _FX_PAIRS = [
+const FX_PAIRS = [
   "USDMXN", "USDBRL", "USDCOP", "USDCLP", "USDPEN",
   "EURUSD", "GBPUSD", "USDJPY", "USDCAD", "USDCHF",
   "USDCNY", "USDINR", "USDSGD", "USDKRW", "USDHKD",
@@ -637,10 +636,7 @@ function MarketHealthBar({
   return (
     <div
       style={{
-        position: "sticky",
-        bottom: 0,
-        left: 0,
-        right: 0,
+        flexShrink: 0,
         background: S.bgPanel,
         borderTop: `1px solid ${S.rim}`,
         padding: "8px 24px",
@@ -649,7 +645,6 @@ function MarketHealthBar({
         gap: 16,
         fontFamily: S.fontMono,
         fontSize: 12,
-        zIndex: 10,
       }}
     >
       {/* Provider dots */}
@@ -785,7 +780,7 @@ function MarketHealthBar({
         <RefreshCw
           size={12}
           style={{
-            animation: refreshing ? "spin 1s linear infinite" : "none",
+            animation: refreshing ? "mi-spin 1s linear infinite" : "none",
           }}
         />
         FORCE REFRESH
@@ -995,7 +990,7 @@ export default function MarketIntelligencePage() {
   const fetchForwardCurves = useCallback(async () => {
     if (!token) return;
     try {
-      const pairsParam = _FX_PAIRS.join(",");
+      const pairsParam = FX_PAIRS.join(",");
       const res = await dashboardFetch(`/v1/forward-curves/bulk-latest?pairs=${pairsParam}`, token);
       if (res.ok) {
         const data = await res.json();
@@ -1043,6 +1038,27 @@ export default function MarketIntelligencePage() {
     };
   }, [token, fetchAll, fetchFxRates, fetchSectors, fetchHealth]);
 
+  // ── Pause polling when tab is hidden (saves API quota) ─────────────────
+  useEffect(() => {
+    const handler = () => {
+      if (document.hidden) {
+        if (fxTimerRef.current) clearInterval(fxTimerRef.current);
+        if (sectorTimerRef.current) clearInterval(sectorTimerRef.current);
+        fxTimerRef.current = null;
+        sectorTimerRef.current = null;
+      } else {
+        fetchAll();
+        fxTimerRef.current = setInterval(fetchFxRates, FX_POLL_MS);
+        sectorTimerRef.current = setInterval(() => {
+          fetchSectors();
+          fetchHealth();
+        }, SECTOR_POLL_MS);
+      }
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [fetchAll, fetchFxRates, fetchSectors, fetchHealth]);
+
   // ── Force refresh handler ────────────────────────────────────────────────
   const handleForceRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -1081,33 +1097,12 @@ export default function MarketIntelligencePage() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <PageShell icon={BarChart3} title="Market Intelligence" breadcrumb={["Dashboard","Market Intelligence"]}>
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 24px",
-          borderBottom: `1px solid ${S.rim}`,
-          background: S.bgPanel,
-        }}
-      >
+    <PageShell
+      icon={BarChart3}
+      title="Market Intelligence"
+      breadcrumb={["Dashboard","Market Intelligence"]}
+      actions={
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Activity size={20} style={{ color: S.cyan }} />
-          <h1
-            style={{
-              fontFamily: S.fontMono,
-              fontSize: 16,
-              fontWeight: 700,
-              color: S.primary,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              margin: 0,
-            }}
-          >
-            Market Intelligence Hub
-          </h1>
           <span
             style={{
               fontFamily: S.fontMono,
@@ -1118,14 +1113,11 @@ export default function MarketIntelligencePage() {
               background: "rgba(5,150,105,0.12)",
               color: S.green,
               letterSpacing: "0.08em",
-              animation: "pulse 2s ease-in-out infinite",
+              animation: "mi-pulse 2s ease-in-out infinite",
             }}
           >
             LIVE
           </span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span
             style={{
               fontFamily: S.fontMono,
@@ -1162,119 +1154,115 @@ export default function MarketIntelligencePage() {
             <RefreshCw
               size={13}
               style={{
-                animation: refreshing ? "spin 1s linear infinite" : "none",
+                animation: refreshing ? "mi-spin 1s linear infinite" : "none",
               }}
             />
             REFRESH
           </button>
         </div>
-      </div>
-
+      }
+    >
       {/* ── Content ─────────────────────────────────────────────────────── */}
       <div
         style={{
-          flex: 1,
-          padding: "20px 24px",
-          paddingBottom: 60,
-          overflow: "auto",
+          display: "flex",
+          flexDirection: "column",
+          minHeight: "calc(100vh - 64px)",
+          margin: "-24px -28px",
         }}
       >
-        {loading ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 64,
-              fontFamily: S.fontMono,
-              fontSize: 14,
-              color: S.tertiary,
-            }}
-          >
-            <RefreshCw
-              size={16}
+        <div
+          style={{
+            flex: 1,
+            padding: "20px 24px",
+            overflow: "auto",
+          }}
+        >
+          {loading ? (
+            <div
               style={{
-                animation: "spin 1s linear infinite",
-                marginRight: 8,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 64,
+                fontFamily: S.fontMono,
+                fontSize: 14,
+                color: S.tertiary,
               }}
-            />
-            Loading market data...
-          </div>
-        ) : (
-          <>
-            {/* Ticker Ribbon */}
-            <TickerRibbon quotes={sectorQuotes} />
-
-            {/* FX Heatmap */}
-            <div style={{ marginBottom: 24 }}>
-              <SectionTitle icon={Globe} title="FX Spot Rates" />
-              {fxError && (
-                <div
-                  style={{
-                    fontFamily: S.fontMono,
-                    fontSize: 12,
-                    color: S.red,
-                    marginBottom: 8,
-                    padding: "6px 10px",
-                    background: "rgba(220,38,38,0.06)",
-                    borderRadius: 4,
-                  }}
-                >
-                  FX data error: {fxError}
-                </div>
-              )}
-              <FXHeatmapGrid rates={fxRates} />
+            >
+              <RefreshCw
+                size={16}
+                style={{
+                  animation: "mi-spin 1s linear infinite",
+                  marginRight: 8,
+                }}
+              />
+              Loading market data...
             </div>
+          ) : (
+            <>
+              {/* Ticker Ribbon */}
+              <TickerRibbon quotes={sectorQuotes} />
 
-            {/* Carry Scorecard */}
-            <div style={{ marginBottom: 24 }}>
-              <SectionTitle icon={TrendingUp} title="Carry Scorecard — 12M Ranked" />
-              <CarryScorecard rates={fxRates} forwardCurves={forwardCurves} />
-            </div>
+              {/* FX Heatmap */}
+              <div style={{ marginBottom: 24 }}>
+                <SectionTitle icon={Globe} title="FX Spot Rates" />
+                {fxError && (
+                  <div
+                    style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 12,
+                      color: S.red,
+                      marginBottom: 8,
+                      padding: "6px 10px",
+                      background: "rgba(220,38,38,0.06)",
+                      borderRadius: 4,
+                    }}
+                  >
+                    FX data error: {fxError}
+                  </div>
+                )}
+                <FXHeatmapGrid rates={fxRates} />
+              </div>
 
-            {/* Sector Performance */}
-            <div style={{ marginBottom: 24 }}>
-              <SectionTitle icon={BarChart3} title="Sector Performance" />
-              {sectorError && (
-                <div
-                  style={{
-                    fontFamily: S.fontMono,
-                    fontSize: 12,
-                    color: S.red,
-                    marginBottom: 8,
-                    padding: "6px 10px",
-                    background: "rgba(220,38,38,0.06)",
-                    borderRadius: 4,
-                  }}
-                >
-                  Sector data error: {sectorError}
-                </div>
-              )}
-              <SectorGrid quotes={sectorQuotes} />
-            </div>
-          </>
-        )}
+              {/* Carry Scorecard */}
+              <div style={{ marginBottom: 24 }}>
+                <SectionTitle icon={TrendingUp} title="Carry Scorecard — 12M Ranked" />
+                <CarryScorecard rates={fxRates} forwardCurves={forwardCurves} />
+              </div>
+
+              {/* Sector Performance */}
+              <div style={{ marginBottom: 24 }}>
+                <SectionTitle icon={BarChart3} title="Sector Performance" />
+                {sectorError && (
+                  <div
+                    style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 12,
+                      color: S.red,
+                      marginBottom: 8,
+                      padding: "6px 10px",
+                      background: "rgba(220,38,38,0.06)",
+                      borderRadius: 4,
+                    }}
+                  >
+                    Sector data error: {sectorError}
+                  </div>
+                )}
+                <SectorGrid quotes={sectorQuotes} />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Health Footer ─────────────────────────────────────────────── */}
+        <MarketHealthBar
+          health={health}
+          lastRefresh={lastRefresh}
+          onForceRefresh={handleForceRefresh}
+          refreshing={refreshing}
+        />
       </div>
-
-      {/* ── Health Footer ───────────────────────────────────────────────── */}
-      <MarketHealthBar
-        health={health}
-        lastRefresh={lastRefresh}
-        onForceRefresh={handleForceRefresh}
-        refreshing={refreshing}
-      />
-
-      {/* ── CSS Keyframes ───────────────────────────────────────────────── */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
     </PageShell>
   );
 }

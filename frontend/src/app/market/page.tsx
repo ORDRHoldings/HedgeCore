@@ -3,12 +3,12 @@
  * /market — ORDR Market (Free)
  *
  * Professional dark chart page with:
- *  - Collapsible left watchlist panel with live prices + % change
  *  - Header OHLC ticker showing current bar data
- *  - Inline symbol search replacing plain dropdown
+ *  - Inline symbol search with grouped dropdown
+ *  - Full-width chart canvas (no sidebar)
  *  - No auth required
  */
-import React, { useState, useEffect, useRef, Suspense, useCallback } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { Bar } from "@/components/chart/indicators/types";
@@ -18,7 +18,6 @@ const ChartEngine = dynamic(() => import("@/components/chart/ChartEngine"), {
   ssr: false,
 });
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://hedgecore.onrender.com";
 const FM = "'IBM Plex Mono', monospace";
 const FU = "'IBM Plex Sans', sans-serif";
 const BG      = "#131722";
@@ -31,7 +30,6 @@ const TEXT_DIM= "#545B69";
 const GREEN   = "#26A69A";
 const RED     = "#EF5350";
 const BLUE    = "#4A90D9";
-const AMBER   = "#F59E0B";
 
 interface AssetItem { symbol: string; display: string; group: string; }
 
@@ -109,25 +107,6 @@ const ASSET_GROUPS: { label: string; items: AssetItem[] }[] = [
 
 const ALL_SYMBOLS: AssetItem[] = ASSET_GROUPS.flatMap((g) => g.items);
 
-const WATCHLIST: AssetItem[] = [
-  { symbol: "EURUSD", display: "EUR/USD", group: "FX" },
-  { symbol: "GBPUSD", display: "GBP/USD", group: "FX" },
-  { symbol: "USDJPY", display: "USD/JPY", group: "FX" },
-  { symbol: "USDCHF", display: "USD/CHF", group: "FX" },
-  { symbol: "AUDUSD", display: "AUD/USD", group: "FX" },
-  { symbol: "USDCAD", display: "USD/CAD", group: "FX" },
-  { symbol: "NZDUSD", display: "NZD/USD", group: "FX" },
-  { symbol: "EURGBP", display: "EUR/GBP", group: "FX" },
-  { symbol: "EURJPY", display: "EUR/JPY", group: "FX" },
-  { symbol: "GBPJPY", display: "GBP/JPY", group: "FX" },
-  { symbol: "XAUUSD", display: "Gold", group: "COMMOD" },
-  { symbol: "XAGUSD", display: "Silver", group: "COMMOD" },
-  { symbol: "BTCUSD", display: "BTC/USD", group: "CRYPTO" },
-  { symbol: "ETHUSD", display: "ETH/USD", group: "CRYPTO" },
-  { symbol: "SPX", display: "S&P 500", group: "INDEX" },
-  { symbol: "NDX", display: "NASDAQ 100", group: "INDEX" },
-];
-
 const TIMEFRAMES = [
   { label: "1m",  value: "1min"  },
   { label: "5m",  value: "5min"  },
@@ -139,7 +118,7 @@ const TIMEFRAMES = [
 ];
 
 function formatPrice(symbol: string, price: number): string {
-  if (!price) return "—";
+  if (!price) return "\u2014";
   const s = symbol.toUpperCase();
   if (s.endsWith("JPY"))                                          return price.toFixed(3);
   if (s === "BTCUSD" || s === "ETHUSD")                          return price.toFixed(2);
@@ -151,139 +130,6 @@ function formatPrice(symbol: string, price: number): string {
 
 function formatChangePct(pct: number): string {
   return (pct >= 0 ? "+" : "") + pct.toFixed(2) + "%";
-}
-
-/* -- useLastPrice ---------------------------------------------------------- */
-
-interface LastPriceResult { price: number | null; changePct: number | null; loading: boolean; }
-
-function useLastPrice(symbol: string, delayMs: number): LastPriceResult {
-  const [price, setPrice]         = useState<number | null>(null);
-  const [changePct, setChangePct] = useState<number | null>(null);
-  const [loading, setLoading]     = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        const url = API_BASE + "/v1/public/chart-data/" + encodeURIComponent(symbol) + "?interval=1day&limit=2";
-        const res = await fetch(url, { headers: { Accept: "application/json" } });
-        if (!res.ok || cancelled) return;
-        const data = await res.json();
-        const bars: Bar[] = data.bars ?? [];
-        if (bars.length >= 1 && !cancelled) {
-          const last = bars[bars.length - 1];
-          setPrice(last.c);
-          if (bars.length >= 2) {
-            const prev = bars[bars.length - 2];
-            if (prev.c !== 0) setChangePct(((last.c - prev.c) / prev.c) * 100);
-          }
-          setLoading(false);
-        }
-      } catch { if (!cancelled) setLoading(false); }
-    }, delayMs);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [symbol, delayMs]);
-
-  return { price, changePct, loading };
-}
-
-/* -- WatchlistItem --------------------------------------------------------- */
-
-function WatchlistItem({ symbol, display, isActive, onClick, delayMs }: {
-  symbol: string; display: string; isActive: boolean; onClick: () => void; delayMs: number;
-}) {
-  const { price, changePct, loading } = useLastPrice(symbol, delayMs);
-  const [hovered, setHovered] = useState(false);
-  const isUp = changePct !== null && changePct >= 0;
-  const changeColor = changePct === null ? TEXT_DIM : isUp ? GREEN : RED;
-
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: "flex", alignItems: "center", width: "100%",
-        padding: "6px 12px",
-        background: isActive ? "rgba(38,166,154,0.10)" : hovered ? BG_HOVER : "transparent",
-        border: "none", borderLeft: "2px solid " + (isActive ? GREEN : "transparent"),
-        cursor: "pointer", textAlign: "left", transition: "background 0.1s",
-      }}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily: FM, fontSize: 12, fontWeight: 700, color: TEXT,
-          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {display}
-        </div>
-      </div>
-      <div style={{ textAlign: "right", flexShrink: 0 }}>
-        {loading
-          ? <span style={{ fontFamily: FM, fontSize: 11, color: TEXT_DIM }}>—</span>
-          : <>
-              <div style={{ fontFamily: FM, fontSize: 12, color: TEXT, fontWeight: 600 }}>
-                {formatPrice(symbol, price ?? 0)}
-              </div>
-              <div style={{ fontFamily: FM, fontSize: 10, color: changeColor }}>
-                {changePct !== null ? formatChangePct(changePct) : "—"}
-              </div>
-            </>
-        }
-      </div>
-    </button>
-  );
-}
-
-/* -- WatchlistPanel -------------------------------------------------------- */
-
-function WatchlistPanel({ activeSymbol, onSymbolSelect }: {
-  activeSymbol: string; onSymbolSelect: (s: string) => void;
-}) {
-  const sections: { label: string; group: string; base: number }[] = [
-    { label: "FX",          group: "FX",     base: 0   },
-    { label: "COMMODITIES", group: "COMMOD", base: 10  },
-    { label: "CRYPTO",      group: "CRYPTO", base: 12  },
-    { label: "INDICES",     group: "INDEX",  base: 14  },
-  ];
-
-  return (
-    <div style={{
-      width: 204, flexShrink: 0, background: BG_PANEL,
-      borderRight: "1px solid " + BORDER,
-      display: "flex", flexDirection: "column", overflow: "hidden",
-    }}>
-      <div style={{
-        padding: "8px 12px", borderBottom: "1px solid " + BORDER,
-        fontFamily: FM, fontSize: 9, color: TEXT_DIM, letterSpacing: "0.14em", fontWeight: 700,
-        flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
-      }}>
-        <span>WATCHLIST</span>
-        <span style={{ color: AMBER, fontSize: 8, letterSpacing: "0.1em" }}>● LIVE</span>
-      </div>
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {sections.map((sec, si) => {
-          const items = WATCHLIST.filter((w) => w.group === sec.group);
-          return (
-            <React.Fragment key={sec.group}>
-              {si > 0 && <div style={{ height: 1, background: BORDER, margin: "4px 0" }} />}
-              <div style={{ padding: "6px 12px 3px", fontFamily: FM, fontSize: 9,
-                color: TEXT_DIM, letterSpacing: "0.12em", fontWeight: 700 }}>
-                {sec.label}
-              </div>
-              {items.map((w, i) => (
-                <WatchlistItem
-                  key={w.symbol} symbol={w.symbol} display={w.display}
-                  isActive={activeSymbol === w.symbol}
-                  onClick={() => onSymbolSelect(w.symbol)}
-                  delayMs={(sec.base + i) * 220}
-                />
-              ))}
-            </React.Fragment>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 /* -- DropdownItem ---------------------------------------------------------- */
@@ -440,7 +286,6 @@ function OHLCTicker({ bars, pair }: { bars: Bar[]; pair: string }) {
 function MarketPageInner() {
   const [pair, setPair]             = useState("EURUSD");
   const [interval, setInterval]     = useState("1day");
-  const [watchlistOpen, setWatchlistOpen] = useState(true);
   const { bars, loading, error, source, refetch } = usePublicChartData(pair, interval, 500);
 
   return (
@@ -452,19 +297,6 @@ function MarketPageInner() {
       <div style={{ display: "flex", alignItems: "center", gap: 8,
         padding: "0 16px", background: BG, borderBottom: "1px solid " + BORDER,
         minHeight: 48, flexShrink: 0, zIndex: 10 }}>
-        <button onClick={() => setWatchlistOpen((o) => !o)}
-          title={watchlistOpen ? "Hide watchlist" : "Show watchlist"}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center",
-            background: watchlistOpen ? "rgba(255,255,255,0.06)" : "transparent",
-            border: "1px solid " + (watchlistOpen ? BORDER : "transparent"),
-            borderRadius: 4, color: watchlistOpen ? TEXT : TEXT_DIM,
-            cursor: "pointer", width: 28, height: 28, flexShrink: 0 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="3" y1="6"  x2="21" y2="6"  />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
         <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 5, marginRight: 4 }}>
           <span style={{ fontFamily: FM, fontSize: 15, fontWeight: 700, color: TEXT, letterSpacing: "0.06em" }}>ORDR</span>
           <span style={{ fontFamily: FM, fontSize: 11, fontWeight: 500, color: TEXT_DIM, letterSpacing: "0.04em" }}>MARKET</span>
@@ -496,36 +328,31 @@ function MarketPageInner() {
           width: 28, height: 28, background: "transparent",
           border: "1px solid " + BORDER, borderRadius: 4,
           color: TEXT_DIM, cursor: "pointer", fontSize: 14, fontFamily: FM,
-        }}>{"↻"}</button>
+        }}>{"\u21BB"}</button>
         <div style={{ width: 1, height: 24, background: BORDER, margin: "0 6px" }} />
         <Link href="/auth/login" style={{ fontFamily: FU, fontSize: 12, fontWeight: 600,
           color: BLUE, textDecoration: "none", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
-          SIGN IN {"→"}
+          SIGN IN {"\u2192"}
         </Link>
       </div>
-      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
-        {watchlistOpen && (
-          <WatchlistPanel activeSymbol={pair} onSymbolSelect={setPair} />
-        )}
-        <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-          {loading && !bars.length
-            ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
-                height: "100%", fontFamily: FM, fontSize: 13, color: TEXT_DIM, background: "#131722" }}>
-                Loading {pair}...
+      <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+        {loading && !bars.length
+          ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
+              height: "100%", fontFamily: FM, fontSize: 13, color: TEXT_DIM, background: "#131722" }}>
+              Loading {pair}...
+            </div>
+          : error && !bars.length
+            ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center",
+                justifyContent: "center", height: "100%", gap: 8,
+                fontFamily: FM, fontSize: 12, color: RED, background: "#131722" }}>
+                <span>{error}</span>
+                <button onClick={refetch} style={{ fontFamily: FM, fontSize: 11,
+                  padding: "4px 12px", borderRadius: 4, border: "1px solid " + BORDER,
+                  background: "#1E222D", color: TEXT, cursor: "pointer" }}>RETRY</button>
               </div>
-            : error && !bars.length
-              ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center",
-                  justifyContent: "center", height: "100%", gap: 8,
-                  fontFamily: FM, fontSize: 12, color: RED, background: "#131722" }}>
-                  <span>{error}</span>
-                  <button onClick={refetch} style={{ fontFamily: FM, fontSize: 11,
-                    padding: "4px 12px", borderRadius: 4, border: "1px solid " + BORDER,
-                    background: "#1E222D", color: TEXT, cursor: "pointer" }}>RETRY</button>
-                </div>
-              : <ChartEngine bars={bars} pair={pair} interval={interval}
-                  source={source} loading={loading} error={error} onPairChange={setPair} />
-          }
-        </div>
+            : <ChartEngine bars={bars} pair={pair} interval={interval}
+                source={source} loading={loading} error={error} onPairChange={setPair} />
+        }
       </div>
     </div>
   );

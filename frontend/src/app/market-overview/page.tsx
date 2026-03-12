@@ -7,6 +7,7 @@ import { T } from "@/lib/design/tokens";
 import { PageShell } from "@/components/layout/PageShell";
 import { Icon } from "@/components/ui/Icon";
 import { BarChart3, RefreshCw } from "lucide-react";
+import EmptyState from "@/components/ui/EmptyState";
 import type { LucideIcon } from "lucide-react";
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
@@ -57,10 +58,15 @@ function SectionBox({ title, icon, children }: {
 }
 
 /* ── FX Heatmap ─────────────────────────────────────────────────────────── */
-function FxHeatmap({ pairs, loading }: { pairs: FxPair[]; loading: boolean }) {
+function FxHeatmap({ pairs, loading, error, onRetry }: {
+  pairs: FxPair[];
+  loading: boolean;
+  error: boolean;
+  onRetry: () => void;
+}) {
   if (loading) {
     return (
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8 }}>
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} style={{ height: 56, background: T.soft, borderRadius: 3 }} />
         ))}
@@ -68,8 +74,19 @@ function FxHeatmap({ pairs, loading }: { pairs: FxPair[]; loading: boolean }) {
     );
   }
 
+  if (error || pairs.length === 0) {
+    return (
+      <EmptyState
+        type="error"
+        title="Unable to load FX data"
+        message="Market data is currently unavailable. Try refreshing or check your connection."
+        action={{ label: "Retry", onClick: onRetry }}
+      />
+    );
+  }
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8 }}>
       {pairs.map(p => {
         const positive = (p.change ?? 0) >= 0;
         const bg = positive ? "rgba(5, 150, 105, 0.08)" : "rgba(220, 38, 38, 0.08)";
@@ -134,10 +151,12 @@ export default function MarketOverviewPage() {
   const { token } = useAuth();
   const [pairs, setPairs] = useState<FxPair[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const fetchRates = useCallback(async () => {
     if (!token) return;
     setLoading(true);
+    setError(false);
     try {
       const res = await dashboardFetch("/v1/market-data/status", token);
       if (res.ok) {
@@ -148,12 +167,14 @@ export default function MarketOverviewPage() {
           const change = typeof info === "object" && info !== null ? (info as Record<string, number>)?.daily_change : undefined;
           return { pair, rate, change };
         });
-        setPairs(fxPairs.length > 0 ? fxPairs : defaultPairs);
+        setPairs(fxPairs);
       } else {
-        setPairs(defaultPairs);
+        setPairs([]);
+        setError(true);
       }
     } catch {
-      setPairs(defaultPairs);
+      setPairs([]);
+      setError(true);
     }
     setLoading(false);
   }, [token]);
@@ -185,10 +206,10 @@ export default function MarketOverviewPage() {
         </button>
       }
     >
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 16 }}>
         {/* Row 1 */}
         <SectionBox title="FX Heatmap" icon={BarChart3}>
-          <FxHeatmap pairs={pairs} loading={loading} />
+          <FxHeatmap pairs={pairs} loading={loading} error={error} onRetry={fetchRates} />
         </SectionBox>
         <SectionBox title="Major Indices">
           <TvEmbed widgetType="mini-chart" symbols={["AMEX:SPY", "FTSE:UKX", "XETR:DAX", "TVC:NI225"]} height={280} />
@@ -206,14 +227,3 @@ export default function MarketOverviewPage() {
   );
 }
 
-/* ── Fallback data ──────────────────────────────────────────────────────── */
-const defaultPairs: FxPair[] = [
-  { pair: "EUR/USD", rate: 1.0847, change: 0.0012 },
-  { pair: "GBP/USD", rate: 1.2710, change: -0.0008 },
-  { pair: "USD/JPY", rate: 149.50, change: 0.0025 },
-  { pair: "USD/CHF", rate: 0.8812, change: -0.0004 },
-  { pair: "AUD/USD", rate: 0.6543, change: 0.0018 },
-  { pair: "NZD/USD", rate: 0.6012, change: 0.0009 },
-  { pair: "USD/CAD", rate: 1.3567, change: -0.0015 },
-  { pair: "EUR/GBP", rate: 0.8534, change: 0.0006 },
-];

@@ -322,6 +322,17 @@ button:not(.no-scale):active:not(:disabled) {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Market Intelligence keyframes */
+@keyframes mi-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes mi-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* ── KPI Tile Hover ── */
 
 .kpi-tile-hover:hover {

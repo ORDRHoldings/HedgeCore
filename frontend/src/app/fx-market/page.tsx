@@ -9,7 +9,7 @@
  *   - Header: brand, title, live badge, UTC clock
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw, Activity, BarChart3 } from "lucide-react"
 import { useAuth } from "@/lib/authContext";
@@ -32,7 +32,6 @@ const S = {
   secondary: "var(--text-secondary)",
   tertiary:  "var(--text-tertiary)",
   cyan:      "var(--accent-cyan)",
-  amber:     "var(--accent-amber)",
   green:     "var(--status-pass,#34d399)",
   red:       "var(--accent-red,#f87171)",
 } as const;
@@ -278,7 +277,7 @@ function StatTile({ label, value, color }: { label: string; value: string; color
 // Main page
 // ---------------------------------------------------------------------------
 export default function FxMarketPage() {
-  const { user, token, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const utcTime = useUtcClock();
 
@@ -313,8 +312,6 @@ export default function FxMarketPage() {
 
   if (isLoading || !user) {
     return (
-
-    
       <div style={{
         display:        "flex",
         alignItems:     "center",
@@ -327,8 +324,6 @@ export default function FxMarketPage() {
       }}>
         AUTHENTICATING...
       </div>
-    
-    
     );
   }
 
@@ -353,150 +348,37 @@ export default function FxMarketPage() {
     changeColor = abs >= 0 ? S.green : S.red;
   }
 
-  const hasKey         = true; // Key is server-side via /api/market/finnhub proxy
   const lastFetchLabel = lastFetch
     ? lastFetch.toUTCString().slice(17, 25) + " UTC"
     : null;
 
   return (
-    <PageShell icon={BarChart3} title="FX Rates" breadcrumb={["Dashboard", "FX Rates"]} noPadding>
-
-    <div style={{
-      display:    "flex",
-      flexDirection: "column",
-      height:     "100vh",
-      overflow:   "hidden",
-      background: S.bgDeep,
-      fontFamily: S.fontUI,
-    }}>
-      {/* ------------------------------------------------------------------ */}
-      {/* HEADER                                                               */}
-      {/* ------------------------------------------------------------------ */}
-      <div style={{
-        display:      "flex",
-        alignItems:   "center",
-        gap:          16,
-        padding:      "0 20px",
-        height:       52,
-        flexShrink:   0,
-        borderBottom: `1px solid ${S.rim}`,
-        background:   S.bgPanel,
-      }}>
-        {/* Brand */}
-        <span style={{
-          fontFamily:    S.fontMono,
-          fontSize:      13,
-          fontWeight:    700,
-          color:         S.cyan,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-        }}>
-          ORDR TERMINAL
-        </span>
-
-        <span style={{ color: S.rim, fontSize: 14 }}>|</span>
-
-        {/* Title */}
-        <span style={{
-          fontFamily:    S.fontMono,
-          fontSize:      13,
-          fontWeight:    600,
-          color:         S.primary,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-        }}>
-          FX RATES
-        </span>
-
-        {/* LIVE badge */}
-        <div style={{
-          display:       "flex",
-          alignItems:    "center",
-          gap:           5,
-          padding:       "3px 8px",
-          borderRadius:  3,
-          background:    "rgba(52,211,153,0.1)",
-          border:        `1px solid rgba(52,211,153,0.3)`,
-        }}>
-          <Activity size={10} color={S.green} />
-          <span style={{
-            fontFamily:    S.fontMono,
-            fontSize: 12,
-            fontWeight:    700,
-            color:         S.green,
-            letterSpacing: "0.1em",
-          }}>
-            LIVE
-          </span>
-        </div>
-
-        {/* Data source badge */}
-        {hasKey ? (
-          <div style={{
-            padding:       "3px 8px",
-            borderRadius:  3,
-            background:    "rgba(0,212,255,0.08)",
-            border:        `1px solid rgba(0,212,255,0.25)`,
-            fontFamily:    S.fontMono,
-            fontSize: 12,
-            fontWeight:    600,
-            color:         S.cyan,
-            letterSpacing: "0.08em",
-          }}>
+    <PageShell
+      icon={BarChart3}
+      title="FX Rates"
+      breadcrumb={["Dashboard", "FX Rates"]}
+      noPadding
+      actions={
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 3, background: "rgba(52,211,153,0.1)", border: `1px solid rgba(52,211,153,0.3)` }}>
+            <Activity size={10} color={S.green} />
+            <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, color: S.green, letterSpacing: "0.1em" }}>LIVE</span>
+          </div>
+          <div style={{ padding: "3px 8px", borderRadius: 3, background: "rgba(0,212,255,0.08)", border: `1px solid rgba(0,212,255,0.25)`, fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, color: S.cyan, letterSpacing: "0.08em" }}>
             FINNHUB
           </div>
-        ) : (
-          <div style={{
-            padding:       "3px 8px",
-            borderRadius:  3,
-            background:    "rgba(251,191,36,0.08)",
-            border:        `1px solid rgba(251,191,36,0.3)`,
-            fontFamily:    S.fontMono,
-            fontSize: 12,
-            fontWeight:    600,
-            color:         S.amber,
-            letterSpacing: "0.08em",
-          }}>
-            NO LIVE DATA
-          </div>
-        )}
+          <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.secondary, letterSpacing: "0.06em" }}>{selectedPair.label}</span>
+          <span style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 600, color: S.secondary }}>{utcTime} <span style={{ color: S.tertiary, fontSize: 11 }}>UTC</span></span>
+        </div>
+      }
+    >
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        {/* Selected pair label */}
-        <span style={{
-          fontFamily:    S.fontMono,
-          fontSize:      12,
-          color:         S.secondary,
-          letterSpacing: "0.06em",
-        }}>
-          {selectedPair.label}
-        </span>
-
-        <span style={{ color: S.rim, fontSize: 14 }}>|</span>
-
-        {/* UTC clock */}
-        <span style={{
-          fontFamily:    S.fontMono,
-          fontSize:      13,
-          fontWeight:    600,
-          color:         S.secondary,
-          letterSpacing: "0.06em",
-          minWidth:      70,
-          textAlign:     "right",
-        }}>
-          {utcTime} <span style={{ color: S.tertiary, fontWeight: 400, fontSize: 12 }}>UTC</span>
-        </span>
-      </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* BODY                                                                 */}
-      {/* ------------------------------------------------------------------ */}
       <div style={{
         display:  "flex",
         flex:     1,
         overflow: "hidden",
+        height:   "calc(100vh - 56px)",
+        fontFamily: S.fontUI,
       }}>
         {/* ---------------------------------------------------------------- */}
         {/* LEFT PANEL — pairs table                                           */}
@@ -588,7 +470,7 @@ export default function FxMarketPage() {
               fontSize: 12,
               color:      S.tertiary,
             }}>
-              {hasKey ? "Prices via Finnhub · OANDA feed" : "Chart only · No API key configured"}
+              Prices via Finnhub · OANDA feed
             </span>
           </div>
         </div>
@@ -710,8 +592,7 @@ export default function FxMarketPage() {
           to   { transform: rotate(360deg); }
         }
       `}</style>
-    </div>
-  
+
     </PageShell>
   );
 }

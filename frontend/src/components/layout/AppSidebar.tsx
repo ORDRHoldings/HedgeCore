@@ -129,11 +129,13 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Market Overview", href: "/market-overview", icon: BarChart3,
-    prefixes: ["/market-overview"],
-    header: "MARKET OVERVIEW",
+    label: "Market", href: "/market-intelligence", icon: BarChart3,
+    prefixes: ["/market-intelligence", "/market-overview", "/fx-market"],
+    header: "MARKET",
     items: [
-      { label: "Market Overview", desc: "FX, indices, gold, oil -- heatmaps & analysis", href: "/market-overview", icon: BarChart3 },
+      { label: "Market Intelligence", desc: "FX heatmap, carry, sectors, provider health", href: "/market-intelligence", icon: Globe },
+      { label: "Market Overview",     desc: "FX, indices, gold, oil -- heatmaps & analysis", href: "/market-overview", icon: BarChart3 },
+      { label: "FX Rates",            desc: "Major pairs with live Finnhub quotes",       href: "/fx-market",           icon: Zap },
     ],
   },
   {
