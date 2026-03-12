@@ -258,7 +258,7 @@ export default function AppearanceTab({ appearance, onChange }: Props) {
         {/* 1) Templates */}
         <section>
           <SectionHead icon={Zap} title="Quick Templates" desc="Apply a curated bundle of appearance settings." />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
             {TEMPLATES.map(tpl => {
               const active = appearance.templateId === tpl.id;
               return (
@@ -300,7 +300,7 @@ export default function AppearanceTab({ appearance, onChange }: Props) {
         {/* 2) Theme Presets */}
         <section>
           <SectionHead icon={Palette} title="Theme Preset" desc="Select a vetted color token set." />
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
             {Object.values(THEME_PRESETS).map(tp => {
               const active = appearance.themeId === tp.id;
               const c = tp.colors;
@@ -509,7 +509,7 @@ export default function AppearanceTab({ appearance, onChange }: Props) {
         {/* 7) Accent Color */}
         <section>
           <SectionHead icon={Palette} title="Accent Color" desc="Applied to buttons, links, and focus rings." />
-          <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 12, alignItems: "flex-start" }}>
             {CURATED_ACCENTS.map(acc => (
               <SwatchCircle
                 key={acc.id}

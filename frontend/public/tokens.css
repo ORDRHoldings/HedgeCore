@@ -9,6 +9,9 @@
   --bg-panel: #1F2937;
   --bg-sub: #293548;
   --bg-sidebar: #0B1120;
+  --sidebar-hover: #111B2E;
+  --sidebar-border: #1A2744;
+  --sidebar-divider: #152036;
   --border-rim: #374151;
   --border-soft: #1F2937;
   --text-primary: #E5E7EB;
@@ -41,6 +44,9 @@
   --bg-panel: #1E1E1E;
   --bg-sub: #2A2A2A;
   --bg-sidebar: #0E0E0E;
+  --sidebar-hover: #181818;
+  --sidebar-border: #2A2A2A;
+  --sidebar-divider: #1C1C1C;
   --border-rim: #444444;
   --border-soft: #333333;
   --text-primary: #E0E0E0;
@@ -71,6 +77,9 @@
   --bg-panel: #3A3F44;
   --bg-sub: #454B52;
   --bg-sidebar: #252525;
+  --sidebar-hover: #2F2F2F;
+  --sidebar-border: #3F4348;
+  --sidebar-divider: #353535;
   --border-rim: #5A6068;
   --border-soft: #4A5058;
   --text-primary: #F4F6F9;
@@ -101,6 +110,9 @@
   --bg-panel: #FFFFFF;
   --bg-sub: #EDF0F5;
   --bg-sidebar: #22263F;
+  --sidebar-hover: #2C3050;
+  --sidebar-border: #353B58;
+  --sidebar-divider: #2A3048;
   --border-rim: #D1D5DB;
   --border-soft: #E5E7EB;
   --text-primary: #1A1A2E;
@@ -123,6 +135,105 @@
   --chart-2: #388E3C;
   --chart-3: #B45309;
   --chart-4: #4F46E5;
+}
+
+/* ── Midnight Terminal (ultra-dark blue-black) ─────────────────────────────── */
+[data-theme="midnight-terminal"] {
+  --bg-deep: #080C18;
+  --bg-panel: #0F1628;
+  --bg-sub: #182038;
+  --bg-sidebar: #060A14;
+  --sidebar-hover: #0D1324;
+  --sidebar-border: #1A2444;
+  --sidebar-divider: #121C32;
+  --border-rim: #1E2C50;
+  --border-soft: #15203A;
+  --text-primary: #C8D8F0;
+  --text-secondary: #7B8EB0;
+  --text-tertiary: #4A5A80;
+  --text-disabled: #2A3550;
+  --accent-blue: #5B9CF0;
+  --accent-blue-dim: rgba(91, 156, 240, 0.10);
+  --accent-cyan: #5BC8F0;
+  --accent-indigo: #6366F1;
+  --accent-amber: #D4A84B;
+  --accent-red: #E06060;
+  --accent-green: #3EAF6E;
+  --status-pass: #3EAF6E;
+  --status-fail: #E06060;
+  --status-warn: #D4A84B;
+  --status-pending: #6B7FA0;
+  --focus-ring: #5B9CF0;
+  --chart-1: #5B9CF0;
+  --chart-2: #3EAF6E;
+  --chart-3: #D4A84B;
+  --chart-4: #6366F1;
+}
+
+/* ── Arctic Frost (light cool blue-gray) ───────────────────────────────────── */
+[data-theme="arctic-frost"] {
+  --bg-deep: #EDF2F8;
+  --bg-panel: #F8FAFC;
+  --bg-sub: #E2E8F0;
+  --bg-sidebar: #1E293B;
+  --sidebar-hover: #283548;
+  --sidebar-border: #334155;
+  --sidebar-divider: #2D3C52;
+  --border-rim: #CBD5E1;
+  --border-soft: #E2E8F0;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #94A3B8;
+  --text-disabled: #CBD5E1;
+  --accent-blue: #2563EB;
+  --accent-blue-dim: rgba(37, 99, 235, 0.08);
+  --accent-cyan: #0891B2;
+  --accent-indigo: #4F46E5;
+  --accent-amber: #B45309;
+  --accent-red: #DC2626;
+  --accent-green: #059669;
+  --status-pass: #059669;
+  --status-fail: #DC2626;
+  --status-warn: #B45309;
+  --status-pending: #94A3B8;
+  --focus-ring: #2563EB;
+  --chart-1: #2563EB;
+  --chart-2: #059669;
+  --chart-3: #B45309;
+  --chart-4: #7C3AED;
+}
+
+/* ── Warm Carbon (dark warm gray-brown) ────────────────────────────────────── */
+[data-theme="warm-carbon"] {
+  --bg-deep: #1A1815;
+  --bg-panel: #252220;
+  --bg-sub: #302C28;
+  --bg-sidebar: #14120F;
+  --sidebar-hover: #1E1C18;
+  --sidebar-border: #3A3530;
+  --sidebar-divider: #2A2622;
+  --border-rim: #4A4440;
+  --border-soft: #383430;
+  --text-primary: #E8E0D8;
+  --text-secondary: #A89888;
+  --text-tertiary: #786858;
+  --text-disabled: #4A4440;
+  --accent-blue: #7BA8D4;
+  --accent-blue-dim: rgba(123, 168, 212, 0.10);
+  --accent-cyan: #7BA8D4;
+  --accent-indigo: #8B7FD4;
+  --accent-amber: #D4A84B;
+  --accent-red: #D4716A;
+  --accent-green: #5EA87A;
+  --status-pass: #5EA87A;
+  --status-fail: #D4716A;
+  --status-warn: #D4A84B;
+  --status-pending: #8A7A6A;
+  --focus-ring: #7BA8D4;
+  --chart-1: #7BA8D4;
+  --chart-2: #5EA87A;
+  --chart-3: #D4A84B;
+  --chart-4: #8B7FD4;
 }
 
 /* ── Density Variants ──────────────────────────────────────────────────────── */

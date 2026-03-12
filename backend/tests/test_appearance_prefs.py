@@ -16,7 +16,7 @@ class TestAppearanceDefaults:
         assert "theme_id" in d
         assert "density" in d
         assert "tabular_numerals" in d
-        assert d["theme_id"] == "ordr-default"
+        assert d["theme_id"] == "institutional-obsidian"
         assert d["density"] == "standard"
         assert d["tabular_numerals"] is True
 
@@ -54,12 +54,12 @@ class TestApplyUpdate:
         existing = get_appearance_defaults()
         updated = apply_appearance_update(existing, {"density": "compact"})
         assert updated["density"] == "compact"
-        assert updated["theme_id"] == "ordr-default"  # unchanged
+        assert updated["theme_id"] == "institutional-obsidian"  # unchanged
 
     def test_invalid_theme_rejected(self):
         existing = get_appearance_defaults()
         updated = apply_appearance_update(existing, {"theme_id": "invalid-theme"})
-        assert updated["theme_id"] == "ordr-default"  # unchanged
+        assert updated["theme_id"] == "institutional-obsidian"  # unchanged
 
     def test_invalid_density_rejected(self):
         existing = get_appearance_defaults()
@@ -99,7 +99,7 @@ class TestApplyUpdate:
 
 class TestValidationConstants:
     def test_theme_ids(self):
-        assert len(VALID_THEME_IDS) == 4
+        assert len(VALID_THEME_IDS) == 7
         assert "ordr-default" in VALID_THEME_IDS
 
     def test_modes(self):
@@ -108,7 +108,7 @@ class TestValidationConstants:
         assert "light" in VALID_MODES
 
     def test_accents(self):
-        assert len(VALID_ACCENTS) == 4
+        assert len(VALID_ACCENTS) == 8
 
     def test_densities(self):
         assert len(VALID_DENSITIES) == 3

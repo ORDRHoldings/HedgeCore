@@ -8,7 +8,10 @@ export interface ThemeColors {
   bgDeep:     string;
   bgPanel:    string;
   bgSub:      string;
-  bgSidebar:  string;
+  bgSidebar:     string;
+  sidebarHover:  string;
+  sidebarBorder: string;
+  sidebarDivider:string;
   borderRim:  string;
   borderSoft: string;
   textPrimary:   string;
@@ -35,7 +38,7 @@ export interface ThemeColors {
 }
 
 // ── Theme Preset ─────────────────────────────────────────────────────────────
-export type ThemeId = "ordr-default" | "institutional-obsidian" | "algorithmic-slate" | "executive-clarity";
+export type ThemeId = "ordr-default" | "institutional-obsidian" | "algorithmic-slate" | "executive-clarity" | "midnight-terminal" | "arctic-frost" | "warm-carbon";
 export type ThemeMode = "dark" | "light";
 
 export interface ThemePreset {
@@ -47,7 +50,7 @@ export interface ThemePreset {
 }
 
 // ── Curated Accent ───────────────────────────────────────────────────────────
-export type AccentId = "ruddy-blue" | "violet" | "emerald" | "amber";
+export type AccentId = "ruddy-blue" | "violet" | "emerald" | "amber" | "coral" | "teal" | "rose" | "indigo";
 
 export interface CuratedAccent {
   id:    AccentId;
@@ -65,7 +68,7 @@ export type NumericFont = "IBM Plex Mono" | "JetBrains Mono" | "ui-monospace";
 export type BaseFontSize = 12 | 13 | 14 | 15 | 16;
 
 // ── Template ─────────────────────────────────────────────────────────────────
-export type TemplateId = "trading-floor" | "treasury-ops" | "executive-review";
+export type TemplateId = "trading-floor" | "treasury-ops" | "executive-review" | "night-desk" | "compliance-review" | "client-presentation";
 
 export interface OperationalTemplate {
   id:          TemplateId;
@@ -91,7 +94,7 @@ export interface AppearanceSettings {
 }
 
 export const DEFAULT_APPEARANCE: AppearanceSettings = {
-  themeId:         "ordr-default",
+  themeId:         "institutional-obsidian",
   modeOverride:    "dark",
   accentId:        "ruddy-blue",
   density:         "standard",

@@ -10,6 +10,9 @@ export const T = {
   bgPanel:   "var(--bg-panel)",
   bgSub:     "var(--bg-sub)",
   bgSidebar: "var(--bg-sidebar)",
+  sidebarHover:   "var(--sidebar-hover)",
+  sidebarBorder:  "var(--sidebar-border)",
+  sidebarDivider: "var(--sidebar-divider)",
 
   // Border
   rim:  "var(--border-rim)",

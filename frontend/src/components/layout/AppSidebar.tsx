@@ -33,19 +33,19 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 // ── Sidebar-specific design tokens ──────────────────────────────────────────
 const ST = {
-  sidebarBg:      "#0B1120",
-  sidebarBgHover: "#111B2E",
-  sidebarBorder:  "#1A2744",
-  sidebarDivider: "#152036",
-  textBright: "#E8ECF4",
-  textMuted:  "#7B8BA5",
-  textDim:    "#4A5A74",
-  accent:     "#1C62F2",
-  accentDim:  "rgba(28, 98, 242, 0.12)",
-  accentGlow: "rgba(28, 98, 242, 0.25)",
-  amber:      "#D97706",
-  green:      "#059669",
-  red:        "#DC2626",
+  sidebarBg:      "var(--bg-sidebar, #0E0E0E)",
+  sidebarBgHover: "var(--sidebar-hover, #181818)",
+  sidebarBorder:  "var(--sidebar-border, #2A2A2A)",
+  sidebarDivider: "var(--sidebar-divider, #1C1C1C)",
+  textBright:     "var(--text-primary, #E0E0E0)",
+  textMuted:      "var(--text-secondary, #B0B0B0)",
+  textDim:        "var(--text-tertiary, #787878)",
+  accent:         "var(--accent-blue, #64A8F0)",
+  accentDim:      "var(--accent-blue-dim, rgba(100, 168, 240, 0.12))",
+  accentGlow:     "var(--accent-blue-dim, rgba(100, 168, 240, 0.25))",
+  amber:          "var(--accent-amber, #E5A84B)",
+  green:          "var(--status-pass, #4CAF50)",
+  red:            "var(--accent-red, #E57373)",
   collapsed: 64,
   expanded:  260,
 } as const;
@@ -482,8 +482,8 @@ export default function AppSidebar() {
       {/* Inject keyframe animation */}
       <style>{`
         @keyframes sidebarPulse {
-          0%, 100% { box-shadow: 0 0 8px rgba(28,98,242,0.25); }
-          50%      { box-shadow: 0 0 14px rgba(28,98,242,0.4); }
+          0%, 100% { box-shadow: 0 0 8px var(--accent-blue-dim, rgba(28,98,242,0.25)); }
+          50%      { box-shadow: 0 0 14px var(--accent-blue-dim, rgba(28,98,242,0.4)); }
         }
       `}</style>
 
@@ -503,11 +503,7 @@ export default function AppSidebar() {
           position:      "relative",
           zIndex:        100,
           flexShrink:    0,
-          // Subtle noise texture via repeating gradient
-          backgroundImage: `
-            radial-gradient(ellipse at 50% 0%, rgba(28,98,242,0.03) 0%, transparent 60%),
-            linear-gradient(180deg, #0B1120 0%, #0D1528 100%)
-          `,
+          backgroundImage: "none",
         }}
       >
         {/* -- Brand mark -------------------------------------------------- */}
@@ -527,7 +523,7 @@ export default function AppSidebar() {
               <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
                 <div style={{
                   width: 28, height: 28, borderRadius: 6,
-                  background: `linear-gradient(135deg, ${ST.accent} 0%, #3B82F6 100%)`,
+                  background: ST.accent,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   boxShadow: `0 2px 8px ${ST.accentGlow}`,
                 }}>
@@ -574,11 +570,11 @@ export default function AppSidebar() {
               onClick={toggleExpanded}
               title="Expand sidebar  [ "
               style={{
-                background: "none", border: "none", cursor: "pointer",
+                border: "none", cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 width: 32, height: 32, borderRadius: 6,
                 color: ST.textBright,
-                backgroundImage: `linear-gradient(135deg, ${ST.accent} 0%, #3B82F6 100%)`,
+                background: ST.accent,
                 boxShadow: `0 2px 8px ${ST.accentGlow}`,
                 transition: "transform 100ms",
               }}

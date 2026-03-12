@@ -23,9 +23,9 @@ router = APIRouter(prefix="/v1/ui", tags=["ui"])
 # Validation constants (appearance)
 # ---------------------------------------------------------------------------
 
-VALID_THEME_IDS = {"ordr-default", "institutional-obsidian", "algorithmic-slate", "executive-clarity"}
+VALID_THEME_IDS = {"ordr-default", "institutional-obsidian", "algorithmic-slate", "executive-clarity", "midnight-terminal", "arctic-frost", "warm-carbon"}
 VALID_MODES = {"system", "dark", "light"}
-VALID_ACCENTS = {"ruddy-blue", "violet", "emerald", "amber"}
+VALID_ACCENTS = {"ruddy-blue", "violet", "emerald", "amber", "coral", "teal", "rose", "indigo"}
 VALID_DENSITIES = {"compact", "standard", "spacious"}
 
 # ---------------------------------------------------------------------------
@@ -69,7 +69,7 @@ class AppearancePrefs(BaseModel):
 
 class AppearancePrefsResponse(BaseModel):
     """Full appearance prefs with defaults filled."""
-    theme_id: str = "ordr-default"
+    theme_id: str = "institutional-obsidian"
     mode_override: str = "system"
     accent_id: str = "ruddy-blue"
     density: str = "standard"
@@ -131,7 +131,7 @@ _ENUM_VALIDATORS: dict[str, set[str]] = {
 def get_appearance_defaults() -> dict:
     """Returns the canonical default appearance dict."""
     return {
-        "theme_id": "ordr-default",
+        "theme_id": "institutional-obsidian",
         "mode_override": "system",
         "accent_id": "ruddy-blue",
         "density": "standard",
