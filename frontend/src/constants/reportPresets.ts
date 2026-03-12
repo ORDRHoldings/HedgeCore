@@ -640,7 +640,7 @@ const T31_MULTICCY_OVERVIEW = tmpl(
   "Multi-Currency Portfolio Overview",
   "MCCY-OVW",
   "Cross-currency exposure summary with G10 and EM pair breakdown, NDF exposure, and hedge coverage matrix.",
-  "EXECUTIVE_BOARD",
+  "MULTI_CURRENCY",
   ["CFO", "TREASURER"] as ReportAudience[],
   ["DASHBOARD", "POSITION_DESK"] as ReportModule[],
   [
@@ -658,7 +658,7 @@ const T32_NDF_PORTFOLIO = tmpl(
   "NDF Portfolio Analysis",
   "NDF-PORT",
   "Deep-dive NDF exposure report covering EM pairs: BRL, COP, CLP, INR, KRW, TWD and others. Settlement risk, fixing schedule, and roll analysis.",
-  "TREASURY_FX",
+  "MULTI_CURRENCY",
   ["TREASURER", "ANALYST"] as ReportAudience[],
   ["POSITION_DESK", "EXECUTION"] as ReportModule[],
   [
@@ -676,7 +676,7 @@ const T33_CROSS_CCY_CORR = tmpl(
   "Cross-Currency Correlation Analysis",
   "CCY-CORR",
   "Pairwise correlation matrix for active currency pairs with factor attribution and diversification benefit quantification.",
-  "RISK_COMMITTEE",
+  "MULTI_CURRENCY",
   ["RISK_COMMITTEE", "ANALYST"] as ReportAudience[],
   ["MACRO_OVERLAY", "SCENARIO_STRESS"] as ReportModule[],
   [
@@ -694,7 +694,7 @@ const T34_EM_RISK_PACK = tmpl(
   "Emerging Market Currency Risk Pack",
   "EM-RISK",
   "Stress and scenario analysis for EM FX exposure covering political risk, liquidity events, and currency crises.",
-  "RISK_COMMITTEE",
+  "MULTI_CURRENCY",
   ["RISK_COMMITTEE", "BOARD"] as ReportAudience[],
   ["SCENARIO_STRESS", "MACRO_OVERLAY"] as ReportModule[],
   [
@@ -712,7 +712,7 @@ const T35_G10_CARRY = tmpl(
   "G10 Carry & Forward Analysis",
   "G10-CARRY",
   "Forward curve analysis, interest rate differential carry, and roll-down for G10 currency positions.",
-  "TREASURY_FX",
+  "MULTI_CURRENCY",
   ["TREASURER", "CFO"] as ReportAudience[],
   ["POSITION_DESK", "MACRO_OVERLAY"] as ReportModule[],
   [
@@ -745,7 +745,7 @@ export const REPORT_PRESETS: ReportTemplate[] = [
 
 export const REPORT_CATEGORIES: { key: string; label: string; count: number; description: string }[] = [
   { key: "EXECUTIVE_BOARD",   label: "Executive / Board",        count: 3,  description: "Board-level and C-suite FX risk summaries" },
-  { key: "TREASURY_FX",       label: "Treasury FX Hedge",        count: 4,  description: "Hedge plans, effectiveness, forward curves" },
+  { key: "TREASURY_FX",       label: "Treasury FX Hedge",        count: 5,  description: "Hedge plans, effectiveness, forward curves, daily flash, trend" },
   { key: "RISK_COMMITTEE",    label: "Risk Committee",           count: 5,  description: "Risk committee packs, VaR, stress, macro" },
   { key: "POLICY_PACK",       label: "Policy Pack",              count: 3,  description: "Policy rationale, change logs, scorecards" },
   { key: "EXECUTION_PACK",    label: "Execution Pack",           count: 3,  description: "Trade logs, settlement, pipeline status" },
@@ -753,7 +753,7 @@ export const REPORT_CATEGORIES: { key: string; label: string; count: number; des
   { key: "EXPOSURE_DECOMP",   label: "Exposure Decomposition",   count: 2,  description: "Currency, tenor, entity decompositions" },
   { key: "DATA_QUALITY",      label: "Data Quality / Ingestion", count: 2,  description: "Validation errors, reconciliation, quality" },
   { key: "CONNECTOR_HEALTH",  label: "Connector Health",         count: 2,  description: "ERP, CSV, DB connector run health & lineage" },
-  { key: "COMPLIANCE_AUDIT",  label: "Compliance & Audit",       count: 4,  description: "IFRS 9, SOX, BCBS, regulatory, audit packs" },
+  { key: "COMPLIANCE_AUDIT",  label: "Compliance & Audit",       count: 3,  description: "IFRS 9, SOX, BCBS, regulatory, audit packs" },
   { key: "MULTI_CURRENCY",    label: "Multi-Currency",           count: 5,  description: "Multi-pair portfolio, NDF, correlation, EM risk, and carry analysis" },
 ];
 

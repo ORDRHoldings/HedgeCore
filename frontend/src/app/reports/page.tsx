@@ -336,11 +336,12 @@ type MainView = "HOME" | "LIBRARY" | "BUILDER" | "SAVED" | "SETTINGS";
 // HOME PANEL
 // ══════════════════════════════════════════════════════════════════════════════
 function HomePanel({
-  onNewReport, onOpenLibrary, savedReports,
+  onNewReport, onOpenLibrary, onSelectPreset, savedReports,
   availableRuns, runsLoading, onBindRun,
 }: {
   onNewReport: () => void;
   onOpenLibrary: () => void;
+  onSelectPreset: (t: ReportTemplate) => void;
   savedReports: ReportDefinition[];
   availableRuns: RunSummary[];
   runsLoading: boolean;
@@ -427,10 +428,12 @@ function HomePanel({
           QUICK START — MOST USED PRESETS
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-          {quickActions.map(qa => (
+          {quickActions.map(qa => {
+            const preset = REPORT_PRESETS.find(p => p.template_id === qa.id);
+            return (
             <button
               key={qa.id}
-              onClick={onNewReport}
+              onClick={() => preset ? onSelectPreset(preset) : onNewReport()}
               style={{
                 background:    S.bgPanel,
                 border:        `1px solid ${S.rim}`,
@@ -452,7 +455,8 @@ function HomePanel({
               </div>
               <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.muted }}>{qa.tag}</span>
             </button>
-          ))}
+          );
+          })}
         </div>
       </div>
 
@@ -554,7 +558,7 @@ function LibraryPanel({ onSelect }: { onSelect: (t: ReportTemplate) => void }) {
     EXECUTIVE_BOARD:"#0284C7", TREASURY_FX:"#15803D", RISK_COMMITTEE:"#B45309",
     POLICY_PACK:"#1D4ED8", EXECUTION_PACK:"#0E7490", SCENARIO_STRESS:"#B91C1C",
     EXPOSURE_DECOMP:"#047857", DATA_QUALITY:"#7C3AED", CONNECTOR_HEALTH:"#C2410C",
-    COMPLIANCE_AUDIT:"#1D4ED8",
+    COMPLIANCE_AUDIT:"#1D4ED8", MULTI_CURRENCY:"#0891B2",
   };
 
   return (
@@ -669,24 +673,29 @@ function LibraryPanel({ onSelect }: { onSelect: (t: ReportTemplate) => void }) {
 // ══════════════════════════════════════════════════════════════════════════════
 function BuilderShell({
   template,
+  savedReport,
   onSave,
   runEnvelopeId,
   ownerEmail,
   token,
 }: {
   template: ReportTemplate | null;
+  savedReport?: ReportDefinition | null;
   onSave: (def: ReportDefinition) => void;
   runEnvelopeId?: string;
   ownerEmail?: string;
   token?: string | null;
 }) {
-  const [step, setStep]               = useState<BuilderStep>(template ? "CONFIGURE" : "PRESET");
-  const [name, setName]               = useState(template?.name ?? "");
-  const [desc, setDesc]               = useState(template?.description ?? "");
-  const [sections, setSections]       = useState<ReportSection[]>(
-    template?.default_sections.map((s, i) => ({ ...s, id: `sec-${i}-${uuidv4().slice(0,4)}` })) ?? []
-  );
-  const [bindings, setBindings]       = useState<DataBindings>({
+  // If restoring a saved report, use its data; otherwise use template defaults
+  const initSections = savedReport
+    ? savedReport.sections
+    : template?.default_sections.map((s, i) => ({ ...s, id: `sec-${i}-${uuidv4().slice(0,4)}` })) ?? [];
+
+  const [step, setStep]               = useState<BuilderStep>(template || savedReport ? "CONFIGURE" : "PRESET");
+  const [name, setName]               = useState(savedReport?.name ?? template?.name ?? "");
+  const [desc, setDesc]               = useState(savedReport?.description ?? template?.description ?? "");
+  const [sections, setSections]       = useState<ReportSection[]>(initSections);
+  const [bindings, setBindings]       = useState<DataBindings>(savedReport?.bindings ?? {
     run_envelope_id:      runEnvelopeId,
     reporting_currency:   "USD",
     as_of_date:           new Date().toISOString().slice(0, 10),
@@ -700,6 +709,14 @@ function BuilderShell({
   const [validationIssues, setIssues] = useState<ReportValidationIssue[]>([]);
   const [exportFormats, setFormats]   = useState<ExportFormat[]>([template?.default_export_format ?? "PDF"]);
   const [exportStatus, setExportStatus] = useState<Record<string, "idle"|"running"|"done"|"error">>({});
+
+  // Sync runEnvelopeId prop into bindings when it changes (e.g. user binds a run from HomePanel)
+  useEffect(() => {
+    if (runEnvelopeId && !savedReport) {
+      setBindings(prev => ({ ...prev, run_envelope_id: runEnvelopeId }));
+    }
+  }, [runEnvelopeId, savedReport]);
+
   // Validate
   const validate = useCallback((): ReportValidationIssue[] => {
     const issues: ReportValidationIssue[] = [];
@@ -950,6 +967,52 @@ function BuilderShell({
 
       {/* Content */}
       <div style={{ flex: 1, overflow: "auto", background: S.bgSub, padding: 16 }}>
+
+        {/* ── STEP: PRESET (no template selected) ── */}
+        {step === "PRESET" && (
+          <div style={{ maxWidth: 700, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16, padding: "20px 0" }}>
+            <div style={{ textAlign: "center", marginBottom: 8 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 14, fontWeight: 700, letterSpacing: "0.08em", color: S.primary, marginBottom: 6 }}>SELECT A REPORT TEMPLATE</div>
+              <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>Choose a preset to pre-populate sections, or start from scratch.</div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+              {REPORT_PRESETS.slice(0, 12).map(t => (
+                <button key={t.template_id} onClick={() => {
+                  setName(t.name);
+                  setDesc(t.description);
+                  setSections(t.default_sections.map((s, i) => ({ ...s, id: `sec-${i}-${uuidv4().slice(0,4)}` })));
+                  setModules(t.modules);
+                  setFormats([t.default_export_format]);
+                  setStep("CONFIGURE");
+                }} style={{
+                  background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 3,
+                  padding: "12px 14px", textAlign: "left", cursor: "pointer",
+                  display: "flex", flexDirection: "column", gap: 4,
+                  transition: "border-color 0.12s",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = S.cyan)}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = S.rim)}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.cyan, letterSpacing: "0.05em" }}>{t.template_id}</span>
+                    <span style={{ fontFamily: S.fontUI, fontSize: 12, fontWeight: 600, color: S.primary }}>{t.short_name}</span>
+                  </div>
+                  <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    {t.description}
+                  </div>
+                  <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.muted }}>{t.default_sections.length} sections · {t.estimated_pages}p</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => { setName("Custom Report"); setStep("CONFIGURE"); }} style={{
+              fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+              color: S.secondary, background: "transparent", border: `1px dashed ${S.rim}`,
+              borderRadius: 3, padding: "12px 14px", cursor: "pointer", textAlign: "center",
+            }}>
+              START BLANK REPORT (no template)
+            </button>
+          </div>
+        )}
 
         {/* ── STEP: CONFIGURE ── */}
         {step === "CONFIGURE" && (
@@ -1604,6 +1667,7 @@ function ReportStudioInner() {
   const initialView: MainView = VIEW_PARAM_MAP[searchParams.get("view") ?? ""] ?? "HOME";
   const [view, setViewState]                  = useState<MainView>(initialView);
   const [selectedTemplate, setTemplate]       = useState<ReportTemplate | null>(null);
+  const [savedReportToOpen, setSavedReportToOpen] = useState<ReportDefinition | null>(null);
   const [savedReports, setSaved]              = useState<ReportDefinition[]>([]);
   const [renderTs, setRenderTs]               = useState("");
 
@@ -1656,6 +1720,7 @@ function ReportStudioInner() {
 
   const handleSelectPreset = (t: ReportTemplate) => {
     setTemplate(t);
+    setSavedReportToOpen(null);
     setView("BUILDER");
   };
 
@@ -1714,7 +1779,7 @@ function ReportStudioInner() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
-            onClick={() => { setTemplate(null); setView("BUILDER"); }}
+            onClick={() => { setTemplate(null); setSavedReportToOpen(null); setView("BUILDER"); }}
             style={{
               fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.07em",
               color: "#FFFFFF", background: S.cyan, border: "none",
@@ -1765,6 +1830,7 @@ function ReportStudioInner() {
           <HomePanel
             onNewReport={() => setView("BUILDER")}
             onOpenLibrary={() => setView("LIBRARY")}
+            onSelectPreset={handleSelectPreset}
             savedReports={savedReports}
             availableRuns={availableRuns}
             runsLoading={runsLoading}
@@ -1776,7 +1842,9 @@ function ReportStudioInner() {
         )}
         {view === "BUILDER" && (
           <BuilderShell
+            key={selectedTemplate?.template_id ?? savedReportToOpen?.report_id ?? "blank"}
             template={selectedTemplate}
+            savedReport={savedReportToOpen}
             onSave={handleSaveReport}
             runEnvelopeId={result?.run_id ?? selectedRunId ?? undefined}
             ownerEmail={user?.email}
@@ -1784,7 +1852,13 @@ function ReportStudioInner() {
           />
         )}
         {view === "SAVED" && (
-          <SavedPanel reports={savedReports} onOpen={r => { setTemplate(null); setView("BUILDER"); }} />
+          <SavedPanel reports={savedReports} onOpen={r => {
+            // Find the original template for this saved report
+            const tmpl = REPORT_PRESETS.find(p => p.template_id === r.template_id) ?? null;
+            setTemplate(tmpl);
+            setSavedReportToOpen(r);
+            setView("BUILDER");
+          }} />
         )}
         {view === "SETTINGS" && (
           <SettingsPanel />

@@ -84,7 +84,8 @@ export type ReportCategory =
   | "EXPOSURE_DECOMP"
   | "DATA_QUALITY"
   | "CONNECTOR_HEALTH"
-  | "COMPLIANCE_AUDIT";
+  | "COMPLIANCE_AUDIT"
+  | "MULTI_CURRENCY";
 
 export type ReportAudience =
   | "BOARD"
