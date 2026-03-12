@@ -32,6 +32,12 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID
 
+from app.services.regulatory_export import (
+    export_emir_xml,
+    export_mifid_xml,
+    export_dodd_frank,
+)
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -707,6 +713,178 @@ async def download_bank_pdf(
     filename = f"bank-compliance-{run_id[:8]}.txt"
     return StreamingResponse(
         io.BytesIO(content),
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ===========================================================================
+# RPT-09: Regulatory Exports — EMIR, MiFID II, Dodd-Frank
+# ===========================================================================
+
+def _positions_to_dicts(positions: list[Position]) -> list[dict]:
+    """Convert Position ORM rows to plain dicts for regulatory export."""
+    return [
+        {
+            "record_id": p.record_id,
+            "currency": p.currency,
+            "amount": float(p.amount) if p.amount is not None else 0,
+            "flow_type": p.flow_type,
+            "entity": p.entity,
+        }
+        for p in positions
+    ]
+
+
+def _build_reg_run_data(
+    run: CalculationRun, current_user: User, run_id: str,
+) -> dict:
+    """Build run_data dict for regulatory export functions."""
+    return {
+        "run_id": run_id,
+        "trade_date": run.created_at.strftime("%Y-%m-%d") if run.created_at else "",
+        "value_date": "",
+        "reporting_entity_lei": "NOT_PROVIDED",
+        "counterparty_lei": "NOT_PROVIDED",
+        "executing_entity_lei": "NOT_PROVIDED",
+        "venue": "XOFF",
+        "decision_maker": current_user.email,
+        "generated_by": current_user.email,
+        "report_date": datetime.now(UTC).strftime("%Y-%m-%d"),
+    }
+
+
+@router.get("/{run_id}/emir")
+async def download_emir(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    GET /v1/reports/{run_id}/emir
+
+    Generate EMIR Article 9 trade report XML for the given calculation run.
+    Reports FX derivative hedge actions to EU trade repositories per
+    EMIR Refit (EU 2024/2987).
+
+    Requires: reports.export
+    """
+    await _require(session, current_user, "reports.export")
+
+    run = await _fetch_run(session, run_id, current_user.company_id)
+    positions = await _fetch_positions(
+        session, run.position_ids or [], current_user.company_id
+    )
+
+    hedge_plan = (run.run_envelope or {}).get("hedge_plan") or {}
+    buckets: list[dict] = hedge_plan.get("buckets", [])
+    run_data = _build_reg_run_data(run, current_user, run_id)
+
+    content = export_emir_xml(
+        run_data, buckets, _positions_to_dicts(positions)
+    )
+
+    await _emit_report_audit(session, current_user, run_id, "emir")
+    logger.info("RPT-09: EMIR export run=%s user=%s", run_id, current_user.email)
+
+    filename = f"emir-report-{run_id[:8]}.xml"
+    return StreamingResponse(
+        io.BytesIO(content.encode("utf-8")),
+        media_type="application/xml; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{run_id}/mifid")
+async def download_mifid(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    GET /v1/reports/{run_id}/mifid
+
+    Generate MiFID II RTS 25 transaction report XML for the given
+    calculation run. Reports FX derivative transactions per
+    MiFID II (EU 2014/65) Article 26.
+
+    Requires: reports.export
+    """
+    await _require(session, current_user, "reports.export")
+
+    run = await _fetch_run(session, run_id, current_user.company_id)
+    positions = await _fetch_positions(
+        session, run.position_ids or [], current_user.company_id
+    )
+
+    hedge_plan = (run.run_envelope or {}).get("hedge_plan") or {}
+    buckets: list[dict] = hedge_plan.get("buckets", [])
+    run_data = _build_reg_run_data(run, current_user, run_id)
+
+    content = export_mifid_xml(
+        run_data, buckets, _positions_to_dicts(positions)
+    )
+
+    await _emit_report_audit(session, current_user, run_id, "mifid")
+    logger.info("RPT-09: MiFID export run=%s user=%s", run_id, current_user.email)
+
+    filename = f"mifid-report-{run_id[:8]}.xml"
+    return StreamingResponse(
+        io.BytesIO(content.encode("utf-8")),
+        media_type="application/xml; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{run_id}/dodd-frank")
+async def download_dodd_frank(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    GET /v1/reports/{run_id}/dodd-frank
+
+    Generate Dodd-Frank Title VII swap data report for the given
+    calculation run. Reports FX swap/forward transactions per
+    CFTC Part 45 real-time reporting requirements.
+
+    Requires: reports.export
+    """
+    await _require(session, current_user, "reports.export")
+
+    run = await _fetch_run(session, run_id, current_user.company_id)
+    positions = await _fetch_positions(
+        session, run.position_ids or [], current_user.company_id
+    )
+
+    hedge_plan = (run.run_envelope or {}).get("hedge_plan") or {}
+    buckets: list[dict] = hedge_plan.get("buckets", [])
+    run_data = _build_reg_run_data(run, current_user, run_id)
+
+    # Build hash chain from audit events
+    from sqlalchemy import select as sa_select
+    hash_q = (
+        sa_select(AuditEvent.event_hash)
+        .where(AuditEvent.company_id == current_user.company_id)
+        .order_by(AuditEvent.created_at.desc())
+        .limit(10)
+    )
+    hash_rows = (await session.execute(hash_q)).scalars().all()
+    hash_chain = list(reversed(hash_rows)) if hash_rows else []
+
+    content = export_dodd_frank(
+        run_data, buckets, _positions_to_dicts(positions), hash_chain
+    )
+
+    await _emit_report_audit(session, current_user, run_id, "dodd-frank")
+    logger.info(
+        "RPT-09: Dodd-Frank export run=%s user=%s", run_id, current_user.email
+    )
+
+    filename = f"dodd-frank-{run_id[:8]}.txt"
+    return StreamingResponse(
+        io.BytesIO(content.encode("utf-8")),
         media_type="text/plain; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

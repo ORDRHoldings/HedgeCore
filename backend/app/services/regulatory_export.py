@@ -1,12 +1,15 @@
 """app/services/regulatory_export.py
 
-Regulatory format exports for Audit Lab.
+Regulatory format exports for Audit Lab and Report Studio.
 
-Provides two serialisation helpers:
-  - export_isda_xml   : ISDA-style XML trade confirmation envelope
-  - export_finra_17a4 : FINRA Rule 17a-4 immutable record (pipe-delimited text)
+Provides five serialisation helpers:
+  - export_isda_xml      : ISDA-style XML trade confirmation envelope
+  - export_finra_17a4    : FINRA Rule 17a-4 immutable record (pipe-delimited text)
+  - export_emir_xml      : EMIR Article 9 trade report (XML)
+  - export_mifid_xml     : MiFID II RTS 25 transaction report (XML)
+  - export_dodd_frank    : Dodd-Frank Title VII swap data report (pipe-delimited text)
 
-Both functions are pure (no DB / IO) and return strings.
+All functions are pure (no DB / IO) and return strings.
 """
 
 from __future__ import annotations
@@ -195,6 +198,318 @@ def export_finra_17a4(
     trailer_parts = [
         "TRAILER",
         f"RECORD_COUNT={len(findings)}",
+        f"INTEGRITY_HASH={integrity_hash}",
+        generated_at,
+    ]
+    lines.append("|".join(trailer_parts))
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# EMIR Article 9 XML export
+# ---------------------------------------------------------------------------
+
+def export_emir_xml(
+    run_data: dict,
+    hedge_actions: list[dict],
+    positions: list[dict],
+) -> str:
+    """Generate EMIR Article 9 trade report XML.
+
+    Implements the key fields required by EMIR Refit (EU 2024/2987)
+    for FX derivative reporting to EU trade repositories.
+
+    Parameters
+    ----------
+    run_data : dict
+        Run-level metadata.  Expected keys:
+          run_id, reporting_entity_lei, counterparty_lei,
+          trade_date, value_date, reporting_timestamp.
+    hedge_actions : list[dict]
+        Hedge plan buckets.  Each dict should contain:
+          currency, instrument, hedge_notional, hedge_rate,
+          value_date, position_id.
+    positions : list[dict]
+        Underlying positions.  Each dict should contain:
+          record_id, currency, amount, flow_type, entity.
+
+    Returns
+    -------
+    str
+        Well-formed XML string representing the EMIR trade report.
+    """
+    generated_at = _now_iso()
+    run_id = run_data.get("run_id", "")
+    lei_reporting = run_data.get("reporting_entity_lei", "NOT_PROVIDED")
+    lei_counterparty = run_data.get("counterparty_lei", "NOT_PROVIDED")
+
+    lines: list[str] = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<emir:tradeReport xmlns:emir="urn:eu:emir:trade:2024">',
+        "  <reportHeader>",
+        f"    <reportId>EMIR-{_x(run_id[:8])}-{generated_at[:10]}</reportId>",
+        f"    <reportingTimestamp>{generated_at}</reportingTimestamp>",
+        f"    <reportingEntityLEI>{_x(lei_reporting)}</reportingEntityLEI>",
+        f"    <counterpartyLEI>{_x(lei_counterparty)}</counterpartyLEI>",
+        f"    <reportType>TRADE</reportType>",
+        f"    <actionType>NEW</actionType>",
+        f"    <regulatoryFramework>EMIR Refit (EU 2024/2987)</regulatoryFramework>",
+        "  </reportHeader>",
+        "  <tradeData>",
+        f"    <uniqueTradeIdentifier>UTI-{_x(run_id)}</uniqueTradeIdentifier>",
+        f"    <tradeDate>{_x(run_data.get('trade_date', generated_at[:10]))}</tradeDate>",
+        f"    <valueDate>{_x(run_data.get('value_date', ''))}</valueDate>",
+        f"    <assetClass>FOREIGN_EXCHANGE</assetClass>",
+        f"    <productClassification>FX_DERIVATIVE</productClassification>",
+        f"    <hedgeFlag>true</hedgeFlag>",
+        f"    <hedgeAccountingStandard>IFRS_9</hedgeAccountingStandard>",
+        "  </tradeData>",
+        "  <hedgeActions>",
+    ]
+
+    total_notional = 0.0
+    for i, action in enumerate(hedge_actions, 1):
+        notional = float(action.get("hedge_notional", 0) or 0)
+        total_notional += abs(notional)
+        lines.append(f"    <action seq=\"{i}\">")
+        lines.append(f"      <currency>{_x(action.get('currency', ''))}</currency>")
+        lines.append(f"      <instrument>{_x(action.get('instrument', ''))}</instrument>")
+        lines.append(f"      <notionalAmount>{_x(str(notional))}</notionalAmount>")
+        lines.append(f"      <notionalCurrency>{_x(action.get('currency', 'USD'))}</notionalCurrency>")
+        lines.append(f"      <rate>{_x(str(action.get('hedge_rate', '')))}</rate>")
+        lines.append(f"      <settlementDate>{_x(action.get('value_date', ''))}</settlementDate>")
+        lines.append(f"      <positionRef>{_x(str(action.get('position_id', '')))}</positionRef>")
+        lines.append("    </action>")
+
+    lines.append("  </hedgeActions>")
+    lines.append(f"  <aggregateNotional>{total_notional}</aggregateNotional>")
+    lines.append("  <underlyingExposures>")
+
+    for pos in positions:
+        lines.append("    <exposure>")
+        lines.append(f"      <recordId>{_x(pos.get('record_id', ''))}</recordId>")
+        lines.append(f"      <currency>{_x(pos.get('currency', ''))}</currency>")
+        lines.append(f"      <amount>{_x(str(pos.get('amount', '')))}</amount>")
+        lines.append(f"      <flowType>{_x(pos.get('flow_type', ''))}</flowType>")
+        lines.append(f"      <entity>{_x(pos.get('entity', ''))}</entity>")
+        lines.append("    </exposure>")
+
+    lines.append("  </underlyingExposures>")
+    lines.append("  <riskMitigation>")
+    lines.append("    <article11Compliance>true</article11Compliance>")
+    lines.append("    <portfolioReconciliation>DAILY</portfolioReconciliation>")
+    lines.append("    <disputeResolution>STANDARD</disputeResolution>")
+    lines.append("    <marginExchange>VM_ONLY</marginExchange>")
+    lines.append("  </riskMitigation>")
+    lines.append("</emir:tradeReport>")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# MiFID II RTS 25 XML export
+# ---------------------------------------------------------------------------
+
+def export_mifid_xml(
+    run_data: dict,
+    hedge_actions: list[dict],
+    positions: list[dict],
+) -> str:
+    """Generate MiFID II RTS 25 transaction report XML.
+
+    Implements the key fields required by MiFID II (EU 2014/65)
+    Article 26 transaction reporting for FX derivatives.
+
+    Parameters
+    ----------
+    run_data : dict
+        Run-level metadata.  Expected keys:
+          run_id, reporting_entity_lei, executing_entity_lei,
+          trade_date, value_date, venue, decision_maker.
+    hedge_actions : list[dict]
+        Hedge plan buckets.  Each dict should contain:
+          currency, instrument, hedge_notional, hedge_rate,
+          value_date, position_id.
+    positions : list[dict]
+        Underlying positions for exposure context.
+
+    Returns
+    -------
+    str
+        Well-formed XML string representing the MiFID II transaction report.
+    """
+    generated_at = _now_iso()
+    run_id = run_data.get("run_id", "")
+    lei_reporting = run_data.get("reporting_entity_lei", "NOT_PROVIDED")
+    lei_executing = run_data.get("executing_entity_lei", lei_reporting)
+
+    lines: list[str] = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<mifid:transactionReport xmlns:mifid="urn:eu:mifid2:rts25:2024">',
+        "  <reportHeader>",
+        f"    <transactionReferenceNumber>TRN-{_x(run_id[:12])}</transactionReferenceNumber>",
+        f"    <reportingTimestamp>{generated_at}</reportingTimestamp>",
+        f"    <reportingEntityLEI>{_x(lei_reporting)}</reportingEntityLEI>",
+        f"    <executingEntityLEI>{_x(lei_executing)}</executingEntityLEI>",
+        f"    <venue>{_x(run_data.get('venue', 'XOFF'))}</venue>",
+        f"    <decisionMaker>{_x(run_data.get('decision_maker', ''))}</decisionMaker>",
+        f"    <regulatoryFramework>MiFID II (EU 2014/65) Article 26</regulatoryFramework>",
+        "  </reportHeader>",
+        "  <transactions>",
+    ]
+
+    for i, action in enumerate(hedge_actions, 1):
+        notional = float(action.get("hedge_notional", 0) or 0)
+        ccy = action.get("currency", "")
+        lines.append(f"    <transaction seq=\"{i}\">")
+        lines.append(f"      <instrumentType>{_x(action.get('instrument', 'FX_FORWARD'))}</instrumentType>")
+        lines.append(f"      <instrumentId>FX-{_x(ccy)}-USD</instrumentId>")
+        lines.append(f"      <buySellIndicator>{'BUY' if notional >= 0 else 'SELL'}</buySellIndicator>")
+        lines.append(f"      <quantity>{abs(notional)}</quantity>")
+        lines.append(f"      <quantityCurrency>{_x(ccy)}</quantityCurrency>")
+        lines.append(f"      <price>{_x(str(action.get('hedge_rate', '')))}</price>")
+        lines.append(f"      <priceCurrency>USD</priceCurrency>")
+        lines.append(f"      <tradeDate>{_x(run_data.get('trade_date', generated_at[:10]))}</tradeDate>")
+        lines.append(f"      <settlementDate>{_x(action.get('value_date', ''))}</settlementDate>")
+        lines.append(f"      <waiver>HEDGING_EXEMPTION</waiver>")
+        lines.append("    </transaction>")
+
+    lines.append("  </transactions>")
+    lines.append("  <exposureSummary>")
+    lines.append(f"    <positionCount>{len(positions)}</positionCount>")
+
+    total_exposure = sum(abs(float(p.get("amount", 0) or 0)) for p in positions)
+    lines.append(f"    <totalExposure>{total_exposure}</totalExposure>")
+    lines.append(f"    <hedgeActionCount>{len(hedge_actions)}</hedgeActionCount>")
+
+    total_hedge = sum(abs(float(a.get("hedge_notional", 0) or 0)) for a in hedge_actions)
+    lines.append(f"    <totalHedgeNotional>{total_hedge}</totalHedgeNotional>")
+
+    coverage = (total_hedge / total_exposure * 100) if total_exposure > 0 else 0
+    lines.append(f"    <coverageRatio>{coverage:.1f}</coverageRatio>")
+    lines.append("  </exposureSummary>")
+    lines.append("  <complianceFlags>")
+    lines.append("    <bestExecutionApplied>true</bestExecutionApplied>")
+    lines.append("    <hedgingTransaction>true</hedgingTransaction>")
+    lines.append("    <shortSelling>false</shortSelling>")
+    lines.append("    <algorithmicTrading>false</algorithmicTrading>")
+    lines.append("  </complianceFlags>")
+    lines.append("</mifid:transactionReport>")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Dodd-Frank Title VII swap data report
+# ---------------------------------------------------------------------------
+
+def export_dodd_frank(
+    run_data: dict,
+    hedge_actions: list[dict],
+    positions: list[dict],
+    hash_chain: list[str],
+) -> str:
+    """Generate Dodd-Frank Title VII swap data report.
+
+    Implements the key fields required by CFTC Part 45 real-time
+    reporting for FX swap/forward transactions.
+
+    The output is pipe-delimited text with three sections:
+      HEADER  -- report-level metadata and regulatory references
+      SWAP    -- one line per hedge action (swap/forward leg)
+      EXPOSURE-- one line per underlying position
+      TRAILER -- record count + integrity hash
+
+    Parameters
+    ----------
+    run_data : dict
+        Run-level metadata.  Expected keys:
+          run_id, reporting_entity_lei, counterparty_lei,
+          trade_date, value_date, generated_by.
+    hedge_actions : list[dict]
+        Hedge plan buckets.
+    positions : list[dict]
+        Underlying positions.
+    hash_chain : list[str]
+        Pre-existing hash chain entries.
+
+    Returns
+    -------
+    str
+        Pipe-delimited text with HEADER, SWAP, EXPOSURE, and TRAILER lines.
+    """
+    generated_at = _now_iso()
+    run_id = run_data.get("run_id", "")
+    lines: list[str] = []
+
+    # -- Header ---------------------------------------------------------------
+    header_parts = [
+        "HEADER",
+        f"USI-{run_id[:16]}",
+        run_data.get("reporting_entity_lei", "NOT_PROVIDED"),
+        run_data.get("counterparty_lei", "NOT_PROVIDED"),
+        run_data.get("trade_date", generated_at[:10]),
+        "ASSET_CLASS=FX",
+        "PRODUCT_TYPE=SWAP_FORWARD",
+        "REGULATION=DODD_FRANK_TITLE_VII",
+        "CFTC_PART=45",
+        generated_at,
+        f"CHAIN_LENGTH={len(hash_chain)}",
+    ]
+    lines.append("|".join(header_parts))
+
+    # -- Swap legs ------------------------------------------------------------
+    running_hash = hash_chain[-1] if hash_chain else "0" * 64
+    record_hashes: list[str] = []
+
+    for seq, action in enumerate(hedge_actions, start=1):
+        notional = float(action.get("hedge_notional", 0) or 0)
+        record_body = "|".join([
+            "SWAP",
+            str(seq).zfill(6),
+            action.get("currency", ""),
+            "USD",
+            action.get("instrument", "FX_FORWARD"),
+            f"NOTIONAL={abs(notional):.2f}",
+            f"RATE={action.get('hedge_rate', '')}",
+            f"SETTLE={action.get('value_date', '')}",
+            f"DIRECTION={'BUY' if notional >= 0 else 'SELL'}",
+            f"POSITION_REF={action.get('position_id', '')}",
+            f"PREV_HASH={running_hash}",
+        ])
+        record_hash = hashlib.sha256(record_body.encode("utf-8")).hexdigest()
+        record_hashes.append(record_hash)
+        lines.append(f"{record_body}|HASH={record_hash}")
+        running_hash = record_hash
+
+    # -- Exposure lines -------------------------------------------------------
+    for seq, pos in enumerate(positions, start=1):
+        exposure_body = "|".join([
+            "EXPOSURE",
+            str(seq).zfill(6),
+            pos.get("record_id", ""),
+            pos.get("currency", ""),
+            f"AMOUNT={pos.get('amount', '')}",
+            f"FLOW_TYPE={pos.get('flow_type', '')}",
+            f"ENTITY={pos.get('entity', '')}",
+        ])
+        lines.append(exposure_body)
+
+    # -- Trailer --------------------------------------------------------------
+    integrity_payload = "|".join(record_hashes) if record_hashes else "EMPTY"
+    integrity_hash = hashlib.sha256(
+        integrity_payload.encode("utf-8")
+    ).hexdigest()
+
+    total_notional = sum(
+        abs(float(a.get("hedge_notional", 0) or 0)) for a in hedge_actions
+    )
+    trailer_parts = [
+        "TRAILER",
+        f"SWAP_COUNT={len(hedge_actions)}",
+        f"EXPOSURE_COUNT={len(positions)}",
+        f"TOTAL_NOTIONAL={total_notional:.2f}",
         f"INTEGRITY_HASH={integrity_hash}",
         generated_at,
     ]

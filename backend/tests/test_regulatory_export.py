@@ -4,6 +4,9 @@ Covers:
   - ISDA XML: structure, escaping, empty transactions, field population
   - FINRA 17a-4: header/record/trailer structure, hash chain continuity,
     record hashing, empty findings, integrity hash
+  - EMIR Article 9: XML structure, hedge actions, exposures, risk mitigation
+  - MiFID II RTS 25: XML structure, transactions, exposure summary, compliance
+  - Dodd-Frank Title VII: header/swap/exposure/trailer, hash chain, integrity
 """
 
 from __future__ import annotations
@@ -14,7 +17,13 @@ from xml.etree import ElementTree as ET
 
 import pytest
 
-from app.services.regulatory_export import export_finra_17a4, export_isda_xml
+from app.services.regulatory_export import (
+    export_dodd_frank,
+    export_emir_xml,
+    export_finra_17a4,
+    export_isda_xml,
+    export_mifid_xml,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -253,3 +262,354 @@ class TestExportFinra17a4:
         header = text.split("\n")[0]
         assert header.startswith("HEADER")
         assert "|SYSTEM|" in header
+
+
+# ---------------------------------------------------------------------------
+# Shared fixtures for new regulatory exports
+# ---------------------------------------------------------------------------
+
+def _sample_reg_run() -> dict:
+    return {
+        "run_id": "run-reg-001",
+        "trade_date": "2026-03-12",
+        "value_date": "2026-03-14",
+        "reporting_entity_lei": "5493001KJTIIGC8Y1R12",
+        "counterparty_lei": "213800ABCD1234567890",
+        "executing_entity_lei": "5493001KJTIIGC8Y1R12",
+        "venue": "XOFF",
+        "decision_maker": "treasury@acme.com",
+        "generated_by": "ordr_terminal",
+        "report_date": "2026-03-12",
+    }
+
+
+def _sample_hedge_actions() -> list[dict]:
+    return [
+        {
+            "currency": "MXN",
+            "instrument": "FX_FORWARD",
+            "hedge_notional": 5_000_000,
+            "hedge_rate": 17.25,
+            "value_date": "2026-06-15",
+            "position_id": "pos-001",
+        },
+        {
+            "currency": "EUR",
+            "instrument": "FX_OPTION",
+            "hedge_notional": -2_000_000,
+            "hedge_rate": 1.085,
+            "value_date": "2026-09-30",
+            "position_id": "pos-002",
+        },
+    ]
+
+
+def _sample_positions() -> list[dict]:
+    return [
+        {
+            "record_id": "REC-001",
+            "currency": "MXN",
+            "amount": 5_500_000,
+            "flow_type": "PAYABLE",
+            "entity": "Acme Mexico SA",
+        },
+        {
+            "record_id": "REC-002",
+            "currency": "EUR",
+            "amount": 2_200_000,
+            "flow_type": "RECEIVABLE",
+            "entity": "Acme GmbH",
+        },
+    ]
+
+
+# ---------------------------------------------------------------------------
+# EMIR Article 9 tests
+# ---------------------------------------------------------------------------
+
+class TestExportEmirXml:
+    def test_valid_xml(self) -> None:
+        """Output must be well-formed XML."""
+        xml = export_emir_xml(_sample_reg_run(), _sample_hedge_actions(), _sample_positions())
+        parseable = xml.replace("emir:", "").replace("xmlns:emir=", "xmlns=")
+        ET.fromstring(parseable)
+
+    def test_report_header_fields(self) -> None:
+        xml = export_emir_xml(_sample_reg_run(), _sample_hedge_actions(), _sample_positions())
+        assert "<reportType>TRADE</reportType>" in xml
+        assert "<actionType>NEW</actionType>" in xml
+        assert "5493001KJTIIGC8Y1R12" in xml
+        assert "213800ABCD1234567890" in xml
+        assert "EMIR Refit" in xml
+
+    def test_uti_present(self) -> None:
+        xml = export_emir_xml(_sample_reg_run(), _sample_hedge_actions(), [])
+        assert "UTI-run-reg-001" in xml
+
+    def test_asset_class_fx(self) -> None:
+        xml = export_emir_xml(_sample_reg_run(), [], [])
+        assert "<assetClass>FOREIGN_EXCHANGE</assetClass>" in xml
+        assert "<hedgeFlag>true</hedgeFlag>" in xml
+
+    def test_hedge_actions_present(self) -> None:
+        xml = export_emir_xml(_sample_reg_run(), _sample_hedge_actions(), [])
+        assert xml.count("<action seq=") == 2
+        assert "<currency>MXN</currency>" in xml
+        assert "<instrument>FX_FORWARD</instrument>" in xml
+        assert "<notionalAmount>5000000" in xml
+
+    def test_aggregate_notional(self) -> None:
+        xml = export_emir_xml(_sample_reg_run(), _sample_hedge_actions(), [])
+        assert "<aggregateNotional>7000000.0</aggregateNotional>" in xml
+
+    def test_exposures_present(self) -> None:
+        xml = export_emir_xml(_sample_reg_run(), [], _sample_positions())
+        assert xml.count("<exposure>") == 2
+        assert "<recordId>REC-001</recordId>" in xml
+        assert "<flowType>PAYABLE</flowType>" in xml
+
+    def test_risk_mitigation_section(self) -> None:
+        xml = export_emir_xml(_sample_reg_run(), [], [])
+        assert "<article11Compliance>true</article11Compliance>" in xml
+        assert "<portfolioReconciliation>DAILY</portfolioReconciliation>" in xml
+
+    def test_empty_actions_and_positions(self) -> None:
+        xml = export_emir_xml(_sample_reg_run(), [], [])
+        parseable = xml.replace("emir:", "").replace("xmlns:emir=", "xmlns=")
+        ET.fromstring(parseable)
+        assert "<aggregateNotional>0.0</aggregateNotional>" in xml
+
+    def test_xml_escaping(self) -> None:
+        run = _sample_reg_run()
+        run["reporting_entity_lei"] = "LEI & <Special>"
+        xml = export_emir_xml(run, [], [])
+        assert "LEI &amp; &lt;Special&gt;" in xml
+
+    def test_missing_keys_default(self) -> None:
+        xml = export_emir_xml({}, [], [])
+        assert "NOT_PROVIDED" in xml
+        parseable = xml.replace("emir:", "").replace("xmlns:emir=", "xmlns=")
+        ET.fromstring(parseable)
+
+
+# ---------------------------------------------------------------------------
+# MiFID II RTS 25 tests
+# ---------------------------------------------------------------------------
+
+class TestExportMifidXml:
+    def test_valid_xml(self) -> None:
+        xml = export_mifid_xml(_sample_reg_run(), _sample_hedge_actions(), _sample_positions())
+        parseable = xml.replace("mifid:", "").replace("xmlns:mifid=", "xmlns=")
+        ET.fromstring(parseable)
+
+    def test_report_header(self) -> None:
+        xml = export_mifid_xml(_sample_reg_run(), _sample_hedge_actions(), [])
+        assert "TRN-run-reg-001" in xml
+        assert "5493001KJTIIGC8Y1R12" in xml
+        assert "<venue>XOFF</venue>" in xml
+        assert "MiFID II" in xml
+
+    def test_transactions_present(self) -> None:
+        xml = export_mifid_xml(_sample_reg_run(), _sample_hedge_actions(), [])
+        assert xml.count("<transaction seq=") == 2
+        assert "<instrumentType>FX_FORWARD</instrumentType>" in xml
+        assert "<instrumentId>FX-MXN-USD</instrumentId>" in xml
+
+    def test_buy_sell_indicator(self) -> None:
+        xml = export_mifid_xml(_sample_reg_run(), _sample_hedge_actions(), [])
+        assert "<buySellIndicator>BUY</buySellIndicator>" in xml
+        assert "<buySellIndicator>SELL</buySellIndicator>" in xml
+
+    def test_quantity_absolute(self) -> None:
+        xml = export_mifid_xml(_sample_reg_run(), _sample_hedge_actions(), [])
+        assert "<quantity>5000000" in xml
+        assert "<quantity>2000000" in xml
+
+    def test_waiver_hedging(self) -> None:
+        xml = export_mifid_xml(_sample_reg_run(), _sample_hedge_actions(), [])
+        assert "<waiver>HEDGING_EXEMPTION</waiver>" in xml
+
+    def test_exposure_summary(self) -> None:
+        xml = export_mifid_xml(_sample_reg_run(), _sample_hedge_actions(), _sample_positions())
+        assert "<positionCount>2</positionCount>" in xml
+        assert "<hedgeActionCount>2</hedgeActionCount>" in xml
+        assert "<totalExposure>7700000" in xml
+        assert "<coverageRatio>" in xml
+
+    def test_compliance_flags(self) -> None:
+        xml = export_mifid_xml(_sample_reg_run(), [], [])
+        assert "<hedgingTransaction>true</hedgingTransaction>" in xml
+        assert "<algorithmicTrading>false</algorithmicTrading>" in xml
+
+    def test_empty_actions(self) -> None:
+        xml = export_mifid_xml(_sample_reg_run(), [], [])
+        parseable = xml.replace("mifid:", "").replace("xmlns:mifid=", "xmlns=")
+        ET.fromstring(parseable)
+        assert "<hedgeActionCount>0</hedgeActionCount>" in xml
+
+    def test_missing_keys_default(self) -> None:
+        xml = export_mifid_xml({}, [], [])
+        assert "NOT_PROVIDED" in xml
+        parseable = xml.replace("mifid:", "").replace("xmlns:mifid=", "xmlns=")
+        ET.fromstring(parseable)
+
+
+# ---------------------------------------------------------------------------
+# Dodd-Frank Title VII tests
+# ---------------------------------------------------------------------------
+
+class TestExportDoddFrank:
+    def test_structure(self) -> None:
+        """Output has HEADER, SWAP(s), EXPOSURE(s), TRAILER."""
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), _sample_positions(), []
+        )
+        lines = text.strip().split("\n")
+        assert lines[0].startswith("HEADER")
+        assert lines[-1].startswith("TRAILER")
+        swaps = [l for l in lines if l.startswith("SWAP")]
+        exposures = [l for l in lines if l.startswith("EXPOSURE")]
+        assert len(swaps) == 2
+        assert len(exposures) == 2
+
+    def test_header_fields(self) -> None:
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), [], []
+        )
+        header = text.split("\n")[0]
+        assert "USI-run-reg-001" in header
+        assert "ASSET_CLASS=FX" in header
+        assert "DODD_FRANK_TITLE_VII" in header
+        assert "CFTC_PART=45" in header
+
+    def test_header_chain_length(self) -> None:
+        chain = ["hash1", "hash2", "hash3"]
+        text = export_dodd_frank(_sample_reg_run(), [], [], chain)
+        header = text.split("\n")[0]
+        assert "CHAIN_LENGTH=3" in header
+
+    def test_swap_sequential_numbering(self) -> None:
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), [], []
+        )
+        lines = text.split("\n")
+        swaps = [l for l in lines if l.startswith("SWAP")]
+        assert "|000001|" in swaps[0]
+        assert "|000002|" in swaps[1]
+
+    def test_swap_contains_hedge_data(self) -> None:
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), [], []
+        )
+        lines = text.split("\n")
+        swaps = [l for l in lines if l.startswith("SWAP")]
+        assert "MXN" in swaps[0]
+        assert "FX_FORWARD" in swaps[0]
+        assert "NOTIONAL=5000000.00" in swaps[0]
+        assert "DIRECTION=BUY" in swaps[0]
+
+    def test_swap_direction_sell(self) -> None:
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), [], []
+        )
+        lines = text.split("\n")
+        swaps = [l for l in lines if l.startswith("SWAP")]
+        assert "DIRECTION=SELL" in swaps[1]
+
+    def test_swap_hash_is_sha256(self) -> None:
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), [], []
+        )
+        lines = text.split("\n")
+        swaps = [l for l in lines if l.startswith("SWAP")]
+        for rec in swaps:
+            match = re.search(r"HASH=([0-9a-f]{64})", rec)
+            assert match is not None
+
+    def test_swap_hash_chain_continuity(self) -> None:
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), [], []
+        )
+        lines = text.split("\n")
+        swaps = [l for l in lines if l.startswith("SWAP")]
+
+        prev_hashes = []
+        record_hashes = []
+        for rec in swaps:
+            prev_match = re.search(r"PREV_HASH=([0-9a-f]{64})", rec)
+            hash_match = re.search(r"\|HASH=([0-9a-f]{64})", rec)
+            assert prev_match and hash_match
+            prev_hashes.append(prev_match.group(1))
+            record_hashes.append(hash_match.group(1))
+
+        assert prev_hashes[0] == "0" * 64
+        assert prev_hashes[1] == record_hashes[0]
+
+    def test_swap_hash_verifiable(self) -> None:
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), [], []
+        )
+        lines = text.split("\n")
+        swaps = [l for l in lines if l.startswith("SWAP")]
+        for rec in swaps:
+            body, _, hash_part = rec.rpartition("|HASH=")
+            expected = hashlib.sha256(body.encode("utf-8")).hexdigest()
+            assert hash_part == expected
+
+    def test_exposure_lines(self) -> None:
+        text = export_dodd_frank(
+            _sample_reg_run(), [], _sample_positions(), []
+        )
+        lines = text.split("\n")
+        exposures = [l for l in lines if l.startswith("EXPOSURE")]
+        assert len(exposures) == 2
+        assert "REC-001" in exposures[0]
+        assert "FLOW_TYPE=PAYABLE" in exposures[0]
+        assert "ENTITY=Acme Mexico SA" in exposures[0]
+
+    def test_trailer_counts(self) -> None:
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), _sample_positions(), []
+        )
+        trailer = text.split("\n")[-1]
+        assert "SWAP_COUNT=2" in trailer
+        assert "EXPOSURE_COUNT=2" in trailer
+        assert "TOTAL_NOTIONAL=7000000.00" in trailer
+
+    def test_trailer_integrity_hash(self) -> None:
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), [], []
+        )
+        trailer = text.split("\n")[-1]
+        match = re.search(r"INTEGRITY_HASH=([0-9a-f]{64})", trailer)
+        assert match is not None
+
+    def test_empty_all(self) -> None:
+        text = export_dodd_frank(_sample_reg_run(), [], [], [])
+        lines = text.split("\n")
+        assert len(lines) == 2  # HEADER + TRAILER
+        assert "SWAP_COUNT=0" in lines[-1]
+        assert "EXPOSURE_COUNT=0" in lines[-1]
+
+    def test_empty_integrity_hash(self) -> None:
+        text = export_dodd_frank(_sample_reg_run(), [], [], [])
+        trailer = text.split("\n")[-1]
+        expected = hashlib.sha256(b"EMPTY").hexdigest()
+        assert f"INTEGRITY_HASH={expected}" in trailer
+
+    def test_existing_chain(self) -> None:
+        chain = ["aaa", "bbb"]
+        text = export_dodd_frank(
+            _sample_reg_run(), _sample_hedge_actions(), [], chain
+        )
+        lines = text.split("\n")
+        swaps = [l for l in lines if l.startswith("SWAP")]
+        first_prev = re.search(r"PREV_HASH=(\S+?)(?:\|)", swaps[0])
+        assert first_prev is not None
+        assert first_prev.group(1) == "bbb"
+
+    def test_missing_keys_default(self) -> None:
+        text = export_dodd_frank({}, [], [], [])
+        header = text.split("\n")[0]
+        assert header.startswith("HEADER")
+        assert "NOT_PROVIDED" in header
