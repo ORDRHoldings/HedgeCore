@@ -1,5 +1,14 @@
 # Changelog (AI-maintained)
 
+## 2026-03-12 — ORDR Market Workspace Redesign (ordr-market/)
+- **Full UI rebuild**: Replaced dark-theme top-bar + raw ChartEngine mount with institutional light-theme trading workstation shell
+- **New workspace/ layer** (4 files, 1,485 lines): `tokens.ts` (design system), `primitives.tsx` (7 atomic components), `MockCandleChart.tsx` (Canvas 2D chart), `ChartWorkspace.tsx` (shell assembly)
+- **Layout**: 40px top bar · 40px left drawing rail (20 tools) · flex chart canvas · 40px right utility rail · 28px bottom strip — chart occupies ~88% viewport
+- **Design system**: Cool neutral palette (`#F0F3FA` / `#FAFBFE`), muted blue/salmon candles, Inter + JetBrains Mono fonts, token-driven spacing/radii/shadows
+- **Canvas chart**: 250-bar mock OHLCV, 7px narrow candles, S/R dashed levels, ghost watermark, price/time axes, volume zone, ResizeObserver responsive
+- **Interactive states**: Hover/active on all buttons, floating drawing palette on draw-mode activation, paper trading toggle, timeframe + chart-type selectors
+- **Build**: Clean — 0 TS errors, 0 warnings. Merged PR #1 → master. Deployed to Vercel (auto).
+
 ## 2026-03-09 — Audit Lab Canonical Truth Pass
 - **Reclassification**: Prior "37/40 production-ready" claim corrected to conservative truth: 3/40 OPERATIONALLY PROVEN, 33/40 CODE COMPLETE (synthetic data only), 3/40 PARTIAL, 1/40 STUB/BLOCKED.
 - **Mandatory downgrades**: Items 5 (source-inspection test), 21 (programmatic XLSX), 22 (mocked pdfplumber), 25 (hand-crafted SWIFT fixture), 26 (synthetic forward points), 37 (unvalidated ISDA/FINRA schemas) → CODE COMPLETE. Item 29 (benchmark provider never imported) → STUB/BLOCKED.

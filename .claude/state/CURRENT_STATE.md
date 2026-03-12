@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-03-09
+Last updated: 2026-03-12
 
 ## System Status
 - Backend: Render (hedgecore.onrender.com) — master branch
@@ -17,6 +17,13 @@ Last updated: 2026-03-09
 - Architecture canon: 5 files (docs/architecture/) + 4 ADRs
 - CI governance: freeze-check + pre-merge-gate + risk-gate in GitHub Actions (all enforced, no advisory)
 - Pre-commit: freeze-check hook wired
+
+## ORDR Market Sub-Project (ordr-market/, 2026-03-12)
+- Workspace redesign complete: institutional light-theme shell, PR #1 merged to master
+- New layer: `src/components/workspace/` — 4 files (tokens, primitives, MockCandleChart, ChartWorkspace)
+- Design system: Inter/JetBrains Mono, cool neutral palette, muted blue/salmon candles
+- Canvas chart: 250-bar OHLCV mock, S/R levels, price/time axes, volume zone
+- Deployed to Vercel (auto-deploy on master push)
 
 ## Codebase Counts (repo-verified 2026-03-08)
 - engine/: 14 orchestrator modules
