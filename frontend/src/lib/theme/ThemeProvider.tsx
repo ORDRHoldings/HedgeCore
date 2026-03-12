@@ -18,6 +18,8 @@ interface ThemeContextValue {
   updateAppearance: (patch: Partial<AppearanceSettings>) => void;
   resolvedColors: ThemeColors;
   resolvedMode: "dark" | "light";
+  /** Persist current appearance to server (non-critical, localStorage is primary). */
+  syncToServer: (token: string) => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -142,6 +144,14 @@ function applyThemeToRoot(appearance: AppearanceSettings) {
     root.classList.remove("ordr-high-contrast");
   }
 
+  // Data attributes for CSS-only consumption + A/B
+  root.setAttribute("data-theme", appearance.themeId);
+  root.setAttribute("data-variant", preset.mode);
+  root.setAttribute("data-density", appearance.density);
+  root.setAttribute("data-reduced-motion", String(appearance.reducedMotion));
+  root.setAttribute("data-high-contrast", String(appearance.highContrast));
+  root.setAttribute("data-tabular-nums", String(appearance.tabularNumerals));
+
   // Body background + color (immediate visual update)
   document.body.style.background = colors.bgDeep;
   document.body.style.color = colors.textPrimary;
@@ -151,14 +161,30 @@ function applyThemeToRoot(appearance: AppearanceSettings) {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [appearance, setAppearanceState] = useState<AppearanceSettings>(() => {
     if (typeof window === "undefined") return DEFAULT_APPEARANCE;
+
+    // 1. Load from localStorage
+    let base = DEFAULT_APPEARANCE;
     try {
       const raw = localStorage.getItem(APPEARANCE_STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        return { ...DEFAULT_APPEARANCE, ...parsed };
+        base = { ...DEFAULT_APPEARANCE, ...JSON.parse(raw) };
       }
     } catch { /* ignore */ }
-    return DEFAULT_APPEARANCE;
+
+    // 2. URL search params override (for shared links / previews)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlTheme = params.get("theme");
+      const urlVariant = params.get("variant");
+      if (urlTheme && THEME_PRESETS[urlTheme as ThemeId]) {
+        base = { ...base, themeId: urlTheme as ThemeId };
+        if (urlVariant === "dark" || urlVariant === "light") {
+          base = { ...base, modeOverride: urlVariant };
+        }
+      }
+    } catch { /* ignore */ }
+
+    return base;
   });
 
   // Apply theme on mount and on change
@@ -203,13 +229,38 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return preset?.mode ?? "dark";
   }, [appearance.modeOverride, appearance.themeId]);
 
+  const syncToServer = useCallback(async (token: string) => {
+    try {
+      const { dashboardFetch } = await import("@/lib/api/dashboardClient");
+      await dashboardFetch("/v1/ui/appearance", token, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          theme_id: appearance.themeId,
+          mode_override: appearance.modeOverride,
+          accent_id: appearance.accentId,
+          density: appearance.density,
+          ui_font: appearance.uiFont,
+          numeric_font: appearance.numericFont,
+          base_font_size: appearance.baseFontSize,
+          tabular_numerals: appearance.tabularNumerals,
+          reduced_motion: appearance.reducedMotion,
+          high_contrast: appearance.highContrast,
+          color_plus_icon: appearance.colorPlusIcon,
+          template_id: appearance.templateId,
+        }),
+      });
+    } catch { /* non-critical -- localStorage is primary */ }
+  }, [appearance]);
+
   const ctx = useMemo<ThemeContextValue>(() => ({
     appearance,
     setAppearance,
     updateAppearance,
     resolvedColors,
     resolvedMode,
-  }), [appearance, setAppearance, updateAppearance, resolvedColors, resolvedMode]);
+    syncToServer,
+  }), [appearance, setAppearance, updateAppearance, resolvedColors, resolvedMode, syncToServer]);
 
   return (
     <ThemeContext.Provider value={ctx}>

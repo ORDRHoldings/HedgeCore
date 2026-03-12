@@ -163,3 +163,58 @@ The backend `Company.settings` JSONB already exists. To add org-level theme defa
 1. Add `appearance_defaults` key to `Company.settings`
 2. Add `allow_user_override: boolean` flag
 3. In `GET /v1/ui/appearance`, merge: org defaults < user overrides (if allowed)
+
+## URL-Based Theme Switching
+
+Apply themes via URL parameters for shared links, previews, and A/B tests:
+
+```
+https://ordr-terminal.vercel.app?theme=executive-clarity&variant=light
+https://ordr-terminal.vercel.app?theme=institutional-obsidian&variant=dark
+```
+
+Parameters:
+- `theme` — Theme preset ID (ordr-default, institutional-obsidian, algorithmic-slate, executive-clarity)
+- `variant` — Mode override (dark, light)
+
+URL params take precedence over localStorage. Invalid values are ignored.
+
+## A/B Testing
+
+The `<html>` element carries data attributes for CSS-only and JS variant targeting:
+
+```html
+<html data-theme="ordr-default" data-variant="dark" data-density="standard" ...>
+```
+
+Use `data-variant` in analytics to segment by theme variant. CTA events include variant automatically.
+
+## CTA Event Tracking
+
+Import `trackEvent` from `@/lib/analytics/events`:
+
+```typescript
+import { trackEvent } from "@/lib/analytics/events";
+
+trackEvent("click_launch_terminal", "hero");
+```
+
+Events are stored in localStorage (`ordr_cta_events`) for batch upload. Call `flushEvents()` to retrieve and clear.
+
+## CI Contrast Validation
+
+Run `node scripts/check-contrast.mjs` to validate all theme presets. This runs in CI after TypeScript checks.
+
+## Accessibility
+
+- **Skip-to-content**: `<a href="#main-content">` visible on Tab focus
+- **Focus indicators**: All interactive elements use `--accent-blue` focus ring via `:focus-visible`
+- **Color is not sole signal**: Gains/losses use icon + sign + color
+- **Reduced motion**: `[data-reduced-motion="true"]` kills all animations
+- **High contrast**: `[data-high-contrast="true"]` boosts border and text contrast
+
+## Static Exports
+
+- `/themes.json` — Machine-readable theme definitions (all presets, accents, templates)
+- `/tokens.css` — CSS-only theme tokens via `[data-theme="..."]` selectors
+- `/og-image.svg` — OpenGraph social preview image

@@ -1,0 +1,150 @@
+/* ORDR Terminal Design Tokens — v1.0.0
+ * Apply a theme: <html data-theme="institutional-obsidian" data-variant="dark">
+ * Or use ?theme=institutional-obsidian&variant=dark in URL
+ */
+
+/* ── ORDR Default (production dark) ────────────────────────────────────────── */
+:root, [data-theme="ordr-default"] {
+  --bg-deep: #111827;
+  --bg-panel: #1F2937;
+  --bg-sub: #293548;
+  --bg-sidebar: #0B1120;
+  --border-rim: #374151;
+  --border-soft: #1F2937;
+  --text-primary: #E5E7EB;
+  --text-secondary: #9CA3AF;
+  --text-tertiary: #6B7280;
+  --text-disabled: #374151;
+  --accent-blue: #1C62F2;
+  --accent-blue-dim: rgba(28, 98, 242, 0.10);
+  --accent-cyan: #1C62F2;
+  --accent-indigo: #4F46E5;
+  --accent-amber: #D97706;
+  --accent-red: #DC2626;
+  --accent-green: #059669;
+  --status-pass: #059669;
+  --status-fail: #DC2626;
+  --status-warn: #D97706;
+  --status-pending: #94A3B8;
+  --focus-ring: #2B6FF2;
+  --chart-1: #1C62F2;
+  --chart-2: #059669;
+  --chart-3: #D97706;
+  --chart-4: #4F46E5;
+  --font-ui: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+/* ── Institutional Obsidian (deep dark) ────────────────────────────────────── */
+[data-theme="institutional-obsidian"] {
+  --bg-deep: #121212;
+  --bg-panel: #1E1E1E;
+  --bg-sub: #2A2A2A;
+  --bg-sidebar: #0E0E0E;
+  --border-rim: #444444;
+  --border-soft: #333333;
+  --text-primary: #E0E0E0;
+  --text-secondary: #B0B0B0;
+  --text-tertiary: #787878;
+  --text-disabled: #444444;
+  --accent-blue: #64A8F0;
+  --accent-blue-dim: rgba(100, 168, 240, 0.10);
+  --accent-cyan: #64A8F0;
+  --accent-indigo: #7C7CF0;
+  --accent-amber: #E5A84B;
+  --accent-red: #E57373;
+  --accent-green: #4CAF50;
+  --status-pass: #4CAF50;
+  --status-fail: #E57373;
+  --status-warn: #E5A84B;
+  --status-pending: #9E9E9E;
+  --focus-ring: #64A8F0;
+  --chart-1: #64A8F0;
+  --chart-2: #4CAF50;
+  --chart-3: #E5A84B;
+  --chart-4: #7C7CF0;
+}
+
+/* ── Algorithmic Slate (neutral mid-dark) ──────────────────────────────────── */
+[data-theme="algorithmic-slate"] {
+  --bg-deep: #2E2E2E;
+  --bg-panel: #3A3F44;
+  --bg-sub: #454B52;
+  --bg-sidebar: #252525;
+  --border-rim: #5A6068;
+  --border-soft: #4A5058;
+  --text-primary: #F4F6F9;
+  --text-secondary: #93ACC5;
+  --text-tertiary: #6B7A8E;
+  --text-disabled: #4A5058;
+  --accent-blue: #64A8F0;
+  --accent-blue-dim: rgba(100, 168, 240, 0.10);
+  --accent-cyan: #64A8F0;
+  --accent-indigo: #807EED;
+  --accent-amber: #E5A84B;
+  --accent-red: #E57373;
+  --accent-green: #4CAF50;
+  --status-pass: #4CAF50;
+  --status-fail: #E57373;
+  --status-warn: #E5A84B;
+  --status-pending: #8899AA;
+  --focus-ring: #64A8F0;
+  --chart-1: #7FC8B6;
+  --chart-2: #807EED;
+  --chart-3: #E5A84B;
+  --chart-4: #64A8F0;
+}
+
+/* ── Executive Clarity (light / low-glare) ─────────────────────────────────── */
+[data-theme="executive-clarity"] {
+  --bg-deep: #F4F6F9;
+  --bg-panel: #FFFFFF;
+  --bg-sub: #EDF0F5;
+  --bg-sidebar: #22263F;
+  --border-rim: #D1D5DB;
+  --border-soft: #E5E7EB;
+  --text-primary: #1A1A2E;
+  --text-secondary: #4B5563;
+  --text-tertiary: #9CA3AF;
+  --text-disabled: #D1D5DB;
+  --accent-blue: #1C62F2;
+  --accent-blue-dim: rgba(28, 98, 242, 0.08);
+  --accent-cyan: #1C62F2;
+  --accent-indigo: #4F46E5;
+  --accent-amber: #B45309;
+  --accent-red: #D32F2F;
+  --accent-green: #388E3C;
+  --status-pass: #388E3C;
+  --status-fail: #D32F2F;
+  --status-warn: #E5C287;
+  --status-pending: #9CA3AF;
+  --focus-ring: #1C62F2;
+  --chart-1: #1C62F2;
+  --chart-2: #388E3C;
+  --chart-3: #B45309;
+  --chart-4: #4F46E5;
+}
+
+/* ── Density Variants ──────────────────────────────────────────────────────── */
+[data-density="compact"]  { --density-scale: 0.85; --row-height: 28px; }
+[data-density="standard"] { --density-scale: 1;    --row-height: 36px; }
+[data-density="spacious"] { --density-scale: 1.2;  --row-height: 44px; }
+
+/* ── Accessibility ─────────────────────────────────────────────────────────── */
+[data-reduced-motion="true"] *,
+[data-reduced-motion="true"] *::before,
+[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+[data-high-contrast="true"] {
+  --border-rim: #888888;
+  --text-secondary: #D1D5DB;
+}
+
+/* ── Tabular Numerals ──────────────────────────────────────────────────────── */
+[data-tabular-nums="true"] .numeric,
+[data-tabular-nums="true"] [data-numeric] {
+  font-variant-numeric: tabular-nums;
+}

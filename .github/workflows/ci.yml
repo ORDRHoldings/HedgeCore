@@ -69,6 +69,9 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
+      - name: Contrast check
+        run: node scripts/check-contrast.mjs
+
       - name: Next.js build
         run: npx next build
         env:

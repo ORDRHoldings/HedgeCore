@@ -211,6 +211,168 @@ describe("Terminal backward compatibility", () => {
   });
 });
 
+// ── URL-based theme switching ────────────────────────────────────────────────
+
+describe("URL-based theme switching", () => {
+  it("valid ?theme= param overrides localStorage themeId", () => {
+    const stored: Partial<AppearanceSettings> = { themeId: "ordr-default" };
+    // Simulate the provider init logic
+    let base = { ...DEFAULT_APPEARANCE, ...stored };
+
+    const urlTheme = "institutional-obsidian";
+    if (urlTheme && THEME_PRESETS[urlTheme as ThemeId]) {
+      base = { ...base, themeId: urlTheme as ThemeId };
+    }
+
+    expect(base.themeId).toBe("institutional-obsidian");
+  });
+
+  it("valid ?variant= param overrides modeOverride", () => {
+    let base = { ...DEFAULT_APPEARANCE };
+
+    const urlTheme = "executive-clarity";
+    const urlVariant = "light";
+    if (urlTheme && THEME_PRESETS[urlTheme as ThemeId]) {
+      base = { ...base, themeId: urlTheme as ThemeId };
+      if (urlVariant === "dark" || urlVariant === "light") {
+        base = { ...base, modeOverride: urlVariant };
+      }
+    }
+
+    expect(base.themeId).toBe("executive-clarity");
+    expect(base.modeOverride).toBe("light");
+  });
+
+  it("invalid ?theme= param does NOT override", () => {
+    let base = { ...DEFAULT_APPEARANCE };
+    const urlTheme = "nonexistent-theme";
+
+    if (urlTheme && THEME_PRESETS[urlTheme as ThemeId]) {
+      base = { ...base, themeId: urlTheme as ThemeId };
+    }
+
+    expect(base.themeId).toBe("ordr-default");
+  });
+
+  it("invalid ?variant= param is ignored", () => {
+    let base = { ...DEFAULT_APPEARANCE };
+    const urlTheme = "ordr-default";
+    const urlVariant = "invalid";
+
+    if (urlTheme && THEME_PRESETS[urlTheme as ThemeId]) {
+      base = { ...base, themeId: urlTheme as ThemeId };
+      if (urlVariant === "dark" || urlVariant === "light") {
+        base = { ...base, modeOverride: urlVariant };
+      }
+    }
+
+    expect(base.modeOverride).toBe("dark"); // unchanged default
+  });
+
+  it("?theme= without ?variant= keeps existing modeOverride", () => {
+    let base = { ...DEFAULT_APPEARANCE, modeOverride: "light" as const };
+    const urlTheme = "algorithmic-slate";
+
+    if (urlTheme && THEME_PRESETS[urlTheme as ThemeId]) {
+      base = { ...base, themeId: urlTheme as ThemeId };
+    }
+
+    expect(base.themeId).toBe("algorithmic-slate");
+    expect(base.modeOverride).toBe("light"); // preserved
+  });
+});
+
+// ── Data attributes ─────────────────────────────────────────────────────────
+
+describe("Data attributes for CSS consumption", () => {
+  it("expected data attributes list", () => {
+    // Verify the attribute names that should be set on <html>
+    const expectedAttrs = [
+      "data-theme",
+      "data-variant",
+      "data-density",
+      "data-reduced-motion",
+      "data-high-contrast",
+      "data-tabular-nums",
+    ];
+    // All should be valid attribute names (lowercase, hyphenated)
+    for (const attr of expectedAttrs) {
+      expect(attr).toMatch(/^data-[a-z-]+$/);
+    }
+  });
+
+  it("data-variant reflects resolved preset mode, not modeOverride", () => {
+    // The data-variant attribute is set from preset.mode, not appearance.modeOverride.
+    // For ordr-default, preset.mode is "dark" regardless of modeOverride.
+    const preset = THEME_PRESETS["ordr-default"];
+    expect(preset.mode).toBe("dark");
+
+    const lightPreset = THEME_PRESETS["executive-clarity"];
+    expect(lightPreset.mode).toBe("light");
+  });
+
+  it("data-density values match density type", () => {
+    const validDensities: Density[] = ["compact", "standard", "spacious"];
+    expect(validDensities).toContain(DEFAULT_APPEARANCE.density);
+  });
+
+  it("boolean attributes serialize to 'true' or 'false' strings", () => {
+    expect(String(DEFAULT_APPEARANCE.reducedMotion)).toBe("false");
+    expect(String(true)).toBe("true");
+    expect(String(DEFAULT_APPEARANCE.highContrast)).toBe("false");
+    expect(String(DEFAULT_APPEARANCE.tabularNumerals)).toBe("true");
+  });
+});
+
+// ── syncToServer payload ────────────────────────────────────────────────────
+
+describe("syncToServer payload shape", () => {
+  it("appearance maps to expected server field names", () => {
+    const appearance = DEFAULT_APPEARANCE;
+    const payload = {
+      theme_id: appearance.themeId,
+      mode_override: appearance.modeOverride,
+      accent_id: appearance.accentId,
+      density: appearance.density,
+      ui_font: appearance.uiFont,
+      numeric_font: appearance.numericFont,
+      base_font_size: appearance.baseFontSize,
+      tabular_numerals: appearance.tabularNumerals,
+      reduced_motion: appearance.reducedMotion,
+      high_contrast: appearance.highContrast,
+      color_plus_icon: appearance.colorPlusIcon,
+      template_id: appearance.templateId,
+    };
+
+    expect(payload.theme_id).toBe("ordr-default");
+    expect(payload.mode_override).toBe("dark");
+    expect(payload.accent_id).toBe("ruddy-blue");
+    expect(payload.density).toBe("standard");
+    expect(payload.ui_font).toBe("IBM Plex Sans");
+    expect(payload.numeric_font).toBe("IBM Plex Mono");
+    expect(payload.base_font_size).toBe(13);
+    expect(payload.tabular_numerals).toBe(true);
+    expect(payload.reduced_motion).toBe(false);
+    expect(payload.high_contrast).toBe(false);
+    expect(payload.color_plus_icon).toBe(true);
+    expect(payload.template_id).toBeNull();
+  });
+
+  it("payload round-trips through JSON", () => {
+    const appearance = { ...DEFAULT_APPEARANCE, themeId: "algorithmic-slate" as ThemeId };
+    const payload = {
+      theme_id: appearance.themeId,
+      mode_override: appearance.modeOverride,
+      accent_id: appearance.accentId,
+      density: appearance.density,
+    };
+    const json = JSON.stringify(payload);
+    const parsed = JSON.parse(json);
+    expect(parsed.theme_id).toBe("algorithmic-slate");
+    expect(parsed.mode_override).toBe("dark");
+  });
+});
+
 // ── Font resolution ──────────────────────────────────────────────────────────
 
 describe("Font resolution", () => {

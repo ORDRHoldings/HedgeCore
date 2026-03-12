@@ -101,7 +101,7 @@ describe("validateThemeContrast", () => {
       textPrimary: "#E5E7EB",
       textSecondary: "#9CA3AF",
       borderRim: "#374151",
-      focusRing: "#1C62F2",
+      focusRing: "#2B6FF2",
       accentBlue: "#1C62F2",
     });
     expect(textFailures(results)).toEqual([]);
@@ -114,7 +114,7 @@ describe("validateThemeContrast", () => {
       textPrimary: "#E5E7EB",
       textSecondary: "#9CA3AF",
       borderRim: "#374151",
-      focusRing: "#1C62F2",
+      focusRing: "#2B6FF2",
       accentBlue: "#1C62F2",
     });
     expect(results.length).toBe(8);
@@ -133,25 +133,17 @@ describe("validateThemeContrast", () => {
     expect(textFailures(results)).toEqual([]);
   });
 
-  test("Algorithmic Slate passes text-primary readability checks", () => {
+  test("Algorithmic Slate passes text readability checks", () => {
     const results = validateThemeContrast({
       bgDeep: "#2E2E2E",
       bgPanel: "#3A3F44",
       textPrimary: "#F4F6F9",
-      textSecondary: "#88A0B9",
+      textSecondary: "#93ACC5",
       borderRim: "#5A6068",
       focusRing: "#64A8F0",
       accentBlue: "#64A8F0",
     });
-    // text-primary passes on both surfaces
-    const primaryFails = results.filter(
-      r => !r.pass && r.pair.startsWith("text-primary")
-    );
-    expect(primaryFails).toEqual([]);
-    // text-secondary on bg-panel is a known near-miss (~3.94 vs 4.5 required)
-    const secOnPanel = results.find(r => r.pair === "text-secondary on bg-panel");
-    expect(secOnPanel).toBeDefined();
-    expect(secOnPanel!.ratio).toBeGreaterThan(3.5);
+    expect(textFailures(results)).toEqual([]);
   });
 
   test("Executive Clarity passes text readability checks", () => {
@@ -176,7 +168,7 @@ describe("validateThemeContrast", () => {
       textPrimary: "#E5E7EB",
       textSecondary: "#9CA3AF",
       borderRim: "#374151",
-      focusRing: "#1C62F2",
+      focusRing: "#2B6FF2",
       accentBlue: "#1C62F2",
     });
     const borderCheck = ordrResults.find(r => r.pair === "border-rim vs bg-panel");
@@ -208,7 +200,7 @@ describe("validateThemeContrast", () => {
       textPrimary: "#E5E7EB",
       textSecondary: "#9CA3AF",
       borderRim: "#374151",
-      focusRing: "#1C62F2",
+      focusRing: "#2B6FF2",
       accentBlue: "#1C62F2",
     });
     expect(results.length).toBeGreaterThan(0);

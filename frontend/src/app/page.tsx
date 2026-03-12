@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { trackEvent } from "@/lib/analytics/events";
 import {
   LayoutGrid, TrendingUp, PieChart, FlaskConical, Globe, BookOpen, Newspaper,
   Shield, Lock, Users, FileCheck, Code2, Sun, Moon, ArrowRight, Zap, Database,
@@ -396,7 +397,7 @@ export default function LandingPage() {
             textDecoration: "none", background: "transparent",
           }}>Sign In</Link>
           {!mob && (
-            <Link href="/auth/login" className="o-btn" style={{
+            <Link href="/auth/login" className="o-btn" onClick={() => trackEvent("click_get_access", "nav")} style={{
               fontFamily: F.ui, fontSize: 13, fontWeight: 600,
               color: T.accentText, background: T.accent,
               padding: "7px 20px", borderRadius: 8, textDecoration: "none", border: "none",
@@ -506,14 +507,14 @@ export default function LandingPage() {
             opacity: heroVis ? 1 : 0, transform: heroVis ? "translateY(0)" : "translateY(16px)",
             transition: "all .7s ease .2s",
           }}>
-            <Link href="/auth/login" className="o-btn" style={{
+            <Link href="/auth/login" className="o-btn" onClick={() => trackEvent("click_launch_terminal", "hero")} style={{
               fontFamily: F.ui, fontSize: 15, fontWeight: 600,
               color: T.accentText, background: T.accent,
               padding: "13px 32px", borderRadius: 10, textDecoration: "none", border: "none",
               display: "flex", alignItems: "center", gap: 8,
               boxShadow: dk ? "0 0 30px rgba(34,211,238,0.15)" : "0 4px 16px rgba(30,58,95,0.15)",
             }}>Launch Terminal <ArrowRight size={16} /></Link>
-            <a href="mailto:info@orderterminal.com" className="o-btn" style={{
+            <a href="mailto:info@orderterminal.com" className="o-btn" onClick={() => trackEvent("click_contact_sales", "hero")} style={{
               fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: T.textSub,
               background: "transparent", padding: "13px 32px", borderRadius: 10,
               border: `1.5px solid ${T.border}`, textDecoration: "none",
@@ -827,14 +828,14 @@ export default function LandingPage() {
             Institutional-grade FX hedge governance. Deterministic, auditable, governed — from exposure to execution.
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 36, flexWrap: "wrap" }}>
-            <Link href="/auth/login" className="o-btn" style={{
+            <Link href="/auth/login" className="o-btn" onClick={() => trackEvent("click_launch_terminal", "footer")} style={{
               fontFamily: F.ui, fontSize: 15, fontWeight: 600,
               color: dk ? "#000" : T.accent, background: dk ? T.accent : "#fff",
               padding: "14px 36px", borderRadius: 10, textDecoration: "none", border: "none",
               display: "flex", alignItems: "center", gap: 8,
               boxShadow: dk ? "0 0 30px rgba(34,211,238,0.2)" : "0 4px 16px rgba(0,0,0,0.1)",
             }}>Launch Terminal <ArrowRight size={16} /></Link>
-            <a href="mailto:info@orderterminal.com" className="o-btn" style={{
+            <a href="mailto:info@orderterminal.com" className="o-btn" onClick={() => trackEvent("click_contact_sales", "footer")} style={{
               fontFamily: F.ui, fontSize: 15, fontWeight: 600,
               color: dk ? T.textSub : "rgba(255,255,255,0.6)",
               background: "transparent", padding: "14px 36px", borderRadius: 10,
