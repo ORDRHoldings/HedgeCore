@@ -186,6 +186,7 @@ export default function LandingPage() {
         @keyframes o-pulse { 0%,100% { opacity:.3 } 50% { opacity:1 } }
         @keyframes o-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
         @keyframes o-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @keyframes o-drift { 0% { transform: translate(-50%,-50%) rotate(0deg) scale(1); } 50% { transform: translate(-50%,-50%) rotate(3deg) scale(1.02); } 100% { transform: translate(-50%,-50%) rotate(0deg) scale(1); } }
         @keyframes o-gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         @keyframes o-borderGlow { 0% { border-color: ${dk ? "rgba(34,211,238,0.15)" : "rgba(30,58,95,0.08)"}; } 50% { border-color: ${dk ? "rgba(34,211,238,0.4)" : "rgba(74,144,217,0.3)"}; } 100% { border-color: ${dk ? "rgba(34,211,238,0.15)" : "rgba(30,58,95,0.08)"}; } }
         html { scroll-behavior: smooth; }
@@ -295,6 +296,18 @@ export default function LandingPage() {
           textAlign: "center", position: "relative", overflow: "hidden",
           background: T.bg, transition: "background 0.5s",
         }}>
+          {/* Knot logo watermark — hero */}
+          <div style={{
+            position: "absolute", top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: mob ? 400 : 620, height: mob ? 400 : 620,
+            backgroundImage: "url(/ordr-knot.png)",
+            backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center",
+            opacity: dk ? 0.025 : 0.035,
+            filter: dk ? "invert(1)" : "none",
+            pointerEvents: "none",
+            animation: "o-drift 20s ease-in-out infinite",
+          }} />
           {/* Glow orbs (dark mode) */}
           {dk && <>
             <div style={{ position: "absolute", top: "-20%", left: "10%", width: 500, height: 500, borderRadius: "50%", background: `radial-gradient(circle, ${T.glowOrb1}, transparent 70%)`, pointerEvents: "none", animation: "o-float 8s ease infinite" }} />
@@ -382,7 +395,19 @@ export default function LandingPage() {
         <section id="products" ref={prodStagger.ref} style={{
           padding: mob ? "24px 16px 40px" : "32px 48px 56px",
           background: T.bg, transition: "background 0.5s",
+          position: "relative", overflow: "hidden",
         }}>
+          {/* Knot logo watermark — products (bottom right, partially clipped) */}
+          <div style={{
+            position: "absolute", bottom: mob ? "-8%" : "-12%", right: mob ? "-8%" : "-3%",
+            width: mob ? 260 : 380, height: mob ? 260 : 380,
+            backgroundImage: "url(/ordr-knot.png)",
+            backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center",
+            opacity: dk ? 0.02 : 0.025,
+            filter: dk ? "invert(1)" : "none",
+            pointerEvents: "none",
+            transform: "rotate(15deg)",
+          }} />
           <div style={{
             display: "grid",
             gridTemplateColumns: mob ? "1fr" : "repeat(4, 1fr)",
@@ -418,6 +443,16 @@ export default function LandingPage() {
           backgroundSize: "48px 48px",
           maskImage: "radial-gradient(ellipse 80% 70% at 50% 50%, black 10%, transparent 70%)",
           WebkitMaskImage: "radial-gradient(ellipse 80% 70% at 50% 50%, black 10%, transparent 70%)",
+        }} />
+        {/* Knot logo watermark — capabilities (right side) */}
+        <div style={{
+          position: "absolute", top: "50%", right: mob ? "-15%" : "-5%",
+          transform: "translateY(-50%) rotate(12deg)",
+          width: mob ? 280 : 420, height: mob ? 280 : 420,
+          backgroundImage: "url(/ordr-knot.png)",
+          backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center",
+          opacity: 0.04, filter: "invert(1)",
+          pointerEvents: "none",
         }} />
         <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: mob ? "block" : "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: mob ? 28 : 40 }}>
@@ -520,6 +555,16 @@ export default function LandingPage() {
       }}>
         {dk && <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 600, height: 300, background: "radial-gradient(ellipse, rgba(34,211,238,0.06), transparent 60%)", pointerEvents: "none" }} />}
         {!dk && <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 50% at 50% 50%, #2a4a72, #1e3a5f)" }} />}
+        {/* Knot logo watermark — CTA (left side) */}
+        <div style={{
+          position: "absolute", top: "50%", left: mob ? "-10%" : "3%",
+          transform: "translateY(-50%) rotate(-8deg)",
+          width: mob ? 200 : 300, height: mob ? 200 : 300,
+          backgroundImage: "url(/ordr-knot.png)",
+          backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center",
+          opacity: 0.035, filter: "invert(1)",
+          pointerEvents: "none",
+        }} />
         <div style={{ position: "relative", zIndex: 1 }}>
           <h2 style={{
             fontFamily: F.heading, fontSize: mob ? 28 : 38, fontWeight: 800, letterSpacing: "-0.03em", margin: 0,
