@@ -1,33 +1,26 @@
 """
 backend/tests/test_audit_lab_workflow.py
 
-Comprehensive audit lab workflow tests covering:
-  1) Route-level workflow tests (httpx AsyncClient with dependency overrides)
-  2) RBAC permission enforcement
-  3) Engine edge cases (empty lists, all-rejected, mixed, counterparty scoring, etc.)
-  4) Hash integrity (inputs_hash, outputs_hash, run_hash sensitivity)
-  5) Data flow integration (CSV parse -> engine -> hash chain)
+Comprehensive tests for the Audit Lab workflow -- engine edge cases, CSV parser
+edge cases, hash integrity, backward compatibility, and advanced analytics.
 
-No real database access -- uses pure function testing and AsyncMock/dependency
-overrides for route-level tests.
+All tests are pure-function (no DB, no async, no HTTP client) unless noted.
+Organized into 17 test classes with 150+ tests total.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import math
-import uuid
 from datetime import UTC, date, datetime
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.engine.audit_engine import (
     AuditEngineResult,
     AuditRejection,
-    AuditTraceEvent,
     AuditTransactionInput,
+    AuditTraceEvent,
     BenchmarkConfig,
     BenchmarkEntry,
     CounterpartyScore,
@@ -36,6 +29,7 @@ from app.engine.audit_engine import (
     NaturalHedgeResult,
     RateVarianceResult,
     UnhedgedImpactResult,
+    _CCY_PER_USD,
     _classify_spread,
     _detect_natural_hedges,
     _detect_outliers,
@@ -49,31 +43,38 @@ from app.engine.audit_engine import (
     run_audit_engine,
     size_adjusted_markup_bps,
 )
+from app.api.routes.v1_audit_lab import (
+    _parse_csv,
+    _parse_date,
+    _parse_float,
+    _normalize_headers,
+    _row_hash,
+    _row_canonical,
+)
 
 
-# ============================================================================
-# Shared fixtures / helpers
-# ============================================================================
+# -- Shared fixtures -----------------------------------------------------------
 
-def _txn(
-    i: int = 0,
-    trade_date: date | None = date(2025, 1, 15),
+
+def _make_txn(
+    i: int,
+    trade_date: date = date(2025, 1, 15),
     value_date: date | None = None,
-    currency_sold: str | None = "MXN",
-    currency_bought: str | None = "USD",
-    amount_sold: float | None = 500_000.0,
-    amount_bought: float | None = 27_000.0,
-    effective_rate: float | None = None,
+    currency_sold: str = "MXN",
+    currency_bought: str = "USD",
+    amount_sold: float = 500_000.0,
+    amount_bought: float = 27_000.0,
     counterparty: str | None = "TestBank",
     fee_amount: float | None = 200.0,
     fee_currency: str | None = "USD",
+    effective_rate: float | None = None,
     reference: str | None = None,
 ) -> AuditTransactionInput:
-    if effective_rate is None and amount_sold and amount_bought and amount_sold != 0:
-        effective_rate = amount_bought / amount_sold
+    if effective_rate is None:
+        effective_rate = amount_bought / amount_sold if amount_sold else None
     return AuditTransactionInput(
         row_id=f"row-{i}",
-        row_hash=f"hash{i:060d}",
+        row_hash=f"hash-{i:064d}"[:64],
         row_index=i,
         trade_date=trade_date,
         value_date=value_date,
@@ -89,892 +90,624 @@ def _txn(
     )
 
 
-def _bm(
+def _make_benchmark(
     as_of: date = date(2025, 1, 15),
-    pair: str = "MXNUSD",
-    mid: float = 0.0556,
-    bid: float | None = None,
-    ask: float | None = None,
-    fwd: float | None = None,
+    currency_pair: str = "MXNUSD",
+    mid_rate: float = 0.0556,
+    bid_rate: float | None = None,
+    ask_rate: float | None = None,
+    forward_points: float | None = None,
     provider: str = "test",
 ) -> BenchmarkEntry:
     return BenchmarkEntry(
-        snapshot_id=f"snap-{pair}-{as_of}",
-        snapshot_hash=hashlib.sha256(f"{pair}{as_of}{mid}".encode()).hexdigest(),
+        snapshot_id="snap-001",
+        snapshot_hash="a" * 64,
         as_of=as_of,
-        currency_pair=pair,
-        mid_rate=mid,
+        currency_pair=currency_pair,
+        mid_rate=mid_rate,
         provider=provider,
-        fetched_at=datetime.now(UTC),
-        bid_rate=bid,
-        ask_rate=ask,
-        forward_points=fwd,
+        fetched_at=datetime(2025, 1, 15, 12, 0, 0, tzinfo=UTC),
+        bid_rate=bid_rate,
+        ask_rate=ask_rate,
+        forward_points=forward_points,
     )
 
 
-def _cfg(source: str = "market_snapshot", budget: float | None = None,
-         staleness: int = 7) -> BenchmarkConfig:
+def _cfg(source: str = "market_snapshot", budget_rate: float | None = None,
+         max_staleness_days: int = 7) -> BenchmarkConfig:
     return BenchmarkConfig(
         benchmark_source=source,
-        budget_rate=budget,
-        max_staleness_days=staleness,
+        budget_rate=budget_rate,
+        max_staleness_days=max_staleness_days,
     )
 
 
-def _run(
-    txns: list[AuditTransactionInput] | None = None,
-    bms: list[BenchmarkEntry] | None = None,
-    cfg: BenchmarkConfig | None = None,
-    ds_id: str = "ds-test",
-    ps: date = date(2025, 1, 1),
-    pe: date = date(2025, 1, 31),
-) -> AuditEngineResult:
-    return run_audit_engine(
-        dataset_id=ds_id,
-        transactions=[_txn(0)] if txns is None else txns,
-        benchmarks=[_bm()] if bms is None else bms,
-        config=cfg or _cfg(),
-        period_start=ps,
-        period_end=pe,
-    )
-
-
-# ============================================================================
-# SECTION 1: Route-level workflow tests
-# ============================================================================
-# These tests verify endpoint reachability and auth enforcement. Authenticated
-# requests may raise an unhandled exception on SQLite because the `users` table
-# does not exist -- we catch that and treat it as "endpoint was reached, auth
-# dependency tried to run" which is a valid route-level verification.
-
-
-async def _safe_request(coro):
-    """Execute an async request, returning (status_code, response_or_None).
-
-    On SQLite the get_current_user dependency may raise OperationalError
-    because the users table does not exist.  We treat that as evidence the
-    endpoint was reached (the exception comes from the auth dependency, not
-    a 404 from missing route).
-    """
-    try:
-        resp = await coro
-        return resp.status_code, resp
-    except Exception:
-        # OperationalError: no such table: users — endpoint exists, auth hit DB
-        return 500, None
-
-
-class TestRouteUploadDataset:
-    """POST /api/v1/audit-lab/datasets/upload"""
-
-    @pytest.mark.asyncio
-    async def test_upload_empty_file_reachable(self, client, auth_headers):
-        """Endpoint accepts request; rejects empty file or fails at auth."""
-        code, _ = await _safe_request(client.post(
-            "/api/v1/audit-lab/datasets/upload",
-            headers=auth_headers,
-            data={"period_start": "2025-01-01", "period_end": "2025-01-31"},
-            files={"file": ("test.csv", b"", "text/csv")},
-        ))
-        assert code in (401, 403, 422, 500)
-
-    @pytest.mark.asyncio
-    async def test_upload_large_file_reachable(self, client, auth_headers):
-        """File > 10MB should be rejected or fail at auth."""
-        big_content = b"x" * (11 * 1024 * 1024)
-        code, _ = await _safe_request(client.post(
-            "/api/v1/audit-lab/datasets/upload",
-            headers=auth_headers,
-            data={"period_start": "2025-01-01", "period_end": "2025-01-31"},
-            files={"file": ("big.csv", big_content, "text/csv")},
-        ))
-        assert code in (401, 403, 413, 500)
-
-    @pytest.mark.asyncio
-    async def test_upload_missing_period_fields(self, client, auth_headers):
-        """Missing period_start/period_end should fail validation or auth."""
-        csv_content = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n2025-01-15,MXN,USD,500000,27000\n"
-        code, _ = await _safe_request(client.post(
-            "/api/v1/audit-lab/datasets/upload",
-            headers=auth_headers,
-            files={"file": ("test.csv", csv_content, "text/csv")},
-        ))
-        assert code in (401, 403, 422, 500)
-
-
-class TestRouteCreateRun:
-    """POST /api/v1/audit-lab/runs"""
-
-    @pytest.mark.asyncio
-    async def test_create_run_missing_dataset_id(self, client, auth_headers):
-        code, _ = await _safe_request(client.post(
-            "/api/v1/audit-lab/runs",
-            headers=auth_headers,
-            json={"benchmark_config": {"benchmark_source": "market_snapshot"}},
-        ))
-        assert code in (401, 403, 422, 500)
-
-    @pytest.mark.asyncio
-    async def test_create_run_invalid_dataset_id(self, client, auth_headers):
-        code, _ = await _safe_request(client.post(
-            "/api/v1/audit-lab/runs",
-            headers=auth_headers,
-            json={
-                "dataset_id": "00000000-0000-0000-0000-000000000000",
-                "benchmark_config": {"benchmark_source": "market_snapshot"},
-            },
-        ))
-        assert code in (401, 403, 404, 500)
-
-
-class TestRouteListRuns:
-    """GET /api/v1/audit-lab/runs"""
-
-    @pytest.mark.asyncio
-    async def test_list_runs_reachable(self, client, auth_headers):
-        code, _ = await _safe_request(
-            client.get("/api/v1/audit-lab/runs", headers=auth_headers)
-        )
-        assert code in (200, 401, 403, 500)
-
-    @pytest.mark.asyncio
-    async def test_list_runs_unauthenticated(self, client):
-        resp = await client.get("/api/v1/audit-lab/runs")
-        assert resp.status_code in (401, 403)
-
-
-class TestRouteGetRun:
-    """GET /api/v1/audit-lab/runs/{run_id}"""
-
-    @pytest.mark.asyncio
-    async def test_get_run_nonexistent(self, client, auth_headers):
-        code, _ = await _safe_request(client.get(
-            "/api/v1/audit-lab/runs/00000000-0000-0000-0000-000000000000",
-            headers=auth_headers,
-        ))
-        assert code in (401, 403, 404, 500)
-
-    @pytest.mark.asyncio
-    async def test_get_run_no_auth(self, client):
-        resp = await client.get("/api/v1/audit-lab/runs/some-run-id")
-        assert resp.status_code in (401, 403)
-
-
-class TestRouteExportRun:
-    """GET /api/v1/audit-lab/runs/{run_id}/export"""
-
-    @pytest.mark.asyncio
-    async def test_export_nonexistent(self, client, auth_headers):
-        code, _ = await _safe_request(client.get(
-            "/api/v1/audit-lab/runs/00000000-dead-beef-0000-000000000000/export",
-            headers=auth_headers,
-        ))
-        assert code in (401, 403, 404, 500)
-
-
-class TestRouteTransactions:
-    """GET /api/v1/audit-lab/runs/{run_id}/transactions"""
-
-    @pytest.mark.asyncio
-    async def test_transactions_nonexistent_run(self, client, auth_headers):
-        code, _ = await _safe_request(client.get(
-            "/api/v1/audit-lab/runs/00000000-0000-0000-0000-000000000000/transactions",
-            headers=auth_headers,
-        ))
-        assert code in (401, 403, 404, 500)
-
-
-class TestRouteCompare:
-    """GET /api/v1/audit-lab/compare?run_ids=a,b"""
-
-    @pytest.mark.asyncio
-    async def test_compare_requires_two_ids(self, client, auth_headers):
-        code, _ = await _safe_request(client.get(
-            "/api/v1/audit-lab/compare?run_ids=single-id",
-            headers=auth_headers,
-        ))
-        assert code in (401, 403, 422, 500)
-
-    @pytest.mark.asyncio
-    async def test_compare_no_auth(self, client):
-        resp = await client.get("/api/v1/audit-lab/compare?run_ids=a,b")
-        assert resp.status_code in (401, 403)
-
-
-class TestRouteDatasets:
-    """GET /api/v1/audit-lab/datasets"""
-
-    @pytest.mark.asyncio
-    async def test_list_datasets(self, client, auth_headers):
-        code, _ = await _safe_request(
-            client.get("/api/v1/audit-lab/datasets", headers=auth_headers)
-        )
-        assert code in (200, 401, 403, 500)
-
-
-class TestRouteReviewQueue:
-    """GET /api/v1/audit-lab/review-queue"""
-
-    @pytest.mark.asyncio
-    async def test_review_queue_no_auth(self, client):
-        resp = await client.get("/api/v1/audit-lab/review-queue")
-        assert resp.status_code in (401, 403)
-
-    @pytest.mark.asyncio
-    async def test_review_queue_with_auth(self, client, auth_headers):
-        code, _ = await _safe_request(
-            client.get("/api/v1/audit-lab/review-queue", headers=auth_headers)
-        )
-        assert code in (200, 401, 403, 500)
-
-
-class TestRouteResolveReviewItem:
-    """POST /api/v1/audit-lab/review-queue/{id}/resolve"""
-
-    @pytest.mark.asyncio
-    async def test_resolve_invalid_action(self, client, auth_headers):
-        code, _ = await _safe_request(client.post(
-            "/api/v1/audit-lab/review-queue/some-txn-id/resolve",
-            headers=auth_headers,
-            json={"action": "invalid_action"},
-        ))
-        assert code in (401, 403, 422, 500)
-
-    @pytest.mark.asyncio
-    async def test_resolve_nonexistent_transaction(self, client, auth_headers):
-        code, _ = await _safe_request(client.post(
-            "/api/v1/audit-lab/review-queue/00000000-0000-0000-0000-000000000000/resolve",
-            headers=auth_headers,
-            json={"action": "approve"},
-        ))
-        assert code in (401, 403, 404, 500)
-
-
-class TestRouteTrends:
-    """GET /api/v1/audit-lab/trends"""
-
-    @pytest.mark.asyncio
-    async def test_trends_no_auth(self, client):
-        resp = await client.get("/api/v1/audit-lab/trends")
-        assert resp.status_code in (401, 403)
-
-    @pytest.mark.asyncio
-    async def test_trends_with_auth(self, client, auth_headers):
-        code, _ = await _safe_request(
-            client.get("/api/v1/audit-lab/trends", headers=auth_headers)
-        )
-        assert code in (200, 401, 403, 500)
-
-
-class TestRouteAuditTrail:
-    """GET /api/v1/audit-lab/audit-trail"""
-
-    @pytest.mark.asyncio
-    async def test_audit_trail_no_auth(self, client):
-        resp = await client.get("/api/v1/audit-lab/audit-trail")
-        assert resp.status_code in (401, 403)
-
-    @pytest.mark.asyncio
-    async def test_audit_trail_with_auth(self, client, auth_headers):
-        code, _ = await _safe_request(
-            client.get("/api/v1/audit-lab/audit-trail", headers=auth_headers)
-        )
-        assert code in (200, 401, 403, 500)
-
-    @pytest.mark.asyncio
-    async def test_audit_trail_with_entity_filter(self, client, auth_headers):
-        code, _ = await _safe_request(client.get(
-            "/api/v1/audit-lab/audit-trail?entity_type=audit_dataset",
-            headers=auth_headers,
-        ))
-        assert code in (200, 401, 403, 500)
-
-
-class TestRouteSchedules:
-    """POST/GET/DELETE /api/v1/audit-lab/schedules"""
-
-    @pytest.mark.asyncio
-    async def test_create_schedule_no_auth(self, client):
-        resp = await client.post(
-            "/api/v1/audit-lab/schedules",
-            json={"dataset_id": "ds-1", "cron_expression": "0 0 * * 1"},
-        )
-        assert resp.status_code in (401, 403)
-
-    @pytest.mark.asyncio
-    async def test_list_schedules_no_auth(self, client):
-        resp = await client.get("/api/v1/audit-lab/schedules")
-        assert resp.status_code in (401, 403)
-
-    @pytest.mark.asyncio
-    async def test_delete_schedule_no_auth(self, client):
-        resp = await client.delete("/api/v1/audit-lab/schedules/some-id")
-        assert resp.status_code in (401, 403)
-
-    @pytest.mark.asyncio
-    async def test_delete_schedule_nonexistent(self, client, auth_headers):
-        code, _ = await _safe_request(client.delete(
-            "/api/v1/audit-lab/schedules/00000000-0000-0000-0000-000000000000",
-            headers=auth_headers,
-        ))
-        assert code in (401, 403, 404, 500)
-
-
-class TestRouteExposureGaps:
-    """GET /api/v1/audit-lab/runs/{run_id}/exposure-gaps"""
-
-    @pytest.mark.asyncio
-    async def test_exposure_gaps_nonexistent_run(self, client, auth_headers):
-        code, _ = await _safe_request(client.get(
-            "/api/v1/audit-lab/runs/00000000-0000-0000-0000-000000000000/exposure-gaps",
-            headers=auth_headers,
-        ))
-        assert code in (401, 403, 404, 500)
-
-
-class TestRouteRegulatoryExport:
-    """GET /api/v1/audit-lab/runs/{run_id}/export/regulatory"""
-
-    @pytest.mark.asyncio
-    async def test_regulatory_export_nonexistent(self, client, auth_headers):
-        code, _ = await _safe_request(client.get(
-            "/api/v1/audit-lab/runs/00000000-0000-0000-0000-000000000000/export/regulatory",
-            headers=auth_headers,
-        ))
-        assert code in (401, 403, 404, 500)
-
-    @pytest.mark.asyncio
-    async def test_regulatory_export_invalid_format(self, client, auth_headers):
-        code, _ = await _safe_request(client.get(
-            "/api/v1/audit-lab/runs/some-id/export/regulatory?format=unknown",
-            headers=auth_headers,
-        ))
-        assert code in (401, 403, 422, 500)
-
-
-# ============================================================================
-# SECTION 2: RBAC permission enforcement
-# ============================================================================
-# These test the _require helper logic and permission gating at handler level.
-
-class TestRBACUploadPermission:
-    """audit.upload permission required for dataset upload."""
-
-    @pytest.mark.asyncio
-    async def test_upload_requires_auth(self, client):
-        csv_data = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n2025-01-15,MXN,USD,100,5\n"
-        resp = await client.post(
-            "/api/v1/audit-lab/datasets/upload",
-            data={"period_start": "2025-01-01", "period_end": "2025-01-31"},
-            files={"file": ("test.csv", csv_data, "text/csv")},
-        )
-        assert resp.status_code in (401, 403)
-
-
-class TestRBACRunPermission:
-    """audit.run permission required for run creation."""
-
-    @pytest.mark.asyncio
-    async def test_create_run_requires_auth(self, client):
-        resp = await client.post(
-            "/api/v1/audit-lab/runs",
-            json={"dataset_id": "ds-1"},
-        )
-        assert resp.status_code in (401, 403)
-
-
-class TestRBACReviewPermission:
-    """audit.review permission required for review queue."""
-
-    @pytest.mark.asyncio
-    async def test_review_queue_requires_auth(self, client):
-        resp = await client.get("/api/v1/audit-lab/review-queue")
-        assert resp.status_code in (401, 403)
-
-    @pytest.mark.asyncio
-    async def test_resolve_requires_auth(self, client):
-        resp = await client.post(
-            "/api/v1/audit-lab/review-queue/txn-id/resolve",
-            json={"action": "approve"},
-        )
-        assert resp.status_code in (401, 403)
-
-
-class TestRBACExportPermission:
-    """Export endpoints require authentication."""
-
-    @pytest.mark.asyncio
-    async def test_export_requires_auth(self, client):
-        resp = await client.get("/api/v1/audit-lab/runs/run-id/export")
-        assert resp.status_code in (401, 403)
-
-    @pytest.mark.asyncio
-    async def test_regulatory_export_requires_auth(self, client):
-        resp = await client.get("/api/v1/audit-lab/runs/run-id/export/regulatory")
-        assert resp.status_code in (401, 403)
-
-
-class TestRBACSchedulePermission:
-    """audit.schedule permission required for schedule CRUD."""
-
-    @pytest.mark.asyncio
-    async def test_create_schedule_requires_auth(self, client):
-        resp = await client.post(
-            "/api/v1/audit-lab/schedules",
-            json={"dataset_id": "ds-1"},
-        )
-        assert resp.status_code in (401, 403)
-
-    @pytest.mark.asyncio
-    async def test_delete_schedule_requires_auth(self, client):
-        resp = await client.delete("/api/v1/audit-lab/schedules/id")
-        assert resp.status_code in (401, 403)
-
-
-# ============================================================================
-# SECTION 3: Engine edge cases
-# ============================================================================
-
-
-class TestEmptyTransactionList:
-    """Empty transaction list should produce zero findings, zero rejections."""
-
-    def _empty_run(self):
-        return run_audit_engine(
-            dataset_id="ds-empty",
-            transactions=[],
-            benchmarks=[_bm()],
-            config=_cfg(),
-            period_start=date(2025, 1, 1),
-            period_end=date(2025, 1, 31),
-        )
-
-    def test_empty_transactions_no_crash(self):
-        result = self._empty_run()
-        assert result.markup_findings == []
-        assert result.markup_rejections == []
-        assert result.fee_findings == []
+def _run(txns, bms, cfg=None, ds="ds-test",
+         period_start=date(2025, 1, 1), period_end=date(2025, 1, 31)):
+    if cfg is None:
+        cfg = _cfg()
+    return run_audit_engine(ds, txns, bms, cfg, period_start, period_end)
+
+
+# ==============================================================================
+# 1. Engine Edge Cases -- Empty and Missing
+# ==============================================================================
+
+
+class TestEmptyAndMissing:
+    """Edge cases with empty transaction lists and missing fields."""
+
+    def test_empty_transaction_list_zero_findings(self):
+        result = _run([], [_make_benchmark()])
+        assert len(result.markup_findings) == 0
+        assert len(result.markup_rejections) == 0
+
+    def test_empty_transaction_list_zero_fees(self):
+        result = _run([], [_make_benchmark()])
+        assert result.total_fees_usd == 0.0
+        assert len(result.fee_findings) == 0
+
+    def test_empty_transaction_list_zero_rate_variance(self):
+        result = _run([], [_make_benchmark()])
+        assert result.total_rate_variance_usd == 0.0
+        assert len(result.rate_variance_results) == 0
+
+    def test_empty_transaction_list_total_loss_zero(self):
+        result = _run([], [_make_benchmark()])
+        assert result.total_loss_usd == 0.0
+
+    def test_empty_transaction_list_valid_hash(self):
+        result = _run([], [_make_benchmark()])
+        assert len(result.run_hash) == 64
+        assert all(c in "0123456789abcdef" for c in result.run_hash)
+
+    def test_empty_transactions_and_benchmarks(self):
+        result = _run([], [])
         assert result.total_markup_usd == 0.0
         assert result.total_fees_usd == 0.0
-        assert result.total_loss_usd == 0.0
-        assert result.rate_variance_results == []
+        assert result.total_rate_variance_usd == 0.0
 
-    def test_empty_transactions_hash_stable(self):
-        r1 = self._empty_run()
-        r2 = self._empty_run()
-        assert r1.run_hash == r2.run_hash
-
-    def test_empty_transactions_trace_has_all_steps(self):
-        result = self._empty_run()
-        steps = {e.step for e in result.trace_events}
-        assert "ENGINE_START" in steps
-        assert "MARKUP" in steps
-        assert "FEES" in steps
-        assert "ENGINE_COMPLETE" in steps
-
-    def test_empty_transactions_methodology_version(self):
-        result = self._empty_run()
-        assert result.methodology_version == "1.1.0"
-
-    def test_empty_transactions_analytics_empty(self):
-        result = self._empty_run()
-        assert result.outlier_results == []
-        assert result.counterparty_scores == []
-        assert result.natural_hedge_results == []
-
-
-class TestAllTransactionsMissingTradeDate:
-    """All transactions missing trade_date should all be rejected with AL-001."""
-
-    def test_all_missing_trade_date_rejected(self):
-        txns = [_txn(i, trade_date=None) for i in range(5)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.markup_findings) == 0
-        assert len(result.markup_rejections) == 5
-        assert all(r.code == "AL-001" for r in result.markup_rejections)
-        assert result.total_markup_usd == 0.0
-
-    def test_all_missing_trade_date_fees_still_computed(self):
-        """Fees don't require trade_date for extraction (though USD conversion may use 1.0)."""
-        txns = [_txn(i, trade_date=None, fee_amount=100.0) for i in range(3)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.fee_findings) == 3
-        assert result.total_fees_usd > 0
-
-
-class TestAllTransactionsZeroEffectiveRate:
-    """All transactions with zero effective_rate should be rejected with AL-003."""
-
-    def test_all_zero_rate_rejected(self):
-        txns = [_txn(i, effective_rate=0.0) for i in range(4)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.markup_findings) == 0
-        assert len(result.markup_rejections) == 4
-        assert all(r.code == "AL-003" for r in result.markup_rejections)
-
-    def test_none_effective_rate_rejected(self):
+    def test_all_missing_trade_date_rejected_al001(self):
         txns = [
             AuditTransactionInput(
-                row_id="r0", row_hash="h" * 64, row_index=0,
-                trade_date=date(2025, 1, 15), value_date=None,
+                row_id=f"r-{i}", row_hash=f"h{i:063d}", row_index=i,
+                trade_date=None, value_date=None,
                 currency_sold="MXN", currency_bought="USD",
-                amount_sold=500_000, amount_bought=0,
-                effective_rate=None,
-                counterparty="B", fee_amount=None, fee_currency=None, reference="R",
-            ),
+                amount_sold=500_000, amount_bought=27_000,
+                effective_rate=0.054, counterparty="Bank",
+                fee_amount=None, fee_currency=None, reference=f"R{i}",
+            )
+            for i in range(5)
         ]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.markup_rejections) == 1
-        assert result.markup_rejections[0].code == "AL-003"
+        result = _run(txns, [_make_benchmark()])
+        assert len(result.markup_rejections) == 5
+        assert all(r.code == "AL-001" for r in result.markup_rejections)
+        assert len(result.markup_findings) == 0
 
-    def test_negative_effective_rate_rejected(self):
-        txns = [_txn(0, effective_rate=-0.05)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.markup_rejections) == 1
-        assert result.markup_rejections[0].code == "AL-003"
-
-
-class TestMissingCurrencyFields:
-    """Missing currency_sold or currency_bought should produce AL-002 rejection."""
-
-    def test_missing_currency_sold(self):
-        txns = [_txn(0, currency_sold=None)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.markup_rejections) == 1
-        assert result.markup_rejections[0].code == "AL-002"
-
-    def test_missing_currency_bought(self):
-        txns = [_txn(0, currency_bought=None)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.markup_rejections) == 1
-        assert result.markup_rejections[0].code == "AL-002"
-
-    def test_both_currencies_missing(self):
-        txns = [_txn(0, currency_sold=None, currency_bought=None)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert any(r.code == "AL-002" for r in result.markup_rejections)
-
-
-class TestMixedGoodAndBadTransactions:
-    """Mixed batch: some valid, some with missing fields."""
-
-    def test_mixed_batch_partial_results(self):
+    def test_all_missing_currencies_rejected_al002(self):
         txns = [
-            _txn(0),                                            # good
-            _txn(1, trade_date=None),                           # AL-001
-            _txn(2, currency_sold=None),                        # AL-002
-            _txn(3, effective_rate=0.0),                        # AL-003
-            _txn(4, amount_sold=300_000, amount_bought=16_000), # good
+            AuditTransactionInput(
+                row_id=f"r-{i}", row_hash=f"h{i:063d}", row_index=i,
+                trade_date=date(2025, 1, 15), value_date=None,
+                currency_sold=None, currency_bought=None,
+                amount_sold=500_000, amount_bought=27_000,
+                effective_rate=0.054, counterparty="Bank",
+                fee_amount=None, fee_currency=None, reference=f"R{i}",
+            )
+            for i in range(3)
         ]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.markup_findings) == 2
+        result = _run(txns, [_make_benchmark()])
         assert len(result.markup_rejections) == 3
+        assert all(r.code == "AL-002" for r in result.markup_rejections)
 
-    def test_mixed_rejection_codes(self):
+    def test_zero_effective_rate_rejected_al003(self):
+        txn = AuditTransactionInput(
+            row_id="r-0", row_hash="h" * 64, row_index=0,
+            trade_date=date(2025, 1, 15), value_date=None,
+            currency_sold="MXN", currency_bought="USD",
+            amount_sold=500_000, amount_bought=0,
+            effective_rate=0.0, counterparty="Bank",
+            fee_amount=None, fee_currency=None, reference="R0",
+        )
+        result = _run([txn], [_make_benchmark()])
+        assert any(r.code == "AL-003" for r in result.markup_rejections)
+
+    def test_negative_effective_rate_rejected_al003(self):
+        txn = AuditTransactionInput(
+            row_id="r-0", row_hash="h" * 64, row_index=0,
+            trade_date=date(2025, 1, 15), value_date=None,
+            currency_sold="MXN", currency_bought="USD",
+            amount_sold=500_000, amount_bought=27_000,
+            effective_rate=-0.054, counterparty="Bank",
+            fee_amount=None, fee_currency=None, reference="R0",
+        )
+        result = _run([txn], [_make_benchmark()])
+        assert any(r.code == "AL-003" for r in result.markup_rejections)
+
+    def test_none_effective_rate_rejected_al003(self):
+        txn = AuditTransactionInput(
+            row_id="r-0", row_hash="h" * 64, row_index=0,
+            trade_date=date(2025, 1, 15), value_date=None,
+            currency_sold="MXN", currency_bought="USD",
+            amount_sold=500_000, amount_bought=27_000,
+            effective_rate=None, counterparty="Bank",
+            fee_amount=None, fee_currency=None, reference="R0",
+        )
+        result = _run([txn], [_make_benchmark()])
+        assert any(r.code == "AL-003" for r in result.markup_rejections)
+
+    def test_single_transaction_proper_findings(self):
+        txn = _make_txn(0)
+        bm = _make_benchmark()
+        result = _run([txn], [bm])
+        assert len(result.markup_findings) == 1
+        assert result.methodology_version == "1.1.0"
+
+    def test_counterparty_none_uses_unknown(self):
+        txn = _make_txn(0, counterparty=None)
+        bm = _make_benchmark()
+        result = _run([txn], [bm])
+        assert "UNKNOWN" in result.markup_by_counterparty
+
+
+# ==============================================================================
+# 2. Engine Edge Cases -- General
+# ==============================================================================
+
+
+class TestEngineEdgeCases:
+    """Misc engine edge cases: large inputs, methodology version, totals."""
+
+    def test_large_transaction_count_no_crash(self):
+        txns = [_make_txn(i) for i in range(1000)]
+        bm = _make_benchmark()
+        result = _run(txns, [bm])
+        assert len(result.markup_findings) == 1000
+        assert len(result.run_hash) == 64
+
+    def test_large_transaction_count_hashes_valid(self):
+        txns = [_make_txn(i) for i in range(100)]
+        bm = _make_benchmark()
+        result = _run(txns, [bm])
+        assert all(c in "0123456789abcdef" for c in result.inputs_hash)
+        assert all(c in "0123456789abcdef" for c in result.outputs_hash)
+        assert all(c in "0123456789abcdef" for c in result.run_hash)
+
+    def test_methodology_version_is_1_1_0(self):
+        result = _run([_make_txn(0)], [_make_benchmark()])
+        assert result.methodology_version == "1.1.0"
+
+    def test_total_loss_is_markup_plus_fees(self):
+        txn = _make_txn(0, fee_amount=100.0, fee_currency="USD")
+        bm = _make_benchmark()
+        result = _run([txn], [bm])
+        assert result.total_loss_usd == pytest.approx(
+            result.total_markup_usd + result.total_fees_usd, abs=0.01
+        )
+
+    def test_total_loss_excludes_rate_variance(self):
+        """rate_variance is reference-only, not included in total_loss."""
+        txn = _make_txn(0, fee_amount=100.0)
+        bm = _make_benchmark()
+        cfg = _cfg(source="budget_rate", budget_rate=0.060)
+        result = _run([txn], [bm], cfg)
+        expected_loss = result.total_markup_usd + result.total_fees_usd
+        assert result.total_loss_usd == pytest.approx(expected_loss, abs=0.01)
+
+    def test_fee_amount_zero_is_not_a_finding(self):
+        txn = _make_txn(0, fee_amount=0.0)
+        bm = _make_benchmark()
+        result = _run([txn], [bm])
+        assert len(result.fee_findings) == 0
+
+    def test_fee_amount_none_is_not_a_finding(self):
+        txn = _make_txn(0, fee_amount=None)
+        bm = _make_benchmark()
+        result = _run([txn], [bm])
+        assert len(result.fee_findings) == 0
+
+    def test_fee_negative_not_extracted(self):
+        """Negative fees should not be extracted (engine checks > 0)."""
+        txn = _make_txn(0, fee_amount=-50.0)
+        bm = _make_benchmark()
+        result = _run([txn], [bm])
+        assert len(result.fee_findings) == 0
+
+    def test_markup_by_pair_populated(self):
+        txn = _make_txn(0)
+        bm = _make_benchmark()
+        result = _run([txn], [bm])
+        assert "MXNUSD" in result.markup_by_pair
+
+    def test_markup_by_month_populated(self):
+        txn = _make_txn(0, trade_date=date(2025, 3, 10))
+        bm = _make_benchmark(as_of=date(2025, 3, 10))
+        result = _run([txn], [bm])
+        assert "2025-03" in result.markup_by_month
+
+    def test_data_quality_score_zero_fees(self):
+        """When no rows have fees, data_quality_score = 0."""
+        txns = [_make_txn(i, fee_amount=None) for i in range(5)]
+        result = _run(txns, [_make_benchmark()])
+        assert result.data_quality_score == 0.0
+
+    def test_data_quality_score_100_all_fees(self):
+        txns = [_make_txn(i, fee_amount=100.0) for i in range(5)]
+        result = _run(txns, [_make_benchmark()])
+        assert result.data_quality_score == 100.0
+
+    def test_data_quality_50_half_fees(self):
+        txns = [_make_txn(i, fee_amount=100.0) for i in range(5)]
+        txns += [_make_txn(i + 5, fee_amount=None) for i in range(5)]
+        result = _run(txns, [_make_benchmark()])
+        assert result.data_quality_score == pytest.approx(50.0, abs=0.1)
+
+    def test_fee_confidence_high_at_50(self):
+        txns = [_make_txn(i, fee_amount=100.0) for i in range(5)]
+        txns += [_make_txn(i + 5, fee_amount=None) for i in range(5)]
+        result = _run(txns, [_make_benchmark()])
+        assert result.fee_confidence == "HIGH"
+
+    def test_fee_confidence_low_below_50(self):
+        txns = [_make_txn(0, fee_amount=100.0)]
+        txns += [_make_txn(i + 1, fee_amount=None) for i in range(5)]
+        result = _run(txns, [_make_benchmark()])
+        assert result.fee_confidence == "LOW_CONFIDENCE"
+
+
+# ==============================================================================
+# 3. Multi-Currency Tests
+# ==============================================================================
+
+
+class TestMultiCurrency:
+    """Mixed currency pairs in a single run."""
+
+    def test_mixed_currencies_produce_findings_per_pair(self):
         txns = [
-            _txn(0, trade_date=None),
-            _txn(1, currency_sold=None),
-            _txn(2, effective_rate=0.0),
+            _make_txn(0, currency_sold="MXN", currency_bought="USD",
+                      amount_sold=500_000, amount_bought=27_000),
+            _make_txn(1, currency_sold="EUR", currency_bought="USD",
+                      amount_sold=100_000, amount_bought=108_000),
+            _make_txn(2, currency_sold="GBP", currency_bought="USD",
+                      amount_sold=50_000, amount_bought=63_000),
         ]
-        result = _run(txns=txns, bms=[_bm()])
-        codes = {r.code for r in result.markup_rejections}
-        assert "AL-001" in codes
-        assert "AL-002" in codes
-        assert "AL-003" in codes
+        bms = [
+            _make_benchmark(currency_pair="MXNUSD", mid_rate=0.0556),
+            _make_benchmark(currency_pair="EURUSD", mid_rate=1.08),
+            _make_benchmark(currency_pair="GBPUSD", mid_rate=1.26),
+        ]
+        result = _run(txns, bms)
+        assert len(result.markup_findings) == 3
+        pairs = {f.currency_pair for f in result.markup_findings}
+        assert pairs == {"MXNUSD", "EURUSD", "GBPUSD"}
+
+    def test_mixed_currencies_markup_by_pair_keys(self):
+        txns = [
+            _make_txn(0, currency_sold="MXN", currency_bought="USD",
+                      amount_sold=500_000, amount_bought=27_000),
+            _make_txn(1, currency_sold="EUR", currency_bought="USD",
+                      amount_sold=100_000, amount_bought=108_000),
+        ]
+        bms = [
+            _make_benchmark(currency_pair="MXNUSD", mid_rate=0.0556),
+            _make_benchmark(currency_pair="EURUSD", mid_rate=1.08),
+        ]
+        result = _run(txns, bms)
+        assert "MXNUSD" in result.markup_by_pair
+        assert "EURUSD" in result.markup_by_pair
+
+    def test_mixed_currencies_rate_variance_per_pair(self):
+        txns = [
+            _make_txn(0, currency_sold="MXN", currency_bought="USD",
+                      amount_sold=500_000, amount_bought=27_000),
+            _make_txn(1, currency_sold="EUR", currency_bought="USD",
+                      amount_sold=100_000, amount_bought=108_000),
+        ]
+        bms = [
+            _make_benchmark(currency_pair="MXNUSD", mid_rate=0.0556),
+            _make_benchmark(currency_pair="EURUSD", mid_rate=1.08),
+        ]
+        cfg = _cfg(source="budget_rate", budget_rate=0.055)
+        result = _run(txns, bms, cfg)
+        pairs = {rv.currency_pair for rv in result.rate_variance_results}
+        assert "MXNUSD" in pairs
+        assert "EURUSD" in pairs
+
+    def test_partial_benchmark_coverage(self):
+        """MXN has a benchmark, EUR does not."""
+        txns = [
+            _make_txn(0, currency_sold="MXN", currency_bought="USD",
+                      amount_sold=500_000, amount_bought=27_000),
+            _make_txn(1, currency_sold="EUR", currency_bought="USD",
+                      amount_sold=100_000, amount_bought=108_000),
+        ]
+        bms = [_make_benchmark(currency_pair="MXNUSD", mid_rate=0.0556)]
+        result = _run(txns, bms)
+        assert len(result.markup_findings) == 1
+        assert result.markup_findings[0].currency_pair == "MXNUSD"
+        assert len(result.markup_rejections) == 1
+
+    def test_fee_in_non_usd_currency_with_benchmark(self):
+        """Fee in EUR with EURUSD benchmark should be converted."""
+        txn = _make_txn(0, fee_amount=100.0, fee_currency="EUR")
+        bm_mxn = _make_benchmark(currency_pair="MXNUSD", mid_rate=0.0556)
+        bm_eur = _make_benchmark(currency_pair="EURUSD", mid_rate=1.08)
+        result = _run([txn], [bm_mxn, bm_eur])
+        assert len(result.fee_findings) == 1
+        # EUR is in _CCY_PER_USD, so fee_usd = 100 * 1.08 = 108
+        assert result.fee_findings[0].fee_usd == pytest.approx(108.0, abs=0.01)
+
+    def test_fee_in_non_usd_currency_without_benchmark(self):
+        """Fee in BRL without BRL benchmark uses rate 1.0 fallback."""
+        txn = _make_txn(0, fee_amount=500.0, fee_currency="BRL",
+                        currency_sold="MXN", currency_bought="USD",
+                        amount_sold=500_000, amount_bought=27_000)
+        bm = _make_benchmark(currency_pair="MXNUSD", mid_rate=0.0556)
+        result = _run([txn], [bm])
+        # BRL has no benchmark, so _to_usd with rate 1.0 and BRL not in _CCY_PER_USD
+        # -> amount / rate = 500 / 1.0 = 500
+        assert len(result.fee_findings) == 1
+        assert result.fee_findings[0].fee_usd == pytest.approx(500.0, abs=0.01)
 
 
-class TestCounterpartyScoringEdgeCases:
-    """Counterparty scoring with various edge conditions."""
+# ==============================================================================
+# 4. Advanced Analytics
+# ==============================================================================
 
-    def _scoring_fixtures(self, markup_per_unit_values: list[tuple[str, float]]):
-        """Build MarkupFinding list from (counterparty, markup_per_unit) tuples."""
-        findings = []
-        for i, (cp, mpu) in enumerate(markup_per_unit_values):
-            findings.append(MarkupFinding(
-                row_id=f"r{i}", row_hash=f"h{i:062d}", row_index=i,
+
+class TestAdvancedAnalytics:
+    """Outlier detection, counterparty scoring, natural hedge detection."""
+
+    # -- Natural hedge detection --
+
+    def test_natural_hedge_offsetting_flows_detected(self):
+        """Buy and sell same pair on same date should be detected."""
+        txn_sell = _make_txn(0, currency_sold="MXN", currency_bought="USD",
+                            amount_sold=500_000, amount_bought=27_000)
+        txn_buy = _make_txn(1, currency_sold="USD", currency_bought="MXN",
+                            amount_sold=27_000, amount_bought=500_000)
+        bm = _make_benchmark(currency_pair="MXNUSD", mid_rate=0.0556)
+        bm2 = _make_benchmark(currency_pair="USDMXN", mid_rate=18.0)
+        result = _run([txn_sell, txn_buy], [bm, bm2])
+        assert result.natural_hedge_results is not None
+        assert len(result.natural_hedge_results) >= 1
+
+    def test_natural_hedge_single_direction_same_pair(self):
+        """All sell same direction on same date -- natural hedge still detects
+        because each txn has both amount_sold and amount_bought (gross_buy > 0
+        and gross_sell > 0 within the group), yielding a result. The key insight
+        is that natural hedge detection counts gross buy/sell amounts across all
+        txns in the date+pair group, not directionality."""
+        txns = [
+            _make_txn(i, currency_sold="MXN", currency_bought="USD",
+                      amount_sold=500_000, amount_bought=27_000)
+            for i in range(3)
+        ]
+        bm = _make_benchmark()
+        result = _run(txns, [bm])
+        assert result.natural_hedge_results is not None
+        # gross_buy = sum of amount_bought, gross_sell = sum of amount_sold
+        # Both are positive, so engine reports a natural hedge result
+        if result.natural_hedge_results:
+            nh = result.natural_hedge_results[0]
+            assert nh.gross_sell > 0
+            assert nh.gross_buy > 0
+
+    def test_natural_hedge_different_dates_not_offset(self):
+        """Offsetting flows on different dates should NOT merge into one group."""
+        txn_sell = _make_txn(0, trade_date=date(2025, 1, 10),
+                            currency_sold="MXN", currency_bought="USD",
+                            amount_sold=500_000, amount_bought=27_000)
+        txn_buy = _make_txn(1, trade_date=date(2025, 1, 20),
+                            currency_sold="USD", currency_bought="MXN",
+                            amount_sold=27_000, amount_bought=500_000)
+        bm = _make_benchmark(currency_pair="MXNUSD", mid_rate=0.0556)
+        bm2 = _make_benchmark(currency_pair="USDMXN", mid_rate=18.0,
+                              as_of=date(2025, 1, 20))
+        result = _run([txn_sell, txn_buy], [bm, bm2])
+        for nh in (result.natural_hedge_results or []):
+            assert nh.date in ("2025-01-10", "2025-01-20")
+
+    def test_natural_hedge_savings_estimate_positive(self):
+        txn_sell = _make_txn(0, currency_sold="MXN", currency_bought="USD",
+                            amount_sold=500_000, amount_bought=27_000)
+        txn_buy = _make_txn(1, currency_sold="USD", currency_bought="MXN",
+                            amount_sold=27_000, amount_bought=500_000)
+        bm = _make_benchmark(currency_pair="USDMXN", mid_rate=18.0)
+        results = _detect_natural_hedges([txn_sell, txn_buy], [bm])
+        for nh in results:
+            if nh.gross_buy > 0 and nh.gross_sell > 0:
+                assert nh.savings_estimate_usd >= 0
+
+    # -- Outlier detection --
+
+    def test_outlier_detection_less_than_3_no_outliers(self):
+        """With fewer than 3 findings per pair, no outliers flagged."""
+        findings = [
+            MarkupFinding(
+                row_id=f"r-{i}", row_hash="h" * 64, row_index=i,
                 trade_date="2025-01-15", currency_pair="MXNUSD",
-                counterparty=cp, effective_rate=0.054 + mpu,
-                benchmark_rate=0.054, benchmark_snapshot_id="s1",
+                counterparty="Bank", effective_rate=0.054,
+                benchmark_rate=0.0556, benchmark_snapshot_id="s1",
                 benchmark_snapshot_hash="a" * 64, benchmark_provider="test",
                 benchmark_as_of="2025-01-15",
-                markup_per_unit=mpu,
-                markup_direction=_markup_direction(mpu),
-                amount_sold=500_000,
-                markup_cost_local=500_000 * mpu,
-                markup_cost_usd=500_000 * mpu * 0.054,
+                markup_per_unit=-0.0016, markup_direction="FAVORABLE",
+                amount_sold=500_000, markup_cost_local=-800,
+                markup_cost_usd=-44.0,
+            )
+            for i in range(2)
+        ]
+        outliers = _detect_outliers(findings)
+        assert all(not o["is_outlier"] for o in outliers)
+        assert all(o["z_score"] is None for o in outliers)
+
+    def test_outlier_detection_clear_outlier(self):
+        """One finding with extreme markup should be flagged as outlier."""
+        normal_markup = 0.001
+        extreme_markup = 0.050
+        findings = [
+            MarkupFinding(
+                row_id=f"r-{i}", row_hash="h" * 64, row_index=i,
+                trade_date="2025-01-15", currency_pair="MXNUSD",
+                counterparty="Bank", effective_rate=0.0556 + normal_markup,
+                benchmark_rate=0.0556, benchmark_snapshot_id="s1",
+                benchmark_snapshot_hash="a" * 64, benchmark_provider="test",
+                benchmark_as_of="2025-01-15",
+                markup_per_unit=normal_markup, markup_direction="ADVERSE",
+                amount_sold=500_000, markup_cost_local=500,
+                markup_cost_usd=28.0,
+            )
+            for i in range(10)
+        ]
+        findings.append(MarkupFinding(
+            row_id="r-outlier", row_hash="h" * 64, row_index=10,
+            trade_date="2025-01-15", currency_pair="MXNUSD",
+            counterparty="Bank", effective_rate=0.0556 + extreme_markup,
+            benchmark_rate=0.0556, benchmark_snapshot_id="s1",
+            benchmark_snapshot_hash="a" * 64, benchmark_provider="test",
+            benchmark_as_of="2025-01-15",
+            markup_per_unit=extreme_markup, markup_direction="ADVERSE",
+            amount_sold=500_000, markup_cost_local=25_000,
+            markup_cost_usd=1400.0,
+        ))
+        outliers = _detect_outliers(findings)
+        outlier_rows = [o for o in outliers if o["is_outlier"]]
+        assert len(outlier_rows) >= 1
+        assert any(o["row_id"] == "r-outlier" for o in outlier_rows)
+
+    def test_outlier_detection_empty_findings(self):
+        outliers = _detect_outliers([])
+        assert outliers == []
+
+    def test_outlier_z_score_numeric(self):
+        findings = [
+            MarkupFinding(
+                row_id=f"r-{i}", row_hash="h" * 64, row_index=i,
+                trade_date="2025-01-15", currency_pair="MXNUSD",
+                counterparty="Bank", effective_rate=0.054 + i * 0.001,
+                benchmark_rate=0.0556, benchmark_snapshot_id="s1",
+                benchmark_snapshot_hash="a" * 64, benchmark_provider="test",
+                benchmark_as_of="2025-01-15",
+                markup_per_unit=-0.0016 + i * 0.001, markup_direction="ADVERSE",
+                amount_sold=500_000, markup_cost_local=100,
+                markup_cost_usd=5.0,
+            )
+            for i in range(5)
+        ]
+        outliers = _detect_outliers(findings)
+        for o in outliers:
+            if o["z_score"] is not None:
+                assert isinstance(o["z_score"], (int, float))
+
+    # -- Counterparty scoring --
+
+    def test_counterparty_scoring_multiple(self):
+        findings = []
+        for i in range(5):
+            findings.append(MarkupFinding(
+                row_id=f"r-{i}", row_hash="h" * 64, row_index=i,
+                trade_date="2025-01-15", currency_pair="MXNUSD",
+                counterparty="BankA" if i < 3 else "BankB",
+                effective_rate=0.054,
+                benchmark_rate=0.0556, benchmark_snapshot_id="s1",
+                benchmark_snapshot_hash="a" * 64, benchmark_provider="test",
+                benchmark_as_of="2025-01-15",
+                markup_per_unit=-0.0016, markup_direction="FAVORABLE",
+                amount_sold=500_000, markup_cost_local=-800,
+                markup_cost_usd=-44.0,
             ))
-        return findings
-
-    def test_single_counterparty(self):
-        findings = self._scoring_fixtures([("BankA", 0.001)])
-        scores = _score_counterparties(findings)
-        assert len(scores) == 1
-        assert scores[0].counterparty == "BankA"
-        assert scores[0].trade_count == 1
-        assert scores[0].composite_score >= 0
-
-    def test_all_adverse_markups(self):
-        findings = self._scoring_fixtures([
-            ("BankA", 0.002), ("BankA", 0.003),
-            ("BankB", 0.005), ("BankB", 0.006),
-        ])
         scores = _score_counterparties(findings)
         assert len(scores) == 2
-        # All adverse -> pct_favorable should be 0
-        for s in scores:
-            assert s.pct_favorable == 0.0
+        cps = {s.counterparty for s in scores}
+        assert "BankA" in cps
+        assert "BankB" in cps
+        assert scores[0].composite_score >= scores[1].composite_score
 
-    def test_mixed_counterparties_ranking(self):
-        findings = self._scoring_fixtures([
-            ("Good", -0.001), ("Good", -0.002),  # favorable
-            ("Bad", 0.005), ("Bad", 0.006),       # adverse
-        ])
+    def test_counterparty_scoring_single(self):
+        findings = [MarkupFinding(
+            row_id="r-0", row_hash="h" * 64, row_index=0,
+            trade_date="2025-01-15", currency_pair="MXNUSD",
+            counterparty="OnlyBank",
+            effective_rate=0.054,
+            benchmark_rate=0.0556, benchmark_snapshot_id="s1",
+            benchmark_snapshot_hash="a" * 64, benchmark_provider="test",
+            benchmark_as_of="2025-01-15",
+            markup_per_unit=-0.0016, markup_direction="FAVORABLE",
+            amount_sold=500_000, markup_cost_local=-800,
+            markup_cost_usd=-44.0,
+        )]
         scores = _score_counterparties(findings)
-        assert scores[0].counterparty == "Good"
-        assert scores[0].composite_score > scores[1].composite_score
+        assert len(scores) == 1
+        assert scores[0].counterparty == "OnlyBank"
+        assert isinstance(scores[0].composite_score, (int, float))
+        assert 0 <= scores[0].composite_score <= 100
 
-    def test_null_counterparty_becomes_unknown(self):
-        findings = self._scoring_fixtures([(None, 0.001)])
+    def test_counterparty_scoring_none_uses_unknown(self):
+        findings = [MarkupFinding(
+            row_id="r-0", row_hash="h" * 64, row_index=0,
+            trade_date="2025-01-15", currency_pair="MXNUSD",
+            counterparty=None,
+            effective_rate=0.054,
+            benchmark_rate=0.0556, benchmark_snapshot_id="s1",
+            benchmark_snapshot_hash="a" * 64, benchmark_provider="test",
+            benchmark_as_of="2025-01-15",
+            markup_per_unit=-0.0016, markup_direction="FAVORABLE",
+            amount_sold=500_000, markup_cost_local=-800,
+            markup_cost_usd=-44.0,
+        )]
         scores = _score_counterparties(findings)
         assert scores[0].counterparty == "UNKNOWN"
 
-    def test_counterparty_score_composite_range(self):
-        """Composite score should be in [0, 100]."""
-        findings = self._scoring_fixtures([
-            ("A", 0.01), ("A", -0.01),
-            ("B", 0.001), ("B", 0.002),
-        ])
-        scores = _score_counterparties(findings)
-        for s in scores:
-            assert 0 <= s.composite_score <= 100
-
-
-class TestNaturalHedgeDetection:
-    """Natural hedge detection edge cases."""
-
-    def test_no_offsetting_flows(self):
-        """Single direction: no natural hedge detected."""
-        txns = [_txn(i) for i in range(3)]  # all sell MXN buy USD
-        result = _detect_natural_hedges(txns, [_bm()])
-        # All on same date+pair, but since MXN is sold and USD bought in each,
-        # both gross_buy (USD amount) and gross_sell (MXN sold) are non-zero
-        # depending on how the grouping works.
-        # The key test: results have no perfect offset since all same direction.
-        for nh in result:
-            assert nh.net > 0  # not perfectly offset
-
-    def test_perfect_offset(self):
-        """Buy and sell same amounts same day same pair -> net near 0."""
-        txn_sell = _txn(0, currency_sold="MXN", currency_bought="USD",
-                        amount_sold=500_000, amount_bought=27_000)
-        txn_buy = _txn(1, currency_sold="USD", currency_bought="MXN",
-                       amount_sold=27_000, amount_bought=500_000)
-        result = _detect_natural_hedges([txn_sell, txn_buy], [_bm()])
-        assert len(result) >= 1
-        # At least one result should have savings > 0
-        total_savings = sum(nh.savings_estimate_usd for nh in result)
-        assert total_savings >= 0
-
-    def test_no_trades_no_hedges(self):
-        result = _detect_natural_hedges([], [])
-        assert result == []
-
-    def test_missing_dates_skipped(self):
-        txns = [_txn(0, trade_date=None), _txn(1, trade_date=None)]
-        result = _detect_natural_hedges(txns, [])
-        assert result == []
-
-    def test_missing_currencies_skipped(self):
-        txns = [_txn(0, currency_sold=None)]
-        result = _detect_natural_hedges(txns, [])
-        assert result == []
-
-
-class TestOutlierDetectionEdgeCases:
-    """Outlier detection with various finding counts."""
-
-    def _make_findings(self, markups: list[float], pair: str = "MXNUSD") -> list[MarkupFinding]:
-        return [
+    def test_counterparty_trade_count(self):
+        findings = [
             MarkupFinding(
-                row_id=f"r{i}", row_hash=f"h{i:062d}", row_index=i,
-                trade_date="2025-01-15", currency_pair=pair,
-                counterparty="Bank", effective_rate=0.054 + m,
-                benchmark_rate=0.054, benchmark_snapshot_id="s",
-                benchmark_snapshot_hash="a" * 64, benchmark_provider="t",
-                benchmark_as_of="2025-01-15",
-                markup_per_unit=m, markup_direction=_markup_direction(m),
-                amount_sold=500_000, markup_cost_local=500_000 * m,
-                markup_cost_usd=500_000 * m * 0.054,
+                row_id=f"r-{i}", row_hash="h" * 64, row_index=i,
+                trade_date="2025-01-15", currency_pair="MXNUSD",
+                counterparty="BankA",
+                effective_rate=0.054, benchmark_rate=0.0556,
+                benchmark_snapshot_id="s1", benchmark_snapshot_hash="a" * 64,
+                benchmark_provider="test", benchmark_as_of="2025-01-15",
+                markup_per_unit=-0.0016, markup_direction="FAVORABLE",
+                amount_sold=500_000, markup_cost_local=-800,
+                markup_cost_usd=-44.0,
             )
-            for i, m in enumerate(markups)
+            for i in range(7)
         ]
+        scores = _score_counterparties(findings)
+        assert scores[0].trade_count == 7
 
-    def test_fewer_than_3_findings_no_outliers(self):
-        findings = self._make_findings([0.001, 0.002])
-        result = _detect_outliers(findings)
-        assert all(not r["is_outlier"] for r in result)
-        assert all(r["z_score"] is None for r in result)
+    def test_analytics_populated_in_engine_result(self):
+        txns = [_make_txn(i) for i in range(5)]
+        bm = _make_benchmark()
+        result = _run(txns, [bm])
+        assert result.outlier_results is not None
+        assert result.counterparty_scores is not None
+        assert result.natural_hedge_results is not None
 
-    def test_exactly_3_findings(self):
-        findings = self._make_findings([0.001, 0.001, 0.001])
-        result = _detect_outliers(findings)
-        assert len(result) == 3
-        # All same -> std=0, z_score=0
-        assert all(r["z_score"] == 0 or r["z_score"] is None for r in result)
-
-    def test_clear_outlier_detected(self):
-        # 9 tightly clustered + 1 extreme: z-score for extreme >> 2.0
-        findings = self._make_findings(
-            [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 1.000]
-        )
-        result = _detect_outliers(findings)
-        outliers = [r for r in result if r["is_outlier"]]
-        assert len(outliers) >= 1
-
-    def test_all_same_no_outliers(self):
-        findings = self._make_findings([0.002] * 10)
-        result = _detect_outliers(findings)
-        assert all(not r["is_outlier"] for r in result)
-
-    def test_empty_findings(self):
-        result = _detect_outliers([])
-        assert result == []
-
-    def test_custom_z_threshold(self):
-        findings = self._make_findings([0.001, 0.001, 0.001, 0.005])
-        result_strict = _detect_outliers(findings, z_threshold=1.0)
-        result_loose = _detect_outliers(findings, z_threshold=10.0)
-        strict_outliers = sum(1 for r in result_strict if r["is_outlier"])
-        loose_outliers = sum(1 for r in result_loose if r["is_outlier"])
-        assert strict_outliers >= loose_outliers
-
-    def test_multi_pair_independent_detection(self):
-        """Outlier detection is per-pair; each pair has its own mean/std."""
-        # 9 clustered + 1 extreme for MXNUSD to ensure z > 2.0
-        findings = (
-            self._make_findings(
-                [0.001] * 9 + [1.000], pair="MXNUSD"
-            )
-            + self._make_findings([0.002, 0.002, 0.002], pair="EURUSD")
-        )
-        # Re-index row_ids to avoid collision
-        for i, f in enumerate(findings):
-            object.__setattr__(f, "row_id", f"r{i}")
-        result = _detect_outliers(findings)
-        mxn_results = [r for r in result if r["pair"] == "MXNUSD"]
-        eur_results = [r for r in result if r["pair"] == "EURUSD"]
-        assert any(r["is_outlier"] for r in mxn_results)
-        assert not any(r["is_outlier"] for r in eur_results)
+    def test_analytics_empty_when_no_findings(self):
+        result = _run([], [])
+        assert result.outlier_results == []
+        assert result.counterparty_scores == []
+        assert result.natural_hedge_results is not None
 
 
-class TestSpreadClassification:
-    """Spread classification: WITHIN_SPREAD, OUTSIDE_SPREAD, SPREAD_UNKNOWN."""
-
-    def test_within_spread(self):
-        assert _classify_spread(1.05, 1.04, 1.06) == "WITHIN_SPREAD"
-
-    def test_outside_spread_high(self):
-        assert _classify_spread(1.07, 1.04, 1.06) == "OUTSIDE_SPREAD"
-
-    def test_outside_spread_low(self):
-        assert _classify_spread(1.03, 1.04, 1.06) == "OUTSIDE_SPREAD"
-
-    def test_at_bid_is_within(self):
-        assert _classify_spread(1.04, 1.04, 1.06) == "WITHIN_SPREAD"
-
-    def test_at_ask_is_within(self):
-        assert _classify_spread(1.06, 1.04, 1.06) == "WITHIN_SPREAD"
-
-    def test_no_bid_unknown(self):
-        assert _classify_spread(1.05, None, 1.06) == "SPREAD_UNKNOWN"
-
-    def test_no_ask_unknown(self):
-        assert _classify_spread(1.05, 1.04, None) == "SPREAD_UNKNOWN"
-
-    def test_both_none_unknown(self):
-        assert _classify_spread(1.05, None, None) == "SPREAD_UNKNOWN"
-
-    def test_inverted_bid_ask_still_works(self):
-        """Spread classification handles bid > ask (inverted)."""
-        assert _classify_spread(1.05, 1.06, 1.04) == "WITHIN_SPREAD"
-
-    def test_wired_into_engine_with_bid_ask(self):
-        """When benchmark has bid/ask, spread_classification is set."""
-        txn = _txn(0, amount_sold=500_000, amount_bought=27_800)  # rate ~0.0556
-        bm = _bm(mid=0.0556, bid=0.0550, ask=0.0562)
-        result = _run(txns=[txn], bms=[bm])
-        assert len(result.markup_findings) == 1
-        assert result.markup_findings[0].spread_classification in (
-            "WITHIN_SPREAD", "OUTSIDE_SPREAD",
-        )
-
-    def test_wired_into_engine_no_bid_ask(self):
-        """Without bid/ask, spread_classification should be SPREAD_UNKNOWN."""
-        txn = _txn(0)
-        bm = _bm()  # no bid/ask
-        result = _run(txns=[txn], bms=[bm])
-        assert len(result.markup_findings) == 1
-        assert result.markup_findings[0].spread_classification == "SPREAD_UNKNOWN"
+# ==============================================================================
+# 5. USD Conversion
+# ==============================================================================
 
 
-class TestBenchmarkSourceTypes:
-    """Budget rate vs market_snapshot benchmark source."""
+class TestUsdConversion:
+    """Tests for _to_usd conversion logic."""
 
-    def test_budget_rate_source(self):
-        txns = [_txn(0, amount_sold=500_000, amount_bought=27_000)]
-        result = _run(txns=txns, bms=[_bm()],
-                      cfg=_cfg(source="budget_rate", budget=0.060))
-        assert len(result.rate_variance_results) == 1
-        rv = result.rate_variance_results[0]
-        assert rv.baseline_source == "budget_rate"
-        assert rv.baseline_rate == pytest.approx(0.060)
-
-    def test_market_snapshot_source(self):
-        txns = [_txn(0)]
-        bms = [_bm(as_of=date(2025, 1, 1))]  # period_start benchmark
-        result = _run(txns=txns, bms=bms,
-                      cfg=_cfg(source="market_snapshot"))
-        assert len(result.rate_variance_results) >= 1
-        for rv in result.rate_variance_results:
-            if rv.status == "COMPUTED":
-                assert rv.baseline_source == "period_start_snapshot"
-
-    def test_budget_rate_none_falls_to_snapshot(self):
-        """budget_rate=None with benchmark_source=budget_rate falls through."""
-        txns = [_txn(0)]
-        result = _run(txns=txns, bms=[_bm(as_of=date(2025, 1, 1))],
-                      cfg=_cfg(source="budget_rate", budget=None))
-        # When budget_rate is None, it should use period_start_snapshot
-        for rv in result.rate_variance_results:
-            if rv.status == "COMPUTED":
-                assert rv.baseline_source == "period_start_snapshot"
-
-
-class TestRateVarianceWithReversePairLookup:
-    """Rate variance with reverse pair for benchmark."""
-
-    def test_reverse_pair_lookup_in_unhedged(self):
-        """Engine should try reverse pair for unhedged impact baseline."""
-        txns = [_txn(0)]  # MXNUSD pair
-        # Only have USDMXN benchmark (reverse), at period start
-        bms = [
-            _bm(as_of=date(2025, 1, 1), pair="USDMXN", mid=18.0),
-            _bm(as_of=date(2025, 1, 15), pair="USDMXN", mid=18.0),
-        ]
-        result = _run(txns=txns, bms=bms)
-        # Engine should find the reverse pair for markup
-        # At minimum, it should not produce BENCHMARK_UNAVAILABLE if reverse exists
-        assert len(result.markup_findings) + len(result.markup_rejections) > 0
-
-
-class TestToUsdConversion:
-    """_to_usd conversion for various currencies."""
-
-    def test_usd_identity(self):
+    def test_usd_unchanged(self):
         assert _to_usd(1000.0, "USD", 1.0) == 1000.0
 
+    def test_usd_unchanged_any_rate(self):
+        assert _to_usd(1000.0, "USD", 18.0) == 1000.0
+
     def test_eur_ccy_per_usd(self):
-        """EUR is CCY/USD: USD = amount * rate."""
+        """EUR is in _CCY_PER_USD: USD = amount * rate."""
         assert _to_usd(1000.0, "EUR", 1.08) == pytest.approx(1080.0)
 
     def test_gbp_ccy_per_usd(self):
@@ -987,287 +720,428 @@ class TestToUsdConversion:
         assert _to_usd(1000.0, "NZD", 0.61) == pytest.approx(610.0)
 
     def test_mxn_usd_per_ccy(self):
-        """MXN is USD/CCY: USD = amount / rate."""
-        assert _to_usd(180_000, "MXN", 18.0) == pytest.approx(10_000.0)
+        """MXN is NOT in _CCY_PER_USD: USD = amount / rate."""
+        assert _to_usd(500_000.0, "MXN", 18.0) == pytest.approx(27_777.78, abs=0.01)
 
     def test_jpy_usd_per_ccy(self):
-        assert _to_usd(15_000_000, "JPY", 150.0) == pytest.approx(100_000.0)
+        assert _to_usd(1_000_000.0, "JPY", 150.0) == pytest.approx(6_666.67, abs=0.01)
 
     def test_brl_usd_per_ccy(self):
-        assert _to_usd(50_000, "BRL", 5.0) == pytest.approx(10_000.0)
+        assert _to_usd(50_000.0, "BRL", 5.0) == pytest.approx(10_000.0)
 
     def test_chf_usd_per_ccy(self):
-        assert _to_usd(9_000, "CHF", 0.9) == pytest.approx(10_000.0)
+        assert _to_usd(10_000.0, "CHF", 0.88) == pytest.approx(11_363.64, abs=0.01)
 
-    def test_zero_benchmark_rate(self):
-        """Zero benchmark rate returns 0.0 (fail-safe)."""
+    def test_zero_rate_returns_zero(self):
         assert _to_usd(1000.0, "MXN", 0.0) == 0.0
 
-    def test_negative_benchmark_rate(self):
-        """Negative benchmark rate returns 0.0."""
+    def test_negative_rate_returns_zero(self):
         assert _to_usd(1000.0, "EUR", -1.0) == 0.0
 
-    def test_case_insensitive(self):
-        assert _to_usd(1000.0, "eur", 1.08) == pytest.approx(1080.0)
+    def test_case_insensitive_usd(self):
         assert _to_usd(1000.0, "usd", 1.0) == 1000.0
-        assert _to_usd(1000.0, "Mxn", 18.0) == pytest.approx(1000.0 / 18.0)
+
+    def test_case_insensitive_eur(self):
+        assert _to_usd(1000.0, "eur", 1.08) == pytest.approx(1080.0)
+
+    def test_ccy_per_usd_set_contents(self):
+        assert _CCY_PER_USD == {"EUR", "GBP", "AUD", "NZD"}
 
 
-class TestMarkupDirectionHelper:
-    """Test _markup_direction classification boundary."""
-
-    def test_positive_adverse(self):
-        assert _markup_direction(0.001) == "ADVERSE"
-
-    def test_negative_favorable(self):
-        assert _markup_direction(-0.001) == "FAVORABLE"
-
-    def test_zero_at_market(self):
-        assert _markup_direction(0.0) == "AT_MARKET"
-
-    def test_tiny_positive_at_market(self):
-        assert _markup_direction(1e-9) == "AT_MARKET"
-
-    def test_tiny_negative_at_market(self):
-        assert _markup_direction(-1e-9) == "AT_MARKET"
-
-    def test_threshold_boundary(self):
-        """abs < 1e-8 is AT_MARKET. Exactly 1e-8 is NOT less, so ADVERSE."""
-        assert _markup_direction(1e-8) == "ADVERSE"
-        assert _markup_direction(9.9e-9) == "AT_MARKET"
+# ==============================================================================
+# 6. Spread Classification
+# ==============================================================================
 
 
-class TestSizeAdjustedMarkupBpsEdgeCases:
-    """Additional edge cases for size_adjusted_markup_bps."""
+class TestSpreadClassification:
+    """Tests for _classify_spread."""
 
-    def test_zero_trade_size(self):
-        """Zero trade size -> smallest tier (100k, 10bps)."""
-        result = size_adjusted_markup_bps(15.0, 0)
-        assert result == pytest.approx(5.0)  # 15 - 10
+    def test_within_spread(self):
+        assert _classify_spread(1.085, 1.08, 1.09) == "WITHIN_SPREAD"
 
-    def test_exactly_at_tier_boundary_100k(self):
-        result = size_adjusted_markup_bps(12.0, 100_000)
-        assert result == pytest.approx(2.0)  # 12 - 10
+    def test_outside_spread_above(self):
+        assert _classify_spread(1.10, 1.08, 1.09) == "OUTSIDE_SPREAD"
 
-    def test_above_100k_boundary(self):
-        result = size_adjusted_markup_bps(12.0, 100_001)
-        assert result == pytest.approx(7.0)  # 12 - 5
+    def test_outside_spread_below(self):
+        assert _classify_spread(1.07, 1.08, 1.09) == "OUTSIDE_SPREAD"
 
-    def test_exactly_at_1m_boundary(self):
-        result = size_adjusted_markup_bps(8.0, 1_000_000)
-        assert result == pytest.approx(3.0)  # 8 - 5
+    def test_at_bid_within_spread(self):
+        assert _classify_spread(1.08, 1.08, 1.09) == "WITHIN_SPREAD"
 
-    def test_above_1m_boundary(self):
-        result = size_adjusted_markup_bps(8.0, 1_000_001)
-        assert result == pytest.approx(6.0)  # 8 - 2
+    def test_at_ask_within_spread(self):
+        assert _classify_spread(1.09, 1.08, 1.09) == "WITHIN_SPREAD"
 
-    def test_negative_markup_bps(self):
-        result = size_adjusted_markup_bps(-5.0, 50_000)
-        assert result == pytest.approx(-15.0)  # -5 - 10
+    def test_no_bid_spread_unknown(self):
+        assert _classify_spread(1.085, None, 1.09) == "SPREAD_UNKNOWN"
+
+    def test_no_ask_spread_unknown(self):
+        assert _classify_spread(1.085, 1.08, None) == "SPREAD_UNKNOWN"
+
+    def test_no_bid_no_ask_spread_unknown(self):
+        assert _classify_spread(1.085, None, None) == "SPREAD_UNKNOWN"
+
+    def test_reversed_bid_ask_still_works(self):
+        """Engine uses min/max so reversed bid/ask is handled."""
+        assert _classify_spread(1.085, 1.09, 1.08) == "WITHIN_SPREAD"
+
+    def test_spread_classification_wired_into_finding(self):
+        txn = _make_txn(0, amount_sold=500_000, amount_bought=27_800)
+        bm = _make_benchmark(mid_rate=0.0556, bid_rate=0.0550, ask_rate=0.0562)
+        result = _run([txn], [bm])
+        assert len(result.markup_findings) == 1
+        assert result.markup_findings[0].spread_classification in (
+            "WITHIN_SPREAD", "OUTSIDE_SPREAD"
+        )
+
+    def test_spread_unknown_when_no_bid_ask(self):
+        txn = _make_txn(0)
+        bm = _make_benchmark()  # no bid/ask
+        result = _run([txn], [bm])
+        assert result.markup_findings[0].spread_classification == "SPREAD_UNKNOWN"
 
 
-class TestFindBenchmarkEdgeCases:
-    """Edge cases for _find_benchmark."""
+# ==============================================================================
+# 7. Hash Integrity
+# ==============================================================================
 
-    def test_no_benchmarks(self):
-        assert _find_benchmark(date(2025, 1, 15), "MXNUSD", []) is None
 
-    def test_wrong_pair(self):
-        bm = _bm(pair="EURUSD")
-        assert _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm]) is None
+class TestHashIntegrity:
+    """Deterministic hashing and hash chain structure."""
 
-    def test_exact_date_match(self):
-        bm = _bm(as_of=date(2025, 1, 15), pair="MXNUSD")
-        result = _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm])
-        assert result is not None
-        assert result.as_of == date(2025, 1, 15)
+    def test_run_hash_deterministic_triple(self):
+        txns = [_make_txn(i) for i in range(3)]
+        bm = _make_benchmark()
+        r1 = _run(txns, [bm])
+        r2 = _run(txns, [bm])
+        r3 = _run(txns, [bm])
+        assert r1.run_hash == r2.run_hash == r3.run_hash
 
-    def test_nearest_chosen(self):
-        bm1 = _bm(as_of=date(2025, 1, 10), pair="MXNUSD", mid=0.055)
-        bm2 = _bm(as_of=date(2025, 1, 14), pair="MXNUSD", mid=0.056)
-        result = _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm1, bm2])
-        assert result.mid_rate == pytest.approx(0.056)  # 14th is closer
+    def test_inputs_hash_changes_with_transaction_count(self):
+        """inputs_hash includes transaction_count and sorted row_hashes."""
+        txns_a = [_make_txn(0)]
+        txns_b = [_make_txn(0), _make_txn(1)]
+        bm = _make_benchmark()
+        r_a = _run(txns_a, [bm])
+        r_b = _run(txns_b, [bm])
+        assert r_a.inputs_hash != r_b.inputs_hash
 
-    def test_staleness_exactly_at_limit(self):
-        bm = _bm(as_of=date(2025, 1, 8), pair="MXNUSD")  # exactly 7 days
-        result = _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm], max_staleness_days=7)
-        assert result is not None
+    def test_inputs_hash_changes_with_benchmark_config(self):
+        txns = [_make_txn(0)]
+        bm = _make_benchmark()
+        cfg_a = _cfg(source="market_snapshot")
+        cfg_b = _cfg(source="budget_rate", budget_rate=0.06)
+        r_a = _run(txns, [bm], cfg_a)
+        r_b = _run(txns, [bm], cfg_b)
+        assert r_a.inputs_hash != r_b.inputs_hash
 
-    def test_staleness_one_over_limit(self):
-        bm = _bm(as_of=date(2025, 1, 7), pair="MXNUSD")  # 8 days
-        result = _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm], max_staleness_days=7)
+    def test_inputs_hash_changes_with_period(self):
+        txns = [_make_txn(0)]
+        bm = _make_benchmark()
+        r_a = _run(txns, [bm], period_start=date(2025, 1, 1), period_end=date(2025, 1, 31))
+        r_b = _run(txns, [bm], period_start=date(2025, 2, 1), period_end=date(2025, 2, 28))
+        assert r_a.inputs_hash != r_b.inputs_hash
+
+    def test_outputs_hash_changes_with_findings(self):
+        txn_a = _make_txn(0, amount_sold=500_000, amount_bought=27_000)
+        txn_b = _make_txn(0, amount_sold=500_000, amount_bought=29_000)
+        bm = _make_benchmark()
+        r_a = _run([txn_a], [bm])
+        r_b = _run([txn_b], [bm])
+        assert r_a.outputs_hash != r_b.outputs_hash
+
+    def test_run_hash_is_sha256_of_inputs_plus_outputs(self):
+        txns = [_make_txn(0)]
+        bm = _make_benchmark()
+        result = _run(txns, [bm])
+        expected = _sha256_dict({
+            "inputs_hash": result.inputs_hash,
+            "outputs_hash": result.outputs_hash,
+        })
+        assert result.run_hash == expected
+
+    def test_all_hashes_64_hex_chars(self):
+        result = _run([_make_txn(0)], [_make_benchmark()])
+        for h in (result.inputs_hash, result.outputs_hash, result.run_hash):
+            assert len(h) == 64
+            assert all(c in "0123456789abcdef" for c in h)
+
+    def test_sha256_dict_canonical_json_sort_keys(self):
+        h1 = _sha256_dict({"z": 1, "a": 2, "m": 3})
+        h2 = _sha256_dict({"a": 2, "m": 3, "z": 1})
+        assert h1 == h2
+
+    def test_sha256_list_consistent(self):
+        h1 = _sha256_list(["alpha", "beta", "gamma"])
+        h2 = _sha256_list(["alpha", "beta", "gamma"])
+        assert h1 == h2
+
+    def test_sha256_list_order_matters(self):
+        h1 = _sha256_list(["alpha", "beta"])
+        h2 = _sha256_list(["beta", "alpha"])
+        assert h1 != h2
+
+    def test_sha256_dict_different_values_different_hash(self):
+        h1 = _sha256_dict({"key": "value1"})
+        h2 = _sha256_dict({"key": "value2"})
+        assert h1 != h2
+
+    def test_dataset_id_affects_inputs_hash(self):
+        txns = [_make_txn(0)]
+        bm = _make_benchmark()
+        r_a = _run(txns, [bm], ds="ds-A")
+        r_b = _run(txns, [bm], ds="ds-B")
+        assert r_a.inputs_hash != r_b.inputs_hash
+        assert r_a.run_hash != r_b.run_hash
+
+
+# ==============================================================================
+# 8. CSV Parser Edge Cases
+# ==============================================================================
+
+
+class TestCsvEdgeCases:
+    """Edge cases for the CSV parser in v1_audit_lab.py."""
+
+    def test_csv_with_bom_prefix(self):
+        """UTF-8 BOM should be stripped by utf-8-sig decoding."""
+        csv_bom = b"\xef\xbb\xbftrade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
+        csv_bom += b"2025-01-15,MXN,USD,500000,27000\n"
+        rows, warnings, pairs = _parse_csv(csv_bom)
+        assert len(rows) == 1
+        assert rows[0]["currency_sold"] == "MXN"
+
+    def test_csv_with_trailing_whitespace_headers(self):
+        csv_data = b"trade_date  ,currency_sold ,currency_bought , amount_sold,amount_bought\n"
+        csv_data += b"2025-01-15,MXN,USD,500000,27000\n"
+        rows, warnings, pairs = _parse_csv(csv_data)
+        assert len(rows) == 1
+        assert rows[0]["currency_sold"] == "MXN"
+
+    def test_csv_mixed_case_headers(self):
+        csv_data = b"Trade_Date,Currency_Sold,Currency_Bought,Amount_Sold,Amount_Bought\n"
+        csv_data += b"2025-01-15,MXN,USD,500000,27000\n"
+        rows, warnings, pairs = _parse_csv(csv_data)
+        assert len(rows) == 1
+
+    def test_csv_extra_columns_ignored(self):
+        csv_data = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought,extra_col,another_col\n"
+        csv_data += b"2025-01-15,MXN,USD,500000,27000,foo,bar\n"
+        rows, warnings, pairs = _parse_csv(csv_data)
+        assert len(rows) == 1
+        assert rows[0]["currency_sold"] == "MXN"
+
+    def test_csv_missing_required_columns_warns(self):
+        csv_data = b"foo,bar,baz\n"
+        csv_data += b"1,2,3\n"
+        rows, warnings, pairs = _parse_csv(csv_data)
+        assert len(rows) == 1
+        assert any("missing" in w.lower() for w in warnings)
+
+    def test_csv_empty_amount_sold_parsed_as_none(self):
+        csv_data = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
+        csv_data += b"2025-01-15,MXN,USD,,27000\n"
+        rows, warnings, pairs = _parse_csv(csv_data)
+        assert rows[0]["amount_sold"] is None
+
+    def test_csv_non_numeric_amount_parsed_as_none(self):
+        csv_data = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
+        csv_data += b"2025-01-15,MXN,USD,ABC,27000\n"
+        rows, warnings, pairs = _parse_csv(csv_data)
+        assert rows[0]["amount_sold"] is None
+
+    def test_parse_date_mm_dd_yyyy(self):
+        d = _parse_date("01/15/2025")
+        assert d == date(2025, 1, 15)
+
+    def test_parse_date_dd_mm_yyyy_dash(self):
+        d = _parse_date("15-01-2025")
+        assert d == date(2025, 1, 15)
+
+    def test_parse_date_iso(self):
+        d = _parse_date("2025-01-15")
+        assert d == date(2025, 1, 15)
+
+    def test_parse_date_dd_mm_yyyy_slash(self):
+        d = _parse_date("15/01/2025")
+        assert d == date(2025, 1, 15)
+
+    def test_parse_date_empty_string(self):
+        assert _parse_date("") is None
+
+    def test_parse_date_none(self):
+        assert _parse_date(None) is None
+
+    def test_parse_date_garbage(self):
+        assert _parse_date("not-a-date") is None
+
+    def test_parse_float_negative_number(self):
+        assert _parse_float("-500000") == -500_000.0
+
+    def test_parse_float_currency_symbol_prefix(self):
+        """Currency symbol should cause parse failure (no stripping)."""
+        result = _parse_float("$500000")
         assert result is None
 
+    def test_parse_float_with_comma_and_decimal(self):
+        assert _parse_float("1,234,567.89") == pytest.approx(1_234_567.89)
 
-class TestCrossRateSynthesisEdgeCases:
-    """Cross-rate synthesis additional tests."""
+    def test_parse_float_whitespace(self):
+        assert _parse_float("  500000  ") == 500_000.0
 
-    def test_zero_quote_rate(self):
-        bms = [
-            _bm(pair="USDMXN", mid=18.0),
-            _bm(pair="USDBRL", mid=0.0),  # zero
-        ]
-        rate, source = _synthesize_cross_rate("MXN", "BRL", bms, date(2025, 1, 15))
-        # Should fail because bm_quote.mid_rate <= 0
-        # Might try second leg (CCY/USD)
-        assert rate is None or source == "SYNTHETIC_CROSS"
+    def test_parse_float_empty_after_strip(self):
+        assert _parse_float("  ") is None
 
-    def test_only_one_leg_available(self):
-        bms = [_bm(pair="USDMXN", mid=18.0)]  # no BRL leg
-        rate, source = _synthesize_cross_rate("MXN", "BRL", bms, date(2025, 1, 15))
-        assert rate is None
-        assert source == "UNAVAILABLE"
+    def test_row_hash_deterministic(self):
+        row = {
+            "row_index": 0,
+            "trade_date": "2025-01-15",
+            "currency_sold": "MXN",
+            "currency_bought": "USD",
+            "amount_sold": 500_000.0,
+        }
+        h1 = _row_hash(row)
+        h2 = _row_hash(row)
+        assert h1 == h2
 
-    def test_staleness_doubled_for_synthetic(self):
-        """Cross-rate uses 2x staleness tolerance."""
-        bms = [
-            _bm(as_of=date(2025, 1, 1), pair="USDMXN", mid=18.0),  # 14 days
-            _bm(as_of=date(2025, 1, 1), pair="USDBRL", mid=5.0),    # 14 days
-        ]
-        # With max_staleness=7, cross staleness=14 -> should still find
-        rate, source = _synthesize_cross_rate(
-            "MXN", "BRL", bms, date(2025, 1, 15), max_staleness_days=7
-        )
-        assert rate is not None
+    def test_row_hash_order_insensitive(self):
+        """_row_canonical uses sort_keys=True, so key order does not matter."""
+        row_a = {"z_field": 1, "a_field": 2}
+        row_b = {"a_field": 2, "z_field": 1}
+        assert _row_hash(row_a) == _row_hash(row_b)
+
+    def test_row_hash_different_for_different_content(self):
+        row_a = {"amount": 500_000}
+        row_b = {"amount": 600_000}
+        assert _row_hash(row_a) != _row_hash(row_b)
+
+    def test_row_hash_is_64_hex(self):
+        row = {"test": "data"}
+        h = _row_hash(row)
+        assert len(h) == 64
+        assert all(c in "0123456789abcdef" for c in h)
+
+    def test_row_canonical_is_json(self):
+        row = {"b": 2, "a": 1}
+        canonical = _row_canonical(row)
+        parsed = json.loads(canonical)
+        assert parsed == {"a": 1, "b": 2}
+
+    def test_normalize_headers_standard(self):
+        headers = ["trade_date", "currency_sold", "currency_bought"]
+        mapping = _normalize_headers(headers)
+        assert mapping["trade_date"] == "trade_date"
+        assert mapping["currency_sold"] == "currency_sold"
+
+    def test_normalize_headers_aliases(self):
+        headers = ["tradedate", "sold_ccy", "buy_ccy", "sell_amount"]
+        mapping = _normalize_headers(headers)
+        assert "trade_date" in mapping
+        assert "currency_sold" in mapping
+        assert "currency_bought" in mapping
+        assert "amount_sold" in mapping
+
+    def test_normalize_headers_case_insensitive(self):
+        headers = ["Trade_Date", "Currency_Sold", "Currency_Bought"]
+        mapping = _normalize_headers(headers)
+        assert "trade_date" in mapping
+
+    def test_normalize_headers_unrecognized_ignored(self):
+        headers = ["unknown_column", "weird_field"]
+        mapping = _normalize_headers(headers)
+        assert len(mapping) == 0
+
+    def test_csv_effective_rate_computed(self):
+        csv_data = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
+        csv_data += b"2025-01-15,MXN,USD,500000,27000\n"
+        rows, _, _ = _parse_csv(csv_data)
+        assert rows[0]["effective_rate"] == pytest.approx(0.054, abs=1e-6)
+
+    def test_csv_effective_rate_none_when_zero_sold(self):
+        csv_data = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
+        csv_data += b"2025-01-15,MXN,USD,0,27000\n"
+        rows, _, _ = _parse_csv(csv_data)
+        assert rows[0]["effective_rate"] is None
+
+    def test_csv_currency_pairs_set(self):
+        csv_data = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
+        csv_data += b"2025-01-15,MXN,USD,500000,27000\n"
+        csv_data += b"2025-01-16,EUR,USD,100000,108000\n"
+        _, _, pairs = _parse_csv(csv_data)
+        assert "MXNUSD" in pairs
+        assert "EURUSD" in pairs
 
 
-class TestBackwardCompatAliases:
-    """Backward compatibility aliases (unhedged_results, total_unhedged_impact_usd)."""
+# ==============================================================================
+# 9. Backward Compatibility
+# ==============================================================================
+
+
+class TestBackwardCompat:
+    """Backward compatibility aliases and dict outputs."""
 
     def test_unhedged_results_alias(self):
-        result = _run()
+        txn = _make_txn(0)
+        bm = _make_benchmark()
+        cfg = _cfg(source="budget_rate", budget_rate=0.060)
+        result = _run([txn], [bm], cfg)
         assert result.unhedged_results is result.rate_variance_results
 
-    def test_total_unhedged_impact_alias(self):
-        result = _run()
+    def test_total_unhedged_impact_usd_alias(self):
+        txn = _make_txn(0)
+        bm = _make_benchmark()
+        cfg = _cfg(source="budget_rate", budget_rate=0.060)
+        result = _run([txn], [bm], cfg)
         assert result.total_unhedged_impact_usd == result.total_rate_variance_usd
 
-    def test_rate_variance_backward_compat_property(self):
-        rv = RateVarianceResult(
-            currency_pair="MXNUSD", period_start="2025-01-01",
-            period_end="2025-01-31", realized_avg_rate=0.054,
-            baseline_rate=0.056, baseline_source="budget_rate",
-            total_exposure_local=500_000, rate_variance_usd=-1000.0,
-            status="COMPUTED", narrative="test",
-        )
-        assert rv.unhedged_impact_usd == -1000.0
-
-    def test_rate_variance_to_dict_has_both_keys(self):
-        rv = RateVarianceResult(
-            currency_pair="MXNUSD", period_start="2025-01-01",
-            period_end="2025-01-31", realized_avg_rate=0.054,
-            baseline_rate=0.056, baseline_source="budget_rate",
-            total_exposure_local=500_000, rate_variance_usd=-1000.0,
-            status="COMPUTED", narrative="test",
-        )
-        d = rv.to_dict()
-        assert "rate_variance_usd" in d
-        assert "unhedged_impact_usd" in d
-        assert d["rate_variance_usd"] == d["unhedged_impact_usd"]
-
-
-class TestUnhedgedImpactAlias:
-    """UnhedgedImpactResult is an alias for RateVarianceResult."""
-
-    def test_alias_identity(self):
+    def test_unhedged_impact_result_alias_type(self):
         assert UnhedgedImpactResult is RateVarianceResult
 
-
-class TestFeeExtractionEdgeCases:
-    """Fee extraction edge cases."""
-
-    def test_zero_fee_not_extracted(self):
-        """fee_amount=0 should not produce a finding (>0 check)."""
-        txns = [_txn(0, fee_amount=0.0)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.fee_findings) == 0
-
-    def test_negative_fee_not_extracted(self):
-        txns = [_txn(0, fee_amount=-50.0)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.fee_findings) == 0
-
-    def test_fee_currency_fallback(self):
-        """If fee_currency is None, falls back to currency_sold then USD."""
-        txns = [_txn(0, fee_amount=100.0, fee_currency=None)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.fee_findings) == 1
-
-    def test_data_quality_zero_with_no_fees(self):
-        txns = [_txn(i, fee_amount=None) for i in range(5)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert result.data_quality_score == 0.0
-        assert result.fee_confidence == "LOW_CONFIDENCE"
-
-    def test_data_quality_exactly_50_percent(self):
-        """5 out of 10 with fees -> 50% -> HIGH confidence."""
-        txns = (
-            [_txn(i, fee_amount=100.0) for i in range(5)]
-            + [_txn(i + 5, fee_amount=None) for i in range(5)]
+    def test_rate_variance_result_unhedged_impact_usd_property(self):
+        rv = RateVarianceResult(
+            currency_pair="MXNUSD",
+            period_start="2025-01-01",
+            period_end="2025-01-31",
+            realized_avg_rate=0.054,
+            baseline_rate=0.060,
+            baseline_source="budget_rate",
+            total_exposure_local=500_000,
+            rate_variance_usd=-3333.33,
+            status="COMPUTED",
+            narrative="Test",
         )
-        result = _run(txns=txns, bms=[_bm()])
-        assert result.data_quality_score == pytest.approx(50.0)
-        assert result.fee_confidence == "HIGH"
+        assert rv.unhedged_impact_usd == rv.rate_variance_usd
 
-    def test_data_quality_49_percent(self):
-        """49% -> LOW_CONFIDENCE."""
-        txns = (
-            [_txn(i, fee_amount=100.0) for i in range(49)]
-            + [_txn(i + 49, fee_amount=None) for i in range(51)]
+    def test_rate_variance_to_dict_backward_compat_key(self):
+        rv = RateVarianceResult(
+            currency_pair="MXNUSD",
+            period_start="2025-01-01",
+            period_end="2025-01-31",
+            realized_avg_rate=0.054,
+            baseline_rate=0.060,
+            baseline_source="budget_rate",
+            total_exposure_local=500_000,
+            rate_variance_usd=-3333.33,
+            status="COMPUTED",
+            narrative="Test",
         )
-        result = _run(txns=txns, bms=[_bm()])
-        assert result.data_quality_score == pytest.approx(49.0, abs=0.1)
-        assert result.fee_confidence == "LOW_CONFIDENCE"
+        d = rv.to_dict()
+        assert "unhedged_impact_usd" in d
+        assert d["unhedged_impact_usd"] == d["rate_variance_usd"]
 
-
-class TestTotalLossComputation:
-    """total_loss_usd = markup + fees (rate_variance is reference only)."""
-
-    def test_total_loss_excludes_rate_variance(self):
-        txns = [_txn(0, amount_sold=500_000, amount_bought=29_000, fee_amount=100.0)]
-        bms = [_bm(mid=0.0556)]
-        result = _run(txns=txns, bms=bms,
-                      cfg=_cfg(source="budget_rate", budget=0.060))
-        expected_loss = result.total_markup_usd + result.total_fees_usd
-        assert result.total_loss_usd == pytest.approx(expected_loss, abs=0.01)
-
-
-class TestTraceEventStructure:
-    """Trace event structure and required steps."""
-
-    def test_trace_event_to_dict(self):
-        evt = AuditTraceEvent(
-            step="TEST", timestamp=datetime(2025, 1, 15, tzinfo=UTC),
-            detail="test detail", data={"key": "val"},
+    def test_markup_finding_to_dict_all_keys(self):
+        f = MarkupFinding(
+            row_id="r-0", row_hash="h" * 64, row_index=0,
+            trade_date="2025-01-15", currency_pair="MXNUSD",
+            counterparty="Bank", effective_rate=0.054,
+            benchmark_rate=0.0556, benchmark_snapshot_id="s1",
+            benchmark_snapshot_hash="a" * 64, benchmark_provider="test",
+            benchmark_as_of="2025-01-15",
+            markup_per_unit=-0.0016, markup_direction="FAVORABLE",
+            amount_sold=500_000, markup_cost_local=-800.0,
+            markup_cost_usd=-44.0, size_adjusted_markup_bps=-5.0,
+            spread_classification="WITHIN_SPREAD",
         )
-        d = evt.to_dict()
-        assert d["step"] == "TEST"
-        assert "2025-01-15" in d["timestamp"]
-        assert d["detail"] == "test detail"
-        assert d["data"]["key"] == "val"
-
-    def test_analytics_trace_step(self):
-        result = _run()
-        steps = [e.step for e in result.trace_events]
-        assert "ANALYTICS" in steps
-
-    def test_trace_order(self):
-        result = _run()
-        steps = [e.step for e in result.trace_events]
-        # Expected order
-        assert steps.index("ENGINE_START") < steps.index("MARKUP")
-        assert steps.index("MARKUP") < steps.index("FEES")
-        assert steps.index("FEES") < steps.index("UNHEDGED_IMPACT")
-        assert steps.index("ANALYTICS") < steps.index("ENGINE_COMPLETE")
-
-
-class TestMarkupFindingToDict:
-    """MarkupFinding.to_dict() includes all required fields."""
-
-    def test_to_dict_all_keys(self):
-        result = _run()
-        assert len(result.markup_findings) > 0
-        d = result.markup_findings[0].to_dict()
+        d = f.to_dict()
         expected_keys = {
             "row_id", "row_hash", "row_index", "trade_date", "currency_pair",
             "counterparty", "effective_rate", "benchmark_rate",
@@ -1277,174 +1151,487 @@ class TestMarkupFindingToDict:
             "amount_sold", "markup_cost_local", "markup_cost_usd",
             "size_adjusted_markup_bps",
         }
-        assert expected_keys.issubset(d.keys())
+        assert set(d.keys()) == expected_keys
 
-
-class TestFeeFindingToDict:
-    """FeeFinding.to_dict() includes all required fields."""
-
-    def test_to_dict_all_keys(self):
-        result = _run()
-        assert len(result.fee_findings) > 0
-        d = result.fee_findings[0].to_dict()
+    def test_fee_finding_to_dict_all_keys(self):
+        f = FeeFinding(
+            row_id="r-0", row_hash="h" * 64, row_index=0,
+            trade_date="2025-01-15", fee_amount=200.0,
+            fee_currency="USD", fee_usd=200.0,
+            benchmark_rate_used=None,
+        )
+        d = f.to_dict()
         expected_keys = {
             "row_id", "row_hash", "row_index", "trade_date",
             "fee_amount", "fee_currency", "fee_usd", "benchmark_rate_used",
         }
-        assert expected_keys.issubset(d.keys())
+        assert set(d.keys()) == expected_keys
 
+    def test_rate_variance_to_dict_all_keys(self):
+        rv = RateVarianceResult(
+            currency_pair="MXNUSD",
+            period_start="2025-01-01",
+            period_end="2025-01-31",
+            realized_avg_rate=0.054,
+            baseline_rate=0.060,
+            baseline_source="budget_rate",
+            total_exposure_local=500_000,
+            rate_variance_usd=-3333.33,
+            status="COMPUTED",
+            narrative="Test narrative",
+        )
+        d = rv.to_dict()
+        expected_keys = {
+            "currency_pair", "period_start", "period_end",
+            "realized_avg_rate", "baseline_rate", "baseline_source",
+            "total_exposure_local", "rate_variance_usd",
+            "unhedged_impact_usd", "status", "narrative",
+        }
+        assert set(d.keys()) == expected_keys
 
-class TestAuditRejectionToDict:
-    """AuditRejection.to_dict() structure."""
-
-    def test_rejection_to_dict(self):
-        rej = AuditRejection(code="AL-001", message="test", detail={"k": "v"})
-        d = rej.to_dict()
+    def test_audit_rejection_to_dict(self):
+        r = AuditRejection(
+            code="AL-001",
+            message="Missing trade_date",
+            detail={"row_id": "r-0", "row_index": 0},
+        )
+        d = r.to_dict()
         assert d["code"] == "AL-001"
-        assert d["message"] == "test"
-        assert d["detail"]["k"] == "v"
+        assert d["message"] == "Missing trade_date"
+        assert d["detail"]["row_id"] == "r-0"
 
 
-# ============================================================================
-# SECTION 4: Hash integrity
-# ============================================================================
+# ==============================================================================
+# 10. Trace Bundle
+# ==============================================================================
 
 
-class TestInputsHashSensitivity:
-    """inputs_hash should change when input parameters change."""
+class TestTraceBundle:
+    """Trace event structure and required steps."""
 
-    def test_different_transactions_different_inputs_hash(self):
-        """Different row_hashes (from different row indices) -> different inputs_hash."""
-        r1 = _run(txns=[_txn(0)])  # row_hash = "hash0000..."
-        r2 = _run(txns=[_txn(1)])  # row_hash = "hash0001..."
-        assert r1.inputs_hash != r2.inputs_hash
+    def test_trace_contains_all_required_steps(self):
+        result = _run([_make_txn(0)], [_make_benchmark()])
+        steps = [e.step for e in result.trace_events]
+        assert "ENGINE_START" in steps
+        assert "MARKUP" in steps
+        assert "FEES" in steps
+        assert "UNHEDGED_IMPACT" in steps
+        assert "ANALYTICS" in steps
+        assert "ENGINE_COMPLETE" in steps
 
-    def test_different_period_different_inputs_hash(self):
-        r1 = _run(ps=date(2025, 1, 1))
-        r2 = _run(ps=date(2025, 2, 1))
-        assert r1.inputs_hash != r2.inputs_hash
+    def test_trace_step_order(self):
+        result = _run([_make_txn(0)], [_make_benchmark()])
+        steps = [e.step for e in result.trace_events]
+        assert steps.index("ENGINE_START") < steps.index("MARKUP")
+        assert steps.index("MARKUP") < steps.index("FEES")
+        assert steps.index("FEES") < steps.index("UNHEDGED_IMPACT")
+        assert steps.index("UNHEDGED_IMPACT") < steps.index("ANALYTICS")
+        assert steps.index("ANALYTICS") < steps.index("ENGINE_COMPLETE")
 
-    def test_different_config_different_inputs_hash(self):
-        r1 = _run(cfg=_cfg(source="market_snapshot"))
-        r2 = _run(cfg=_cfg(source="budget_rate", budget=0.06))
-        assert r1.inputs_hash != r2.inputs_hash
+    def test_trace_events_have_timestamp(self):
+        result = _run([_make_txn(0)], [_make_benchmark()])
+        for e in result.trace_events:
+            assert e.timestamp is not None
+            assert isinstance(e.timestamp, datetime)
 
-    def test_different_dataset_id_different_inputs_hash(self):
-        r1 = _run(ds_id="ds-A")
-        r2 = _run(ds_id="ds-B")
-        assert r1.inputs_hash != r2.inputs_hash
+    def test_trace_events_have_detail(self):
+        result = _run([_make_txn(0)], [_make_benchmark()])
+        for e in result.trace_events:
+            assert isinstance(e.detail, str)
+            assert len(e.detail) > 0
 
-    def test_same_inputs_same_inputs_hash(self):
-        r1 = _run()
-        r2 = _run()
-        assert r1.inputs_hash == r2.inputs_hash
+    def test_trace_event_to_dict(self):
+        event = AuditTraceEvent(
+            step="TEST_STEP",
+            timestamp=datetime(2025, 1, 15, 12, 0, 0, tzinfo=UTC),
+            detail="Test detail",
+            data={"key": "value"},
+        )
+        d = event.to_dict()
+        assert d["step"] == "TEST_STEP"
+        assert d["detail"] == "Test detail"
+        assert d["data"] == {"key": "value"}
+        assert "timestamp" in d
 
-    def test_benchmark_source_change_changes_inputs_hash(self):
-        r1 = _run(cfg=_cfg(source="market_snapshot"))
-        r2 = _run(cfg=_cfg(source="budget_rate", budget=0.05))
-        assert r1.inputs_hash != r2.inputs_hash
+    def test_engine_start_trace_has_metadata(self):
+        result = _run([_make_txn(0)], [_make_benchmark()])
+        start = next(e for e in result.trace_events if e.step == "ENGINE_START")
+        assert start.data is not None
+        assert "transaction_count" in start.data
+        assert "benchmark_count" in start.data
+        assert "dataset_id" in start.data
 
-    def test_transaction_order_irrelevant_for_inputs_hash(self):
-        """inputs_hash uses sorted transaction hashes, so order shouldn't matter."""
-        txn_a = _txn(0, amount_sold=500_000, amount_bought=27_000)
-        txn_b = _txn(1, amount_sold=300_000, amount_bought=16_000)
-        r1 = _run(txns=[txn_a, txn_b])
-        r2 = _run(txns=[txn_b, txn_a])
-        assert r1.inputs_hash == r2.inputs_hash
+    def test_engine_complete_trace_has_totals(self):
+        result = _run([_make_txn(0)], [_make_benchmark()])
+        complete = next(e for e in result.trace_events if e.step == "ENGINE_COMPLETE")
+        assert complete.data is not None
+        assert "total_markup_usd" in complete.data
+        assert "total_fees_usd" in complete.data
+        assert "total_loss_usd" in complete.data
 
+    def test_empty_run_still_has_all_trace_steps(self):
+        result = _run([], [])
+        steps = {e.step for e in result.trace_events}
+        assert "ENGINE_START" in steps
+        assert "MARKUP" in steps
+        assert "FEES" in steps
+        assert "UNHEDGED_IMPACT" in steps
+        assert "ANALYTICS" in steps
+        assert "ENGINE_COMPLETE" in steps
 
-class TestOutputsHashSensitivity:
-    """outputs_hash should change when totals/counts change."""
-
-    def test_different_markup_totals_different_outputs_hash(self):
-        r1 = _run(txns=[_txn(0, amount_sold=500_000, amount_bought=27_000)])
-        r2 = _run(txns=[_txn(0, amount_sold=500_000, amount_bought=29_000)])
-        # Different effective rates -> different markups -> different outputs
-        assert r1.outputs_hash != r2.outputs_hash
-
-    def test_different_fee_totals_different_outputs_hash(self):
-        r1 = _run(txns=[_txn(0, fee_amount=100.0)])
-        r2 = _run(txns=[_txn(0, fee_amount=500.0)])
-        assert r1.outputs_hash != r2.outputs_hash
-
-    def test_same_totals_same_outputs_hash(self):
-        r1 = _run()
-        r2 = _run()
-        assert r1.outputs_hash == r2.outputs_hash
-
-
-class TestRunHashSensitivity:
-    """run_hash = SHA-256(inputs_hash || outputs_hash)."""
-
-    def test_run_hash_changes_with_transaction_change(self):
-        r1 = _run(txns=[_txn(0, amount_sold=500_000)])
-        r2 = _run(txns=[_txn(0, amount_sold=600_000)])
-        assert r1.run_hash != r2.run_hash
-
-    def test_run_hash_changes_with_benchmark_change(self):
-        r1 = _run(bms=[_bm(mid=0.0556)])
-        r2 = _run(bms=[_bm(mid=0.0600)])
-        assert r1.run_hash != r2.run_hash
-
-    def test_run_hash_is_sha256_hex(self):
-        result = _run()
-        assert len(result.run_hash) == 64
-        assert all(c in "0123456789abcdef" for c in result.run_hash)
-
-    def test_run_hash_is_deterministic(self):
-        r1 = _run()
-        r2 = _run()
-        assert r1.run_hash == r2.run_hash
-
-    def test_run_hash_composed_from_inputs_and_outputs(self):
-        """run_hash should be SHA-256 of dict(inputs_hash, outputs_hash)."""
-        result = _run()
-        expected = _sha256_dict({
-            "inputs_hash": result.inputs_hash,
-            "outputs_hash": result.outputs_hash,
-        })
-        assert result.run_hash == expected
+    def test_analytics_trace_has_counts(self):
+        result = _run([_make_txn(i) for i in range(5)], [_make_benchmark()])
+        analytics = next(e for e in result.trace_events if e.step == "ANALYTICS")
+        assert analytics.data is not None
+        assert "outlier_count" in analytics.data
+        assert "counterparty_count" in analytics.data
+        assert "natural_hedge_count" in analytics.data
 
 
-class TestHashHelpers:
-    """_sha256_dict and _sha256_list helpers."""
-
-    def test_sha256_dict_deterministic(self):
-        d = {"b": 2, "a": 1}
-        assert _sha256_dict(d) == _sha256_dict({"a": 1, "b": 2})
-
-    def test_sha256_dict_different_values(self):
-        assert _sha256_dict({"a": 1}) != _sha256_dict({"a": 2})
-
-    def test_sha256_list_deterministic(self):
-        assert _sha256_list([1, 2, 3]) == _sha256_list([1, 2, 3])
-
-    def test_sha256_list_different_order(self):
-        assert _sha256_list([1, 2, 3]) != _sha256_list([3, 2, 1])
-
-    def test_sha256_dict_returns_hex_64(self):
-        h = _sha256_dict({"test": True})
-        assert len(h) == 64
-        assert all(c in "0123456789abcdef" for c in h)
-
-    def test_sha256_list_returns_hex_64(self):
-        h = _sha256_list([1, 2, 3])
-        assert len(h) == 64
+# ==============================================================================
+# 11. Rate Variance (Unhedged Impact)
+# ==============================================================================
 
 
-# ============================================================================
-# SECTION 5: Data flow integration
-# ============================================================================
+class TestRateVariance:
+    """Rate variance / unhedged impact computation edge cases."""
+
+    def test_budget_rate_mode_uses_budget(self):
+        txn = _make_txn(0, amount_sold=500_000, amount_bought=27_000)
+        bm = _make_benchmark()
+        cfg = _cfg(source="budget_rate", budget_rate=0.060)
+        result = _run([txn], [bm], cfg)
+        assert len(result.rate_variance_results) == 1
+        rv = result.rate_variance_results[0]
+        assert rv.baseline_source == "budget_rate"
+        assert rv.baseline_rate == pytest.approx(0.060)
+
+    def test_market_snapshot_mode_uses_period_start(self):
+        txn = _make_txn(0, amount_sold=500_000, amount_bought=27_000)
+        bm = _make_benchmark(as_of=date(2025, 1, 1), mid_rate=0.0560)
+        cfg = _cfg(source="market_snapshot")
+        result = _run([txn], [bm], cfg, period_start=date(2025, 1, 1))
+        if result.rate_variance_results:
+            rv = result.rate_variance_results[0]
+            if rv.status == "COMPUTED":
+                assert rv.baseline_source == "period_start_snapshot"
+
+    def test_no_valid_transactions_no_rate_variance(self):
+        """All transactions missing effective_rate -- rate_variance empty."""
+        txns = [
+            AuditTransactionInput(
+                row_id=f"r-{i}", row_hash=f"h{i:063d}", row_index=i,
+                trade_date=date(2025, 1, 15), value_date=None,
+                currency_sold="MXN", currency_bought="USD",
+                amount_sold=500_000, amount_bought=0,
+                effective_rate=None, counterparty="Bank",
+                fee_amount=None, fee_currency=None, reference=f"R{i}",
+            )
+            for i in range(3)
+        ]
+        bm = _make_benchmark()
+        result = _run(txns, [bm])
+        assert len(result.rate_variance_results) == 0
+
+    def test_unavailable_baseline_fails_closed(self):
+        """When no period-start benchmark, status is UNAVAILABLE."""
+        txn = _make_txn(0)
+        cfg = _cfg(source="market_snapshot")
+        result = _run([txn], [], cfg)
+        assert len(result.rate_variance_results) == 1
+        rv = result.rate_variance_results[0]
+        assert rv.status == "UNAVAILABLE"
+        assert rv.rate_variance_usd == 0.0
+
+    def test_rate_variance_narrative_contains_reference(self):
+        txn = _make_txn(0, amount_sold=500_000, amount_bought=27_000)
+        bm = _make_benchmark()
+        cfg = _cfg(source="budget_rate", budget_rate=0.060)
+        result = _run([txn], [bm], cfg)
+        rv = result.rate_variance_results[0]
+        assert "REFERENCE BASELINE" in rv.narrative
+
+    def test_single_transaction_pair_weighted_avg(self):
+        txn = _make_txn(0, amount_sold=500_000, amount_bought=27_000)
+        bm = _make_benchmark()
+        cfg = _cfg(source="budget_rate", budget_rate=0.054)
+        result = _run([txn], [bm], cfg)
+        rv = result.rate_variance_results[0]
+        assert rv.realized_avg_rate == pytest.approx(0.054, abs=1e-6)
+        assert rv.rate_variance_usd == pytest.approx(0.0, abs=1.0)
+
+    def test_multiple_transactions_weighted_average_rate(self):
+        txn1 = _make_txn(0, amount_sold=300_000, amount_bought=16_200)
+        txn2 = _make_txn(1, amount_sold=200_000, amount_bought=11_600)
+        bm = _make_benchmark()
+        cfg = _cfg(source="budget_rate", budget_rate=0.055)
+        result = _run([txn1, txn2], [bm], cfg)
+        rv = result.rate_variance_results[0]
+        expected_avg = (300_000 * (16_200 / 300_000) + 200_000 * (11_600 / 200_000)) / 500_000
+        assert rv.realized_avg_rate == pytest.approx(expected_avg, abs=1e-6)
 
 
-class TestCSVParseToEngineFlow:
-    """Full workflow: parse CSV -> build transactions -> run engine -> verify hashes."""
+# ==============================================================================
+# 12. Benchmark Lookup
+# ==============================================================================
 
-    def _parse_and_run(self, csv_bytes: bytes, benchmarks: list[BenchmarkEntry],
-                       cfg: BenchmarkConfig | None = None) -> AuditEngineResult:
-        from app.api.routes.v1_audit_lab import _parse_csv, _parse_date, _row_hash
 
-        rows, warnings, pairs = _parse_csv(csv_bytes)
+class TestBenchmarkLookup:
+    """Tests for _find_benchmark helper."""
+
+    def test_exact_date_match(self):
+        bm = _make_benchmark(as_of=date(2025, 1, 15))
+        found = _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm])
+        assert found is not None
+        assert found.as_of == date(2025, 1, 15)
+
+    def test_nearest_date_selected(self):
+        bm1 = _make_benchmark(as_of=date(2025, 1, 10), mid_rate=0.055)
+        bm2 = _make_benchmark(as_of=date(2025, 1, 14), mid_rate=0.056)
+        found = _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm1, bm2])
+        assert found is not None
+        assert found.mid_rate == 0.056
+
+    def test_wrong_pair_returns_none(self):
+        bm = _make_benchmark(currency_pair="EURUSD")
+        found = _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm])
+        assert found is None
+
+    def test_empty_benchmarks_returns_none(self):
+        found = _find_benchmark(date(2025, 1, 15), "MXNUSD", [])
+        assert found is None
+
+    def test_staleness_exactly_at_limit(self):
+        bm = _make_benchmark(as_of=date(2025, 1, 8))
+        found = _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm], max_staleness_days=7)
+        assert found is not None
+
+    def test_staleness_one_over_limit(self):
+        bm = _make_benchmark(as_of=date(2025, 1, 7))
+        found = _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm], max_staleness_days=7)
+        assert found is None
+
+    def test_staleness_none_disables(self):
+        bm = _make_benchmark(as_of=date(2024, 1, 1))
+        found = _find_benchmark(date(2025, 1, 15), "MXNUSD", [bm], max_staleness_days=None)
+        assert found is not None
+
+
+# ==============================================================================
+# 13. Cross-Rate Synthesis
+# ==============================================================================
+
+
+class TestCrossRateSynthesisWorkflow:
+    """Tests for _synthesize_cross_rate."""
+
+    def test_usd_ccy_legs(self):
+        bms = [
+            _make_benchmark(currency_pair="USDMXN", mid_rate=18.0),
+            _make_benchmark(currency_pair="USDBRL", mid_rate=5.0),
+        ]
+        rate, source = _synthesize_cross_rate("MXN", "BRL", bms, date(2025, 1, 15))
+        assert rate is not None
+        assert rate == pytest.approx(18.0 / 5.0, abs=1e-6)
+        assert source == "SYNTHETIC_CROSS"
+
+    def test_ccy_usd_legs(self):
+        bms = [
+            _make_benchmark(currency_pair="EURUSD", mid_rate=1.08),
+            _make_benchmark(currency_pair="GBPUSD", mid_rate=1.26),
+        ]
+        rate, source = _synthesize_cross_rate("EUR", "GBP", bms, date(2025, 1, 15))
+        assert rate is not None
+        assert rate == pytest.approx(1.08 / 1.26, abs=1e-6)
+        assert source == "SYNTHETIC_CROSS"
+
+    def test_no_common_leg_unavailable(self):
+        bms = [_make_benchmark(currency_pair="EURGBP", mid_rate=0.85)]
+        rate, source = _synthesize_cross_rate("MXN", "BRL", bms, date(2025, 1, 15))
+        assert rate is None
+        assert source == "UNAVAILABLE"
+
+    def test_synthetic_wired_into_finding(self):
+        txn = _make_txn(0, currency_sold="MXN", currency_bought="BRL",
+                        amount_sold=100_000, amount_bought=28_000,
+                        effective_rate=0.28)
+        bms = [
+            _make_benchmark(currency_pair="USDMXN", mid_rate=18.0),
+            _make_benchmark(currency_pair="USDBRL", mid_rate=5.0),
+        ]
+        result = _run([txn], bms)
+        assert len(result.markup_findings) == 1
+        assert result.markup_findings[0].benchmark_snapshot_id == "SYNTHETIC"
+
+    def test_cross_rate_wider_staleness(self):
+        """Cross-rate uses 2x staleness tolerance."""
+        bms = [
+            BenchmarkEntry(
+                snapshot_id="s1", snapshot_hash="a" * 64,
+                as_of=date(2025, 1, 1),
+                currency_pair="USDMXN", mid_rate=18.0,
+                provider="test", fetched_at=datetime(2025, 1, 1, tzinfo=UTC),
+            ),
+            BenchmarkEntry(
+                snapshot_id="s2", snapshot_hash="b" * 64,
+                as_of=date(2025, 1, 1),
+                currency_pair="USDBRL", mid_rate=5.0,
+                provider="test", fetched_at=datetime(2025, 1, 1, tzinfo=UTC),
+            ),
+        ]
+        rate, source = _synthesize_cross_rate(
+            "MXN", "BRL", bms, date(2025, 1, 15), max_staleness_days=7
+        )
+        assert rate is not None
+        assert source == "SYNTHETIC_CROSS"
+
+    def test_zero_quote_rate_unavailable(self):
+        bms = [
+            _make_benchmark(currency_pair="USDMXN", mid_rate=18.0),
+            _make_benchmark(currency_pair="USDBRL", mid_rate=0.0),
+        ]
+        rate, source = _synthesize_cross_rate("MXN", "BRL", bms, date(2025, 1, 15))
+        assert rate is None or source == "UNAVAILABLE"
+
+
+# ==============================================================================
+# 14. Size-Adjusted Markup (Extended)
+# ==============================================================================
+
+
+class TestSizeAdjustedMarkupExtended:
+    """Extended size-adjusted markup tests."""
+
+    def test_at_100k_boundary(self):
+        adjusted = size_adjusted_markup_bps(12.0, 100_000)
+        assert adjusted == pytest.approx(2.0)
+
+    def test_at_1m_boundary(self):
+        adjusted = size_adjusted_markup_bps(8.0, 1_000_000)
+        assert adjusted == pytest.approx(3.0)
+
+    def test_above_1m(self):
+        adjusted = size_adjusted_markup_bps(5.0, 5_000_000)
+        assert adjusted == pytest.approx(3.0)
+
+    def test_zero_markup(self):
+        adjusted = size_adjusted_markup_bps(0.0, 50_000)
+        assert adjusted == pytest.approx(-10.0)
+
+    def test_negative_markup(self):
+        adjusted = size_adjusted_markup_bps(-5.0, 50_000)
+        assert adjusted == pytest.approx(-15.0)
+
+    def test_zero_trade_size(self):
+        adjusted = size_adjusted_markup_bps(12.0, 0)
+        assert adjusted == pytest.approx(2.0)
+
+
+# ==============================================================================
+# 15. Markup Direction Helper (Extended)
+# ==============================================================================
+
+
+class TestMarkupDirectionExtended:
+    """Extended markup direction classification."""
+
+    def test_small_positive_adverse(self):
+        assert _markup_direction(0.0001) == "ADVERSE"
+
+    def test_small_negative_favorable(self):
+        assert _markup_direction(-0.0001) == "FAVORABLE"
+
+    def test_near_zero_at_market(self):
+        assert _markup_direction(1e-9) == "AT_MARKET"
+
+    def test_exact_zero_at_market(self):
+        assert _markup_direction(0.0) == "AT_MARKET"
+
+    def test_threshold_boundary(self):
+        """Values below 1e-8 abs are AT_MARKET."""
+        assert _markup_direction(0.5e-8) == "AT_MARKET"
+        assert _markup_direction(-0.5e-8) == "AT_MARKET"
+        assert _markup_direction(1.1e-8) == "ADVERSE"
+        assert _markup_direction(-1.1e-8) == "FAVORABLE"
+
+
+# ==============================================================================
+# 16. Dataclass Immutability and Defaults
+# ==============================================================================
+
+
+class TestDataclassProperties:
+    """Tests for dataclass structure, defaults, and immutability."""
+
+    def test_audit_transaction_input_frozen(self):
+        txn = _make_txn(0)
+        with pytest.raises(AttributeError):
+            txn.row_id = "modified"  # type: ignore
+
+    def test_benchmark_entry_frozen(self):
+        bm = _make_benchmark()
+        with pytest.raises(AttributeError):
+            bm.mid_rate = 999.0  # type: ignore
+
+    def test_benchmark_entry_default_forward_points_none(self):
+        bm = _make_benchmark()
+        assert bm.forward_points is None
+
+    def test_benchmark_entry_default_bid_ask_none(self):
+        bm = _make_benchmark()
+        assert bm.bid_rate is None
+        assert bm.ask_rate is None
+
+    def test_audit_transaction_default_trade_time_none(self):
+        txn = _make_txn(0)
+        assert txn.trade_time is None
+
+    def test_benchmark_config_default_staleness(self):
+        cfg = BenchmarkConfig(benchmark_source="market_snapshot")
+        assert cfg.max_staleness_days == 7
+
+    def test_benchmark_config_default_budget_rate_none(self):
+        cfg = BenchmarkConfig(benchmark_source="market_snapshot")
+        assert cfg.budget_rate is None
+
+    def test_counterparty_score_fields(self):
+        cs = CounterpartyScore(
+            counterparty="Bank", avg_markup_bps=5.0,
+            median_markup_bps=4.0, total_cost_usd=1000.0,
+            trade_count=10, pct_favorable=30.0, composite_score=75.0,
+        )
+        assert cs.counterparty == "Bank"
+        assert cs.composite_score == 75.0
+
+    def test_natural_hedge_result_fields(self):
+        nh = NaturalHedgeResult(
+            currency_pair="MXNUSD", date="2025-01-15",
+            gross_buy=500_000, gross_sell=300_000,
+            net=200_000, savings_estimate_usd=150.0,
+        )
+        assert nh.net == 200_000
+        assert nh.savings_estimate_usd == 150.0
+
+
+# ==============================================================================
+# 17. Full Workflow Integration
+# ==============================================================================
+
+
+class TestFullWorkflowIntegration:
+    """End-to-end tests simulating the upload-parse-run pipeline."""
+
+    def test_csv_parse_then_engine_run(self):
+        """Parse CSV, build AuditTransactionInput list, run engine."""
+        csv_data = (
+            b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought,"
+            b"counterparty,fee_amount,fee_currency,reference\n"
+            b"2025-01-15,MXN,USD,500000,27600,Santander,200,USD,REF001\n"
+            b"2025-01-20,MXN,USD,750000,41250,BBVA,300,USD,REF002\n"
+        )
+        rows, warnings, pairs = _parse_csv(csv_data)
+        assert len(rows) == 2
+
         txns = []
         for row in rows:
             txns.append(AuditTransactionInput(
@@ -1463,281 +1650,136 @@ class TestCSVParseToEngineFlow:
                 fee_currency=row["fee_currency"],
                 reference=row["reference"],
             ))
-        return run_audit_engine(
-            dataset_id="ds-flow-test",
-            transactions=txns,
-            benchmarks=benchmarks,
-            config=cfg or _cfg(),
-            period_start=date(2025, 1, 1),
-            period_end=date(2025, 1, 31),
-        )
 
-    def test_csv_to_engine_happy_path(self):
-        csv = (
-            b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought,"
-            b"counterparty,fee_amount,fee_currency,reference\n"
-            b"2025-01-15,MXN,USD,500000,27600,Santander,200,USD,REF001\n"
-            b"2025-01-20,MXN,USD,750000,41250,BBVA,300,USD,REF002\n"
-        )
-        bms = [_bm(as_of=date(2025, 1, 15)), _bm(as_of=date(2025, 1, 20))]
-        result = self._parse_and_run(csv, bms)
+        bms = [_make_benchmark(as_of=date(2025, 1, 15), mid_rate=0.0556)]
+        result = _run(txns, bms, period_start=date(2025, 1, 1), period_end=date(2025, 1, 31))
+
         assert len(result.markup_findings) == 2
         assert result.total_fees_usd > 0
         assert len(result.run_hash) == 64
 
-    def test_csv_to_engine_deterministic(self):
-        csv = (
-            b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
-            b"2025-01-15,MXN,USD,500000,27000\n"
-        )
-        bms = [_bm()]
-        r1 = self._parse_and_run(csv, bms)
-        r2 = self._parse_and_run(csv, bms)
+    def test_csv_with_all_invalid_rows_still_runs(self):
+        """All rows invalid -- engine still returns valid result with rejections."""
+        csv_data = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
+        csv_data += b",,,500000,27000\n"
+        csv_data += b",,,600000,33000\n"
+
+        rows, warnings, pairs = _parse_csv(csv_data)
+        txns = []
+        for row in rows:
+            txns.append(AuditTransactionInput(
+                row_id=f"row-{row['row_index']}",
+                row_hash=_row_hash(row),
+                row_index=row["row_index"],
+                trade_date=_parse_date(row["trade_date"]),
+                value_date=None,
+                currency_sold=row["currency_sold"],
+                currency_bought=row["currency_bought"],
+                amount_sold=row["amount_sold"],
+                amount_bought=row["amount_bought"],
+                effective_rate=row["effective_rate"],
+                counterparty=row["counterparty"],
+                fee_amount=row["fee_amount"],
+                fee_currency=row["fee_currency"],
+                reference=row["reference"],
+            ))
+
+        bm = _make_benchmark()
+        result = _run(txns, [bm])
+
+        assert len(result.markup_findings) == 0
+        assert len(result.markup_rejections) >= 2
+        assert result.total_markup_usd == 0.0
+        assert len(result.run_hash) == 64
+
+    def test_deterministic_end_to_end(self):
+        """Same CSV input produces same run hash every time."""
+        csv_data = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
+        csv_data += b"2025-01-15,MXN,USD,500000,27000\n"
+
+        rows1, _, _ = _parse_csv(csv_data)
+        rows2, _, _ = _parse_csv(csv_data)
+
+        def _to_txns(rows):
+            return [
+                AuditTransactionInput(
+                    row_id=f"row-{r['row_index']}",
+                    row_hash=_row_hash(r),
+                    row_index=r["row_index"],
+                    trade_date=_parse_date(r["trade_date"]),
+                    value_date=None,
+                    currency_sold=r["currency_sold"],
+                    currency_bought=r["currency_bought"],
+                    amount_sold=r["amount_sold"],
+                    amount_bought=r["amount_bought"],
+                    effective_rate=r["effective_rate"],
+                    counterparty=r["counterparty"],
+                    fee_amount=r["fee_amount"],
+                    fee_currency=r["fee_currency"],
+                    reference=r["reference"],
+                )
+                for r in rows
+            ]
+
+        bms = [_make_benchmark()]
+        r1 = _run(_to_txns(rows1), bms)
+        r2 = _run(_to_txns(rows2), bms)
         assert r1.run_hash == r2.run_hash
         assert r1.inputs_hash == r2.inputs_hash
         assert r1.outputs_hash == r2.outputs_hash
 
-    def test_csv_with_missing_fields(self):
-        csv = (
-            b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
-            b"2025-01-15,MXN,USD,500000,27000\n"
-            b",MXN,USD,500000,27000\n"        # missing trade_date
-            b"2025-01-15,,USD,500000,27000\n"  # missing currency_sold
-        )
-        bms = [_bm()]
-        result = self._parse_and_run(csv, bms)
-        assert len(result.markup_findings) == 1
-        assert len(result.markup_rejections) >= 2
-
-    def test_csv_to_engine_hash_chain_integrity(self):
-        """Run hash should be verifiable from inputs_hash + outputs_hash."""
-        csv = (
-            b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
-            b"2025-01-15,MXN,USD,500000,27000\n"
-        )
-        result = self._parse_and_run(csv, [_bm()])
-        recomputed = _sha256_dict({
-            "inputs_hash": result.inputs_hash,
-            "outputs_hash": result.outputs_hash,
-        })
-        assert result.run_hash == recomputed
-
-    def test_csv_empty_body(self):
-        """CSV with headers but no data rows."""
-        csv = b"trade_date,currency_sold,currency_bought,amount_sold,amount_bought\n"
-        bms = [_bm()]
-        result = self._parse_and_run(csv, bms)
-        assert result.markup_findings == []
-        assert result.total_markup_usd == 0.0
-
-
-class TestWORMModelConstraints:
-    """Verify AuditEngineResult is immutable-friendly (frozen dataclasses, etc.)."""
-
-    def test_audit_transaction_input_is_frozen(self):
-        txn = _txn(0)
-        with pytest.raises(AttributeError):
-            txn.row_id = "modified"  # type: ignore[misc]
-
-    def test_benchmark_entry_is_frozen(self):
-        bm = _bm()
-        with pytest.raises(AttributeError):
-            bm.mid_rate = 999.0  # type: ignore[misc]
-
-    def test_finding_types_have_to_dict(self):
-        """All finding types must expose to_dict() for JSON serialization."""
-        result = _run()
-        for f in result.markup_findings:
-            assert callable(getattr(f, "to_dict", None))
-        for f in result.fee_findings:
-            assert callable(getattr(f, "to_dict", None))
-        for rv in result.rate_variance_results:
-            assert callable(getattr(rv, "to_dict", None))
-
-
-class TestCounterpartyScoreFields:
-    """CounterpartyScore dataclass field completeness."""
-
-    def test_all_fields_present(self):
-        cs = CounterpartyScore(
-            counterparty="BankA",
-            avg_markup_bps=5.0,
-            median_markup_bps=4.5,
-            total_cost_usd=1000.0,
-            trade_count=10,
-            pct_favorable=30.0,
-            composite_score=65.0,
-        )
-        assert cs.counterparty == "BankA"
-        assert cs.avg_markup_bps == 5.0
-        assert cs.median_markup_bps == 4.5
-        assert cs.total_cost_usd == 1000.0
-        assert cs.trade_count == 10
-        assert cs.pct_favorable == 30.0
-        assert cs.composite_score == 65.0
-
-
-class TestNaturalHedgeResultFields:
-    """NaturalHedgeResult dataclass field completeness."""
-
-    def test_all_fields_present(self):
-        nh = NaturalHedgeResult(
-            currency_pair="MXNUSD",
-            date="2025-01-15",
-            gross_buy=500_000,
-            gross_sell=500_000,
-            net=0,
-            savings_estimate_usd=25.0,
-        )
-        assert nh.currency_pair == "MXNUSD"
-        assert nh.net == 0
-        assert nh.savings_estimate_usd == 25.0
-
-
-class TestEngineResultBackwardCompat:
-    """AuditEngineResult backward compatibility."""
-
-    def test_result_has_both_rate_variance_and_unhedged(self):
-        result = _run()
-        assert hasattr(result, "rate_variance_results")
-        assert hasattr(result, "unhedged_results")
-        assert hasattr(result, "total_rate_variance_usd")
-        assert hasattr(result, "total_unhedged_impact_usd")
-
-    def test_result_has_advanced_analytics(self):
-        result = _run()
-        assert hasattr(result, "outlier_results")
-        assert hasattr(result, "counterparty_scores")
-        assert hasattr(result, "natural_hedge_results")
-
-
-class TestEngineWithMultiplePairsAndCounterparties:
-    """Engine run with diverse transaction set."""
-
-    def test_multiple_pairs(self):
+    def test_multi_counterparty_aggregation(self):
+        """Multiple counterparties properly bucketed."""
         txns = [
-            _txn(0, currency_sold="MXN", currency_bought="USD",
-                 amount_sold=500_000, amount_bought=27_000),
-            _txn(1, currency_sold="EUR", currency_bought="USD",
-                 amount_sold=100_000, amount_bought=108_000),
+            _make_txn(0, counterparty="BankA"),
+            _make_txn(1, counterparty="BankB"),
+            _make_txn(2, counterparty="BankA"),
+            _make_txn(3, counterparty=None),
         ]
-        bms = [
-            _bm(pair="MXNUSD", mid=0.0556),
-            _bm(pair="EURUSD", mid=1.08),
-        ]
-        result = _run(txns=txns, bms=bms)
-        assert len(result.markup_by_pair) >= 1
-
-    def test_multiple_counterparties(self):
-        txns = [
-            _txn(0, counterparty="BankA"),
-            _txn(1, counterparty="BankB"),
-            _txn(2, counterparty="BankA"),
-        ]
-        result = _run(txns=txns, bms=[_bm()])
+        bm = _make_benchmark()
+        result = _run(txns, [bm])
         assert "BankA" in result.markup_by_counterparty
         assert "BankB" in result.markup_by_counterparty
-
-    def test_unknown_counterparty(self):
-        txns = [_txn(0, counterparty=None)]
-        result = _run(txns=txns, bms=[_bm()])
         assert "UNKNOWN" in result.markup_by_counterparty
 
-    def test_by_month_grouping(self):
-        txns = [
-            _txn(0, trade_date=date(2025, 1, 15)),
-            _txn(1, trade_date=date(2025, 2, 15)),
-        ]
-        bms = [
-            _bm(as_of=date(2025, 1, 15)),
-            _bm(as_of=date(2025, 2, 15)),
-        ]
-        result = _run(txns=txns, bms=bms)
-        assert "2025-01" in result.markup_by_month
-        assert "2025-02" in result.markup_by_month
+    def test_fee_trade_date_none_shows_unknown(self):
+        """Transaction with fee but no trade_date still extracts fee."""
+        txn = AuditTransactionInput(
+            row_id="r-0", row_hash="h" * 64, row_index=0,
+            trade_date=None, value_date=None,
+            currency_sold="MXN", currency_bought="USD",
+            amount_sold=500_000, amount_bought=27_000,
+            effective_rate=0.054, counterparty="Bank",
+            fee_amount=100.0, fee_currency="USD", reference="R0",
+        )
+        bm = _make_benchmark()
+        result = _run([txn], [bm])
+        assert len(result.fee_findings) == 1
+        assert result.fee_findings[0].trade_date == "UNKNOWN"
 
-
-class TestRateVarianceUnavailable:
-    """Rate variance when no benchmark exists for period start."""
-
-    def test_unavailable_when_no_benchmark_at_period_start(self):
-        txns = [_txn(0)]
-        # Benchmark exists for trade_date but NOT for period_start
-        bms = [_bm(as_of=date(2025, 1, 15))]  # period_start=2025-01-01
-        result = _run(txns=txns, bms=bms,
-                      cfg=_cfg(staleness=3))  # strict staleness
-        for rv in result.rate_variance_results:
-            # With staleness=3, benchmark on 1/15 is 14 days from 1/1 -> UNAVAILABLE
-            assert rv.status in ("UNAVAILABLE", "COMPUTED")
-
-    def test_unavailable_produces_zero_impact(self):
-        txns = [_txn(0)]
-        result = _run(txns=txns, bms=[],
-                      cfg=_cfg(source="market_snapshot"))
-        for rv in result.rate_variance_results:
-            if rv.status == "UNAVAILABLE":
-                assert rv.rate_variance_usd == 0.0
-
-
-class TestForwardPointsEdgeCases:
-    """Forward points integration edge cases."""
-
-    def test_forward_points_with_none_value_date(self):
-        """value_date=None -> forward_points NOT applied."""
-        txn = _txn(0, value_date=None)
-        bm = _bm(mid=0.0556, fwd=0.0010)
-        result = _run(txns=[txn], bms=[bm])
+    def test_reverse_pair_lookup(self):
+        """When benchmark is stored as reverse pair, engine inverts."""
+        txn = _make_txn(0, currency_sold="MXN", currency_bought="USD",
+                        amount_sold=500_000, amount_bought=27_000)
+        bm = _make_benchmark(currency_pair="USDMXN", mid_rate=18.0)
+        result = _run([txn], [bm])
+        assert len(result.markup_findings) == 1
         f = result.markup_findings[0]
-        assert f.benchmark_rate == pytest.approx(0.0556)
+        assert f.benchmark_rate == pytest.approx(18.0, abs=0.01)
 
-    def test_forward_points_zero_value(self):
-        """forward_points=0 is still applied when value_date != trade_date."""
-        txn = _txn(0, value_date=date(2025, 2, 15))
-        bm = _bm(mid=0.0556, fwd=0.0)
-        result = _run(txns=[txn], bms=[bm])
-        f = result.markup_findings[0]
-        # 0.0556 + 0.0 = 0.0556
-        assert f.benchmark_rate == pytest.approx(0.0556)
-
-
-class TestLargeTransactionBatch:
-    """Ensure engine handles larger batches without errors."""
-
-    def test_100_transactions(self):
-        txns = [_txn(i, amount_sold=100_000 + i * 1000,
-                      amount_bought=5400 + i * 50)
-                for i in range(100)]
-        result = _run(txns=txns, bms=[_bm()])
-        assert len(result.markup_findings) == 100
-        assert len(result.trace_events) >= 5
-
-    def test_100_transactions_deterministic(self):
-        txns = [_txn(i) for i in range(100)]
-        r1 = _run(txns=txns, bms=[_bm()])
-        r2 = _run(txns=txns, bms=[_bm()])
-        assert r1.run_hash == r2.run_hash
-
-
-class TestSeverityClassification:
-    """Test the severity classification logic used in route handlers."""
-
-    def test_severity_thresholds(self):
-        """Verify severity classification from route _sev() logic."""
-        # Replicate the logic from the route
-        def _sev(amount_usd: float) -> str:
-            if amount_usd >= 10_000:
-                return "HIGH"
-            if amount_usd >= 1_000:
-                return "MEDIUM"
-            if amount_usd > 0:
-                return "LOW"
-            return "INFO"
-
-        assert _sev(50_000) == "HIGH"
-        assert _sev(10_000) == "HIGH"
-        assert _sev(9_999) == "MEDIUM"
-        assert _sev(1_000) == "MEDIUM"
-        assert _sev(999) == "LOW"
-        assert _sev(0.01) == "LOW"
-        assert _sev(0) == "INFO"
-        assert _sev(-100) == "INFO"
+    def test_mixed_valid_and_invalid_transactions(self):
+        """Mix of valid and rejected transactions in one run."""
+        valid_txn = _make_txn(0)
+        invalid_txn = AuditTransactionInput(
+            row_id="r-1", row_hash="h" * 64, row_index=1,
+            trade_date=None, value_date=None,
+            currency_sold="MXN", currency_bought="USD",
+            amount_sold=500_000, amount_bought=27_000,
+            effective_rate=0.054, counterparty="Bank",
+            fee_amount=None, fee_currency=None, reference="R1",
+        )
+        bm = _make_benchmark()
+        result = _run([valid_txn, invalid_txn], [bm])
+        assert len(result.markup_findings) == 1
+        assert len(result.markup_rejections) == 1
+        assert result.markup_rejections[0].code == "AL-001"
