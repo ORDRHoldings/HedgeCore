@@ -108,12 +108,12 @@ const NAV: NavSection[] = [
     prefixes: ["/reports"],
     header: "Report Studio",
     items: [
-      { label: "Report Studio",     desc: "30 presets, AI composer, export",   href: "/reports",              icon: FileText },
-      { label: "Preset Library",    desc: "Board/treasury/risk/audit presets", href: "/reports?view=library", icon: Book },
-      { label: "AI Report Builder", desc: "Goal-driven AI composer",           href: "/reports?view=builder", icon: Zap },
-      { label: "Saved Reports",     desc: "Versioned and scheduled reports",   href: "/reports?view=saved",   icon: Shield },
-      { label: "Run Results",       desc: "Hedge schedule with rationale",     href: "/results",              icon: BarChart3 },
-      { label: "Committee Pack",    desc: "IFRS 9 hedge effectiveness pack",   href: "/committee-pack",       icon: Download },
+      { label: "Studio",            desc: "Split-pane report builder + export", href: "/reports",                  icon: FileText },
+      { label: "Library",           desc: "30 preset templates by category",    href: "/reports?tab=library",      icon: Book },
+      { label: "Saved",             desc: "Versioned saved reports",            href: "/reports?tab=saved",        icon: Shield },
+      { label: "Regulatory",        desc: "EMIR, MiFID, Dodd-Frank downloads", href: "/reports?tab=regulatory",   icon: Zap },
+      { label: "Run Results",       desc: "Hedge schedule with rationale",      href: "/results",                  icon: BarChart3 },
+      { label: "Committee Pack",    desc: "IFRS 9 hedge effectiveness pack",    href: "/committee-pack",           icon: Download },
     ],
   },
   {
