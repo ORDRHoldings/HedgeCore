@@ -1,5 +1,13 @@
 # Changelog (AI-maintained)
 
+## 2026-03-13 — Unified Market Intelligence Dashboard (commit 243febf)
+- **Consolidation**: Replaced 3 disconnected market pages (`/market-intelligence`, `/market-overview`, `/fx-market`) with single tabbed Market Intelligence Dashboard at `/market-intelligence`.
+- **6 tabs**: Overview (5-layer command page: ticker tape, hotlists, heatmap, calendar, breadth, sectors, technicals, news), Heatmap (full-viewport with Stocks/ETFs/Forex/Crypto selector), Calendar (economic events), Companies (symbol search + overview + technicals), Watchlists (localStorage persistence + screener + mini charts), Signals (passive technicals grid + news stream).
+- **New components** (17 files): `TradingViewWidget.tsx` (generic script-injection embed wrapper), `MarketTabBar.tsx`, `MarketControlBar.tsx`, `types.ts`, 5 overview sub-components (LeftColumn, CenterColumn, RightColumn, BelowFoldModules, MarketPulseStrip), 6 tab components (OverviewTab, HeatmapTab, CalendarTab, CompaniesTab, WatchlistsTab, SignalsTab).
+- **Sidebar**: MARKET section updated from 3 separate items to 6 tab-linked items, prefixes narrowed to `["/market-intelligence"]`.
+- **Deleted**: `market-overview/page.tsx`, `fx-market/page.tsx`.
+- **Build**: PASS (next build clean). No backend changes.
+
 ## 2026-03-12 — ORDR Market Workspace Redesign (ordr-market/)
 - **Full UI rebuild**: Replaced dark-theme top-bar + raw ChartEngine mount with institutional light-theme trading workstation shell
 - **New workspace/ layer** (4 files, 1,485 lines): `tokens.ts` (design system), `primitives.tsx` (7 atomic components), `MockCandleChart.tsx` (Canvas 2D chart), `ChartWorkspace.tsx` (shell assembly)

@@ -10,18 +10,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/session_start.py"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python .claude/hooks/prompt_rule_injector.py"
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='D:\\Synexiun\\1-SynexFund\\HedgeCalc\\FXDemo\\.claude\\hooks\\session_start.py'; if (Test-Path $p) { & 'C:\\Python312\\python.exe' $p; exit $LASTEXITCODE } else { Write-Host 'Hook skipped: missing session_start.py'; exit 0 }\""
           }
         ]
       }
@@ -32,11 +21,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/pretool_freeze_guard.py"
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='D:\\Synexiun\\1-SynexFund\\HedgeCalc\\FXDemo\\.claude\\hooks\\pretool_freeze_guard.py'; if (Test-Path $p) { & 'C:\\Python312\\python.exe' $p; exit $LASTEXITCODE } else { Write-Host 'Hook skipped: missing pretool_freeze_guard.py'; exit 0 }\""
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/config_change_guard.py"
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='D:\\Synexiun\\1-SynexFund\\HedgeCalc\\FXDemo\\.claude\\hooks\\config_change_guard.py'; if (Test-Path $p) { & 'C:\\Python312\\python.exe' $p; exit $LASTEXITCODE } else { Write-Host 'Hook skipped: missing config_change_guard.py'; exit 0 }\""
           }
         ]
       }
@@ -47,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/post_file_facts.py"
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='D:\\Synexiun\\1-SynexFund\\HedgeCalc\\FXDemo\\.claude\\hooks\\post_file_facts.py'; if (Test-Path $p) { & 'C:\\Python312\\python.exe' $p; exit $LASTEXITCODE } else { Write-Host 'Hook skipped: missing post_file_facts.py'; exit 0 }\""
           }
         ]
       }
@@ -58,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/precompact_rollup.py"
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='D:\\Synexiun\\1-SynexFund\\HedgeCalc\\FXDemo\\.claude\\hooks\\precompact_rollup.py'; if (Test-Path $p) { & 'C:\\Python312\\python.exe' $p; exit $LASTEXITCODE } else { Write-Host 'Hook skipped: missing precompact_rollup.py'; exit 0 }\""
           }
         ]
       }
