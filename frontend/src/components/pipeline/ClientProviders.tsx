@@ -39,6 +39,9 @@ const VoiceTerminal = dynamic(() => import("../voice/VoiceTerminal"), { ssr: fal
 // Public routes: no sidebar, no voice, full viewport
 const PUBLIC_ROUTES = ["/", "/market"];
 
+// Marketing route prefixes: no sidebar, no voice (matched via startsWith)
+const MARKETING_PREFIXES = ["/products", "/solutions", "/pricing", "/about", "/contact"];
+
 // Auth pages where the voice assistant should NOT appear
 const AUTH_PREFIXES = ["/auth", "/login", "/register"];
 
@@ -62,9 +65,10 @@ function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
 
   // Public routes: no sidebar, no voice, full viewport
-  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname) ||
+    MARKETING_PREFIXES.some(p => pathname === p || pathname.startsWith(p + "/"));
   if (isPublicRoute) {
-    // Canvas-based routes (chart/market) need overflow hidden; landing page scrolls naturally
+    // Canvas-based routes (chart/market) need overflow hidden; landing/marketing pages scroll naturally
     const isCanvasRoute = pathname === "/market";
     const publicStyle: React.CSSProperties = isCanvasRoute
       ? { height: "100vh", overflow: "hidden" }
