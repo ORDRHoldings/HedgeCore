@@ -75,7 +75,7 @@ const NAV_ITEMS: NavItem[] = [
     description: "30 presets + AI composer", permission: "reports.view_own_branch",
   },
   {
-    id: "fxrates", label: "FX Rates", shortcut: "F", route: "/fx-market",
+    id: "fxrates", label: "FX Rates", shortcut: "F", route: "/market-intelligence",
     Icon: Globe, color: "#EC4899", glow: "rgba(236,72,153,0.15)",
     description: "Spot, forwards, vol", permission: null,
   },

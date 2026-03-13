@@ -224,7 +224,7 @@ export default function DashboardPage() {
               desc="Track live hedges, MTM P&L, drift alerts."
             />
             <MissionCard
-              href="/market-overview"
+              href="/market-intelligence"
               icon={BarChart3}
               title="Market Data"
               stat={data?.marketOnline ? "LIVE" : "OFFLINE"}

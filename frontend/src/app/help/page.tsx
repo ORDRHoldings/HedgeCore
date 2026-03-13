@@ -55,7 +55,7 @@ const GUIDE_NAV: Array<{ id: string; title: string; icon: string; path: string }
   { id: "sandbox-simulation", title: "Sandbox & Simulation",    icon: "🧪", path: "/sandbox" },
   { id: "execution-pipeline", title: "Execution Pipeline",      icon: "▶",  path: "/hedge-desk" },
   { id: "execution-bridge",   title: "Execution Bridge",        icon: "⇄",  path: "/execution" },
-  { id: "fx-rates",           title: "FX Rates",                icon: "₿",  path: "/market-overview" },
+  { id: "fx-rates",           title: "FX Rates",                icon: "₿",  path: "/market-intelligence" },
   { id: "polisophic",         title: "Polisophic Risk Intel",   icon: "🌍", path: "/polisophic" },
   { id: "governance",         title: "Governance & Audit",      icon: "🔒", path: "/audit-trail" },
   { id: "troubleshooting",    title: "Troubleshooting",         icon: "⚠",  path: "/help" },
@@ -69,7 +69,7 @@ const QUICK_LINKS = [
   { label: "Policy Engine",      path: "/policies" },
   { label: "Sandbox",            path: "/sandbox" },
   { label: "Execution",          path: "/hedge-desk" },
-  { label: "FX Rates",           path: "/market-overview" },
+  { label: "FX Rates",           path: "/market-intelligence" },
   { label: "Audit Trail",        path: "/audit-trail" },
   { label: "HedgeWiki",          path: "/hedgewiki" },
 ];

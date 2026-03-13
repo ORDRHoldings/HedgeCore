@@ -46,7 +46,7 @@ const AUTH_PREFIXES = ["/auth", "/login", "/register"];
 const PIPELINE_PREFIXES = [
   "/sandbox",
   "/execution",
-  "/market-overview",
+  "/market-intelligence",
   "/position-desk",
 ];
 

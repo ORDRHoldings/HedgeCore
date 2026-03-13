@@ -82,7 +82,7 @@ const QUICK_LINKS = [
   { label: "Execution",      path: "/hedge-desk",     Icon: Rocket        },
   { label: "Sandbox",        path: "/sandbox",       Icon: FlaskConical  },
   { label: "Reports",        path: "/reports",       Icon: FileBarChart  },
-  { label: "FX Rates",       path: "/market-overview",   Icon: Globe2        },
+  { label: "FX Rates",       path: "/market-intelligence",   Icon: Globe2        },
   { label: "Audit Trail",    path: "/audit-trail",   Icon: BookOpen      },
   { label: "Polisophic",     path: "/polisophic",    Icon: Landmark      },
   { label: "Connectors",     path: "/connectors",    Icon: Cpu           },

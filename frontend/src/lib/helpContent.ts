@@ -530,7 +530,7 @@ export const POSITION_DESK_HELP: HelpPanelConfig = {
         label:    "Step 1 of 7 — Position Management",
         description:
           "The Position Desk is the starting point of the hedge workflow. Raw FX exposures (AR receivables, AP payables) are loaded here, either via CSV import, ERP connector, or manual entry. Positions flow through the lifecycle: NEW → POLICY_ASSIGNED → READY_TO_EXECUTE → HEDGED.",
-        next: { label: "FX Market Data", href: "/market-overview" },
+        next: { label: "FX Market Data", href: "/market-intelligence" },
       },
     },
     {
@@ -1045,7 +1045,7 @@ export const SCENARIO_STUDIO_HELP: HelpPanelConfig = {
         label:    "Step 3 of 7 — Scenario Analysis",
         description:
           "The Scenario Studio sits between market data and execution. It runs stress tests and Monte Carlo simulations to quantify hedge effectiveness under various market shocks, informing the hedge ratio and tenor decisions before execution.",
-        prev: { label: "FX Market Data", href: "/market-overview" },
+        prev: { label: "FX Market Data", href: "/market-intelligence" },
         next: { label: "Execution Hub", href: "/hedge-desk" },
       },
     },
@@ -1219,7 +1219,7 @@ export const SANDBOX_HELP: HelpPanelConfig = {
         label:    "Step 3 (Alt) — Simulation",
         description:
           "The Sandbox is the advanced simulation environment. It mirrors the live execution workflow but runs in a non-committing mode, allowing full analysis without creating audit events or modifying positions.",
-        prev: { label: "FX Rates", href: "/market-overview" },
+        prev: { label: "FX Rates", href: "/market-intelligence" },
         next: { label: "Execution Hub", href: "/hedge-desk" },
       },
     },
@@ -2297,7 +2297,7 @@ export const INPUT_HELP: HelpPanelConfig = {
         total:       7,
         label:       "Step 3 of 7 — Run Engine",
         description: "Input is the engine trigger. After loading positions (step 1) and market data (step 2), you bind a hedge policy and launch a deterministic calculation run. Output flows to Sandbox (step 4) for stress testing.",
-        prev: { label: "Market Data", href: "/market-overview" },
+        prev: { label: "Market Data", href: "/market-intelligence" },
         next: { label: "Sandbox",     href: "/sandbox" },
       },
     },
@@ -2387,7 +2387,7 @@ export const INPUT_HELP: HelpPanelConfig = {
       type:  "workflow",
       steps: [
         { step: 1, label: "Load Positions",      description: "Navigate to Position Desk, upload your FX exposure CSV, confirm lifecycle transitions to POLICY_ASSIGNED.", link: "/position-desk" },
-        { step: 2, label: "Fetch Market Data",   description: "Go to Currency FX, confirm spot rates and forward curve are live (green badge). Stale data shows a warning.", link: "/market-overview" },
+        { step: 2, label: "Fetch Market Data",   description: "Go to Currency FX, confirm spot rates and forward curve are live (green badge). Stale data shows a warning.", link: "/market-intelligence" },
         { step: 3, label: "Bind Policy",         description: "In the Input page, select the active hedge policy from the dropdown. The policy card shows all parameters." },
         { step: 4, label: "Run Engine",          description: "Click RUN HEDGE ENGINE. The engine executes deterministically — same inputs always produce the same output." },
         { step: 5, label: "Review Results",      description: "Output appears in Run Viewer. Review bucket breakdown, hedge notionals, costs, and effectiveness score.", link: "/run-viewer" },
@@ -3323,7 +3323,7 @@ export const HELP_CENTER_HELP: HelpPanelConfig = {
       type:  "workflow",
       steps: [
         { step: 1, label: "Position Desk",    description: "Upload FX positions via CSV or connect your ERP. Review lifecycle transitions to POLICY_ASSIGNED.", link: "/position-desk" },
-        { step: 2, label: "Market Data",      description: "Fetch live FX rates and 12-month forward curves. Confirm rates are live (green badge) before running.", link: "/market-overview" },
+        { step: 2, label: "Market Data",      description: "Fetch live FX rates and 12-month forward curves. Confirm rates are live (green badge) before running.", link: "/market-intelligence" },
         { step: 3, label: "Run Engine",       description: "Bind a policy and trigger the deterministic calculation engine. Review hedge notionals and costs.", link: "/position-desk" },
         { step: 4, label: "Sandbox",          description: "Stress-test your hedge plan against historical FX scenarios. Review scenario P&L and adjust if needed.", link: "/sandbox" },
         { step: 5, label: "Stage & Approve",  description: "Submit calculation run for 4-eyes supervisor approval. Track through PENDING → APPROVED.", link: "/staging" },
