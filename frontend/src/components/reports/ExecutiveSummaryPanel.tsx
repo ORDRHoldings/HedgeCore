@@ -13,6 +13,8 @@ import type {
 } from '../../api/types';
 import { fmtMXN, fmtUSD, fmtPct } from '../../utils/formatters';
 import { scenarioKpis, generateExecutiveNarrative } from '../../utils/reportCalcs';
+import { generateExecutiveSummaryNarrative } from '../../utils/reportNarratives';
+import NarrativeSection from './NarrativeSection';
 
 interface ExecutiveSummaryPanelProps {
   summary: HedgePlanSummary;
@@ -51,6 +53,11 @@ const ExecutiveSummaryPanel: React.FC<ExecutiveSummaryPanelProps> = ({
     if (summary.total_commercial_exposure_mxn === 0) return 0;
     return Math.abs(summary.total_hedge_position_mxn / summary.total_commercial_exposure_mxn);
   }, [summary]);
+
+  const narrativeParagraphs = useMemo(
+    () => generateExecutiveSummaryNarrative(buckets, summary, totals, policy, validationReport),
+    [buckets, summary, totals, policy, validationReport],
+  );
 
   const kpiCards = useMemo(
     () => [
@@ -205,6 +212,9 @@ const ExecutiveSummaryPanel: React.FC<ExecutiveSummaryPanelProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Institutional Narrative */}
+      <NarrativeSection paragraphs={narrativeParagraphs} />
     </div>
   );
 };

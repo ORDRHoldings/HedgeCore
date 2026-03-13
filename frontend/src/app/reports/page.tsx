@@ -7,7 +7,7 @@
  * URL-driven tab routing via ?tab= query param, Suspense-wrapped.
  */
 
-import { Suspense, useCallback, useEffect } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { PageShell } from "@/components/layout/PageShell";
@@ -33,6 +33,9 @@ function ReportStudioInner() {
   const tabParam = searchParams.get("tab") ?? "";
   const activeTab: ReportStudioTab =
     tabParam && HASH_MAP[tabParam] ? HASH_MAP[tabParam] : "STUDIO";
+
+  // Preset selected from Library tab → navigate to Studio with preset loaded
+  const [pendingPresetId, setPendingPresetId] = useState<string | null>(null);
 
   // Auth guard
   useEffect(() => {
@@ -80,9 +83,16 @@ function ReportStudioInner() {
   const renderTab = () => {
     switch (activeTab) {
       case "STUDIO":
-        return <StudioTab token={token ?? ""} userId={user?.id} />;
+        return <StudioTab token={token ?? ""} userId={user?.id} initialPresetId={pendingPresetId} />;
       case "LIBRARY":
-        return <LibraryTab onSelectPreset={(id) => { void id; }} />;
+        return (
+          <LibraryTab
+            onSelectPreset={(id) => {
+              setPendingPresetId(id === "CUSTOM" ? null : id);
+              router.replace("/reports", { scroll: false });
+            }}
+          />
+        );
       case "SAVED":
         return <SavedTab token={token ?? ""} />;
       case "REGULATORY":

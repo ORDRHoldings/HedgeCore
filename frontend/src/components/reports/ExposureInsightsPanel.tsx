@@ -8,6 +8,8 @@ import {
   concentrationAnalysis,
   cashflowVolatility,
 } from '../../utils/reportCalcs';
+import { generateExposureNarrative } from '../../utils/reportNarratives';
+import NarrativeSection from './NarrativeSection';
 
 interface ExposureInsightsPanelProps {
   buckets: BucketResult[];
@@ -17,6 +19,7 @@ const ExposureInsightsPanel: React.FC<ExposureInsightsPanelProps> = ({ buckets }
   const composition = useMemo(() => flowComposition(buckets), [buckets]);
   const concentration = useMemo(() => concentrationAnalysis(buckets), [buckets]);
   const volatility = useMemo(() => cashflowVolatility(buckets), [buckets]);
+  const narrativeParagraphs = useMemo(() => generateExposureNarrative(buckets), [buckets]);
 
   const hhiLabel = useMemo(() => {
     if (concentration.herfindahlIndex > 0.25) return { text: 'Concentrated', color: 'var(--accent-red)' };
@@ -136,6 +139,9 @@ const ExposureInsightsPanel: React.FC<ExposureInsightsPanelProps> = ({ buckets }
           {insightText}
         </p>
       </div>
+
+      {/* Institutional Narrative */}
+      <NarrativeSection paragraphs={narrativeParagraphs} />
     </div>
   );
 };

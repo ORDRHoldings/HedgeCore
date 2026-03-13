@@ -4,6 +4,8 @@ import React, { useMemo } from 'react';
 import type { BucketResult, HedgePlanSummary } from '../../api/types';
 import { fmtMXN, fmtPct } from '../../utils/formatters';
 import { bucketCoverageRatios, instrumentMix } from '../../utils/reportCalcs';
+import { generateHedgeEfficiencyNarrative } from '../../utils/reportNarratives';
+import NarrativeSection from './NarrativeSection';
 
 interface HedgeEfficiencyPanelProps {
   buckets: BucketResult[];
@@ -21,6 +23,10 @@ const statusColor: Record<CoverageStatus, string> = {
 const HedgeEfficiencyPanel: React.FC<HedgeEfficiencyPanelProps> = ({ buckets, summary }) => {
   const coverageData = useMemo(() => bucketCoverageRatios(buckets), [buckets]);
   const mix = useMemo(() => instrumentMix(buckets), [buckets]);
+  const narrativeParagraphs = useMemo(
+    () => generateHedgeEfficiencyNarrative(buckets, summary),
+    [buckets, summary],
+  );
 
   const maxRatio = useMemo(
     () => Math.max(...coverageData.map((d) => d.ratio), 1),
@@ -129,6 +135,9 @@ const HedgeEfficiencyPanel: React.FC<HedgeEfficiencyPanelProps> = ({ buckets, su
           {fmtMXN(Math.abs(summary.total_residual_mxn))} net residual exposure.
         </p>
       </div>
+
+      {/* Institutional Narrative */}
+      <NarrativeSection paragraphs={narrativeParagraphs} />
     </div>
   );
 };

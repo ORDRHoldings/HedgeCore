@@ -9,6 +9,8 @@ import type {
 } from '../../api/types';
 import { fmtPct } from '../../utils/formatters';
 import { policyComplianceChecks } from '../../utils/reportCalcs';
+import { generateComplianceNarrative } from '../../utils/reportNarratives';
+import NarrativeSection from './NarrativeSection';
 
 interface PolicyCompliancePanelProps {
   buckets: BucketResult[];
@@ -26,6 +28,10 @@ const PolicyCompliancePanel: React.FC<PolicyCompliancePanelProps> = ({
   const complianceResult = useMemo(
     () => policyComplianceChecks(buckets, summary, policy),
     [buckets, summary, policy],
+  );
+  const narrativeParagraphs = useMemo(
+    () => generateComplianceNarrative(buckets, summary, policy, validationReport),
+    [buckets, summary, policy, validationReport],
   );
 
   const { checks, score: scorePct, classification: classLabel } = complianceResult;
@@ -129,6 +135,9 @@ const PolicyCompliancePanel: React.FC<PolicyCompliancePanelProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Institutional Narrative */}
+      <NarrativeSection paragraphs={narrativeParagraphs} />
     </div>
   );
 };

@@ -8,6 +8,8 @@ import type {
 } from '../../api/types';
 import { fmtUSD, fmtPct } from '../../utils/formatters';
 import { scenarioKpis, vulnerabilityRanking } from '../../utils/reportCalcs';
+import { generateScenarioNarrative } from '../../utils/reportNarratives';
+import NarrativeSection from './NarrativeSection';
 import ScenarioChart from '../results/ScenarioChart';
 
 interface ScenarioSensitivityPanelProps {
@@ -23,6 +25,10 @@ const ScenarioSensitivityPanel: React.FC<ScenarioSensitivityPanelProps> = ({
 }) => {
   const kpis = useMemo(() => scenarioKpis(totals, summary), [totals, summary]);
   const ranking = useMemo(() => vulnerabilityRanking(perBucket, totals), [perBucket, totals]);
+  const narrativeParagraphs = useMemo(
+    () => generateScenarioNarrative(totals, summary, perBucket),
+    [totals, summary, perBucket],
+  );
 
   const totalWorstCase = useMemo(
     () => ranking.reduce((s, r) => s + Math.abs(r.worstCaseImpact), 0) || 1,
@@ -104,6 +110,9 @@ const ScenarioSensitivityPanel: React.FC<ScenarioSensitivityPanelProps> = ({
           })}
         </tbody>
       </table>
+
+      {/* Institutional Narrative */}
+      <NarrativeSection paragraphs={narrativeParagraphs} />
     </div>
   );
 };

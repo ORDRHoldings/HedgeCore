@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { T } from "@/lib/design/tokens";
 import { REPORT_PRESETS } from "@/constants/reportPresets";
 import type { ReportTemplate } from "@/types/reportTypes";
@@ -16,6 +16,7 @@ import type { StudioSection } from "./SectionList";
 interface Props {
   token: string;
   userId?: string;
+  initialPresetId?: string | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -33,8 +34,9 @@ function templateToSections(template: ReportTemplate): StudioSection[] {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function StudioTab({ token, userId }: Props) {
+export default function StudioTab({ token, userId, initialPresetId }: Props) {
   void userId;
+  const appliedPresetRef = useRef<string | null>(null);
 
   // ── State ─────────────────────────────────────────────────────────────────
 
@@ -48,6 +50,20 @@ export default function StudioTab({ token, userId }: Props) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [sections, setSections] = useState<StudioSection[]>([]);
   const [selectedSectionIndex, setSelectedSectionIndex] = useState<number | null>(null);
+
+  // ── Auto-load preset from Library ────────────────────────────────────────
+
+  useEffect(() => {
+    if (initialPresetId && initialPresetId !== appliedPresetRef.current) {
+      const preset = REPORT_PRESETS.find((p) => p.template_id === initialPresetId);
+      if (preset) {
+        appliedPresetRef.current = initialPresetId;
+        setSelectedTemplateId(preset.template_id);
+        setSections(templateToSections(preset));
+        setSelectedSectionIndex(null);
+      }
+    }
+  }, [initialPresetId]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
