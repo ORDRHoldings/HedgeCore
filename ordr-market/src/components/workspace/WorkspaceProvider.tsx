@@ -14,9 +14,9 @@ import { SYMBOL_DATA, DEFAULT_TF_FAVORITES, WORKSPACE_STORAGE_KEY } from './work
 // ── Initial State ────────────────────────────────────────────────────────────
 const initialState: WorkspaceState = {
   mode: 'workspace',
-  symbol: 'EURUSD',
+  symbol: 'SPY',
   timeframe: '30m',
-  chartType: 'candle',
+  chartType: 'candles',
   activeTool: 'cursor',
   showSR: false,
   showFVG: false,
@@ -31,6 +31,13 @@ const initialState: WorkspaceState = {
   timeframeFavorites: [...DEFAULT_TF_FAVORITES],
   customTimeframes: [],
   selectedObjectId: null,
+  chartConfig: { ema20: true, sr: true, fvg: true, trendlines: true },
+  chartSubPanes: [],
+  drawingMode: null,
+  magnetEnabled: true,
+  hideDrawings: false,
+  lockDrawings: false,
+  deleteDrawingsCounter: 0,
 };
 
 // ── Reducer ──────────────────────────────────────────────────────────────────
@@ -110,6 +117,32 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       return state.customTimeframes.includes(action.tf) ? state : { ...state, customTimeframes: [...state.customTimeframes, action.tf] };
     case 'SET_SELECTED_OBJECT':
       return { ...state, selectedObjectId: action.id };
+    case 'TOGGLE_CHART_INDICATOR': {
+      const prev = state.chartConfig[action.key] ?? false;
+      return { ...state, chartConfig: { ...state.chartConfig, [action.key]: !prev } };
+    }
+    case 'SET_CHART_CONFIG':
+      return { ...state, chartConfig: action.config };
+    case 'SET_CHART_SUBPANES':
+      return { ...state, chartSubPanes: action.panes };
+    case 'TOGGLE_CHART_SUBPANE': {
+      const panes = state.chartSubPanes;
+      if (panes.includes(action.key)) {
+        return { ...state, chartSubPanes: panes.filter(k => k !== action.key) };
+      }
+      const next = panes.length >= 3 ? [...panes.slice(1), action.key] : [...panes, action.key];
+      return { ...state, chartSubPanes: next };
+    }
+    case 'SET_DRAWING_MODE':
+      return { ...state, drawingMode: action.mode };
+    case 'TOGGLE_MAGNET':
+      return { ...state, magnetEnabled: !state.magnetEnabled };
+    case 'TOGGLE_HIDE_DRAWINGS':
+      return { ...state, hideDrawings: !state.hideDrawings };
+    case 'TOGGLE_LOCK_DRAWINGS':
+      return { ...state, lockDrawings: !state.lockDrawings };
+    case 'DELETE_ALL_DRAWINGS':
+      return { ...state, deleteDrawingsCounter: state.deleteDrawingsCounter + 1 };
     case 'RESTORE_LAYOUT':
       return { ...state, ...action.layout };
     default:
@@ -175,7 +208,23 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('keydown', handler);
   }, [state.mode]);
 
-  const symbolInfo = SYMBOL_DATA[state.symbol] ?? SYMBOL_DATA['EURUSD'];
+  // Generate synthetic SymbolInfo for symbols not in the static data (stocks, etc.)
+  const symbolInfo = SYMBOL_DATA[state.symbol] ?? (() => {
+    const seed = state.symbol.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const price = 50 + (seed % 400) + (seed % 100) / 100;
+    const change = ((seed * 7) % 200 - 100) / 100;
+    return {
+      name: state.symbol,
+      exchange: price > 200 ? 'NASDAQ' : 'NYSE',
+      market: 'US',
+      price, change, changePct: +(change / price * 100).toFixed(2),
+      bid: +(price - 0.02).toFixed(2), ask: +(price + 0.02).toFixed(2),
+      open: +(price - change).toFixed(2),
+      high: +(price + Math.abs(change) * 1.5).toFixed(2),
+      low: +(price - Math.abs(change) * 1.2).toFixed(2),
+      close: price,
+    };
+  })();
 
   return (
     <WorkspaceContext.Provider value={{ state, dispatch, symbolInfo }}>

@@ -9,7 +9,7 @@ export type RightTab = 'properties' | 'layers' | 'ai' | 'orderflow' | 'alerts' |
 export type BottomTab = 'mtf' | 'scanner' | 'replay' | 'strategy' | 'orders';
 
 // ── Chart ────────────────────────────────────────────────────────────────────
-export type ChartType = 'candle' | 'bar' | 'line' | 'area';
+export type ChartType = 'candles' | 'hollow' | 'bars' | 'line' | 'area' | 'heikinAshi' | 'baseline';
 export type WorkspaceMode = 'focus' | 'workspace' | 'execution';
 
 // ── Indicator Instance ───────────────────────────────────────────────────────
@@ -84,6 +84,13 @@ export interface WorkspaceState {
   timeframeFavorites: string[];
   customTimeframes: string[];
   selectedObjectId: string | null;
+  chartConfig: Record<string, boolean>;
+  chartSubPanes: string[];
+  drawingMode: string | null;
+  magnetEnabled: boolean;
+  hideDrawings: boolean;
+  lockDrawings: boolean;
+  deleteDrawingsCounter: number;
 }
 
 // ── Workspace Actions ────────────────────────────────────────────────────────
@@ -116,6 +123,15 @@ export type WorkspaceAction =
   | { type: 'TOGGLE_TF_FAVORITE'; tf: string }
   | { type: 'ADD_CUSTOM_TF'; tf: string }
   | { type: 'SET_SELECTED_OBJECT'; id: string | null }
+  | { type: 'TOGGLE_CHART_INDICATOR'; key: string }
+  | { type: 'SET_CHART_CONFIG'; config: Record<string, boolean> }
+  | { type: 'SET_CHART_SUBPANES'; panes: string[] }
+  | { type: 'TOGGLE_CHART_SUBPANE'; key: string }
+  | { type: 'SET_DRAWING_MODE'; mode: string | null }
+  | { type: 'TOGGLE_MAGNET' }
+  | { type: 'TOGGLE_HIDE_DRAWINGS' }
+  | { type: 'TOGGLE_LOCK_DRAWINGS' }
+  | { type: 'DELETE_ALL_DRAWINGS' }
   | { type: 'RESTORE_LAYOUT'; layout: Partial<WorkspaceState> };
 
 // ── Context Value ────────────────────────────────────────────────────────────

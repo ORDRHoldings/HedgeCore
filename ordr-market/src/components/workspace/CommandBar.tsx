@@ -15,6 +15,7 @@ import { ThemeSwitcher } from './ThemeSwitcher';
 import { useWorkspace } from './WorkspaceProvider';
 import { SYMBOL_DATA, BASE_TIMEFRAMES, INDICATOR_LIBRARY, INDICATOR_CATEGORIES, formatPrice } from './workspace-data';
 import type { ChartType, WorkspaceMode } from './workspace-types';
+import ChartSymbolSearch from '../chart/ChartSymbolSearch';
 
 // ── Shared styles ────────────────────────────────────────────────────────────
 const btnBase: React.CSSProperties = {
@@ -50,56 +51,51 @@ function Separator() {
   return <div style={{ width: 1, height: 16, background: T.border, flexShrink: 0, margin: '0 4px' }} />;
 }
 
-// ── Symbol Search ────────────────────────────────────────────────────────────
+// ── Symbol Search (opens on click OR when user starts typing) ────────────────
 function SymbolSearch() {
   const { state, dispatch } = useWorkspace();
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [hlIdx, setHlIdx] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [initialQuery, setInitialQuery] = useState('');
 
+  // Global keyboard listener: typing alphanumeric keys opens symbol search
   useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const handler = (e: KeyboardEvent) => {
+      // Don't trigger if already open, or if user is in an input/textarea
+      if (open) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      // Don't trigger on modifier combos (Ctrl+C, etc.)
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // Only trigger on single printable alphanumeric characters
+      // Skip keys reserved for workspace shortcuts (v=cursor, m=measure)
+      if (e.key === 'v' || e.key === 'V' || e.key === 'm' || e.key === 'Escape') return;
+      if (e.key.length === 1 && /^[a-zA-Z0-9]$/.test(e.key)) {
+        e.preventDefault();
+        setInitialQuery(e.key.toUpperCase());
+        setOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [open]);
 
-  useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
-
-  const symbols = Object.keys(SYMBOL_DATA);
-  const filtered = symbols.filter(s => {
-    if (!search) return true;
-    const q = search.toUpperCase();
-    return s.includes(q) || SYMBOL_DATA[s].name.toUpperCase().includes(q);
-  });
-
-  const select = (sym: string) => {
-    dispatch({ type: 'SET_SYMBOL', symbol: sym });
-    setOpen(false);
-    setSearch('');
-  };
-
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setHlIdx(i => Math.min(i + 1, filtered.length - 1)); }
-    if (e.key === 'ArrowUp') { e.preventDefault(); setHlIdx(i => Math.max(i - 1, 0)); }
-    if (e.key === 'Enter' && filtered[hlIdx]) { select(filtered[hlIdx]); }
-    if (e.key === 'Escape') { setOpen(false); }
+  const handleOpen = () => {
+    setInitialQuery('');
+    setOpen(true);
   };
 
   return (
-    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+    <>
       <button
-        onClick={() => { setOpen(!open); setSearch(''); setHlIdx(0); }}
+        onClick={handleOpen}
         style={{
           display: 'flex', alignItems: 'center', gap: 4,
           padding: '0 7px', height: 26, borderRadius: 3,
-          border: `1px solid ${open ? T.accent : T.border}`, background: T.surfaceAlt,
+          border: `1px solid ${T.border}`, background: T.surfaceAlt,
           cursor: 'pointer', flexShrink: 0, outline: 'none',
         }}
-        onMouseEnter={e => { if (!open) e.currentTarget.style.borderColor = T.accent; }}
-        onMouseLeave={e => { if (!open) e.currentTarget.style.borderColor = T.border; }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; }}
       >
         <Search size={11} color={T.text3} />
         <span style={{ fontSize: 13, fontWeight: 700, color: T.text1, letterSpacing: '-0.3px', fontFamily: T.font }}>
@@ -107,77 +103,14 @@ function SymbolSearch() {
         </span>
         <ChevronDown size={9} color={T.text3} />
       </button>
-
-      {open && (
-        <div style={{
-          position: 'absolute', top: 32, left: 0, zIndex: 100,
-          background: T.surface, border: `1px solid ${T.border}`,
-          borderRadius: T.r4, boxShadow: T.shadowFloat,
-          width: 260, maxHeight: 320, display: 'flex', flexDirection: 'column',
-        }}>
-          <div style={{ padding: '6px 8px', borderBottom: `1px solid ${T.border}` }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '0 8px', height: 28, borderRadius: 3,
-              background: T.surfaceAlt, border: `1px solid ${T.border}`,
-            }}>
-              <Search size={12} color={T.text3} />
-              <input
-                ref={inputRef}
-                value={search}
-                onChange={e => { setSearch(e.target.value); setHlIdx(0); }}
-                onKeyDown={handleKey}
-                placeholder="Search symbol..."
-                style={{
-                  flex: 1, border: 'none', outline: 'none', background: 'transparent',
-                  fontSize: 11, color: T.text1, fontFamily: T.font,
-                }}
-              />
-            </div>
-          </div>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '2px 0' }}>
-            {filtered.map((sym, idx) => {
-              const info = SYMBOL_DATA[sym];
-              const active = sym === state.symbol;
-              const highlighted = idx === hlIdx;
-              const bull = info.change >= 0;
-              return (
-                <div
-                  key={sym}
-                  onClick={() => select(sym)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '6px 10px', cursor: 'pointer',
-                    background: highlighted ? T.panelHover : active ? T.panelActive : 'transparent',
-                  }}
-                  onMouseEnter={() => setHlIdx(idx)}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: T.text1, fontFamily: T.font }}>{sym}</span>
-                      <span style={{ fontSize: 9, color: T.text3, fontFamily: T.font, fontWeight: 500 }}>{info.exchange}</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: T.text3, fontFamily: T.font }}>{info.name}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: T.text1, fontFamily: T.mono, fontVariantNumeric: 'tabular-nums' }}>
-                      {formatPrice(info.price)}
-                    </div>
-                    <div style={{ fontSize: 9, fontWeight: 500, color: bull ? '#26A69A' : '#EF5350', fontFamily: T.mono }}>
-                      {bull ? '+' : ''}{info.changePct.toFixed(2)}%
-                    </div>
-                  </div>
-                  {active && <Check size={11} color={T.accent} />}
-                </div>
-              );
-            })}
-            {filtered.length === 0 && (
-              <div style={{ padding: '16px 10px', fontSize: 11, color: T.text3, textAlign: 'center' }}>No symbols found</div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+      <ChartSymbolSearch
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        onSelect={(sym) => { dispatch({ type: 'SET_SYMBOL', symbol: sym }); setOpen(false); }}
+        currentSymbol={state.symbol}
+        initialQuery={initialQuery}
+      />
+    </>
   );
 }
 
@@ -284,10 +217,13 @@ function TimeframeRow() {
 function ChartTypeSelector() {
   const { state, dispatch } = useWorkspace();
   const types: { id: ChartType; icon: React.ReactNode; label: string }[] = [
-    { id: 'candle', icon: <CandlestickChart size={14} />, label: 'Candlestick' },
-    { id: 'bar',    icon: <BarChart2 size={14} />,        label: 'Bars' },
-    { id: 'line',   icon: <LineChart size={14} />,         label: 'Line' },
-    { id: 'area',   icon: <AreaChart size={14} />,         label: 'Area' },
+    { id: 'candles',    icon: <CandlestickChart size={14} />, label: 'Candles' },
+    { id: 'hollow',     icon: <CandlestickChart size={14} />, label: 'Hollow' },
+    { id: 'bars',       icon: <BarChart2 size={14} />,        label: 'Bars' },
+    { id: 'line',       icon: <LineChart size={14} />,         label: 'Line' },
+    { id: 'area',       icon: <AreaChart size={14} />,         label: 'Area' },
+    { id: 'heikinAshi', icon: <CandlestickChart size={14} />, label: 'HA' },
+    { id: 'baseline',   icon: <TrendingUp size={14} />,       label: 'Base' },
   ];
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>

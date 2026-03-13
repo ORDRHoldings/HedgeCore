@@ -38,7 +38,9 @@ interface Props {
   showFVG?: boolean;
   indicators?: ActiveIndicator[];
   activeTool?: string;
+  resetTrigger?: number;
   onDrawingComplete?: (drawing: ChartDrawing) => void;
+  onContextMenu?: (x: number, y: number) => void;
 }
 
 // ─── Interval helpers ─────────────────────────────────────────────────────────
@@ -66,6 +68,7 @@ function formatTimeLabel(ts: number, interval: string): string {
 }
 
 function formatPrice(p: number): string {
+  if (p >= 1000) return p.toFixed(2);
   if (p >= 100) return p.toFixed(2);
   if (p >= 10) return p.toFixed(2);
   if (p >= 1) return p.toFixed(4);
@@ -73,20 +76,51 @@ function formatPrice(p: number): string {
 }
 
 // ─── Mock data generator ──────────────────────────────────────────────────────
-function generateMockBars(count = 300, interval = '30m'): Bar[] {
+// Seeded PRNG for deterministic per-symbol data
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+function symbolBasePrice(sym: string): number {
+  const map: Record<string, number> = {
+    EURUSD: 1.0825, GBPUSD: 1.2683, USDJPY: 149.41, USDCAD: 1.3645,
+    AUDUSD: 0.6542, NZDUSD: 0.6105, USDCHF: 0.8812,
+    EURGBP: 0.8534, EURJPY: 161.82, GBPJPY: 189.56, AUDJPY: 97.72,
+    XAUUSD: 2318.45, XAGUSD: 27.34,
+    BTCUSD: 67842, ETHUSD: 3482, SOLUSD: 142.5, XRPUSD: 0.5824,
+    SPX: 5187.67, NDX: 18234.5, DJI: 38742.1, VIX: 14.32,
+    AAPL: 178.52, MSFT: 415.60, AMZN: 178.25, TSLA: 175.30,
+    GOOGL: 155.72, META: 493.50, NVDA: 878.40, AMD: 162.18,
+    NFLX: 612.40, JPM: 198.30, V: 278.60, BA: 184.50,
+    SPY: 518.20, QQQ: 445.80,
+  };
+  if (map[sym]) return map[sym];
+  const hash = sym.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return 50 + (hash % 400) + (hash % 100) / 100;
+}
+
+function generateMockBars(count = 300, interval = '30m', sym = 'EURUSD'): Bar[] {
   const bars: Bar[] = [];
-  let price = 1.08250;
+  const base = symbolBasePrice(sym);
+  const seed = sym.split('').reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
+  const rand = seededRandom(Math.abs(seed) + 1);
+  // Scale volatility relative to price magnitude
+  const volScale = base * 0.003;
+  const meanRevert = base;
+  let price = base;
   const ms = intervalMs(interval);
   const now = Date.now();
   for (let i = 0; i < count; i++) {
     const open = price;
-    const drift = (Math.random() - 0.487) * 0.0024;
-    const pull = (1.08300 - price) * 0.004;
-    const close = +(open + drift + pull).toFixed(5);
-    const range = Math.abs(drift) * 1.4 + Math.random() * 0.0014;
-    const high = +(Math.max(open, close) + range * (0.4 + Math.random() * 0.4)).toFixed(5);
-    const low = +(Math.min(open, close) - range * (0.3 + Math.random() * 0.4)).toFixed(5);
-    bars.push({ t: now - (count - i) * ms, o: open, h: high, l: low, c: close, v: Math.floor(38_000 + Math.random() * 140_000) });
+    const drift = (rand() - 0.487) * volScale;
+    const pull = (meanRevert - price) * 0.004;
+    const close = open + drift + pull;
+    const range = Math.abs(drift) * 1.4 + rand() * volScale * 0.6;
+    const high = Math.max(open, close) + range * (0.4 + rand() * 0.4);
+    const low = Math.min(open, close) - range * (0.3 + rand() * 0.4);
+    const vol = Math.floor(38_000 + rand() * 140_000);
+    bars.push({ t: now - (count - i) * ms, o: +open, h: +high, l: +low, c: +close, v: vol });
     price = close;
   }
   return bars;
@@ -180,10 +214,12 @@ export function MockCandleChart({
   showFVG = false,
   indicators = [],
   activeTool = 'cursor',
+  resetTrigger = 0,
   onDrawingComplete,
+  onContextMenu,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mockBars = useMemo(() => generateMockBars(300, interval), [interval]);
+  const mockBars = useMemo(() => generateMockBars(300, interval, symbol), [interval, symbol]);
   const allBars = propBars && propBars.length > 0 ? propBars : mockBars;
 
   // ── Interactive state ─────────────────────────────────────────────────────
@@ -885,8 +921,25 @@ export function MockCandleChart({
     });
   };
 
+  // ── Reset when resetTrigger changes ────────────────────────────────────────
+  const prevResetRef = useRef(0);
+  useEffect(() => {
+    if (resetTrigger !== prevResetRef.current) {
+      prevResetRef.current = resetTrigger;
+      setCandleStep(DEFAULT_CANDLE_STEP);
+      setPanOffset(0);
+      setDrawings([]);
+      setPendingDraw(null);
+    }
+  }, [resetTrigger]);
+
   const isDrawMode = DRAW_MODES.has(activeTool);
   const cursor = isDrawMode ? 'crosshair' : (isPanningRef.current ? 'grabbing' : 'crosshair');
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onContextMenu?.(e.clientX, e.clientY);
+  };
 
   return (
     <canvas
@@ -897,6 +950,7 @@ export function MockCandleChart({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
       onWheel={handleWheel}
+      onContextMenu={handleContextMenu}
     />
   );
 }

@@ -22,14 +22,29 @@ export interface ChartSymbolSearchProps {
   onClose: () => void;
   onSelect: (symbol: string) => void;
   currentSymbol: string;
+  /** Pre-fill search query when opening via keyboard */
+  initialQuery?: string;
 }
 
 /* ═══════════════════════════════════════════════════════
    Constants
    ═══════════════════════════════════════════════════════ */
 
-const FONT_MONO = "'IBM Plex Mono', monospace";
-const FONT_UI = "'IBM Plex Sans', sans-serif";
+const FONT_MONO = "var(--font-mono, 'IBM Plex Mono', monospace)";
+const FONT_UI = "var(--font-ui, 'IBM Plex Sans', sans-serif)";
+
+// Theme-aware color tokens (follow active CSS variable theme)
+const C = {
+  bg:       'var(--bg-panel, #1E222D)',
+  bgAlt:    'var(--bg-sub, #2A2E39)',
+  bgDeep:   'var(--bg-deep, #131722)',
+  border:   'var(--border-rim, #2A2E39)',
+  text1:    'var(--text-primary, #D1D4DC)',
+  text2:    'var(--text-secondary, #787B86)',
+  text3:    'var(--text-tertiary, #545B69)',
+  accent:   'var(--accent-blue, #2962FF)',
+  hover:    'rgba(128,128,128,0.10)',
+} as const;
 const RECENT_KEY = "ordr_recent_symbols";
 const MAX_RECENT = 10;
 const MAX_VISIBLE = 50;
@@ -308,6 +323,7 @@ export default function ChartSymbolSearch({
   onClose,
   onSelect,
   currentSymbol,
+  initialQuery,
 }: ChartSymbolSearchProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
@@ -317,18 +333,18 @@ export default function ChartSymbolSearch({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Load recent on open
+  // Load recent on open; pre-fill initialQuery from keyboard trigger
   useEffect(() => {
     if (isOpen) {
-      setQuery("");
+      setQuery(initialQuery ?? "");
       setCategory("all");
       setHighlightIndex(0);
       setRecent(loadRecent());
-      // Focus input after mount
       requestAnimationFrame(() => {
         inputRef.current?.focus();
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // Search results
@@ -428,9 +444,9 @@ export default function ChartSymbolSearch({
         style={{
           width: 480,
           maxHeight: 600,
-          background: "#1E222D",
+          background: C.bg,
           borderRadius: 12,
-          border: "1px solid #2A2E39",
+          border: `1px solid ${C.border}`,
           boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
           display: "flex",
           flexDirection: "column",
@@ -441,16 +457,18 @@ export default function ChartSymbolSearch({
         <div
           style={{
             padding: "12px 16px",
-            borderBottom: "1px solid #2A2E39",
+            borderBottom: `1px solid ${C.border}`,
             display: "flex",
             alignItems: "center",
             gap: 8,
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#787B86" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.3-4.3" />
-          </svg>
+          <span style={{ color: C.text2, display: 'flex' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </span>
           <input
             ref={inputRef}
             type="text"
@@ -464,8 +482,8 @@ export default function ChartSymbolSearch({
               outline: "none",
               fontFamily: FONT_UI,
               fontSize: 16,
-              color: "#D1D4DC",
-              caretColor: "#2962FF",
+              color: C.text1,
+              caretColor: C.accent,
             }}
           />
           {query && (
@@ -484,10 +502,12 @@ export default function ChartSymbolSearch({
                 justifyContent: "center",
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#787B86" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
+              <span style={{ color: C.text2, display: 'flex' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </span>
             </button>
           )}
         </div>
@@ -498,7 +518,7 @@ export default function ChartSymbolSearch({
             display: "flex",
             gap: 0,
             padding: "0 16px",
-            borderBottom: "1px solid #2A2E39",
+            borderBottom: `1px solid ${C.border}`,
           }}
         >
           {CATEGORY_TABS.map((tab) => {
@@ -510,11 +530,11 @@ export default function ChartSymbolSearch({
                 style={{
                   background: "none",
                   border: "none",
-                  borderBottom: active ? "2px solid #2962FF" : "2px solid transparent",
+                  borderBottom: active ? `2px solid ${C.accent}` : "2px solid transparent",
                   fontFamily: FONT_MONO,
                   fontSize: 11,
                   fontWeight: active ? 700 : 500,
-                  color: active ? "#D1D4DC" : "#545B69",
+                  color: active ? C.text1 : C.text3,
                   padding: "8px 12px",
                   cursor: "pointer",
                   letterSpacing: "0.05em",
@@ -546,7 +566,7 @@ export default function ChartSymbolSearch({
                   fontFamily: FONT_MONO,
                   fontSize: 10,
                   fontWeight: 600,
-                  color: "#545B69",
+                  color: C.text3,
                   letterSpacing: "0.1em",
                 }}
               >
@@ -565,7 +585,7 @@ export default function ChartSymbolSearch({
                       alignItems: "center",
                       padding: "8px 16px",
                       cursor: "pointer",
-                      background: highlighted ? "#2A2E39" : "transparent",
+                      background: highlighted ? C.hover : "transparent",
                       transition: "background 0.1s",
                     }}
                     onMouseEnter={() => setHighlightIndex(idx)}
@@ -575,7 +595,7 @@ export default function ChartSymbolSearch({
                         fontFamily: FONT_MONO,
                         fontSize: 13,
                         fontWeight: 700,
-                        color: isCurrent ? "#2962FF" : "#D1D4DC",
+                        color: isCurrent ? C.accent : C.text1,
                         minWidth: 90,
                       }}
                     >
@@ -585,7 +605,7 @@ export default function ChartSymbolSearch({
                       style={{
                         fontFamily: FONT_UI,
                         fontSize: 12,
-                        color: "#787B86",
+                        color: C.text2,
                         flex: 1,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -599,7 +619,7 @@ export default function ChartSymbolSearch({
                         fontFamily: FONT_MONO,
                         fontSize: 9,
                         fontWeight: 600,
-                        color: CATEGORY_COLORS[asset.category] ?? "#787B86",
+                        color: CATEGORY_COLORS[asset.category] ?? C.text2,
                         background: `${CATEGORY_COLORS[asset.category] ?? "#787B86"}15`,
                         padding: "2px 6px",
                         borderRadius: 3,
@@ -616,7 +636,7 @@ export default function ChartSymbolSearch({
                 <div
                   style={{
                     height: 1,
-                    background: "#2A2E39",
+                    background: C.border,
                     margin: "4px 16px",
                   }}
                 />
@@ -632,7 +652,7 @@ export default function ChartSymbolSearch({
                 fontFamily: FONT_MONO,
                 fontSize: 10,
                 fontWeight: 600,
-                color: "#545B69",
+                color: C.text3,
                 letterSpacing: "0.1em",
               }}
             >
@@ -654,7 +674,7 @@ export default function ChartSymbolSearch({
                   alignItems: "center",
                   padding: "8px 16px",
                   cursor: "pointer",
-                  background: highlighted ? "#2A2E39" : "transparent",
+                  background: highlighted ? C.hover : "transparent",
                   transition: "background 0.1s",
                 }}
                 onMouseEnter={() => setHighlightIndex(idx)}
@@ -665,15 +685,15 @@ export default function ChartSymbolSearch({
                     fontSize: 13,
                     fontWeight: 700,
                     minWidth: 90,
-                    color: isCurrent ? "#2962FF" : "#D1D4DC",
+                    color: isCurrent ? C.accent : C.text1,
                   }}
                 >
                   {query.trim() && match.symbolIndices ? (
                     <HighlightedText
                       text={match.asset.symbol}
                       indices={match.symbolIndices}
-                      baseColor={isCurrent ? "#2962FF" : "#D1D4DC"}
-                      highlightColor="#2962FF"
+                      baseColor={isCurrent ? C.accent : C.text1}
+                      highlightColor={C.accent}
                       fontWeight={700}
                     />
                   ) : (
@@ -694,11 +714,11 @@ export default function ChartSymbolSearch({
                     <HighlightedText
                       text={match.asset.display}
                       indices={match.displayIndices}
-                      baseColor="#787B86"
-                      highlightColor="#2962FF"
+                      baseColor={C.text2}
+                      highlightColor={C.accent}
                     />
                   ) : (
-                    <span style={{ color: "#787B86" }}>{match.asset.display}</span>
+                    <span style={{ color: C.text2 }}>{match.asset.display}</span>
                   )}
                 </span>
                 <span
@@ -706,7 +726,7 @@ export default function ChartSymbolSearch({
                     fontFamily: FONT_MONO,
                     fontSize: 9,
                     fontWeight: 600,
-                    color: CATEGORY_COLORS[match.asset.category] ?? "#787B86",
+                    color: CATEGORY_COLORS[match.asset.category] ?? C.text2,
                     background: `${CATEGORY_COLORS[match.asset.category] ?? "#787B86"}15`,
                     padding: "2px 6px",
                     borderRadius: 3,
@@ -732,11 +752,11 @@ export default function ChartSymbolSearch({
                 gap: 8,
               }}
             >
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#545B69" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <path d="m21 21-4.3-4.3" />
               </svg>
-              <span style={{ fontFamily: FONT_UI, fontSize: 13, color: "#545B69" }}>
+              <span style={{ fontFamily: FONT_UI, fontSize: 13, color: C.text3 }}>
                 No symbols found for &quot;{query}&quot;
               </span>
             </div>
@@ -747,32 +767,32 @@ export default function ChartSymbolSearch({
         <div
           style={{
             padding: "8px 16px",
-            borderTop: "1px solid #2A2E39",
+            borderTop: `1px solid ${C.border}`,
             display: "flex",
             alignItems: "center",
             gap: 16,
           }}
         >
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: "#545B69" }}>
-            <kbd style={{ background: "#2A2E39", padding: "1px 4px", borderRadius: 3, fontSize: 9 }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: C.text3 }}>
+            <kbd style={{ background: C.bgAlt, padding: "1px 4px", borderRadius: 3, fontSize: 9 }}>
               ↑↓
             </kbd>{" "}
             navigate
           </span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: "#545B69" }}>
-            <kbd style={{ background: "#2A2E39", padding: "1px 4px", borderRadius: 3, fontSize: 9 }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: C.text3 }}>
+            <kbd style={{ background: C.bgAlt, padding: "1px 4px", borderRadius: 3, fontSize: 9 }}>
               Enter
             </kbd>{" "}
             select
           </span>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: "#545B69" }}>
-            <kbd style={{ background: "#2A2E39", padding: "1px 4px", borderRadius: 3, fontSize: 9 }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: C.text3 }}>
+            <kbd style={{ background: C.bgAlt, padding: "1px 4px", borderRadius: 3, fontSize: 9 }}>
               Esc
             </kbd>{" "}
             close
           </span>
           <div style={{ flex: 1 }} />
-          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: "#545B69" }}>
+          <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: C.text3 }}>
             {ASSETS.length} symbols
           </span>
         </div>

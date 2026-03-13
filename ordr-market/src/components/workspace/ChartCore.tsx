@@ -1,217 +1,105 @@
 'use client';
 /**
  * ORDR Market — Chart Core
- * Central chart area with overlay header, floating drawing palette, and interactive canvas chart.
+ *
+ * Embeds the full ChartEngine (77 indicators, 7 chart types, drawings,
+ * context menu, symbol search) inside the modular workspace layout.
+ * Bridges workspace state (symbol, timeframe) to ChartEngine props.
  */
-import React, { useState } from 'react';
-import {
-  ChevronLeft, ChevronRight, X,
-  TrendingUp, Minus, ChevronsUpDown, Layers, Square, Circle, Pen, Type,
-  Ruler, Eraser,
-} from 'lucide-react';
-import { T } from './tokens';
+import React, { useMemo } from 'react';
 import { useWorkspace } from './WorkspaceProvider';
-import { MockCandleChart } from './MockCandleChart';
-import { DRAWING_MODES, formatPrice } from './workspace-data';
+import ChartEngine from '../chart/ChartEngine';
+import type { Bar } from '../chart/indicators/types';
 
-// ── Indicator Chips ──────────────────────────────────────────────────────────
-function IndicatorChips() {
-  const { state, dispatch } = useWorkspace();
-  const [collapsed, setCollapsed] = useState(false);
-
-  if (state.indicators.length === 0) return null;
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 4, flexWrap: 'wrap', pointerEvents: 'auto' }}>
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 16, height: 16, borderRadius: 2,
-          border: `1px solid rgba(255,255,255,0.1)`, background: 'rgba(30,30,30,0.7)',
-          cursor: 'pointer', outline: 'none', flexShrink: 0, color: '#B0B0B0',
-        }}
-      >
-        {collapsed ? <ChevronRight size={9} /> : <ChevronLeft size={9} />}
-      </button>
-
-      {state.indicators.map(ind => (
-        <div
-          key={ind.id}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            padding: '1px 6px', height: 18, borderRadius: 2,
-            background: 'rgba(30,30,30,0.85)', border: `1px solid rgba(255,255,255,0.08)`,
-            backdropFilter: 'blur(4px)', flexShrink: 0,
-            opacity: ind.visible ? 1 : 0.4,
-          }}
-        >
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: ind.color, flexShrink: 0 }} />
-          <span style={{ fontSize: 10, fontWeight: 600, color: '#E0E0E0', fontFamily: T.font, whiteSpace: 'nowrap' }}>
-            {ind.name}
-            {ind.params && <span style={{ fontWeight: 400, color: '#787878' }}>({ind.params})</span>}
-          </span>
-          {!collapsed && ind.value && (
-            <span style={{ fontSize: 10, fontWeight: 500, color: ind.color, fontFamily: T.mono }}>{ind.value}</span>
-          )}
-          <button
-            onClick={() => dispatch({ type: 'TOGGLE_INDICATOR_VISIBILITY', id: ind.id })}
-            title={ind.visible ? 'Hide' : 'Show'}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 12, height: 12, borderRadius: 2, border: 'none',
-              background: 'transparent', cursor: 'pointer', outline: 'none', padding: 0,
-              color: ind.visible ? '#787878' : '#EF5350',
-            }}
-          >
-            {ind.visible ? '●' : '○'}
-          </button>
-          <button
-            onClick={() => dispatch({ type: 'REMOVE_INDICATOR', id: ind.id })}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 12, height: 12, borderRadius: 2, border: 'none',
-              background: 'transparent', cursor: 'pointer', outline: 'none', padding: 0, color: '#787878',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#EF5350'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#787878'; }}
-          >
-            <X size={8} />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
+// ── Mock data generator (seeded per symbol for deterministic bars) ───────────
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
 }
 
-// ── Chart Overlay Header ─────────────────────────────────────────────────────
-function ChartOverlayHeader() {
-  const { state, symbolInfo } = useWorkspace();
-  const bull = symbolInfo.change >= 0;
-  const color = bull ? '#26A69A' : '#EF5350';
+const PRICE_MAP: Record<string, number> = {
+  EURUSD: 1.0825, GBPUSD: 1.2683, USDJPY: 149.41, USDCAD: 1.3645,
+  AUDUSD: 0.6542, NZDUSD: 0.6105, USDCHF: 0.8812,
+  EURGBP: 0.8534, EURJPY: 161.82, GBPJPY: 189.56, AUDJPY: 97.72,
+  XAUUSD: 2318.45, XAGUSD: 27.34,
+  BTCUSD: 67842, ETHUSD: 3482, SOLUSD: 142.5, XRPUSD: 0.5824,
+  SPX: 5187.67, NDX: 18234.5, DJI: 38742.1, VIX: 14.32,
+  AAPL: 178.52, MSFT: 415.60, AMZN: 178.25, TSLA: 175.30,
+  GOOGL: 155.72, META: 493.50, NVDA: 878.40, AMD: 162.18,
+  NFLX: 612.40, JPM: 198.30, V: 278.60, BA: 184.50,
+  SPY: 518.20, QQQ: 445.80, ADAUSD: 0.45, DOGEUSD: 0.082,
+  CRUDE_OIL: 78.42, NATURAL_GAS: 2.34, COPPER: 4.12,
+};
 
-  return (
-    <div style={{
-      position: 'absolute', top: 10, left: 12, zIndex: 5,
-      pointerEvents: 'none', userSelect: 'none',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: '#E0E0E0', fontFamily: T.font, letterSpacing: '-0.3px' }}>
-          {state.symbol}
-        </span>
-        <span style={{ fontSize: 10, color: '#B0B0B0', fontFamily: T.font }}>{symbolInfo.name}</span>
-        <span style={{
-          fontSize: 9, fontWeight: 600, color: '#B0B0B0', fontFamily: T.font,
-          padding: '1px 4px', borderRadius: 2, background: 'rgba(255,255,255,0.06)',
-          letterSpacing: '0.04em',
-        }}>
-          {symbolInfo.exchange} · {symbolInfo.market}
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 2 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color, fontFamily: T.mono, letterSpacing: '-0.3px', fontVariantNumeric: 'tabular-nums' }}>
-          {formatPrice(symbolInfo.price)}
-        </span>
-        <span style={{ fontSize: 10, fontWeight: 500, color, fontFamily: T.mono }}>
-          {bull ? '▲' : '▼'} {bull ? '+' : ''}{formatPrice(symbolInfo.change)}
-        </span>
-        <span style={{ fontSize: 10, color, fontFamily: T.mono, opacity: 0.85 }}>
-          ({bull ? '+' : ''}{symbolInfo.changePct.toFixed(2)}%)
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        {(['O', 'H', 'L', 'C'] as const).map(lbl => {
-          const val = { O: symbolInfo.open, H: symbolInfo.high, L: symbolInfo.low, C: symbolInfo.close }[lbl];
-          return (
-            <div key={lbl} style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
-              <span style={{ fontSize: 9, fontWeight: 600, color: '#787878', fontFamily: T.font }}>{lbl}</span>
-              <span style={{ fontSize: 10, color: '#B0B0B0', fontFamily: T.mono, letterSpacing: '-0.3px', fontVariantNumeric: 'tabular-nums' }}>
-                {formatPrice(val)}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <IndicatorChips />
-    </div>
-  );
+function intervalMs(iv: string): number {
+  const map: Record<string, number> = {
+    '1m': 60_000, '3m': 180_000, '5m': 300_000, '15m': 900_000,
+    '30m': 1_800_000, '1h': 3_600_000, '4h': 14_400_000,
+    'D': 86_400_000, 'W': 604_800_000, 'M': 2_592_000_000,
+  };
+  return map[iv] ?? 86_400_000;
 }
 
-// ── Floating Drawing Palette ─────────────────────────────────────────────────
-function FloatingPalette() {
-  const { state, dispatch } = useWorkspace();
-
-  const tools = [
-    { id: 'trendline', icon: <TrendingUp size={13} />,    tooltip: 'Trend Line' },
-    { id: 'hline',     icon: <Minus size={13} />,         tooltip: 'H-Line' },
-    { id: 'channel',   icon: <ChevronsUpDown size={13} />, tooltip: 'Channel' },
-    { id: 'fib',       icon: <Layers size={13} />,        tooltip: 'Fibonacci' },
-    null,
-    { id: 'rect',      icon: <Square size={13} />,        tooltip: 'Rectangle' },
-    { id: 'ellipse',   icon: <Circle size={13} />,        tooltip: 'Ellipse' },
-    { id: 'pen',       icon: <Pen size={13} />,           tooltip: 'Pen' },
-    { id: 'text',      icon: <Type size={13} />,          tooltip: 'Text' },
-    null,
-    { id: 'measure',   icon: <Ruler size={13} />,         tooltip: 'Measure' },
-    { id: 'eraser',    icon: <Eraser size={13} />,        tooltip: 'Eraser' },
-  ] as const;
-
-  return (
-    <div style={{
-      position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
-      zIndex: 15, background: 'rgba(30,30,30,0.92)', borderRadius: T.r4,
-      boxShadow: T.shadowFloat, border: '1px solid rgba(255,255,255,0.08)',
-      display: 'flex', alignItems: 'center', padding: '0 4px', gap: 1, height: 32,
-      backdropFilter: 'blur(8px)',
-    }}>
-      {tools.map((t, i) => t === null
-        ? <div key={`ps${i}`} style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.08)', margin: '0 3px' }} />
-        : (
-          <button key={t.id} title={t.tooltip} onClick={() => dispatch({ type: 'SET_TOOL', tool: t.id })} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 26, height: 24, borderRadius: 3, border: 'none',
-            background: state.activeTool === t.id ? 'rgba(100,168,240,0.15)' : 'transparent',
-            color: state.activeTool === t.id ? '#64A8F0' : '#B0B0B0', cursor: 'pointer', outline: 'none',
-          }}
-          onMouseEnter={e => { if (state.activeTool !== t.id) { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#E0E0E0'; } }}
-          onMouseLeave={e => { if (state.activeTool !== t.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#B0B0B0'; } }}
-          >
-            {t.icon}
-          </button>
-        )
-      )}
-    </div>
-  );
+function generateBars(count: number, interval: string, sym: string): Bar[] {
+  const base = PRICE_MAP[sym] ?? (50 + (sym.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 400));
+  // Include interval in seed so different timeframes produce different patterns
+  const symSeed = sym.split('').reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
+  const ivSeed = interval.split('').reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
+  const seed = Math.abs(symSeed * 31 + ivSeed) + 1;
+  const rand = seededRandom(seed);
+  // Scale volatility with timeframe — higher TFs have wider candles
+  const ms = intervalMs(interval);
+  const tfScale = Math.sqrt(ms / 60_000); // sqrt scaling (1m baseline)
+  const vol = base * 0.003 * Math.min(tfScale, 4);
+  let price = base;
+  const nowSec = Math.floor(Date.now() / 1000); // Seconds (chart engine expects Unix seconds)
+  const msSec = Math.floor(ms / 1000); // interval in seconds
+  const bars: Bar[] = [];
+  for (let i = 0; i < count; i++) {
+    const open = price;
+    const drift = (rand() - 0.487) * vol;
+    const pull = (base - price) * 0.004;
+    const close = open + drift + pull;
+    const range = Math.abs(drift) * 1.4 + rand() * vol * 0.6;
+    const high = Math.max(open, close) + range * (0.4 + rand() * 0.4);
+    const low = Math.min(open, close) - range * (0.3 + rand() * 0.4);
+    const v = Math.floor(38_000 + rand() * 140_000);
+    bars.push({ t: nowSec - (count - i) * msSec, o: +open, h: +high, l: +low, c: +close, v });
+    price = close;
+  }
+  return bars;
 }
 
 // ── Main Chart Core ──────────────────────────────────────────────────────────
 export function ChartCore() {
-  const { state, symbolInfo } = useWorkspace();
-  const showPalette = DRAWING_MODES.has(state.activeTool);
+  const { state, dispatch } = useWorkspace();
+
+  const bars = useMemo(
+    () => generateBars(500, state.timeframe, state.symbol),
+    [state.timeframe, state.symbol],
+  );
+
+  const handlePairChange = (pair: string) => {
+    dispatch({ type: 'SET_SYMBOL', symbol: pair });
+  };
 
   return (
-    <div style={{
-      flex: 1, position: 'relative', overflow: 'hidden',
-      background: T.chartBg, minWidth: 0, minHeight: 0,
-    }}>
-      <ChartOverlayHeader />
-      {showPalette && <FloatingPalette />}
-
-      <div style={{ position: 'absolute', inset: 0 }}>
-        <MockCandleChart
-          symbol={state.symbol}
-          exchange={`${symbolInfo.exchange} · ${symbolInfo.market}`}
-          interval={state.timeframe}
-          chartType={state.chartType}
-          showSR={state.showSR}
-          showFVG={state.showFVG}
-          indicators={state.indicators}
-          activeTool={state.activeTool}
-        />
-      </div>
+    <div style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
+      <ChartEngine
+        bars={bars}
+        pair={state.symbol}
+        interval={state.timeframe}
+        onPairChange={handlePairChange}
+        embedded
+        externalConfig={state.chartConfig as any}
+        externalSubPanes={state.chartSubPanes}
+        externalChartType={state.chartType as any}
+        externalDrawingMode={state.drawingMode as any}
+        externalMagnetEnabled={state.magnetEnabled}
+        externalHideDrawings={state.hideDrawings}
+        externalLockDrawings={state.lockDrawings}
+        externalDeleteAllDrawings={state.deleteDrawingsCounter}
+      />
     </div>
   );
 }

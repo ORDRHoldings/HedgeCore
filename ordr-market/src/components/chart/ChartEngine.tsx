@@ -55,7 +55,7 @@ import {
   handleDragStart, handleDragMove, handleDragEnd, tickAnimation,
 } from "./core/zoom";
 import type { ZoomPanState } from "./core/zoom";
-import { THEME } from "./core/theme";
+import { THEME, syncThemeWithCSS } from "./core/theme";
 import { drawCandlesticks } from "./renderers/candlestick";
 import { drawVolume } from "./renderers/volume";
 import {
@@ -87,7 +87,7 @@ import {
   drawBBPercentB, drawBBWidth, drawHistVol, drawCorrelation, drawADRPane,
 } from "./renderers/oscillators";
 import { drawVolumeProfile } from "./renderers/volumeProfile";
-import { drawCurrentPriceLine, drawOHLCLegend } from "./renderers/priceLine";
+import { drawCurrentPriceLine, drawOHLCLegend, drawIndicatorLegend } from "./renderers/priceLine";
 import {
   drawLineChart, drawAreaChart, drawBarChart,
   drawHollowCandles, drawHeikinAshi, drawBaseline,
@@ -124,6 +124,28 @@ interface Props {
   loading?: boolean;
   error?: string | null;
   onPairChange?: (pair: string) => void;
+  /** Embedded mode: hides built-in header, toolbars, status bar. Canvas only. */
+  embedded?: boolean;
+  /** External indicator config — overrides internal state when provided */
+  externalConfig?: Partial<ChartIndicatorConfig>;
+  /** External sub-pane list — overrides internal state when provided */
+  externalSubPanes?: string[];
+  /** External chart type — overrides internal state when provided */
+  externalChartType?: ChartType;
+  /** External drawing mode — overrides internal state when provided */
+  externalDrawingMode?: DrawingType | null;
+  /** Magnet mode enabled (snap to OHLC) */
+  externalMagnetEnabled?: boolean;
+  /** Hide all drawings */
+  externalHideDrawings?: boolean;
+  /** Lock all drawings (prevent editing) */
+  externalLockDrawings?: boolean;
+  /** Delete all drawings trigger (increments to trigger) */
+  externalDeleteAllDrawings?: number;
+  /** Callback when config changes internally (for sync) */
+  onConfigChange?: (config: ChartIndicatorConfig) => void;
+  /** Callback when subpanes change internally (for sync) */
+  onSubPanesChange?: (panes: string[]) => void;
 }
 
 const DEFAULT_CONFIG: ChartIndicatorConfig = {
@@ -278,7 +300,13 @@ function withPane(layout: ChartLayout, pane: SubPaneLayout): ChartLayout {
    Component
    ═══════════════════════════════════════════════════════ */
 
-function ChartEngineInner({ bars, pair, interval, source, loading, error, onPairChange }: Props) {
+function ChartEngineInner({
+  bars, pair, interval, source, loading, error, onPairChange,
+  embedded, externalConfig, externalSubPanes, externalChartType,
+  externalDrawingMode, externalMagnetEnabled, externalHideDrawings,
+  externalLockDrawings, externalDeleteAllDrawings,
+  onConfigChange, onSubPanesChange,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const outerRef = useRef<HTMLDivElement>(null);
@@ -331,6 +359,45 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   useEffect(() => { drawingPointsRef.current = drawingPoints; }, [drawingPoints]);
   useEffect(() => { drawingsRef.current = drawings; }, [drawings]);
 
+  // ── Embedded mode: use external state when provided ────────────────────────
+  const effectiveConfig = externalConfig ? { ...config, ...externalConfig } : config;
+  const effectiveSubPanes = externalSubPanes ?? activeSubPanes;
+  const effectiveChartType = externalChartType ?? chartType;
+  const effectiveDrawingMode = externalDrawingMode !== undefined ? externalDrawingMode : drawingMode;
+
+  // Sync external config changes to internal state
+  useEffect(() => {
+    if (externalConfig) setConfig(prev => ({ ...prev, ...externalConfig } as ChartIndicatorConfig));
+  }, [externalConfig]);
+  useEffect(() => {
+    if (externalSubPanes) setActiveSubPanes(externalSubPanes);
+  }, [externalSubPanes]);
+  useEffect(() => {
+    if (externalChartType) setChartType(externalChartType);
+  }, [externalChartType]);
+  useEffect(() => {
+    if (externalDrawingMode !== undefined) setDrawingMode(externalDrawingMode);
+  }, [externalDrawingMode]);
+
+  // ── External magnet / hide / lock / delete-all ─────────────────────────────
+  const magnetEnabledRef = useRef(externalMagnetEnabled ?? true);
+  useEffect(() => { magnetEnabledRef.current = externalMagnetEnabled ?? true; }, [externalMagnetEnabled]);
+
+  const hideDrawingsRef = useRef(externalHideDrawings ?? false);
+  useEffect(() => { hideDrawingsRef.current = externalHideDrawings ?? false; }, [externalHideDrawings]);
+
+  const lockDrawingsRef = useRef(externalLockDrawings ?? false);
+  useEffect(() => { lockDrawingsRef.current = externalLockDrawings ?? false; }, [externalLockDrawings]);
+
+  // Delete all drawings when trigger counter increments
+  useEffect(() => {
+    if (externalDeleteAllDrawings && externalDeleteAllDrawings > 0) {
+      setDrawings([]);
+      saveDrawings(pair, []);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalDeleteAllDrawings]);
+
   // Shift key tracking (for 15° angle snap)
   const shiftHeldRef = useRef(false);
   useEffect(() => {
@@ -372,8 +439,8 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   // Layout (left toolbar adds 40px)
   const LEFT_TOOLBAR_WIDTH = 40;
   const layout = useMemo(
-    () => computeLayout(dimensions.w, dimensions.h, activeSubPanes.length),
-    [dimensions.w, dimensions.h, activeSubPanes.length],
+    () => computeLayout(dimensions.w, dimensions.h, effectiveSubPanes.length),
+    [dimensions.w, dimensions.h, effectiveSubPanes.length],
   );
 
   // Helper: get param value with fallback to schema default
@@ -386,60 +453,60 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     if (bars.length < 5) return EMPTY_BUNDLE;
 
     const overlayLines: IndicatorBundle["overlayLines"] = [];
-    if (config.sma20) overlayLines.push({ points: computeSMA(bars, p("sma20", "period", 20)), color: THEME.sma1Color, label: formatIndicatorLabel("sma20", { period: p("sma20", "period", 20) }) });
-    if (config.sma50) overlayLines.push({ points: computeSMA(bars, p("sma50", "period", 50)), color: THEME.sma2Color, label: formatIndicatorLabel("sma50", { period: p("sma50", "period", 50) }) });
-    if (config.sma200) overlayLines.push({ points: computeSMA(bars, p("sma200", "period", 200)), color: "#FF5252", label: formatIndicatorLabel("sma200", { period: p("sma200", "period", 200) }) });
-    if (config.ema20) overlayLines.push({ points: computeEMA(bars, p("ema20", "period", 20)), color: THEME.emaColor, label: formatIndicatorLabel("ema20", { period: p("ema20", "period", 20) }) });
-    if (config.ema50) overlayLines.push({ points: computeEMA(bars, p("ema50", "period", 50)), color: "#00E676", label: formatIndicatorLabel("ema50", { period: p("ema50", "period", 50) }) });
-    if (config.hma9) overlayLines.push({ points: computeHMA(bars, p("hma9", "period", 9)), color: "#00E676", label: formatIndicatorLabel("hma9", { period: p("hma9", "period", 9) }) });
-    if (config.tema20) overlayLines.push({ points: computeTEMA(bars, p("tema20", "period", 20)), color: "#FF4081", label: formatIndicatorLabel("tema20", { period: p("tema20", "period", 20) }) });
-    if (config.wma) overlayLines.push({ points: computeWMA(bars, p("wma", "period", 20)), color: "#FF9800", label: formatIndicatorLabel("wma", { period: p("wma", "period", 20) }) });
-    if (config.smma) overlayLines.push({ points: computeSMMA(bars, p("smma", "period", 20)), color: "#FF7043", label: formatIndicatorLabel("smma", { period: p("smma", "period", 20) }) });
-    if (config.alma) overlayLines.push({ points: computeALMA(bars, p("alma", "period", 21), p("alma", "sigma", 6), p("alma", "offset", 0.85)), color: "#AB47BC", label: formatIndicatorLabel("alma", { period: p("alma", "period", 21), sigma: p("alma", "sigma", 6), offset: p("alma", "offset", 0.85) }) });
-    if (config.dema) overlayLines.push({ points: computeDEMA(bars, p("dema", "period", 20)), color: "#26C6DA", label: formatIndicatorLabel("dema", { period: p("dema", "period", 20) }) });
-    if (config.lsma) overlayLines.push({ points: computeLSMA(bars, p("lsma", "period", 25)), color: "#66BB6A", label: formatIndicatorLabel("lsma", { period: p("lsma", "period", 25) }) });
-    if (config.mcginley) overlayLines.push({ points: computeMcGinley(bars, p("mcginley", "period", 14)), color: "#FFA726", label: formatIndicatorLabel("mcginley", { period: p("mcginley", "period", 14) }) });
-    if (config.vwma) overlayLines.push({ points: computeVWMA(bars, p("vwma", "period", 20)), color: "#EC407A", label: formatIndicatorLabel("vwma", { period: p("vwma", "period", 20) }) });
+    if (effectiveConfig.sma20) overlayLines.push({ points: computeSMA(bars, p("sma20", "period", 20)), color: THEME.sma1Color, label: formatIndicatorLabel("sma20", { period: p("sma20", "period", 20) }) });
+    if (effectiveConfig.sma50) overlayLines.push({ points: computeSMA(bars, p("sma50", "period", 50)), color: THEME.sma2Color, label: formatIndicatorLabel("sma50", { period: p("sma50", "period", 50) }) });
+    if (effectiveConfig.sma200) overlayLines.push({ points: computeSMA(bars, p("sma200", "period", 200)), color: "#FF5252", label: formatIndicatorLabel("sma200", { period: p("sma200", "period", 200) }) });
+    if (effectiveConfig.ema20) overlayLines.push({ points: computeEMA(bars, p("ema20", "period", 20)), color: THEME.emaColor, label: formatIndicatorLabel("ema20", { period: p("ema20", "period", 20) }) });
+    if (effectiveConfig.ema50) overlayLines.push({ points: computeEMA(bars, p("ema50", "period", 50)), color: "#00E676", label: formatIndicatorLabel("ema50", { period: p("ema50", "period", 50) }) });
+    if (effectiveConfig.hma9) overlayLines.push({ points: computeHMA(bars, p("hma9", "period", 9)), color: "#00E676", label: formatIndicatorLabel("hma9", { period: p("hma9", "period", 9) }) });
+    if (effectiveConfig.tema20) overlayLines.push({ points: computeTEMA(bars, p("tema20", "period", 20)), color: "#FF4081", label: formatIndicatorLabel("tema20", { period: p("tema20", "period", 20) }) });
+    if (effectiveConfig.wma) overlayLines.push({ points: computeWMA(bars, p("wma", "period", 20)), color: "#FF9800", label: formatIndicatorLabel("wma", { period: p("wma", "period", 20) }) });
+    if (effectiveConfig.smma) overlayLines.push({ points: computeSMMA(bars, p("smma", "period", 20)), color: "#FF7043", label: formatIndicatorLabel("smma", { period: p("smma", "period", 20) }) });
+    if (effectiveConfig.alma) overlayLines.push({ points: computeALMA(bars, p("alma", "period", 21), p("alma", "sigma", 6), p("alma", "offset", 0.85)), color: "#AB47BC", label: formatIndicatorLabel("alma", { period: p("alma", "period", 21), sigma: p("alma", "sigma", 6), offset: p("alma", "offset", 0.85) }) });
+    if (effectiveConfig.dema) overlayLines.push({ points: computeDEMA(bars, p("dema", "period", 20)), color: "#26C6DA", label: formatIndicatorLabel("dema", { period: p("dema", "period", 20) }) });
+    if (effectiveConfig.lsma) overlayLines.push({ points: computeLSMA(bars, p("lsma", "period", 25)), color: "#66BB6A", label: formatIndicatorLabel("lsma", { period: p("lsma", "period", 25) }) });
+    if (effectiveConfig.mcginley) overlayLines.push({ points: computeMcGinley(bars, p("mcginley", "period", 14)), color: "#FFA726", label: formatIndicatorLabel("mcginley", { period: p("mcginley", "period", 14) }) });
+    if (effectiveConfig.vwma) overlayLines.push({ points: computeVWMA(bars, p("vwma", "period", 20)), color: "#EC407A", label: formatIndicatorLabel("vwma", { period: p("vwma", "period", 20) }) });
 
     const bandsList: IndicatorBundle["bands"] = [];
-    if (config.bollinger) {
+    if (effectiveConfig.bollinger) {
       const bbPeriod = p("bollinger", "period", 20);
       const bbStdDev = p("bollinger", "stdDev", 2);
       bandsList.push({ points: computeBollinger(bars, bbPeriod, bbStdDev), fill: THEME.bbFill, line: THEME.bbLine, label: formatIndicatorLabel("bollinger", { period: bbPeriod, stdDev: bbStdDev }) });
     }
-    if (config.keltner) {
+    if (effectiveConfig.keltner) {
       const kcEma = p("keltner", "emaPeriod", 20);
       const kcAtr = p("keltner", "atrPeriod", 10);
       const kcMult = p("keltner", "multiplier", 1.5);
       bandsList.push({ points: computeKeltner(bars, kcEma, kcAtr, kcMult), fill: THEME.kcFill, line: THEME.kcLine, label: formatIndicatorLabel("keltner", { emaPeriod: kcEma, atrPeriod: kcAtr, multiplier: kcMult }) });
     }
-    if (config.donchian) {
+    if (effectiveConfig.donchian) {
       const dcPeriod = p("donchian", "period", 20);
       bandsList.push({ points: computeDonchian(bars, dcPeriod), fill: "rgba(0,188,212,0.06)", line: "#00BCD4", label: formatIndicatorLabel("donchian", { period: dcPeriod }) });
     }
-    if (config.envelope) {
+    if (effectiveConfig.envelope) {
       const envPeriod = p("envelope", "period", 20);
       const envPct = p("envelope", "percent", 2.5);
       bandsList.push({ points: computeEnvelope(bars, envPeriod, envPct), fill: "rgba(120,144,156,0.06)", line: "#78909C", label: formatIndicatorLabel("envelope", { period: envPeriod, percent: envPct }) });
     }
 
-    const vwap = config.vwap ? computeVWAP(bars) : [];
-    const ichimoku = config.ichimoku ? computeIchimoku(bars, p("ichimoku", "tenkan", 9), p("ichimoku", "kijun", 26), p("ichimoku", "senkouB", 52)) : [];
-    const parabolicSAR = config.parabolicSAR ? computeParabolicSAR(bars, p("parabolicSAR", "afStart", 0.02), p("parabolicSAR", "afMax", 0.2)) : [];
-    const pivotPointsArr = config.pivotPoints ? computePivotPoints(bars) : [];
+    const vwap = effectiveConfig.vwap ? computeVWAP(bars) : [];
+    const ichimoku = effectiveConfig.ichimoku ? computeIchimoku(bars, p("ichimoku", "tenkan", 9), p("ichimoku", "kijun", 26), p("ichimoku", "senkouB", 52)) : [];
+    const parabolicSAR = effectiveConfig.parabolicSAR ? computeParabolicSAR(bars, p("parabolicSAR", "afStart", 0.02), p("parabolicSAR", "afMax", 0.2)) : [];
+    const pivotPointsArr = effectiveConfig.pivotPoints ? computePivotPoints(bars) : [];
     const pivotPoints = pivotPointsArr.length > 0 ? pivotPointsArr[pivotPointsArr.length - 1] : null;
-    const volumeProfile = config.volumeProfile ? computeVolumeProfile(bars, p("volumeProfile", "numLevels", 50)) : null;
+    const volumeProfile = effectiveConfig.volumeProfile ? computeVolumeProfile(bars, p("volumeProfile", "numLevels", 50)) : null;
 
-    const supertrend = config.supertrend ? computeSuperTrend(bars, p("supertrend", "period", 10), p("supertrend", "multiplier", 3)) : [];
-    const chandelierExit = config.chandelierExit ? computeChandelierExit(bars, p("chandelierExit", "period", 22), p("chandelierExit", "multiplier", 3)) : [];
-    const chandeKrollStop = config.chandeKrollStop ? computeChandeKrollStop(bars, p("chandeKrollStop", "p", 10), p("chandeKrollStop", "q", 9), p("chandeKrollStop", "x", 1.5)) : [];
-    const alligator = config.alligator ? computeAlligator(bars) : [];
-    const zigzag = config.zigzag ? computeZigzag(bars, p("zigzag", "deviation", 5)) : [];
-    const autoFib = config.autoFib ? computeAutoFib(bars, p("autoFib", "lookback", 50)) : null;
-    const maRibbon = config.maRibbon ? computeMARibbon(bars) : [];
+    const supertrend = effectiveConfig.supertrend ? computeSuperTrend(bars, p("supertrend", "period", 10), p("supertrend", "multiplier", 3)) : [];
+    const chandelierExit = effectiveConfig.chandelierExit ? computeChandelierExit(bars, p("chandelierExit", "period", 22), p("chandelierExit", "multiplier", 3)) : [];
+    const chandeKrollStop = effectiveConfig.chandeKrollStop ? computeChandeKrollStop(bars, p("chandeKrollStop", "p", 10), p("chandeKrollStop", "q", 9), p("chandeKrollStop", "x", 1.5)) : [];
+    const alligator = effectiveConfig.alligator ? computeAlligator(bars) : [];
+    const zigzag = effectiveConfig.zigzag ? computeZigzag(bars, p("zigzag", "deviation", 5)) : [];
+    const autoFib = effectiveConfig.autoFib ? computeAutoFib(bars, p("autoFib", "lookback", 50)) : null;
+    const maRibbon = effectiveConfig.maRibbon ? computeMARibbon(bars) : [];
 
     const subPaneData: Record<string, unknown> = {};
-    for (const sp of activeSubPanes) {
+    for (const sp of effectiveSubPanes) {
       switch (sp) {
         case "rsi": subPaneData.rsi = computeRSI(bars, p("rsi", "period", 14)); break;
         case "macd": subPaneData.macd = computeMACD(bars, p("macd", "fast", 12), p("macd", "slow", 26), p("macd", "signal", 9)); break;
@@ -492,12 +559,12 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       }
     }
 
-    const sr = config.sr ? detectSupportResistance(bars) : [];
-    const fvg = config.fvg ? detectFVG(bars) : [];
-    const trend = config.trendlines ? detectTrendlines(bars) : [];
+    const sr = effectiveConfig.sr ? detectSupportResistance(bars) : [];
+    const fvg = effectiveConfig.fvg ? detectFVG(bars) : [];
+    const trend = effectiveConfig.trendlines ? detectTrendlines(bars) : [];
 
     return { overlayLines, bands: bandsList, vwap, ichimoku, parabolicSAR, pivotPoints, volumeProfile, subPaneData, sr, fvg, trend, supertrend, chandelierExit, chandeKrollStop, alligator, zigzag, autoFib, maRibbon };
-  }, [bars, config, activeSubPanes, indicatorParams, p]);
+  }, [bars, effectiveConfig, effectiveSubPanes, indicatorParams, p]);
 
   // Load drawings
   useEffect(() => {
@@ -507,12 +574,13 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     setRedoStack([]);
   }, [pair]);
 
-  // Reset zoom on bar change
+  // Reset zoom when bars data changes (new symbol or timeframe)
   useEffect(() => {
     if (bars.length > 0) {
       zoomRef.current = createInitialZoomState(bars.length, Math.min(200, bars.length));
+      priceZoomRef.current = 1.0;
     }
-  }, [bars.length]);
+  }, [bars]);
 
   // Resize observer
   useEffect(() => {
@@ -619,7 +687,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
           break;
         case "cancel":
           // Cancel drawing in progress or deselect
-          if (drawingMode) {
+          if (effectiveDrawingMode) {
             setDrawingMode(null);
             drawingModeRef.current = null;
             setDrawingPoints([]);
@@ -646,7 +714,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [bars.length, pair, drawings, showSymbolSearch, showIndicatorDialog, selectedDrawingId, drawingMode]);
+  }, [bars.length, pair, drawings, showSymbolSearch, showIndicatorDialog, selectedDrawingId, effectiveDrawingMode]);
 
   /* ─── Drawing undo/redo ─── */
   const pushDrawingState = useCallback((newDrawings: Drawing[]) => {
@@ -682,6 +750,9 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
 
   /* ─── Render ─── */
   const render = useCallback(() => {
+    // Sync chart theme with CSS variables (reads :root vars set by ThemeProvider)
+    syncThemeWithCSS();
+
     const canvas = canvasRef.current;
     if (!canvas || bars.length === 0) return;
     const ctx = canvas.getContext("2d");
@@ -746,7 +817,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     if (indicators.ichimoku.length > 0) drawIchimoku(ctx, indicators.ichimoku, bars, layout, viewport, priceScale);
 
     // Layer 2: Price data (chart type dispatch)
-    switch (chartType) {
+    switch (effectiveChartType) {
       case "candles":
         drawCandlesticks(ctx, bars, layout, viewport, priceScale);
         break;
@@ -791,10 +862,10 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     if (indicators.volumeProfile) drawVolumeProfile(ctx, indicators.volumeProfile, layout, viewport, priceScale);
 
     // Layer 6: Sub-panes
-    for (let i = 0; i < activeSubPanes.length; i++) {
+    for (let i = 0; i < effectiveSubPanes.length; i++) {
       const pane = layout.subPanes[i];
       if (!pane) continue;
-      const type = activeSubPanes[i];
+      const type = effectiveSubPanes[i];
       const d = indicators.subPaneData;
       switch (type) {
         case "rsi": drawRSI(ctx, d.rsi as IndicatorPoint[], bars, withPane(layout, pane), viewport); break;
@@ -848,13 +919,14 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       }
     }
 
-    // Layer 7: Drawings (apply drag override if active)
-    let renderDrawings = drawings;
-    if (dragOverrideRef.current) {
-      const ov = dragOverrideRef.current;
-      renderDrawings = drawings.map(d => d.id === ov.id ? { ...d, points: ov.points } : d);
-    }
-    drawDrawings(ctx, renderDrawings, layout, viewport, pair, priceScale, selectedDrawingId, hoveredDrawingId, bars);
+    // Layer 7: Drawings (apply drag override if active, respect hide toggle)
+    if (!hideDrawingsRef.current) {
+      let renderDrawings = drawings;
+      if (dragOverrideRef.current) {
+        const ov = dragOverrideRef.current;
+        renderDrawings = drawings.map(d => d.id === ov.id ? { ...d, points: ov.points } : d);
+      }
+      drawDrawings(ctx, renderDrawings, layout, viewport, pair, priceScale, selectedDrawingId, hoveredDrawingId, bars);
 
     // Layer 7b: Rubber-band preview (drawing in progress)
     const currentPoints = drawingPointsRef.current;
@@ -885,22 +957,26 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       }
     }
 
+    } // end hideDrawingsRef check
+
     // Layer 8: Axes
     drawPriceAxis(ctx, layout, viewport, pair, priceScale, refPrice);
     drawTimeAxis(ctx, layout, viewport, bars, interval);
 
     // Layer 8b: Drawing price axis labels (on top of axes)
-    drawDrawingPriceLabels(ctx, renderDrawings, layout, viewport, priceScale, selectedDrawingId);
+    if (!hideDrawingsRef.current) {
+      drawDrawingPriceLabels(ctx, drawings, layout, viewport, priceScale, selectedDrawingId);
+    }
 
     // Layer 9: Crosshair
     drawCrosshair(ctx, ch, layout, viewport, bars, pair, crosshairMode, priceScale, refPrice);
 
-    // Layer 10: OHLC Legend (top-left, on top of everything)
+    // Layer 10: OHLC Legend — Row 1 (top-left)
     drawOHLCLegend(ctx, bars, layout, viewport, pair, ch.visible ? ch.snapIndex : -1);
 
-    // Layer 11: Legend (indicator labels)
-    drawLegend(ctx, indicators.overlayLines, indicators.bands, layout);
-  }, [bars, layout, indicators, drawings, pair, interval, activeSubPanes, dimensions, chartType, enabledSessions, priceScale, crosshairMode, selectedDrawingId, hoveredDrawingId]);
+    // Layer 11: Indicator chips — Row 2 (below OHLC)
+    drawIndicatorLegend(ctx, indicators.overlayLines, indicators.bands, layout);
+  }, [bars, layout, indicators, drawings, pair, interval, effectiveSubPanes, dimensions, effectiveChartType, enabledSessions, priceScale, crosshairMode, selectedDrawingId, hoveredDrawingId]);
 
   /* ─── Animation loop ─── */
   useEffect(() => {
@@ -1027,8 +1103,8 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
       return;
     }
 
-    // Update magnetic snap result during drawing mode
-    if (drawingModeRef.current && bars.length > 0) {
+    // Update magnetic snap result during drawing mode (respects magnet toggle)
+    if (drawingModeRef.current && bars.length > 0 && magnetEnabledRef.current) {
       const vp = getActiveViewport();
       magneticSnapResultRef.current = magneticSnap(x, y, bars, layout, vp, priceScale);
     } else {
@@ -1078,10 +1154,16 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
     const currentDrawingMode = drawingModeRef.current;
     if (currentDrawingMode) {
       const vp = getActiveViewport();
-      // Magnetic snap to nearest OHLC (pixel coords)
-      const snap = magneticSnap(x, y, bars, layout, vp, priceScale);
-      let idx = snap.index;
-      let price = snap.price;
+      // Magnetic snap to nearest OHLC (pixel coords) — respects magnet toggle
+      let idx: number, price: number;
+      if (magnetEnabledRef.current) {
+        const snap = magneticSnap(x, y, bars, layout, vp, priceScale);
+        idx = snap.index;
+        price = snap.price;
+      } else {
+        idx = Math.round(xToIndex(x, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth));
+        price = yToPrice(y, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+      }
       const currentPoints = drawingPointsRef.current;
       // Shift-snap for second point (angle constraint) — operates in pixel space
       if (currentPoints.length === 1 && shiftHeldRef.current && currentDrawingMode !== "horizontal") {
@@ -1126,9 +1208,9 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
         if (drawingPropsPanel && drawingPropsPanel.drawingId !== hit.drawingId) {
           setDrawingPropsPanel(null);
         }
-        // Start drag-to-move if drawing is not locked
+        // Start drag-to-move if drawing is not locked (respect global lock too)
         const targetDrawing = drawingsRef.current.find(d => d.id === hit.drawingId);
-        if (targetDrawing && !targetDrawing.locked) {
+        if (targetDrawing && !targetDrawing.locked && !lockDrawingsRef.current) {
           drawingDragRef.current = {
             drawingId: hit.drawingId,
             part: hit.part,
@@ -1425,14 +1507,14 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
           key: k,
           label,
           color: OVERLAY_META[k].color,
-          enabled: !!config[k],
+          enabled: !!effectiveConfig[k as keyof ChartIndicatorConfig],
         };
       })
       .filter((c) => c.enabled);
-  }, [config, indicatorParams]);
+  }, [effectiveConfig, indicatorParams]);
 
   const subPaneChips: SubPaneChip[] = useMemo(() => {
-    return activeSubPanes
+    return effectiveSubPanes
       .filter((k) => SUBPANE_META[k])
       .map((k) => {
         const schema = getIndicatorSchema(k);
@@ -1449,7 +1531,7 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
           color: SUBPANE_META[k].color,
         };
       });
-  }, [activeSubPanes, indicatorParams]);
+  }, [effectiveSubPanes, indicatorParams]);
 
   const handleRemoveOverlay = useCallback((key: string) => {
     handleToggle(key);
@@ -1485,118 +1567,124 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
   return (
     <div ref={outerRef} style={{
       display: "flex", flexDirection: "column", height: "100%",
-      background: THEME.canvasBg, borderRadius: 8,
-      border: `1px solid ${THEME.subPaneBorder}`, overflow: "hidden",
+      background: THEME.canvasBg,
+      borderRadius: embedded ? 0 : 8,
+      border: embedded ? "none" : `1px solid ${THEME.subPaneBorder}`,
+      overflow: "hidden",
     }}>
-      {/* Header */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 12,
-        padding: "6px 12px",
-        borderBottom: `1px solid ${THEME.subPaneBorder}`,
-        background: THEME.axisBg, minHeight: 40,
-      }}>
-        {/* Clickable pair name → opens symbol search */}
-        <button
-          onClick={() => setShowSymbolSearch(true)}
-          style={{
-            fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, fontSize: 15,
-            color: "#D1D4DC", background: "none", border: "none", cursor: "pointer",
-            padding: "2px 4px", borderRadius: 4,
-          }}
-          title="Search symbol (press .)"
-        >
-          {pair}
-          <span style={{ fontSize: 10, color: THEME.axisText, marginLeft: 4 }}>&#9662;</span>
-        </button>
+      {/* Header — hidden in embedded mode (workspace CommandBar handles this) */}
+      {!embedded && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "6px 12px",
+          borderBottom: `1px solid ${THEME.subPaneBorder}`,
+          background: THEME.axisBg, minHeight: 40,
+        }}>
+          <button
+            onClick={() => setShowSymbolSearch(true)}
+            style={{
+              fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, fontSize: 15,
+              color: "#D1D4DC", background: "none", border: "none", cursor: "pointer",
+              padding: "2px 4px", borderRadius: 4,
+            }}
+            title="Search symbol (press .)"
+          >
+            {pair}
+            <span style={{ fontSize: 10, color: THEME.axisText, marginLeft: 4 }}>&#9662;</span>
+          </button>
 
-        {lastBar && (
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, fontWeight: 600, color: "#D1D4DC" }}>
-              {formatPrice(lastBar.c, pair)}
-            </span>
-            <span style={{
-              fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600,
-              color: isUp ? THEME.bullBody : THEME.bearBody,
-            }}>
-              {isUp ? "+" : ""}{change.toFixed(3)}%
-            </span>
+          {lastBar && (
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, fontWeight: 600, color: "#D1D4DC" }}>
+                {formatPrice(lastBar.c, pair)}
+              </span>
+              <span style={{
+                fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600,
+                color: isUp ? THEME.bullBody : THEME.bearBody,
+              }}>
+                {isUp ? "+" : ""}{change.toFixed(3)}%
+              </span>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 1, background: "#1A1E2E", borderRadius: 4, padding: 1, marginLeft: 8 }}>
+            {(["candles", "hollow", "bars", "line", "area", "heikinAshi", "baseline"] as ChartType[]).map(ct => (
+              <button
+                key={ct}
+                onClick={() => setChartType(ct)}
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fontWeight: 600,
+                  padding: "2px 6px", borderRadius: 3, border: "none",
+                  background: effectiveChartType === ct ? "#2A2E39" : "transparent",
+                  color: effectiveChartType === ct ? "#D1D4DC" : "#545B69",
+                  cursor: "pointer", textTransform: "uppercase",
+                }}
+              >
+                {ct === "heikinAshi" ? "HA" : ct === "baseline" ? "BASE" : ct.toUpperCase().slice(0, 4)}
+              </button>
+            ))}
           </div>
-        )}
 
-        {/* Chart type selector */}
-        <div style={{ display: "flex", gap: 1, background: "#1A1E2E", borderRadius: 4, padding: 1, marginLeft: 8 }}>
-          {(["candles", "hollow", "bars", "line", "area", "heikinAshi", "baseline"] as ChartType[]).map(ct => (
-            <button
-              key={ct}
-              onClick={() => setChartType(ct)}
-              style={{
-                fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, fontWeight: 600,
-                padding: "2px 6px", borderRadius: 3, border: "none",
-                background: chartType === ct ? "#2A2E39" : "transparent",
-                color: chartType === ct ? "#D1D4DC" : "#545B69",
-                cursor: "pointer", textTransform: "uppercase",
-              }}
-            >
-              {ct === "heikinAshi" ? "HA" : ct === "baseline" ? "BASE" : ct.toUpperCase().slice(0, 4)}
-            </button>
-          ))}
+          <div style={{ flex: 1 }} />
+
+          {source && (
+            <span style={{
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+              padding: "2px 6px", borderRadius: 4,
+              background: "rgba(41,98,255,0.15)", color: "#2962FF", fontWeight: 600,
+            }}>
+              {source}
+            </span>
+          )}
+          {source && source.toLowerCase().includes("twelve") && (
+            <span style={{
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 9,
+              padding: "1px 5px", borderRadius: 3,
+              background: "rgba(255,152,0,0.15)", color: "#FF9800", fontWeight: 600,
+            }}>
+              DELAYED
+            </span>
+          )}
+          {loading && (
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: THEME.axisText }}>
+              LOADING...
+            </span>
+          )}
         </div>
+      )}
 
-        <div style={{ flex: 1 }} />
-
-        {source && (
-          <span style={{
-            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
-            padding: "2px 6px", borderRadius: 4,
-            background: "rgba(41,98,255,0.15)", color: "#2962FF", fontWeight: 600,
-          }}>
-            {source}
-          </span>
-        )}
-        {source && source.toLowerCase().includes("twelve") && (
-          <span style={{
-            fontFamily: "'IBM Plex Mono', monospace", fontSize: 9,
-            padding: "1px 5px", borderRadius: 3,
-            background: "rgba(255,152,0,0.15)", color: "#FF9800", fontWeight: 600,
-          }}>
-            DELAYED
-          </span>
-        )}
-        {loading && (
-          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: THEME.axisText }}>
-            LOADING...
-          </span>
-        )}
-      </div>
-
-      {/* Top Toolbar */}
-      <ChartToolbar
-        config={config}
-        onToggle={handleToggle}
-        activeSubPanes={activeSubPanes}
-        onToggleSubPane={handleToggleSubPane}
-        drawingMode={drawingMode}
-        onSetDrawingMode={setDrawingMode}
-        hasDrawings={drawings.length > 0}
-        onClearDrawings={clearDrawings}
-      />
-
-      {/* Main area: left toolbar + canvas */}
-      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
-        {/* Left Drawing Toolbar */}
-        <ChartLeftToolbar
-          activeTool={activeTool}
-          onSelectTool={handleSelectTool}
+      {/* Top Toolbar — hidden in embedded mode */}
+      {!embedded && (
+        <ChartToolbar
+          config={config}
+          onToggle={handleToggle}
+          activeSubPanes={activeSubPanes}
+          onToggleSubPane={handleToggleSubPane}
+          drawingMode={drawingMode}
+          onSetDrawingMode={setDrawingMode}
           hasDrawings={drawings.length > 0}
           onClearDrawings={clearDrawings}
         />
+      )}
+
+      {/* Main area: left toolbar + canvas */}
+      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
+        {/* Left Drawing Toolbar — hidden in embedded mode */}
+        {!embedded && (
+          <ChartLeftToolbar
+            activeTool={activeTool}
+            onSelectTool={handleSelectTool}
+            hasDrawings={drawings.length > 0}
+            onClearDrawings={clearDrawings}
+          />
+        )}
 
         {/* Canvas container */}
         <div
           ref={containerRef}
           style={{
             flex: 1, position: "relative",
-            cursor: isDrawingDragging ? "move" : drawingMode ? "crosshair" : isDragging ? "grabbing" : hoveredDrawingId ? "pointer" : "crosshair",
+            cursor: isDrawingDragging ? "move" : effectiveDrawingMode ? "crosshair" : isDragging ? "grabbing" : hoveredDrawingId ? "pointer" : "crosshair",
             overflow: "hidden",
             touchAction: "none",
             userSelect: "none",
@@ -1685,15 +1773,17 @@ function ChartEngineInner({ bars, pair, interval, source, loading, error, onPair
         </div>
       </div>
 
-      {/* Bottom Status Bar */}
-      <ChartStatusBar
-        interval={interval}
-        lastBarTimestamp={lastBar ? lastBar.t : 0}
-        priceScale={priceScale}
-        onPriceScaleChange={setPriceScale}
-        onScreenshot={() => { if (canvasRef.current) exportScreenshot(canvasRef.current, pair); }}
-        onFullscreen={() => { if (outerRef.current) toggleFullscreen(outerRef.current); }}
-      />
+      {/* Bottom Status Bar — hidden in embedded mode */}
+      {!embedded && (
+        <ChartStatusBar
+          interval={interval}
+          lastBarTimestamp={lastBar ? lastBar.t : 0}
+          priceScale={priceScale}
+          onPriceScaleChange={setPriceScale}
+          onScreenshot={() => { if (canvasRef.current) exportScreenshot(canvasRef.current, pair); }}
+          onFullscreen={() => { if (outerRef.current) toggleFullscreen(outerRef.current); }}
+        />
+      )}
 
       {/* Symbol Search Modal */}
       <ChartSymbolSearch
@@ -1774,32 +1864,4 @@ export default function ChartEngine(props: Props) {
    Legend (drawn on canvas)
    ═══════════════════════════════════════════════════════ */
 
-function drawLegend(
-  ctx: CanvasRenderingContext2D,
-  lines: { label: string; color: string }[],
-  bands: { label: string; line: string }[],
-  layout: ChartLayout,
-): void {
-  const items = [
-    ...lines.map(l => ({ label: l.label, color: l.color })),
-    ...bands.map(b => ({ label: b.label, color: b.line })),
-  ];
-  if (items.length === 0) return;
-
-  ctx.font = "10px 'IBM Plex Mono', monospace";
-  let x = layout.chartLeft + 4;
-  const y = layout.mainTop + 28; // Below OHLC legend
-
-  for (const item of items) {
-    ctx.fillStyle = item.color;
-    ctx.beginPath();
-    ctx.arc(x + 4, y, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = THEME.axisText;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillText(item.label, x + 10, y);
-    x += ctx.measureText(item.label).width + 20;
-  }
-}
+// (drawLegend moved to renderers/priceLine.ts as drawIndicatorLegend)

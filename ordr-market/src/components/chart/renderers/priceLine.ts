@@ -12,6 +12,7 @@ import { priceToY, formatPrice } from "../core/data";
 import { THEME } from "../core/theme";
 
 const FONT = "11px 'IBM Plex Mono', monospace";
+const FONT_SMALL = "10px 'IBM Plex Mono', monospace";
 const LABEL_PAD_X = 4;
 const LABEL_PAD_Y = 2;
 const ARROW_SIZE = 4;
@@ -28,10 +29,6 @@ function formatVolume(v: number): string {
 
 /**
  * Draw TradingView-style current price line with animated label.
- *
- * A dashed horizontal line at the last bar's close, spanning the full chart
- * width. A filled label sits in the price-axis gutter with a left-pointing
- * arrow. The label pulses subtly via alpha oscillation.
  */
 export function drawCurrentPriceLine(
   ctx: CanvasRenderingContext2D,
@@ -68,17 +65,16 @@ export function drawCurrentPriceLine(
   ctx.setLineDash([]);
 
   // --- Animated label in price-axis gutter ---
-  // Alpha oscillation: cycle between 0.85 and 1.0 every 1000ms
-  const cycle = (Math.sin((Date.now() / 1000) * Math.PI * 2) + 1) / 2; // 0..1
-  const alpha = 0.85 + cycle * 0.15; // 0.85..1.0
+  const cycle = (Math.sin((Date.now() / 1000) * Math.PI * 2) + 1) / 2;
+  const alpha = 0.85 + cycle * 0.15;
 
   ctx.font = FONT;
   const priceStr = formatPrice(lastBar.c, pair);
   const textWidth = ctx.measureText(priceStr).width;
   const labelWidth = textWidth + LABEL_PAD_X * 2;
-  const labelHeight = 11 + LABEL_PAD_Y * 2; // 11px font height + padding
+  const labelHeight = 11 + LABEL_PAD_Y * 2;
   const axisX = canvasWidth - priceAxisWidth;
-  const labelX = axisX + 2; // small gap from chart edge
+  const labelX = axisX + 2;
   const labelY = y - labelHeight / 2;
 
   ctx.globalAlpha = alpha;
@@ -107,10 +103,10 @@ export function drawCurrentPriceLine(
 }
 
 /**
- * Draw TradingView-style compact OHLC legend in top-left of chart.
+ * Draw clean OHLC legend — Row 1 of top-left info block.
  *
- * Shows either the hovered bar or the last bar. Single-line format:
- *   O 1.08234  H 1.08456  L 1.08123  C 1.08345  Vol 1.2M  +0.123%
+ * Format: O 1.08234  H 1.08456  L 1.08123  C 1.08345  Vol 1.2M  +0.123%
+ * Uses theme colors for bull/bear change %, muted labels.
  */
 export function drawOHLCLegend(
   ctx: CanvasRenderingContext2D,
@@ -127,51 +123,95 @@ export function drawOHLCLegend(
       ? bars[hoveredIndex]
       : bars[bars.length - 1];
 
-  const { chartLeft, mainTop } = layout;
+  const { chartLeft } = layout;
   const x0 = chartLeft + 8;
-  const y0 = mainTop + 16;
+  const y0 = 14; // Row 1: absolute position in reserved header space (above mainTop)
 
   ctx.save();
   ctx.font = FONT;
   ctx.textAlign = "left";
-  ctx.textBaseline = "top";
+  ctx.textBaseline = "middle";
 
-  // Compute change percentage (open to close)
+  // Change percentage
   const changePct = bar.o !== 0 ? ((bar.c - bar.o) / bar.o) * 100 : 0;
-  const changePctStr =
-    (changePct >= 0 ? "+" : "") + changePct.toFixed(3) + "%";
-  const changeColor = changePct >= 0 ? THEME.bullBody : THEME.bearBody;
+  const isBull = bar.c >= bar.o;
+  const changeColor = isBull ? THEME.bullBody : THEME.bearBody;
+  const valueColor = THEME.tooltipText || "#D1D4DC";
+  const labelColor = THEME.axisText || "#787B86";
 
-  // Build label-value pairs
-  const segments: Array<{ label: string; value: string; color: string }> = [
-    { label: "O ", value: formatPrice(bar.o, pair), color: "#D1D4DC" },
-    { label: "H ", value: formatPrice(bar.h, pair), color: "#D1D4DC" },
-    { label: "L ", value: formatPrice(bar.l, pair), color: "#D1D4DC" },
-    { label: "C ", value: formatPrice(bar.c, pair), color: "#D1D4DC" },
-    { label: "Vol ", value: formatVolume(bar.v), color: "#D1D4DC" },
+  // Segments: label + value pairs
+  const segments: { label: string; value: string; color: string }[] = [
+    { label: "O ", value: formatPrice(bar.o, pair), color: valueColor },
+    { label: "H ", value: formatPrice(bar.h, pair), color: valueColor },
+    { label: "L ", value: formatPrice(bar.l, pair), color: valueColor },
+    { label: "C ", value: formatPrice(bar.c, pair), color: isBull ? THEME.bullBody : THEME.bearBody },
+    { label: "Vol ", value: formatVolume(bar.v), color: valueColor },
   ];
 
   let cursor = x0;
-  const gap = "  "; // 2-space separator
+  const gap = 10; // pixel gap between segments
 
   for (const seg of segments) {
-    // Label (muted)
-    ctx.fillStyle = THEME.axisText;
+    ctx.fillStyle = labelColor;
     ctx.fillText(seg.label, cursor, y0);
     cursor += ctx.measureText(seg.label).width;
 
-    // Value
     ctx.fillStyle = seg.color;
     ctx.fillText(seg.value, cursor, y0);
-    cursor += ctx.measureText(seg.value).width;
-
-    // Gap
-    cursor += ctx.measureText(gap).width;
+    cursor += ctx.measureText(seg.value).width + gap;
   }
 
-  // Change percentage
+  // Change percentage at end
+  const changePctStr = (changePct >= 0 ? "+" : "") + changePct.toFixed(3) + "%";
   ctx.fillStyle = changeColor;
   ctx.fillText(changePctStr, cursor, y0);
 
   ctx.restore();
+}
+
+/**
+ * Draw indicator chip legend — Row 2 of top-left info block.
+ *
+ * Each active indicator rendered as: [colored dot] [label]
+ * Spaced horizontally, positioned below OHLC legend.
+ * Returns the Y position of the bottom of the legend for downstream layout.
+ */
+export function drawIndicatorLegend(
+  ctx: CanvasRenderingContext2D,
+  lines: { label: string; color: string }[],
+  bands: { label: string; line: string }[],
+  layout: ChartLayout,
+): number {
+  const items = [
+    ...lines.map(l => ({ label: l.label, color: l.color })),
+    ...bands.map(b => ({ label: b.label, color: b.line })),
+  ];
+
+  const { chartLeft } = layout;
+  const ROW_Y = 30; // Row 2: absolute position in reserved header space
+
+  if (items.length === 0) return ROW_Y;
+
+  ctx.save();
+  ctx.font = FONT_SMALL;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+
+  let x = chartLeft + 8;
+
+  for (const item of items) {
+    // Colored dot
+    ctx.fillStyle = item.color;
+    ctx.beginPath();
+    ctx.arc(x + 4, ROW_Y, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Label text
+    ctx.fillStyle = THEME.axisText || "#787B86";
+    ctx.fillText(item.label, x + 10, ROW_Y);
+    x += ctx.measureText(item.label).width + 22;
+  }
+
+  ctx.restore();
+  return ROW_Y + 10;
 }

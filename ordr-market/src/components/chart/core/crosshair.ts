@@ -107,56 +107,7 @@ export function drawCrosshair(
     ctx.fillText(timeStr, snapX, axisY + 4);
   }
 
-  // OHLCV tooltip
-  if (idx >= 0 && idx < bars.length) {
-    drawTooltip(ctx, bars[idx], pair, layout);
-  }
-}
-
-function drawTooltip(ctx: CanvasRenderingContext2D, bar: Bar, pair: string, layout: ChartLayout): void {
-  const x = 10;
-  const y = layout.mainTop + 10;
-  const lineH = 16;
-  const lines = [
-    `O: ${formatPrice(bar.o, pair)}`,
-    `H: ${formatPrice(bar.h, pair)}`,
-    `L: ${formatPrice(bar.l, pair)}`,
-    `C: ${formatPrice(bar.c, pair)}`,
-    `V: ${bar.v.toLocaleString()}`,
-  ];
-  const maxW = Math.max(...lines.map(l => ctx.measureText(l).width)) + 16;
-
-  ctx.fillStyle = THEME.tooltipBg;
-  const rh = lines.length * lineH + 12;
-  roundRect(ctx, x, y, maxW, rh, 4);
-  ctx.fill();
-
-  ctx.font = "11px 'IBM Plex Mono', monospace";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-
-  lines.forEach((line, i) => {
-    const isC = i === 3;
-    const color = isC
-      ? (bar.c >= bar.o ? THEME.tooltipGreen : THEME.tooltipRed)
-      : THEME.tooltipText;
-    ctx.fillStyle = color;
-    ctx.fillText(line, x + 8, y + 6 + i * lineH);
-  });
-}
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
+  // No separate tooltip box — OHLC legend (Row 1) already shows hovered bar data
 }
 
 export function snapToBar(

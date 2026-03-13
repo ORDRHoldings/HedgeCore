@@ -31,10 +31,10 @@ export interface ZoomPanState {
   isAnimating: boolean;
 }
 
-const LERP_ZOOM = 0.22;      // Zoom smoothing (higher = snappier)
-const LERP_MOMENTUM = 0.15;  // Momentum smoothing
-const VELOCITY_DECAY = 0.92;  // Friction (lower = stops sooner)
-const VELOCITY_MIN = 0.05;    // Stop threshold (higher = stops earlier, less float)
+const LERP_ZOOM = 0.16;      // Zoom smoothing (higher = snappier)
+const LERP_MOMENTUM = 0.10;  // Momentum smoothing
+const VELOCITY_DECAY = 0.86;  // Friction (lower = stops sooner)
+const VELOCITY_MIN = 0.10;    // Stop threshold (higher = stops earlier, less float)
 const EPSILON = 0.01;         // Animation complete threshold
 const RIGHT_MARGIN = 1.0;    // Allow scrolling 100% past last bar (full screen of future space like TradingView)
 
@@ -115,7 +115,7 @@ export function handleWheel(
   const frac = Math.max(0, Math.min(1, (mouseX - chartLeft) / chartWidth));
   const maxEnd = barCount - 1 + range * RIGHT_MARGIN; // Allow future space
 
-  const zoomFactor = deltaY > 0 ? 1.12 : 0.89;
+  const zoomFactor = deltaY > 0 ? 1.08 : 0.93;
   let newRange = range * zoomFactor;
   newRange = Math.max(minRange, Math.min(maxRange, newRange));
 
@@ -166,7 +166,7 @@ export function handleDragMove(
   const now = performance.now();
   const dt = now - state.lastDragTime;
   // Only track velocity if enough time has passed (avoid spikes from fast events)
-  const vel = dt > 2 ? ((mouseX - state.lastDragX) / chartWidth) * range * (-16 / Math.max(dt, 8)) : state.velocityX;
+  const vel = dt > 2 ? ((mouseX - state.lastDragX) / chartWidth) * range * (-6 / Math.max(dt, 8)) : state.velocityX;
 
   // Vertical panning: convert dy pixels to price offset
   let newPriceOffset = state.priceOffset;
@@ -176,8 +176,8 @@ export function handleDragMove(
     const priceShift = (dy / mainHeight) * priceRange;
     newPriceOffset += priceShift;
     // Track vertical velocity
-    pVel = dt > 2 ? ((mouseY - state.lastDragY) / mainHeight) * priceRange * (16 / Math.max(dt, 8)) : state.priceVelocity;
-    pVel = pVel * 0.25 + state.priceVelocity * 0.75;
+    pVel = dt > 2 ? ((mouseY - state.lastDragY) / mainHeight) * priceRange * (6 / Math.max(dt, 8)) : state.priceVelocity;
+    pVel = pVel * 0.15 + state.priceVelocity * 0.85;
   }
 
   return {
@@ -185,7 +185,7 @@ export function handleDragMove(
     startIndex: newStart, endIndex: newEnd,
     targetStart: newStart, targetEnd: newEnd,
     lastDragX: mouseX, lastDragY: mouseY, lastDragTime: now,
-    velocityX: vel * 0.25 + state.velocityX * 0.75, // Gentle velocity tracking
+    velocityX: vel * 0.15 + state.velocityX * 0.85, // Gentle velocity tracking
     priceOffset: newPriceOffset,
     priceVelocity: pVel,
   };

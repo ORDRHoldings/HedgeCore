@@ -38,7 +38,7 @@ export function computeLayout(w: number, h: number, subPaneCount: number): Chart
   const chartRightPad = 8; // breathing room before price axis
   const chartRight = w - priceAxisWidth - chartRightPad;
   const chartWidth = chartRight - chartLeft;
-  const mainTop = 4;
+  const mainTop = 40; // Room for OHLC legend row 1 + indicator chips row 2
   const volumeHeight = 80;
 
   const panePixels = Math.max(70, Math.floor(90));
@@ -138,7 +138,10 @@ export function formatPrice(price: number, pair: string): string {
 
 export function formatTimestamp(ts: number, interval: string): string {
   const d = new Date(ts * 1000);
-  if (interval.includes("min") || interval === "1h" || interval === "4h") {
+  const iv = interval.toLowerCase();
+  // Intraday: show date + time
+  const isIntraday = iv.includes("m") || iv.includes("h") || iv.includes("min");
+  if (isIntraday) {
     return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   }
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;

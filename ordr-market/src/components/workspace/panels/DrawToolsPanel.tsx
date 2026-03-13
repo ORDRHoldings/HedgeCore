@@ -7,6 +7,16 @@ import {
 import { T } from '../tokens';
 import { useWorkspace } from '../WorkspaceProvider';
 
+// Map workspace tool IDs to ChartEngine DrawingType values
+const DRAWING_MODE_MAP: Record<string, string | null> = {
+  cursor: null, crosshair: null,
+  trendline: 'trendline', ray: 'ray', hline: 'horizontal',
+  channel: 'parallel_channel', pitchfork: 'pitchfork', fib: 'fibonacci',
+  rect: 'rectangle', ellipse: 'ellipse', path: 'brush', text: 'text_note',
+  measure: 'date_price_range',
+  magnet: null, lock: null, eye: null, trash: null,
+};
+
 interface ToolGroup {
   label: string;
   tools: { id: string; icon: React.ReactNode; name: string; shortcut?: string }[];
@@ -71,11 +81,23 @@ export function DrawToolsPanel() {
             {group.label}
           </div>
           {group.tools.map(tool => {
-            const active = state.activeTool === tool.id;
+            // Toggle tools reflect workspace state
+            const active = tool.id === 'magnet' ? state.magnetEnabled
+              : tool.id === 'lock' ? state.lockDrawings
+              : tool.id === 'eye' ? state.hideDrawings
+              : state.activeTool === tool.id;
             return (
               <div
                 key={tool.id}
-                onClick={() => dispatch({ type: 'SET_TOOL', tool: tool.id })}
+                onClick={() => {
+                  if (tool.id === 'magnet') { dispatch({ type: 'TOGGLE_MAGNET' }); return; }
+                  if (tool.id === 'lock') { dispatch({ type: 'TOGGLE_LOCK_DRAWINGS' }); return; }
+                  if (tool.id === 'eye') { dispatch({ type: 'TOGGLE_HIDE_DRAWINGS' }); return; }
+                  if (tool.id === 'trash') { dispatch({ type: 'DELETE_ALL_DRAWINGS' }); return; }
+                  dispatch({ type: 'SET_TOOL', tool: tool.id });
+                  const mode = DRAWING_MODE_MAP[tool.id];
+                  dispatch({ type: 'SET_DRAWING_MODE', mode: mode !== undefined ? mode : null });
+                }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8,
                   padding: '5px 10px', cursor: 'pointer', borderRadius: 3,
