@@ -130,12 +130,15 @@ const NAV: NavSection[] = [
   },
   {
     label: "Market", href: "/market-intelligence", icon: BarChart3,
-    prefixes: ["/market-intelligence", "/market-overview", "/fx-market"],
+    prefixes: ["/market-intelligence"],
     header: "MARKET",
     items: [
-      { label: "Market Intelligence", desc: "FX heatmap, carry, sectors, provider health", href: "/market-intelligence", icon: Globe },
-      { label: "Market Overview",     desc: "FX, indices, gold, oil -- heatmaps & analysis", href: "/market-overview", icon: BarChart3 },
-      { label: "FX Rates",            desc: "Major pairs with live Finnhub quotes",       href: "/fx-market",           icon: Zap },
+      { label: "Overview",   desc: "Market pulse, heatmap, movers, calendar",     href: "/market-intelligence",                icon: Globe },
+      { label: "Heatmap",    desc: "Full-screen stock, FX, ETF, crypto heatmap",  href: "/market-intelligence?tab=heatmap",    icon: BarChart3 },
+      { label: "Calendar",   desc: "Economic & earnings event calendar",          href: "/market-intelligence?tab=calendar",   icon: Clock },
+      { label: "Companies",  desc: "Symbol search, overview, technicals",         href: "/market-intelligence?tab=companies",  icon: Target },
+      { label: "Watchlists", desc: "Custom watchlist & stock screener",           href: "/market-intelligence?tab=watchlists", icon: PenSquare },
+      { label: "Signals",    desc: "Passive technicals & news catalyst stream",   href: "/market-intelligence?tab=signals",    icon: Zap },
     ],
   },
   {
