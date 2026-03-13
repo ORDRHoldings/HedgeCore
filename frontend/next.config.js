@@ -15,7 +15,7 @@ const nextConfig = {
   async redirects() {
     return [
       { source: "/execution-desk", destination: "/hedge-desk", permanent: true },
-      { source: "/currency-fx", destination: "/market-overview", permanent: true },
+      { source: "/currency-fx", destination: "/market-intelligence", permanent: true },
       { source: "/hedges", destination: "/position-desk", permanent: true },
       { source: "/input", destination: "/position-desk", permanent: true },
       { source: "/upload-csv", destination: "/position-desk", permanent: true },
@@ -25,15 +25,15 @@ const nextConfig = {
       { source: "/policy-dashboard", destination: "/policies", permanent: true },
       { source: "/execution", destination: "/hedge-desk", permanent: true },
       { source: "/decision-desk", destination: "/hedge-desk", permanent: true },
-      { source: "/fx-market", destination: "/market-overview", permanent: true },
-      { source: "/market-intelligence", destination: "/market-overview", permanent: true },
+      { source: "/fx-market", destination: "/market-intelligence", permanent: true },
+      { source: "/market-overview", destination: "/market-intelligence", permanent: true },
       { source: "/execution-history", destination: "/trade-history", permanent: true },
       { source: "/access-control", destination: "/settings", permanent: true },
     ];
   },
   async headers() {
     return [{
-      source: "/market-overview",
+      source: "/market-intelligence",
       headers: [{
         key: "Content-Security-Policy",
         value: "frame-src 'self' https://s.tradingview.com https://www.tradingview.com",
