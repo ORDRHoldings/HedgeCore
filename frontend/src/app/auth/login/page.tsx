@@ -4,38 +4,39 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/authContext";
 import { classifyError, type ErrKind } from "@/lib/auth/loginClassifier";
+import { useParticleField } from "@/lib/hooks/useParticleField";
 
-// ─── Brand tokens (light alabaster palette — matches reference) ──────────────
+// ─── Treasury dark palette (matches globals.css design tokens) ──────────────
 const C = {
-  alabaster:   "#F8FAFC",
-  white:       "#FFFFFF",
-  obsidian:    "#050505",
-  slate900:    "#0F172A",
-  slate700:    "#334155",
-  slate600:    "#475569",
-  slate400:    "#94A3B8",
-  slate300:    "#CBD5E1",
-  platinum:    "#E2E8F0",
-  orange:      "#FF7A00",
-  orangeGlow:  "rgba(255,122,0,0.30)",
-  green:       "#10B981",
-  red:         "#DC2626",
-  redBg:       "rgba(220,38,38,0.06)",
-  redBorder:   "rgba(220,38,38,0.20)",
-  amber:       "#D97706",
-  amberBg:     "rgba(217,119,6,0.06)",
-  amberBorder: "rgba(217,119,6,0.20)",
-  rule:        "rgba(0,0,0,0.05)",
-  ruleLight:   "rgba(0,0,0,0.03)",
+  bg:          "#0B1120",           // --bg-sidebar
+  bgDeep:      "#111827",           // --bg-deep
+  panel:       "rgba(17,24,39,0.92)",
+  border:      "#374151",           // --border-rim
+  borderSoft:  "rgba(55,65,81,0.5)",
+  text1:       "#E5E7EB",           // --text-primary
+  text2:       "#9CA3AF",           // --text-secondary
+  text3:       "#6B7280",           // --text-tertiary
+  accent:      "#1C62F2",           // --accent-blue
+  accentGlow:  "rgba(28,98,242,0.28)",
+  accentDim:   "rgba(28,98,242,0.12)",
+  accentLight: "#5B8EF5",
+  green:       "#059669",           // --accent-green
+  greenGlow:   "rgba(5,150,105,0.3)",
+  red:         "#DC2626",           // --accent-red
+  redBg:       "rgba(220,38,38,0.08)",
+  redBorder:   "rgba(220,38,38,0.22)",
+  amber:       "#D97706",           // --accent-amber
+  amberBg:     "rgba(217,119,6,0.08)",
+  amberBorder: "rgba(217,119,6,0.22)",
   fontHead:    "'Manrope','Inter',sans-serif",
-  fontUI:      "'Inter','IBM Plex Sans',sans-serif",
-  fontMono:    "'JetBrains Mono','IBM Plex Mono',monospace",
+  fontUI:      "'IBM Plex Sans','Inter',sans-serif",
+  fontMono:    "'IBM Plex Mono','JetBrains Mono',monospace",
 } as const;
 
-// ─── Environment detection (never shows "demo") ─────────────────────────────
-const APP_ENV = (process.env.NEXT_PUBLIC_APP_ENV ?? "production").toLowerCase();
-const SHOW_ENV_BADGE = APP_ENV !== "production" && APP_ENV !== "demo";
-const ENV_LABEL = APP_ENV === "dev" ? "DEVELOPMENT" : APP_ENV.toUpperCase();
+// ─── Environment badge ───────────────────────────────────────────────────────
+const APP_ENV     = (process.env.NEXT_PUBLIC_APP_ENV ?? "production").toLowerCase();
+const SHOW_ENV    = APP_ENV !== "production" && APP_ENV !== "demo";
+const ENV_LABEL   = APP_ENV === "dev" ? "DEVELOPMENT" : APP_ENV.toUpperCase();
 
 // ─── Error config ────────────────────────────────────────────────────────────
 const ERR_MAP: Record<ErrKind, {
@@ -65,20 +66,19 @@ const ERR_MAP: Record<ErrKind, {
   },
 };
 
-// ─── Eye icons (password visibility) ─────────────────────────────────────────
+// ─── Eye icons ───────────────────────────────────────────────────────────────
 function IconEyeOpen() {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" aria-hidden="true">
       <path d="M1 7.5C2 5.2 4.5 2.5 7.5 2.5S13 5.2 14 7.5c-1 2.3-3.5 5-6.5 5S2 9.8 1 7.5Z"
         stroke="currentColor" strokeWidth="1.2" fill="none" />
       <circle cx="7.5" cy="7.5" r="2" stroke="currentColor" strokeWidth="1.2" />
     </svg>
   );
 }
-
 function IconEyeClosed() {
   return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" aria-hidden="true">
       <path d="M2 2.5L12.5 13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
       <path d="M6.3 6.35a2 2 0 002.4 2.4M4.6 4.7C3 5.6 1.8 6.7 1 7.5c.9 1.6 3.2 5 6.5 5 1.3 0 2.5-.5 3.5-1.2M9.4 3.8A6.8 6.8 0 007.5 3.5C4.2 3.5 1.9 6.1 1 7.5c.3.7.9 1.5 1.6 2.2"
         stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
@@ -86,21 +86,16 @@ function IconEyeClosed() {
   );
 }
 
-// ─── Canvas particle field (shared hook) ─────────────────────────────────────
-import { useParticleField } from "@/lib/hooks/useParticleField";
-
 // ─── Parallax hook ───────────────────────────────────────────────────────────
 function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-
     const handler = (e: MouseEvent) => {
-      const x = (window.innerWidth / 2 - e.clientX) / 40;
-      const y = (window.innerHeight / 2 - e.clientY) / 40;
-      el.style.transform = `perspective(1000px) rotateY(${-x}deg) rotateX(${y}deg)`;
+      const x = (window.innerWidth  / 2 - e.clientX) / 60;
+      const y = (window.innerHeight / 2 - e.clientY) / 60;
+      el.style.transform = `perspective(1200px) rotateY(${-x}deg) rotateX(${y}deg)`;
     };
-
     window.addEventListener("mousemove", handler);
     return () => window.removeEventListener("mousemove", handler);
   }, [ref]);
@@ -108,20 +103,19 @@ function useParallax(ref: React.RefObject<HTMLDivElement | null>) {
 
 // ─── Main login page ─────────────────────────────────────────────────────────
 export default function LoginPage() {
-  const [username,   setUsername]   = useState("");
-  const [password,   setPassword]  = useState("");
-  const [showPwd,    setShowPwd]   = useState(false);
-  const [capsLock,   setCapsLock]  = useState(false);
-  const [loading,    setLoading]   = useState(false);
-  const [error,      setError]     = useState<string | null>(null);
-  const [errKind,    setErrKind]   = useState<ErrKind | null>(null);
-  const [warmingUp,  setWarmingUp] = useState(false);
-  const [showOverlay, setShowOverlay] = useState(true);
-  const [focusField, setFocusField]   = useState<"user" | "pass" | null>(null);
-  const [btnHovered, setBtnHovered]   = useState(false);
-  const [logoHovered, setLogoHovered] = useState(false);
+  const [username,     setUsername]     = useState("");
+  const [password,     setPassword]     = useState("");
+  const [showPwd,      setShowPwd]      = useState(false);
+  const [capsLock,     setCapsLock]     = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+  const [errKind,      setErrKind]      = useState<ErrKind | null>(null);
+  const [warmingUp,    setWarmingUp]    = useState(false);
+  const [showOverlay,  setShowOverlay]  = useState(true);
+  const [focusField,   setFocusField]   = useState<"user" | "pass" | null>(null);
+  const [btnHovered,   setBtnHovered]   = useState(false);
 
-  // MFA challenge state
+  // MFA
   const [mfaChallenge, setMfaChallenge] = useState(false);
   const [mfaToken,     setMfaToken]     = useState<string | null>(null);
   const [mfaCode,      setMfaCode]      = useState("");
@@ -129,26 +123,26 @@ export default function LoginPage() {
   const [mfaError,     setMfaError]     = useState<string | null>(null);
   const mfaInputRef = useRef<HTMLInputElement>(null);
 
-  const { login }    = useAuth();
-  const router       = useRouter();
-  const usernameRef  = useRef<HTMLInputElement>(null);
-  const warmupRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const canvasRef    = useRef<HTMLCanvasElement>(null);
-  const prismRef     = useRef<HTMLDivElement>(null);
+  const { login }   = useAuth();
+  const router      = useRouter();
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const warmupRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const prismRef    = useRef<HTMLDivElement>(null);
 
-  // Particle field animation
-  useParticleField(canvasRef);
-  // Mouse parallax on form card
+  // Particle field — blue, more visible, larger reach
+  useParticleField(canvasRef, {
+    color:          C.accent,
+    connectionDist: 160,
+    lineOpacity:    0.42,
+  });
   useParallax(prismRef);
 
   useEffect(() => {
-    // Dismiss entrance overlay
-    const t = setTimeout(() => setShowOverlay(false), 2200);
-    // Focus username field after bloom animation
-    const t2 = setTimeout(() => usernameRef.current?.focus(), 1200);
+    const t  = setTimeout(() => setShowOverlay(false), 1800);
+    const t2 = setTimeout(() => usernameRef.current?.focus(), 900);
     return () => {
-      clearTimeout(t);
-      clearTimeout(t2);
+      clearTimeout(t); clearTimeout(t2);
       if (warmupRef.current) clearTimeout(warmupRef.current);
     };
   }, []);
@@ -157,13 +151,11 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!username.trim() || !password) {
       setError("User ID and access credential are required.");
       setErrKind("auth");
       return;
     }
-
     clearError();
     setLoading(true);
     setWarmingUp(false);
@@ -175,7 +167,6 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.success) {
-      // Check MFA status
       try {
         const cookieToken = document.cookie
           .split("; ")
@@ -197,10 +188,8 @@ export default function LoginPage() {
             }
           }
         }
-      } catch {
-        // Fail-open for MFA status check
-      }
-      router.push("/welcome");
+      } catch { /* fail-open */ }
+      router.push("/dashboard");   // ← skip /welcome, go directly to dashboard
     } else {
       const msg = result.error ?? "Authentication failed";
       setError(msg);
@@ -224,7 +213,7 @@ export default function LoginPage() {
         signal: AbortSignal.timeout(10_000),
       });
       if (res.ok) {
-        router.push("/welcome");
+        router.push("/dashboard");  // ← skip /welcome
       } else {
         const data = await res.json().catch(() => ({}));
         setMfaError((data as { detail?: string }).detail ?? "Invalid code — try again.");
@@ -241,52 +230,53 @@ export default function LoginPage() {
   const inputHasError = !!error && errKind === "auth";
   const errCfg = errKind ? ERR_MAP[errKind] : null;
 
-  // ─── Styles ────────────────────────────────────────────────────────────────
-
+  // ─── Shared styles ──────────────────────────────────────────────────────────
   const labelStyle: React.CSSProperties = {
     display: "block",
     fontFamily: C.fontMono,
-    fontSize: "8px",
+    fontSize: "11px",
     fontWeight: 600,
     textTransform: "uppercase",
-    letterSpacing: "2px",
-    color: C.slate700,
-    marginBottom: 8,
+    letterSpacing: "0.18em",
+    color: C.text3,
+    marginBottom: 10,
+    textAlign: "center",
   };
 
   const inputStyle = (field: "user" | "pass", hasErr: boolean): React.CSSProperties => ({
     width: "100%",
-    padding: "13px 0",
+    padding: "15px 0",
     background: "transparent",
     border: "none",
-    borderBottom: `1px solid ${hasErr ? C.red : focusField === field ? C.orange : C.platinum}`,
+    borderBottom: `1px solid ${hasErr ? C.red : focusField === field ? C.accent : C.border}`,
     fontFamily: C.fontMono,
-    fontSize: "14px",
-    color: C.obsidian,
+    fontSize: "16px",
+    color: C.text1,
     outline: "none",
     boxSizing: "border-box" as const,
-    caretColor: C.orange,
-    transition: "all 0.4s ease",
-    transform: focusField === field ? "translateX(5px)" : "none",
-    opacity: loading ? 0.5 : 1,
-    letterSpacing: "0.02em",
+    caretColor: C.accentLight,
+    transition: "all 0.35s ease",
+    transform: focusField === field ? "translateX(6px)" : "none",
+    opacity: loading ? 0.45 : 1,
+    letterSpacing: "0.03em",
+    textAlign: "center",
   });
 
-  // ─── MFA challenge content ─────────────────────────────────────────────────
+  // ─── MFA content ───────────────────────────────────────────────────────────
   const mfaContent = mfaChallenge ? (
-    <div style={{ display: "flex", flexDirection: "column", gap: 21 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24, textAlign: "center" }}>
       <div>
         <h2 style={{
-          fontFamily: C.fontHead, fontSize: "1.125rem", fontWeight: 700,
-          color: C.obsidian, margin: 0, letterSpacing: "-0.02em",
+          fontFamily: C.fontHead, fontSize: "22px", fontWeight: 700,
+          color: C.text1, margin: 0, letterSpacing: "-0.02em",
         }}>
           MFA Verification
         </h2>
         <p style={{
-          fontFamily: C.fontUI, fontSize: "0.75rem",
-          color: C.slate600, margin: "8px 0 0", lineHeight: 1.6,
+          fontFamily: C.fontUI, fontSize: "15px",
+          color: C.text2, margin: "10px 0 0", lineHeight: 1.6,
         }}>
-          Enter your 6-digit authenticator code to complete authentication.
+          Enter your 6-digit authenticator code.
         </p>
       </div>
 
@@ -304,12 +294,8 @@ export default function LoginPage() {
           disabled={mfaLoading}
           style={{
             ...inputStyle("user", !!mfaError),
-            fontFamily: C.fontMono,
-            fontSize: "1.5rem",
-            fontWeight: 700,
-            letterSpacing: "0.3em",
-            textAlign: "center",
-            opacity: mfaLoading ? 0.5 : 1,
+            fontSize: "26px", fontWeight: 700, letterSpacing: "0.35em",
+            opacity: mfaLoading ? 0.45 : 1,
           }}
           aria-label="6-digit MFA code"
         />
@@ -317,11 +303,11 @@ export default function LoginPage() {
 
       {mfaError && (
         <div style={{
-          padding: "10px 14px",
+          padding: "12px 16px",
           background: C.redBg, border: `1px solid ${C.redBorder}`,
-          borderLeft: `3px solid ${C.red}`, borderRadius: 2,
-          fontFamily: C.fontMono, fontSize: "9px",
-          color: C.red, letterSpacing: "0.06em",
+          borderLeft: `3px solid ${C.red}`, borderRadius: 3,
+          fontFamily: C.fontMono, fontSize: "11px",
+          color: C.red, letterSpacing: "0.06em", textAlign: "left",
         }}>
           ⊘ {mfaError}
         </div>
@@ -332,14 +318,15 @@ export default function LoginPage() {
         disabled={mfaLoading || mfaCode.length !== 6}
         className="no-scale"
         style={{
-          width: "100%", padding: "21px",
-          fontFamily: C.fontMono, fontSize: "10px", fontWeight: 500,
-          textTransform: "uppercase", letterSpacing: "5px",
+          width: "100%", padding: "20px",
+          fontFamily: C.fontMono, fontSize: "13px", fontWeight: 600,
+          textTransform: "uppercase", letterSpacing: "0.3em",
           color: "#FFFFFF",
-          background: (mfaLoading || mfaCode.length !== 6) ? C.slate300 : C.obsidian,
-          border: "none", borderRadius: 2,
+          background: (mfaLoading || mfaCode.length !== 6) ? C.border : C.accent,
+          border: "none", borderRadius: 4,
           cursor: (mfaLoading || mfaCode.length !== 6) ? "not-allowed" : "pointer",
-          transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+          transition: "all 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
+          boxShadow: mfaCode.length === 6 ? `0 8px 28px ${C.accentGlow}` : "none",
         }}
       >
         {mfaLoading ? "VERIFYING…" : "VERIFY & CONTINUE"}
@@ -347,35 +334,23 @@ export default function LoginPage() {
     </div>
   ) : null;
 
-  // ─── Login form ────────────────────────────────────────────────────────────
+  // ─── Login form ─────────────────────────────────────────────────────────────
   const loginForm = (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
 
-      {/* ── Context header ── */}
-      <div style={{ marginBottom: 34 }}>
+      {/* Context header */}
+      <div style={{ marginBottom: 36, textAlign: "center" }}>
         <p style={{
-          fontFamily: C.fontMono,
-          fontSize: "9px",
-          textTransform: "uppercase",
-          letterSpacing: "0.25em",
-          color: C.slate400,
-          margin: "0 0 13px 0",
-          textAlign: "center",
+          fontFamily: C.fontMono, fontSize: "11px",
+          textTransform: "uppercase", letterSpacing: "0.22em",
+          color: C.text3, margin: "0 0 14px 0",
         }}>
           Institutional FX Hedge Governance
         </p>
-        <div style={{
-          width: "100%", height: 1,
-          background: C.rule,
-          marginBottom: 21,
-        }} />
+        <div style={{ width: "40px", height: "1px", background: C.accent, opacity: 0.5, margin: "0 auto 18px" }} />
         <p style={{
-          fontFamily: C.fontUI,
-          fontSize: "12px",
-          color: C.slate600,
-          lineHeight: 1.7,
-          margin: 0,
-          textAlign: "center",
+          fontFamily: C.fontUI, fontSize: "15px",
+          color: C.text2, lineHeight: 1.7, margin: 0,
         }}>
           Authenticate to access deterministic hedge calculations,
           policy governance, and the execution pipeline.
@@ -385,26 +360,19 @@ export default function LoginPage() {
       {/* Error banner */}
       {error && errCfg && (
         <div style={{
-          padding: "12px 14px",
-          background: errCfg.bg,
-          border: `1px solid ${errCfg.border}`,
-          borderLeft: `3px solid ${errCfg.color}`,
-          borderRadius: 2,
-          marginBottom: 21,
-          display: "flex", flexDirection: "column", gap: 4,
+          padding: "13px 16px",
+          background: errCfg.bg, border: `1px solid ${errCfg.border}`,
+          borderLeft: `3px solid ${errCfg.color}`, borderRadius: 3,
+          marginBottom: 24, display: "flex", flexDirection: "column", gap: 5,
         }}>
           <div style={{
-            fontFamily: C.fontMono, fontSize: "9px", fontWeight: 600,
-            color: errCfg.color, letterSpacing: "0.1em",
+            fontFamily: C.fontMono, fontSize: "10px", fontWeight: 600,
+            color: errCfg.color, letterSpacing: "0.12em",
             display: "flex", alignItems: "center", gap: 6,
           }}>
-            <span>{errCfg.icon}</span>
-            <span>{errCfg.label}</span>
+            <span>{errCfg.icon}</span><span>{errCfg.label}</span>
           </div>
-          <div style={{
-            fontFamily: C.fontUI, fontSize: "11px",
-            color: errCfg.color, opacity: 0.85, lineHeight: 1.5,
-          }}>
+          <div style={{ fontFamily: C.fontUI, fontSize: "13px", color: errCfg.color, opacity: 0.85, lineHeight: 1.5 }}>
             {errCfg.body(error)}
           </div>
         </div>
@@ -413,13 +381,10 @@ export default function LoginPage() {
       {/* Warmup banner */}
       {warmingUp && (
         <div style={{
-          padding: "12px 14px",
-          background: C.amberBg,
-          border: `1px solid ${C.amberBorder}`,
-          borderLeft: `3px solid ${C.amber}`,
-          borderRadius: 2,
-          marginBottom: 21,
-          fontFamily: C.fontMono, fontSize: "9px",
+          padding: "13px 16px", marginBottom: 24,
+          background: C.amberBg, border: `1px solid ${C.amberBorder}`,
+          borderLeft: `3px solid ${C.amber}`, borderRadius: 3,
+          fontFamily: C.fontMono, fontSize: "10px",
           color: C.amber, letterSpacing: "0.06em",
           display: "flex", alignItems: "center", gap: 8,
         }}>
@@ -429,7 +394,7 @@ export default function LoginPage() {
       )}
 
       {/* Terminal ID */}
-      <div style={{ marginBottom: 21 }}>
+      <div style={{ marginBottom: 24 }}>
         <label style={labelStyle}>Terminal ID</label>
         <input
           ref={usernameRef}
@@ -447,7 +412,7 @@ export default function LoginPage() {
       </div>
 
       {/* Access Key */}
-      <div style={{ marginBottom: 34 }}>
+      <div style={{ marginBottom: 36 }}>
         <label style={labelStyle}>Access Key</label>
         <div style={{ position: "relative" }}>
           <input
@@ -460,10 +425,7 @@ export default function LoginPage() {
             placeholder="••••••••••••"
             disabled={loading}
             autoComplete="current-password"
-            style={{
-              ...inputStyle("pass", inputHasError),
-              paddingRight: 36,
-            }}
+            style={{ ...inputStyle("pass", inputHasError), paddingRight: 40 }}
             aria-label="Access Key"
           />
           <button
@@ -474,7 +436,7 @@ export default function LoginPage() {
             style={{
               position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)",
               background: "none", border: "none", padding: 4,
-              color: C.slate400, cursor: "pointer",
+              color: C.text3, cursor: "pointer",
               display: "flex", alignItems: "center",
             }}
             aria-label={showPwd ? "Hide password" : "Show password"}
@@ -484,15 +446,15 @@ export default function LoginPage() {
         </div>
         {capsLock && (
           <span style={{
-            fontFamily: C.fontMono, fontSize: "8px", marginTop: 6,
-            color: C.amber, letterSpacing: "0.08em", display: "block",
+            fontFamily: C.fontMono, fontSize: "10px", marginTop: 7,
+            color: C.amber, letterSpacing: "0.08em", display: "block", textAlign: "center",
           }}>
             ⚠ CAPS LOCK IS ON
           </span>
         )}
       </div>
 
-      {/* Submit — Establish Link */}
+      {/* Submit */}
       <button
         type="submit"
         disabled={loading}
@@ -500,53 +462,37 @@ export default function LoginPage() {
         onMouseEnter={() => setBtnHovered(true)}
         onMouseLeave={() => setBtnHovered(false)}
         style={{
-          width: "100%",
-          padding: "21px",
-          fontFamily: C.fontMono,
-          fontSize: "10px",
-          fontWeight: 500,
+          width: "100%", padding: "20px",
+          fontFamily: C.fontMono, fontSize: "13px", fontWeight: 600,
           textTransform: "uppercase",
-          letterSpacing: loading ? "5px" : btnHovered ? "8px" : "5px",
-          color: loading ? C.slate400 : "#FFFFFF",
-          background: loading ? C.slate300 : btnHovered ? C.orange : C.obsidian,
-          border: "none",
-          borderRadius: 2,
+          letterSpacing: loading ? "0.3em" : btnHovered ? "0.45em" : "0.3em",
+          color: loading ? C.text3 : "#FFFFFF",
+          background: loading ? C.border : C.accent,
+          border: "none", borderRadius: 4,
           cursor: loading ? "not-allowed" : "pointer",
           transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
-          position: "relative",
-          overflow: "hidden",
-          boxShadow: btnHovered && !loading ? `0 13px 34px ${C.orangeGlow}` : "none",
+          boxShadow: btnHovered && !loading ? `0 12px 36px ${C.accentGlow}` : "none",
         }}
       >
         {loading ? (
-          <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
             <span className="login-spin">⟳</span>
             AUTHENTICATING...
           </span>
         ) : "ESTABLISH LINK"}
       </button>
 
-      {/* ── Security & compliance badges ── */}
+      {/* Security badges */}
       <div style={{
-        marginTop: 34,
-        borderTop: `1px solid ${C.rule}`,
-        paddingTop: 21,
-        display: "flex",
-        flexWrap: "wrap",
-        justifyContent: "center",
-        gap: 8,
+        marginTop: 32, borderTop: `1px solid ${C.borderSoft}`, paddingTop: 20,
+        display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8,
       }}>
         {["AES-256", "HASH-CHAINED AUDIT", "RBAC", "4-EYES APPROVAL"].map(badge => (
           <span key={badge} style={{
-            fontFamily: C.fontMono,
-            fontSize: "7px",
-            fontWeight: 500,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: C.slate400,
-            padding: "3px 8px",
-            border: `1px solid ${C.platinum}`,
-            borderRadius: 1,
+            fontFamily: C.fontMono, fontSize: "9px", fontWeight: 500,
+            letterSpacing: "0.12em", textTransform: "uppercase",
+            color: C.text3, padding: "4px 9px",
+            border: `1px solid ${C.border}`, borderRadius: 2,
           }}>
             {badge}
           </span>
@@ -555,21 +501,14 @@ export default function LoginPage() {
 
       {/* Footer status */}
       <div style={{
-        marginTop: 21,
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        fontFamily: C.fontMono,
-        fontSize: "8px",
-        color: C.slate400,
-        letterSpacing: "0.06em",
+        marginTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center",
+        fontFamily: C.fontMono, fontSize: "10px", color: C.text3, letterSpacing: "0.06em",
       }}>
         <span>© {new Date().getFullYear()} SYNEXIUN</span>
-        <span style={{ color: C.green, display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ color: C.green, display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{
-            width: 5, height: 5, borderRadius: "50%",
-            background: C.green, display: "inline-block",
-            boxShadow: `0 0 6px rgba(16,185,129,0.5)`,
+            width: 6, height: 6, borderRadius: "50%", background: C.green, display: "inline-block",
+            boxShadow: `0 0 8px ${C.greenGlow}`,
           }} />
           ENCRYPTION ACTIVE
         </span>
@@ -577,122 +516,119 @@ export default function LoginPage() {
     </form>
   );
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={{
       position: "fixed", inset: 0,
-      background: C.alabaster,
+      background: C.bg,
       display: "flex", alignItems: "center", justifyContent: "center",
       overflow: "hidden",
       fontFamily: C.fontUI,
-      color: C.obsidian,
+      color: C.text1,
     }}>
-      {/* ── Geometric initialization overlay (entrance bloom) ── */}
+      {/* Entrance overlay */}
       <div
         className="login-init-overlay"
         style={{
           position: "fixed", inset: 0, zIndex: 100,
-          background: "#fff",
+          background: C.bgDeep,
           display: "flex", alignItems: "center", justifyContent: "center",
           pointerEvents: "none",
-          animation: "loginFadeOut 1.2s cubic-bezier(0.8, 0, 0.2, 1) forwards 1s",
+          animation: "loginFadeOut 1.0s cubic-bezier(0.8, 0, 0.2, 1) forwards 0.8s",
           ...(showOverlay ? {} : { opacity: 0, visibility: "hidden" as const }),
         }}
       >
         <div style={{
           position: "absolute",
-          border: "1px solid rgba(0,0,0,0.05)",
-          animation: "loginGrowBox 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+          border: `1px solid ${C.accent}`,
+          opacity: 0.3,
+          animation: "loginGrowBox 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         }} />
       </div>
 
-      {/* ── Canvas particle field ── */}
+      {/* Canvas particle field */}
       <canvas
         ref={canvasRef}
         style={{
           position: "fixed", top: 0, left: 0,
           width: "100%", height: "100%",
-          zIndex: 1, opacity: 0.6,
+          zIndex: 1, opacity: 1,
           pointerEvents: "none",
         }}
       />
 
-      {/* ── Corner telemetry ── */}
-      <div className="login-telemetry" style={{ top: 21, left: 21 }}>
+      {/* Radial glow behind card */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 2, pointerEvents: "none",
+        background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(28,98,242,0.07) 0%, transparent 70%)",
+      }} />
+
+      {/* Corner telemetry */}
+      <div className="login-telemetry" style={{ top: 24, left: 24 }}>
         SYS_LOAD: φ=1.618<br/>NODE_SYNC: TRUE
       </div>
-      <div className="login-telemetry" style={{ top: 21, right: 21, textAlign: "right" }}>
+      <div className="login-telemetry" style={{ top: 24, right: 24, textAlign: "right" }}>
         CLOCK_PI: 3.1415...<br/>LOC: [0.00, 0.00]
       </div>
-      <div className="login-telemetry" style={{ bottom: 21, left: 21 }}>
+      <div className="login-telemetry" style={{ bottom: 24, left: 24 }}>
         SEC_LEVEL: QUANTUM<br/>ENC: AES-256
       </div>
-      <div className="login-telemetry" style={{ bottom: 21, right: 21, textAlign: "right" }}>
+      <div className="login-telemetry" style={{ bottom: 24, right: 24, textAlign: "right" }}>
         ORDR_OS v4.0
-        {SHOW_ENV_BADGE && <><br/>{ENV_LABEL}</>}
+        {SHOW_ENV && <><br/>{ENV_LABEL}</>}
         <br/>HANDSHAKE: WAIT
       </div>
 
-      {/* ── The Terminal Prism (main card) ── */}
+      {/* Main card */}
       <div
         ref={prismRef}
         style={{
-          position: "relative",
-          zIndex: 10,
-          width: 420,
-          padding: "48px 44px",
-          background: "rgba(255, 255, 255, 0.88)",
-          backdropFilter: "blur(40px) saturate(200%)",
-          WebkitBackdropFilter: "blur(40px) saturate(200%)",
-          border: "1px solid rgba(255, 255, 255, 0.6)",
-          borderRadius: 3,
-          boxShadow: "0 55px 144px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(0,0,0,0.02)",
-          animation: "loginTerminalBloom 1.618s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.5s",
-          // Start state (before animation)
-          transform: "scale(0.6)",
-          opacity: 0,
+          position: "relative", zIndex: 10,
+          width: 440, padding: "52px 48px",
+          background: C.panel,
+          backdropFilter: "blur(40px) saturate(180%)",
+          WebkitBackdropFilter: "blur(40px) saturate(180%)",
+          border: `1px solid ${C.border}`,
+          borderRadius: 6,
+          boxShadow: `0 40px 120px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.05)`,
+          animation: "loginTerminalBloom 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.4s",
+          transform: "scale(0.6)", opacity: 0,
           willChange: "transform, opacity, filter",
         }}
       >
-        {/* Logo — PNG, bold, stunning, visible */}
-        <div
-          style={{ textAlign: "center", marginBottom: 34 }}
-          onMouseEnter={() => setLogoHovered(true)}
-          onMouseLeave={() => setLogoHovered(false)}
-        >
-          <div style={{
-            transition: "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-            transform: logoHovered ? "scale(1.05)" : "scale(1)",
-            display: "inline-block",
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/ordr-logo-horizontal.png"
-              alt="ORDR Terminal"
-              style={{
-                width: 260,
-                height: "auto",
-                display: "block",
-              }}
-            />
-          </div>
+        {/* Accent top line */}
+        <div style={{
+          position: "absolute", top: 0, left: "20%", right: "20%", height: "2px",
+          background: `linear-gradient(90deg, transparent, ${C.accent}, transparent)`,
+          borderRadius: "0 0 2px 2px",
+        }} />
+
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/ordr-logo-horizontal.png"
+            alt="ORDR Terminal"
+            style={{ width: 240, height: "auto", display: "block", margin: "0 auto",
+              filter: "brightness(0) invert(1)", opacity: 0.9 }}
+          />
         </div>
 
-        {/* Form content */}
+        {/* Form */}
         {mfaChallenge ? mfaContent : loginForm}
       </div>
 
-      {/* ── Keyframe animations ── */}
+      {/* Keyframes */}
       <style>{`
         @keyframes loginGrowBox {
-          0%   { width: 0; height: 0; opacity: 1; }
-          100% { width: calc(100vw * 1.618); height: calc(100vh * 1.618); opacity: 0; }
+          0%   { width: 0; height: 0; opacity: 0.6; }
+          100% { width: calc(100vw * 1.8); height: calc(100vh * 1.8); opacity: 0; }
         }
         @keyframes loginFadeOut {
           to { opacity: 0; visibility: hidden; }
         }
         @keyframes loginTerminalBloom {
-          0%   { transform: scale(0.6); opacity: 0; filter: blur(10px); }
+          0%   { transform: scale(0.6); opacity: 0; filter: blur(12px); }
           100% { transform: scale(1);   opacity: 1; filter: blur(0); }
         }
         @keyframes loginSpin {
@@ -705,19 +641,16 @@ export default function LoginPage() {
         }
         .login-telemetry {
           position: fixed;
-          font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
-          font-size: 12px;
-          color: #94A3B8;
-          opacity: 0.5;
+          font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+          font-size: 11px;
+          color: ${C.text3};
+          opacity: 0.7;
           pointer-events: none;
           z-index: 5;
-          letter-spacing: 0.04em;
-          line-height: 1.7;
+          letter-spacing: 0.05em;
+          line-height: 1.8;
         }
-        .login-init-overlay,
-        .login-init-overlay * {
-          cursor: default;
-        }
+        input::placeholder { color: ${C.text3}; opacity: 1; }
       `}</style>
     </div>
   );
