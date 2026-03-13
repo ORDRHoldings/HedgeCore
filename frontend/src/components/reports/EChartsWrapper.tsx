@@ -70,7 +70,8 @@ class ChartErrorBoundary extends React.Component<
 }
 
 // ── Design token constants ─────────────────────────────────────────────────────
-// Hex values matching globals.css custom properties.
+// ECharts requires resolved hex for canvas — CSS variables don't work in canvas renderer.
+// Data-visualization colors stay as hex; backgrounds use transparent to inherit from panel.
 const C = {
   cyan:    "#22D3EE",
   cyanDim: "#0E7490",
@@ -87,8 +88,10 @@ const C = {
   text2:   "#A3B1C6",
   text3:   "#8A94A0",
   border:  "#2A3545",
-  bgDeep:  "#0B1120",
-  bgPanel: "#152238",
+  canvas:  "transparent",
+  panelBg: "transparent",
+  // Dark fill for canvas-rendered gaps/areas (cannot use CSS vars in canvas)
+  darkFill: "#152238",
 } as const;
 
 // ── Gradient factory ──────────────────────────────────────────────────────────
@@ -121,11 +124,11 @@ const AXIS_LABEL = { color: C.text3, fontSize: 12, fontFamily: "monospace" };
 const SPLIT_LINE = { lineStyle: { color: C.border, type: "dashed" as const, opacity: 0.5 } };
 
 const TOOLTIP_STYLE = {
-  backgroundColor: "#1A2535EE",
+  backgroundColor: "rgba(26, 37, 53, 0.93)",
   borderColor: C.border,
   borderWidth: 1,
   textStyle: { color: C.text1, fontSize: 12, fontFamily: "monospace" },
-  extraCssText: "backdrop-filter: blur(8px); box-shadow: 0 4px 24px #000A",
+  extraCssText: "backdrop-filter: blur(8px); box-shadow: 0 4px 24px rgba(0,0,0,0.67)",
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -517,7 +520,7 @@ export function DonutChart({
         {
           value: 100 - score,
           name: "Gap",
-          itemStyle: { color: C.bgPanel + "CC" },
+          itemStyle: { color: C.darkFill + "CC" },
         },
       ],
       label: {
@@ -590,7 +593,7 @@ export function RadarChart({ dimensions, label = "Risk Posture", height = 280 }:
       splitArea: {
         show: true,
         areaStyle: {
-          color: [C.bgPanel + "40", C.bgPanel + "20"],
+          color: [C.darkFill + "40", C.darkFill + "20"],
         },
       },
       axisLine: { lineStyle: { color: C.border, opacity: 0.5 } },
