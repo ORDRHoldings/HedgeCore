@@ -1,0 +1,126 @@
+/**
+ * Operational Templates -- curated preset bundles.
+ * Each template sets multiple appearance settings at once.
+ */
+import type { OperationalTemplate } from "./types";
+
+export const TEMPLATES: OperationalTemplate[] = [
+  {
+    id:          "trading-floor",
+    name:        "Trading Floor",
+    description: "Power-user setup: deep dark, compact density, reduced motion, tabular numbers",
+    settings: {
+      themeId:         "institutional-obsidian",
+      modeOverride:    "dark",
+      accentId:        "ruddy-blue",
+      density:         "compact",
+      uiFont:          "IBM Plex Sans",
+      numericFont:     "IBM Plex Mono",
+      baseFontSize:    12,
+      tabularNumerals: true,
+      reducedMotion:   true,
+      highContrast:    false,
+      colorPlusIcon:   true,
+      templateId:      "trading-floor",
+    },
+  },
+  {
+    id:          "treasury-ops",
+    name:        "Treasury Ops",
+    description: "Balanced setup for daily operations: neutral dark, standard density",
+    settings: {
+      themeId:         "algorithmic-slate",
+      modeOverride:    "dark",
+      accentId:        "ruddy-blue",
+      density:         "standard",
+      uiFont:          "IBM Plex Sans",
+      numericFont:     "IBM Plex Mono",
+      baseFontSize:    13,
+      tabularNumerals: true,
+      reducedMotion:   false,
+      highContrast:    false,
+      colorPlusIcon:   true,
+      templateId:      "treasury-ops",
+    },
+  },
+  {
+    id:          "executive-review",
+    name:        "Executive Review",
+    description: "Light theme, spacious layout for presentations and reviews",
+    settings: {
+      themeId:         "executive-clarity",
+      modeOverride:    "light",
+      accentId:        "ruddy-blue",
+      density:         "spacious",
+      uiFont:          "IBM Plex Sans",
+      numericFont:     "IBM Plex Mono",
+      baseFontSize:    14,
+      tabularNumerals: true,
+      reducedMotion:   false,
+      highContrast:    false,
+      colorPlusIcon:   true,
+      templateId:      "executive-review",
+    },
+  },
+  {
+    id:          "night-desk",
+    name:        "Night Desk",
+    description: "Ultra-dark setup for overnight and low-light trading sessions",
+    settings: {
+      themeId:         "midnight-terminal",
+      modeOverride:    "dark",
+      accentId:        "ruddy-blue",
+      density:         "compact",
+      uiFont:          "IBM Plex Sans",
+      numericFont:     "JetBrains Mono",
+      baseFontSize:    12,
+      tabularNumerals: true,
+      reducedMotion:   true,
+      highContrast:    false,
+      colorPlusIcon:   true,
+      templateId:      "night-desk",
+    },
+  },
+  {
+    id:          "compliance-review",
+    name:        "Compliance Review",
+    description: "High-contrast setup for audit and compliance workflows",
+    settings: {
+      themeId:         "institutional-obsidian",
+      modeOverride:    "dark",
+      accentId:        "ruddy-blue",
+      density:         "standard",
+      uiFont:          "IBM Plex Sans",
+      numericFont:     "IBM Plex Mono",
+      baseFontSize:    13,
+      tabularNumerals: true,
+      reducedMotion:   false,
+      highContrast:    true,
+      colorPlusIcon:   true,
+      templateId:      "compliance-review",
+    },
+  },
+  {
+    id:          "client-presentation",
+    name:        "Client Presentation",
+    description: "Clean light theme with spacious layout for client-facing presentations",
+    settings: {
+      themeId:         "arctic-frost",
+      modeOverride:    "light",
+      accentId:        "indigo",
+      density:         "spacious",
+      uiFont:          "Inter",
+      numericFont:     "IBM Plex Mono",
+      baseFontSize:    15,
+      tabularNumerals: true,
+      reducedMotion:   false,
+      highContrast:    false,
+      colorPlusIcon:   false,
+      templateId:      "client-presentation",
+    },
+  },
+];
+
+export const TEMPLATE_MAP: Record<string, OperationalTemplate> = Object.fromEntries(
+  TEMPLATES.map(t => [t.id, t])
+);
