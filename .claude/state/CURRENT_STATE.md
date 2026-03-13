@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-03-13
+Last updated: 2026-03-13 (session 2)
 
 ## System Status
 - Backend: Render (hedgecore.onrender.com) — master branch
@@ -18,6 +18,25 @@ Last updated: 2026-03-13
 - CI governance: freeze-check + pre-merge-gate + risk-gate in GitHub Actions (all enforced, no advisory)
 - Pre-commit: freeze-check hook wired
 
+## Marketing Website (2026-03-13, commits 7bb2a2d)
+- Complete professional FinTech marketing website rebuild
+- Landing page rewrite: 10 animated sections, ticker tape, metrics counters, scroll animations
+- 7 product pages: Treasury, Market, Portfolio, Labs, Polisophic, HedgeWiki, FinHub
+- 6 solution pages: Corporate Treasury, Risk Management, Asset Management, Banking, Insurance, Energy
+- Pricing page: 3 tiers (Essentials $299/mo, Professional $799/mo, Enterprise custom)
+- About page: company story, leadership team, values
+- Contact page: form + contact cards
+- Shared infrastructure: MarketingLayout, MarketingNav (dropdown menus, mobile hamburger), MarketingFooter
+- Theme system: dark/light toggle, useMarketingTheme hook, DARK/LIGHT presets
+- ClientProviders updated: /products, /solutions, /pricing, /about, /contact treated as public routes
+- 25 new/modified files, 5647 insertions
+
+## Report Studio Enhancements (2026-03-13, commit bb0c613)
+- Library → Studio bridge: clicking a preset now loads it into Studio tab (was dead callback)
+- Formal narrative engine: 7 generators producing multi-paragraph institutional prose
+- NarrativeSection component: type-coded left borders (OVERVIEW/ANALYSIS/FINDING/etc.)
+- 135+ tests: 65 unit (reportCalcs), 40 narrative, 30+ workflow
+
 ## ORDR Market Sub-Project (ordr-market/, 2026-03-13)
 - **Modular workspace redesign shipped (2026-03-13, 22bcb23)**: Complete decomposition from monolithic ChartWorkspace.tsx into 23-file modular system
 - Architecture: WorkspaceProvider (useReducer+Context) → WorkspaceShell (flexbox layout) → 5 regions (CommandBar, LeftRail, ChartCore, RightStack, BottomDock) → 12 panel components
@@ -33,7 +52,11 @@ Last updated: 2026-03-13
 - Theme engine: 7 presets, 8 accents, 6 templates, WCAG contrast validator
 - Canvas chart: 300-bar OHLCV mock, S/R, FVG overlays, responsive
 - Old ChartWorkspace.tsx preserved (not deleted) for reference
-- Deployed to Vercel — last push: 22bcb23
+- Embedded mode: ChartEngine accepts external config/state props for workspace integration
+- Indicator legends: drawIndicatorLegend() for sub-pane labels
+- IndicatorsPanel: expanded with category groups and search
+- WorkspaceProvider: external state management for embedded chart
+- Deployed to Vercel — last push: 99ef12b
 
 ## Market Intelligence Dashboard (2026-03-13, commits 243febf..4458175)
 - Unified 3 disconnected pages (/market-intelligence, /market-overview, /fx-market) into single 6-tab dashboard
@@ -62,6 +85,7 @@ Last updated: 2026-03-13
 - DDL tables in main.py: 38 (+3 market data snapshot tables)
 - Widgets in registry: 21
 - Frontend market pages: 1 unified (/market-intelligence, 6 tabs) — was 3 separate pages
+- Marketing pages: 25 files (landing, 7 products, 6 solutions, pricing, about, contact, 5 shared components)
 - UIUXSRC: standalone design system package (7 themes, 13 components, 20 files)
 - ADRs: 4 accepted (+0004-policy-engine-v1-extensions)
 - Whitepapers: 3 (hedge-effectiveness-thresholds, scenario-methodology, overlay-activation-contracts)

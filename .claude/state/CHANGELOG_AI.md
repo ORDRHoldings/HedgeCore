@@ -1,5 +1,33 @@
 # Changelog (AI-maintained)
 
+## 2026-03-13 — ORDR Market Embedded Mode + Workspace Refactor (commit 99ef12b)
+- **ChartEngine embedded mode**: 12 new props for external config sync (indicators, sub-panes, chart type, drawing mode, magnet/hide/lock/delete-all).
+- **Theme**: `syncThemeWithCSS()` for CSS variable integration.
+- **priceLine**: New `drawIndicatorLegend()` for sub-pane indicator labels.
+- **IndicatorsPanel**: Expanded with category groups and search filtering.
+- **WorkspaceProvider**: External state management for embedded chart integration.
+- **ChartCore/CommandBar**: Refactored for workspace integration, simplified rendering.
+- 16 files changed, +1056 -733 lines.
+
+## 2026-03-13 — Professional FinTech Marketing Website (commit 7bb2a2d)
+- **Landing page**: Complete rewrite with 10 animated sections — ticker tape, metrics counters, scroll-triggered animations, hero gradient, feature grid, use cases, CTA.
+- **7 product pages**: Treasury, Market, Portfolio, Labs, Polisophic, HedgeWiki, FinHub — each with hero, animated metrics, feature cards, use cases, CTA.
+- **6 solution pages**: Corporate Treasury, Risk Management, Asset Management, Banking, Insurance, Energy — industry-specific content with relevant product mapping.
+- **Pricing**: 3 tiers (Essentials $299/mo, Professional $799/mo, Enterprise custom) with feature comparison and FAQ.
+- **About**: Company story, leadership team (4 executives), values section.
+- **Contact**: Form with role selector + contact info cards.
+- **Shared infra**: `MarketingLayout` (nav+footer wrapper), `MarketingNav` (529L, product/solution dropdowns, mobile hamburger, theme toggle), `MarketingFooter` (271L, 5-column layout), `theme.ts` (DARK/LIGHT presets, fonts), `useMarketingTheme` hook.
+- **ClientProviders**: `/products`, `/solutions`, `/pricing`, `/about`, `/contact` added as public route prefixes.
+- **Fix**: React hooks rules violations — `useCounter` in `.map()` callbacks replaced with `MetricCounter` component across all 7 product pages.
+- 25 files changed, +5647 -420 lines.
+
+## 2026-03-13 — Report Studio: Formal Narratives + Library Bridge (commit bb0c613)
+- **Library → Studio bridge**: Fixed dead `onSelectPreset` callback — clicking a preset in Library now loads it into Studio tab via `pendingPresetId` state.
+- **Narrative engine**: 7 generators producing multi-paragraph institutional prose (executive summary, exposure, hedge efficiency, scenario, compliance, VaR, hedge accounting).
+- **NarrativeSection component**: Shared renderer with type-coded left borders (OVERVIEW/ANALYSIS/FINDING/METHODOLOGY/RECOMMENDATION/DISCLAIMER).
+- **Enhanced panels**: 5 report panels now render narrative sections below existing metrics.
+- **Tests**: 135+ new tests — 65 unit (reportCalcs), 40 narrative, 30+ workflow.
+
 ## 2026-03-13 — UIUXSRC Portable Design System (commit bae6972)
 - **New package**: Created standalone `UIUXSRC/` design system — portable, framework-agnostic UI component library.
 - **7 theme presets**: Treasury Dark, Midnight, Slate, Arctic, Bloomberg, Nord, Solarized — all with CSS variable tokens.
