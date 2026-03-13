@@ -1,5 +1,19 @@
 # Changelog (AI-maintained)
 
+## 2026-03-13 — UIUXSRC Portable Design System (commit bae6972)
+- **New package**: Created standalone `UIUXSRC/` design system — portable, framework-agnostic UI component library.
+- **7 theme presets**: Treasury Dark, Midnight, Slate, Arctic, Bloomberg, Nord, Solarized — all with CSS variable tokens.
+- **13 components**: Button, ActionButton, Card, KpiTile, KpiStrip, StatusChip, EmptyState, Spinner, Icon, PageHeader, PageShell + ThemeProvider + contrast validator.
+- **Integration guide**: `CLAUDE.md` (253 lines) with usage patterns, token reference, component API docs. `README.md` with quick start.
+- **Design tokens**: `tokens.ts` (centralized S object), `globals.css` (341 lines of CSS variables), WCAG contrast validation utility.
+- **Research**: `UIUX Research/` added with deep-research-report.md + Treasury Software Color Theme Research.docx.
+- 20 new files, +2595 lines. No build impact (standalone package).
+
+## 2026-03-13 — Stale Route Cleanup (commit 4458175)
+- **Fix**: Updated 8 files with dead references to `/market-overview` and `/fx-market` after page deletion.
+- **Files**: dashboard/page.tsx, help/page.tsx, Nav.tsx, DashboardHelpPanel.tsx, CommandHubWidget.tsx, QuickActionsWidget.tsx, ClientProviders.tsx, helpContent.ts.
+- All routes now point to `/market-intelligence` with appropriate tab params.
+
 ## 2026-03-13 — Unified Market Intelligence Dashboard (commit 243febf)
 - **Consolidation**: Replaced 3 disconnected market pages (`/market-intelligence`, `/market-overview`, `/fx-market`) with single tabbed Market Intelligence Dashboard at `/market-intelligence`.
 - **6 tabs**: Overview (5-layer command page: ticker tape, hotlists, heatmap, calendar, breadth, sectors, technicals, news), Heatmap (full-viewport with Stocks/ETFs/Forex/Crypto selector), Calendar (economic events), Companies (symbol search + overview + technicals), Watchlists (localStorage persistence + screener + mini charts), Signals (passive technicals grid + news stream).

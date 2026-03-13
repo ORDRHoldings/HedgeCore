@@ -1,0 +1,143 @@
+<h2>Landing Page Design Direction</h2>
+<p class="subtitle">ORDR — Three products, white background, stunning design. Which personality?</p>
+
+<div class="section">
+  <h3>Product Structure (confirmed)</h3>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0;">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;font-size:15px;color:#166534;">ORDR Market</div>
+      <div style="font-size:13px;color:#15803d;margin-top:4px;">FREE</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:8px;">Public chart engine, 77 indicators, multi-asset</div>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;font-size:15px;color:#1e40af;">ORDR Labs</div>
+      <div style="font-size:13px;color:#2563eb;margin-top:4px;">FREE</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:8px;">Scenario Studio, Sandbox, stress testing, Monte Carlo</div>
+    </div>
+    <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:16px;">
+      <div style="font-weight:700;font-size:15px;color:#6b21a8;">ORDR Treasury</div>
+      <div style="font-size:13px;color:#7c3aed;margin-top:4px;">PAID</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:8px;">Hedge Desk, Governance, Positions, Reports, Audit</div>
+    </div>
+  </div>
+</div>
+
+<div class="cards">
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:white;padding:32px 24px;border-bottom:1px solid #e5e7eb;">
+      <!-- Minimal Corporate -->
+      <div style="text-align:center;">
+        <div style="font-family:'Manrope',sans-serif;font-size:11px;letter-spacing:0.2em;color:#9ca3af;text-transform:uppercase;">Synexiun</div>
+        <div style="font-family:'Manrope',sans-serif;font-size:48px;font-weight:800;color:#0f172a;letter-spacing:-0.03em;margin:12px 0 4px;">ORDR</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:16px;color:#64748b;font-weight:400;">Institutional Treasury Infrastructure</div>
+        <div style="margin-top:24px;display:flex;justify-content:center;gap:12px;">
+          <div style="padding:10px 28px;background:#0f172a;color:white;border-radius:6px;font-size:13px;font-weight:600;letter-spacing:0.04em;">GET STARTED</div>
+          <div style="padding:10px 28px;border:1px solid #d1d5db;color:#374151;border-radius:6px;font-size:13px;font-weight:600;">EXPLORE PRODUCTS</div>
+        </div>
+        <div style="margin-top:32px;display:flex;justify-content:center;gap:40px;">
+          <div style="text-align:center;">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:700;color:#0f172a;">3</div>
+            <div style="font-size:11px;color:#9ca3af;letter-spacing:0.06em;">PRODUCTS</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:700;color:#0f172a;">219</div>
+            <div style="font-size:11px;color:#9ca3af;letter-spacing:0.06em;">API ENDPOINTS</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:700;color:#0f172a;">41</div>
+            <div style="font-size:11px;color:#9ca3af;letter-spacing:0.06em;">ENGINE MODULES</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Clean Corporate</h3>
+      <p>Stark white, black type, minimal color. Apple/Stripe energy. Confidence through restraint. Product cards with subtle borders. Feels like a $50B company.</p>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);padding:32px 24px;border-bottom:1px solid #e5e7eb;">
+      <!-- Geometric / Bloomberg-inspired -->
+      <div style="text-align:center;position:relative;">
+        <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:200px;height:80px;background:linear-gradient(135deg, rgba(28,98,242,0.06) 0%, rgba(124,58,237,0.06) 100%);border-radius:40px;filter:blur(20px);"></div>
+        <div style="font-family:'Manrope',sans-serif;font-size:11px;letter-spacing:0.25em;color:#6366f1;text-transform:uppercase;font-weight:600;">Synexiun Presents</div>
+        <div style="font-family:'Manrope',sans-serif;font-size:48px;font-weight:800;color:#0f172a;letter-spacing:-0.03em;margin:8px 0 4px;">
+          <span style="background:linear-gradient(135deg,#1e40af,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">ORDR</span>
+        </div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:15px;color:#64748b;">Three products. One platform. Zero compromise.</div>
+        <div style="margin-top:20px;display:flex;justify-content:center;gap:8px;">
+          <div style="padding:8px 16px;background:linear-gradient(135deg,#1e40af,#7c3aed);color:white;border-radius:8px;font-size:12px;font-weight:600;letter-spacing:0.03em;">ORDR TREASURY</div>
+          <div style="padding:8px 16px;background:#f0fdf4;color:#166534;border-radius:8px;font-size:12px;font-weight:600;border:1px solid #bbf7d0;">ORDR MARKET <span style="font-size:10px;opacity:0.7;">FREE</span></div>
+          <div style="padding:8px 16px;background:#eff6ff;color:#1e40af;border-radius:8px;font-size:12px;font-weight:600;border:1px solid #bfdbfe;">ORDR LABS <span style="font-size:10px;opacity:0.7;">FREE</span></div>
+        </div>
+        <div style="margin-top:24px;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e5e7eb;border-radius:8px;overflow:hidden;">
+          <div style="background:white;padding:12px 8px;text-align:center;">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:#1e40af;">219</div>
+            <div style="font-size:10px;color:#9ca3af;letter-spacing:0.06em;">ENDPOINTS</div>
+          </div>
+          <div style="background:white;padding:12px 8px;text-align:center;">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:#7c3aed;">77</div>
+            <div style="font-size:10px;color:#9ca3af;letter-spacing:0.06em;">INDICATORS</div>
+          </div>
+          <div style="background:white;padding:12px 8px;text-align:center;">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:#166534;">60</div>
+            <div style="font-size:10px;color:#9ca3af;letter-spacing:0.06em;">PRESETS</div>
+          </div>
+          <div style="background:white;padding:12px 8px;text-align:center;">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:#0f172a;">3.2K</div>
+            <div style="font-size:10px;color:#9ca3af;letter-spacing:0.06em;">TESTS</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Gradient + Geometric</h3>
+      <p>White base with subtle gradient accents. Blue-to-purple brand gradient on ORDR. Product pills with color coding. Bloomberg meets Vercel. Each product has its own color identity.</p>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#ffffff;padding:32px 24px;border-bottom:1px solid #e5e7eb;overflow:hidden;position:relative;">
+      <!-- Editorial / Magazine -->
+      <div style="position:absolute;top:0;right:0;width:160px;height:160px;background:linear-gradient(135deg,#dbeafe,#ede9fe);border-radius:0 0 0 100%;opacity:0.5;"></div>
+      <div style="position:relative;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:24px;">
+          <div style="width:24px;height:24px;background:#0f172a;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:800;">O</div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#0f172a;letter-spacing:0.08em;">ORDR</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#94a3b8;letter-spacing:0.06em;margin-left:4px;">by Synexiun</span>
+        </div>
+        <div style="font-family:'Manrope',sans-serif;font-size:36px;font-weight:800;color:#0f172a;line-height:1.1;letter-spacing:-0.02em;">
+          Treasury.<br/>
+          <span style="color:#64748b;">Reimagined.</span>
+        </div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:#64748b;margin-top:12px;max-width:320px;line-height:1.5;">
+          Three products for institutional FX — from free charting to governed hedge execution.
+        </div>
+        <div style="margin-top:20px;display:flex;gap:24px;">
+          <div>
+            <div style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;font-weight:600;">Market</div>
+            <div style="font-size:12px;color:#166534;font-weight:600;margin-top:2px;">Free charting</div>
+          </div>
+          <div style="width:1px;background:#e5e7eb;"></div>
+          <div>
+            <div style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;font-weight:600;">Labs</div>
+            <div style="font-size:12px;color:#1e40af;font-weight:600;margin-top:2px;">Free simulation</div>
+          </div>
+          <div style="width:1px;background:#e5e7eb;"></div>
+          <div>
+            <div style="font-size:11px;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;font-weight:600;">Treasury</div>
+            <div style="font-size:12px;color:#7c3aed;font-weight:600;margin-top:2px;">Full platform</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Editorial / Magazine</h3>
+      <p>Bold typographic hero with "Treasury. Reimagined." statement. Asymmetric layout, organic shapes. Feels like a premium fintech pitch deck. Left-aligned, editorial flow.</p>
+    </div>
+  </div>
+</div>

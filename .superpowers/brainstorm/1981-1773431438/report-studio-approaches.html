@@ -1,0 +1,85 @@
+<h2>Report Studio Redesign: Architecture Approach</h2>
+<p class="subtitle">The current 1,900-line monolith needs to become a modular, theme-aligned system. Which structure?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Tabbed Shell (Settings Pattern)</h3>
+      <p>Single <code>/reports</code> page with <strong>5 tabs</strong> via <code>?tab=</code> URL params. Same pattern as Settings and Market Intelligence.</p>
+      <div style="margin-top:12px; padding:12px; background:rgba(255,255,255,0.05); border-radius:6px; font-size:13px;">
+        <strong>Tabs:</strong><br/>
+        <span style="color:#26A69A;">STUDIO</span> (bind run + compose sections + live preview) &rarr;
+        <span style="color:#3B82F6;">LIBRARY</span> (30 presets, search/filter) &rarr;
+        <span style="color:#F59E0B;">SAVED</span> (version history, re-export) &rarr;
+        <span style="color:#EC4899;">SCHEDULED</span> (delivery rules) &rarr;
+        <span style="color:#8B5CF6;">REGULATORY</span> (EMIR/MiFID/Dodd-Frank)
+      </div>
+      <div style="margin-top:8px; font-size:12px; color:#9CA3AF;">
+        <strong>Pros:</strong> Consistent with app patterns, URL-addressable tabs, simple mental model<br/>
+        <strong>Cons:</strong> Studio tab still complex (bind + compose + preview in one view)
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Guided Pipeline (Hedge Desk Pattern)</h3>
+      <p>Multi-step wizard for report creation: <strong>BIND &rarr; COMPOSE &rarr; PREVIEW &rarr; EXPORT</strong>. Like Hedge Desk's 7-phase pipeline.</p>
+      <div style="margin-top:12px; padding:12px; background:rgba(255,255,255,0.05); border-radius:6px; font-size:13px;">
+        <strong>Steps:</strong><br/>
+        <span style="color:#3B82F6;">1. BIND</span> (select run + policy + market snapshot) &rarr;
+        <span style="color:#26A69A;">2. COMPOSE</span> (pick preset or build custom sections) &rarr;
+        <span style="color:#F59E0B;">3. PREVIEW</span> (live rendered report with charts) &rarr;
+        <span style="color:#EC4899;">4. EXPORT</span> (format picker + delivery)
+      </div>
+      <div style="margin-top:8px; font-size:12px; color:#9CA3AF;">
+        <strong>Pros:</strong> Forces correct workflow order, each step is focused and simple<br/>
+        <strong>Cons:</strong> Extra clicks for power users who just want to re-export a saved report
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid: Tabs + Pipeline Studio (Recommended)</h3>
+      <p>Tabbed shell for navigation, but the <strong>STUDIO tab itself is a guided pipeline</strong>. Best of both worlds.</p>
+      <div style="margin-top:12px; padding:12px; background:rgba(255,255,255,0.05); border-radius:6px; font-size:13px;">
+        <strong>Structure:</strong><br/>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:6px;">
+          <div style="padding:8px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">
+            <span style="color:#26A69A; font-weight:700;">TAB: Studio</span><br/>
+            <span style="font-size:11px;">4-step pipeline inside:<br/>Bind &rarr; Compose &rarr; Preview &rarr; Export</span>
+          </div>
+          <div style="padding:8px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">
+            <span style="color:#3B82F6; font-weight:700;">TAB: Library</span><br/>
+            <span style="font-size:11px;">30 presets, search, filter<br/>Click preset &rarr; jumps to Studio</span>
+          </div>
+          <div style="padding:8px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">
+            <span style="color:#F59E0B; font-weight:700;">TAB: Saved</span><br/>
+            <span style="font-size:11px;">Version history, re-export<br/>Click report &rarr; jumps to Preview</span>
+          </div>
+          <div style="padding:8px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">
+            <span style="color:#8B5CF6; font-weight:700;">TAB: Regulatory</span><br/>
+            <span style="font-size:11px;">EMIR, MiFID, Dodd-Frank<br/>One-click XML/text downloads</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:8px; font-size:12px; color:#9CA3AF;">
+        <strong>Pros:</strong> Guided creation, quick access to saved/regulatory, consistent app patterns<br/>
+        <strong>Cons:</strong> Slightly more complex routing (tab + step state)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:24px; padding:16px; border:1px solid rgba(38,166,154,0.3); border-radius:6px; background:rgba(38,166,154,0.05);">
+  <h3 style="margin:0 0 8px; color:#26A69A;">Theme Alignment (applies to all approaches)</h3>
+  <p style="font-size:13px; margin:0;">
+    <strong>Current:</strong> White palette (<code>#FAFAFA</code> page, <code>#FFFFFF</code> panels) with hardcoded hex values<br/>
+    <strong>Target:</strong> Dark theme using <code>T</code> tokens from <code>tokens.ts</code> &mdash; <code>var(--bg-deep)</code>, <code>var(--bg-panel)</code>, <code>var(--text-primary)</code>, etc.<br/>
+    <strong>Charts:</strong> EChartsWrapper already dark &mdash; will finally match the page background
+  </p>
+</div>

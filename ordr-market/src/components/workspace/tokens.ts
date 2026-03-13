@@ -57,6 +57,55 @@ export const T = {
   // ── Shadows ─────────────────────────────────────────────────────────────
   shadowFloat: '0 4px 20px rgba(0,0,0,0.11), 0 1px 6px rgba(0,0,0,0.06)',
   shadowSm:    '0 1px 4px rgba(0,0,0,0.08)',
+  shadowPanel: '0 2px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)',
+
+  // ── Chart-specific (always dark canvas) ───────────────────────────────
+  chartGrid:      '#1C2030',
+  chartAxis:      '#363A45',
+  chartAxisText:  '#787B86',
+  chartCrosshair: '#787B86',
+
+  // ── EMA color family ──────────────────────────────────────────────────
+  ema1: '#2962FF',    // Fast (20)
+  ema2: '#FF6D00',    // Medium (50)
+  ema3: '#AB47BC',    // Slow (200)
+
+  // ── FVG / SMC zones ───────────────────────────────────────────────────
+  fvgBull:  'rgba(38,166,154,0.12)',
+  fvgBear:  'rgba(239,83,80,0.12)',
+  liqHigh:  'rgba(255,152,0,0.50)',
+  liqMid:   'rgba(255,152,0,0.30)',
+  liqLow:   'rgba(255,152,0,0.15)',
+
+  // ── Selection / focus ─────────────────────────────────────────────────
+  selected:   '#2962FF',
+  selectedBg: 'rgba(41,98,255,0.12)',
+  focusRing:  'var(--accent-blue, #64A8F0)',
+
+  // ── Layout dimensions ─────────────────────────────────────────────────
+  cmdBarH:          36,
+  statusBarH:       24,
+  leftRailW:        44,
+  leftPanelW:       216,
+  leftExpandedW:    260,   // railW + panelW
+  rightStackW:      280,
+  bottomDockMinH:   120,
+  bottomDockMaxH:   400,
+
+  // ── Panel tokens ──────────────────────────────────────────────────────
+  panelHeaderH:  32,
+  panelBg:       'var(--bg-panel, #1E1E1E)',
+  panelBorder:   'var(--border-soft, #333333)',
+  panelHover:    'rgba(128,128,128,0.06)',
+  panelActive:   'rgba(128,128,128,0.10)',
+
+  // ── Semantic colors ───────────────────────────────────────────────────
+  info:    'var(--accent-blue, #64A8F0)',
+  infoBg:  'var(--accent-blue-dim, rgba(100,168,240,0.10))',
+  warn:    'var(--accent-amber, #E5A84B)',
+  warnBg:  'rgba(229,168,75,0.10)',
+  success: 'var(--accent-green, #4CAF50)',
+  danger:  'var(--accent-red, #E57373)',
 } as const;
 
 export type TokenMap = typeof T;

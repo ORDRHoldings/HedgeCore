@@ -1,0 +1,274 @@
+<h2>Report Studio: Full Design</h2>
+<p class="subtitle">Hybrid Tabs + Split-Pane Studio &mdash; complete layout mockup</p>
+
+<!-- ═══ FULL PAGE MOCKUP ═══ -->
+<div class="mockup">
+  <div class="mockup-header">Report Studio &mdash; Full Page Layout (Dark Theme)</div>
+  <div class="mockup-body" style="padding:0; background:#0B1120; min-height:500px; display:flex; flex-direction:column;">
+
+    <!-- PageShell Header -->
+    <div style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:8px;">
+      <div style="width:20px; height:20px; background:rgba(59,130,246,0.15); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#3B82F6;">&#9638;</div>
+      <span style="font-family:monospace; font-size:13px; font-weight:700; color:#E5E7EB; letter-spacing:0.06em;">REPORT STUDIO</span>
+      <span style="font-family:monospace; font-size:11px; color:#6B7280;">INSTITUTIONAL REPORTING</span>
+      <div style="flex:1;"></div>
+      <span style="font-family:monospace; font-size:10px; color:#6B7280;">? HELP</span>
+    </div>
+
+    <!-- Tab Bar -->
+    <div style="padding:0 16px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; gap:0;">
+      <div style="padding:10px 16px; font-family:monospace; font-size:12px; font-weight:700; color:#26A69A; border-bottom:2px solid #26A69A; letter-spacing:0.06em;">STUDIO</div>
+      <div style="padding:10px 16px; font-family:monospace; font-size:12px; color:#6B7280; letter-spacing:0.06em;">LIBRARY</div>
+      <div style="padding:10px 16px; font-family:monospace; font-size:12px; color:#6B7280; letter-spacing:0.06em;">SAVED</div>
+      <div style="padding:10px 16px; font-family:monospace; font-size:12px; color:#6B7280; letter-spacing:0.06em;">REGULATORY</div>
+    </div>
+
+    <!-- Split Pane Body -->
+    <div style="flex:1; display:grid; grid-template-columns:300px 1fr; min-height:0;">
+
+      <!-- LEFT: Config Panel -->
+      <div style="border-right:1px solid rgba(255,255,255,0.08); overflow-y:auto; background:rgba(255,255,255,0.02);">
+
+        <!-- Data Binding Section -->
+        <div style="padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="font-family:monospace; font-size:10px; font-weight:700; color:#6B7280; letter-spacing:0.1em; margin-bottom:8px;">DATA BINDING</div>
+
+          <div style="margin-bottom:8px;">
+            <div style="font-family:monospace; font-size:10px; color:#6B7280; margin-bottom:3px;">CALCULATION RUN</div>
+            <div style="padding:6px 8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:3px; font-family:monospace; font-size:11px; color:#E5E7EB; display:flex; justify-content:space-between;">
+              <span>RUN-4a8f &middot; MXN/USD</span>
+              <span style="color:#26A69A;">&#9660;</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom:8px;">
+            <div style="font-family:monospace; font-size:10px; color:#6B7280; margin-bottom:3px;">POLICY</div>
+            <div style="padding:6px 8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:3px; font-family:monospace; font-size:11px; color:#E5E7EB;">
+              Conservative (60/30) &middot; RPV-12
+            </div>
+          </div>
+
+          <div style="display:flex; gap:6px; margin-top:6px;">
+            <div style="flex:1; padding:4px; background:rgba(38,166,154,0.08); border:1px solid rgba(38,166,154,0.2); border-radius:2px; text-align:center; font-family:monospace; font-size:9px; color:#26A69A;">
+              &#10003; RUN BOUND
+            </div>
+            <div style="flex:1; padding:4px; background:rgba(38,166,154,0.08); border:1px solid rgba(38,166,154,0.2); border-radius:2px; text-align:center; font-family:monospace; font-size:9px; color:#26A69A;">
+              &#10003; POLICY BOUND
+            </div>
+          </div>
+        </div>
+
+        <!-- Template Section -->
+        <div style="padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="font-family:monospace; font-size:10px; font-weight:700; color:#6B7280; letter-spacing:0.1em; margin-bottom:8px;">TEMPLATE</div>
+          <div style="padding:6px 8px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:3px; font-family:monospace; font-size:11px; color:#3B82F6; display:flex; justify-content:space-between;">
+            <span>RPT-001 Board Pack</span>
+            <span>&#9660;</span>
+          </div>
+          <div style="font-family:monospace; font-size:9px; color:#6B7280; margin-top:4px;">12 pages &middot; Board audience &middot; v3</div>
+        </div>
+
+        <!-- Sections List -->
+        <div style="padding:12px 14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-family:monospace; font-size:10px; font-weight:700; color:#6B7280; letter-spacing:0.1em;">SECTIONS (7)</div>
+            <div style="font-family:monospace; font-size:9px; color:#3B82F6; cursor:pointer;">+ ADD</div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <div style="padding:6px 8px; background:rgba(38,166,154,0.06); border:1px solid rgba(38,166,154,0.15); border-left:3px solid #26A69A; border-radius:2px; font-family:monospace; font-size:11px; color:#E5E7EB; display:flex; justify-content:space-between;">
+              <span>1. Executive Summary</span>
+              <span style="color:#6B7280; font-size:9px;">&#9776;</span>
+            </div>
+            <div style="padding:6px 8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-left:3px solid transparent; border-radius:2px; font-family:monospace; font-size:11px; color:#9CA3AF; display:flex; justify-content:space-between;">
+              <span>2. Exposure Insights</span>
+              <span style="color:#6B7280; font-size:9px;">&#9776;</span>
+            </div>
+            <div style="padding:6px 8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-left:3px solid transparent; border-radius:2px; font-family:monospace; font-size:11px; color:#9CA3AF; display:flex; justify-content:space-between;">
+              <span>3. Hedge Efficiency</span>
+              <span style="color:#6B7280; font-size:9px;">&#9776;</span>
+            </div>
+            <div style="padding:6px 8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-left:3px solid transparent; border-radius:2px; font-family:monospace; font-size:11px; color:#9CA3AF; display:flex; justify-content:space-between;">
+              <span>4. Scenario Sensitivity</span>
+              <span style="color:#6B7280; font-size:9px;">&#9776;</span>
+            </div>
+            <div style="padding:6px 8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-left:3px solid transparent; border-radius:2px; font-family:monospace; font-size:11px; color:#9CA3AF; display:flex; justify-content:space-between;">
+              <span>5. Policy Compliance</span>
+              <span style="color:#6B7280; font-size:9px;">&#9776;</span>
+            </div>
+            <div style="padding:6px 8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-left:3px solid transparent; border-radius:2px; font-family:monospace; font-size:11px; color:#9CA3AF; display:flex; justify-content:space-between;">
+              <span>6. VaR Analysis</span>
+              <span style="color:#6B7280; font-size:9px;">&#9776;</span>
+            </div>
+            <div style="padding:6px 8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-left:3px solid transparent; border-radius:2px; font-family:monospace; font-size:11px; color:#9CA3AF; display:flex; justify-content:space-between;">
+              <span>7. Disclosures</span>
+              <span style="color:#6B7280; font-size:9px;">&#9776;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Live Preview -->
+      <div style="overflow-y:auto; padding:16px; background:#0D1117;">
+
+        <!-- Preview Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div>
+            <div style="font-family:monospace; font-size:10px; font-weight:700; color:#6B7280; letter-spacing:0.1em;">LIVE PREVIEW</div>
+            <div style="font-family:monospace; font-size:9px; color:#4B5563; margin-top:2px;">Updates as you configure &middot; Click section to scroll</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <div style="padding:3px 8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:2px; font-family:monospace; font-size:10px; color:#9CA3AF;">FULL</div>
+            <div style="padding:3px 8px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); border-radius:2px; font-family:monospace; font-size:10px; color:#3B82F6;">SECTION</div>
+          </div>
+        </div>
+
+        <!-- Executive Summary Preview -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:14px; margin-bottom:12px;">
+          <div style="font-family:'IBM Plex Sans',sans-serif; font-size:14px; font-weight:700; color:#E5E7EB; margin-bottom:10px;">Executive Summary</div>
+
+          <!-- KPI Strip -->
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px;">
+            <div style="padding:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:3px;">
+              <div style="font-family:monospace; font-size:9px; color:#6B7280; letter-spacing:0.08em;">TOTAL EXPOSURE</div>
+              <div style="font-family:monospace; font-size:18px; font-weight:700; color:#E5E7EB; margin-top:2px;">$12.4M</div>
+            </div>
+            <div style="padding:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:3px;">
+              <div style="font-family:monospace; font-size:9px; color:#6B7280; letter-spacing:0.08em;">HEDGE COVERAGE</div>
+              <div style="font-family:monospace; font-size:18px; font-weight:700; color:#26A69A; margin-top:2px;">73%</div>
+            </div>
+            <div style="padding:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:3px;">
+              <div style="font-family:monospace; font-size:9px; color:#6B7280; letter-spacing:0.08em;">RESIDUAL RISK</div>
+              <div style="font-family:monospace; font-size:18px; font-weight:700; color:#EF5350; margin-top:2px;">$3.3M</div>
+            </div>
+            <div style="padding:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:3px;">
+              <div style="font-family:monospace; font-size:9px; color:#6B7280; letter-spacing:0.08em;">HEDGE COST</div>
+              <div style="font-family:monospace; font-size:18px; font-weight:700; color:#F59E0B; margin-top:2px;">$18.6K</div>
+            </div>
+          </div>
+
+          <!-- Narrative -->
+          <div style="font-family:'IBM Plex Sans',sans-serif; font-size:12px; color:#9CA3AF; line-height:1.6; padding:8px; background:rgba(255,255,255,0.02); border-radius:3px; border-left:3px solid rgba(59,130,246,0.3);">
+            The portfolio maintains 73% hedge coverage across 6 currency buckets, exceeding the 60% policy floor. EUR/USD forward contracts maturing Q3 account for 42% of hedged notional. Two MXN buckets remain unhedged due to forecast uncertainty, contributing $3.3M residual exposure.
+          </div>
+        </div>
+
+        <!-- Coverage Chart Preview -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:14px; margin-bottom:12px;">
+          <div style="font-family:'IBM Plex Sans',sans-serif; font-size:14px; font-weight:700; color:#E5E7EB; margin-bottom:10px;">Exposure Insights</div>
+          <div style="display:flex; gap:8px; height:60px;">
+            <div style="flex:3; display:flex; flex-direction:column; justify-content:flex-end;">
+              <div style="background:linear-gradient(180deg, #26A69A, #1B7A72); height:80%; border-radius:2px 2px 0 0;"></div>
+              <div style="font-family:monospace; font-size:8px; color:#6B7280; text-align:center; margin-top:2px;">EUR</div>
+            </div>
+            <div style="flex:2; display:flex; flex-direction:column; justify-content:flex-end;">
+              <div style="background:linear-gradient(180deg, #3B82F6, #2563EB); height:55%; border-radius:2px 2px 0 0;"></div>
+              <div style="font-family:monospace; font-size:8px; color:#6B7280; text-align:center; margin-top:2px;">GBP</div>
+            </div>
+            <div style="flex:4; display:flex; flex-direction:column; justify-content:flex-end;">
+              <div style="background:linear-gradient(180deg, #F59E0B, #D97706); height:100%; border-radius:2px 2px 0 0;"></div>
+              <div style="font-family:monospace; font-size:8px; color:#6B7280; text-align:center; margin-top:2px;">MXN</div>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
+              <div style="background:linear-gradient(180deg, #EC4899, #BE185D); height:30%; border-radius:2px 2px 0 0;"></div>
+              <div style="font-family:monospace; font-size:8px; color:#6B7280; text-align:center; margin-top:2px;">JPY</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- More sections indicator -->
+        <div style="text-align:center; padding:8px; font-family:monospace; font-size:10px; color:#4B5563;">
+          &#8942; 5 more sections below &#8942;
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Action Bar -->
+    <div style="padding:8px 16px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.02); display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-family:monospace; font-size:10px; color:#6B7280;">7 sections &middot; ~12 pages</span>
+        <span style="font-family:monospace; font-size:9px; color:#4B5563;">SHA-256: a4f2c8...9e1b03</span>
+        <div style="display:flex; gap:4px;">
+          <span style="padding:2px 5px; background:rgba(38,166,154,0.1); border:1px solid rgba(38,166,154,0.2); border-radius:2px; font-family:monospace; font-size:8px; color:#26A69A;">&#10003; VALID</span>
+          <span style="padding:2px 5px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); border-radius:2px; font-family:monospace; font-size:8px; color:#F59E0B;">1 WARNING</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <div style="padding:5px 10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:3px; font-family:monospace; font-size:11px; color:#9CA3AF; cursor:pointer;">SAVE</div>
+        <div style="padding:5px 10px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); border-radius:3px; font-family:monospace; font-size:11px; color:#3B82F6; cursor:pointer;">PDF</div>
+        <div style="padding:5px 10px; background:rgba(38,166,154,0.15); border:1px solid rgba(38,166,154,0.3); border-radius:3px; font-family:monospace; font-size:11px; color:#26A69A; cursor:pointer;">XLSX</div>
+        <div style="padding:5px 10px; background:#3B82F6; border-radius:3px; font-family:monospace; font-size:11px; color:#fff; font-weight:700; cursor:pointer;">EXPORT &rarr;</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ OTHER TABS OVERVIEW ═══ -->
+<div style="margin-top:24px;">
+  <h3>Other Tabs</h3>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+  <!-- Library Tab -->
+  <div style="padding:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:6px;">
+    <div style="font-family:monospace; font-size:12px; font-weight:700; color:#3B82F6; margin-bottom:8px;">LIBRARY TAB</div>
+    <div style="font-size:12px; color:#9CA3AF; line-height:1.5;">
+      &bull; 30 preset cards in 10 categories<br/>
+      &bull; Search bar + category filter pills<br/>
+      &bull; Click preset &rarr; loads into Studio<br/>
+      &bull; Audience / page count / section badges<br/>
+      &bull; "Custom" card to start blank
+    </div>
+  </div>
+
+  <!-- Saved Tab -->
+  <div style="padding:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:6px;">
+    <div style="font-family:monospace; font-size:12px; font-weight:700; color:#F59E0B; margin-bottom:8px;">SAVED TAB</div>
+    <div style="font-size:12px; color:#9CA3AF; line-height:1.5;">
+      &bull; Table: name, run, date, version, actions<br/>
+      &bull; Version badges per run (v1, v2, v3)<br/>
+      &bull; One-click re-export (PDF/XLSX/ZIP)<br/>
+      &bull; Click row &rarr; loads into Studio preview<br/>
+      &bull; Delete with confirmation
+    </div>
+  </div>
+
+  <!-- Regulatory Tab -->
+  <div style="padding:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:6px;">
+    <div style="font-family:monospace; font-size:12px; font-weight:700; color:#8B5CF6; margin-bottom:8px;">REGULATORY TAB</div>
+    <div style="font-size:12px; color:#9CA3AF; line-height:1.5;">
+      &bull; EMIR Article 9 &middot; MiFID II RTS 25<br/>
+      &bull; Dodd-Frank Title VII &middot; ISDA &middot; FINRA<br/>
+      &bull; Run selector + one-click download<br/>
+      &bull; Format badges (XML/TXT)<br/>
+      &bull; Audit trail per download
+    </div>
+  </div>
+</div>
+
+<!-- ═══ KEY CHANGES SUMMARY ═══ -->
+<div style="margin-top:24px; padding:16px; border:1px solid rgba(38,166,154,0.3); border-radius:6px; background:rgba(38,166,154,0.05);">
+  <h3 style="margin:0 0 10px; color:#26A69A;">What Changes</h3>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; font-size:12px;">
+    <div>
+      <div style="font-weight:700; color:#EF5350; margin-bottom:4px;">KILL</div>
+      <div style="color:#9CA3AF; line-height:1.6;">
+        &bull; White palette S object (hardcoded hex)<br/>
+        &bull; 1,900-line monolith page.tsx<br/>
+        &bull; Tailwind classes in ReportsContainer<br/>
+        &bull; PowerPoint/ZIP_COMMITTEE phantom features<br/>
+        &bull; Uninjected AI placeholder tokens
+      </div>
+    </div>
+    <div>
+      <div style="font-weight:700; color:#26A69A; margin-bottom:4px;">ADD</div>
+      <div style="color:#9CA3AF; line-height:1.6;">
+        &bull; Dark theme via T tokens (CSS variables)<br/>
+        &bull; Split-pane Studio with live preview<br/>
+        &bull; 4-tab shell (Studio/Library/Saved/Regulatory)<br/>
+        &bull; Draggable section reorder in config panel<br/>
+        &bull; Export action bar with validation status
+      </div>
+    </div>
+  </div>
+</div>

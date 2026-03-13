@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORDR-Terminal — Version B: Gemini Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #09090b;
+    --bg-card: #18181b;
+    --bg-elevated: #27272a;
+    --border: #27272a;
+    --border-hover: #3f3f46;
+    --text: #fafafa;
+    --text-muted: #a1a1aa;
+    --text-dim: #71717a;
+    --accent: #22d3ee;
+    --accent-2: #818cf8;
+    --accent-3: #34d399;
+    --gradient: linear-gradient(135deg, #22d3ee, #818cf8, #c084fc);
+    --glow-cyan: rgba(34, 211, 238, 0.15);
+    --glow-purple: rgba(129, 140, 248, 0.15);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+
+  /* ── ANIMATIONS ─────────────────────── */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  @keyframes pulse-glow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+  @keyframes orbit { 0% { transform: rotate(0deg) translateX(180px) rotate(0deg); } 100% { transform: rotate(360deg) translateX(180px) rotate(-360deg); } }
+  @keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+  @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+  @keyframes scan-line { 0% { top: -2px; } 100% { top: 100%; } }
+  @keyframes count-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── NAV ─────────────────────────────── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px; height: 52px;
+    background: rgba(9,9,11,0.8); backdrop-filter: blur(24px) saturate(180%);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-left { display: flex; align-items: center; gap: 12px; }
+  .nav-logo {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .nav-logo-icon {
+    width: 24px; height: 24px; border-radius: 5px; position: relative;
+    background: var(--gradient); display: flex; align-items: center; justify-content: center;
+  }
+  .nav-logo-icon span {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 800;
+    color: #000; letter-spacing: -0.02em;
+  }
+  .nav-brand {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700;
+    letter-spacing: 0.06em; color: var(--text);
+  }
+  .nav-sep { color: var(--text-dim); font-weight: 300; margin: 0 2px; }
+  .nav-tag {
+    font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+    color: var(--text-dim); letter-spacing: 0.04em;
+  }
+  .nav-center { display: flex; gap: 24px; }
+  .nav-center a {
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+    color: var(--text-muted); text-decoration: none; transition: color 0.15s;
+  }
+  .nav-center a:hover { color: var(--text); }
+  .nav-right { display: flex; align-items: center; gap: 8px; }
+  .btn-ghost {
+    padding: 6px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted);
+    background: transparent; border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s;
+  }
+  .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+  .btn-accent {
+    padding: 6px 16px; font-size: 13px; font-weight: 600; color: #000;
+    background: var(--accent); border: none; border-radius: 8px;
+    cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s;
+  }
+  .btn-accent:hover { filter: brightness(1.1); box-shadow: 0 0 20px var(--glow-cyan); }
+
+  /* ── HERO ────────────────────────────── */
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 120px 48px 60px; position: relative; overflow: hidden;
+  }
+  /* Animated orbs */
+  .hero-orb {
+    position: absolute; border-radius: 50%; filter: blur(80px);
+    pointer-events: none; animation: gradient-shift 8s ease infinite;
+    background-size: 200% 200%;
+  }
+  .hero-orb-1 {
+    width: 500px; height: 500px; top: 10%; left: 15%;
+    background: radial-gradient(circle, var(--glow-cyan), transparent 70%);
+    opacity: 0.4;
+  }
+  .hero-orb-2 {
+    width: 400px; height: 400px; top: 20%; right: 10%;
+    background: radial-gradient(circle, var(--glow-purple), transparent 70%);
+    opacity: 0.3; animation-delay: -4s;
+  }
+  /* Grid overlay */
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 10%, transparent 70%);
+  }
+  .hero-content { position: relative; z-index: 1; animation: fadeIn 0.9s ease-out; }
+  .hero-status {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 14px 5px 10px; border: 1px solid var(--border);
+    border-radius: 100px; margin-bottom: 36px; background: rgba(255,255,255,0.03);
+  }
+  .hero-status-dot {
+    width: 7px; height: 7px; background: var(--accent-3); border-radius: 50%;
+    box-shadow: 0 0 8px rgba(52,211,153,0.6);
+    animation: pulse-glow 2s ease infinite;
+  }
+  .hero-status-text {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500;
+    color: var(--text-muted); letter-spacing: 0.06em;
+  }
+  .hero-title {
+    font-family: 'Manrope', sans-serif; font-size: 80px; font-weight: 800;
+    letter-spacing: -0.05em; line-height: 0.95;
+    background: linear-gradient(135deg, #fff 0%, #fff 40%, var(--accent) 70%, var(--accent-2) 100%);
+    background-size: 200% 200%; animation: gradient-shift 6s ease infinite;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-subtitle {
+    font-family: 'Manrope', sans-serif; font-size: 80px; font-weight: 300;
+    letter-spacing: -0.05em; line-height: 0.95; color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .hero-desc {
+    font-size: 17px; color: var(--text-muted); max-width: 520px; line-height: 1.65;
+    margin: 28px auto 0; font-weight: 400;
+  }
+  .hero-actions { display: flex; gap: 12px; justify-content: center; margin-top: 40px; }
+  .btn-hero-main {
+    padding: 13px 32px; font-size: 15px; font-weight: 600; color: #000;
+    background: var(--accent); border: none; border-radius: 10px; cursor: pointer;
+    font-family: 'Inter', sans-serif; transition: all 0.2s;
+    box-shadow: 0 0 24px var(--glow-cyan);
+  }
+  .btn-hero-main:hover { filter: brightness(1.1); box-shadow: 0 0 40px var(--glow-cyan); transform: translateY(-1px); }
+  .btn-hero-sec {
+    padding: 13px 32px; font-size: 15px; font-weight: 600; color: var(--text-muted);
+    background: transparent; border: 1px solid var(--border); border-radius: 10px;
+    cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s;
+  }
+  .btn-hero-sec:hover { border-color: var(--text-dim); color: var(--text); }
+
+  /* ── STATS BAR ──────────────────────── */
+  .stats-bar {
+    display: flex; justify-content: center; gap: 1px; margin-top: 64px;
+    max-width: 960px; width: 100%; background: var(--border); border-radius: 14px;
+    overflow: hidden; position: relative; z-index: 1;
+    animation: fadeIn 0.9s ease-out 0.3s both;
+  }
+  .stats-bar::before {
+    content: ''; position: absolute; inset: -1px; border-radius: 15px;
+    background: var(--gradient); z-index: -1; opacity: 0.3;
+  }
+  .stat-cell {
+    flex: 1; background: var(--bg); padding: 22px 12px; text-align: center;
+    transition: background 0.2s;
+  }
+  .stat-cell:hover { background: var(--bg-card); }
+  .stat-val {
+    font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700;
+    color: var(--text); animation: count-up 0.6s ease-out both;
+  }
+  .stat-lbl {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
+    color: var(--text-dim); letter-spacing: 0.14em; margin-top: 4px; text-transform: uppercase;
+  }
+
+  /* ── TICKER ─────────────────────────── */
+  .ticker {
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: 12px 0; overflow: hidden; background: rgba(24,24,27,0.5);
+  }
+  .ticker-track {
+    display: flex; gap: 40px; animation: ticker-scroll 45s linear infinite;
+    width: max-content;
+  }
+  .ticker-item { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+  .ticker-sym {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+    color: var(--text-dim); letter-spacing: 0.06em;
+  }
+  .ticker-price {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+    color: var(--text);
+  }
+  .ticker-chg {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .ticker-up { color: #34d399; background: rgba(52,211,153,0.1); }
+  .ticker-down { color: #f87171; background: rgba(248,113,113,0.1); }
+  .ticker-dot { width: 3px; height: 3px; background: var(--border-hover); border-radius: 50%; }
+
+  /* ── PRODUCTS ────────────────────────── */
+  .products-section { padding: 120px 48px; }
+  .products-header { text-align: center; margin-bottom: 72px; }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-family: 'Manrope', sans-serif; font-size: 44px; font-weight: 800;
+    letter-spacing: -0.03em; color: var(--text); line-height: 1.1;
+  }
+  .section-desc {
+    font-size: 16px; color: var(--text-muted); max-width: 500px; line-height: 1.6;
+    margin: 16px auto 0;
+  }
+
+  .products-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    max-width: 1200px; margin: 0 auto;
+  }
+  /* second row: 3 items centered */
+  .products-grid .p-card:nth-child(5) { grid-column: 1 / 2; }
+  .products-grid .p-card:nth-child(6) { grid-column: 2 / 3; }
+  .products-grid .p-card:nth-child(7) { grid-column: 3 / 4; }
+
+  .p-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 32px 28px; display: flex; flex-direction: column; gap: 14px;
+    transition: all 0.3s; cursor: pointer; position: relative; overflow: hidden;
+    text-decoration: none; color: inherit; min-height: 280px;
+  }
+  .p-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--gradient); opacity: 0; transition: opacity 0.3s;
+  }
+  .p-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+  .p-card:hover::before { opacity: 1; }
+  .p-card:hover .p-icon { box-shadow: 0 0 20px var(--glow-cyan); border-color: var(--accent); }
+  .p-card:hover .p-arrow { opacity: 1; transform: translate(0, -50%); }
+
+  .p-icon {
+    width: 48px; height: 48px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--bg); display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s;
+  }
+  .p-icon svg { width: 22px; height: 22px; color: var(--accent); }
+  .p-name {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+    letter-spacing: 0.06em; color: var(--text); margin-top: 4px;
+  }
+  .p-desc {
+    font-size: 13px; color: var(--text-muted); line-height: 1.6; flex: 1;
+  }
+  .p-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+  .p-chip {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
+    letter-spacing: 0.08em; color: var(--text-dim); background: var(--bg);
+    border: 1px solid var(--border); padding: 3px 8px; border-radius: 6px;
+  }
+  .p-arrow {
+    position: absolute; top: 50%; right: 28px;
+    font-size: 18px; color: var(--accent); opacity: 0;
+    transform: translate(-6px, -50%); transition: all 0.3s;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── PLATFORM ───────────────────────── */
+  .platform-section {
+    padding: 120px 48px; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, var(--bg) 0%, rgba(24,24,27,0.5) 50%, var(--bg) 100%);
+  }
+  .platform-section::before {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); width: 600px; height: 600px;
+    background: radial-gradient(circle, var(--glow-cyan), transparent 60%);
+    opacity: 0.08; pointer-events: none;
+  }
+  .platform-content { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; }
+  .platform-header { text-align: center; margin-bottom: 72px; }
+  .platform-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .plat-card {
+    padding: 28px 24px; border: 1px solid var(--border); border-radius: 14px;
+    background: rgba(24,24,27,0.6); backdrop-filter: blur(8px);
+    transition: all 0.3s; position: relative; overflow: hidden;
+  }
+  .plat-card::after {
+    content: ''; position: absolute; top: -2px; left: 0; right: 0; height: 2px;
+    background: var(--gradient); animation: scan-line 4s linear infinite;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .plat-card:hover { border-color: var(--border-hover); }
+  .plat-card:hover::after { opacity: 0.5; }
+  .plat-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 800;
+    background: var(--gradient); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .plat-label {
+    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+    color: var(--text); margin-top: 6px;
+  }
+  .plat-desc {
+    font-size: 13px; color: var(--text-dim); line-height: 1.5; margin-top: 8px;
+  }
+
+  /* ── ARCH ────────────────────────────── */
+  .arch-section { padding: 120px 48px; }
+  .arch-content { max-width: 1200px; margin: 0 auto; }
+  .arch-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+  .arch-blocks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .arch-blk {
+    padding: 20px 18px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--bg-card); transition: all 0.2s;
+  }
+  .arch-blk:hover { border-color: var(--border-hover); }
+  .arch-blk-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
+    letter-spacing: 0.12em; color: var(--text-dim); text-transform: uppercase;
+  }
+  .arch-blk-val {
+    font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700;
+    color: var(--accent); margin-top: 4px;
+  }
+  .arch-blk-desc { font-size: 12px; color: var(--text-dim); margin-top: 4px; line-height: 1.4; }
+  .arch-blk.wide { grid-column: 1 / -1; }
+
+  /* ── TRUST ──────────────────────────── */
+  .trust-bar {
+    display: flex; justify-content: center; gap: 48px; padding: 48px;
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+  .trust-item { display: flex; align-items: center; gap: 10px; }
+  .trust-icon { width: 18px; height: 18px; color: var(--accent); opacity: 0.7; }
+  .trust-label { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+
+  /* ── CTA ─────────────────────────────── */
+  .cta-section {
+    padding: 120px 48px; text-align: center; position: relative; overflow: hidden;
+  }
+  .cta-section::before {
+    content: ''; position: absolute; bottom: 0; left: 50%;
+    transform: translateX(-50%); width: 800px; height: 400px;
+    background: radial-gradient(ellipse, var(--glow-cyan), transparent 60%);
+    opacity: 0.1; pointer-events: none;
+  }
+  .cta-content { position: relative; z-index: 1; }
+  .cta-title {
+    font-family: 'Manrope', sans-serif; font-size: 44px; font-weight: 800;
+    letter-spacing: -0.03em;
+    background: var(--gradient); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .cta-sub { font-size: 16px; color: var(--text-dim); margin-top: 16px; max-width: 440px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+  .cta-actions { display: flex; gap: 12px; justify-content: center; margin-top: 36px; }
+
+  /* ── FOOTER ─────────────────────────── */
+  footer {
+    padding: 36px 48px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer-left { display: flex; align-items: center; gap: 8px; }
+  .footer-logo-sm {
+    width: 18px; height: 18px; border-radius: 4px; background: var(--gradient);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 800; color: #000;
+  }
+  .footer-text { font-size: 12px; color: var(--text-dim); }
+  .footer-links { display: flex; gap: 20px; }
+  .footer-links a { font-size: 12px; color: var(--text-dim); text-decoration: none; transition: color 0.15s; }
+  .footer-links a:hover { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-left">
+    <div class="nav-logo">
+      <div class="nav-logo-icon"><span>O</span></div>
+      <span class="nav-brand">ORDR</span>
+      <span class="nav-sep">|</span>
+      <span class="nav-tag">Terminal</span>
+    </div>
+  </div>
+  <div class="nav-center">
+    <a href="#products">Products</a>
+    <a href="#platform">Platform</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#">Docs</a>
+    <a href="#">Pricing</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn-ghost">Sign In</button>
+    <button class="btn-accent">Request Access</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-content">
+    <div class="hero-status">
+      <div class="hero-status-dot"></div>
+      <span class="hero-status-text">INSTITUTIONAL INFRASTRUCTURE · SYNEXIUN</span>
+    </div>
+    <h1 class="hero-title">ORDR-Terminal</h1>
+    <div class="hero-subtitle">Capital Markets OS</div>
+    <p class="hero-desc">
+      Seven interconnected products spanning treasury governance, risk analytics, charting, intelligence, and research. The operating system institutions deserve.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-hero-main">Request Access</button>
+      <button class="btn-hero-sec">Explore Products</button>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-cell"><div class="stat-val">7</div><div class="stat-lbl">Products</div></div>
+      <div class="stat-cell"><div class="stat-val">219</div><div class="stat-lbl">Endpoints</div></div>
+      <div class="stat-cell"><div class="stat-val">41</div><div class="stat-lbl">Modules</div></div>
+      <div class="stat-cell"><div class="stat-val">77</div><div class="stat-lbl">Indicators</div></div>
+      <div class="stat-cell"><div class="stat-val">3.2K</div><div class="stat-lbl">Tests</div></div>
+      <div class="stat-cell"><div class="stat-val">&lt;50ms</div><div class="stat-lbl">Latency</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track">
+    <div class="ticker-item"><span class="ticker-sym">EUR/USD</span><span class="ticker-price">1.0847</span><span class="ticker-chg ticker-up">+0.12%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">GBP/USD</span><span class="ticker-price">1.2634</span><span class="ticker-chg ticker-up">+0.08%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">USD/JPY</span><span class="ticker-price">149.82</span><span class="ticker-chg ticker-down">-0.24%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">USD/CHF</span><span class="ticker-price">0.8847</span><span class="ticker-chg ticker-up">+0.05%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">AUD/USD</span><span class="ticker-price">0.6521</span><span class="ticker-chg ticker-down">-0.18%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">SPX</span><span class="ticker-price">5,667.20</span><span class="ticker-chg ticker-up">+0.34%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">GOLD</span><span class="ticker-price">2,178.40</span><span class="ticker-chg ticker-up">+0.52%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">BTC</span><span class="ticker-price">67,842</span><span class="ticker-chg ticker-down">-1.23%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <!-- duplicate for loop -->
+    <div class="ticker-item"><span class="ticker-sym">EUR/USD</span><span class="ticker-price">1.0847</span><span class="ticker-chg ticker-up">+0.12%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">GBP/USD</span><span class="ticker-price">1.2634</span><span class="ticker-chg ticker-up">+0.08%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">USD/JPY</span><span class="ticker-price">149.82</span><span class="ticker-chg ticker-down">-0.24%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">USD/CHF</span><span class="ticker-price">0.8847</span><span class="ticker-chg ticker-up">+0.05%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">AUD/USD</span><span class="ticker-price">0.6521</span><span class="ticker-chg ticker-down">-0.18%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">SPX</span><span class="ticker-price">5,667.20</span><span class="ticker-chg ticker-up">+0.34%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">GOLD</span><span class="ticker-price">2,178.40</span><span class="ticker-chg ticker-up">+0.52%</span></div>
+    <div class="ticker-item"><span class="ticker-dot"></span></div>
+    <div class="ticker-item"><span class="ticker-sym">BTC</span><span class="ticker-price">67,842</span><span class="ticker-chg ticker-down">-1.23%</span></div>
+  </div>
+</div>
+
+<!-- PRODUCTS -->
+<section id="products" class="products-section">
+  <div class="products-header">
+    <div class="section-label">The ORDR-Terminal Suite</div>
+    <h2 class="section-title">Seven products. One platform.</h2>
+    <p class="section-desc">Each product is purpose-built for institutional capital markets. Unified infrastructure, independent value.</p>
+  </div>
+  <div class="products-grid">
+
+    <a href="/dashboard" class="p-card">
+      <div class="p-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+          <path d="M10 6.5h4M6.5 10v4M17.5 10v4M10 17.5h4"/>
+        </svg>
+      </div>
+      <div class="p-name">ORDR TREASURY</div>
+      <p class="p-desc">Institutional FX hedge governance. Deterministic engine, 4-eyes approval, WORM audit, IFRS 9 effectiveness, full position lifecycle.</p>
+      <div class="p-chips"><span class="p-chip">GOVERNANCE</span><span class="p-chip">AUDIT</span><span class="p-chip">HEDGING</span></div>
+      <div class="p-arrow">→</div>
+    </a>
+
+    <a href="/market" class="p-card">
+      <div class="p-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+        </svg>
+      </div>
+      <div class="p-name">ORDR MARKET</div>
+      <p class="p-desc">Professional charting and agentic trading. 77 indicators, multi-asset coverage — FX, equities, crypto, commodities. AI-powered execution.</p>
+      <div class="p-chips"><span class="p-chip">CHARTING</span><span class="p-chip">AGENTIC</span><span class="p-chip">TRADING</span></div>
+      <div class="p-arrow">→</div>
+    </a>
+
+    <a href="/portfolio-risk" class="p-card">
+      <div class="p-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/>
+          <path d="M15 12l6-6"/>
+        </svg>
+      </div>
+      <div class="p-name">ORDR PORTFOLIO HEDGE</div>
+      <p class="p-desc">Deterministic portfolio risk engine. Ingest positions, decompose exposures, classify R1–R8 risk, generate execution plans at sub-50ms.</p>
+      <div class="p-chips"><span class="p-chip">RISK</span><span class="p-chip">PORTFOLIO</span><span class="p-chip">ENGINE</span></div>
+      <div class="p-arrow">→</div>
+    </a>
+
+    <a href="/scenario-studio" class="p-card">
+      <div class="p-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 3h6v6a1 1 0 0 0 .293.707l3.414 3.414a1 1 0 0 1 .293.707V18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-4.172a1 1 0 0 1 .293-.707l3.414-3.414A1 1 0 0 0 9 9V3z"/>
+          <path d="M9 3h6"/><circle cx="12" cy="15" r="1.5"/>
+        </svg>
+      </div>
+      <div class="p-name">ORDR LABS</div>
+      <p class="p-desc">Scenario Studio and Sandbox. Stress testing, Monte Carlo simulation, crisis library, what-if analysis. Experiment without consequence.</p>
+      <div class="p-chips"><span class="p-chip">SIMULATION</span><span class="p-chip">STRESS TEST</span><span class="p-chip">SANDBOX</span></div>
+      <div class="p-arrow">→</div>
+    </a>
+
+    <a href="/polisophic" class="p-card">
+      <div class="p-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      </div>
+      <div class="p-name">ORDR POLISOPHIC</div>
+      <p class="p-desc">Political and macroeconomic risk intelligence. Corridor scoring, geopolitical event tracking, currency-impact analysis for informed decisions.</p>
+      <div class="p-chips"><span class="p-chip">GEOPOLITICAL</span><span class="p-chip">INTEL</span><span class="p-chip">RISK</span></div>
+      <div class="p-arrow">→</div>
+    </a>
+
+    <a href="/hedgewiki" class="p-card">
+      <div class="p-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          <path d="M8 7h8M8 11h6M8 15h4"/>
+        </svg>
+      </div>
+      <div class="p-name">ORDR HEDGEWIKI</div>
+      <p class="p-desc">Institutional knowledge base. FX instruments, ISDA definitions, IFRS 9 / ASC 815 guidance, hedge accounting methodology for professionals.</p>
+      <div class="p-chips"><span class="p-chip">KNOWLEDGE</span><span class="p-chip">REFERENCE</span><span class="p-chip">COMPLIANCE</span></div>
+      <div class="p-arrow">→</div>
+    </a>
+
+    <a href="/market-intelligence" class="p-card">
+      <div class="p-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+          <path d="M5 8h2M5 12h3M17 8h2M17 12h1"/>
+        </svg>
+      </div>
+      <div class="p-name">ORDR FINHUB</div>
+      <p class="p-desc">Financial magazine and data hub. Market analysis, institutional research, economic data feeds, curated intelligence for decision-makers.</p>
+      <div class="p-chips"><span class="p-chip">MAGAZINE</span><span class="p-chip">DATA</span><span class="p-chip">RESEARCH</span></div>
+      <div class="p-arrow">→</div>
+    </a>
+
+  </div>
+</section>
+
+<!-- PLATFORM -->
+<section id="platform" class="platform-section">
+  <div class="platform-content">
+    <div class="platform-header">
+      <div class="section-label">Platform Capabilities</div>
+      <h2 class="section-title">Built to institutional standards</h2>
+      <p class="section-desc">Every calculation deterministic. Every decision auditable. Every workflow governed.</p>
+    </div>
+    <div class="platform-grid">
+      <div class="plat-card">
+        <div class="plat-num">R1–R8</div>
+        <div class="plat-label">Risk Taxonomy</div>
+        <div class="plat-desc">Frozen canonical classification. Eight risk categories: translation, transaction, economic, strategic.</div>
+      </div>
+      <div class="plat-card">
+        <div class="plat-num">SHA-256</div>
+        <div class="plat-label">Hash Chain</div>
+        <div class="plat-desc">WORM append-only audit trail. Per-tenant SHA-256 chain. Tamper-evident, compliance-ready.</div>
+      </div>
+      <div class="plat-card">
+        <div class="plat-num">4-Eyes</div>
+        <div class="plat-label">Governance</div>
+        <div class="plat-desc">Separation of duties. Maker-checker workflow. Tri-state pipeline: Sandbox → Staging → Ledger.</div>
+      </div>
+      <div class="plat-card">
+        <div class="plat-num">60</div>
+        <div class="plat-label">Policy Presets</div>
+        <div class="plat-desc">Pre-configured templates: maturity profiles, governance tiers, evidence grades, accounting modes.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture" class="arch-section">
+  <div class="arch-content">
+    <div class="arch-layout">
+      <div>
+        <div class="section-label">Architecture</div>
+        <h2 class="section-title">Deterministic by design</h2>
+        <p class="section-desc" style="margin-top:16px;color:var(--text-muted);max-width:440px;line-height:1.6;">Same inputs, same outputs. No ML black boxes, no stochastic drift. Every hedge ratio reproducible and explainable to auditors, regulators, and boards.</p>
+        <div style="margin-top:28px;display:flex;gap:12px;">
+          <button class="btn-accent" style="padding:11px 24px;font-size:13px;">Documentation</button>
+          <button class="btn-ghost" style="padding:11px 24px;font-size:13px;">API Reference</button>
+        </div>
+      </div>
+      <div class="arch-blocks">
+        <div class="arch-blk">
+          <div class="arch-blk-label">Engine</div>
+          <div class="arch-blk-val">41</div>
+          <div class="arch-blk-desc">Pure deterministic kernel modules</div>
+        </div>
+        <div class="arch-blk">
+          <div class="arch-blk-label">Routes</div>
+          <div class="arch-blk-val">219</div>
+          <div class="arch-blk-desc">RBAC-protected API endpoints</div>
+        </div>
+        <div class="arch-blk">
+          <div class="arch-blk-label">Models</div>
+          <div class="arch-blk-val">27</div>
+          <div class="arch-blk-desc">Async ORM with WORM semantics</div>
+        </div>
+        <div class="arch-blk">
+          <div class="arch-blk-label">Coverage</div>
+          <div class="arch-blk-val">62%</div>
+          <div class="arch-blk-desc">3,200+ automated test cases</div>
+        </div>
+        <div class="arch-blk wide">
+          <div class="arch-blk-label">Authorization</div>
+          <div class="arch-blk-val">9 Roles · 41 Permissions</div>
+          <div class="arch-blk-desc">Hierarchical RBAC, fail-closed enforcement, API key + JWT auth</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST -->
+<div class="trust-bar">
+  <div class="trust-item">
+    <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    <span class="trust-label">WORM Audit Trail</span>
+  </div>
+  <div class="trust-item">
+    <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span class="trust-label">SHA-256 Hash Chain</span>
+  </div>
+  <div class="trust-item">
+    <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span class="trust-label">4-Eyes Governance</span>
+  </div>
+  <div class="trust-item">
+    <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+    <span class="trust-label">IFRS 9 / ASC 815</span>
+  </div>
+  <div class="trust-item">
+    <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+    <span class="trust-label">Deterministic Engine</span>
+  </div>
+</div>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-content">
+    <h2 class="cta-title">The terminal for modern capital markets</h2>
+    <p class="cta-sub">Seven products. One platform. Institutional infrastructure from day one.</p>
+    <div class="cta-actions">
+      <button class="btn-hero-main">Request Access</button>
+      <button class="btn-hero-sec">Schedule Demo</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">
+    <div class="footer-logo-sm">O</div>
+    <span class="footer-text">ORDR-Terminal — Synexiun © 2026</span>
+  </div>
+  <div class="footer-links">
+    <a href="#">Privacy</a><a href="#">Terms</a><a href="#">Security</a>
+    <a href="#">Documentation</a><a href="#">API</a><a href="#">Contact</a>
+  </div>
+</footer>
+
+</body>
+</html>

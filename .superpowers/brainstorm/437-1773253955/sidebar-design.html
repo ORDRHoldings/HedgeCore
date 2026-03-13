@@ -1,0 +1,75 @@
+<h2>Sidebar: Open by Default, Readable, Visible</h2>
+<p class="subtitle">The sidebar should feel like a permanent instrument panel — not something you have to discover.</p>
+
+<div class="section">
+  <h3>Current sidebar issues to fix:</h3>
+  <ul>
+    <li><strong>Default closed</strong> — new users see a mystery icon rail</li>
+    <li><strong>Custom SVG icons</strong> — inconsistent sizes (14px/18px mix), no standard library</li>
+    <li><strong>10 sections</strong> — too many for scan-ability</li>
+    <li><strong>Sub-items only visible expanded</strong> — collapsed mode hides all context</li>
+    <li><strong>Flyout panels on hover</strong> — fragile interaction, disappear when cursor moves</li>
+  </ul>
+</div>
+
+<h2 style="margin-top:32px;">Icon Style</h2>
+<p class="subtitle">Which icon style fits an institutional terminal product?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Lucide Icons (current frontend standard)</h3>
+      <p>Clean 24px stroke icons. Already in the project's dependency. Used by Linear, Vercel, Notion. 1400+ icons available.</p>
+      <p style="font-family:monospace;font-size:12px;color:#888;">import { LayoutDashboard, Shield, BarChart3, Microscope, Globe, Settings } from "lucide-react"</p>
+      <div style="display:flex;gap:12px;margin-top:8px;font-size:13px;color:#6af;">
+        <span>Already installed</span> · <span>Consistent 24px grid</span> · <span>Stroke-based, clean</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Phosphor Icons</h3>
+      <p>6 weights (thin → fill). Slightly warmer/friendlier than Lucide. Used by Framer, Cal.com. Would need new dependency.</p>
+      <p style="font-family:monospace;font-size:12px;color:#888;">import { ChartBar, Shield, Microscope, GearSix } from "@phosphor-icons/react"</p>
+      <div style="display:flex;gap:12px;margin-top:8px;font-size:13px;color:#f0ad4e;">
+        <span>New dependency</span> · <span>6 weight options</span> · <span>Slightly warmer</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Keep Custom SVGs (current)</h3>
+      <p>Hand-crafted inline SVGs in AppSidebar.tsx. Unique to ORDR but inconsistent (14px/18px mix, different stroke widths).</p>
+      <div style="display:flex;gap:12px;margin-top:8px;font-size:13px;color:#f87171;">
+        <span>Already there</span> · <span>Inconsistent sizes</span> · <span>Hard to maintain</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px;">
+  <h3>Sidebar behavior changes (all options):</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+      <div class="label">DEFAULT STATE</div>
+      <p><strong>Open (260px)</strong> on first visit.<br/>User preference saved to localStorage.</p>
+    </div>
+    <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+      <div class="label">SECTION COUNT</div>
+      <p><strong>7 primary</strong> + 2 bottom rail (Admin, Help).<br/>Down from 12.</p>
+    </div>
+    <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+      <div class="label">TYPOGRAPHY</div>
+      <p><strong>13px IBM Plex Sans</strong> for labels.<br/>No more 10px text. Readable at arm's length.</p>
+    </div>
+    <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+      <div class="label">ICONS</div>
+      <p><strong>20px consistent size</strong>.<br/>Same stroke weight across all sections.</p>
+    </div>
+  </div>
+</div>

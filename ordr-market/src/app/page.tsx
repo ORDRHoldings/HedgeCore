@@ -2,11 +2,12 @@
 /**
  * ORDR Market — Root Page
  *
- * Renders the full institutional trading workspace.
- * ChartWorkspace owns the entire viewport: top bar, rails, canvas, bottom strip.
+ * Renders the modular institutional trading workspace.
+ * WorkspaceShell owns the entire viewport: command bar, adaptive rails,
+ * chart core, tabbed sidebar, bottom dock, and status bar.
  */
-import ChartWorkspace from '@/components/workspace/ChartWorkspace';
+import WorkspaceShell from '@/components/workspace/WorkspaceShell';
 
 export default function HomePage() {
-  return <ChartWorkspace />;
+  return <WorkspaceShell />;
 }

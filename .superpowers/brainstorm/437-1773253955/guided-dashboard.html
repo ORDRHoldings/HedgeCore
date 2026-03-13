@@ -1,0 +1,51 @@
+<h2>Dashboard: "What do you want to do today?"</h2>
+<p class="subtitle">The dashboard greets the user and guides them into the right workflow — not a wall of widgets.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Command Center</h3>
+      <p>Top section: greeting + 3 large action cards ("New Hedge", "Monitor Hedges", "Market Overview"). Below: live KPI strip + recent activity feed. Think Bloomberg Terminal meets Notion homepage.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Clear guided entry — user always knows what to do</li><li>Action cards are large, unmissable</li><li>KPIs visible without scrolling</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less data density than current widget grid</li><li>Power users may want to skip the cards</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Mission Control</h3>
+      <p>Full-width greeting bar with user name + org. Below: 3 "mission cards" with live stats INSIDE the cards (e.g., "New Hedge" card shows "4 positions ready"). Bottom: compact KPI row. Everything is a doorway.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Cards pull you in with real data — not just labels</li><li>Each card previews what's waiting</li><li>Feels intelligent — the app knows your state</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Requires API calls to populate card stats</li><li>More complex to build</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Adaptive Briefing</h3>
+      <p>The dashboard changes based on what needs attention. If hedges are drifting → "Monitor" card pulses. If positions are unhedged → "New Hedge" card highlights with count. If nothing urgent → calm overview with market summary. Like a daily briefing that prioritizes for you.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Feels like the app is working for you</li><li>Reduces decision fatigue — shows what matters NOW</li><li>Most "final product" feel of all options</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Most complex to build — needs priority logic</li><li>Risk of being wrong about what's urgent</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px; padding: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+  <h3>All options share these elements:</h3>
+  <ul style="columns: 2; column-gap: 32px;">
+    <li>Greeting with user name + role + org</li>
+    <li>3 primary actions: New Hedge, Monitor, Market</li>
+    <li>Live KPI strip (exposure, coverage, pending approvals)</li>
+    <li>Recent activity / audit feed</li>
+    <li>Quick access to Audit Lab (the prospect magnet)</li>
+  </ul>
+</div>

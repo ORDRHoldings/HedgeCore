@@ -1,0 +1,410 @@
+<h2>ORDR Terminal — Full UX Overhaul Design</h2>
+<p class="subtitle">One cohesive, cold, authoritative institutional product. All decisions applied.</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" style="margin-top:32px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div style="width:32px;height:32px;background:#1C62F2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;">1</div>
+    <h3 style="margin:0;">Design System — Unified Tokens + Shared Components</h3>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+      <div class="label">COLOR SYSTEM</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:16px;height:16px;background:#0B1120;border:1px solid #333;border-radius:2px;"></div>
+          <span style="font-size:12px;color:#aaa;">Sidebar / Deep background</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:16px;height:16px;background:#111827;border:1px solid #333;border-radius:2px;"></div>
+          <span style="font-size:12px;color:#aaa;">Page background</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:16px;height:16px;background:#1F2937;border:1px solid #333;border-radius:2px;"></div>
+          <span style="font-size:12px;color:#aaa;">Panel / Card</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:16px;height:16px;background:#1C62F2;border-radius:2px;"></div>
+          <span style="font-size:12px;color:#aaa;">Accent — active states, CTAs ONLY</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:16px;height:16px;background:#E5E7EB;border-radius:2px;"></div>
+          <span style="font-size:12px;color:#aaa;">Primary text</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:16px;height:16px;background:#6B7280;border-radius:2px;"></div>
+          <span style="font-size:12px;color:#aaa;">Secondary text</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:16px;height:16px;background:#374151;border-radius:2px;"></div>
+          <span style="font-size:12px;color:#aaa;">Tertiary / disabled</span>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:8px;background:rgba(28,98,242,0.06);border:1px solid rgba(28,98,242,0.15);border-radius:4px;font-size:11px;color:#93B4F8;">
+        Status colors (green/red/amber) appear ONLY on data values — never on UI chrome, badges, or buttons.
+      </div>
+    </div>
+
+    <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+      <div class="label">SHARED COMPONENTS</div>
+      <ul style="font-size:13px;color:#ccc;line-height:2;">
+        <li><code>PageHeader</code> — icon + title + breadcrumb + action slot</li>
+        <li><code>PageShell</code> — wraps every page (header + content area)</li>
+        <li><code>KpiStrip</code> — horizontal stat bar (reusable across pages)</li>
+        <li><code>DataTable</code> — standard table with sort/filter header</li>
+        <li><code>EmptyState</code> — loading / error / no-data (already exists, enforce usage)</li>
+        <li><code>ActionButton</code> — primary (blue fill) / secondary (border) / ghost</li>
+        <li><code>StatusDot</code> — green/red/amber dot for data status</li>
+        <li><code>tokens.ts</code> — single source of truth, replaces 5 local S/T objects</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+    <div class="label">TYPOGRAPHY RULES</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:8px;">
+      <div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:20px;font-weight:700;color:#E5E7EB;">Page Titles</div>
+        <div style="font-size:11px;color:#6B7280;">IBM Plex Sans · 20px · 700</div>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:500;color:#E5E7EB;">Section Headers</div>
+        <div style="font-size:11px;color:#6B7280;">IBM Plex Sans · 14px · 500</div>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#E5E7EB;">Data Values</div>
+        <div style="font-size:11px;color:#6B7280;">IBM Plex Mono · 13px · 400</div>
+      </div>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:#f87171;">Minimum font size: 12px everywhere. No exceptions.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" style="margin-top:40px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div style="width:32px;height:32px;background:#1C62F2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;">2</div>
+    <h3 style="margin:0;">Sidebar — Open, Readable, Sharp</h3>
+  </div>
+
+  <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;">
+    <!-- Sidebar mockup -->
+    <div style="background:#0B1120;border:1px solid #1A2744;border-radius:6px;padding:16px 0;min-height:500px;">
+      <!-- Logo area -->
+      <div style="padding:12px 20px 20px;border-bottom:1px solid #152036;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:#E8ECF4;letter-spacing:0.08em;">ORDR</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:11px;color:#4A5A74;margin-top:2px;">Terminal v1</div>
+      </div>
+
+      <!-- Nav items -->
+      <div style="padding:12px 8px;">
+        <!-- Active item -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(28,98,242,0.10);border-left:2px solid #1C62F2;margin-bottom:2px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C62F2" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;color:#E8ECF4;">Dashboard</span>
+        </div>
+        <!-- Normal items -->
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-left:2px solid transparent;margin-bottom:2px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7B8BA5" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#7B8BA5;">Hedge Desk</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-left:2px solid transparent;margin-bottom:2px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7B8BA5" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#7B8BA5;">Reports</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-left:2px solid transparent;margin-bottom:2px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7B8BA5" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#7B8BA5;">Audit Lab</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-left:2px solid transparent;margin-bottom:2px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7B8BA5" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#7B8BA5;">Market Overview</span>
+        </div>
+
+        <!-- Divider -->
+        <div style="height:1px;background:#152036;margin:12px 12px;"></div>
+
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-left:2px solid transparent;margin-bottom:2px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A5A74" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#4A5A74;">Research</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-left:2px solid transparent;margin-bottom:2px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A5A74" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#4A5A74;">Governance</span>
+        </div>
+
+        <!-- Divider -->
+        <div style="height:1px;background:#152036;margin:12px 12px;"></div>
+
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-left:2px solid transparent;margin-bottom:2px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A5A74" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#4A5A74;">Settings</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Specs -->
+    <div>
+      <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;margin-bottom:16px;">
+        <div class="label">BEHAVIOR</div>
+        <ul style="font-size:13px;color:#ccc;line-height:2;">
+          <li><strong>Default: OPEN (260px)</strong> — saved to localStorage per user</li>
+          <li>Collapsed: 64px icon rail (no flyout, just icons + tooltip on hover)</li>
+          <li>Toggle: <code>[</code> key or collapse button at bottom</li>
+          <li>Active state: left blue border + blue icon + white text</li>
+          <li>Hover: background subtle lighten (#111B2E)</li>
+          <li>Sub-items: indented 32px, 12px text, appear inline when section expanded</li>
+        </ul>
+      </div>
+      <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;margin-bottom:16px;">
+        <div class="label">7 SECTIONS (3 tiers)</div>
+        <table style="width:100%;font-size:12px;color:#ccc;border-collapse:collapse;">
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+            <td style="padding:6px 0;color:#E8ECF4;font-weight:600;">PRIMARY</td>
+            <td style="padding:6px 0;">Dashboard · Hedge Desk · Reports · Audit Lab · Market Overview</td>
+          </tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+            <td style="padding:6px 0;color:#7B8BA5;">SECONDARY</td>
+            <td style="padding:6px 0;">Research · Governance</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#4A5A74;">UTILITY</td>
+            <td style="padding:6px 0;">Settings · Admin · Help</td>
+          </tr>
+        </table>
+      </div>
+      <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+        <div class="label">ICONS</div>
+        <p style="font-size:13px;color:#ccc;">Lucide React · 20px · strokeWidth={1.5} · strokeLinecap="square" · strokeLinejoin="miter"</p>
+        <p style="font-size:12px;color:#6B7280;">Primary sections: #7B8BA5 (muted). Secondary: #4A5A74 (dim). Active: #1C62F2 (accent blue).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" style="margin-top:40px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div style="width:32px;height:32px;background:#1C62F2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;">3</div>
+    <h3 style="margin:0;">Dashboard — Mission Control</h3>
+  </div>
+
+  <div style="background:#111827;border:1px solid #1F2937;border-radius:6px;padding:32px;">
+    <!-- Greeting -->
+    <div style="margin-bottom:28px;">
+      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:20px;font-weight:700;color:#E5E7EB;">Good morning, James</div>
+      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#6B7280;margin-top:4px;">Meridian Capital · Head of Treasury · 11 Mar 2026</div>
+    </div>
+
+    <!-- Mission Cards -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+      <!-- New Hedge -->
+      <div style="background:#1F2937;border:1px solid #374151;padding:24px;border-radius:4px;cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1C62F2" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;color:#E5E7EB;">New Hedge</span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:700;color:#E5E7EB;">4</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#6B7280;">positions ready to hedge</div>
+        <div style="margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#1C62F2;">START PIPELINE →</div>
+      </div>
+      <!-- Monitor -->
+      <div style="background:#1F2937;border:1px solid #374151;padding:24px;border-radius:4px;cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;color:#E5E7EB;">Monitor Hedges</span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:700;color:#E5E7EB;">12</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#6B7280;">active hedges · 2 pending approval</div>
+        <div style="margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6B7280;">VIEW PORTFOLIO →</div>
+      </div>
+      <!-- Market -->
+      <div style="background:#1F2937;border:1px solid #374151;padding:24px;border-radius:4px;cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;color:#E5E7EB;">Market Data</span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:700;color:#E5E7EB;">1.0847</div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#6B7280;">EUR/USD spot · DXY 104.2</div>
+        <div style="margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6B7280;">MARKET OVERVIEW →</div>
+      </div>
+    </div>
+
+    <!-- KPI Strip -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:#374151;border:1px solid #374151;border-radius:4px;overflow:hidden;">
+      <div style="background:#1F2937;padding:14px 16px;">
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.06em;">Total Exposure</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:#E5E7EB;margin-top:4px;">$24.8M</div>
+      </div>
+      <div style="background:#1F2937;padding:14px 16px;">
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.06em;">Hedge Coverage</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:#E5E7EB;margin-top:4px;">67%</div>
+      </div>
+      <div style="background:#1F2937;padding:14px 16px;">
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.06em;">Pending Approvals</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:#E5E7EB;margin-top:4px;">2</div>
+      </div>
+      <div style="background:#1F2937;padding:14px 16px;">
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.06em;">MTM P&L</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:#059669;margin-top:4px;">+$142K</div>
+      </div>
+      <div style="background:#1F2937;padding:14px 16px;">
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:0.06em;">Open Positions</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:#E5E7EB;margin-top:4px;">18</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" style="margin-top:40px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div style="width:32px;height:32px;background:#1C62F2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;">4</div>
+    <h3 style="margin:0;">Page Consolidation — 71 → ~30 Pages</h3>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="padding:16px;background:rgba(220,38,38,0.06);border:1px solid rgba(220,38,38,0.15);border-radius:6px;">
+      <div class="label" style="color:#f87171;">DELETE (5 pages)</div>
+      <ul style="font-size:13px;color:#ccc;line-height:2;">
+        <li><code>/execution</code> — self-labeled LEGACY</li>
+        <li><code>/decision-desk</code> + <code>/runs/[id]</code> — removed from nav</li>
+        <li><code>/currency-fx</code> — ORDR Market (separate app)</li>
+        <li><code>/execution-history</code> — duplicate of /trade-history</li>
+        <li><code>/access-control</code> — duplicate of Settings → Users</li>
+      </ul>
+    </div>
+    <div style="padding:16px;background:rgba(28,98,242,0.06);border:1px solid rgba(28,98,242,0.15);border-radius:6px;">
+      <div class="label" style="color:#93B4F8;">MERGE (8 pages → 2)</div>
+      <ul style="font-size:13px;color:#ccc;line-height:2;">
+        <li><code>/saved-policies</code> → tab in <code>/policies</code></li>
+        <li><code>/policy-desk</code> → tab in <code>/policies</code></li>
+        <li><code>/policy-dashboard</code> → tab in <code>/policies</code></li>
+        <li><code>/input</code> → modal/drawer in <code>/position-desk</code></li>
+        <li><code>/upload-csv</code> → modal in <code>/position-desk</code></li>
+        <li><code>/fx-market</code> → <code>/market-overview</code></li>
+        <li><code>/market-intelligence</code> → <code>/market-overview</code></li>
+        <li><code>/calculate</code> → Hedge Desk pipeline only</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+    <div class="label">KEEP UNTOUCHED</div>
+    <p style="font-size:13px;color:#ccc;">Hedge Desk pipeline (all 7 phases), Audit Lab (5 pages), Governance (6 pages), Research (3 pages), Help (4 pages), Admin (2 pages), Settings (1 page + tabs). <strong>Code stays. Only pages and routing change.</strong></p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" style="margin-top:40px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div style="width:32px;height:32px;background:#1C62F2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;">5</div>
+    <h3 style="margin:0;">PageShell — Every Page Gets This</h3>
+  </div>
+
+  <div style="background:#111827;border:1px solid #1F2937;border-radius:6px;padding:0;overflow:hidden;">
+    <!-- Page Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #1F2937;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/></svg>
+        <div>
+          <div style="font-family:'IBM Plex Sans',sans-serif;font-size:16px;font-weight:600;color:#E5E7EB;">Audit Lab</div>
+          <div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#6B7280;">Dashboard → Audit Lab</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <div style="padding:8px 16px;border:1px solid #374151;font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#E5E7EB;border-radius:3px;">Upload Dataset</div>
+        <div style="padding:8px 16px;background:#1C62F2;font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#fff;border-radius:3px;">Run Audit</div>
+      </div>
+    </div>
+    <!-- Content area placeholder -->
+    <div style="padding:24px;min-height:120px;">
+      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:#6B7280;text-align:center;padding:40px 0;">
+        Page content renders here — freeform per page
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;font-size:12px;color:#6B7280;">
+    <strong>PageShell props:</strong> <code>icon</code>, <code>title</code>, <code>breadcrumb</code>, <code>actions</code> (ReactNode slot for buttons). Content is <code>children</code>.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" style="margin-top:40px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div style="width:32px;height:32px;background:#1C62F2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;">6</div>
+    <h3 style="margin:0;">Market Overview — Hybrid Page</h3>
+  </div>
+
+  <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+      <div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;">
+        <div class="label">FX HEATMAP</div>
+        <p style="font-size:12px;color:#999;">Own data from TwelveData · 17 pairs · strength grid</p>
+      </div>
+      <div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;">
+        <div class="label">INDICES</div>
+        <p style="font-size:12px;color:#999;">TradingView embed · S&P, FTSE, DAX, Nikkei</p>
+      </div>
+      <div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;">
+        <div class="label">COMMODITIES</div>
+        <p style="font-size:12px;color:#999;">TradingView embed · Gold, Oil, Silver</p>
+      </div>
+      <div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;">
+        <div class="label">ECONOMIC CALENDAR</div>
+        <p style="font-size:12px;color:#999;">External embed · upcoming NFP, CPI, rate decisions</p>
+      </div>
+      <div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;">
+        <div class="label">TECHNICAL SUMMARY</div>
+        <p style="font-size:12px;color:#999;">Own data · RSI/MA signals across key pairs</p>
+      </div>
+      <div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;">
+        <div class="label">VOLATILITY GAUGE</div>
+        <p style="font-size:12px;color:#999;">Own data · implied vol, VIX, risk sentiment</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" style="margin-top:40px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div style="width:32px;height:32px;background:#1C62F2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;">7</div>
+    <h3 style="margin:0;">Audit Lab — Public Access Hook</h3>
+  </div>
+
+  <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+    <ul style="font-size:13px;color:#ccc;line-height:2;">
+      <li><strong>Public route:</strong> <code>/audit-lab/demo</code> — no login required</li>
+      <li><strong>Demo mode:</strong> pre-loaded sample dataset, limited to 1 comparison run</li>
+      <li><strong>CTA at end:</strong> "See the full picture — Create your free account"</li>
+      <li><strong>Full version:</strong> requires auth, unlimited uploads/comparisons/trends</li>
+      <li><strong>Same component:</strong> AuditLab component checks auth status, shows demo or full mode</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" style="margin-top:40px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+    <div style="width:32px;height:32px;background:#1C62F2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;">8</div>
+    <h3 style="margin:0;">Rollout — Big Bang on Master</h3>
+  </div>
+
+  <div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
+    <ol style="font-size:13px;color:#ccc;line-height:2.2;">
+      <li>Create shared components (<code>tokens.ts</code>, <code>PageShell</code>, <code>PageHeader</code>, <code>ActionButton</code>, <code>KpiStrip</code>)</li>
+      <li>Rebuild sidebar (Lucide sharp icons, open default, 7 sections, 3 tiers)</li>
+      <li>Rebuild dashboard (Mission Control — greeting + 3 cards + KPI strip)</li>
+      <li>Delete legacy pages (5 deletions)</li>
+      <li>Merge duplicate pages (policies 4→1, positions 3→1, market 2→1)</li>
+      <li>Apply PageShell + monochrome tokens to all remaining pages</li>
+      <li>Build Market Overview page (hybrid: own FX + TradingView embeds)</li>
+      <li>Build Audit Lab public demo mode</li>
+      <li>Final pass: enforce 12px minimum, remove all colored badges from chrome, consistent loading/error states</li>
+    </ol>
+    <p style="font-size:12px;color:#6B7280;margin-top:8px;">All work ships as one commit to master. No intermediate states.</p>
+  </div>
+</div>
