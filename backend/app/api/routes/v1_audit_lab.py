@@ -435,7 +435,7 @@ async def _create_audit_run_inner(
                 "FROM market_snapshots WHERE company_id = :cid "
                 "AND as_of >= :start AND as_of <= :end ORDER BY as_of"
             ),
-            {"cid": company_id, "start": str(buffer_start), "end": str(buffer_end)},
+            {"cid": company_id, "start": buffer_start, "end": buffer_end},
         )
         _has_bid_ask = True
     except Exception:
@@ -446,7 +446,7 @@ async def _create_audit_run_inner(
                 "FROM market_snapshots WHERE company_id = :cid "
                 "AND as_of >= :start AND as_of <= :end ORDER BY as_of"
             ),
-            {"cid": company_id, "start": str(buffer_start), "end": str(buffer_end)},
+            {"cid": company_id, "start": buffer_start, "end": buffer_end},
         )
         _has_bid_ask = False
     benchmarks: list[BenchmarkEntry] = []
