@@ -19,10 +19,10 @@ const ICONS: Record<string, React.ReactNode> = {
 };
 
 const AI_DESCS: Record<string, string> = {
-  treasury: "Deterministic hedge computation with an Agentic AI risk assistant. Communicate via chat, phone, or voice to get real-time status on hedges, positions, and risk exposure. The engine calculates; the AI interprets, monitors, and alerts.",
+  treasury: "Deterministic hedge computation with AI as a communication layer. Communicate via chat, phone, or voice for status updates, customer management, and report writing. The engine calculates; the AI helps you communicate -- it does not evaluate calculations.",
   market: "The first agentic charting platform. AI coaches trading discipline, helps read charts, and assists non-technical users in building algorithms via natural language. Supports Python, JavaScript, and execution linking.",
-  portfolio: "AI-enhanced portfolio risk decomposition across the R1-R8 taxonomy. The deterministic engine classifies and quantifies exposure; the AI layer detects anomalies, surfaces concentration risks, and recommends rebalancing actions.",
-  labs: "AI-assisted scenario generation, backtesting evaluation, and Monte Carlo analysis. The deterministic engine runs simulations; the AI interprets results, suggests stress parameters, and identifies tail-risk patterns.",
+  portfolio: "Deterministic portfolio risk decomposition across the R1-R8 taxonomy. The engine classifies and quantifies exposure with full reproducibility. AI assists with customer management and writing institutional-grade reports -- no AI in calculations.",
+  labs: "Pure deterministic scenario generation, backtesting, and Monte Carlo simulation in full sandbox isolation. The same frozen kernel as production with SHA-256 report integrity. No AI involvement -- all analysis is deterministic.",
   polisophic: "AI-powered geopolitical intelligence with corridor scoring. The engine quantifies political risk into FX overlays; the AI monitors global events, interprets macro trends, and translates them into actionable hedge signals.",
   hedgewiki: "AI-enhanced knowledge navigation across ISDA definitions, IFRS 9, ASC 815, and regulatory frameworks. Ask questions in natural language and receive contextual, citation-backed answers from the institutional knowledge graph.",
   finhub: "AI-curated market intelligence with economic calendars, company research, and signal detection. The AI filters noise, surfaces relevant events for your portfolio, and provides contextual analysis on market-moving data.",
@@ -37,11 +37,11 @@ export default function ProductsPage() {
           ORDR TERMINAL PLATFORM
         </div>
         <h1 style={{ fontFamily: F.heading, fontSize: 52, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 20px", color: C.text }}>
-          Seven Products. One Deterministic Platform. AI-Enhanced.
+          Seven Products. One Deterministic Platform.
         </h1>
         <p style={{ fontFamily: F.ui, fontSize: 18, color: C.textSub, maxWidth: 700, margin: "0 auto", lineHeight: 1.7 }}>
           Every ORDR product is built on the same deterministic computation engine -- reproducible, auditable, and cryptographically sealed.
-          An Agentic AI layer sits on top, providing insight, evaluation, and multi-channel assistance without ever altering the calculation path.
+          AI is not used in calculations. Where AI is present, it provides communication, charting (Market), and geopolitical intelligence (Polisophic).
         </p>
       </section>
 
@@ -69,7 +69,7 @@ export default function ProductsPage() {
           ))}
 
           {/* AI layer capabilities */}
-          {["Insight", "Evaluation", "Monitoring", "Voice / Chat", "Alerts"].map((cap, i) => (
+          {["Communication", "Reports", "Chart Analysis", "Voice / Chat", "Geopolitical"].map((cap, i) => (
             <g key={cap}>
               <rect x={80 + i * 156} y="182" width="130" height="28" rx="4" fill="rgba(30,58,95,0.08)" stroke="#1E3A5F" strokeWidth="0.5" />
               <text x={145 + i * 156} y="200" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fontWeight="600" fill="#1E3A5F" textAnchor="middle">{cap}</text>
@@ -113,7 +113,7 @@ export default function ProductsPage() {
           Product Suite
         </h2>
         <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, margin: "0 0 40px", lineHeight: 1.6, maxWidth: 700 }}>
-          Each product operates on the same frozen deterministic engine. The Agentic AI layer provides contextual intelligence, natural-language interaction, and proactive monitoring without altering computation outputs.
+          Each product operates on the same frozen deterministic engine. AI is used only for communication and management (Treasury, Portfolio), charting and algo building (Market), and geopolitical analysis (Polisophic). No AI is used in calculations.
         </p>
         <div className="prod-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20 }}>
           {PRODUCTS.map((p) => (
@@ -149,8 +149,8 @@ export default function ProductsPage() {
             Deterministic Core + Agentic AI Layer
           </h2>
           <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, margin: "0 0 48px", lineHeight: 1.7, maxWidth: 700 }}>
-            The ORDR architecture separates computation from intelligence. The deterministic engine is frozen, auditable, and cryptographically sealed.
-            The AI layer operates strictly as an observer and interpreter -- it reads outputs but never writes to the calculation path.
+            The ORDR architecture separates computation from communication. The deterministic engine is frozen, auditable, and cryptographically sealed.
+            AI is not involved in any calculations. Where present, it serves as a communication layer (Treasury), charting tool (Market), or geopolitical analyzer (Polisophic).
           </p>
           <div className="arch-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
             <div style={{ padding: "28px 24px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8 }}>
@@ -164,11 +164,11 @@ export default function ProductsPage() {
             </div>
             <div style={{ padding: "28px 24px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8 }}>
               <div style={{ color: C.accent, marginBottom: 16 }}><Brain size={22} /></div>
-              <div style={{ fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 10 }}>Agentic AI Layer</div>
+              <div style={{ fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 10 }}>AI Communication Layer</div>
               <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: 0 }}>
-                An always-on intelligence layer that interprets engine outputs, monitors risk positions, and communicates
-                proactively via chat, voice, or phone. It evaluates scenarios, surfaces anomalies, and provides
-                natural-language explanations of complex hedge structures. It never modifies calculations -- only reads and interprets.
+                AI is used for communication and management in Treasury (chat, voice, phone for status updates and reports),
+                agentic charting in Market (chart analysis, trading coaching, algo building), and geopolitical intelligence
+                in Polisophic (corridor scoring, event monitoring). AI never touches calculations in any product.
               </p>
             </div>
             <div style={{ padding: "28px 24px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8 }}>
@@ -206,7 +206,7 @@ export default function ProductsPage() {
       <section style={{ background: C.accent, padding: "80px 48px", textAlign: "center" }}>
         <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, color: "#fff", margin: "0 0 16px" }}>Ready to get started?</h2>
         <p style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", marginBottom: 32, maxWidth: 600, margin: "0 auto 32px" }}>
-          Launch the terminal and explore institutional-grade FX hedge governance with AI-enhanced insight and multi-channel communication.
+          Launch the terminal and explore institutional-grade FX hedge governance with deterministic computation and multi-channel communication.
         </p>
         <Link href="/auth/login" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.accent, background: "#fff", padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
           Get Started <ArrowRight size={16} />

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, Sliders, Box, BookMarked, RefreshCw, History, Shuffle,
-  Brain, Shield, Layers, BarChart3,
+  Shield, Layers, BarChart3,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
@@ -13,18 +13,18 @@ const STATS = [
   { value: "10,000+", label: "Monte Carlo Paths" },
   { value: "SHA-256", label: "Report Integrity" },
   { value: "Full", label: "Sandbox Isolation" },
-  { value: "AI-Assisted", label: "Evaluation" },
+  { value: "Multi-Period", label: "Backtesting" },
 ];
 
 const FEATURES = [
-  { icon: <Sliders size={20} />, title: "Scenario Studio", desc: "Configure custom shock packs with parametric control over every risk factor. Vol-scaled stress tests automatically adjust shock magnitudes based on realized volatility regime. Historical VaR and Expected Shortfall (ES) analysis with configurable confidence levels (95%, 99%, 99.5%). AI suggests scenario parameters based on your portfolio composition, identifying the stress tests most relevant to your specific exposure profile." },
-  { icon: <Box size={20} />, title: "Sandbox Environment", desc: "Full isolation from production data and governance pipeline. Test any policy configuration, any shock scenario, any hedge structure without affecting live positions. Draft persistence across sessions so you can build complex experiments over time. The sandbox mirrors production engine behavior exactly -- same deterministic kernel, same validation rules -- but with complete freedom to experiment. AI helps design experiments by suggesting edge cases and boundary conditions." },
-  { icon: <BookMarked size={20} />, title: "Crisis Library", desc: "Pre-built crisis scenarios calibrated from historical events: 2008 GFC (credit freeze + vol spike + EM contagion), 2015 CHF de-peg (instantaneous 20% move), 2016 Brexit referendum (GBP flash), 2020 COVID (cross-asset correlation spike), 2022 rate hike cycle (USD strength + EM pressure), and historical EM currency crises (TRY, ZAR, BRL, ARS). Each scenario includes multiple severity levels and compound stress combinations. AI provides historical context and explains how each crisis affected portfolios similar to yours." },
-  { icon: <RefreshCw size={20} />, title: "What-If Analysis", desc: "Change any policy parameter and see real-time impact on hedge positions. Modify hedge ratios, swap instruments, adjust maturity profiles, or shift netting assumptions and instantly see the cascading effects across your portfolio. Side-by-side comparison of current vs. proposed policy with quantified P&L impact. AI evaluates what-if results and highlights unintended consequences you might not notice -- downstream effectiveness changes, governance tier shifts, or accounting treatment implications." },
-  { icon: <History size={20} />, title: "Backtesting Engine", desc: "Single-period and multi-period backtests with policy comparison across historical data windows. Run any policy against past market data and measure actual vs. predicted performance. SHA-256 report hashing for tamper-evident backtest records. Policy comparison mode tests multiple configurations against the same historical period, ranking by effectiveness, cost, and risk reduction. AI interprets backtest results and identifies why certain policies outperformed, attributing results to specific parameter choices." },
-  { icon: <Shuffle size={20} />, title: "Monte Carlo Simulation", desc: "Stochastic scenario generation with configurable path counts (1,000 to 100,000+), distribution assumptions (normal, t-distribution, historical bootstrap), and correlation structures. Tail risk quantification with confidence interval estimation, distribution analysis, and extreme event probability. AI analyzes Monte Carlo output distributions and highlights tail risk concentrations, comparing simulated outcomes against your risk appetite thresholds and historical precedents." },
-  { icon: <BarChart3 size={20} />, title: "Sensitivity Analysis", desc: "Systematic parameter sweeps across hedge ratios, vol assumptions, correlation inputs, and cost parameters. Grid-based analysis showing how output metrics change across parameter ranges. AI identifies parameter sensitivities -- which inputs have the largest marginal impact on your risk-adjusted returns -- and recommends calibration priorities." },
-  { icon: <Brain size={20} />, title: "AI Experiment Design", desc: "Describe what you want to test in natural language and the AI designs a structured experiment: scenario selection, parameter ranges, comparison metrics, and statistical significance thresholds. It reviews your experiment setup before execution and suggests additional tests you might not have considered. After execution, it provides a structured analysis of results with actionable recommendations." },
+  { icon: <Sliders size={20} />, title: "Scenario Studio", desc: "Configure custom shock packs with parametric control over every risk factor. Vol-scaled stress tests automatically adjust shock magnitudes based on realized volatility regime. Historical VaR and Expected Shortfall (ES) analysis with configurable confidence levels (95%, 99%, 99.5%). Select scenario parameters based on your portfolio composition to identify the stress tests most relevant to your specific exposure profile." },
+  { icon: <Box size={20} />, title: "Sandbox Environment", desc: "Full isolation from production data and governance pipeline. Test any policy configuration, any shock scenario, any hedge structure without affecting live positions. Draft persistence across sessions so you can build complex experiments over time. The sandbox mirrors production engine behavior exactly -- same deterministic kernel, same validation rules -- but with complete freedom to experiment." },
+  { icon: <BookMarked size={20} />, title: "Crisis Library", desc: "Pre-built crisis scenarios calibrated from historical events: 2008 GFC (credit freeze + vol spike + EM contagion), 2015 CHF de-peg (instantaneous 20% move), 2016 Brexit referendum (GBP flash), 2020 COVID (cross-asset correlation spike), 2022 rate hike cycle (USD strength + EM pressure), and historical EM currency crises (TRY, ZAR, BRL, ARS). Each scenario includes multiple severity levels and compound stress combinations with full historical context documentation." },
+  { icon: <RefreshCw size={20} />, title: "What-If Analysis", desc: "Change any policy parameter and see real-time impact on hedge positions. Modify hedge ratios, swap instruments, adjust maturity profiles, or shift netting assumptions and instantly see the cascading effects across your portfolio. Side-by-side comparison of current vs. proposed policy with quantified P&L impact, including downstream effectiveness changes, governance tier shifts, and accounting treatment implications." },
+  { icon: <History size={20} />, title: "Backtesting Engine", desc: "Single-period and multi-period backtests with policy comparison across historical data windows. Run any policy against past market data and measure actual vs. predicted performance. SHA-256 report hashing for tamper-evident backtest records. Policy comparison mode tests multiple configurations against the same historical period, ranking by effectiveness, cost, and risk reduction." },
+  { icon: <Shuffle size={20} />, title: "Monte Carlo Simulation", desc: "Stochastic scenario generation with configurable path counts (1,000 to 100,000+), distribution assumptions (normal, t-distribution, historical bootstrap), and correlation structures. Tail risk quantification with confidence interval estimation, distribution analysis, and extreme event probability. Compare simulated outcomes against your risk appetite thresholds and historical precedents." },
+  { icon: <BarChart3 size={20} />, title: "Sensitivity Analysis", desc: "Systematic parameter sweeps across hedge ratios, vol assumptions, correlation inputs, and cost parameters. Grid-based analysis showing how output metrics change across parameter ranges. Identify which inputs have the largest marginal impact on your risk-adjusted returns and prioritize calibration accordingly." },
+  { icon: <Shield size={20} />, title: "Report Integrity", desc: "Every backtest, simulation, and scenario result is SHA-256 hashed for tamper-evident integrity. Reports are cryptographically sealed at generation time, ensuring that results cannot be modified after the fact. Full audit trail of experiment configurations, parameters, and outputs for regulatory compliance and internal governance." },
 ];
 
 export default function LabsPage() {
@@ -37,11 +37,11 @@ export default function LabsPage() {
         </Link>
         <h1 style={{ fontFamily: F.heading, fontSize: 48, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 16px", color: C.text }}>ORDR Labs</h1>
         <p style={{ fontFamily: F.ui, fontSize: 20, color: C.textSub, maxWidth: 700, margin: "0 auto 12px", lineHeight: 1.6 }}>
-          AI-Assisted Scenario Studio, Backtesting, and Monte Carlo Simulation
+          Scenario Studio, Backtesting, and Monte Carlo Simulation
         </p>
         <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textMuted, maxWidth: 650, margin: "0 auto 32px", lineHeight: 1.7 }}>
-          Full sandbox isolation with the same deterministic engine as production. The AI helps design experiments,
-          suggests stress parameters, evaluates backtest results, and identifies tail-risk patterns you might miss.
+          Full sandbox isolation with the same deterministic engine as production. Pure deterministic computation
+          for scenario design, stress testing, backtesting, and Monte Carlo simulation. No AI involvement.
         </p>
         <Link href="/auth/login" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: "#fff", background: C.accent, padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
           Get Started <ArrowRight size={16} />
@@ -101,12 +101,12 @@ export default function LabsPage() {
 
           {/* AI Layer (outside sandbox) */}
           <rect x="580" y="60" width="200" height="200" rx="8" fill="rgba(30,58,95,0.06)" stroke="#1E3A5F" strokeWidth="1" strokeDasharray="4 2" />
-          <text x="680" y="88" fontFamily="IBM Plex Mono, monospace" fontSize="11" fontWeight="700" fill="#1E3A5F" textAnchor="middle">AI EVALUATION</text>
-          <text x="680" y="120" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fill="#1E3A5F" textAnchor="middle">Experiment Design</text>
-          <text x="680" y="145" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fill="#1E3A5F" textAnchor="middle">Result Interpretation</text>
-          <text x="680" y="170" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fill="#1E3A5F" textAnchor="middle">Tail Risk Detection</text>
-          <text x="680" y="195" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fill="#1E3A5F" textAnchor="middle">Parameter Suggestion</text>
-          <text x="680" y="220" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fill="#1E3A5F" textAnchor="middle">Backtest Analysis</text>
+          <text x="680" y="88" fontFamily="IBM Plex Mono, monospace" fontSize="11" fontWeight="700" fill="#1E3A5F" textAnchor="middle">OUTPUT / REPORTS</text>
+          <text x="680" y="120" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fill="#1E3A5F" textAnchor="middle">SHA-256 Reports</text>
+          <text x="680" y="145" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fill="#1E3A5F" textAnchor="middle">Result Tables</text>
+          <text x="680" y="170" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fill="#1E3A5F" textAnchor="middle">Distribution Charts</text>
+          <text x="680" y="195" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fill="#1E3A5F" textAnchor="middle">Policy Comparison</text>
+          <text x="680" y="220" fontFamily="IBM Plex Sans, sans-serif" fontSize="10" fill="#1E3A5F" textAnchor="middle">Audit Export</text>
 
           {/* Arrows */}
           <line x1="360" y1="105" x2="388" y2="120" stroke="#E5E7EB" strokeWidth="1" />
@@ -140,7 +140,7 @@ export default function LabsPage() {
       {/* CTA */}
       <section style={{ background: C.accent, padding: "80px 48px", textAlign: "center" }}>
         <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, color: "#fff", margin: "0 0 16px" }}>Start experimenting today</h2>
-        <p style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>AI-assisted scenario design, backtesting, and Monte Carlo simulation in full sandbox isolation.</p>
+        <p style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>Deterministic scenario design, backtesting, and Monte Carlo simulation in full sandbox isolation.</p>
         <Link href="/auth/login" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.accent, background: "#fff", padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
           Get Started <ArrowRight size={16} />
         </Link>

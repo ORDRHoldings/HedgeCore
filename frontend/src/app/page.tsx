@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   LayoutGrid, TrendingUp, PieChart, FlaskConical, Globe, BookOpen, Newspaper,
   ArrowRight, Upload, Settings, Calculator, ShieldCheck, Brain, CheckCircle2,
-  Shield, Users, Layers, FileCheck, Cpu, Eye, Mic, MessageSquare, Monitor,
+  Shield, Users, Layers, FileCheck, Cpu, Eye, Mic, MessageSquare,
   Building2, Landmark, BarChart3, Umbrella, Flame, Lock,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
@@ -31,10 +31,10 @@ const STATS = [
 ];
 
 const PRODUCT_DETAILS: Record<string, string> = {
-  treasury: "Deterministic FX hedge calculation with AI-assisted policy evaluation. 60 policy presets, 41 engine modules, 4-eyes governance, and WORM audit trail. The AI layer evaluates hedge effectiveness, flags anomalies, and communicates via voice or chat.",
+  treasury: "Deterministic FX hedge calculation with 60 policy presets, 41 engine modules, 4-eyes governance, and WORM audit trail. AI serves as a communication layer -- chat, phone, and voice for status updates, customer management, and report writing. AI does not evaluate or influence calculations.",
   market: "The first Agentic charting system with AI integrated. Built for algorithmic trading -- build algos for non-technical AND technical people in Python, JavaScript, and more. AI assistant coaches trading discipline, helps read charts better, and provides real-time market insight. Link execution to your platform.",
-  portfolio: "Multi-currency portfolio risk decomposition with AI-driven exposure analysis. R1-R8 risk taxonomy, concentration monitoring, and factor attribution with intelligent anomaly detection and pattern recognition.",
-  labs: "Scenario studio with AI-enhanced backtesting. Monte Carlo simulation, historical VaR/ES, configurable shock packs, and vol-scaled stress testing. AI evaluates scenario outcomes and identifies non-obvious risk patterns.",
+  portfolio: "Multi-currency portfolio risk decomposition with deterministic R1-R8 risk taxonomy, concentration monitoring, and factor attribution. AI assists with customer management and writing institutional-grade reports. All risk calculations are fully deterministic.",
+  labs: "Pure deterministic scenario studio with backtesting, Monte Carlo simulation, historical VaR/ES, configurable shock packs, and vol-scaled stress testing. Full sandbox isolation with the same frozen kernel as production. No AI involvement.",
   polisophic: "Geopolitical risk intelligence powered by AI corridor scoring. Monitors political, economic, and regulatory developments across 190+ countries. AI synthesizes risk signals into actionable hedging recommendations.",
   hedgewiki: "AI-searchable ISDA definitions, IFRS 9 / ASC 815 reference library, and hedge accounting guidance. Natural language queries across the full regulatory corpus with contextual cross-references.",
   finhub: "AI-curated economic calendars, company research, and signal detection. Aggregates macro data, earnings, central bank communications, and market events with intelligent prioritization and alerting.",
@@ -42,8 +42,8 @@ const PRODUCT_DETAILS: Record<string, string> = {
 
 const AI_LAYER_STEPS = [
   { icon: <Calculator size={20} />, title: "Engine Calculates", desc: "The deterministic engine processes inputs through 41 production modules. Same input always produces the same output. Sub-50ms. Hash-chained. Reproducible." },
-  { icon: <Brain size={20} />, title: "AI Evaluates", desc: "The Agentic AI layer evaluates engine output, identifies patterns, flags anomalies, and provides contextual insight. It reads charts, assesses risk profiles, and coaches trading discipline." },
-  { icon: <Mic size={20} />, title: "AI Assists", desc: "Communicate with the AI via voice, chat, or visual terminal. Get status updates like talking to an employee. Ask questions, request analysis, receive guidance in real-time." },
+  { icon: <Brain size={20} />, title: "AI Communicates", desc: "AI is a communication and management layer for specific products. Treasury uses chat, voice, and phone for status updates and reports. Market uses AI for chart analysis and algo building. Polisophic uses AI for geopolitical intelligence. AI does not evaluate engine calculations." },
+  { icon: <Mic size={20} />, title: "AI Assists", desc: "Where AI is present, it assists through communication channels: status updates and report writing (Treasury), chart reading and algo building (Market), geopolitical analysis (Polisophic). AI is not involved in any calculation, risk scoring, or engine output." },
   { icon: <CheckCircle2 size={20} />, title: "Human Decides", desc: "AI never auto-executes. Every trade, hedge, and decision is made by the human operator. The platform ensures 4-eyes governance and separation of duties on all execution." },
 ];
 
@@ -52,7 +52,7 @@ const CAPABILITIES = [
   { icon: <Users size={20} />, title: "4-Eyes Governance", desc: "Maker-checker approval with enforced Separation of Duties. The tri-state pipeline (Sandbox, Staging, Ledger) ensures no calculation reaches production without multi-party review. Threshold-based escalation with 3-actor SoD." },
   { icon: <Cpu size={20} />, title: "Deterministic Engine", desc: "Same inputs produce same outputs, always. 41 production modules with sub-50ms computation. Pure functions, no side effects, no randomness. Every result independently verifiable and reproducible." },
   { icon: <FileCheck size={20} />, title: "IFRS 9 / ASC 815", desc: "Built-in prospective effectiveness testing with critical terms matching and statistical forecast validation. Hedge documentation generation, accounting framework alignment, and evidence grading for audit readiness." },
-  { icon: <Eye size={20} />, title: "Real-Time Risk Intelligence", desc: "R1-R8 risk taxonomy, exposure decomposition, concentration analysis, and scenario stress testing. AI layer provides pattern recognition and anomaly detection across the full risk surface." },
+  { icon: <Eye size={20} />, title: "Real-Time Risk Intelligence", desc: "R1-R8 risk taxonomy, exposure decomposition, concentration analysis, and scenario stress testing. All risk computations are deterministic and reproducible across the full risk surface." },
   { icon: <Layers size={20} />, title: "Policy Engine", desc: "60 policy presets with maturity profiles, governance tiers, evidence grades, and 7-layer extension architecture. Extended overlays for volatility, geopolitical risk, netting, and prospective effectiveness." },
 ];
 
@@ -60,7 +60,7 @@ const WORKFLOW = [
   { step: "01", icon: <Upload size={20} />, title: "Import Exposures", desc: "Upload FX positions from ERP, TMS, or spreadsheet. Automatic classification, validation, and enrichment with market data." },
   { step: "02", icon: <Settings size={20} />, title: "Configure Policy", desc: "Select from 60 presets or build custom policies. Define hedge ratios, instruments, governance tiers, and risk parameters." },
   { step: "03", icon: <Calculator size={20} />, title: "Calculate", desc: "Deterministic engine computes hedge recommendations. Sub-50ms, reproducible, auditable. Every calculation hash-chained." },
-  { step: "04", icon: <Brain size={20} />, title: "AI Review", desc: "Agentic AI evaluates the calculation, flags anomalies, provides insight, and coaches the operator on risk implications." },
+  { step: "04", icon: <Brain size={20} />, title: "Review & Report", desc: "Review engine outputs and generate stakeholder reports. In Treasury, AI helps communicate status and write reports. AI does not evaluate or interpret calculations." },
   { step: "05", icon: <ShieldCheck size={20} />, title: "Execute", desc: "4-eyes approval, governed execution, WORM audit trail. Every decision recorded, hash-chained, and immutable." },
 ];
 
@@ -98,9 +98,9 @@ export default function LandingPage() {
           maxWidth: 680, margin: "0 auto 40px", lineHeight: 1.6,
         }}>
           The engines are deterministic -- same input always produces the same output.
-          An Agentic AI layer sits on top, providing real-time insight, evaluation,
-          and assistance across voice, chat, and terminal. Built for treasury teams
-          and algorithmic traders that demand both precision and intelligence.
+          AI is not used in any calculations. Where AI is present, it provides communication
+          and management capabilities: Market uses AI for chart analysis and algo building,
+          Polisophic for geopolitical intelligence, and Treasury for status updates and reports.
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           <Link href="/auth/login" style={{
@@ -211,13 +211,13 @@ export default function LandingPage() {
             </text>
             <line x1="100" y1="258" x2="840" y2="258" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
             {/* AI sub-items */}
-            <text x="140" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Risk Evaluation</text>
-            <text x="300" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Pattern Recognition</text>
-            <text x="470" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Chart Analysis</text>
-            <text x="630" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Trading Discipline</text>
-            <text x="790" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Anomaly Detection</text>
+            <text x="140" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Customer Management</text>
+            <text x="300" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Report Generation</text>
+            <text x="470" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Chart Analysis (Market)</text>
+            <text x="630" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Trading Coaching (Market)</text>
+            <text x="790" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Geopolitical Intel (Polisophic)</text>
             <text x="230" y="310" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.45)">Voice &amp; Chat Interface</text>
-            <text x="470" y="310" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.45)">Contextual Insight Engine</text>
+            <text x="470" y="310" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.45)">Communication Layer</text>
             <text x="710" y="310" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.45)">Never Auto-Executes</text>
 
             {/* Arrows: AI -> Engine */}
@@ -273,7 +273,7 @@ export default function LandingPage() {
             </h2>
             <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, lineHeight: 1.6, marginTop: 0, maxWidth: 640 }}>
               Each product is purpose-built for a specific function in the hedge lifecycle.
-              Every product benefits from the deterministic engine and Agentic AI layer.
+              Every product is powered by the same deterministic computation engine.
             </p>
           </div>
           <div className="products-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
@@ -348,8 +348,8 @@ export default function LandingPage() {
               Built for your industry
             </h2>
             <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, lineHeight: 1.6, maxWidth: 560 }}>
-              Six industry-specific solutions, each built on the same deterministic engine
-              and Agentic AI layer, tailored to the unique requirements of your sector.
+              Six industry-specific solutions, each built on the same deterministic engine,
+              tailored to the unique requirements of your sector.
             </p>
           </div>
           <div className="solutions-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
@@ -427,12 +427,12 @@ export default function LandingPage() {
               <rect x="560" y="20" width="160" height="260" rx="8" fill="#1a6b5a" />
               <text x="640" y="60" textAnchor="middle" fontFamily={F.mono} fontSize="10" fontWeight="700" fill="#fff" letterSpacing="0.08em">AI INSIGHT</text>
               <line x1="580" y1="72" x2="700" y2="72" stroke="rgba(255,255,255,0.15)" />
-              <text x="640" y="96" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Risk evaluation</text>
-              <text x="640" y="116" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Pattern recognition</text>
+              <text x="640" y="96" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Customer management</text>
+              <text x="640" y="116" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Report writing</text>
               <text x="640" y="136" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Chart analysis</text>
-              <text x="640" y="156" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Voice &amp; chat</text>
-              <text x="640" y="176" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Anomaly detection</text>
-              <text x="640" y="196" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">Coaching</text>
+              <text x="640" y="156" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Status updates</text>
+              <text x="640" y="176" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Voice &amp; chat</text>
+              <text x="640" y="196" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">Market &amp; Polisophic</text>
               <text x="640" y="216" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">Never executes</text>
 
               <rect x="740" y="20" width="140" height="260" rx="8" fill={C.accent} />

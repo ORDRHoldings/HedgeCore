@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, Cpu, Users, Shield, FileCheck, Settings, FileSpreadsheet,
-  MessageSquare, Phone, Mic, Eye, Bell, BarChart3, Lock, Layers, AlertTriangle, BookOpen,
+  MessageSquare, Phone, Bell, BarChart3, Lock, Layers, AlertTriangle,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
@@ -18,23 +18,23 @@ const STATS = [
 ];
 
 const FEATURES = [
-  { icon: <Settings size={20} />, title: "Policy Engine", desc: "60 institutional presets with ExtendedPolicyConfig covering 50+ fields across 10 sections: volatility overlays, geopolitical adjustments, scenario parameters, effectiveness thresholds, decision gates, netting rules, instrument selection, maturity profiles, governance intensity, and liquidity regimes. Every preset includes governance tier (STANDARD / ENHANCED / COMMITTEE), evidence grade, and accounting mode classification. AI assists in policy selection by analyzing your exposure profile and recommending appropriate configurations." },
-  { icon: <Users size={20} />, title: "4-Eyes Governance", desc: "Tri-state pipeline (SANDBOX to STAGING to LEDGER) with maker-checker approval and Separation of Duties enforcement. No single actor can both propose and approve an execution. Threshold-based escalation triggers 3-actor review for large notionals. The AI monitors governance flow, alerts on pending approvals, and surfaces SoD conflicts before they block execution." },
-  { icon: <Shield size={20} />, title: "WORM Audit Trail", desc: "Append-only event logging across audit_events, calculation_runs, and policy_revisions tables. Per-tenant SHA-256 hash chain with GENESIS_HASH verification. No UPDATE, no DELETE -- ever. Every calculation input, output, and governance decision is permanently recorded and cryptographically chained. The AI can query the audit trail on your behalf and surface anomalies." },
-  { icon: <FileCheck size={20} />, title: "IFRS 9 / ASC 815 Effectiveness", desc: "Built-in prospective effectiveness testing with critical terms matching and statistical forecast. Grading labels (HEURISTIC / STATISTICAL), per-component rationale breakdowns, and hedge documentation generation. Dual-standard support for both IFRS 9 and ASC 815 with automatic threshold detection. AI interprets effectiveness scores and explains accounting implications in plain language." },
-  { icon: <Layers size={20} />, title: "R1-R8 Risk Taxonomy", desc: "Eight frozen risk categories: Translation (R1), Transaction (R2), Economic (R3), Strategic (R4), Operational (R5), Settlement (R6), Credit (R7), and Liquidity (R8). Each position is classified across all eight dimensions with quantified exposure. The taxonomy is architecturally frozen -- no additions, no modifications, no reinterpretation. AI provides contextual explanations for each risk category relative to your specific positions." },
-  { icon: <BarChart3 size={20} />, title: "Scenario Stress Testing", desc: "Configurable shock packs with vol-scaled stress tests, historical VaR/ES analysis, and crisis replay. Pre-built scenarios for 2008 GFC, 2020 COVID, 2022 rate hikes, and EM currency crises. Full parametric control over every risk factor. Hedged vs. unhedged comparison with quantified downside. AI evaluates scenario results and highlights positions most vulnerable to tail events." },
-  { icon: <AlertTriangle size={20} />, title: "Geopolitical Overlay", desc: "Polisophic corridor scoring integrated as a policy overlay layer. Political risk scores feed directly into the hedge engine as vol adjustments and hedge ratio modifiers. Country-level risk profiles for 195 jurisdictions with real-time event monitoring. Neutralized by default -- activation requires governance approval. AI interprets geopolitical signals and translates them into actionable hedge recommendations." },
+  { icon: <Settings size={20} />, title: "Policy Engine", desc: "60 institutional presets with ExtendedPolicyConfig covering 50+ fields across 10 sections: volatility overlays, geopolitical adjustments, scenario parameters, effectiveness thresholds, decision gates, netting rules, instrument selection, maturity profiles, governance intensity, and liquidity regimes. Every preset includes governance tier (STANDARD / ENHANCED / COMMITTEE), evidence grade, and accounting mode classification." },
+  { icon: <Users size={20} />, title: "4-Eyes Governance", desc: "Tri-state pipeline (SANDBOX to STAGING to LEDGER) with maker-checker approval and Separation of Duties enforcement. No single actor can both propose and approve an execution. Threshold-based escalation triggers 3-actor review for large notionals." },
+  { icon: <Shield size={20} />, title: "WORM Audit Trail", desc: "Append-only event logging across audit_events, calculation_runs, and policy_revisions tables. Per-tenant SHA-256 hash chain with GENESIS_HASH verification. No UPDATE, no DELETE -- ever. Every calculation input, output, and governance decision is permanently recorded and cryptographically chained." },
+  { icon: <FileCheck size={20} />, title: "IFRS 9 / ASC 815 Effectiveness", desc: "Built-in prospective effectiveness testing with critical terms matching and statistical forecast. Grading labels (HEURISTIC / STATISTICAL), per-component rationale breakdowns, and hedge documentation generation. Dual-standard support for both IFRS 9 and ASC 815 with automatic threshold detection." },
+  { icon: <Layers size={20} />, title: "R1-R8 Risk Taxonomy", desc: "Eight frozen risk categories: Translation (R1), Transaction (R2), Economic (R3), Strategic (R4), Operational (R5), Settlement (R6), Credit (R7), and Liquidity (R8). Each position is classified across all eight dimensions with quantified exposure. The taxonomy is architecturally frozen -- no additions, no modifications, no reinterpretation." },
+  { icon: <BarChart3 size={20} />, title: "Scenario Stress Testing", desc: "Configurable shock packs with vol-scaled stress tests, historical VaR/ES analysis, and crisis replay. Pre-built scenarios for 2008 GFC, 2020 COVID, 2022 rate hikes, and EM currency crises. Full parametric control over every risk factor. Hedged vs. unhedged comparison with quantified downside." },
+  { icon: <AlertTriangle size={20} />, title: "Geopolitical Overlay", desc: "Polisophic corridor scoring integrated as a policy overlay layer. Political risk scores feed directly into the hedge engine as vol adjustments and hedge ratio modifiers. Country-level risk profiles for 195 jurisdictions with real-time event monitoring. Neutralized by default -- activation requires governance approval." },
   { icon: <Lock size={20} />, title: "Deterministic Execution", desc: "41-module production kernel with zero side effects. Every function is pure, every output is reproducible. Sub-50ms computation with fail-closed validation. No external state, no randomness, no learning. The same inputs always produce the same outputs. The kernel is architecturally frozen and requires an Architecture Decision Record (ADR) to modify. AI never touches the calculation path." },
 ];
 
 const WORKFLOW_STEPS = [
-  { step: "1", title: "Position Intake", desc: "Positions enter the system in NEW state with currency pair, notional, maturity, and entity classification. The AI assistant can help you bulk-import positions from spreadsheets and validate data quality before ingestion." },
-  { step: "2", title: "Policy Assignment", desc: "Each position receives a policy configuration from the 60-preset library or a custom policy built via the wizard. AI recommends policies based on exposure profile, historical patterns, and governance tier requirements." },
+  { step: "1", title: "Position Intake", desc: "Positions enter the system in NEW state with currency pair, notional, maturity, and entity classification. Bulk import from spreadsheets with automatic data validation before ingestion." },
+  { step: "2", title: "Policy Assignment", desc: "Each position receives a policy configuration from the 60-preset library or a custom policy built via the wizard. Select policies based on exposure profile, governance tier requirements, and maturity structure." },
   { step: "3", title: "Deterministic Calculation", desc: "The frozen kernel computes hedge ratios, instrument selection, notional sizing, risk decomposition, and effectiveness scores. Sub-50ms, reproducible, hash-chained. No AI involvement in computation." },
-  { step: "4", title: "AI Evaluation", desc: "The Agentic AI layer reads engine outputs and provides interpretation: risk concentration alerts, scenario vulnerability analysis, effectiveness score explanations, and comparison against historical benchmarks. You can ask questions via chat, voice, or phone." },
-  { step: "5", title: "Governance Review", desc: "Proposals enter the 4-eyes pipeline. Maker submits, checker reviews. The AI surfaces relevant context for the checker: policy rationale, risk implications, and audit trail references. SoD enforcement is automatic." },
-  { step: "6", title: "Execution & Audit", desc: "Approved proposals move to HEDGED state. Every step is WORM-logged with SHA-256 hash chain. The AI provides post-execution monitoring, alerting you to position changes, maturity events, and rebalancing triggers." },
+  { step: "4", title: "Communication & Reports", desc: "Use AI to communicate status updates, generate stakeholder reports, and brief your team on portfolio state via chat, voice, or phone. The AI helps you write and deliver -- it does not evaluate engine calculations." },
+  { step: "5", title: "Governance Review", desc: "Proposals enter the 4-eyes pipeline. Maker submits, checker reviews. SoD enforcement is automatic. Policy rationale and audit trail references are available for the checker." },
+  { step: "6", title: "Execution & Audit", desc: "Approved proposals move to HEDGED state. Every step is WORM-logged with SHA-256 hash chain. Position changes, maturity events, and rebalancing triggers are tracked deterministically." },
 ];
 
 export default function TreasuryPage() {
@@ -53,7 +53,7 @@ export default function TreasuryPage() {
         </p>
         <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textMuted, maxWidth: 650, margin: "0 auto 32px", lineHeight: 1.7 }}>
           Communicate via chatbox, phone, or voice. Get status updates like from your employee.
-          The engine is deterministic and cryptographically sealed. The AI provides insight, evaluation, and proactive monitoring -- it does not make decisions for you.
+          The engine is deterministic and cryptographically sealed. The AI helps you manage communications, write reports, and get status updates -- it does not evaluate or influence calculations.
         </p>
         <Link href="/auth/login" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: "#fff", background: C.accent, padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
           Get Started <ArrowRight size={16} />
@@ -74,10 +74,10 @@ export default function TreasuryPage() {
 
       {/* Your AI Risk Assistant */}
       <section style={{ padding: "80px 48px", maxWidth: 1100, margin: "0 auto" }}>
-        <h2 style={{ fontFamily: F.heading, fontSize: 32, fontWeight: 700, margin: "0 0 12px", color: C.text }}>Your AI Risk Assistant</h2>
+        <h2 style={{ fontFamily: F.heading, fontSize: 32, fontWeight: 700, margin: "0 0 12px", color: C.text }}>Your AI Communication Assistant</h2>
         <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, margin: "0 0 40px", lineHeight: 1.7, maxWidth: 700 }}>
-          Think of the Agentic AI as a junior risk analyst who never sleeps. It monitors your positions, interprets engine outputs, and communicates with you through whichever channel you prefer.
-          It does not make decisions -- the deterministic engine handles all computation. The AI observes, interprets, and reports.
+          The AI is your communication layer. It helps you get status updates, generate reports for stakeholders, and manage customer communications through whichever channel you prefer.
+          It does not evaluate calculations or detect anomalies -- the deterministic engine handles all computation independently.
         </p>
         <div className="ai-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
           <div style={{ padding: "28px 24px", border: `1px solid ${C.border}`, borderRadius: 8, background: C.bg }}>
@@ -85,23 +85,23 @@ export default function TreasuryPage() {
             <div style={{ fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 10 }}>Terminal Chat</div>
             <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: 0 }}>
               Ask questions directly in the ORDR terminal. &quot;What is my largest EUR/USD exposure?&quot; &quot;Show me positions maturing this week.&quot;
-              &quot;Why did the effectiveness score drop on position 4721?&quot; The AI reads engine outputs and responds with data-backed answers, citations to specific calculation runs, and links to relevant audit events.
+              &quot;Draft a summary for the board meeting.&quot; The AI retrieves data and helps you communicate it -- generating status summaries, drafting reports, and managing customer interactions.
             </p>
           </div>
           <div style={{ padding: "28px 24px", border: `1px solid ${C.border}`, borderRadius: 8, background: C.bg }}>
             <div style={{ color: C.accent, marginBottom: 16 }}><Phone size={22} /></div>
             <div style={{ fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 10 }}>Phone / Voice</div>
             <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: 0 }}>
-              Call your AI assistant or use voice commands within the terminal. Get verbal status updates on your hedge portfolio, risk exposure summary, and pending governance actions.
-              Ideal for treasury managers who need quick updates without opening the terminal. The AI speaks the same language as your risk reports.
+              Call your AI assistant or use voice commands within the terminal. Get verbal status updates on your hedge portfolio and pending governance actions.
+              Ideal for treasury managers who need quick updates without opening the terminal. The AI communicates portfolio status and helps you stay informed.
             </p>
           </div>
           <div style={{ padding: "28px 24px", border: `1px solid ${C.border}`, borderRadius: 8, background: C.bg }}>
             <div style={{ color: C.accent, marginBottom: 16 }}><Bell size={22} /></div>
-            <div style={{ fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 10 }}>Proactive Monitoring</div>
+            <div style={{ fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 10 }}>Report Writing</div>
             <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: 0 }}>
-              The AI continuously monitors your positions and alerts you to material changes: maturity events approaching, effectiveness scores declining, concentration risk building, or governance actions pending.
-              It escalates based on your configured thresholds -- you set the rules, the AI enforces attention.
+              The AI helps you generate institutional-grade reports for stakeholders, board presentations, and regulatory submissions.
+              It drafts summaries from engine data, formats tables and charts, and helps you communicate complex hedge structures in clear language.
             </p>
           </div>
         </div>
@@ -127,13 +127,13 @@ export default function TreasuryPage() {
           <rect x="290" y="40" width="200" height="240" rx="8" fill="rgba(30,58,95,0.06)" stroke="#1E3A5F" strokeWidth="1" strokeDasharray="4 2" />
           <text x="390" y="30" fontFamily="IBM Plex Mono, monospace" fontSize="11" fontWeight="700" fill="#1E3A5F" textAnchor="middle" letterSpacing="0.08em">AGENTIC AI LAYER</text>
           <rect x="315" y="70" width="150" height="32" rx="4" fill="rgba(30,58,95,0.08)" />
-          <text x="390" y="91" fontFamily="IBM Plex Sans, sans-serif" fontSize="11" fill="#1E3A5F" textAnchor="middle">Interpretation</text>
+          <text x="390" y="91" fontFamily="IBM Plex Sans, sans-serif" fontSize="11" fill="#1E3A5F" textAnchor="middle">Status Updates</text>
           <rect x="315" y="118" width="150" height="32" rx="4" fill="rgba(30,58,95,0.08)" />
-          <text x="390" y="139" fontFamily="IBM Plex Sans, sans-serif" fontSize="11" fill="#1E3A5F" textAnchor="middle">Monitoring</text>
+          <text x="390" y="139" fontFamily="IBM Plex Sans, sans-serif" fontSize="11" fill="#1E3A5F" textAnchor="middle">Report Writing</text>
           <rect x="315" y="166" width="150" height="32" rx="4" fill="rgba(30,58,95,0.08)" />
-          <text x="390" y="187" fontFamily="IBM Plex Sans, sans-serif" fontSize="11" fill="#1E3A5F" textAnchor="middle">Alerts & Escalation</text>
+          <text x="390" y="187" fontFamily="IBM Plex Sans, sans-serif" fontSize="11" fill="#1E3A5F" textAnchor="middle">Customer Mgmt</text>
           <rect x="315" y="214" width="150" height="32" rx="4" fill="rgba(30,58,95,0.08)" />
-          <text x="390" y="235" fontFamily="IBM Plex Sans, sans-serif" fontSize="11" fill="#1E3A5F" textAnchor="middle">Evaluation</text>
+          <text x="390" y="235" fontFamily="IBM Plex Sans, sans-serif" fontSize="11" fill="#1E3A5F" textAnchor="middle">Communication</text>
 
           {/* Engine column */}
           <rect x="560" y="40" width="220" height="240" rx="8" fill="#1E3A5F" />
@@ -171,7 +171,7 @@ export default function TreasuryPage() {
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <h2 style={{ fontFamily: F.heading, fontSize: 32, fontWeight: 700, margin: "0 0 12px", color: C.text }}>Capabilities</h2>
           <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, margin: "0 0 48px", lineHeight: 1.7, maxWidth: 700 }}>
-            Every capability combines deterministic computation with AI-enhanced insight. The engine calculates; the AI interprets, monitors, and communicates.
+            The engine calculates deterministically. The AI helps you communicate, manage your team, and write reports.
           </p>
           <div className="feat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24 }}>
             {FEATURES.map(f => (
@@ -191,7 +191,7 @@ export default function TreasuryPage() {
       <section style={{ padding: "80px 48px", maxWidth: 1100, margin: "0 auto" }}>
         <h2 style={{ fontFamily: F.heading, fontSize: 32, fontWeight: 700, margin: "0 0 12px", color: C.text }}>How It Works</h2>
         <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, margin: "0 0 48px", lineHeight: 1.7, maxWidth: 700 }}>
-          The hedge lifecycle flows through six stages. At each stage, the deterministic engine handles computation while the AI layer provides contextual intelligence and communication.
+          The hedge lifecycle flows through six stages. The deterministic engine handles all computation. AI is available only as a communication layer for status updates and report writing.
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
           {WORKFLOW_STEPS.map((w, i) => (
@@ -211,7 +211,7 @@ export default function TreasuryPage() {
       {/* CTA */}
       <section style={{ background: C.accent, padding: "80px 48px", textAlign: "center" }}>
         <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, color: "#fff", margin: "0 0 16px" }}>Start managing your hedge portfolio</h2>
-        <p style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>Deterministic computation. AI-enhanced insight. Multi-channel communication.</p>
+        <p style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>Deterministic computation. Multi-channel communication. AI for status updates and reports.</p>
         <Link href="/auth/login" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.accent, background: "#fff", padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
           Get Started <ArrowRight size={16} />
         </Link>
