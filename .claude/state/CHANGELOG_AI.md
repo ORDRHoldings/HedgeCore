@@ -1,5 +1,53 @@
 # Changelog (AI-maintained)
 
+## 2026-03-14 — Deep Security Audit: Admin + Hedge Desk + Pipeline (commit af2357a)
+
+### Admin Section (10 criticals fixed)
+- **Unauthenticated DB wipe**: `seed-companies` gated behind `require_superuser` + production env block
+- **WORM compliance**: Removed DELETE/TRUNCATE on audit_events, calculation_runs, policy_revisions
+- **Credential leak**: Stripped plaintext passwords from seed response
+- **API key creation**: Delegated to service with proper Argon2id hashing (was missing secret_hash)
+- **API key auth escalation**: Replaced `validate_api_key` with `require_superuser` on management endpoints
+- **Dual Base class**: `api_key_audit.py` now uses `app.core.db.Base` (was invisible to migrations)
+- **Token version**: JWT `ver` claim now validated in `get_current_user` — forced logout works
+- **Auth consolidation**: 3 files fixed to import `get_current_user` from `dependencies.py` (not `security.py`)
+- **Frontend auth gates**: admin-monitor + devops pages guard data fetches before superuser check
+
+### Hedge Desk Pipeline (5 criticals fixed)
+- **Tenant isolation**: `company_id` column added to `proposals` + `ledger_entries` tables
+- **Scoped queries**: `list_proposals`, `get_proposal`, `list_ledger`, `get_ledger` all filter by tenant
+- **RBAC**: All proposal + ledger endpoints now require permission checks
+
+### Hedge Desk Workflow (6 high fixes)
+- **Data flow**: `calcResult` stores full object (marketSnapshot no longer lost between phases)
+- **Currency**: PhaseExecute extracts currency from bucket dynamically (was hardcoded MXN)
+- **CME_SPECS**: Consolidated into shared `tokens.ts` (was duplicated in Review + Execute)
+- **Execution safety**: Confirmation overlay before irreversible HEDGED marking
+- **Hash chain**: Pipeline events query prev hash per-tenant (was always GENESIS_HASH)
+- **Terminal guard**: Block field mutations on HEDGED/REJECTED positions
+
+### Backend Hardening (3 high fixes)
+- **Dual-key**: Removed route-layer override — service is single source of truth
+- **Governance default**: `"solo"` → `"team"` (fail-closed SoD)
+- **DB models**: `__import__` hack removed, int→UUID FK types fixed, Float→Numeric for monetary columns
+
+### Evidence
+- 95 new tests across 6 test files
+- 3475 backend tests passed, 134 skipped, 0 failed
+- Frontend TypeScript clean, build passes
+- 35 files changed, +2015 -206 lines
+
+## 2026-03-14 — Marketing Site Redesign: Tailwind + SVG Diagrams (commit 88af206)
+- **Full redesign**: Replaced inline-style C/F theme system with Tailwind CSS classes and enterprise grid aesthetic.
+- **Home page**: 12 sections with 3 inline SVG diagram components (SvgArchitecture 3-layer platform, SvgHashChain WORM audit blocks, SvgPillars 5 infrastructure pillars).
+- **Custom CSS**: `bg-grid`/`bg-grid-dark` patterns, `section-label` with `::before` dash, `mkt-card` hover top-border animation, `status-dot` with `pulse-dot` keyframe.
+- **Nav rebuild**: Products/Solutions mega-dropdowns with icons, ORDR Market removed as standalone link (only in Products dropdown). Mobile overlay simplified.
+- **Footer rebuild**: 5-column dark layout (brand+status, products, solutions, company, legal) with external link support.
+- **Secondary pages**: About (Engine/AI panels, Core Values, Numbers Strip), Contact (form+cards+system status), Products index (2-col grid with AI Boundary boxes).
+- **Product CTAs**: All "Get Started" → "Request Demo", /auth/login → /contact across 5 product detail pages.
+- **Layout**: MarketingLayout simplified (no C/F imports), theme.ts preserved for product detail backward compat.
+- 15 files changed, +889 -1630 lines (-741 net).
+
 ## 2026-03-13 — ORDR Market Embedded Mode + Workspace Refactor (commit 99ef12b)
 - **ChartEngine embedded mode**: 12 new props for external config sync (indicators, sub-panes, chart type, drawing mode, magnet/hide/lock/delete-all).
 - **Theme**: `syncThemeWithCSS()` for CSS variable integration.
