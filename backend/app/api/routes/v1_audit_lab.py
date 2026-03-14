@@ -499,8 +499,9 @@ async def _create_audit_run_inner(
             "(id, company_id, dataset_id, methodology_version, benchmark_config, "
             " run_hash, inputs_hash, outputs_hash, trace_bundle, status, "
             " created_by, created_at) "
-            "VALUES (:id, :cid, :did, :mv, :bc, :rh, :ih, :oh, :tb, 'COMPLETED', "
-            " :cb, NOW())"
+            "VALUES (CAST(:id AS uuid), CAST(:cid AS uuid), CAST(:did AS uuid), :mv, CAST(:bc AS jsonb), "
+            " :rh, :ih, :oh, CAST(:tb AS jsonb), 'COMPLETED', "
+            " CAST(:cb AS uuid), NOW())"
         ),
         {
             "id": run_id,
@@ -539,8 +540,8 @@ async def _create_audit_run_inner(
                 "INSERT INTO audit_findings "
                 "(id, run_id, company_id, finding_type, currency_pair, counterparty, "
                 " amount_usd, severity, narrative, evidence, finding_hash, created_at) "
-                "VALUES (:id, :rid, :cid, 'MARKUP', :cp, NULL, "
-                " :amt, :sev, :nar, :ev, :fh, NOW())"
+                "VALUES (CAST(:id AS uuid), CAST(:rid AS uuid), CAST(:cid AS uuid), 'MARKUP', :cp, NULL, "
+                " :amt, :sev, :nar, CAST(:ev AS jsonb), :fh, NOW())"
             ),
             {
                 "id": str(uuid.uuid4()),
@@ -574,8 +575,8 @@ async def _create_audit_run_inner(
                 "INSERT INTO audit_findings "
                 "(id, run_id, company_id, finding_type, currency_pair, counterparty, "
                 " amount_usd, severity, narrative, evidence, finding_hash, created_at) "
-                "VALUES (:id, :rid, :cid, 'FEE', NULL, NULL, "
-                " :amt, :sev, :nar, :ev, :fh, NOW())"
+                "VALUES (CAST(:id AS uuid), CAST(:rid AS uuid), CAST(:cid AS uuid), 'FEE', NULL, NULL, "
+                " :amt, :sev, :nar, CAST(:ev AS jsonb), :fh, NOW())"
             ),
             {
                 "id": str(uuid.uuid4()),
@@ -603,8 +604,8 @@ async def _create_audit_run_inner(
                 "INSERT INTO audit_findings "
                 "(id, run_id, company_id, finding_type, currency_pair, counterparty, "
                 " amount_usd, severity, narrative, evidence, finding_hash, created_at) "
-                "VALUES (:id, :rid, :cid, 'RATE_VARIANCE', :cp, NULL, "
-                " :amt, :sev, :nar, :ev, :fh, NOW())"
+                "VALUES (CAST(:id AS uuid), CAST(:rid AS uuid), CAST(:cid AS uuid), 'RATE_VARIANCE', :cp, NULL, "
+                " :amt, :sev, :nar, CAST(:ev AS jsonb), :fh, NOW())"
             ),
             {
                 "id": str(uuid.uuid4()),
@@ -632,8 +633,8 @@ async def _create_audit_run_inner(
                     "INSERT INTO audit_findings "
                     "(id, run_id, company_id, finding_type, currency_pair, counterparty, "
                     " amount_usd, severity, narrative, evidence, finding_hash, created_at) "
-                    "VALUES (:id, :rid, :cid, 'OUTLIER', NULL, NULL, "
-                    " 0, :sev, :nar, :ev, :fh, NOW())"
+                    "VALUES (CAST(:id AS uuid), CAST(:rid AS uuid), CAST(:cid AS uuid), 'OUTLIER', NULL, NULL, "
+                    " 0, :sev, :nar, CAST(:ev AS jsonb), :fh, NOW())"
                 ),
                 {
                     "id": str(uuid.uuid4()),
@@ -691,7 +692,7 @@ async def _create_audit_run_inner(
         text(
             "INSERT INTO audit_reports "
             "(id, run_id, company_id, report_json, report_hash, created_at) "
-            "VALUES (:id, :rid, :cid, :rj, :rh, NOW())"
+            "VALUES (CAST(:id AS uuid), CAST(:rid AS uuid), CAST(:cid AS uuid), CAST(:rj AS jsonb), :rh, NOW())"
         ),
         {
             "id": str(uuid.uuid4()),
