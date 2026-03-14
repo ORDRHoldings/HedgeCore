@@ -68,6 +68,11 @@ class LedgerEntry(Base):
     # Replay verification status
     replay_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # Tenant isolation: scopes ledger entry to a single company
+    company_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True, index=True,
+    )
+
     def __repr__(self) -> str:
         return f"<LedgerEntry {self.ledger_id} order={self.order_id}>"
 

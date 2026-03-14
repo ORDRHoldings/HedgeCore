@@ -509,44 +509,10 @@ async def propose_execution(
 
         raise HTTPException(status_code=500, detail="Internal server error")
 
-    # L-12: check dual-key threshold against active policy (non-fatal)
-    try:
-
-        from app.schemas_v1.policy import PolicyConfig as _PolicyConfig
-        from app.services import policy_revision_service as _pr_svc
-        from app.services import policy_service as _pol_svc
-
-        _instance = await _pol_svc.get_active_instance(session, current_user)
-
-        if _instance is not None:
-
-            _rev = await _pr_svc.get_latest_revision(session, _instance.id)
-
-            if _rev is not None and _rev.canonical_policy:
-
-                _pol_cfg = _PolicyConfig(**_rev.canonical_policy)
-
-                if (
-
-                    _pol_cfg.dual_key_required
-
-                    and data.hedge_amount is not None
-
-                    and data.hedge_rate is not None
-
-                ):
-
-                    notional = data.hedge_amount * data.hedge_rate
-
-                    if notional >= _pol_cfg.dual_key_threshold_usd:
-
-                        proposal.second_approver_required = True
-
-                        await session.commit()
-
-    except Exception:
-
-        logger.debug("dual-key threshold check failed (non-fatal)", exc_info=True)
+    # NOTE: dual-key threshold is determined by the service layer
+    # (execution_proposal_service._determine_second_approval_required).
+    # Do NOT override proposal.second_approver_required at the route layer
+    # to avoid divergent logic between route and service.
 
     await _emit_proposal_audit(
 
@@ -747,7 +713,7 @@ async def approve_proposal(
 
     from app.models.organization import Company
     _co = (await session.execute(_sel(Company).where(Company.id == current_user.company_id))).scalar_one_or_none()
-    _gov_mode = ((_co.settings or {}).get("governance_mode", "solo")) if _co else "solo"
+    _gov_mode = ((_co.settings or {}).get("governance_mode", "team")) if _co else "team"
 
     try:
 

@@ -13,6 +13,7 @@ Key Improvements:
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 
 from sqlalchemy import (
@@ -24,6 +25,7 @@ from sqlalchemy import (
     String,
     text,
 )
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
@@ -50,11 +52,12 @@ class AuditLog(Base):
         doc="Correlation ID (x-request-id header).",
     )
 
-    user_id: Mapped[int | None] = mapped_column(
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
-        doc="Authenticated user ID (nullable for anonymous calls).",
+        doc="Authenticated user UUID (nullable for anonymous calls).",
     )
 
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)

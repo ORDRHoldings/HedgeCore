@@ -56,11 +56,13 @@ export default function PhaseComplete({
     return acc;
   }, {});
 
-  // Extract calc data
-  const hedgePlan = calcResult?.hedge_plan as { buckets?: BucketResult[]; summary?: Record<string, number> } | undefined;
+  // Extract calc data — calcResult may be the full CalculateResult
+  // { calcResponse, marketSnapshot, ... } or the raw engine response.
+  const engineResponse = ((calcResult as Record<string, unknown>)?.calcResponse ?? calcResult) as Record<string, unknown> | undefined;
+  const hedgePlan = engineResponse?.hedge_plan as { buckets?: BucketResult[]; summary?: Record<string, number> } | undefined;
   const summary = hedgePlan?.summary;
   const buckets: BucketResult[] = (hedgePlan?.buckets ?? []).filter(b => !b.suppressed && Math.abs(b.action_mxn) > 0);
-  const runEnvelope = calcResult?.run_envelope as Record<string, unknown> | undefined;
+  const runEnvelope = engineResponse?.run_envelope as Record<string, unknown> | undefined;
 
   // Computed metrics
   const totalExposure = summary?.total_exposure_mxn ?? totalNotional;

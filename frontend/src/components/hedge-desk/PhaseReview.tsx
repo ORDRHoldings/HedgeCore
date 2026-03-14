@@ -5,7 +5,8 @@ import { dashboardFetch } from "@/lib/api/dashboardClient";
 import type { PositionRow } from "@/api/positionClient";
 import { translateError, translateCaughtError, type TranslatedError } from "@/lib/errors/hedgeErrors";
 import HedgeErrorBanner from "./ErrorBanner";
-import { T } from "./tokens";
+import { T, CME_SPECS } from "./tokens";
+import type { CmeSpec } from "./tokens";
 import {
   CheckCircleIcon,
   AlertTriangleIcon,
@@ -18,31 +19,6 @@ import {
   CopyIcon,
 } from "lucide-react";
 import Link from "next/link";
-
-// ─── CME Contract Specifications ─────────────────────────────────────────────
-
-interface CmeSpec {
-  symbol:        string;
-  name:          string;
-  contract_size: number;
-  currency:      string;
-  margin_est:    number;
-  tick_size:     number;
-  tick_value:    number;
-  exchange:      string;
-  settle:        string;
-}
-
-const CME_SPECS: Record<string, CmeSpec> = {
-  MXN: { symbol: "M6M", name: "Mexican Peso Futures",        contract_size: 500000,   currency: "MXN", margin_est: 1800, tick_size: 0.000025,  tick_value: 12.50, exchange: "CME", settle: "3rd Wednesday" },
-  EUR: { symbol: "6E",  name: "Euro FX Futures",             contract_size: 125000,   currency: "EUR", margin_est: 2200, tick_size: 0.00005,   tick_value: 6.25,  exchange: "CME", settle: "3rd Wednesday" },
-  GBP: { symbol: "6B",  name: "British Pound Futures",       contract_size: 62500,    currency: "GBP", margin_est: 1900, tick_size: 0.0001,    tick_value: 6.25,  exchange: "CME", settle: "3rd Wednesday" },
-  JPY: { symbol: "6J",  name: "Japanese Yen Futures",        contract_size: 12500000, currency: "JPY", margin_est: 2000, tick_size: 0.0000005, tick_value: 6.25,  exchange: "CME", settle: "3rd Wednesday" },
-  CAD: { symbol: "6C",  name: "Canadian Dollar Futures",     contract_size: 100000,   currency: "CAD", margin_est: 1500, tick_size: 0.00005,   tick_value: 5.00,  exchange: "CME", settle: "3rd Wednesday" },
-  CHF: { symbol: "6S",  name: "Swiss Franc Futures",         contract_size: 125000,   currency: "CHF", margin_est: 2100, tick_size: 0.0001,    tick_value: 12.50, exchange: "CME", settle: "3rd Wednesday" },
-  AUD: { symbol: "6A",  name: "Australian Dollar Futures",   contract_size: 100000,   currency: "AUD", margin_est: 1400, tick_size: 0.0001,    tick_value: 10.00, exchange: "CME", settle: "3rd Wednesday" },
-  NZD: { symbol: "6N",  name: "New Zealand Dollar Futures",  contract_size: 100000,   currency: "NZD", margin_est: 1300, tick_size: 0.0001,    tick_value: 10.00, exchange: "CME", settle: "3rd Wednesday" },
-};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -201,8 +177,11 @@ export default function PhaseReview({
   const isSolo = governanceMode === "solo";
 
   // ── Engine output extraction ──────────────────────────────────────────────
+  // calcResult may be the full CalculateResult { calcResponse, marketSnapshot, ... }
+  // or the raw engine response. Extract the engine response for field access.
+  const _engineRes = (calcResult.calcResponse ?? calcResult) as Record<string, unknown>;
 
-  const _hp = (calcResult.hedge_plan ?? null) as null | {
+  const _hp = (_engineRes.hedge_plan ?? null) as null | {
     buckets: Array<{
       bucket:                   string;
       action_usd:               number;
@@ -226,7 +205,7 @@ export default function PhaseReview({
     };
   };
 
-  const _re = (calcResult.run_envelope ?? null) as null | {
+  const _re = (_engineRes.run_envelope ?? null) as null | {
     run_id:                string;
     timestamp:             string;
     engine_version:        string;
@@ -236,7 +215,7 @@ export default function PhaseReview({
     market_snapshot_hash?: string | null;
   };
 
-  const _sc = ((calcResult.scenario_results as {
+  const _sc = ((_engineRes.scenario_results as {
     totals?: Array<{
       sigma:                   number;
       shocked_spot:            number;

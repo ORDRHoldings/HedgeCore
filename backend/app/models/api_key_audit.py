@@ -5,13 +5,15 @@ API Key Audit Log (WORM-intent)
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, Integer, String
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 # ? CANONICAL Declarative Base
-from app.db.base import Base
+from app.core.db import Base
 
 
 class ApiKeyAuditLog(Base):
@@ -23,14 +25,14 @@ class ApiKeyAuditLog(Base):
         index=True,
     )
 
-    api_key_id: Mapped[int] = mapped_column(
-        Integer,
+    api_key_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True),
         index=True,
         nullable=False,
     )
 
-    user_id: Mapped[int | None] = mapped_column(
-        Integer,
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
         index=True,
         nullable=True,
     )

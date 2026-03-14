@@ -175,12 +175,13 @@ async def create_proposal(
     """Create a proposal (freeze sandbox result)."""
 
     await _check_permission(session, current_user, "pipeline.create_proposal")
+    _company_id = str(current_user.company_id) if current_user.company_id else None
 
     try:
 
         proposal = await pipeline_service.create_proposal(
 
-            session, str(current_user.id), request.run_id
+            session, str(current_user.id), request.run_id, company_id=_company_id,
 
         )
 
@@ -212,9 +213,12 @@ async def list_proposals(
 
 ):
 
-    """List all proposals."""
+    """List all proposals (tenant-scoped)."""
 
-    proposals = await pipeline_service.list_proposals(session)
+    await _check_permission(session, current_user, "pipeline.create_proposal")
+    _company_id = str(current_user.company_id) if current_user.company_id else None
+
+    proposals = await pipeline_service.list_proposals(session, company_id=_company_id)
 
     return ProposalListResponse(
 
@@ -240,9 +244,12 @@ async def get_proposal(
 
 ):
 
-    """Get a specific proposal."""
+    """Get a specific proposal (tenant-scoped)."""
 
-    proposal = await pipeline_service.get_proposal(session, proposal_id)
+    await _check_permission(session, current_user, "pipeline.create_proposal")
+    _company_id = str(current_user.company_id) if current_user.company_id else None
+
+    proposal = await pipeline_service.get_proposal(session, proposal_id, company_id=_company_id)
 
     if not proposal:
 
@@ -413,9 +420,12 @@ async def list_ledger(
 
 ):
 
-    """List all ledger entries."""
+    """List all ledger entries (tenant-scoped)."""
 
-    entries = await pipeline_service.list_ledger(session)
+    await _check_permission(session, current_user, "pipeline.approve")
+    _company_id = str(current_user.company_id) if current_user.company_id else None
+
+    entries = await pipeline_service.list_ledger(session, company_id=_company_id)
 
     return LedgerListResponse(
 
@@ -441,9 +451,12 @@ async def get_ledger(
 
 ):
 
-    """Get a specific ledger entry."""
+    """Get a specific ledger entry (tenant-scoped)."""
 
-    entry = await pipeline_service.get_ledger(session, ledger_id)
+    await _check_permission(session, current_user, "pipeline.approve")
+    _company_id = str(current_user.company_id) if current_user.company_id else None
+
+    entry = await pipeline_service.get_ledger(session, ledger_id, company_id=_company_id)
 
     if not entry:
 
@@ -468,6 +481,14 @@ async def replay_ledger(
 ):
 
     """Run deterministic replay verification on a ledger entry."""
+
+    await _check_permission(session, current_user, "pipeline.approve")
+    _company_id = str(current_user.company_id) if current_user.company_id else None
+
+    # Verify tenant access before replay
+    entry = await pipeline_service.get_ledger(session, ledger_id, company_id=_company_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail=f"Ledger {ledger_id} not found")
 
     try:
 
@@ -497,9 +518,12 @@ async def get_ledger_timeline(
 
 ):
 
-    """Get event timeline for a ledger entry."""
+    """Get event timeline for a ledger entry (tenant-scoped)."""
 
-    entry = await pipeline_service.get_ledger(session, ledger_id)
+    await _check_permission(session, current_user, "pipeline.approve")
+    _company_id = str(current_user.company_id) if current_user.company_id else None
+
+    entry = await pipeline_service.get_ledger(session, ledger_id, company_id=_company_id)
 
     if not entry:
 
@@ -551,9 +575,12 @@ async def export_ledger(
 
 ):
 
-    """Export ledger entry as PDF, Excel, or ZIP."""
+    """Export ledger entry as PDF, Excel, or ZIP (tenant-scoped)."""
 
-    entry = await pipeline_service.get_ledger(session, ledger_id)
+    await _check_permission(session, current_user, "pipeline.approve")
+    _company_id = str(current_user.company_id) if current_user.company_id else None
+
+    entry = await pipeline_service.get_ledger(session, ledger_id, company_id=_company_id)
 
     if not entry:
 

@@ -1106,6 +1106,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
         # 🔒 P0: Tenant isolation — company_id on staging_artifacts 🔒
         "ALTER TABLE staging_artifacts ADD COLUMN IF NOT EXISTS company_id UUID",
         "CREATE INDEX IF NOT EXISTS ix_staging_artifacts_company ON staging_artifacts(company_id)",
+        # 🔒 P-C1/C2: Tenant isolation — company_id on proposals and ledger_entries 🔒
+        "ALTER TABLE proposals ADD COLUMN IF NOT EXISTS company_id UUID",
+        "CREATE INDEX IF NOT EXISTS ix_proposals_company ON proposals(company_id)",
+        "ALTER TABLE ledger_entries ADD COLUMN IF NOT EXISTS company_id UUID",
+        "CREATE INDEX IF NOT EXISTS ix_ledger_entries_company ON ledger_entries(company_id)",
         # 🔒 P0: DB-level SoD trigger — prevent self-approval at DB layer 🔒
         """
         CREATE OR REPLACE FUNCTION prevent_self_approval()

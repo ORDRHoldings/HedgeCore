@@ -72,5 +72,10 @@ class Proposal(Base):
     # Optional justification
     justification: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Tenant isolation: scopes proposal to a single company
+    company_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True, index=True,
+    )
+
     def __repr__(self) -> str:
         return f"<Proposal {self.proposal_id} status={self.status}>"

@@ -5,7 +5,6 @@ HedgeCalc - Phase VI
 Admin Routes for API Keys & Integration Tokens Management
 """
 
-import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,11 +14,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import require_superuser
 from app.db.session import get_session
 from app.models.api_key import ApiKey
+from app.models.user import User
 from app.schemas.api_key import (
     ApiKeyCreateRequest,
     ApiKeyPublic,
     ApiKeyRotateRequest,
+    ApiKeySecretResponse,
 )
+from app.services.api_keys import create_api_key as svc_create_api_key
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -43,30 +45,29 @@ async def get_api_key_by_id(db: AsyncSession, api_key_id: str) -> ApiKey:
 # ----------------------------------------------------------------------
 # Routes
 # ----------------------------------------------------------------------
-@router.post("/api-keys", response_model=ApiKeyPublic)
+@router.post("/api-keys", response_model=ApiKeySecretResponse)
 async def create_api_key(
     payload: ApiKeyCreateRequest,
     db: AsyncSession = Depends(get_session),
-    _: object = Depends(require_superuser),
+    current_user: User = Depends(require_superuser),
 ):
     """
     Create a new API key (admin only).
+    Returns the full token once (show-once pattern).
     """
-    new_api_key = ApiKey(
-        key_id=f"HK_live_{uuid.uuid4().hex}",
+    api_key, token = await svc_create_api_key(
+        session=db,
         name=payload.name,
         scopes=payload.scopes,
-        status="active",
         owner_user_id=payload.owner_user_id,
-        created_at=datetime.utcnow(),
         expires_at=payload.expires_at,
     )
 
-    db.add(new_api_key)
-    await db.commit()
-    await db.refresh(new_api_key)
-
-    return ApiKeyPublic.model_validate(new_api_key)
+    return ApiKeySecretResponse(
+        key_id=api_key.key_id,
+        token=token,
+        expires_at=api_key.expires_at,
+    )
 
 
 @router.post("/api-keys/{api_key_id}/revoke", response_model=ApiKeyPublic)

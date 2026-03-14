@@ -126,6 +126,12 @@ async def update_position(
     all_branches: bool,
 ) -> Position:
     pos = await _get_in_scope(session, user, position_id, all_branches)
+
+    # Block all field modifications on terminal (immutable) positions
+    TERMINAL_STATES = {"HEDGED", "REJECTED"}
+    if pos.execution_status in TERMINAL_STATES:
+        raise ValueError(f"Cannot modify position in {pos.execution_status} state")
+
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(pos, field, value)
     await session.commit()

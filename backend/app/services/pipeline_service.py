@@ -95,19 +95,47 @@ async def _emit_pipeline_event(
     actor_id: str,
     description: str,
     payload: dict,
+    company_id: str | None = None,
 ) -> None:
     """Persist a pipeline lifecycle event to the WORM audit_events table."""
+    from sqlalchemy import select as _sel
+
+    from app.models.audit_event import AuditEvent as _AuditEvent
+
     try:
         import uuid as _uuid
         actor_uuid = _uuid.UUID(actor_id) if actor_id else None
     except (ValueError, AttributeError):
         actor_uuid = None
+
+    # Resolve company_id to a UUID for the tenant-scoped hash chain query
+    _company_uuid = None
+    if company_id:
+        try:
+            import uuid as _uuid2
+            _company_uuid = _uuid2.UUID(company_id)
+        except (ValueError, AttributeError):
+            pass
+
+    # Query previous event hash for the hash chain (per-tenant)
+    prev_hash = GENESIS_HASH
+    if _company_uuid is not None:
+        _prev_q = (
+            _sel(_AuditEvent.event_hash)
+            .where(_AuditEvent.company_id == _company_uuid)
+            .order_by(_AuditEvent.created_at.desc())
+            .limit(1)
+        )
+        _prev_result = await session.execute(_prev_q)
+        prev_hash = _prev_result.scalars().first() or GENESIS_HASH
+
     event = build_audit_event(
         event_type="LIFECYCLE",
         description=description,
         payload=payload,
-        prev_event_hash=GENESIS_HASH,
+        prev_event_hash=prev_hash,
         actor_id=actor_uuid,
+        company_id=_company_uuid,
         entity_type="staging_artifact",
         entity_id=entity_id,
     )
@@ -995,7 +1023,9 @@ def sandbox_calculate_multi(
 
 
 
-async def create_proposal(session: AsyncSession, user_id: str, run_id: str) -> Proposal:
+async def create_proposal(
+    session: AsyncSession, user_id: str, run_id: str, company_id: str | None = None,
+) -> Proposal:
 
     """Freeze a sandbox result into a proposal and persist to DB."""
 
@@ -1185,6 +1215,8 @@ async def create_proposal(session: AsyncSession, user_id: str, run_id: str) -> P
 
         capability_flags=freeze_artifact.capability_flags,
 
+        company_id=company_id,
+
     )
 
 
@@ -1205,17 +1237,22 @@ async def create_proposal(session: AsyncSession, user_id: str, run_id: str) -> P
 
 
 
-async def list_proposals(session: AsyncSession) -> list[Proposal]:
+async def list_proposals(session: AsyncSession, company_id: str | None = None) -> list[Proposal]:
 
-    return await pipeline_db.load_all_proposals(session)
-
-
+    return await pipeline_db.load_all_proposals(session, company_id_filter=company_id)
 
 
 
-async def get_proposal(session: AsyncSession, proposal_id: str) -> Proposal | None:
 
-    return await pipeline_db.load_proposal(session, proposal_id)
+
+async def get_proposal(
+    session: AsyncSession, proposal_id: str, company_id: str | None = None,
+) -> Proposal | None:
+
+    proposal = await pipeline_db.load_proposal(session, proposal_id)
+    if proposal and company_id and proposal.company_id and proposal.company_id != company_id:
+        return None  # Tenant isolation: return 404 rather than 403 (don't leak existence)
+    return proposal
 
 
 
@@ -1305,6 +1342,7 @@ async def submit_to_staging(
         session, staging_id, "SUBMITTED", user_id,
         f"Proposal {proposal_id} submitted to staging",
         {"staging_id": staging_id, "proposal_id": proposal_id, "integrity_score": artifact.integrity_score},
+        company_id=company_id,
     )
 
 
@@ -1469,6 +1507,7 @@ async def authorize_staged(
             session, staging_id, "REJECTED", user_id,
             f"Staging artifact {staging_id} rejected",
             {"staging_id": staging_id, "action": "REJECT", "comment": request.comment},
+            company_id=company_id,
         )
 
         return artifact
@@ -1493,6 +1532,7 @@ async def authorize_staged(
             session, staging_id, "RETURNED", user_id,
             f"Staging artifact {staging_id} returned",
             {"staging_id": staging_id, "action": "RETURN", "comment": request.comment},
+            company_id=company_id,
         )
 
         return artifact
@@ -1527,6 +1567,7 @@ async def authorize_staged(
         session, staging_id, "APPROVED", user_id,
         f"Staging artifact {staging_id} approved",
         {"staging_id": staging_id, "action": "APPROVE", "comment": request.comment},
+        company_id=company_id,
     )
 
 
@@ -1633,6 +1674,8 @@ async def _create_ledger_entry(
 
         freeze_artifact=proposal.freeze_artifact if proposal else None,
 
+        company_id=artifact.company_id,
+
     )
 
 
@@ -1669,17 +1712,21 @@ async def _create_ledger_entry(
 
 
 
-async def list_ledger(session: AsyncSession) -> list[LedgerEntry]:
+async def list_ledger(session: AsyncSession, company_id: str | None = None) -> list[LedgerEntry]:
 
-    return await pipeline_db.load_all_ledger(session)
-
-
+    return await pipeline_db.load_all_ledger(session, company_id_filter=company_id)
 
 
 
-async def get_ledger(session: AsyncSession, ledger_id: str) -> LedgerEntry | None:
 
-    return await pipeline_db.load_ledger(session, ledger_id)
+async def get_ledger(
+    session: AsyncSession, ledger_id: str, company_id: str | None = None,
+) -> LedgerEntry | None:
+
+    entry = await pipeline_db.load_ledger(session, ledger_id)
+    if entry and company_id and entry.company_id and entry.company_id != company_id:
+        return None  # Tenant isolation: return 404 rather than 403 (don't leak existence)
+    return entry
 
 
 

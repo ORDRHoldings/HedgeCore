@@ -275,6 +275,10 @@ export default function PhaseRisk({
   // Governance mode (default to team for safety)
   const govMode = governanceMode ?? "team";
 
+  // Extract engine response for sub-panels — calcResult may be the full
+  // CalculateResult { calcResponse, marketSnapshot, ... } or the raw engine response
+  const engineResponse = (calcResult.calcResponse ?? calcResult) as Record<string, unknown>;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
@@ -496,11 +500,11 @@ export default function PhaseRisk({
               }} />
             </div>
             <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 0 }}>
-              <PreTradeCostPanel positions={positions} calcResult={calcResult} />
+              <PreTradeCostPanel positions={positions} calcResult={engineResponse} />
               <CrisisImpactPanel
                 positions={positions}
                 hedgeCoveragePercent={
-                  ((calcResult?.hedge_plan as Record<string, unknown>)?.summary as Record<string, number>)?.coverage_pct
+                  ((engineResponse?.hedge_plan as Record<string, unknown>)?.summary as Record<string, number>)?.coverage_pct
                   ?? 0.85
                 }
               />

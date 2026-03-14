@@ -36,9 +36,11 @@ STATE MACHINE:
 
 
 
-WORM CONTRACT:
+MUTABILITY CONTRACT:
 
-  Rows are NEVER deleted (WORM -- enforced by DB trigger).
+  DELETE-protected (trigger blocks DELETE). UPDATE allowed for status
+  transitions and fill recording. Not a full WORM table -- only
+  audit_events, calculation_runs, and policy_revisions are true WORM.
 
   Terminal states (EXECUTED, WITHDRAWN, REJECTED) are immutable.
 
@@ -86,7 +88,9 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     DateTime,
+    Float,
     Index,
+    Numeric,
     String,
     Text,
     text,
@@ -260,11 +264,11 @@ class ExecutionProposal(Base):
     risk_verdict = Column(String(32), nullable=True)
 
     # Fill execution data (recorded after actual trade execution)
-    actual_fill_rate     = Column(__import__('sqlalchemy').Float, nullable=True)
-    actual_fill_notional = Column(__import__('sqlalchemy').Float, nullable=True)
-    slippage_bps         = Column(__import__('sqlalchemy').Float, nullable=True)
-    fill_timestamp       = Column(__import__('sqlalchemy').String(64), nullable=True)
-    fill_hash            = Column(__import__('sqlalchemy').String(64), nullable=True)
+    actual_fill_rate     = Column(Numeric(20, 6), nullable=True)
+    actual_fill_notional = Column(Numeric(20, 6), nullable=True)
+    slippage_bps         = Column(Float, nullable=True)
+    fill_timestamp       = Column(String(64), nullable=True)
+    fill_hash            = Column(String(64), nullable=True)
 
 
 

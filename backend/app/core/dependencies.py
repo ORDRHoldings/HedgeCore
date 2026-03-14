@@ -124,6 +124,20 @@ async def get_current_user(
             )
 
         user = await _load_active_user(db, user_id)
+
+        # Token version validation: reject tokens issued before a version bump
+        token_ver = payload.get("ver")
+        if token_ver is not None and hasattr(user, "token_version"):
+            if user.token_version is not None and token_ver != user.token_version:
+                logger.warning(
+                    "Auth failure: token version mismatch (token=%s, user=%s) ip=%s ua=%s path=%s",
+                    token_ver, user.token_version, ip, ua, request.url.path,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token revoked",
+                )
+
         return user
 
     except jwt.ExpiredSignatureError:

@@ -116,7 +116,6 @@ def test_reset_clears_business_data_step_list():
     # Required tables must be present
     required = {
         "positions",
-        "calculation_runs",
         "proposals",
         "staging_artifacts",
         "approvals",
@@ -124,12 +123,15 @@ def test_reset_clears_business_data_step_list():
         "ledger_entries",
         "policy_templates",
         "policy_instances",
-        "policy_revisions",
         "user_policy_favorites",
-        "audit_events",
     }
     for table in required:
         assert table in labels, f"Missing required table in _DELETE_STEPS: {table}"
+
+    # WORM tables must NOT appear (append-only per architecture freeze)
+    worm_tables = {"audit_events", "calculation_runs", "policy_revisions"}
+    for table in worm_tables:
+        assert table not in labels, f"WORM table found in _DELETE_STEPS: {table}"
 
     # Protected tables must NOT appear
     forbidden = {"users", "roles", "user_roles", "permissions", "companies", "branches", "departments"}

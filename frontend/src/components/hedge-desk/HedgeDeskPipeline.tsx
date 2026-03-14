@@ -261,7 +261,7 @@ export default function HedgeDeskPipeline({ token, user, governanceMode }: Hedge
               token={token}
               initialPolicyInstanceId={policyInstanceId}
               onComplete={(result: CalculateResult) => {
-                setCalcResult(result.calcResponse);
+                setCalcResult(result as unknown as Record<string, unknown>);
                 setRunId(result.runId);
                 setPolicyInstanceId(result.policyInstanceId);
                 if (result.riskDecisionHash) setRiskDecisionHash(result.riskDecisionHash);

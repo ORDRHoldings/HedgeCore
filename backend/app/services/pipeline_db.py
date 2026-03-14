@@ -52,6 +52,7 @@ def _proposal_orm_to_schema(row: ProposalORM) -> Proposal:
         freeze_artifact=FreezeArtifact(**row.freeze_artifact),
         residual_risk_vector=row.residual_risk_vector,
         capability_flags=row.capability_flags,
+        company_id=str(row.company_id) if row.company_id else None,
     )
 
 
@@ -62,6 +63,13 @@ async def save_proposal(session: AsyncSession, proposal: Proposal, run_id: str) 
         user_uuid = uuid.UUID(proposal.created_by)
     except (ValueError, AttributeError):
         user_uuid = uuid.UUID("00000000-0000-0000-0000-000000000000")
+
+    company_uuid = None
+    if proposal.company_id:
+        try:
+            company_uuid = uuid.UUID(proposal.company_id)
+        except (ValueError, AttributeError):
+            pass
 
     orm = ProposalORM(
         id=uuid.uuid4(),
@@ -81,6 +89,7 @@ async def save_proposal(session: AsyncSession, proposal: Proposal, run_id: str) 
         freeze_artifact=proposal.freeze_artifact.model_dump(mode="json"),
         residual_risk_vector=proposal.residual_risk_vector,
         capability_flags=proposal.capability_flags,
+        company_id=company_uuid,
     )
     session.add(orm)
     await session.commit()
@@ -108,11 +117,20 @@ async def load_proposal(session: AsyncSession, proposal_id: str) -> Proposal | N
     return _proposal_orm_to_schema(row)
 
 
-async def load_all_proposals(session: AsyncSession) -> list[Proposal]:
-    """Load all proposals."""
-    result = await session.execute(
-        select(ProposalORM).order_by(ProposalORM.created_at.desc())
-    )
+async def load_all_proposals(
+    session: AsyncSession,
+    company_id_filter: str | None = None,
+) -> list[Proposal]:
+    """Load all proposals, optionally filtered by tenant company_id."""
+    q = select(ProposalORM)
+    if company_id_filter:
+        try:
+            cid = uuid.UUID(company_id_filter)
+            q = q.where(ProposalORM.company_id == cid)
+        except (ValueError, AttributeError):
+            pass
+    q = q.order_by(ProposalORM.created_at.desc())
+    result = await session.execute(q)
     return [_proposal_orm_to_schema(r) for r in result.scalars().all()]
 
 
@@ -321,6 +339,7 @@ def _ledger_orm_to_schema(row: LedgerORM) -> LedgerEntry:
         root_hash=row.root_hash,
         freeze_artifact=freeze,
         replay_verified=row.replay_verified,
+        company_id=str(row.company_id) if row.company_id else None,
     )
 
 
@@ -330,6 +349,13 @@ async def save_ledger(session: AsyncSession, entry: LedgerEntry) -> None:
         auth_uuid = uuid.UUID(entry.authorized_by)
     except (ValueError, AttributeError):
         auth_uuid = uuid.UUID("00000000-0000-0000-0000-000000000000")
+
+    company_uuid = None
+    if entry.company_id:
+        try:
+            company_uuid = uuid.UUID(entry.company_id)
+        except (ValueError, AttributeError):
+            pass
 
     orm = LedgerORM(
         id=uuid.uuid4(),
@@ -345,6 +371,7 @@ async def save_ledger(session: AsyncSession, entry: LedgerEntry) -> None:
         frozen_artifact=entry.freeze_artifact.model_dump(mode="json")
             if entry.freeze_artifact else {},
         replay_verified=entry.replay_verified,
+        company_id=company_uuid,
     )
     session.add(orm)
     await session.commit()
@@ -361,9 +388,18 @@ async def load_ledger(session: AsyncSession, ledger_id: str) -> LedgerEntry | No
     return _ledger_orm_to_schema(row)
 
 
-async def load_all_ledger(session: AsyncSession) -> list[LedgerEntry]:
-    """Load all ledger entries."""
-    result = await session.execute(
-        select(LedgerORM).order_by(LedgerORM.authorized_at.desc())
-    )
+async def load_all_ledger(
+    session: AsyncSession,
+    company_id_filter: str | None = None,
+) -> list[LedgerEntry]:
+    """Load all ledger entries, optionally filtered by tenant company_id."""
+    q = select(LedgerORM)
+    if company_id_filter:
+        try:
+            cid = uuid.UUID(company_id_filter)
+            q = q.where(LedgerORM.company_id == cid)
+        except (ValueError, AttributeError):
+            pass
+    q = q.order_by(LedgerORM.authorized_at.desc())
+    result = await session.execute(q)
     return [_ledger_orm_to_schema(r) for r in result.scalars().all()]

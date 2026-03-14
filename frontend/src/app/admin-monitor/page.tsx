@@ -290,6 +290,7 @@ export default function AdminMonitorPage() {
   // Fetch all data
   const fetchAll = useCallback(async () => {
     if (!token) return;
+    if (!user?.is_superuser) return;
 
     const endpoints = [
       { key: "health",   path: "/v1/admin/monitor/health" },
@@ -352,7 +353,7 @@ export default function AdminMonitorPage() {
 
     setLoading(false);
     setLastRefresh(new Date());
-  }, [token]);
+  }, [token, user?.is_superuser]);
 
   useEffect(() => {
     fetchAll();

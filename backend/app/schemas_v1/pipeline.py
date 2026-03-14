@@ -178,6 +178,8 @@ class Proposal(BaseModel):
 
     capability_flags: dict[str, bool] = {}
 
+    company_id: str | None = None
+
 
 
 
@@ -310,6 +312,8 @@ class LedgerEntry(BaseModel):
     root_hash: str = ""
 
     freeze_artifact: FreezeArtifact | None = None
+
+    company_id: str | None = None
 
 
 

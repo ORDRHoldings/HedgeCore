@@ -5,12 +5,16 @@ Superuser-only endpoint that clears all business data for one or more tenant
 slugs and (optionally) auto-seeds the MXN001 SMB demo company on first call.
 
 Business data erased (FK-safe order):
-  audit_events, anchor_hashes, ledger_entries, execution_proposals,
-  approvals, staging_artifacts, proposals, calculation_runs, positions,
-  user_policy_favorites, policy_revisions, policy_instances, policy_templates
+  anchor_hashes, ledger_entries, execution_proposals,
+  approvals, staging_artifacts, proposals, positions,
+  user_policy_favorites, policy_instances, policy_templates
+
+WORM tables (audit_events, calculation_runs, policy_revisions) excluded --
+append-only per architecture freeze.
 
 Users / RBAC / Company rows are NEVER touched.
 """
+import os
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -21,7 +25,8 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.security import get_current_user, hash_password
+from app.core.dependencies import require_superuser
+from app.core.security import hash_password
 from app.models.audit_event import GENESIS_HASH, build_audit_event
 from app.models.organization import Branch, Company, Department
 from app.models.permission import SEED_PERMISSIONS, Permission, RolePermission
@@ -52,11 +57,8 @@ DEMOCO_DEPT_ID    = uuid.UUID("33333333-3333-3333-3333-333333333301")
 # Business-data DELETE statements (company_id-scoped, FK-safe)
 # Each entry: (label, sql_template, uses_company_id)
 # ---------------------------------------------------------------------------
+# WORM tables (audit_events, calculation_runs, policy_revisions) excluded — append-only per architecture freeze
 _DELETE_STEPS: list[tuple[str, str]] = [
-    (
-        "audit_events",
-        "DELETE FROM audit_events WHERE company_id = :cid",
-    ),
     (
         "anchor_hashes",
         "DELETE FROM anchor_hashes WHERE company_id = :cid",
@@ -85,10 +87,6 @@ _DELETE_STEPS: list[tuple[str, str]] = [
         "DELETE FROM proposals WHERE company_id = :cid",
     ),
     (
-        "calculation_runs",
-        "DELETE FROM calculation_runs WHERE company_id = :cid",
-    ),
-    (
         "positions",
         "DELETE FROM positions WHERE company_id = :cid",
     ),
@@ -96,10 +94,6 @@ _DELETE_STEPS: list[tuple[str, str]] = [
         "user_policy_favorites",
         """DELETE FROM user_policy_favorites
            WHERE user_id IN (SELECT id FROM users WHERE company_id = :cid)""",
-    ),
-    (
-        "policy_revisions",
-        "DELETE FROM policy_revisions WHERE company_id = :cid",
     ),
     (
         "policy_instances",
@@ -273,15 +267,8 @@ async def reset_demo_data(
     body: ResetRequest,
     request: Request,
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_superuser),
 ) -> ResetResponse:
-
-    # --- RBAC gate ---
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Superuser access required to reset demo data.",
-        )
 
     # --- Confirm token ---
     if body.confirm != "RESET":
@@ -429,13 +416,14 @@ _ROLE_PERMS = {
 }
 
 # Tables to TRUNCATE (FK-safe order, children first)
+# WORM tables (audit_events, calculation_runs, policy_revisions) excluded — append-only per architecture freeze
 _TRUNCATE_TABLES = [
-    "audit_events","audit_logs","auth_audit_log","auth_audit_logs","api_key_audit",
+    "audit_logs","auth_audit_log","auth_audit_logs","api_key_audit",
     "refresh_tokens","api_keys",
     "ledger_entries","ledger","anchor_hashes","execution_proposals",
     "approvals","staging_artifacts","staging","proposals",
-    "calculation_runs","positions",
-    "user_policy_favorites","policy_revisions","policy_instances","policy_templates",
+    "positions",
+    "user_policy_favorites","policy_instances","policy_templates",
     "connector_run_errors","connector_runs",
     "role_permissions","user_roles",
     "users","permissions","roles",
@@ -446,7 +434,7 @@ _TRUNCATE_SQL = {t: 'TRUNCATE TABLE "%s" CASCADE' % t for t in _TRUNCATE_TABLES}
 _TRUNCATE_STMTS = {t: text(sql) for t, sql in _TRUNCATE_SQL.items()}
 # ---------------------------------------------------------------------------
 # POST /v1/admin/reset/seed-companies
-# Full database reset + seed two companies (no auth required — one-time setup)
+# Full database reset + seed two companies (superuser only, disabled in production)
 # ---------------------------------------------------------------------------
 
 class SeedResponse(BaseModel):
@@ -460,11 +448,17 @@ class SeedResponse(BaseModel):
 async def seed_companies(
     request: Request,
     db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(require_superuser),
 ) -> SeedResponse:
     """Wipe everything and create two companies with admin users.
 
-    No auth required (bootstrap endpoint). Idempotent — safe to call repeatedly.
+    Requires superuser auth. Disabled in production environments.
     """
+    if os.environ.get("ENV", "").lower() == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Disabled in production",
+        )
     # ── 1. TRUNCATE all tables ────────────────────────────────────────────
     # Table names from hardcoded _TRUNCATE_TABLES (no user input).
     for table in _TRUNCATE_TABLES:
@@ -580,7 +574,7 @@ async def seed_companies(
         seeded.append({
             "company": cfg["name"],
             "plan_tier": cfg["plan_tier"],
-            "login": f"{cfg['user_email']}/{cfg['user_pass']}",
+            "login": cfg["user_email"],
             "superuser": True,
         })
 

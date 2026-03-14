@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import enum
 import logging
+import uuid
 
 from sqlalchemy import (
     DateTime,
@@ -21,6 +22,7 @@ from sqlalchemy import (
 from sqlalchemy import (
     Enum as SAEnum,
 )
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.user import Base
@@ -68,7 +70,8 @@ class AuthAuditLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    user_id: Mapped[int | None] = mapped_column(
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
@@ -118,7 +121,7 @@ async def record_auth_event(
     event_type: AuthEventType | None = None,
     status: AuthEventStatus | None = None,
     reason_code: AuthReasonCode | None = None,
-    user_id: int | None = None,
+    user_id: uuid.UUID | None = None,
     request_id: str | None = None,
     route: str | None = None,
     method: str | None = None,

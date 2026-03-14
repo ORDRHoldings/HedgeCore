@@ -10,34 +10,20 @@ import {
   CopyIcon, ExternalLinkIcon, ShieldCheckIcon, UserCheckIcon,
   ActivityIcon, AlertTriangleIcon, InfoIcon,
 } from "lucide-react";
-import { T } from "./tokens";
+import { T, CME_SPECS, DEFAULT_CME_SPEC } from "./tokens";
+import type { CmeSpec } from "./tokens";
 
-// ─── CME contract specifications (reference data — margins from CME exchange) ─
-const CME_SPECS: Record<string, {
-  symbol: string; name: string; contract_size: number;
-  currency: string; margin_est: number; tick_size: number; tick_value: number;
-}> = {
-  MXN: { symbol: "M6M", name: "Mexican Peso Futures",      contract_size: 500_000,    currency: "MXN", margin_est: 1800, tick_size: 0.000025,  tick_value: 12.50 },
-  EUR: { symbol: "6E",  name: "Euro FX Futures",           contract_size: 125_000,    currency: "EUR", margin_est: 2200, tick_size: 0.00005,   tick_value: 6.25  },
-  GBP: { symbol: "6B",  name: "British Pound Futures",     contract_size: 62_500,     currency: "GBP", margin_est: 1900, tick_size: 0.0001,    tick_value: 6.25  },
-  JPY: { symbol: "6J",  name: "Japanese Yen Futures",      contract_size: 12_500_000, currency: "JPY", margin_est: 2000, tick_size: 0.0000005, tick_value: 6.25  },
-  CAD: { symbol: "6C",  name: "Canadian Dollar Futures",   contract_size: 100_000,    currency: "CAD", margin_est: 1500, tick_size: 0.00005,   tick_value: 5.00  },
-  CHF: { symbol: "6S",  name: "Swiss Franc Futures",       contract_size: 125_000,    currency: "CHF", margin_est: 2100, tick_size: 0.0001,    tick_value: 12.50 },
-  AUD: { symbol: "6A",  name: "Australian Dollar Futures", contract_size: 100_000,    currency: "AUD", margin_est: 1400, tick_size: 0.0001,    tick_value: 10.00 },
-  NZD: { symbol: "6N",  name: "NZ Dollar Futures",         contract_size: 100_000,    currency: "NZD", margin_est: 1300, tick_size: 0.0001,    tick_value: 10.00 },
-};
-
-const DEFAULT_SPEC = CME_SPECS.MXN;
+const DEFAULT_SPEC = DEFAULT_CME_SPEC;
 
 // ─── Market snapshot types ───────────────────────────────────────────────────
 interface FxRateEntry { symbol: string; bid: number; ask: number; mid: number; }
 interface MarketSnap  { rates: FxRateEntry[]; source: string; cachedAt: number; }
 
 // ─── IBKR deep link helpers ──────────────────────────────────────────────────
-function ibkrNativeUrl(spec: typeof CME_SPECS[string], side: string, qty: number, rate: number): string {
+function ibkrNativeUrl(spec: CmeSpec, side: string, qty: number, rate: number): string {
   return `ibkr://order?symbol=${spec.symbol}&secType=FUT&exchange=CME&side=${side}&quantity=${qty}&orderType=LMT&lmtPrice=${rate.toFixed(5)}&currency=USD&tif=GTC`;
 }
-function openIbkr(spec: typeof CME_SPECS[string], side: string, qty: number, rate: number): void {
+function openIbkr(spec: CmeSpec, side: string, qty: number, rate: number): void {
   window.open(ibkrNativeUrl(spec, side, qty, rate), "_self");
   setTimeout(() => window.open(`https://www.interactivebrokers.com/en/trading/order-ticket.php?symbol=${spec.symbol}&side=${side}&quantity=${qty}`, "_blank", "noopener,noreferrer"), 2000);
 }
@@ -66,19 +52,32 @@ function saveTradeHistory(entry: TradeHistoryEntry): void {
 
 // ─── Ticket metrics ──────────────────────────────────────────────────────────
 interface TicketMetrics {
-  spec: typeof CME_SPECS[string]; side: string; contracts: number;
+  spec: CmeSpec; side: string; contracts: number;
   margin: number; notional: number; estCost: number; hedgeEffectiveness: number; currency: string;
 }
 
-function computeTicket(bucket: BucketResult): TicketMetrics {
-  const currency = "MXN";
+/**
+ * Extract the foreign currency code from a bucket's action_direction.
+ * e.g. "SELL_MXN_BUY_USD" -> "MXN", "BUY_EUR_SELL_USD" -> "EUR"
+ * Falls back to the provided default currency.
+ */
+function extractCurrencyFromDirection(direction: string | null, fallback: string): string {
+  if (!direction) return fallback;
+  // Pattern: (SELL|BUY)_{CCY}_(BUY|SELL)_USD
+  const match = direction.match(/(?:SELL|BUY)_([A-Z]{3})_(?:SELL|BUY)_/i);
+  if (match) return match[1].toUpperCase();
+  return fallback;
+}
+
+function computeTicket(bucket: BucketResult, defaultCurrency = "MXN"): TicketMetrics {
+  const currency = extractCurrencyFromDirection(bucket.action_direction, defaultCurrency);
   const spec = CME_SPECS[currency] ?? DEFAULT_SPEC;
   const contracts = Math.max(1, Math.ceil(Math.abs(bucket.action_mxn) / spec.contract_size));
   const margin = contracts * spec.margin_est;
   const notional = contracts * spec.contract_size;
   const estCost = Math.abs(bucket.action_usd) * 0.0005;
   const hedgeEffectiveness = parseFloat(Math.min(100, (notional / Math.abs(bucket.action_mxn || 1)) * 100).toFixed(1));
-  const side = bucket.action_direction === "SELL_MXN_BUY_USD" ? "SELL" : "BUY";
+  const side = (bucket.action_direction ?? "").includes("SELL") && (bucket.action_direction ?? "").startsWith("SELL") ? "SELL" : "BUY";
   return { spec, side, contracts, margin, notional, estCost, hedgeEffectiveness, currency };
 }
 
@@ -102,6 +101,7 @@ export default function PhaseExecute({
   const [awaitingApproval, setAwaitingApproval] = useState(false);
   const [done, setDone]                         = useState(false);
   const [copiedRow, setCopiedRow]               = useState<number | null>(null);
+  const [showConfirm, setShowConfirm]           = useState(false);
 
   // ── Live market snapshot (from /api/market/fx/rates) ─────────────────────
   const [marketSnap, setMarketSnap]   = useState<MarketSnap | null>(null);
@@ -129,9 +129,12 @@ export default function PhaseExecute({
   }, []);
 
   // ── Buckets ───────────────────────────────────────────────────────────────
-  const hedgePlan = calcResult.hedge_plan as { buckets?: BucketResult[]; summary?: Record<string, number> } | undefined;
+  // calcResult may be the full CalculateResult { calcResponse, marketSnapshot, ... }
+  // or the raw engine response. Extract the engine response for field access.
+  const engineResponse = (calcResult.calcResponse ?? calcResult) as Record<string, unknown>;
+  const hedgePlan = engineResponse.hedge_plan as { buckets?: BucketResult[]; summary?: Record<string, number> } | undefined;
   const buckets: BucketResult[] = (hedgePlan?.buckets ?? []).filter(b => !b.suppressed && Math.abs(b.action_mxn) > 0);
-  const runId = (calcResult.run_id as string) ?? "";
+  const runId = (engineResponse.run_id as string) ?? "";
 
   const totals = buckets.reduce(
     (acc, b) => {
@@ -192,7 +195,7 @@ export default function PhaseExecute({
         timestamp: new Date().toISOString(), run_id: runId, positions: proposalIds,
         legs: buckets.map(b => { const m = computeTicket(b); return { bucket: b.bucket, symbol: m.spec.symbol, contracts: m.contracts, forward_rate: b.forward_rate, action_usd: b.action_usd, action_mxn: b.action_mxn, margin_req: m.margin, side: m.side }; }),
         total_contracts: totals.contracts, total_action_usd: totals.actionUsd, total_margin: totals.margin,
-        risk_verdict: (calcResult.risk_verdict as string) ?? "APPROVED",
+        risk_verdict: (engineResponse.risk_verdict as string) ?? "APPROVED",
         ...(parsedFillPrice > 0 ? { fill_price: parsedFillPrice } : {}), status: "HEDGED",
       });
       setDone(true); onComplete({ fillPrice: parsedFillPrice, proposalIds });
@@ -654,7 +657,7 @@ export default function PhaseExecute({
 
         {/* Right — Primary CTA */}
         <button
-          onClick={handleMarkHedged} disabled={!fillOk || proposalIds.length === 0}
+          onClick={() => setShowConfirm(true)} disabled={!fillOk || proposalIds.length === 0}
           style={{
             display: "flex", alignItems: "center", gap: 8,
             background: done ? T.tertiary : executing ? "color-mix(in srgb, var(--status-pass,#22c55e) 60%, #000)" : T.green,
@@ -674,6 +677,73 @@ export default function PhaseExecute({
           }
         </button>
       </div>
+
+      {/* ── Execution confirmation overlay ─────────────────────────────── */}
+      {showConfirm && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 50,
+          background: "rgba(0,0,0,0.55)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            background: T.bgPanel,
+            border: `1px solid ${T.rim}`,
+            borderRadius: 6,
+            padding: "28px 32px",
+            maxWidth: 440,
+            width: "100%",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+            display: "flex", flexDirection: "column", gap: 16,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <AlertTriangleIcon size={20} color={T.amber} />
+              <span style={{
+                fontFamily: T.fontMono, fontSize: 14, fontWeight: 700,
+                letterSpacing: "0.12em", color: T.amber,
+              }}>
+                CONFIRM EXECUTION
+              </span>
+            </div>
+            <span style={{
+              fontFamily: T.fontUI, fontSize: 13, color: T.secondary, lineHeight: "1.6",
+            }}>
+              This action is irreversible. All {buckets.length} position{buckets.length !== 1 ? "s" : ""} will
+              be marked as <strong style={{ fontFamily: T.fontMono, color: T.primary }}>HEDGED</strong> and
+              recorded in the audit trail. This cannot be undone.
+            </span>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 12,
+              justifyContent: "flex-end",
+              marginTop: 4,
+            }}>
+              <button
+                onClick={() => setShowConfirm(false)}
+                style={{
+                  fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  color: T.tertiary, background: "transparent",
+                  border: `1px solid ${T.soft}`,
+                  padding: "9px 20px", borderRadius: 3, cursor: "pointer",
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={() => { setShowConfirm(false); handleMarkHedged(); }}
+                style={{
+                  fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  color: "#000", background: T.green,
+                  border: "none",
+                  padding: "9px 20px", borderRadius: 3, cursor: "pointer",
+                }}
+              >
+                CONFIRM &amp; MARK HEDGED
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

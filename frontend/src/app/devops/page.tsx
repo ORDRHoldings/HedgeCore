@@ -155,6 +155,7 @@ export default function DevOpsPage() {
 
   const fetchData = useCallback(async () => {
     if (!token) return;
+    if (!user?.is_superuser) return;
     try {
       const res = await dashboardFetch("/v1/devops/status", token);
       if (!res.ok) {
@@ -170,7 +171,7 @@ export default function DevOpsPage() {
     }
     setLoading(false);
     setLastRefresh(new Date());
-  }, [token]);
+  }, [token, user?.is_superuser]);
 
   useEffect(() => {
     fetchData();
