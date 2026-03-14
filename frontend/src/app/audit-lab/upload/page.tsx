@@ -111,7 +111,15 @@ function AuditLabUploadPageInner() {
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 409) {
-          setError(`Duplicate dataset: SHA-256 ${(data as Record<string,string>).source_hash?.slice(0, 16)}… already exists.`);
+          // Dataset already exists — recover by advancing to run phase with the existing dataset_id
+          const det = (data as Record<string, unknown>).detail as Record<string, string> | undefined;
+          const existingId = det?.dataset_id;
+          if (existingId) {
+            setDatasetId(existingId);
+            setPhase("run");
+            return;
+          }
+          setError(`Duplicate dataset: SHA-256 ${det?.source_hash?.slice(0, 16) ?? "?"}… already exists.`);
         } else {
           const det = (data as Record<string, unknown>).detail;
           setError(typeof det === "string" ? det : det != null ? JSON.stringify(det) : "Upload failed.");

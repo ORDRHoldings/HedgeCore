@@ -195,13 +195,15 @@ async def upload_audit_dataset(
         ),
         {"cid": company_id, "h": source_hash},
     )
-    if existing.fetchone():
+    existing_row = existing.fetchone()
+    if existing_row:
         raise HTTPException(
             status_code=409,
             detail={
                 "error": "duplicate_dataset",
                 "message": "A dataset with identical content (same SHA-256) already exists.",
                 "source_hash": source_hash,
+                "dataset_id": str(existing_row[0]),
             },
         )
 
