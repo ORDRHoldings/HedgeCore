@@ -1,217 +1,175 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronLeft, ArrowRight, FileSpreadsheet, Search, ShieldAlert, FileText, Calculator, Lock, Settings, ClipboardCheck } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
-import { useMarketingTheme } from "@/components/marketing/useMarketingTheme";
-import { F } from "@/components/marketing/theme";
-import {
-  Building2, Calculator, Eye, Shield, FileText, Users, ArrowRight, BarChart3,
-} from "lucide-react";
+import { C, F } from "@/components/marketing/theme";
 
-const FEATURES = [
-  {
-    icon: <Calculator size={22} strokeWidth={1.5} />,
-    title: "Automated Hedge Calculation",
-    desc: "Import positions, apply policy, generate hedge recommendations automatically. Sub-50ms deterministic computation with full audit trail.",
-  },
-  {
-    icon: <Eye size={22} strokeWidth={1.5} />,
-    title: "Cashflow Visibility",
-    desc: "Full confirmed and forecast decomposition across monthly buckets with coverage gap identification and maturity profiling.",
-  },
-  {
-    icon: <BarChart3 size={22} strokeWidth={1.5} />,
-    title: "Policy Governance",
-    desc: "60 pre-built policy templates with maturity profiles, governance tiers, and compliance guardrails. Customize or deploy instantly.",
-  },
-  {
-    icon: <Shield size={22} strokeWidth={1.5} />,
-    title: "Audit Trail",
-    desc: "WORM-compliant event logging with SHA-256 hash chain satisfies SOX, IFRS 9, and internal audit requirements.",
-  },
-  {
-    icon: <FileText size={22} strokeWidth={1.5} />,
-    title: "Report Studio",
-    desc: "30+ institutional report templates including Board Pack, CFO Dashboard, Treasury Flash, and regulatory exports.",
-  },
-  {
-    icon: <Users size={22} strokeWidth={1.5} />,
-    title: "4-Eyes Approval",
-    desc: "Separation of duties enforcement prevents unauthorized hedge execution. Maker-checker workflow with full provenance tracking.",
-  },
+const CHALLENGES = [
+  { title: "Manual Spreadsheet Hedging", desc: "Critical hedge decisions rely on error-prone spreadsheets that break with every change, creating operational risk and audit exposure." },
+  { title: "Audit Trail Gaps", desc: "Regulators and internal audit demand complete decision provenance. Spreadsheets and email chains cannot provide tamper-evident records." },
+  { title: "Policy Inconsistency", desc: "Hedge policy varies by analyst, by desk, and by quarter. Without a governed engine, the same exposure gets different treatment every time." },
+  { title: "Regulatory Reporting Burden", desc: "IFRS 9 effectiveness testing, ASC 815 documentation, and SOX controls require systems that most treasury teams do not have." },
+];
+
+const CAPABILITIES = [
+  { icon: <Calculator size={20} />, title: "Automated Hedge Calculation", desc: "Import positions, apply policy, and generate deterministic hedge recommendations in under 50ms.", product: "ORDR Treasury" },
+  { icon: <Lock size={20} />, title: "WORM Audit Trail", desc: "SHA-256 hash-chained, append-only event log satisfies SOX, IFRS 9, and internal audit requirements.", product: "ORDR Treasury" },
+  { icon: <Settings size={20} />, title: "Policy Governance Engine", desc: "60 pre-built policy templates with maturity profiles, governance tiers, and compliance guardrails.", product: "ORDR Treasury" },
+  { icon: <ClipboardCheck size={20} />, title: "IFRS 9 Effectiveness Testing", desc: "Prospective effectiveness assessment with critical terms match and statistical forecast methods.", product: "ORDR Treasury" },
 ];
 
 export default function CorporateTreasuryPage() {
-  const { T, dk, mob } = useMarketingTheme();
-
   return (
     <MarketingLayout>
-      <style>{`
-        .ct-feat{transition:all .3s cubic-bezier(.4,0,.2,1)}
-        .ct-feat:hover{transform:translateY(-4px);border-color:${dk ? "rgba(34,211,238,0.25)" : "rgba(30,58,95,0.2)"} !important}
-      `}</style>
-
       {/* Hero */}
-      <section style={{
-        padding: mob ? "80px 20px 48px" : "100px 48px 64px",
-        textAlign: "center", position: "relative", background: T.heroGrad,
-      }}>
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 16px",
-            border: `1px solid ${T.border}`, borderRadius: 100,
-            fontFamily: F.mono, fontSize: 12, fontWeight: 600, color: T.textDim,
-            background: dk ? "rgba(34,211,238,0.03)" : "rgba(30,58,95,0.03)",
-            marginBottom: 24,
-          }}>
-            <Building2 size={14} /> CORPORATE TREASURY
-          </div>
-          <h1 style={{
-            fontFamily: F.heading, fontSize: mob ? 36 : 56, fontWeight: 800,
-            letterSpacing: "-0.03em", lineHeight: 1.1, margin: 0,
-            color: dk ? "#eeeef2" : T.accent,
-          }}>
-            Corporate Treasury
-          </h1>
-          <p style={{
-            fontFamily: F.ui, fontSize: mob ? 16 : 18, color: T.textSub,
-            maxWidth: 560, margin: "20px auto 0", lineHeight: 1.6,
-          }}>
-            End-to-end FX exposure management for treasury teams. From position import
-            to hedge execution, with institutional governance at every step.
-          </p>
-        </div>
+      <section style={{ padding: "80px 48px 64px", maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
+        <Link href="/solutions" style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          fontFamily: F.ui, fontSize: 14, color: C.textSub, textDecoration: "none",
+          marginBottom: 32,
+        }}>
+          <ChevronLeft size={14} /> All Solutions
+        </Link>
+        <h1 style={{
+          fontFamily: F.heading, fontSize: 48, fontWeight: 800,
+          letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 16px",
+          color: C.accent,
+        }}>
+          Corporate Treasury
+        </h1>
+        <p style={{
+          fontFamily: F.ui, fontSize: 18, color: C.textSub,
+          maxWidth: 560, margin: "0 auto 32px", lineHeight: 1.6,
+        }}>
+          End-to-end FX exposure management for multinational treasury teams with
+          policy governance and audit-ready reporting.
+        </p>
+        <Link href="/auth/login" style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          fontFamily: F.ui, fontSize: 15, fontWeight: 600,
+          color: "#fff", background: C.accent,
+          padding: "13px 32px", borderRadius: 8, textDecoration: "none",
+        }}>
+          Get Started <ArrowRight size={16} />
+        </Link>
       </section>
 
-      {/* Challenge */}
-      <section style={{
-        padding: mob ? "48px 20px" : "72px 48px",
-        background: T.sectionAlt, borderTop: `1px solid ${T.border}`,
-        borderBottom: `1px solid ${T.border}`,
-      }}>
-        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      {/* Challenges */}
+      <section style={{ background: C.bgAlt, padding: "80px 48px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <h2 style={{
-            fontFamily: F.heading, fontSize: mob ? 24 : 32, fontWeight: 700,
-            letterSpacing: "-0.02em", margin: "0 0 20px", color: T.text,
+            fontFamily: F.heading, fontSize: 32, fontWeight: 700,
+            letterSpacing: "-0.02em", margin: "0 0 40px", textAlign: "center", color: C.text,
           }}>
-            The Challenge
+            Your Challenges
           </h2>
-          <p style={{
-            fontFamily: F.ui, fontSize: 16, color: T.textSub, lineHeight: 1.8, margin: 0,
-          }}>
-            Treasury teams at multinational corporations face complex FX exposures across
-            dozens of currency pairs, with confirmed and forecast cashflows spanning 12+ months.
-            Manual spreadsheet-based hedging is error-prone, unauditable, and fails to meet
-            IFRS 9 documentation requirements. When audit season arrives, weeks are lost
-            reconstructing decisions that should have been captured automatically.
-          </p>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section style={{ padding: mob ? "48px 20px" : "80px 48px", maxWidth: 1200, margin: "0 auto" }}>
-        <h2 style={{
-          fontFamily: F.heading, fontSize: mob ? 24 : 32, fontWeight: 700,
-          letterSpacing: "-0.02em", margin: "0 0 40px", textAlign: "center", color: T.text,
-        }}>
-          How ORDR Solves It
-        </h2>
-        <div style={{
-          display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3, 1fr)", gap: 24,
-        }}>
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="ct-feat"
-              style={{
-                background: T.bgCard, border: `1px solid ${T.border}`,
-                borderRadius: 14, padding: "28px 24px", boxShadow: T.cardShadow,
-              }}
-            >
-              <div style={{
-                width: 44, height: 44, borderRadius: 10,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: dk ? T.accentSoft : T.accentSoft,
-                color: T.accent, marginBottom: 16,
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24 }}>
+            {CHALLENGES.map((c) => (
+              <div key={c.title} style={{
+                background: C.bg, border: `1px solid ${C.border}`,
+                borderRadius: 12, padding: "28px 24px",
               }}>
-                {f.icon}
+                <h3 style={{
+                  fontFamily: F.heading, fontSize: 18, fontWeight: 700,
+                  margin: "0 0 10px", color: C.text,
+                }}>
+                  {c.title}
+                </h3>
+                <p style={{
+                  fontFamily: F.ui, fontSize: 14, color: C.textSub,
+                  lineHeight: 1.6, margin: 0,
+                }}>
+                  {c.desc}
+                </p>
               </div>
-              <h3 style={{
-                fontFamily: F.heading, fontSize: 16, fontWeight: 700,
-                margin: "0 0 8px", color: T.text,
-              }}>
-                {f.title}
-              </h3>
-              <p style={{
-                fontFamily: F.ui, fontSize: 14, color: T.textSub,
-                lineHeight: 1.6, margin: 0,
-              }}>
-                {f.desc}
-              </p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Who It's For */}
-      <section style={{
-        padding: mob ? "48px 20px" : "64px 48px",
-        background: T.sectionAlt, borderTop: `1px solid ${T.border}`,
-        borderBottom: `1px solid ${T.border}`,
-      }}>
-        <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
+      {/* Capabilities */}
+      <section style={{ padding: "80px 48px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <h2 style={{
-            fontFamily: F.heading, fontSize: mob ? 24 : 32, fontWeight: 700,
-            letterSpacing: "-0.02em", margin: "0 0 16px", color: T.text,
+            fontFamily: F.heading, fontSize: 32, fontWeight: 700,
+            letterSpacing: "-0.02em", margin: "0 0 40px", textAlign: "center", color: C.text,
           }}>
-            Who It&apos;s For
+            How ORDR Helps
           </h2>
-          <p style={{
-            fontFamily: F.ui, fontSize: 16, color: T.textSub, lineHeight: 1.7, margin: 0,
-          }}>
-            VP Treasury, Treasury Analysts, and FX Managers at corporations with $10M+
-            annual FX exposure. Designed for teams managing confirmed and forecast
-            cashflows across multiple entities and jurisdictions.
-          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24 }}>
+            {CAPABILITIES.map((c) => (
+              <div key={c.title} style={{
+                background: C.bg, border: `1px solid ${C.border}`,
+                borderRadius: 12, padding: "28px 24px",
+              }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 12, marginBottom: 12,
+                }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 8,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: C.accentLight, color: C.accent,
+                  }}>
+                    {c.icon}
+                  </div>
+                  <span style={{
+                    fontFamily: F.mono, fontSize: 11, fontWeight: 600,
+                    color: C.accent, letterSpacing: "0.06em",
+                  }}>
+                    {c.product.toUpperCase()}
+                  </span>
+                </div>
+                <h3 style={{
+                  fontFamily: F.heading, fontSize: 18, fontWeight: 700,
+                  margin: "0 0 10px", color: C.text,
+                }}>
+                  {c.title}
+                </h3>
+                <p style={{
+                  fontFamily: F.ui, fontSize: 14, color: C.textSub,
+                  lineHeight: 1.6, margin: 0,
+                }}>
+                  {c.desc}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section style={{
-        padding: mob ? "48px 20px 64px" : "64px 48px 96px",
-        textAlign: "center",
-      }}>
+      <section style={{ background: C.accent, padding: "80px 48px", textAlign: "center" }}>
         <h2 style={{
-          fontFamily: F.heading, fontSize: mob ? 28 : 40, fontWeight: 800,
-          letterSpacing: "-0.02em", margin: "0 0 16px",
-          color: dk ? "#eeeef2" : T.accent,
+          fontFamily: F.heading, fontSize: 36, fontWeight: 800,
+          color: "#fff", margin: "0 0 16px", letterSpacing: "-0.02em",
         }}>
           Ready to modernize your treasury?
         </h2>
         <p style={{
-          fontFamily: F.ui, fontSize: 16, color: T.textSub,
+          fontFamily: F.ui, fontSize: 16, color: "rgba(255,255,255,0.7)",
           maxWidth: 480, margin: "0 auto 32px", lineHeight: 1.6,
         }}>
-          See how ORDR replaces spreadsheets with deterministic, governed hedge computation.
+          Replace spreadsheets with deterministic, governed hedge computation.
         </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link href="/auth/login" style={{
-            fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-            color: T.accentText, background: T.accent,
-            padding: "13px 32px", borderRadius: 10, textDecoration: "none",
-            display: "inline-flex", alignItems: "center", gap: 8,
-          }}>
-            Get Started <ArrowRight size={16} />
-          </Link>
-          <Link href="/contact" style={{
-            fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: T.textSub,
-            padding: "13px 32px", borderRadius: 10, textDecoration: "none",
-            border: `1.5px solid ${T.border}`,
-          }}>
-            Contact Sales
-          </Link>
-        </div>
+        <Link href="/auth/login" style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          fontFamily: F.ui, fontSize: 15, fontWeight: 600,
+          color: C.accent, background: "#fff",
+          padding: "13px 32px", borderRadius: 8, textDecoration: "none",
+        }}>
+          Get Started <ArrowRight size={16} />
+        </Link>
       </section>
+
+      <style>{`
+        @media(max-width:768px){
+          section{padding:60px 20px !important}
+          h1{font-size:36px !important}
+          h2{font-size:24px !important}
+          div[style*="grid-template-columns: repeat(2"]{grid-template-columns:1fr !important}
+        }
+      `}</style>
     </MarketingLayout>
   );
 }

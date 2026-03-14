@@ -1,210 +1,175 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronLeft, ArrowRight, Umbrella, Shield, Settings, FlaskConical, Scale, FileCheck, Lock, BarChart3 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
-import { useMarketingTheme } from "@/components/marketing/useMarketingTheme";
-import { F } from "@/components/marketing/theme";
-import {
-  Umbrella, Clock, ShieldCheck, Coins, FileCheck, Users, FileText, ArrowRight,
-} from "lucide-react";
+import { C, F } from "@/components/marketing/theme";
 
-const FEATURES = [
-  {
-    icon: <Clock size={22} strokeWidth={1.5} />,
-    title: "Liability-Driven Hedging",
-    desc: "Match hedge maturities to insurance liability durations. Tenor-aware optimization aligns hedging horizons with claim payout schedules.",
-  },
-  {
-    icon: <ShieldCheck size={22} strokeWidth={1.5} />,
-    title: "Solvency Requirements",
-    desc: "Tools to support Solvency II capital optimization and risk reporting. Quantify SCR impact of hedging decisions before execution.",
-  },
-  {
-    icon: <Coins size={22} strokeWidth={1.5} />,
-    title: "Currency Risk for Reserves",
-    desc: "Monitor and hedge FX exposure on international reserves and premiums. Track coverage ratios across currency-denominated liabilities.",
-  },
-  {
-    icon: <FileCheck size={22} strokeWidth={1.5} />,
-    title: "Effectiveness Testing",
-    desc: "IFRS 9 prospective effectiveness testing for hedge accounting qualification. Critical terms match and statistical forecast validation.",
-  },
-  {
-    icon: <Users size={22} strokeWidth={1.5} />,
-    title: "Governance Controls",
-    desc: "Maker-checker workflows meet insurance regulatory requirements. Full Separation of Duties enforcement with escalation paths.",
-  },
-  {
-    icon: <FileText size={22} strokeWidth={1.5} />,
-    title: "Comprehensive Reporting",
-    desc: "Generate regulatory reports and board-ready summaries. Pre-built templates for Solvency II SFCR, ORSA, and internal risk reports.",
-  },
+const CHALLENGES = [
+  { title: "ALM Currency Mismatch", desc: "Insurance liabilities denominated in one currency backed by assets in another create structural FX risk that requires systematic hedging." },
+  { title: "Hedge Accounting Complexity", desc: "IFRS 9 effectiveness testing, designation documentation, and ongoing assessment demand purpose-built tooling that spreadsheets cannot provide." },
+  { title: "Regulatory Capital Optimization", desc: "Solvency II and local capital regimes require demonstrable hedge effectiveness to reduce capital charges on FX-exposed portfolios." },
+  { title: "Long-Duration Liabilities", desc: "Multi-year insurance obligations require forward-looking hedge programs with maturity matching and roll strategy management." },
+];
+
+const CAPABILITIES = [
+  { icon: <Scale size={20} />, title: "Liability Hedging", desc: "Portfolio-level exposure decomposition with confirmed and forecast cashflow bucketing across maturity tenors.", product: "ORDR Portfolio" },
+  { icon: <FileCheck size={20} />, title: "IFRS 9 / ASC 815 Compliance", desc: "Prospective effectiveness testing with critical terms match and statistical forecast methods for hedge accounting designation.", product: "ORDR Treasury" },
+  { icon: <Settings size={20} />, title: "Policy Governance", desc: "60 policy templates with governance tiers, maturity profiles, and escalation workflows for institutional oversight.", product: "ORDR Treasury" },
+  { icon: <FlaskConical size={20} />, title: "Scenario Stress Testing", desc: "Configurable shock packs, historical VaR, expected shortfall, and Monte Carlo simulation for risk committee reporting.", product: "ORDR Labs" },
 ];
 
 export default function InsurancePage() {
-  const { T, dk, mob } = useMarketingTheme();
-
   return (
     <MarketingLayout>
-      <style>{`
-        .ins-feat{transition:all .3s cubic-bezier(.4,0,.2,1)}
-        .ins-feat:hover{transform:translateY(-4px);border-color:${dk ? "rgba(236,72,153,0.3)" : "rgba(30,58,95,0.2)"} !important}
-      `}</style>
-
       {/* Hero */}
-      <section style={{
-        padding: mob ? "80px 20px 48px" : "100px 48px 64px",
-        textAlign: "center", position: "relative", background: T.heroGrad,
-      }}>
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 16px",
-            border: `1px solid ${T.border}`, borderRadius: 100,
-            fontFamily: F.mono, fontSize: 12, fontWeight: 600, color: T.textDim,
-            background: dk ? "rgba(236,72,153,0.04)" : "rgba(30,58,95,0.03)",
-            marginBottom: 24,
-          }}>
-            <Umbrella size={14} /> INSURANCE
-          </div>
-          <h1 style={{
-            fontFamily: F.heading, fontSize: mob ? 36 : 56, fontWeight: 800,
-            letterSpacing: "-0.03em", lineHeight: 1.1, margin: 0,
-            color: dk ? "#eeeef2" : T.accent,
-          }}>
-            Insurance
-          </h1>
-          <p style={{
-            fontFamily: F.ui, fontSize: mob ? 16 : 18, color: T.textSub,
-            maxWidth: 560, margin: "20px auto 0", lineHeight: 1.6,
-          }}>
-            Liability hedging and regulatory compliance for insurers. Align hedge
-            maturities with liability durations while satisfying Solvency II requirements.
-          </p>
-        </div>
+      <section style={{ padding: "80px 48px 64px", maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
+        <Link href="/solutions" style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          fontFamily: F.ui, fontSize: 14, color: C.textSub, textDecoration: "none",
+          marginBottom: 32,
+        }}>
+          <ChevronLeft size={14} /> All Solutions
+        </Link>
+        <h1 style={{
+          fontFamily: F.heading, fontSize: 48, fontWeight: 800,
+          letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 16px",
+          color: C.accent,
+        }}>
+          Insurance
+        </h1>
+        <p style={{
+          fontFamily: F.ui, fontSize: 18, color: C.textSub,
+          maxWidth: 560, margin: "0 auto 32px", lineHeight: 1.6,
+        }}>
+          ALM currency risk management and regulatory hedge accounting
+          for insurance companies.
+        </p>
+        <Link href="/auth/login" style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          fontFamily: F.ui, fontSize: 15, fontWeight: 600,
+          color: "#fff", background: C.accent,
+          padding: "13px 32px", borderRadius: 8, textDecoration: "none",
+        }}>
+          Get Started <ArrowRight size={16} />
+        </Link>
       </section>
 
-      {/* Challenge */}
-      <section style={{
-        padding: mob ? "48px 20px" : "72px 48px",
-        background: T.sectionAlt, borderTop: `1px solid ${T.border}`,
-        borderBottom: `1px solid ${T.border}`,
-      }}>
-        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      {/* Challenges */}
+      <section style={{ background: C.bgAlt, padding: "80px 48px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <h2 style={{
-            fontFamily: F.heading, fontSize: mob ? 24 : 32, fontWeight: 700,
-            letterSpacing: "-0.02em", margin: "0 0 20px", color: T.text,
+            fontFamily: F.heading, fontSize: 32, fontWeight: 700,
+            letterSpacing: "-0.02em", margin: "0 0 40px", textAlign: "center", color: C.text,
           }}>
-            The Challenge
+            Your Challenges
           </h2>
-          <p style={{
-            fontFamily: F.ui, fontSize: 16, color: T.textSub, lineHeight: 1.8, margin: 0,
-          }}>
-            Insurance companies hold international reserves and collect premiums in
-            multiple currencies. Mismatched hedge durations create basis risk that
-            amplifies under stress scenarios. Solvency II reporting demands precise
-            quantification of currency risk impact on capital adequacy, and hedge
-            accounting qualification requires ongoing effectiveness documentation.
-          </p>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section style={{ padding: mob ? "48px 20px" : "80px 48px", maxWidth: 1200, margin: "0 auto" }}>
-        <h2 style={{
-          fontFamily: F.heading, fontSize: mob ? 24 : 32, fontWeight: 700,
-          letterSpacing: "-0.02em", margin: "0 0 40px", textAlign: "center", color: T.text,
-        }}>
-          Insurance Hedging Toolkit
-        </h2>
-        <div style={{
-          display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(3, 1fr)", gap: 24,
-        }}>
-          {FEATURES.map((f) => (
-            <div key={f.title} className="ins-feat" style={{
-              background: T.bgCard, border: `1px solid ${T.border}`,
-              borderRadius: 14, padding: "28px 24px", boxShadow: T.cardShadow,
-            }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 10,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: "rgba(236,72,153,0.08)", color: "#ec4899", marginBottom: 16,
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24 }}>
+            {CHALLENGES.map((c) => (
+              <div key={c.title} style={{
+                background: C.bg, border: `1px solid ${C.border}`,
+                borderRadius: 12, padding: "28px 24px",
               }}>
-                {f.icon}
+                <h3 style={{
+                  fontFamily: F.heading, fontSize: 18, fontWeight: 700,
+                  margin: "0 0 10px", color: C.text,
+                }}>
+                  {c.title}
+                </h3>
+                <p style={{
+                  fontFamily: F.ui, fontSize: 14, color: C.textSub,
+                  lineHeight: 1.6, margin: 0,
+                }}>
+                  {c.desc}
+                </p>
               </div>
-              <h3 style={{
-                fontFamily: F.heading, fontSize: 16, fontWeight: 700,
-                margin: "0 0 8px", color: T.text,
-              }}>
-                {f.title}
-              </h3>
-              <p style={{
-                fontFamily: F.ui, fontSize: 14, color: T.textSub, lineHeight: 1.6, margin: 0,
-              }}>
-                {f.desc}
-              </p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Who It's For */}
-      <section style={{
-        padding: mob ? "48px 20px" : "64px 48px",
-        background: T.sectionAlt, borderTop: `1px solid ${T.border}`,
-        borderBottom: `1px solid ${T.border}`,
-      }}>
-        <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
+      {/* Capabilities */}
+      <section style={{ padding: "80px 48px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <h2 style={{
-            fontFamily: F.heading, fontSize: mob ? 24 : 32, fontWeight: 700,
-            letterSpacing: "-0.02em", margin: "0 0 16px", color: T.text,
+            fontFamily: F.heading, fontSize: 32, fontWeight: 700,
+            letterSpacing: "-0.02em", margin: "0 0 40px", textAlign: "center", color: C.text,
           }}>
-            Who It&apos;s For
+            How ORDR Helps
           </h2>
-          <p style={{
-            fontFamily: F.ui, fontSize: 16, color: T.textSub, lineHeight: 1.7, margin: 0,
-          }}>
-            Chief Investment Officers, Heads of ALM, and Risk Actuaries at insurance
-            companies and reinsurers. Built for teams managing multi-currency reserve
-            portfolios under Solvency II or equivalent regulatory frameworks.
-          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24 }}>
+            {CAPABILITIES.map((c) => (
+              <div key={c.title} style={{
+                background: C.bg, border: `1px solid ${C.border}`,
+                borderRadius: 12, padding: "28px 24px",
+              }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 12, marginBottom: 12,
+                }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 8,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: C.accentLight, color: C.accent,
+                  }}>
+                    {c.icon}
+                  </div>
+                  <span style={{
+                    fontFamily: F.mono, fontSize: 11, fontWeight: 600,
+                    color: C.accent, letterSpacing: "0.06em",
+                  }}>
+                    {c.product.toUpperCase()}
+                  </span>
+                </div>
+                <h3 style={{
+                  fontFamily: F.heading, fontSize: 18, fontWeight: 700,
+                  margin: "0 0 10px", color: C.text,
+                }}>
+                  {c.title}
+                </h3>
+                <p style={{
+                  fontFamily: F.ui, fontSize: 14, color: C.textSub,
+                  lineHeight: 1.6, margin: 0,
+                }}>
+                  {c.desc}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section style={{
-        padding: mob ? "48px 20px 64px" : "64px 48px 96px", textAlign: "center",
-      }}>
+      <section style={{ background: C.accent, padding: "80px 48px", textAlign: "center" }}>
         <h2 style={{
-          fontFamily: F.heading, fontSize: mob ? 28 : 40, fontWeight: 800,
-          letterSpacing: "-0.02em", margin: "0 0 16px",
-          color: dk ? "#eeeef2" : T.accent,
+          fontFamily: F.heading, fontSize: 36, fontWeight: 800,
+          color: "#fff", margin: "0 0 16px", letterSpacing: "-0.02em",
         }}>
-          Align hedging with liabilities
+          Governed hedging for insurers
         </h2>
         <p style={{
-          fontFamily: F.ui, fontSize: 16, color: T.textSub,
+          fontFamily: F.ui, fontSize: 16, color: "rgba(255,255,255,0.7)",
           maxWidth: 480, margin: "0 auto 32px", lineHeight: 1.6,
         }}>
-          Duration-matched hedging with governance controls built for insurance regulation.
+          Hedge accounting compliance and ALM risk management in one platform.
         </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link href="/auth/login" style={{
-            fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-            color: T.accentText, background: T.accent,
-            padding: "13px 32px", borderRadius: 10, textDecoration: "none",
-            display: "inline-flex", alignItems: "center", gap: 8,
-          }}>
-            Get Started <ArrowRight size={16} />
-          </Link>
-          <Link href="/contact" style={{
-            fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: T.textSub,
-            padding: "13px 32px", borderRadius: 10, textDecoration: "none",
-            border: `1.5px solid ${T.border}`,
-          }}>
-            Contact Sales
-          </Link>
-        </div>
+        <Link href="/auth/login" style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          fontFamily: F.ui, fontSize: 15, fontWeight: 600,
+          color: C.accent, background: "#fff",
+          padding: "13px 32px", borderRadius: 8, textDecoration: "none",
+        }}>
+          Get Started <ArrowRight size={16} />
+        </Link>
       </section>
+
+      <style>{`
+        @media(max-width:768px){
+          section{padding:60px 20px !important}
+          h1{font-size:36px !important}
+          h2{font-size:24px !important}
+          div[style*="grid-template-columns: repeat(2"]{grid-template-columns:1fr !important}
+        }
+      `}</style>
     </MarketingLayout>
   );
 }

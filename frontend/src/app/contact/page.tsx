@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
-import { useMarketingTheme } from "@/components/marketing/useMarketingTheme";
-import { F } from "@/components/marketing/theme";
-import {
-  Mail, MapPin, Send, CheckCircle2,
-} from "lucide-react";
+import { C, F } from "@/components/marketing/theme";
+import { Mail, MapPin, Send, CheckCircle2 } from "lucide-react";
 
 const ROLES = [
   "VP Treasury",
@@ -28,7 +25,6 @@ const CONTACTS = [
 ];
 
 export default function ContactPage() {
-  const { T, dk, mob } = useMarketingTheme();
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
     name: "", email: "", company: "", role: "", message: "",
@@ -44,12 +40,11 @@ export default function ContactPage() {
     padding: "12px 14px",
     fontFamily: F.ui,
     fontSize: 14,
-    color: T.text,
-    background: dk ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)",
-    border: `1px solid ${T.border}`,
+    color: C.text,
+    background: "#fff",
+    border: `1px solid ${C.border}`,
     borderRadius: 8,
     outline: "none",
-    transition: "border-color .2s",
   };
 
   const labelStyle: React.CSSProperties = {
@@ -57,42 +52,32 @@ export default function ContactPage() {
     fontFamily: F.ui,
     fontSize: 13,
     fontWeight: 600,
-    color: T.text,
+    color: C.text,
     marginBottom: 6,
   };
 
   return (
     <MarketingLayout>
       <style>{`
-        .ct-input:focus{border-color:${T.accent} !important;box-shadow:0 0 0 3px ${dk ? "rgba(34,211,238,0.1)" : "rgba(30,58,95,0.08)"}}
-        .ct-contact{transition:all .2s}
-        .ct-contact:hover{background:${dk ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)"} !important}
+        .ct-input:focus{border-color:${C.accent} !important;box-shadow:0 0 0 3px rgba(30,58,95,0.08)}
       `}</style>
 
       {/* Hero */}
       <section style={{
-        padding: mob ? "80px 20px 48px" : "100px 48px 64px",
-        textAlign: "center", background: T.heroGrad,
+        padding: "100px 48px 64px",
+        textAlign: "center",
+        background: C.bg,
       }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 16px",
-            border: `1px solid ${T.border}`, borderRadius: 100,
-            fontFamily: F.mono, fontSize: 12, fontWeight: 600, color: T.textDim,
-            background: dk ? "rgba(34,211,238,0.03)" : "rgba(30,58,95,0.03)",
-            marginBottom: 24,
-          }}>
-            CONTACT
-          </div>
           <h1 style={{
-            fontFamily: F.heading, fontSize: mob ? 36 : 56, fontWeight: 800,
+            fontFamily: F.heading, fontSize: 56, fontWeight: 800,
             letterSpacing: "-0.03em", lineHeight: 1.1, margin: 0,
-            color: dk ? "#eeeef2" : T.accent,
+            color: C.accent,
           }}>
             Contact Us
           </h1>
           <p style={{
-            fontFamily: F.ui, fontSize: mob ? 16 : 18, color: T.textSub,
+            fontFamily: F.ui, fontSize: 18, color: C.textSub,
             maxWidth: 500, margin: "20px auto 0", lineHeight: 1.6,
           }}>
             Let&apos;s discuss how ORDR can transform your hedge operations.
@@ -102,19 +87,18 @@ export default function ContactPage() {
 
       {/* Two-column layout */}
       <section style={{
-        padding: mob ? "48px 20px 64px" : "80px 48px 96px",
+        padding: "80px 48px 96px",
         maxWidth: 1100, margin: "0 auto",
       }}>
         <div style={{
           display: "grid",
-          gridTemplateColumns: mob ? "1fr" : "1.2fr 0.8fr",
-          gap: mob ? 40 : 48,
+          gridTemplateColumns: "1.2fr 0.8fr",
+          gap: 48,
         }}>
           {/* Left: Form */}
           <div style={{
-            background: T.bgCard, border: `1px solid ${T.border}`,
-            borderRadius: 16, padding: mob ? "28px 20px" : "40px 36px",
-            boxShadow: T.cardShadow,
+            background: C.bg, border: `1px solid ${C.border}`,
+            borderRadius: 12, padding: "40px 36px",
           }}>
             {submitted ? (
               <div style={{
@@ -122,20 +106,20 @@ export default function ContactPage() {
               }}>
                 <div style={{
                   width: 64, height: 64, borderRadius: "50%",
-                  background: dk ? "rgba(52,211,153,0.1)" : "rgba(22,163,74,0.08)",
+                  background: "rgba(22,163,74,0.08)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   margin: "0 auto 24px",
                 }}>
-                  <CheckCircle2 size={32} style={{ color: T.green }} />
+                  <CheckCircle2 size={32} style={{ color: "#16a34a" }} />
                 </div>
                 <h3 style={{
                   fontFamily: F.heading, fontSize: 24, fontWeight: 700,
-                  margin: "0 0 12px", color: T.text,
+                  margin: "0 0 12px", color: C.text,
                 }}>
                   Thank you
                 </h3>
                 <p style={{
-                  fontFamily: F.ui, fontSize: 15, color: T.textSub, lineHeight: 1.6,
+                  fontFamily: F.ui, fontSize: 15, color: C.textSub, lineHeight: 1.6,
                   maxWidth: 360, margin: "0 auto",
                 }}>
                   We have received your message and will get back to you within
@@ -146,7 +130,7 @@ export default function ContactPage() {
               <>
                 <h2 style={{
                   fontFamily: F.heading, fontSize: 22, fontWeight: 700,
-                  margin: "0 0 24px", color: T.text,
+                  margin: "0 0 24px", color: C.text,
                 }}>
                   Send us a message
                 </h2>
@@ -155,7 +139,7 @@ export default function ContactPage() {
                 }}>
                   <div style={{
                     display: "grid",
-                    gridTemplateColumns: mob ? "1fr" : "1fr 1fr",
+                    gridTemplateColumns: "1fr 1fr",
                     gap: 16,
                   }}>
                     <div>
@@ -185,7 +169,7 @@ export default function ContactPage() {
                   </div>
                   <div style={{
                     display: "grid",
-                    gridTemplateColumns: mob ? "1fr" : "1fr 1fr",
+                    gridTemplateColumns: "1fr 1fr",
                     gap: 16,
                   }}>
                     <div>
@@ -209,7 +193,7 @@ export default function ContactPage() {
                           ...inputStyle,
                           appearance: "none" as const,
                           cursor: "pointer",
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(T.textDim)}' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999999' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
                           backgroundRepeat: "no-repeat",
                           backgroundPosition: "right 12px center",
                         }}
@@ -241,13 +225,12 @@ export default function ContactPage() {
                     type="submit"
                     style={{
                       fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-                      color: dk ? "#000" : "#fff",
-                      background: T.accent,
-                      padding: "13px 28px", borderRadius: 10,
+                      color: "#fff",
+                      background: C.accent,
+                      padding: "13px 28px", borderRadius: 8,
                       border: "none", cursor: "pointer",
                       display: "inline-flex", alignItems: "center",
                       justifyContent: "center", gap: 8,
-                      transition: "opacity .2s",
                     }}
                   >
                     <Send size={16} /> Send Message
@@ -261,12 +244,12 @@ export default function ContactPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <h2 style={{
               fontFamily: F.heading, fontSize: 22, fontWeight: 700,
-              margin: "0 0 8px", color: T.text,
+              margin: "0 0 8px", color: C.text,
             }}>
               Get in touch
             </h2>
             <p style={{
-              fontFamily: F.ui, fontSize: 14, color: T.textSub,
+              fontFamily: F.ui, fontSize: 14, color: C.textSub,
               lineHeight: 1.6, margin: "0 0 8px",
             }}>
               Reach out directly or fill in the form and our team will respond
@@ -275,26 +258,24 @@ export default function ContactPage() {
             {CONTACTS.map((c) => (
               <div
                 key={c.label}
-                className="ct-contact"
                 style={{
                   display: "flex", alignItems: "flex-start", gap: 14,
                   padding: "16px 18px",
-                  background: T.bgCard, border: `1px solid ${T.border}`,
-                  borderRadius: 12,
+                  background: C.bg, border: `1px solid ${C.border}`,
+                  borderRadius: 10,
                 }}
               >
                 <div style={{
-                  width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                  width: 40, height: 40, borderRadius: 8, flexShrink: 0,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: dk ? T.accentSoft : T.accentSoft,
-                  color: T.accent,
+                  background: C.accentLight, color: C.accent,
                 }}>
                   {c.icon}
                 </div>
                 <div>
                   <div style={{
                     fontFamily: F.ui, fontSize: 13, fontWeight: 600,
-                    color: T.text, marginBottom: 2,
+                    color: C.text, marginBottom: 2,
                   }}>
                     {c.label}
                   </div>
@@ -302,7 +283,7 @@ export default function ContactPage() {
                     <a
                       href={c.href}
                       style={{
-                        fontFamily: F.mono, fontSize: 13, color: T.accent,
+                        fontFamily: F.mono, fontSize: 13, color: C.accent,
                         textDecoration: "none",
                       }}
                     >
@@ -310,7 +291,7 @@ export default function ContactPage() {
                     </a>
                   ) : (
                     <span style={{
-                      fontFamily: F.ui, fontSize: 13, color: T.textSub,
+                      fontFamily: F.ui, fontSize: 13, color: C.textSub,
                     }}>
                       {c.value}
                     </span>
@@ -321,6 +302,15 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+
+      <style>{`
+        @media(max-width:768px){
+          section{padding:60px 20px !important}
+          h1{font-size:36px !important}
+          div[style*="grid-template-columns: 1.2fr"]{grid-template-columns:1fr !important}
+          div[style*="grid-template-columns: 1fr 1fr"]{grid-template-columns:1fr !important}
+        }
+      `}</style>
     </MarketingLayout>
   );
 }
