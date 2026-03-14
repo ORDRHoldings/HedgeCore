@@ -236,7 +236,9 @@ async def upload_audit_dataset(
     if pend < pstart:
         raise HTTPException(status_code=422, detail="period_end must be >= period_start.")
 
-    # Insert dataset
+    # Insert dataset — pass correct Python types for asyncpg binary protocol
+    # asyncpg requires: uuid.UUID for UUID cols, datetime.date for DATE cols,
+    # list/dict for JSONB cols (not JSON strings, not string UUIDs, not string dates)
     dataset_id = str(uuid.uuid4())
     try:
         await session.execute(
@@ -244,19 +246,18 @@ async def upload_audit_dataset(
                 "INSERT INTO audit_datasets "
                 "(id, company_id, period_start, period_end, source_filename, source_hash, "
                 " row_count, currency_pairs, created_by, created_at) "
-                "VALUES (CAST(:id AS uuid), CAST(:cid AS uuid), CAST(:ps AS date), CAST(:pe AS date), "
-                " :fn, :sh, :rc, CAST(:cp AS jsonb), CAST(:cb AS uuid), NOW())"
+                "VALUES (:id, :cid, :ps, :pe, :fn, :sh, :rc, :cp, :cb, NOW())"
             ),
             {
-                "id": dataset_id,
-                "cid": company_id,
-                "ps": str(pstart),
-                "pe": str(pend),
+                "id": uuid.UUID(dataset_id),
+                "cid": uuid.UUID(company_id),
+                "ps": pstart,                         # datetime.date object
+                "pe": pend,                           # datetime.date object
                 "fn": file.filename or "upload.csv",
                 "sh": source_hash,
                 "rc": len(rows),
-                "cp": json.dumps(sorted(currency_pairs)),
-                "cb": str(current_user.id),
+                "cp": sorted(currency_pairs),         # Python list → JSONB
+                "cb": current_user.id,                # uuid.UUID object
             },
         )
 
@@ -264,12 +265,12 @@ async def upload_audit_dataset(
         txn_params = []
         for row in rows:
             txn_params.append({
-                "id": str(uuid.uuid4()),
-                "did": dataset_id,
-                "cid": company_id,
+                "id": uuid.uuid4(),
+                "did": uuid.UUID(dataset_id),
+                "cid": uuid.UUID(company_id),
                 "ri": row["row_index"],
-                "td": row["trade_date"],
-                "vd": row["value_date"] or None,
+                "td": _parse_date(row["trade_date"]) if isinstance(row["trade_date"], str) else row["trade_date"],
+                "vd": _parse_date(row["value_date"]) if isinstance(row["value_date"], str) else row["value_date"],
                 "cs": row["currency_sold"],
                 "cb": row["currency_bought"],
                 "as_": row["amount_sold"],
@@ -280,7 +281,7 @@ async def upload_audit_dataset(
                 "fc": row["fee_currency"],
                 "ref": row["reference"],
                 "rh": _row_hash(row),
-                "pw": json.dumps(row["parse_warnings"] or []),
+                "pw": row["parse_warnings"] or [],    # Python list → JSONB
             })
         if txn_params:
             await session.execute(
@@ -290,9 +291,8 @@ async def upload_audit_dataset(
                     " currency_sold, currency_bought, amount_sold, amount_bought, "
                     " effective_rate, counterparty, fee_amount, fee_currency, reference, "
                     " row_hash, parse_warnings, created_at) "
-                    "VALUES (CAST(:id AS uuid), CAST(:did AS uuid), CAST(:cid AS uuid), :ri, "
-                    " CAST(:td AS date), CAST(:vd AS date), :cs, :cb, :as_, :ab, "
-                    " :er, :cp, :fa, :fc, :ref, :rh, CAST(:pw AS jsonb), NOW())"
+                    "VALUES (:id, :did, :cid, :ri, :td, :vd, :cs, :cb, :as_, :ab, "
+                    " :er, :cp, :fa, :fc, :ref, :rh, :pw, NOW())"
                 ),
                 txn_params,
             )
