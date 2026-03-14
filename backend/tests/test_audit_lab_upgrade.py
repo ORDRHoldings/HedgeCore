@@ -222,8 +222,8 @@ class TestMxnDefaultRemoval:
     def test_null_currency_skipped(self):
         """Verify source code skips null primary_currency."""
         import inspect
-        from app.api.routes.v1_audit_lab import create_audit_run
-        source = inspect.getsource(create_audit_run)
+        from app.api.routes.v1_audit_lab import _create_audit_run_inner
+        source = inspect.getsource(_create_audit_run_inner)
         assert "if not s.primary_currency:" in source
         assert 'or "MXN"' not in source
 
