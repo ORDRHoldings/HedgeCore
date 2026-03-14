@@ -113,7 +113,20 @@ function AuditLabUploadPageInner() {
         if (res.status === 409) {
           // Dataset already exists — recover by advancing to run phase with the existing dataset_id
           const det = (data as Record<string, unknown>).detail as Record<string, string> | undefined;
-          const existingId = det?.dataset_id;
+          let existingId = det?.dataset_id;
+
+          // Fallback: if backend didn't include dataset_id, look it up via GET /datasets by source_hash
+          if (!existingId && det?.source_hash) {
+            try {
+              const listRes = await dashboardFetch("/v1/audit-lab/datasets", token);
+              if (listRes.ok) {
+                const listData = await listRes.json() as { items: Array<{ id: string; source_hash: string }> };
+                const match = listData.items?.find(d => d.source_hash === det!.source_hash);
+                existingId = match?.id;
+              }
+            } catch { /* ignore — fall through to error */ }
+          }
+
           if (existingId) {
             setDatasetId(existingId);
             setUploadResult({ row_count: 0, currency_pairs_detected: [], _reused: true });
