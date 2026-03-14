@@ -113,7 +113,8 @@ function AuditLabUploadPageInner() {
         if (res.status === 409) {
           setError(`Duplicate dataset: SHA-256 ${(data as Record<string,string>).source_hash?.slice(0, 16)}… already exists.`);
         } else {
-          setError((data as Record<string,string>).detail ?? "Upload failed.");
+          const det = (data as Record<string, unknown>).detail;
+          setError(typeof det === "string" ? det : det != null ? JSON.stringify(det) : "Upload failed.");
         }
         return;
       }
@@ -146,7 +147,8 @@ function AuditLabUploadPageInner() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError((data as Record<string,string>).detail ?? "Audit run failed.");
+        const det = (data as Record<string, unknown>).detail;
+        setError(typeof det === "string" ? det : det != null ? JSON.stringify(det) : "Audit run failed.");
         return;
       }
       setPhase("done");
