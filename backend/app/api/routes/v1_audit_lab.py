@@ -244,7 +244,8 @@ async def upload_audit_dataset(
                 "INSERT INTO audit_datasets "
                 "(id, company_id, period_start, period_end, source_filename, source_hash, "
                 " row_count, currency_pairs, created_by, created_at) "
-                "VALUES (:id, :cid::uuid, :ps::date, :pe::date, :fn, :sh, :rc, :cp::jsonb, :cb::uuid, NOW())"
+                "VALUES (CAST(:id AS uuid), CAST(:cid AS uuid), CAST(:ps AS date), CAST(:pe AS date), "
+                " :fn, :sh, :rc, CAST(:cp AS jsonb), CAST(:cb AS uuid), NOW())"
             ),
             {
                 "id": dataset_id,
@@ -268,7 +269,7 @@ async def upload_audit_dataset(
                 "cid": company_id,
                 "ri": row["row_index"],
                 "td": row["trade_date"],
-                "vd": row["value_date"],
+                "vd": row["value_date"] or None,
                 "cs": row["currency_sold"],
                 "cb": row["currency_bought"],
                 "as_": row["amount_sold"],
@@ -289,8 +290,9 @@ async def upload_audit_dataset(
                     " currency_sold, currency_bought, amount_sold, amount_bought, "
                     " effective_rate, counterparty, fee_amount, fee_currency, reference, "
                     " row_hash, parse_warnings, created_at) "
-                    "VALUES (:id, :did::uuid, :cid::uuid, :ri, :td::date, :vd::date, :cs, :cb, :as_, :ab, "
-                    " :er, :cp, :fa, :fc, :ref, :rh, :pw::jsonb, NOW())"
+                    "VALUES (CAST(:id AS uuid), CAST(:did AS uuid), CAST(:cid AS uuid), :ri, "
+                    " CAST(:td AS date), CAST(:vd AS date), :cs, :cb, :as_, :ab, "
+                    " :er, :cp, :fa, :fc, :ref, :rh, CAST(:pw AS jsonb), NOW())"
                 ),
                 txn_params,
             )
