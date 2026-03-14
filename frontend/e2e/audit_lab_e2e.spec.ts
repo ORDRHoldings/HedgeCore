@@ -185,16 +185,22 @@ test.describe("Audit Lab — Full E2E Pipeline (3 Datasets)", () => {
       await parseBtn.click();
       console.log("  ✓ Clicked UPLOAD & PARSE");
 
-      // Wait for success banner (phase 2) OR error message
+      // Wait for phase "run" — either success banner OR the RUN button appearing
+      // (On duplicate 409, frontend skips the banner and goes directly to run phase)
       const successBanner = page.locator("text=DATASET UPLOADED SUCCESSFULLY").first();
+      const runPhaseBtn = page.locator("button:has-text('RUN AUDIT ANALYSIS')").first();
       try {
-        await successBanner.waitFor({ state: "visible", timeout: 40000 });
+        await Promise.race([
+          successBanner.waitFor({ state: "visible", timeout: 40000 }),
+          runPhaseBtn.waitFor({ state: "visible", timeout: 40000 }),
+        ]);
+        console.log("  ✓ Reached run phase (upload succeeded or duplicate recovered)");
       } catch (e: unknown) {
         // TimeoutError — dump body for diagnosis
         const bodySnippet = (await page.locator("body").textContent() ?? "").slice(0, 1200).replace(/\s+/g, " ");
-        console.log(`  ✗ Upload banner not shown. Page content: ${bodySnippet}`);
-        // Check if an error banner is visible
-        const errorEl = page.getByText(/upload failed|network error|duplicate dataset|error/i).first();
+        console.log(`  ✗ Did not reach run phase. Page content: ${bodySnippet}`);
+        // Check if an error banner is visible (non-409 errors)
+        const errorEl = page.getByText(/upload failed|network error/i).first();
         if (await errorEl.isVisible({ timeout: 2000 }).catch(() => false)) {
           const errText = (await errorEl.textContent() ?? "").trim();
           throw new Error(`Upload returned error: ${errText}`);

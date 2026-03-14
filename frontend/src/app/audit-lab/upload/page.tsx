@@ -116,6 +116,7 @@ function AuditLabUploadPageInner() {
           const existingId = det?.dataset_id;
           if (existingId) {
             setDatasetId(existingId);
+            setUploadResult({ row_count: 0, currency_pairs_detected: [], _reused: true });
             setPhase("run");
             return;
           }
