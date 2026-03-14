@@ -21,7 +21,7 @@ const CONTACTS = [
   { icon: <Mail size={20} strokeWidth={1.5} />, label: "General Inquiries", value: "info@orderterminal.com", href: "mailto:info@orderterminal.com" },
   { icon: <Mail size={20} strokeWidth={1.5} />, label: "Sales", value: "sales@orderterminal.com", href: "mailto:sales@orderterminal.com" },
   { icon: <Mail size={20} strokeWidth={1.5} />, label: "Support", value: "support@orderterminal.com", href: "mailto:support@orderterminal.com" },
-  { icon: <MapPin size={20} strokeWidth={1.5} />, label: "Office", value: "London, United Kingdom", href: null },
+  { icon: <MapPin size={20} strokeWidth={1.5} />, label: "Headquarters", value: "Newport Beach, CA, USA", href: null },
 ];
 
 export default function ContactPage() {

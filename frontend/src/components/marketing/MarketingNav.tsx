@@ -29,7 +29,7 @@ const SOL_ICONS: Record<string, React.ReactNode> = {
 };
 
 const NAV_LINKS = [
-  { label: "Pricing", href: "/pricing" },
+  { label: "ORDR Market", href: "/products/market" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
 ];
