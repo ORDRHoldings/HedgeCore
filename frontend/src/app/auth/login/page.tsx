@@ -116,9 +116,11 @@ export default function LoginPage() {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
 
   useParticleField(canvasRef, {
-    color:          C.accent,
-    connectionDist: 140,
-    lineOpacity:    0.28,
+    colorful:       true,
+    connectionDist: 150,
+    lineOpacity:    0.22,
+    saturation:     35,
+    lightness:      86,
   });
 
   useEffect(() => {
@@ -503,7 +505,7 @@ export default function LoginPage() {
         style={{
           position: "fixed", top: 0, left: 0,
           width: "100%", height: "100%",
-          zIndex: 1, opacity: 0.6,
+          zIndex: 1, opacity: 0.7,
           pointerEvents: "none",
         }}
       />

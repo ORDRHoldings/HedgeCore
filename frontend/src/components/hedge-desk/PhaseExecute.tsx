@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import type { BucketResult } from "@/api/types";
 import { translateError, translateCaughtError, type TranslatedError } from "@/lib/errors/hedgeErrors";
@@ -8,16 +8,13 @@ import HedgeErrorBanner from "./ErrorBanner";
 import {
   CheckCircleIcon, AlertCircleIcon, LoaderIcon, ChevronLeftIcon,
   CopyIcon, ExternalLinkIcon, ShieldCheckIcon, UserCheckIcon,
-  ActivityIcon, AlertTriangleIcon, InfoIcon,
+  AlertTriangleIcon, InfoIcon, WifiIcon, WifiOffIcon,
+  ZapIcon, XCircleIcon,
 } from "lucide-react";
 import { T, CME_SPECS, DEFAULT_CME_SPEC } from "./tokens";
 import type { CmeSpec } from "./tokens";
 
 const DEFAULT_SPEC = DEFAULT_CME_SPEC;
-
-// ─── Market snapshot types ───────────────────────────────────────────────────
-interface FxRateEntry { symbol: string; bid: number; ask: number; mid: number; }
-interface MarketSnap  { rates: FxRateEntry[]; source: string; cachedAt: number; }
 
 // ─── IBKR deep link helpers ──────────────────────────────────────────────────
 function ibkrNativeUrl(spec: CmeSpec, side: string, qty: number, rate: number): string {
@@ -81,6 +78,19 @@ function computeTicket(bucket: BucketResult, defaultCurrency = "MXN"): TicketMet
   return { spec, side, contracts, margin, notional, estCost, hedgeEffectiveness, currency };
 }
 
+// ─── IBKR execution types ────────────────────────────────────────────────────
+type IBKRStatus = "idle" | "connecting" | "executing" | "filled" | "error";
+
+interface IBKRFillResult {
+  currency_pair: string;
+  action: string;
+  fill_price: number;
+  fill_quantity: number;
+  status: string;
+  exec_id?: string;
+  error?: string;
+}
+
 // ─── Props ───────────────────────────────────────────────────────────────────
 interface PhaseExecuteProps {
   proposalIds: string[];
@@ -103,30 +113,10 @@ export default function PhaseExecute({
   const [copiedRow, setCopiedRow]               = useState<number | null>(null);
   const [showConfirm, setShowConfirm]           = useState(false);
 
-  // ── Live market snapshot (from /api/market/fx/rates) ─────────────────────
-  const [marketSnap, setMarketSnap]   = useState<MarketSnap | null>(null);
-  const [snapLoading, setSnapLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setSnapLoading(true);
-      try {
-        const res = await fetch("/api/market/fx/rates");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json() as MarketSnap;
-        if (!cancelled) setMarketSnap(data);
-      } catch {
-        // fail silently — panel hides on error
-      } finally {
-        if (!cancelled) setSnapLoading(false);
-      }
-    };
-    load();
-    // Refresh every 60 s (matches server cache TTL)
-    const id = setInterval(load, 60_000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, []);
+  // ── IBKR execution state ─────────────────────────────────────────────────
+  const [ibkrStatus, setIbkrStatus]   = useState<IBKRStatus>("idle");
+  const [ibkrResults, setIbkrResults] = useState<IBKRFillResult[]>([]);
+  const [ibkrError, setIbkrError]     = useState<string | null>(null);
 
   // ── Buckets ───────────────────────────────────────────────────────────────
   // calcResult may be the full CalculateResult { calcResponse, marketSnapshot, ... }
@@ -149,14 +139,14 @@ export default function PhaseExecute({
 
   const fillOk = !executing && !done;
 
-  // ── Execute ───────────────────────────────────────────────────────────────
-  const handleMarkHedged = async () => {
+  // ── Execute (mark hedged) ───────────────────────────────────────────────
+  const handleMarkHedged = useCallback(async (ibkrFillPrice?: number) => {
     if (proposalIds.length === 0) {
       setError(translateError(400, "No execution proposals available. Return to Review step."));
       return;
     }
     setExecuting(true); setError(null); setAwaitingApproval(false);
-    const parsedFillPrice = fillPrice ? parseFloat(fillPrice) : 0;
+    const parsedFillPrice = ibkrFillPrice ?? (fillPrice ? parseFloat(fillPrice) : 0);
     try {
       const results = await Promise.allSettled(
         proposalIds.map(async (id) => {
@@ -202,7 +192,93 @@ export default function PhaseExecute({
     } catch (e) {
       setError(translateCaughtError(e));
     } finally { setExecuting(false); }
-  };
+  }, [proposalIds, fillPrice, token, totals, governanceMode, runId, buckets, engineResponse, onComplete]);
+
+  // ── IBKR Execute ───────────────────────────────────────────────────────
+  const handleIBKRExecute = useCallback(async () => {
+    setIbkrError(null);
+    setIbkrResults([]);
+    setIbkrStatus("connecting");
+
+    try {
+      // 1. Check IBKR status
+      const statusRes = await dashboardFetch("/v1/ibkr/status", token);
+      if (!statusRes.ok) {
+        throw new Error("Failed to check IBKR status");
+      }
+      const statusData = await statusRes.json() as { connected: boolean; enabled: boolean; error?: string };
+
+      if (!statusData.enabled) {
+        throw new Error("IBKR integration is not enabled on the server. Contact your administrator.");
+      }
+
+      // 2. Connect if not connected
+      if (!statusData.connected) {
+        const connectRes = await dashboardFetch("/v1/ibkr/connect", token, { method: "POST", body: JSON.stringify({}) });
+        if (!connectRes.ok) {
+          const errBody = await connectRes.json().catch(() => ({}));
+          throw new Error((errBody as { detail?: string }).detail ?? "Failed to connect to IBKR Gateway");
+        }
+      }
+
+      setIbkrStatus("executing");
+
+      // 3. Build orders from trade tickets
+      const orders = buckets.map(b => {
+        const m = computeTicket(b);
+        const pair = `USD${m.currency}`;
+        return {
+          currency_pair: pair,
+          action: m.side,
+          quantity: m.contracts * m.spec.contract_size,
+          order_type: "MKT",
+        };
+      });
+
+      // 4. Execute via IBKR
+      const execRes = await dashboardFetch("/v1/ibkr/execute", token, {
+        method: "POST",
+        body: JSON.stringify({
+          proposal_id: proposalIds[0] ?? "",
+          orders,
+        }),
+      });
+
+      if (!execRes.ok) {
+        const errBody = await execRes.json().catch(() => ({}));
+        throw new Error((errBody as { detail?: string }).detail ?? `IBKR execution failed: HTTP ${execRes.status}`);
+      }
+
+      const execData = await execRes.json() as {
+        success: boolean;
+        fills: IBKRFillResult[];
+        weighted_avg_price: number;
+        total_notional: number;
+        message: string;
+      };
+
+      setIbkrResults(execData.fills);
+
+      if (execData.success) {
+        setIbkrStatus("filled");
+        // Use IBKR fill price for the proposal record
+        const ibkrFillPrice = execData.weighted_avg_price > 0 ? execData.weighted_avg_price : undefined;
+        if (ibkrFillPrice) {
+          setFillPrice(ibkrFillPrice.toFixed(6));
+        }
+        // Proceed to mark hedged with IBKR fill price
+        await handleMarkHedged(ibkrFillPrice);
+      } else {
+        // Partial fills or errors
+        setIbkrStatus("error");
+        setIbkrError(execData.message);
+      }
+
+    } catch (err) {
+      setIbkrStatus("error");
+      setIbkrError(err instanceof Error ? err.message : "IBKR execution failed");
+    }
+  }, [token, buckets, proposalIds, handleMarkHedged]);
 
   // ── Copy ticket row ───────────────────────────────────────────────────────
   const copyRow = (b: BucketResult, i: number) => {
@@ -218,11 +294,6 @@ export default function PhaseExecute({
     ].join("\n");
     navigator.clipboard.writeText(text).then(() => { setCopiedRow(i); setTimeout(() => setCopiedRow(null), 2000); }).catch(() => undefined);
   };
-
-  // ── Helpers for market panel ──────────────────────────────────────────────
-  const spotMxn = marketSnap?.rates?.find(r => r.symbol === "USDMXN");
-  const snapTs  = marketSnap ? new Date(marketSnap.cachedAt).toISOString().slice(11, 19) + " UTC" : null;
-  const srcLive = marketSnap?.source === "live" || marketSnap?.source === "cache";
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -243,7 +314,7 @@ export default function PhaseExecute({
             <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.primary }}>EXECUTION CONFIRMATION</span>
           </div>
           <span style={{ fontFamily: T.fontUI, fontSize: 12, color: T.secondary }}>
-            Review trade tickets, verify broker fills, and confirm execution
+            Review trade tickets, execute via IBKR, and confirm execution
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -271,118 +342,10 @@ export default function PhaseExecute({
           }}>
             <AlertTriangleIcon size={14} color={T.amber} style={{ flexShrink: 0, marginTop: 1 }} />
             <span style={{ fontFamily: T.fontUI, fontSize: 12, color: T.amber, lineHeight: "1.5" }}>
-              ORDR Terminal generates trade tickets for manual execution. Submit these tickets to your broker platform, then record the execution details below.
+              ORDR Terminal will execute these trade tickets via IBKR Gateway. Review all tickets carefully before confirming.
             </span>
           </div>
         )}
-
-        {/* ── LIVE MARKET SNAPSHOT panel ──────────────────────────────── */}
-        <div style={{
-          marginBottom: 16,
-          background: T.bgSub,
-          border: `1px solid ${T.rim}`,
-          borderRadius: 3,
-          overflow: "hidden",
-        }}>
-          {/* Panel header */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "7px 14px",
-            borderBottom: `1px solid ${T.soft}`,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <ActivityIcon size={12} color={T.cyan} />
-              <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.tertiary }}>
-                LIVE MARKET SNAPSHOT
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {snapLoading ? (
-                <LoaderIcon size={10} color={T.tertiary} style={{ animation: "spin 1s linear infinite" }} />
-              ) : (
-                <span style={{
-                  fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
-                  color: srcLive ? T.green : T.amber,
-                  background: srcLive ? "color-mix(in srgb, var(--status-pass,#22c55e) 10%, transparent)" : "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
-                  border: srcLive ? "1px solid color-mix(in srgb, var(--status-pass,#22c55e) 25%, transparent)" : "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
-                  padding: "2px 8px", borderRadius: 2,
-                }}>
-                  {srcLive ? "● LIVE" : "◌ INDICATIVE"}
-                </span>
-              )}
-              {snapTs && !snapLoading && (
-                <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>
-                  as of {snapTs}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Rate cells */}
-          <div style={{ display: "flex", flexWrap: "wrap" }}>
-            {snapLoading ? (
-              <div style={{ padding: "12px 16px", fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>
-                Fetching live rates...
-              </div>
-            ) : marketSnap?.rates?.length ? (
-              marketSnap.rates.map(r => (
-                <div key={r.symbol} style={{
-                  padding: "10px 18px",
-                  borderRight: `1px solid ${T.soft}`,
-                  borderBottom: `1px solid ${T.soft}`,
-                  minWidth: 130,
-                }}>
-                  <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.12em", marginBottom: 4 }}>
-                    {r.symbol}
-                  </div>
-                  <div style={{ fontFamily: T.fontMono, fontSize: 14, fontWeight: 700, color: T.primary, marginBottom: 2 }}>
-                    {r.mid.toFixed(4)}
-                  </div>
-                  <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>
-                    {r.bid.toFixed(4)} / {r.ask.toFixed(4)}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div style={{ padding: "12px 16px", fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>
-                Market data unavailable
-              </div>
-            )}
-          </div>
-
-          {/* Calc-rate vs spot comparison (MXN only) */}
-          {spotMxn && buckets.length > 0 && (() => {
-            const b0 = buckets[0];
-            const fwdUsed = parseFloat(fillPrice) > 0 ? parseFloat(fillPrice) : b0.forward_rate;
-            const premium = ((fwdUsed - spotMxn.mid) / spotMxn.mid * 100).toFixed(2);
-            const premAmt = fwdUsed - spotMxn.mid;
-            return (
-              <div style={{
-                display: "flex", alignItems: "center", gap: 24,
-                padding: "7px 14px",
-                borderTop: `1px solid ${T.soft}`,
-                background: T.bgPanel,
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.08em" }}>SPOT USDMXN</span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.primary }}>{spotMxn.mid.toFixed(4)}</span>
-                </div>
-                <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.08em" }}>FWD RATE USED</span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: T.cyan }}>{fwdUsed.toFixed(4)}</span>
-                </div>
-                <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.08em" }}>FWD PREMIUM</span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, color: premAmt >= 0 ? T.green : T.red }}>
-                    {premAmt >= 0 ? "+" : ""}{premAmt.toFixed(4)} ({premium}%)
-                  </span>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
 
         {/* ── TRADE TICKETS — fixed table ─────────────────────────────── */}
         <div style={{ marginBottom: 16 }}>
@@ -513,6 +476,99 @@ export default function PhaseExecute({
           )}
         </div>
 
+        {/* ── IBKR Execution Results ─────────────────────────────────── */}
+        {ibkrStatus === "filled" && ibkrResults.length > 0 && (
+          <div style={{
+            marginBottom: 16,
+            background: T.bgSub,
+            border: `1px solid color-mix(in srgb, var(--status-pass,#22c55e) 40%, transparent)`,
+            borderRadius: 4,
+            overflow: "hidden",
+          }}>
+            {/* Header */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "10px 16px",
+              background: "color-mix(in srgb, var(--status-pass,#22c55e) 8%, transparent)",
+              borderBottom: `1px solid color-mix(in srgb, var(--status-pass,#22c55e) 20%, transparent)`,
+            }}>
+              <CheckCircleIcon size={14} color={T.green} />
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", color: T.green }}>
+                IBKR EXECUTION CONFIRMED
+              </span>
+              <div style={{ flex: 1 }} />
+              <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.secondary }}>
+                {ibkrResults.length} fill{ibkrResults.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {/* Fill results table */}
+            <div style={{ padding: "0" }}>
+              {/* Table header */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 80px 100px 120px 140px",
+                padding: "6px 16px",
+                borderBottom: `1px solid ${T.soft}`,
+              }}>
+                {["PAIR", "SIDE", "FILL PRICE", "FILL QTY", "EXEC ID"].map(h => (
+                  <div key={h} style={{ fontFamily: T.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: T.tertiary, padding: "4px 0" }}>
+                    {h}
+                  </div>
+                ))}
+              </div>
+
+              {/* Fill rows */}
+              {ibkrResults.map((fill, idx) => (
+                <div key={idx} style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 80px 100px 120px 140px",
+                  padding: "8px 16px",
+                  borderBottom: idx < ibkrResults.length - 1 ? `1px solid ${T.soft}` : "none",
+                  background: idx % 2 === 0 ? "transparent" : T.bgPanel,
+                }}>
+                  <div style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.primary }}>{fill.currency_pair}</div>
+                  <div style={{
+                    fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
+                    color: fill.action === "SELL" ? T.red : T.cyan,
+                  }}>{fill.action}</div>
+                  <div style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.cyan }}>
+                    {fill.fill_price > 0 ? fill.fill_price.toFixed(4) : "--"}
+                  </div>
+                  <div style={{ fontFamily: T.fontMono, fontSize: 13, color: T.primary }}>{fmt(fill.fill_quantity)}</div>
+                  <div style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary }}>{fill.exec_id ?? "--"}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Aggregates */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 24,
+              padding: "10px 16px",
+              borderTop: `1px solid ${T.soft}`,
+              background: T.bgPanel,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.08em" }}>TOTAL NOTIONAL</span>
+                <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.primary }}>
+                  {fmtUsd(ibkrResults.reduce((s, f) => s + f.fill_quantity * f.fill_price, 0))}
+                </span>
+              </div>
+              <span style={{ width: 1, height: 14, background: T.soft, display: "inline-block" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.tertiary, letterSpacing: "0.08em" }}>WAVG FILL</span>
+                <span style={{ fontFamily: T.fontMono, fontSize: 13, fontWeight: 700, color: T.cyan }}>
+                  {(() => {
+                    const totalNot = ibkrResults.reduce((s, f) => s + f.fill_quantity * f.fill_price, 0);
+                    const totalQty = ibkrResults.reduce((s, f) => s + f.fill_quantity, 0);
+                    return totalQty > 0 ? (totalNot / totalQty).toFixed(4) : "--";
+                  })()}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Fill price input ─────────────────────────────────────────── */}
         <div style={{
           background: T.bgSub, border: `1px solid ${T.soft}`, borderRadius: 4,
@@ -525,7 +581,7 @@ export default function PhaseExecute({
           <input
             type="number" step="0.000001" min="0"
             value={fillPrice} onChange={e => setFillPrice(e.target.value)}
-            placeholder="Leave blank to use forward rate"
+            placeholder="Auto-filled from IBKR, or enter manually"
             disabled={!fillOk}
             style={{
               flex: 1, fontFamily: T.fontMono, fontSize: 13, color: T.primary,
@@ -581,8 +637,8 @@ export default function PhaseExecute({
               BEFORE CONFIRMING, VERIFY:
             </div>
             {[
-              "All trade tickets have been submitted to your broker (IBKR or equivalent)",
-              "Fill confirmations have been received for all legs",
+              "All trade tickets are correct (instrument, direction, quantity)",
+              "IBKR Gateway is running and account has sufficient margin",
               "Fill prices are within acceptable slippage tolerance",
             ].map((item, idx) => (
               <div key={idx} style={{
@@ -690,7 +746,7 @@ export default function PhaseExecute({
             border: `1px solid ${T.rim}`,
             borderRadius: 6,
             padding: "28px 32px",
-            maxWidth: 440,
+            maxWidth: 520,
             width: "100%",
             boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
             display: "flex", flexDirection: "column", gap: 16,
@@ -707,39 +763,149 @@ export default function PhaseExecute({
             <span style={{
               fontFamily: T.fontUI, fontSize: 13, color: T.secondary, lineHeight: "1.6",
             }}>
-              This action is irreversible. All {buckets.length} position{buckets.length !== 1 ? "s" : ""} will
-              be marked as <strong style={{ fontFamily: T.fontMono, color: T.primary }}>HEDGED</strong> and
-              recorded in the audit trail. This cannot be undone.
+              This will submit {buckets.length} order{buckets.length !== 1 ? "s" : ""} to IBKR Gateway and mark
+              all positions as <strong style={{ fontFamily: T.fontMono, color: T.primary }}>HEDGED</strong>.
+              This action is irreversible and will be recorded in the audit trail.
             </span>
+
+            {/* ── IBKR execution progress ── */}
+            {ibkrStatus !== "idle" && (
+              <div style={{
+                background: T.bgSub,
+                border: `1px solid ${T.soft}`,
+                borderRadius: 4,
+                padding: "12px 14px",
+              }}>
+                {ibkrStatus === "connecting" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <LoaderIcon size={14} color={T.cyan} style={{ animation: "spin 1s linear infinite" }} />
+                    <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.cyan, letterSpacing: "0.08em" }}>
+                      CONNECTING TO IBKR GATEWAY...
+                    </span>
+                  </div>
+                )}
+                {ibkrStatus === "executing" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <ZapIcon size={14} color={T.amber} style={{ animation: "spin 1s linear infinite" }} />
+                    <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.amber, letterSpacing: "0.08em" }}>
+                      EXECUTING {buckets.length} ORDER{buckets.length !== 1 ? "S" : ""}...
+                    </span>
+                  </div>
+                )}
+                {ibkrStatus === "filled" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <CheckCircleIcon size={14} color={T.green} />
+                    <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.green, letterSpacing: "0.08em" }}>
+                      ALL ORDERS FILLED — RECORDING EXECUTION...
+                    </span>
+                  </div>
+                )}
+                {ibkrStatus === "error" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <XCircleIcon size={14} color={T.red} />
+                      <span style={{ fontFamily: T.fontMono, fontSize: 12, color: T.red, letterSpacing: "0.08em" }}>
+                        IBKR EXECUTION FAILED
+                      </span>
+                    </div>
+                    {ibkrError && (
+                      <div style={{
+                        fontFamily: T.fontMono, fontSize: 12, color: T.secondary,
+                        background: T.bgPanel, padding: "8px 10px", borderRadius: 3,
+                        border: `1px solid ${T.soft}`, lineHeight: "1.5",
+                      }}>
+                        {ibkrError}
+                      </div>
+                    )}
+
+                    {/* Fill results if any partial fills */}
+                    {ibkrResults.length > 0 && (
+                      <div style={{ marginTop: 4 }}>
+                        {ibkrResults.map((fill, idx) => (
+                          <div key={idx} style={{
+                            display: "flex", alignItems: "center", gap: 12,
+                            padding: "4px 0",
+                            fontFamily: T.fontMono, fontSize: 12,
+                          }}>
+                            <span style={{ color: T.primary, minWidth: 70 }}>{fill.currency_pair}</span>
+                            <span style={{ color: fill.action === "SELL" ? T.red : T.cyan, minWidth: 40 }}>{fill.action}</span>
+                            <span style={{ color: fill.status === "Filled" ? T.green : fill.status === "Error" ? T.red : T.amber }}>
+                              {fill.status}
+                            </span>
+                            {fill.fill_price > 0 && (
+                              <span style={{ color: T.cyan }}>{fill.fill_price.toFixed(4)}</span>
+                            )}
+                            {fill.error && (
+                              <span style={{ color: T.red, fontSize: 12 }}>{fill.error}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={{
               display: "flex", alignItems: "center", gap: 12,
               justifyContent: "flex-end",
               marginTop: 4,
             }}>
               <button
-                onClick={() => setShowConfirm(false)}
+                onClick={() => { setShowConfirm(false); setIbkrStatus("idle"); setIbkrError(null); setIbkrResults([]); }}
+                disabled={ibkrStatus === "connecting" || ibkrStatus === "executing"}
                 style={{
                   fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
                   letterSpacing: "0.08em",
                   color: T.tertiary, background: "transparent",
                   border: `1px solid ${T.soft}`,
-                  padding: "9px 20px", borderRadius: 3, cursor: "pointer",
+                  padding: "9px 20px", borderRadius: 3,
+                  cursor: ibkrStatus === "connecting" || ibkrStatus === "executing" ? "default" : "pointer",
+                  opacity: ibkrStatus === "connecting" || ibkrStatus === "executing" ? 0.5 : 1,
                 }}
               >
                 CANCEL
               </button>
-              <button
-                onClick={() => { setShowConfirm(false); handleMarkHedged(); }}
-                style={{
-                  fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  color: "#000", background: T.green,
-                  border: "none",
-                  padding: "9px 20px", borderRadius: 3, cursor: "pointer",
-                }}
-              >
-                CONFIRM &amp; MARK HEDGED
-              </button>
+
+              {/* Manual fallback when IBKR fails */}
+              {ibkrStatus === "error" && (
+                <button
+                  onClick={() => { setShowConfirm(false); setIbkrStatus("idle"); setIbkrError(null); setIbkrResults([]); handleMarkHedged(); }}
+                  style={{
+                    fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    color: T.amber, background: "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
+                    padding: "9px 20px", borderRadius: 3, cursor: "pointer",
+                  }}
+                >
+                  PROCEED WITHOUT IBKR (MANUAL)
+                </button>
+              )}
+
+              {/* Primary action — execute via IBKR */}
+              {ibkrStatus !== "error" && ibkrStatus !== "filled" && (
+                <button
+                  onClick={handleIBKRExecute}
+                  disabled={ibkrStatus === "connecting" || ibkrStatus === "executing"}
+                  style={{
+                    fontFamily: T.fontMono, fontSize: 12, fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    color: "#000", background: T.green,
+                    border: "none",
+                    padding: "9px 20px", borderRadius: 3,
+                    cursor: ibkrStatus === "connecting" || ibkrStatus === "executing" ? "default" : "pointer",
+                    opacity: ibkrStatus === "connecting" || ibkrStatus === "executing" ? 0.7 : 1,
+                    display: "flex", alignItems: "center", gap: 6,
+                  }}
+                >
+                  {(ibkrStatus === "connecting" || ibkrStatus === "executing") && (
+                    <LoaderIcon size={12} color="#000" style={{ animation: "spin 1s linear infinite" }} />
+                  )}
+                  {ibkrStatus === "idle" ? "EXECUTE VIA IBKR" : "EXECUTING..."}
+                </button>
+              )}
             </div>
           </div>
         </div>

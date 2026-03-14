@@ -253,3 +253,7 @@ router.include_router(v1_market_data_admin_router)
 # Equity snapshots (owns /v1/equity-snapshots)
 from app.api.routes.v1_equity_snapshots import router as v1_equity_snapshots_router
 router.include_router(v1_equity_snapshots_router)
+
+# IBKR Gateway integration (owns /v1/ibkr)
+from app.api.routes.v1_ibkr import router as v1_ibkr_router
+router.include_router(v1_ibkr_router)
