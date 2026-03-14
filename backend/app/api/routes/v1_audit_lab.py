@@ -238,63 +238,69 @@ async def upload_audit_dataset(
 
     # Insert dataset
     dataset_id = str(uuid.uuid4())
-    await session.execute(
-        text(
-            "INSERT INTO audit_datasets "
-            "(id, company_id, period_start, period_end, source_filename, source_hash, "
-            " row_count, currency_pairs, created_by, created_at) "
-            "VALUES (:id, :cid, :ps, :pe, :fn, :sh, :rc, :cp, :cb, NOW())"
-        ),
-        {
-            "id": dataset_id,
-            "cid": company_id,
-            "ps": str(pstart),
-            "pe": str(pend),
-            "fn": file.filename or "upload.csv",
-            "sh": source_hash,
-            "rc": len(rows),
-            "cp": json.dumps(sorted(currency_pairs)),
-            "cb": str(current_user.id),
-        },
-    )
-
-    # Insert transactions (batch)
-    txn_params = []
-    for row in rows:
-        txn_params.append({
-            "id": str(uuid.uuid4()),
-            "did": dataset_id,
-            "cid": company_id,
-            "ri": row["row_index"],
-            "td": row["trade_date"],
-            "vd": row["value_date"],
-            "cs": row["currency_sold"],
-            "cb": row["currency_bought"],
-            "as_": row["amount_sold"],
-            "ab": row["amount_bought"],
-            "er": row["effective_rate"],
-            "cp": row["counterparty"],
-            "fa": row["fee_amount"],
-            "fc": row["fee_currency"],
-            "ref": row["reference"],
-            "rh": _row_hash(row),
-            "pw": json.dumps(row["parse_warnings"]),
-        })
-    if txn_params:
+    try:
         await session.execute(
             text(
-                "INSERT INTO audit_transactions "
-                "(id, dataset_id, company_id, row_index, trade_date, value_date, "
-                " currency_sold, currency_bought, amount_sold, amount_bought, "
-                " effective_rate, counterparty, fee_amount, fee_currency, reference, "
-                " row_hash, parse_warnings, created_at) "
-                "VALUES (:id, :did, :cid, :ri, :td, :vd, :cs, :cb, :as_, :ab, "
-                " :er, :cp, :fa, :fc, :ref, :rh, :pw, NOW())"
+                "INSERT INTO audit_datasets "
+                "(id, company_id, period_start, period_end, source_filename, source_hash, "
+                " row_count, currency_pairs, created_by, created_at) "
+                "VALUES (:id, :cid::uuid, :ps::date, :pe::date, :fn, :sh, :rc, :cp::jsonb, :cb::uuid, NOW())"
             ),
-            txn_params,
+            {
+                "id": dataset_id,
+                "cid": company_id,
+                "ps": str(pstart),
+                "pe": str(pend),
+                "fn": file.filename or "upload.csv",
+                "sh": source_hash,
+                "rc": len(rows),
+                "cp": json.dumps(sorted(currency_pairs)),
+                "cb": str(current_user.id),
+            },
         )
 
-    await session.commit()
+        # Insert transactions (batch)
+        txn_params = []
+        for row in rows:
+            txn_params.append({
+                "id": str(uuid.uuid4()),
+                "did": dataset_id,
+                "cid": company_id,
+                "ri": row["row_index"],
+                "td": row["trade_date"],
+                "vd": row["value_date"],
+                "cs": row["currency_sold"],
+                "cb": row["currency_bought"],
+                "as_": row["amount_sold"],
+                "ab": row["amount_bought"],
+                "er": row["effective_rate"],
+                "cp": row["counterparty"],
+                "fa": row["fee_amount"],
+                "fc": row["fee_currency"],
+                "ref": row["reference"],
+                "rh": _row_hash(row),
+                "pw": json.dumps(row["parse_warnings"] or []),
+            })
+        if txn_params:
+            await session.execute(
+                text(
+                    "INSERT INTO audit_transactions "
+                    "(id, dataset_id, company_id, row_index, trade_date, value_date, "
+                    " currency_sold, currency_bought, amount_sold, amount_bought, "
+                    " effective_rate, counterparty, fee_amount, fee_currency, reference, "
+                    " row_hash, parse_warnings, created_at) "
+                    "VALUES (:id, :did::uuid, :cid::uuid, :ri, :td::date, :vd::date, :cs, :cb, :as_, :ab, "
+                    " :er, :cp, :fa, :fc, :ref, :rh, :pw::jsonb, NOW())"
+                ),
+                txn_params,
+            )
+
+        await session.commit()
+    except Exception as exc:
+        await session.rollback()
+        import logging as _logging
+        _logging.getLogger(__name__).error("audit_dataset insert failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Dataset insert failed: {type(exc).__name__}: {exc}")
 
     # PLAN-02a: audit event for dataset upload
     await emit_audit(
