@@ -1,7 +1,7 @@
 /**
  * /api/market/macro — Live macro snapshot: DXY, VIX, US 10Y, Brent, Gold
  *
- * Fetches from Yahoo Finance v8/finance/chart (same endpoint as geo-news).
+ * Primary: IBKR backend. Fallback: Yahoo Finance v8/finance/chart.
  * Fed Funds rate is static (FOMC target, updated per meeting).
  * Cache: 5-minute in-memory TTL.
  */
@@ -9,8 +9,12 @@
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 
+// IBKR backend (primary)
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 // ─── In-memory cache ──────────────────────────────────────────────────────────
 const TTL_MS = 300_000; // 5 min
+let _ibkrCache: { data: Record<string, MacroItem>; ts: number } | null = null;
 let _cache: { data: Record<string, MacroItem>; ts: number } | null = null;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -88,14 +92,14 @@ const SYMBOLS: SymbolDef[] = [
   },
 ];
 
-// Fed Funds: FOMC sets this ~8× per year; updated here per decision
+// Fed Funds: FOMC sets this ~8x per year; updated here per decision
 const FED_FUNDS_STATIC: MacroItem = {
   label:   "FED FUNDS",
   value:   4.33,
   display: "4.33%",
   maxRef:  6,
   trend:   "flat",
-  context: "FOMC target range 4.25–4.50% · data-dependent hold",
+  context: "FOMC target range 4.25-4.50% . data-dependent hold",
   unit:    "%",
   note:    "FOMC target rate",
 };
@@ -131,9 +135,79 @@ async function fetchYFQuote(
   }
 }
 
+/**
+ * Fetch macro data from IBKR backend.
+ * Expected response: { macroData: Record<string, MacroItem>, ... }
+ */
+async function fetchIbkrMacro(): Promise<Record<string, MacroItem> | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/v1/market-data/live/macro`,
+      {
+        signal: AbortSignal.timeout(5_000),
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+    if (!res.ok) return null;
+
+    const json = await res.json() as {
+      macroData?: Record<string, {
+        label?: string;
+        value?: number;
+        display?: string;
+        maxRef?: number;
+        trend?: "up" | "down" | "flat";
+        context?: string;
+        unit?: string;
+        note?: string;
+      }>;
+      source?: string;
+    };
+
+    if (!json.macroData || typeof json.macroData !== "object") return null;
+
+    // Validate and normalize: ensure all expected fields are present
+    const result: Record<string, MacroItem> = {};
+    let validCount = 0;
+
+    for (const [key, item] of Object.entries(json.macroData)) {
+      if (item && typeof item.value === "number" && item.value > 0) {
+        // Look up our symbol definition for formatting context
+        const symDef = SYMBOLS.find((s) => s.label === key);
+
+        result[key] = {
+          label:   item.label ?? key,
+          value:   item.value,
+          display: item.display ?? (symDef ? symDef.fmt(item.value) : String(item.value)),
+          maxRef:  item.maxRef ?? symDef?.maxRef ?? 100,
+          trend:   item.trend ?? "flat",
+          context: item.context ?? symDef?.context ?? "",
+          unit:    item.unit ?? symDef?.unit ?? "",
+          note:    item.note ?? "ibkr live",
+        };
+        validCount++;
+      }
+    }
+
+    return validCount > 0 ? result : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 export async function GET() {
   const now = Date.now();
+
+  // Serve from IBKR cache first, then Yahoo cache
+  if (_ibkrCache && now - _ibkrCache.ts < TTL_MS) {
+    return NextResponse.json({
+      macroData:  _ibkrCache.data,
+      dataSource: "ibkr",
+      asOf:       new Date(_ibkrCache.ts).toISOString().slice(0, 10),
+      cachedAt:   _ibkrCache.ts,
+    });
+  }
 
   if (_cache && now - _cache.ts < TTL_MS) {
     return NextResponse.json({
@@ -144,6 +218,27 @@ export async function GET() {
     });
   }
 
+  // ── Primary: IBKR backend ─────────────────────────────────────────────────
+  const ibkrMacro = await fetchIbkrMacro();
+  if (ibkrMacro) {
+    // Always include Fed Funds (static FOMC rate)
+    ibkrMacro["FED FUNDS"] = FED_FUNDS_STATIC;
+    _ibkrCache = { data: ibkrMacro, ts: now };
+
+    logger.info({ endpoint: "/api/market/macro", liveCount: Object.keys(ibkrMacro).length, cached: false, status: 200, source: "ibkr" });
+
+    const resp = NextResponse.json({
+      macroData:  ibkrMacro,
+      dataSource: "ibkr",
+      asOf:       new Date(now).toISOString().slice(0, 10),
+      cachedAt:   now,
+      liveCount:  Object.keys(ibkrMacro).length,
+    });
+    resp.headers.set("Cache-Control", "s-maxage=300, stale-while-revalidate=60");
+    return resp;
+  }
+
+  // ── Fallback: Yahoo Finance ────────────────────────────────────────────────
   const settled = await Promise.allSettled(
     SYMBOLS.map((s) => fetchYFQuote(s.yfSymbol)),
   );

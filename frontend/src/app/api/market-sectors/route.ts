@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Market Sectors & ETFs — Finnhub quote API
+// Market Sectors & ETFs — IBKR backend (primary) + Finnhub (fallback)
 // GET /api/market-sectors
-// Finnhub free tier: 60 req/min, no daily cap — all 15 fetched in parallel
 // Cache: 5-minute in-memory TTL
 // ─────────────────────────────────────────────────────────────────────────────
 
+// IBKR backend (primary)
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+// Fallback: Finnhub
 const FH_KEY  = process.env.FINNHUB_API_KEY ?? '';
 const FH_BASE = 'https://finnhub.io/api/v1';
 
@@ -38,7 +41,7 @@ interface QuoteResult {
   category: 'market' | 'sector';
 }
 
-// In-memory cache — 5 min TTL (interface must be declared before use)
+// In-memory cache — 5 min TTL
 const CACHE_TTL_MS = 300_000;
 let _cache: {
   quotes: QuoteResult[];
@@ -95,6 +98,67 @@ async function fetchFinnhubQuote(
   }
 }
 
+/**
+ * Try IBKR backend for all equity quotes in a single batch call.
+ * Returns null if IBKR is unavailable or returns no data.
+ */
+async function fetchIbkrEquityQuotes(): Promise<QuoteResult[] | null> {
+  try {
+    const symbolList = SYMBOLS.map((s) => s.symbol).join(',');
+    const res = await fetch(
+      `${API_BASE}/api/v1/market-data/live/equity-quotes?symbols=${encodeURIComponent(symbolList)}`,
+      {
+        signal: AbortSignal.timeout(5_000),
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
+    if (!res.ok) return null;
+
+    const json = await res.json() as {
+      quotes?: Array<{
+        symbol: string;
+        price?: number;
+        last?: number;
+        change?: number;
+        change_pct?: number;
+        volume?: number;
+        timestamp?: number;
+      }>;
+      source?: string;
+      connected?: boolean;
+    };
+
+    if (!json.quotes || !Array.isArray(json.quotes) || json.quotes.length === 0) return null;
+
+    const results: QuoteResult[] = [];
+    const ibkrMap = new Map(json.quotes.map((q) => [q.symbol, q]));
+
+    for (const def of SYMBOLS) {
+      const q = ibkrMap.get(def.symbol);
+      if (q) {
+        const price = q.price ?? q.last ?? 0;
+        if (price <= 0) continue;
+        const latestTradingDay = q.timestamp
+          ? new Date(q.timestamp * 1000).toISOString().slice(0, 10)
+          : new Date().toISOString().slice(0, 10);
+        results.push({
+          symbol: def.symbol,
+          name: def.name,
+          category: def.category,
+          price: parseFloat(price.toFixed(2)),
+          change: parseFloat((q.change ?? 0).toFixed(2)),
+          changePercent: parseFloat((q.change_pct ?? 0).toFixed(2)),
+          latestTradingDay,
+        });
+      }
+    }
+
+    return results.length > 0 ? results : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
   const now = Date.now();
 
@@ -113,29 +177,46 @@ export async function GET() {
 
   let liveCount = 0;
   let results: QuoteResult[] = [];
+  let dataSource = 'fallback';
 
-  if (FH_KEY) {
-    // Fetch all in parallel — Finnhub 60 req/min free tier, no daily limit
-    const raw = await Promise.all(
-      SYMBOLS.map(s => fetchFinnhubQuote(s.symbol, s.name, s.category))
-    );
-    raw.forEach((r, idx) => {
-      if (r) { results.push(r); liveCount++; }
-      else {
-        const fb = FALLBACK_QUOTES.find(f => f.symbol === SYMBOLS[idx]!.symbol);
+  // ── Primary: IBKR backend (single batch call) ─────────────────────────────
+  const ibkrResults = await fetchIbkrEquityQuotes();
+  if (ibkrResults && ibkrResults.length > 0) {
+    // Fill in any missing symbols from fallback
+    const ibkrSymbols = new Set(ibkrResults.map((r) => r.symbol));
+    results = [...ibkrResults];
+    for (const def of SYMBOLS) {
+      if (!ibkrSymbols.has(def.symbol)) {
+        const fb = FALLBACK_QUOTES.find((f) => f.symbol === def.symbol);
         if (fb) results.push(fb);
       }
-    });
-  }
+    }
+    liveCount = ibkrResults.length;
+    dataSource = 'ibkr';
+  } else {
+    // ── Fallback: Finnhub (individual calls) ─────────────────────────────────
+    if (FH_KEY) {
+      const raw = await Promise.all(
+        SYMBOLS.map(s => fetchFinnhubQuote(s.symbol, s.name, s.category))
+      );
+      raw.forEach((r, idx) => {
+        if (r) { results.push(r); liveCount++; }
+        else {
+          const fb = FALLBACK_QUOTES.find(f => f.symbol === SYMBOLS[idx]!.symbol);
+          if (fb) results.push(fb);
+        }
+      });
+    }
 
-  if (results.length === 0) results = [...FALLBACK_QUOTES];
+    if (results.length === 0) results = [...FALLBACK_QUOTES];
+    dataSource = liveCount > 0 ? 'live' : 'fallback';
+  }
 
   const symbolOrder = SYMBOLS.map(s => s.symbol);
   results.sort((a, b) => symbolOrder.indexOf(a.symbol) - symbolOrder.indexOf(b.symbol));
 
   const latestDay = results.find(r => r.latestTradingDay > '2020-01-01')?.latestTradingDay
     ?? new Date().toISOString().slice(0, 10);
-  const dataSource = liveCount > 0 ? 'live' : 'fallback';
 
   if (liveCount > 0) {
     _cache = { quotes: results, dataSource, asOf: latestDay, liveCount, ts: now };
@@ -148,9 +229,11 @@ export async function GET() {
     liveCount,
     totalCount: results.length,
     timestamp:  new Date().toISOString(),
-    note: dataSource === 'live'
-      ? `Finnhub data as of ${latestDay}. ${liveCount}/${results.length} symbols live.`
-      : 'Using reference data — configure FINNHUB_API_KEY for live quotes.',
+    note: dataSource === 'ibkr'
+      ? `IBKR live data as of ${latestDay}. ${liveCount}/${results.length} symbols live.`
+      : dataSource === 'live'
+        ? `Finnhub data as of ${latestDay}. ${liveCount}/${results.length} symbols live.`
+        : 'Using reference data — configure IBKR or FINNHUB_API_KEY for live quotes.',
   });
   response.headers.set(
     'Cache-Control',

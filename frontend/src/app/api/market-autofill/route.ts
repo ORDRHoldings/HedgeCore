@@ -1,27 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FX Market Autofill — Finnhub forex/rates (spot) + CME futures (forwards)
+// FX Market Autofill — IBKR backend (spot) + Finnhub CME futures (forwards)
 // POST /api/market-autofill
 // Body: { currencies: string[], trade_value_dates?: string[] }
 // Returns: MarketSnapshot-compatible market object
 //
-// Spot rates:  Finnhub /forex/rates?base=USD (single call, all currencies)
+// Spot rates:  IBKR backend (primary) -> exchangerate-api.com (fallback)
 // Forward pts: Finnhub /quote?symbol={CME_SYMBOL} per contract (1!, 2!, 3!)
 //              CME quarterly cycle: March / June / September / December
-//              Prices are USD per 1 FCY → invert to get FCY/USD forward rate
+//              Prices are USD per 1 FCY -> invert to get FCY/USD forward rate
 //              Forward points = forward_rate - spot
 // Fallback:   Carry-differential estimates when CME data unavailable
 // ─────────────────────────────────────────────────────────────────────────────
 
+// IBKR backend (primary for spot)
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 const FH_KEY  = process.env.FINNHUB_API_KEY ?? '';
 const FH_BASE = 'https://finnhub.io/api/v1';
 
-// Primary spot-rate source: exchangerate-api.com (free, no key, ~170 currencies)
+// Primary spot-rate source (fallback): exchangerate-api.com (free, no key, ~170 currencies)
 const ERA_URL = 'https://api.exchangerate-api.com/v4/latest/USD';
 
 // ── CME FX futures symbol mapping ─────────────────────────────────────────
-// Finnhub uses the continuous contract notation (1! = front month, 2! = back month, …)
+// Finnhub uses the continuous contract notation (1! = front month, 2! = back month, ...)
 // All prices are quoted in USD per 1 unit of FCY (invert to get FCY/USD rate)
 // CME quarterly expiry cycle: March (H), June (M), September (U), December (Z)
 const CME_SYMBOLS: Record<string, string[]> = {
@@ -56,6 +59,51 @@ const DEMO_SPOTS: Record<string, number> = {
   AUD: 1.581, NZD: 1.728, CAD: 1.437,
   ZAR: 18.91, TRY: 36.20, RUB: 90.10,
 };
+
+// ── Fetch spot rate from IBKR backend for a single currency pair ──────────
+async function fetchIbkrSpotRate(currency: string): Promise<number | null> {
+  try {
+    const pair = `USD${currency}`;
+    const res = await fetch(
+      `${API_BASE}/api/v1/market-data/live/fx-rates?pairs=${encodeURIComponent(pair)}`,
+      {
+        signal: AbortSignal.timeout(5_000),
+        headers: { 'Content-Type': 'application/json' },
+      },
+    );
+    if (!res.ok) return null;
+
+    const json = await res.json() as {
+      rates?: Array<{ symbol: string; bid?: number; ask?: number; mid: number }>;
+      source?: string;
+    };
+
+    if (!json.rates || !Array.isArray(json.rates) || json.rates.length === 0) return null;
+
+    // Find the matching rate — handle both USDMXN and MXNUSD conventions
+    const INVERTED = new Set(['EUR', 'GBP', 'AUD', 'NZD']);
+    for (const rate of json.rates) {
+      if (rate.mid && rate.mid > 0) {
+        if (INVERTED.has(currency)) {
+          // For EURUSD: IBKR mid might be the market convention (1.08 = USD per EUR)
+          // We need CCY/USD (0.9263 = EUR per USD). But it depends on what symbol
+          // the backend returns. If symbol is "EURUSD", mid is USD/EUR -> invert.
+          // If symbol is "USDEUR", mid is EUR/USD -> use directly.
+          if (rate.symbol?.startsWith('USD')) {
+            return parseFloat(rate.mid.toFixed(6));
+          }
+          // Symbol is like EURUSD -> mid is USD per EUR -> invert to get EUR per USD
+          return parseFloat((1 / rate.mid).toFixed(6));
+        }
+        // For non-inverted (USDMXN): mid is MXN per USD -> use directly
+        return parseFloat(rate.mid.toFixed(6));
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 // ── Fetch all forex spot rates from exchangerate-api.com (free, no key) ──
 async function fetchLiveForexRates(): Promise<Record<string, number> | null> {
@@ -177,7 +225,7 @@ async function buildCMEForwardPoints(
   const contracts: { monthsOut: number; forwardRate: number; bucket: string }[] = [];
   for (const { price, bucket } of fetchResults) {
     if (price === null || price <= 0 || !bucket) continue;
-    // All CME FX futures are priced in USD per 1 unit of FCY → invert to FCY/USD
+    // All CME FX futures are priced in USD per 1 unit of FCY -> invert to FCY/USD
     const forwardRate = 1 / price;
     const [y, m] = bucket.split('-').map(Number);
     const monthsOut = (y - now.getFullYear()) * 12 + (m - (now.getMonth() + 1));
@@ -267,15 +315,25 @@ export async function POST(req: NextRequest) {
 
     const primaryCurrency = currencies[0] ?? 'MXN';
 
-    // ── Step 1: Spot rate from exchangerate-api.com (live, free) ────────
+    // ── Step 1: Spot rate — IBKR (primary) -> exchangerate-api.com (fallback)
     let spot: number | null = null;
     let spotSource = 'indicative_fallback';
 
     if (primaryCurrency !== 'USD') {
-      const rates = await fetchLiveForexRates();
-      if (rates && rates[primaryCurrency] && rates[primaryCurrency] > 0) {
-        spot = parseFloat(rates[primaryCurrency].toFixed(6));
-        spotSource = 'live';
+      // Try IBKR backend first
+      const ibkrSpot = await fetchIbkrSpotRate(primaryCurrency);
+      if (ibkrSpot !== null && ibkrSpot > 0) {
+        spot = ibkrSpot;
+        spotSource = 'ibkr';
+      }
+
+      // Fallback to exchangerate-api.com
+      if (spot === null) {
+        const rates = await fetchLiveForexRates();
+        if (rates && rates[primaryCurrency] && rates[primaryCurrency] > 0) {
+          spot = parseFloat(rates[primaryCurrency].toFixed(6));
+          spotSource = 'live';
+        }
       }
     }
 
@@ -295,7 +353,7 @@ export async function POST(req: NextRequest) {
       forwardSource = 'cme_futures';
     } else {
       forwardPoints = estimateForwardPoints(spot, primaryCurrency, requiredBuckets);
-      forwardSource = spotSource === 'live' ? 'carry_estimate' : 'indicative_fallback';
+      forwardSource = (spotSource === 'live' || spotSource === 'ibkr') ? 'carry_estimate' : 'indicative_fallback';
     }
 
     // ── Step 3: Assemble market snapshot ────────────────────────────────
@@ -305,12 +363,18 @@ export async function POST(req: NextRequest) {
       ? `${primaryCurrency}/USD`
       : `USD/${primaryCurrency}`;
 
-    const isLive = spotSource === 'live';
+    const isLive = spotSource === 'live' || spotSource === 'ibkr';
     const dataClass = isLive ? 'LIVE' : 'INDICATIVE_FALLBACK';
 
     let note: string;
     if (!isLive) {
-      note = 'Indicative fallback rates (BIS EOD 2026-02-27) — exchangerate-api.com unreachable.';
+      note = 'Indicative fallback rates (BIS EOD 2026-02-27) — IBKR and exchangerate-api.com unreachable.';
+    } else if (spotSource === 'ibkr') {
+      if (forwardSource === 'cme_futures') {
+        note = `Live spot from IBKR. Forward rates from CME futures (${(CME_SYMBOLS[primaryCurrency] ?? []).join(', ')}).`;
+      } else {
+        note = `Live spot from IBKR. Forward points estimated from carry differentials.`;
+      }
     } else if (forwardSource === 'cme_futures') {
       note = `Live spot from exchangerate-api.com. Forward rates from CME futures (${(CME_SYMBOLS[primaryCurrency] ?? []).join(', ')}).`;
     } else {
@@ -322,7 +386,7 @@ export async function POST(req: NextRequest) {
       spot_rate: spot,
       forward_points_by_month: forwardPoints,
       provider_metadata: {
-        source:              isLive ? `live_${forwardSource}` : 'indicative_fallback',
+        source:              isLive ? `${spotSource}_${forwardSource}` : 'indicative_fallback',
         data_class:          dataClass,
         spot_source:         spotSource,
         forward_source:      forwardSource,

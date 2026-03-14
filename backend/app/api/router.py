@@ -257,3 +257,7 @@ router.include_router(v1_equity_snapshots_router)
 # IBKR Gateway integration (owns /v1/ibkr)
 from app.api.routes.v1_ibkr import router as v1_ibkr_router
 router.include_router(v1_ibkr_router)
+
+# Live market data from IBKR (owns /v1/market-data/live)
+from app.api.routes.v1_market_data_live import router as v1_market_data_live_router
+router.include_router(v1_market_data_live_router)
