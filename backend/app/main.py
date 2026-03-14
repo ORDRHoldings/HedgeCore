@@ -1715,7 +1715,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
     traceback.print_exc()
 
-    return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+    return JSONResponse(status_code=500, content={"detail": "Internal Server Error", "debug_type": type(exc).__name__, "debug_msg": str(exc)[:500]})
 
 
 
