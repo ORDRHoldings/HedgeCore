@@ -236,9 +236,10 @@ async def upload_audit_dataset(
     if pend < pstart:
         raise HTTPException(status_code=422, detail="period_end must be >= period_start.")
 
-    # Insert dataset — pass correct Python types for asyncpg binary protocol
-    # asyncpg requires: uuid.UUID for UUID cols, datetime.date for DATE cols,
-    # list/dict for JSONB cols (not JSON strings, not string UUIDs, not string dates)
+    # Insert dataset — CAST() in SQL tells asyncpg the target type;
+    # pass proper Python types that match asyncpg's codec for each target type:
+    #   UUID cols → uuid.UUID objects, DATE cols → datetime.date objects,
+    #   JSONB cols → Python list/dict objects
     dataset_id = str(uuid.uuid4())
     try:
         await session.execute(
@@ -246,18 +247,19 @@ async def upload_audit_dataset(
                 "INSERT INTO audit_datasets "
                 "(id, company_id, period_start, period_end, source_filename, source_hash, "
                 " row_count, currency_pairs, created_by, created_at) "
-                "VALUES (:id, :cid, :ps, :pe, :fn, :sh, :rc, :cp, :cb, NOW())"
+                "VALUES (CAST(:id AS uuid), CAST(:cid AS uuid), CAST(:ps AS date), CAST(:pe AS date), "
+                " :fn, :sh, :rc, CAST(:cp AS jsonb), CAST(:cb AS uuid), NOW())"
             ),
             {
                 "id": uuid.UUID(dataset_id),
                 "cid": uuid.UUID(company_id),
-                "ps": pstart,                         # datetime.date object
-                "pe": pend,                           # datetime.date object
+                "ps": pstart,                         # datetime.date — matches asyncpg date codec
+                "pe": pend,                           # datetime.date
                 "fn": file.filename or "upload.csv",
                 "sh": source_hash,
                 "rc": len(rows),
-                "cp": sorted(currency_pairs),         # Python list → JSONB
-                "cb": current_user.id,                # uuid.UUID object
+                "cp": sorted(currency_pairs),         # Python list — matches asyncpg jsonb codec
+                "cb": current_user.id,                # uuid.UUID
             },
         )
 
@@ -281,7 +283,7 @@ async def upload_audit_dataset(
                 "fc": row["fee_currency"],
                 "ref": row["reference"],
                 "rh": _row_hash(row),
-                "pw": row["parse_warnings"] or [],    # Python list → JSONB
+                "pw": row["parse_warnings"] or [],    # Python list — matches asyncpg jsonb codec
             })
         if txn_params:
             await session.execute(
@@ -291,8 +293,9 @@ async def upload_audit_dataset(
                     " currency_sold, currency_bought, amount_sold, amount_bought, "
                     " effective_rate, counterparty, fee_amount, fee_currency, reference, "
                     " row_hash, parse_warnings, created_at) "
-                    "VALUES (:id, :did, :cid, :ri, :td, :vd, :cs, :cb, :as_, :ab, "
-                    " :er, :cp, :fa, :fc, :ref, :rh, :pw, NOW())"
+                    "VALUES (CAST(:id AS uuid), CAST(:did AS uuid), CAST(:cid AS uuid), :ri, "
+                    " CAST(:td AS date), CAST(:vd AS date), :cs, :cb, :as_, :ab, "
+                    " :er, :cp, :fa, :fc, :ref, :rh, CAST(:pw AS jsonb), NOW())"
                 ),
                 txn_params,
             )
