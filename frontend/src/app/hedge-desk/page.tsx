@@ -27,7 +27,7 @@ const HD = {
 type GovernanceMode = "solo" | "team";
 
 function HedgeDeskInner() {
-  const { isAuthenticated, user, token } = useAuth();
+  const { isAuthenticated, isLoading, user, token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -35,12 +35,12 @@ function HedgeDeskInner() {
   const [governanceMode, setGovernanceMode] = useState<GovernanceMode>("solo");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
-  // Auth guard
+  // Auth guard — wait for silent refresh to complete before redirecting
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.replace("/auth/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router]);
 
   // Fetch governance mode from company settings
   useEffect(() => {
@@ -70,7 +70,7 @@ function HedgeDeskInner() {
     router.push("/hedge-desk?mode=run");
   }, [router]);
 
-  if (!isAuthenticated || !user || !token) return null;
+  if (isLoading || !isAuthenticated || !user || !token) return null;
 
   const isRunMode = mode === "run";
   const modeBadgeColor = governanceMode === "team" ? HD.amber : HD.emerald;

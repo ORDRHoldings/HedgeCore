@@ -150,6 +150,23 @@ export default function PhaseExecute({
     try {
       const results = await Promise.allSettled(
         proposalIds.map(async (id) => {
+          // Step 1: Approve the proposal (required before execution)
+          // Solo mode: same user can approve; Team mode: SoD enforced server-side
+          const approveRes = await dashboardFetch(`/v1/proposals/${id}/approve`, token, {
+            method: "PATCH",
+            body: JSON.stringify({ approval_notes: "Approved via hedge desk pipeline" }),
+          });
+          // 403 in team mode = SoD violation (different checker needed)
+          if (approveRes.status === 403 && governanceMode === "team") {
+            throw Object.assign(new Error("AWAITING_APPROVAL"), { code: 409 });
+          }
+          // 409 = already approved or wrong state — proceed to execute anyway
+          if (!approveRes.ok && approveRes.status !== 409) {
+            const errData = await approveRes.json().catch(() => ({}));
+            throw new Error((errData as { detail?: string }).detail ?? `Approve failed: HTTP ${approveRes.status}`);
+          }
+
+          // Step 2: Execute the approved proposal → transitions position to HEDGED
           const execRes = await dashboardFetch(`/v1/proposals/${id}/execute`, token, { method: "POST", body: JSON.stringify({}) });
           if (execRes.status === 409) throw Object.assign(new Error("NOT_APPROVED"), { code: 409 });
           if (!execRes.ok) {

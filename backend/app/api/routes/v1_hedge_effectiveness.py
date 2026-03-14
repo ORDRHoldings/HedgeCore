@@ -23,7 +23,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
@@ -33,6 +33,7 @@ from app.engine.hedge_effectiveness_engine import (
     EffectivenessPeriod,
     run_hedge_effectiveness,
 )
+from app.models.hedge_effectiveness import HedgeEffectivenessDataset, HedgeEffectivenessRun
 from app.models.user import User
 from app.services import rbac_service
 from app.services.audit_emit import emit_audit
@@ -135,8 +136,7 @@ async def create_dataset(
 ) -> dict:
     await _require(session, current_user, "hedge_effectiveness.run")
 
-    company_id = str(current_user.company_id)
-    dataset_id = str(uuid.uuid4())
+    company_id = current_user.company_id
 
     periods_data = []
     for i, p in enumerate(body.periods):
@@ -150,29 +150,22 @@ async def create_dataset(
     data_json = json.dumps(periods_data, sort_keys=True, default=str)
     source_hash = hashlib.sha256(data_json.encode("utf-8")).hexdigest()
 
-    await session.execute(
-        text(
-            "INSERT INTO hedge_effectiveness_datasets "
-            "(id, company_id, name, description, currency_pair, hedge_type, "
-            " designation_date, source, period_count, data_json, source_hash, "
-            " created_by, created_at) "
-            "VALUES (:id, :cid, :name, :desc, :pair, :ht, :dd, 'manual', "
-            " :pc, :dj, :sh, :cb, NOW())"
-        ),
-        {
-            "id": dataset_id,
-            "cid": company_id,
-            "name": body.name,
-            "desc": body.description,
-            "pair": body.currency_pair,
-            "ht": body.hedge_type,
-            "dd": body.designation_date,
-            "pc": len(periods_data),
-            "dj": data_json,
-            "sh": source_hash,
-            "cb": str(current_user.id),
-        },
+    dataset = HedgeEffectivenessDataset(
+        id=uuid.uuid4(),
+        company_id=company_id,
+        name=body.name,
+        description=body.description,
+        currency_pair=body.currency_pair,
+        hedge_type=body.hedge_type,
+        designation_date=body.designation_date,
+        source="manual",
+        period_count=len(periods_data),
+        data_json=periods_data,
+        source_hash=source_hash,
+        created_by=current_user.id,
+        created_at=datetime.now(UTC),
     )
+    session.add(dataset)
     await session.commit()
 
     await emit_audit(
@@ -181,7 +174,7 @@ async def create_dataset(
         event_type="SYSTEM",
         description=f"Hedge effectiveness dataset created: {body.name} ({len(periods_data)} periods)",
         entity_type="hedge_effectiveness_dataset",
-        entity_id=dataset_id,
+        entity_id=str(dataset.id),
         payload={
             "name": body.name,
             "period_count": len(periods_data),
@@ -191,7 +184,7 @@ async def create_dataset(
     )
 
     return {
-        "dataset_id": dataset_id,
+        "dataset_id": str(dataset.id),
         "name": body.name,
         "period_count": len(periods_data),
         "currency_pair": body.currency_pair,
@@ -218,34 +211,26 @@ async def upload_dataset(
 
     rows, warnings = _parse_effectiveness_csv(raw_bytes)
 
-    company_id = str(current_user.company_id)
-    dataset_id = str(uuid.uuid4())
-    data_json = json.dumps(rows, sort_keys=True, default=str)
+    company_id = current_user.company_id
+    data_json_str = json.dumps(rows, sort_keys=True, default=str)
     source_hash = hashlib.sha256(raw_bytes).hexdigest()
 
-    await session.execute(
-        text(
-            "INSERT INTO hedge_effectiveness_datasets "
-            "(id, company_id, name, description, currency_pair, hedge_type, "
-            " designation_date, source, period_count, data_json, source_hash, "
-            " created_by, created_at) "
-            "VALUES (:id, :cid, :name, :desc, :pair, :ht, :dd, 'csv_upload', "
-            " :pc, :dj, :sh, :cb, NOW())"
-        ),
-        {
-            "id": dataset_id,
-            "cid": company_id,
-            "name": name.strip() or (file.filename or "upload.csv"),
-            "desc": description.strip() or None,
-            "pair": currency_pair.strip() or None,
-            "ht": hedge_type.strip() or "cash_flow",
-            "dd": designation_date.strip() or None,
-            "pc": len(rows),
-            "dj": data_json,
-            "sh": source_hash,
-            "cb": str(current_user.id),
-        },
+    dataset = HedgeEffectivenessDataset(
+        id=uuid.uuid4(),
+        company_id=company_id,
+        name=name.strip() or (file.filename or "upload.csv"),
+        description=description.strip() or None,
+        currency_pair=currency_pair.strip() or None,
+        hedge_type=hedge_type.strip() or "cash_flow",
+        designation_date=designation_date.strip() or None,
+        source="csv_upload",
+        period_count=len(rows),
+        data_json=rows,
+        source_hash=source_hash,
+        created_by=current_user.id,
+        created_at=datetime.now(UTC),
     )
+    session.add(dataset)
     await session.commit()
 
     await emit_audit(
@@ -254,7 +239,7 @@ async def upload_dataset(
         event_type="SYSTEM",
         description=f"Hedge effectiveness CSV uploaded: {len(rows)} periods",
         entity_type="hedge_effectiveness_dataset",
-        entity_id=dataset_id,
+        entity_id=str(dataset.id),
         payload={
             "period_count": len(rows),
             "source_hash": source_hash,
@@ -263,7 +248,7 @@ async def upload_dataset(
     )
 
     return {
-        "dataset_id": dataset_id,
+        "dataset_id": str(dataset.id),
         "period_count": len(rows),
         "source_hash": source_hash,
         "parse_warnings": warnings[:50],
@@ -276,29 +261,29 @@ async def list_datasets(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    company_id = str(current_user.company_id)
-    rows = await session.execute(
-        text(
-            "SELECT id, name, description, currency_pair, hedge_type, "
-            "designation_date, source, period_count, source_hash, created_at "
-            "FROM hedge_effectiveness_datasets WHERE company_id = :cid "
-            "ORDER BY created_at DESC LIMIT :lim"
-        ),
-        {"cid": company_id, "lim": limit},
+    company_id = current_user.company_id
+    stmt = (
+        select(HedgeEffectivenessDataset)
+        .where(HedgeEffectivenessDataset.company_id == company_id)
+        .order_by(HedgeEffectivenessDataset.created_at.desc())
+        .limit(limit)
     )
+    result = await session.execute(stmt)
+    datasets = result.scalars().all()
+
     items = []
-    for r in rows.fetchall():
+    for ds in datasets:
         items.append({
-            "id": str(r.id),
-            "name": r.name,
-            "description": r.description,
-            "currency_pair": r.currency_pair,
-            "hedge_type": r.hedge_type,
-            "designation_date": str(r.designation_date) if r.designation_date else None,
-            "source": r.source,
-            "period_count": r.period_count,
-            "source_hash": r.source_hash,
-            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "id": str(ds.id),
+            "name": ds.name,
+            "description": ds.description,
+            "currency_pair": ds.currency_pair,
+            "hedge_type": ds.hedge_type,
+            "designation_date": ds.designation_date,
+            "source": ds.source,
+            "period_count": ds.period_count,
+            "source_hash": ds.source_hash,
+            "created_at": ds.created_at.isoformat() if ds.created_at else None,
         })
     return {"items": items, "total": len(items)}
 # -- Endpoint: Run assessment -----------------------------------------------
@@ -311,19 +296,18 @@ async def run_assessment(
 ) -> dict:
     await _require(session, current_user, "hedge_effectiveness.run")
 
-    company_id = str(current_user.company_id)
+    company_id = current_user.company_id
 
     # Load dataset
-    ds_row = await session.execute(
-        text(
-            "SELECT id, name, currency_pair, hedge_type, designation_date, "
-            "period_count, data_json "
-            "FROM hedge_effectiveness_datasets "
-            "WHERE id = :id AND company_id = :cid LIMIT 1"
-        ),
-        {"id": body.dataset_id, "cid": company_id},
+    stmt = (
+        select(HedgeEffectivenessDataset)
+        .where(
+            HedgeEffectivenessDataset.id == uuid.UUID(body.dataset_id),
+            HedgeEffectivenessDataset.company_id == company_id,
+        )
     )
-    ds = ds_row.fetchone()
+    result = await session.execute(stmt)
+    ds = result.scalar_one_or_none()
     if not ds:
         raise HTTPException(status_code=404, detail="Dataset not found.")
 
@@ -344,67 +328,54 @@ async def run_assessment(
         method=body.method,
         hedge_type=ds.hedge_type or "cash_flow",
         currency_pair=ds.currency_pair,
-        designation_date=str(ds.designation_date) if ds.designation_date else None,
+        designation_date=ds.designation_date,
     )
 
     # Run engine
-    result = run_hedge_effectiveness(
+    eff_result = run_hedge_effectiveness(
         dataset_id=body.dataset_id,
         periods=periods,
         config=config,
     )
 
     # Persist run (WORM)
-    run_id = str(uuid.uuid4())
+    do_ratio = eff_result.dollar_offset.dollar_offset_ratio if eff_result.dollar_offset else None
+    do_effective = eff_result.dollar_offset.is_effective if eff_result.dollar_offset else None
+    reg_r2 = eff_result.regression.regression_r_squared if eff_result.regression else None
+    reg_slope = eff_result.regression.regression_slope if eff_result.regression else None
+    reg_effective = eff_result.regression.is_effective if eff_result.regression else None
+    reg_method = eff_result.regression.method if eff_result.regression else None
 
-    report_json = result.to_dict()
+    report_json = eff_result.to_dict()
     trace_bundle = {
-        "run_id": run_id,
-        "events": [e.to_dict() for e in result.trace_events],
+        "run_id": str(uuid.uuid4()),
+        "events": [e.to_dict() for e in eff_result.trace_events],
     }
 
-    do_ratio = result.dollar_offset.dollar_offset_ratio if result.dollar_offset else None
-    do_effective = result.dollar_offset.is_effective if result.dollar_offset else None
-    reg_r2 = result.regression.regression_r_squared if result.regression else None
-    reg_slope = result.regression.regression_slope if result.regression else None
-    reg_effective = result.regression.is_effective if result.regression else None
-    reg_method = result.regression.method if result.regression else None
-
-    await session.execute(
-        text(
-            "INSERT INTO hedge_effectiveness_runs "
-            "(id, company_id, dataset_id, methodology_version, standard, "
-            " method_requested, dollar_offset_ratio, dollar_offset_effective, "
-            " regression_r_squared, regression_slope, regression_effective, "
-            " regression_method, overall_effective, run_hash, inputs_hash, "
-            " outputs_hash, report_json, trace_bundle, status, "
-            " created_by, created_at) "
-            "VALUES (:id, :cid, :did, :mv, :std, :meth, :dor, :doe, "
-            " :rr2, :rsl, :re, :rm, :oe, :rh, :ih, :oh, :rj, :tb, "
-            " 'COMPLETED', :cb, NOW())"
-        ),
-        {
-            "id": run_id,
-            "cid": company_id,
-            "did": body.dataset_id,
-            "mv": result.methodology_version,
-            "std": result.standard,
-            "meth": body.method,
-            "dor": do_ratio,
-            "doe": do_effective,
-            "rr2": reg_r2,
-            "rsl": reg_slope,
-            "re": reg_effective,
-            "rm": reg_method,
-            "oe": result.overall_effective,
-            "rh": result.run_hash,
-            "ih": result.inputs_hash,
-            "oh": result.outputs_hash,
-            "rj": json.dumps(report_json, default=str),
-            "tb": json.dumps(trace_bundle, default=str),
-            "cb": str(current_user.id),
-        },
+    run = HedgeEffectivenessRun(
+        id=uuid.uuid4(),
+        company_id=company_id,
+        dataset_id=uuid.UUID(body.dataset_id),
+        methodology_version=eff_result.methodology_version,
+        standard=eff_result.standard,
+        method_requested=body.method,
+        dollar_offset_ratio=do_ratio,
+        dollar_offset_effective=do_effective,
+        regression_r_squared=reg_r2,
+        regression_slope=reg_slope,
+        regression_effective=reg_effective,
+        regression_method=reg_method,
+        overall_effective=eff_result.overall_effective,
+        run_hash=eff_result.run_hash,
+        inputs_hash=eff_result.inputs_hash,
+        outputs_hash=eff_result.outputs_hash,
+        report_json=report_json,
+        trace_bundle=trace_bundle,
+        status="COMPLETED",
+        created_by=current_user.id,
+        created_at=datetime.now(UTC),
     )
+    session.add(run)
     await session.commit()
 
     await emit_audit(
@@ -413,34 +384,31 @@ async def run_assessment(
         event_type="SYSTEM",
         description=(
             f"Hedge effectiveness assessment: "
-            f"{'EFFECTIVE' if result.overall_effective else 'INEFFECTIVE'} "
-            f"under {result.standard} "
-            f"(dollar-offset: {do_ratio:.4f})" if do_ratio else
-            f"Hedge effectiveness assessment: "
-            f"{'EFFECTIVE' if result.overall_effective else 'INEFFECTIVE'} "
-            f"under {result.standard}"
+            f"{'EFFECTIVE' if eff_result.overall_effective else 'INEFFECTIVE'} "
+            f"under {eff_result.standard}"
+            + (f" (dollar-offset: {do_ratio:.4f})" if do_ratio else "")
         ),
         entity_type="hedge_effectiveness_run",
-        entity_id=run_id,
+        entity_id=str(run.id),
         payload={
-            "run_hash": result.run_hash,
+            "run_hash": eff_result.run_hash,
             "dataset_id": body.dataset_id,
-            "standard": result.standard,
-            "overall_effective": result.overall_effective,
+            "standard": eff_result.standard,
+            "overall_effective": eff_result.overall_effective,
             "dollar_offset_ratio": do_ratio,
             "regression_r_squared": reg_r2,
         },
     )
 
     return {
-        "run_id": run_id,
-        "run_hash": result.run_hash,
-        "overall_effective": result.overall_effective,
-        "standard": result.standard,
-        "dollar_offset": result.dollar_offset.to_dict() if result.dollar_offset else None,
-        "regression": result.regression.to_dict() if result.regression else None,
-        "determination_narrative": result.determination_narrative,
-        "compliance_notes": result.compliance_notes,
+        "run_id": str(run.id),
+        "run_hash": eff_result.run_hash,
+        "overall_effective": eff_result.overall_effective,
+        "standard": eff_result.standard,
+        "dollar_offset": eff_result.dollar_offset.to_dict() if eff_result.dollar_offset else None,
+        "regression": eff_result.regression.to_dict() if eff_result.regression else None,
+        "determination_narrative": eff_result.determination_narrative,
+        "compliance_notes": eff_result.compliance_notes,
     }
 # -- Endpoint: List runs ----------------------------------------------------
 
@@ -450,43 +418,39 @@ async def list_runs(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    company_id = str(current_user.company_id)
+    company_id = current_user.company_id
 
-    rows = await session.execute(
-        text(
-            "SELECT r.id, r.dataset_id, r.methodology_version, r.standard, "
-            "r.method_requested, r.dollar_offset_ratio, r.dollar_offset_effective, "
-            "r.regression_r_squared, r.regression_slope, r.regression_effective, "
-            "r.overall_effective, r.run_hash, r.status, r.created_at, "
-            "d.name as dataset_name, d.currency_pair "
-            "FROM hedge_effectiveness_runs r "
-            "JOIN hedge_effectiveness_datasets d ON d.id = r.dataset_id "
-            "WHERE r.company_id = :cid "
-            "ORDER BY r.created_at DESC LIMIT :lim"
-        ),
-        {"cid": company_id, "lim": limit},
+    stmt = (
+        select(HedgeEffectivenessRun, HedgeEffectivenessDataset.name, HedgeEffectivenessDataset.currency_pair)
+        .join(HedgeEffectivenessDataset, HedgeEffectivenessDataset.id == HedgeEffectivenessRun.dataset_id)
+        .where(HedgeEffectivenessRun.company_id == company_id)
+        .order_by(HedgeEffectivenessRun.created_at.desc())
+        .limit(limit)
     )
-    result = []
-    for row in rows.fetchall():
-        result.append({
-            "run_id": str(row.id),
-            "dataset_id": str(row.dataset_id),
-            "dataset_name": row.dataset_name,
-            "currency_pair": row.currency_pair,
-            "methodology_version": row.methodology_version,
-            "standard": row.standard,
-            "method_requested": row.method_requested,
-            "dollar_offset_ratio": float(row.dollar_offset_ratio) if row.dollar_offset_ratio is not None else None,
-            "dollar_offset_effective": row.dollar_offset_effective,
-            "regression_r_squared": float(row.regression_r_squared) if row.regression_r_squared is not None else None,
-            "regression_slope": float(row.regression_slope) if row.regression_slope is not None else None,
-            "regression_effective": row.regression_effective,
-            "overall_effective": row.overall_effective,
-            "run_hash": row.run_hash,
-            "status": row.status,
-            "created_at": row.created_at.isoformat() if row.created_at else None,
+    result = await session.execute(stmt)
+    rows = result.all()
+
+    items = []
+    for run, dataset_name, currency_pair in rows:
+        items.append({
+            "run_id": str(run.id),
+            "dataset_id": str(run.dataset_id),
+            "dataset_name": dataset_name,
+            "currency_pair": currency_pair,
+            "methodology_version": run.methodology_version,
+            "standard": run.standard,
+            "method_requested": run.method_requested,
+            "dollar_offset_ratio": float(run.dollar_offset_ratio) if run.dollar_offset_ratio is not None else None,
+            "dollar_offset_effective": run.dollar_offset_effective,
+            "regression_r_squared": float(run.regression_r_squared) if run.regression_r_squared is not None else None,
+            "regression_slope": float(run.regression_slope) if run.regression_slope is not None else None,
+            "regression_effective": run.regression_effective,
+            "overall_effective": run.overall_effective,
+            "run_hash": run.run_hash,
+            "status": run.status,
+            "created_at": run.created_at.isoformat() if run.created_at else None,
         })
-    return result
+    return items
 # -- Endpoint: Get run detail -----------------------------------------------
 
 @router.get("/runs/{run_id}")
@@ -495,57 +459,52 @@ async def get_run(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    company_id = str(current_user.company_id)
+    company_id = current_user.company_id
 
-    row = await session.execute(
-        text(
-            "SELECT r.id, r.dataset_id, r.methodology_version, r.standard, "
-            "r.method_requested, r.dollar_offset_ratio, r.dollar_offset_effective, "
-            "r.regression_r_squared, r.regression_slope, r.regression_effective, "
-            "r.regression_method, r.overall_effective, r.run_hash, r.inputs_hash, "
-            "r.outputs_hash, r.report_json, r.trace_bundle, r.status, "
-            "r.created_at, r.created_by, "
-            "d.name as dataset_name, d.currency_pair, d.hedge_type, "
-            "d.designation_date, d.period_count, d.data_json "
-            "FROM hedge_effectiveness_runs r "
-            "JOIN hedge_effectiveness_datasets d ON d.id = r.dataset_id "
-            "WHERE r.id = :rid AND r.company_id = :cid LIMIT 1"
-        ),
-        {"rid": run_id, "cid": company_id},
+    stmt = (
+        select(HedgeEffectivenessRun, HedgeEffectivenessDataset)
+        .join(HedgeEffectivenessDataset, HedgeEffectivenessDataset.id == HedgeEffectivenessRun.dataset_id)
+        .where(
+            HedgeEffectivenessRun.id == uuid.UUID(run_id),
+            HedgeEffectivenessRun.company_id == company_id,
+        )
     )
-    r = row.fetchone()
-    if not r:
+    result = await session.execute(stmt)
+    row = result.one_or_none()
+    if not row:
         raise HTTPException(status_code=404, detail="Assessment run not found.")
 
-    report = r.report_json if isinstance(r.report_json, dict) else (
-        json.loads(r.report_json) if isinstance(r.report_json, str) else {}
+    run, ds = row
+
+    report = run.report_json if isinstance(run.report_json, dict) else (
+        json.loads(run.report_json) if isinstance(run.report_json, str) else {}
     )
 
     return {
-        "run_id": str(r.id),
-        "dataset_id": str(r.dataset_id),
-        "dataset_name": r.dataset_name,
-        "currency_pair": r.currency_pair,
-        "hedge_type": r.hedge_type,
-        "designation_date": str(r.designation_date) if r.designation_date else None,
-        "period_count": r.period_count,
-        "methodology_version": r.methodology_version,
-        "standard": r.standard,
-        "method_requested": r.method_requested,
-        "dollar_offset_ratio": float(r.dollar_offset_ratio) if r.dollar_offset_ratio is not None else None,
-        "dollar_offset_effective": r.dollar_offset_effective,
-        "regression_r_squared": float(r.regression_r_squared) if r.regression_r_squared is not None else None,
-        "regression_slope": float(r.regression_slope) if r.regression_slope is not None else None,
-        "regression_effective": r.regression_effective,
-        "regression_method": r.regression_method,
-        "overall_effective": r.overall_effective,
-        "run_hash": r.run_hash,
-        "inputs_hash": r.inputs_hash,
-        "outputs_hash": r.outputs_hash,
-        "status": r.status,
-        "created_at": r.created_at.isoformat() if r.created_at else None,
+        "run_id": str(run.id),
+        "dataset_id": str(run.dataset_id),
+        "dataset_name": ds.name,
+        "currency_pair": ds.currency_pair,
+        "hedge_type": ds.hedge_type,
+        "designation_date": ds.designation_date,
+        "period_count": ds.period_count,
+        "methodology_version": run.methodology_version,
+        "standard": run.standard,
+        "method_requested": run.method_requested,
+        "dollar_offset_ratio": float(run.dollar_offset_ratio) if run.dollar_offset_ratio is not None else None,
+        "dollar_offset_effective": run.dollar_offset_effective,
+        "regression_r_squared": float(run.regression_r_squared) if run.regression_r_squared is not None else None,
+        "regression_slope": float(run.regression_slope) if run.regression_slope is not None else None,
+        "regression_effective": run.regression_effective,
+        "regression_method": run.regression_method,
+        "overall_effective": run.overall_effective,
+        "run_hash": run.run_hash,
+        "inputs_hash": run.inputs_hash,
+        "outputs_hash": run.outputs_hash,
+        "status": run.status,
+        "created_at": run.created_at.isoformat() if run.created_at else None,
         "report": report,
-        "trace_bundle": r.trace_bundle,
+        "trace_bundle": run.trace_bundle,
     }
 # -- Endpoint: Export evidence binder ----------------------------------------
 
@@ -555,28 +514,25 @@ async def export_run(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    company_id = str(current_user.company_id)
+    company_id = current_user.company_id
 
-    row = await session.execute(
-        text(
-            "SELECT r.id, r.dataset_id, r.methodology_version, r.standard, "
-            "r.run_hash, r.inputs_hash, r.outputs_hash, r.overall_effective, "
-            "r.dollar_offset_ratio, r.regression_r_squared, r.regression_slope, "
-            "r.trace_bundle, r.report_json, r.created_at, "
-            "d.name as dataset_name, d.source_hash as dataset_hash, "
-            "d.currency_pair, d.hedge_type, d.period_count "
-            "FROM hedge_effectiveness_runs r "
-            "JOIN hedge_effectiveness_datasets d ON d.id = r.dataset_id "
-            "WHERE r.id = :rid AND r.company_id = :cid LIMIT 1"
-        ),
-        {"rid": run_id, "cid": company_id},
+    stmt = (
+        select(HedgeEffectivenessRun, HedgeEffectivenessDataset)
+        .join(HedgeEffectivenessDataset, HedgeEffectivenessDataset.id == HedgeEffectivenessRun.dataset_id)
+        .where(
+            HedgeEffectivenessRun.id == uuid.UUID(run_id),
+            HedgeEffectivenessRun.company_id == company_id,
+        )
     )
-    r = row.fetchone()
-    if not r:
+    result = await session.execute(stmt)
+    row = result.one_or_none()
+    if not row:
         raise HTTPException(status_code=404, detail="Assessment run not found.")
 
-    report = r.report_json if isinstance(r.report_json, dict) else (
-        json.loads(r.report_json) if isinstance(r.report_json, str) else {}
+    run, ds = row
+
+    report = run.report_json if isinstance(run.report_json, dict) else (
+        json.loads(run.report_json) if isinstance(run.report_json, str) else {}
     )
 
     return {
@@ -584,25 +540,25 @@ async def export_run(
         "generated_at": datetime.now(UTC).isoformat(),
         "run_type": "hedge_effectiveness",
         "run_id": run_id,
-        "run_hash": r.run_hash,
-        "inputs_hash": r.inputs_hash,
-        "outputs_hash": r.outputs_hash,
-        "methodology_version": r.methodology_version,
-        "standard": r.standard,
-        "overall_effective": r.overall_effective,
+        "run_hash": run.run_hash,
+        "inputs_hash": run.inputs_hash,
+        "outputs_hash": run.outputs_hash,
+        "methodology_version": run.methodology_version,
+        "standard": run.standard,
+        "overall_effective": run.overall_effective,
         "dataset": {
-            "id": str(r.dataset_id),
-            "name": r.dataset_name,
-            "hash": r.dataset_hash,
-            "currency_pair": r.currency_pair,
-            "hedge_type": r.hedge_type,
-            "period_count": r.period_count,
+            "id": str(run.dataset_id),
+            "name": ds.name,
+            "hash": ds.source_hash,
+            "currency_pair": ds.currency_pair,
+            "hedge_type": ds.hedge_type,
+            "period_count": ds.period_count,
         },
         "results": {
-            "dollar_offset_ratio": float(r.dollar_offset_ratio) if r.dollar_offset_ratio is not None else None,
-            "regression_r_squared": float(r.regression_r_squared) if r.regression_r_squared is not None else None,
-            "regression_slope": float(r.regression_slope) if r.regression_slope is not None else None,
+            "dollar_offset_ratio": float(run.dollar_offset_ratio) if run.dollar_offset_ratio is not None else None,
+            "regression_r_squared": float(run.regression_r_squared) if run.regression_r_squared is not None else None,
+            "regression_slope": float(run.regression_slope) if run.regression_slope is not None else None,
         },
         "report": report,
-        "trace_bundle": r.trace_bundle,
+        "trace_bundle": run.trace_bundle,
     }

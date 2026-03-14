@@ -15,9 +15,11 @@ export async function loginAsDemo(page: Page): Promise<void> {
   await page.fill('input[type="password"]', 'demo');
 
   // Capture the login response to extract access_token
+  // Must be a JSON response (the backend API), not the HTML login page
   const loginRespPromise = page.waitForResponse(
-    r => r.url().includes("/auth/login") && r.status() === 200,
-    { timeout: 15000 }
+    r => r.url().includes("/auth/login") && r.status() === 200
+      && (r.headers()["content-type"] ?? "").includes("application/json"),
+    { timeout: 30000 }
   );
 
   // Submit
