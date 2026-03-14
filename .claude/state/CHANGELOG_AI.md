@@ -1,5 +1,18 @@
 # Changelog (AI-maintained)
 
+## 2026-03-14 — IBKR Paper Trading + Colorful Login (commit 732b2a0)
+
+### IBKR Integration (ADR-0005)
+- **IBKRExecutor service** (`ibkr_executor.py`): ib_insync-based FX order execution with connect/disconnect, contract resolution cache, MKT/LMT orders, fill-wait with timeout, batch execution
+- **3 API endpoints** (`v1_ibkr.py`): GET /v1/ibkr/status, POST /v1/ibkr/connect, POST /v1/ibkr/execute
+- **PhaseExecute rewrite**: Removed Live Market Snapshot section, added IBKR execution flow with confirmation overlay, fill tracking, weighted avg price, auto-HEDGED position marking
+- **ADR-0005**: Documents broker execution exception for paper trading (v1 freeze extension)
+- **56 new tests**: 35 executor service + 21 route tests, all passing
+
+### Login Page
+- **Colorful particle field**: useParticleField hook extended with HSL color-shifting mode (treasury pastels: cyan, blue, lavender, teal, rose, mint), sinusoidal oscillation between white and accent hues
+- Login page canvas opacity 0.6→0.7, saturation 35, lightness 86
+
 ## 2026-03-14 — Deep Security Audit: Admin + Hedge Desk + Pipeline (commit af2357a)
 
 ### Admin Section (10 criticals fixed)

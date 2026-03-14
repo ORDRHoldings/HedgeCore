@@ -1,14 +1,16 @@
 # ORDR Terminal — Current State
 
-> Last updated: 2026-03-14 (commit af2357a)
+> Last updated: 2026-03-14 (commit 732b2a0)
 
 ## Recent Work
+- **IBKR paper trading integration**: ADR-0005 approved, IBKRExecutor service, 3 API endpoints, PhaseExecute rewrite with IBKR execution flow
+- **Login page colorful particles**: Treasury pastel palette with HSL color-shifting nodes
 - **Deep security audit**: Admin section (10 criticals), hedge desk pipeline (5 criticals), hedge desk workflow (6 highs), backend hardening (3 highs), DB model fixes (4 criticals)
 - **Total fixes**: 20 critical+high findings resolved across 35 files
-- **Tests**: 3475 passing (+95 new), 134 skipped (PG-only), 0 failed
+- **Tests**: 3531 passing (+56 new IBKR), 134 skipped (PG-only), 0 failed
 
 ## Test Evidence
-- Backend: `3475 passed, 134 skipped, 0 failed` (22.33s)
+- Backend: `3531 passed, 134 skipped, 0 failed` (19.31s)
 - Frontend: `tsc --noEmit` clean, `next build` passes
 - Pre-existing failure: `test_report_studio_governance.py::test_compute_report_hash_function_exists` (unrelated)
 
