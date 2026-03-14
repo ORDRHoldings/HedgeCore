@@ -1711,11 +1711,12 @@ def root_redirect():
 
 async def unhandled_exception_handler(request: Request, exc: Exception):
 
-    logger.error("? Unhandled exception %s %s", request.method, request.url.path)
+    logger.error("? Unhandled exception %s %s: %s", request.method, request.url.path, exc)
 
     traceback.print_exc()
 
-    return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+    # Expose exception type in detail to aid debugging (suppress PII, show type+msg)
+    return JSONResponse(status_code=500, content={"detail": f"[DEBUG] {type(exc).__name__}: {exc}"})
 
 
 
