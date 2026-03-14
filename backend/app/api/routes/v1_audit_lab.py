@@ -345,6 +345,23 @@ async def create_audit_run(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user),
 ) -> dict:
+    import traceback as _tb
+    import logging as _log
+    _logger = _log.getLogger(__name__)
+    try:
+        return await _create_audit_run_inner(body, session, current_user)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _logger.error("create_audit_run failed: %s\n%s", exc, _tb.format_exc())
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
+
+
+async def _create_audit_run_inner(
+    body: dict,
+    session: AsyncSession,
+    current_user,
+) -> dict:
     await _require(session, current_user, "audit.run")
 
     dataset_id = body.get("dataset_id")
