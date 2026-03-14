@@ -16,10 +16,10 @@ const C = {
   text1:       "#E5E7EB",           // --text-primary
   text2:       "#9CA3AF",           // --text-secondary
   text3:       "#6B7280",           // --text-tertiary
-  accent:      "#1C62F2",           // --accent-blue
-  accentGlow:  "rgba(28,98,242,0.28)",
-  accentDim:   "rgba(28,98,242,0.12)",
-  accentLight: "#5B8EF5",
+  accent:      "#111111",           // enterprise black
+  accentGlow:  "rgba(17,17,17,0.35)",
+  accentDim:   "rgba(17,17,17,0.15)",
+  accentLight: "#444444",
   green:       "#059669",           // --accent-green
   greenGlow:   "rgba(5,150,105,0.3)",
   red:         "#DC2626",           // --accent-red
@@ -321,8 +321,8 @@ export default function LoginPage() {
           width: "100%", padding: "20px",
           fontFamily: C.fontMono, fontSize: "13px", fontWeight: 600,
           textTransform: "uppercase", letterSpacing: "0.3em",
-          color: "#FFFFFF",
-          background: (mfaLoading || mfaCode.length !== 6) ? C.border : C.accent,
+          color: "#111111",
+          background: (mfaLoading || mfaCode.length !== 6) ? C.border : "#E5E7EB",
           border: "none", borderRadius: 4,
           cursor: (mfaLoading || mfaCode.length !== 6) ? "not-allowed" : "pointer",
           transition: "all 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -347,7 +347,7 @@ export default function LoginPage() {
         }}>
           Institutional FX Hedge Governance
         </p>
-        <div style={{ width: "40px", height: "1px", background: C.accent, opacity: 0.5, margin: "0 auto 18px" }} />
+        <div style={{ width: "40px", height: "1px", background: "rgba(255,255,255,0.2)", margin: "0 auto 18px" }} />
         <p style={{
           fontFamily: C.fontUI, fontSize: "15px",
           color: C.text2, lineHeight: 1.7, margin: 0,
@@ -466,8 +466,8 @@ export default function LoginPage() {
           fontFamily: C.fontMono, fontSize: "13px", fontWeight: 600,
           textTransform: "uppercase",
           letterSpacing: loading ? "0.3em" : btnHovered ? "0.45em" : "0.3em",
-          color: loading ? C.text3 : "#FFFFFF",
-          background: loading ? C.border : C.accent,
+          color: loading ? C.text3 : "#111111",
+          background: loading ? C.border : "#E5E7EB",
           border: "none", borderRadius: 4,
           cursor: loading ? "not-allowed" : "pointer",
           transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -560,7 +560,7 @@ export default function LoginPage() {
       {/* Radial glow behind card */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 2, pointerEvents: "none",
-        background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(28,98,242,0.07) 0%, transparent 70%)",
+        background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 70%)",
       }} />
 
       {/* Corner telemetry */}
@@ -584,7 +584,7 @@ export default function LoginPage() {
         ref={prismRef}
         style={{
           position: "relative", zIndex: 10,
-          width: 440, padding: "52px 48px",
+          width: 380, padding: "40px 36px",
           background: C.panel,
           backdropFilter: "blur(40px) saturate(180%)",
           WebkitBackdropFilter: "blur(40px) saturate(180%)",
@@ -599,7 +599,7 @@ export default function LoginPage() {
         {/* Accent top line */}
         <div style={{
           position: "absolute", top: 0, left: "20%", right: "20%", height: "2px",
-          background: `linear-gradient(90deg, transparent, ${C.accent}, transparent)`,
+          background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)`,
           borderRadius: "0 0 2px 2px",
         }} />
 

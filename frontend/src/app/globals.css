@@ -927,3 +927,89 @@ button:not(.no-scale):active:not(:disabled) {
     margin: 1.5cm;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Marketing Site Styles
+   ══════════════════════════════════════════════════════════════ */
+
+.bg-grid {
+  background-size: 32px 32px;
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+}
+
+.bg-grid-dark {
+  background-size: 32px 32px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+.section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #6B7280;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-label::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 2px;
+  background-color: #1E3A5F;
+}
+
+.mkt-card {
+  border: 1px solid #E5E7EB;
+  border-radius: 2px;
+  padding: 24px;
+  background: #FFFFFF;
+  transition: all 0.2s ease-in-out;
+  position: relative;
+}
+
+.mkt-card:hover {
+  border-color: #1E3A5F;
+  transform: translateY(-2px);
+}
+
+.mkt-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #1E3A5F;
+  transition: width 0.3s ease;
+}
+
+.mkt-card:hover::before {
+  width: 100%;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #059669;
+  box-shadow: 0 0 8px #059669;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.status-dot.pulsing {
+  animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

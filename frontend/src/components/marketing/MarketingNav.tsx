@@ -2,42 +2,35 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { Menu, X, ChevronDown } from "lucide-react";
 import {
-  Menu, X, ChevronDown,
-  LayoutGrid, TrendingUp, PieChart, FlaskConical, Globe, BookOpen, Newspaper,
-  Building2, ShieldAlert, BarChart3, Landmark, Umbrella, Flame,
+  Shield, BarChart2, Layers, Zap, Globe, BookOpen, Activity,
+  Building, ShieldAlert, Briefcase, Landmark, FileText,
 } from "lucide-react";
-import { C, F, PRODUCTS, SOLUTIONS } from "./theme";
 
-const ICONS: Record<string, React.ReactNode> = {
-  LayoutGrid: <LayoutGrid size={16} strokeWidth={1.5} />,
-  TrendingUp: <TrendingUp size={16} strokeWidth={1.5} />,
-  PieChart: <PieChart size={16} strokeWidth={1.5} />,
-  FlaskConical: <FlaskConical size={16} strokeWidth={1.5} />,
-  Globe: <Globe size={16} strokeWidth={1.5} />,
-  BookOpen: <BookOpen size={16} strokeWidth={1.5} />,
-  Newspaper: <Newspaper size={16} strokeWidth={1.5} />,
-};
+const PRODUCTS = [
+  { id: "treasury", name: "ORDR Treasury", desc: "FX hedge calculation, policy governance", icon: Shield, external: null },
+  { id: "market", name: "ORDR Market", desc: "Agentic charting and algo trading", icon: BarChart2, external: "https://ordr-market.vercel.app/" },
+  { id: "portfolio", name: "ORDR Portfolio", desc: "Portfolio risk decomposition", icon: Layers, external: null },
+  { id: "labs", name: "ORDR Labs", desc: "Scenario studio and backtesting", icon: Zap, external: null },
+  { id: "polisophic", name: "ORDR Polisophic", desc: "Geopolitical risk intelligence", icon: Globe, external: null },
+  { id: "hedgewiki", name: "ORDR HedgeWiki", desc: "ISDA / IFRS 9 / ASC 815 reference", icon: BookOpen, external: "https://hedge-wiki.vercel.app/" },
+  { id: "finhub", name: "ORDR FinHub", desc: "AI-curated market intelligence", icon: Activity, external: null },
+];
 
-const SOL_ICONS: Record<string, React.ReactNode> = {
-  "corporate-treasury": <Building2 size={16} strokeWidth={1.5} />,
-  "risk-management": <ShieldAlert size={16} strokeWidth={1.5} />,
-  "asset-management": <BarChart3 size={16} strokeWidth={1.5} />,
-  banking: <Landmark size={16} strokeWidth={1.5} />,
-  insurance: <Umbrella size={16} strokeWidth={1.5} />,
-  energy: <Flame size={16} strokeWidth={1.5} />,
-};
-
-const NAV_LINKS = [
-  { label: "ORDR Market", href: "/products/market" },
-  { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
+const SOLUTIONS = [
+  { id: "corporate-treasury", name: "Corporate Treasury", icon: Building },
+  { id: "risk-management", name: "Risk Management", icon: ShieldAlert },
+  { id: "asset-management", name: "Asset Management", icon: Briefcase },
+  { id: "banking", name: "Banking & Capital Markets", icon: Landmark },
+  { id: "insurance", name: "Insurance", icon: FileText },
+  { id: "energy", name: "Energy & Commodities", icon: Zap },
 ];
 
 export default function MarketingNav() {
   const [mob, setMob] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openDrop, setOpenDrop] = useState<string | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -54,176 +47,130 @@ export default function MarketingNav() {
 
   const enter = useCallback((n: string) => {
     if (timeout.current) clearTimeout(timeout.current);
-    setOpenDrop(n);
-  }, []);
-  const leave = useCallback(() => {
-    timeout.current = setTimeout(() => setOpenDrop(null), 100);
+    setActiveDropdown(n);
   }, []);
 
-  const linkStyle: React.CSSProperties = {
-    fontFamily: F.ui, fontSize: 14, fontWeight: 500,
-    color: C.navTextMuted, textDecoration: "none", padding: "4px 0",
-    transition: "color .15s",
-  };
+  const leave = useCallback(() => {
+    timeout.current = setTimeout(() => setActiveDropdown(null), 100);
+  }, []);
 
   return (
     <>
-      <style>{`
-        .mnav-link:hover{color:#fff !important}
-        .mnav-drop-item{transition:background .12s}
-        .mnav-drop-item:hover{background:${C.bgAlt} !important}
-      `}</style>
+      <nav className="fixed top-0 w-full h-[56px] bg-[#000000] text-white z-50 flex items-center px-4 md:px-8 border-b border-[#333333]">
+        <div className="absolute top-0 left-0 w-full h-[2px] bg-[#1E3A5F]" />
 
-      <nav style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: mob ? "0 20px" : "0 48px", height: 56,
-        background: C.navBg,
-      }}>
         {/* Logo */}
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <span style={{ fontFamily: F.mono, fontSize: 18, fontWeight: 800, color: "#fff", letterSpacing: "0.06em" }}>ORDR</span>
-        </Link>
+        <div className="flex-1 flex items-center">
+          <Link href="/" className="font-mono text-[18px] font-extrabold tracking-[0.06em] hover:text-[#D1D5DB] transition-colors no-underline text-white">
+            ORDR
+          </Link>
+        </div>
 
-        {/* Desktop nav */}
+        {/* Desktop Menu */}
         {!mob && (
-          <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
-            {/* Products dropdown */}
-            <div style={{ position: "relative" }} onMouseEnter={() => enter("Products")} onMouseLeave={leave}>
-              <button style={{ ...linkStyle, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, color: openDrop === "Products" ? "#fff" : C.navTextMuted }}>
-                Products <ChevronDown size={12} style={{ transform: openDrop === "Products" ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
-              </button>
-              {openDrop === "Products" && (
-                <div style={{ position: "absolute", top: "calc(100% + 12px)", left: -20, width: 480, background: "#fff", borderRadius: 8, boxShadow: C.dropdownShadow, padding: 8, zIndex: 200 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-                    {PRODUCTS.map(p => (
-                      <Link key={p.slug} href={`/products/${p.slug}`} className="mnav-drop-item" onClick={() => setOpenDrop(null)}
-                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 6, textDecoration: "none", color: C.text }}>
-                        <div style={{ width: 28, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: C.accentLight, color: C.accent, flexShrink: 0 }}>
-                          {ICONS[p.icon] || <LayoutGrid size={16} />}
+          <div className="flex flex-1 justify-center items-center gap-8 text-[12px] font-bold tracking-wide uppercase h-full text-[#9CA3AF]">
+            {/* Products Dropdown */}
+            <div className="relative h-full flex items-center cursor-pointer hover:text-white transition-colors"
+              onMouseEnter={() => enter("products")} onMouseLeave={leave}>
+              <span className="flex items-center gap-1">Products <ChevronDown size={14} /></span>
+              {activeDropdown === "products" && (
+                <div className="absolute top-[56px] left-1/2 -translate-x-1/2 w-[520px] bg-white text-[#111111] shadow-2xl border border-[#D1D5DB] rounded-b-sm p-4 grid grid-cols-2 gap-x-4 gap-y-2 normal-case tracking-normal">
+                  <div className="col-span-2 mb-2 px-2 pb-2 border-b border-[#E5E7EB]">
+                    <span className="font-mono text-[10px] font-bold text-[#6B7280] tracking-widest uppercase">Ecosystem Modules</span>
+                  </div>
+                  {PRODUCTS.map(p => {
+                    const Icon = p.icon;
+                    const inner = (
+                      <div className="p-3 hover:bg-[#F9FAFB] rounded-sm cursor-pointer group/item flex items-start gap-3 border border-transparent hover:border-[#E5E7EB] transition-all">
+                        <div className="w-6 h-6 rounded-sm bg-[#F4F5F7] flex items-center justify-center shrink-0 border border-[#E5E7EB]">
+                          <Icon size={12} className="text-[#4B5563] group-hover/item:text-[#1E3A5F]" />
                         </div>
                         <div>
-                          <div style={{ fontFamily: F.ui, fontSize: 13, fontWeight: 600, color: C.text }}>{p.name}</div>
-                          <div style={{ fontFamily: F.ui, fontSize: 11, color: C.textMuted, marginTop: 1 }}>{p.desc}</div>
+                          <div className="font-bold text-[13px] leading-tight mb-1 group-hover/item:text-[#1E3A5F]">{p.name}</div>
+                          <div className="text-[11px] text-[#6B7280] truncate max-w-[170px] font-medium">{p.desc}</div>
+                        </div>
+                      </div>
+                    );
+                    return p.external ? (
+                      <a key={p.id} href={p.external} target="_blank" rel="noopener noreferrer" className="no-underline text-inherit" onClick={() => setActiveDropdown(null)}>{inner}</a>
+                    ) : (
+                      <Link key={p.id} href={`/products/${p.id}`} className="no-underline text-inherit" onClick={() => setActiveDropdown(null)}>{inner}</Link>
+                    );
+                  })}
+                  <div className="col-span-2 mt-2 pt-3 border-t border-[#E5E7EB] px-2 text-center bg-[#F9FAFB] rounded-sm">
+                    <Link href="/products" className="text-[#1E3A5F] text-[11px] font-bold uppercase tracking-widest hover:underline no-underline" onClick={() => setActiveDropdown(null)}>
+                      VIEW ALL MODULES →
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Solutions Dropdown */}
+            <div className="relative h-full flex items-center cursor-pointer hover:text-white transition-colors"
+              onMouseEnter={() => enter("solutions")} onMouseLeave={leave}>
+              <span className="flex items-center gap-1">Solutions <ChevronDown size={14} /></span>
+              {activeDropdown === "solutions" && (
+                <div className="absolute top-[56px] left-1/2 -translate-x-1/2 w-[380px] bg-white text-[#111111] shadow-2xl border border-[#D1D5DB] rounded-b-sm p-3 flex flex-col gap-1 normal-case tracking-normal">
+                  <div className="mb-2 px-2 pb-2 border-b border-[#E5E7EB]">
+                    <span className="font-mono text-[10px] font-bold text-[#6B7280] tracking-widest uppercase">Industries Served</span>
+                  </div>
+                  {SOLUTIONS.map(s => {
+                    const Icon = s.icon;
+                    return (
+                      <Link key={s.id} href={`/solutions/${s.id}`} className="no-underline text-inherit" onClick={() => setActiveDropdown(null)}>
+                        <div className="p-3 hover:bg-[#F9FAFB] rounded-sm cursor-pointer group/item flex items-center gap-3 border border-transparent hover:border-[#E5E7EB] transition-all">
+                          <Icon size={14} className="text-[#6B7280] group-hover/item:text-[#1E3A5F]" />
+                          <div className="font-bold text-[13px] group-hover/item:text-[#1E3A5F]">{s.name}</div>
                         </div>
                       </Link>
-                    ))}
-                  </div>
-                  <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 4, paddingTop: 4 }}>
-                    <Link href="/products" className="mnav-drop-item" onClick={() => setOpenDrop(null)}
-                      style={{ display: "block", padding: "8px 12px", borderRadius: 6, textDecoration: "none", fontFamily: F.ui, fontSize: 13, fontWeight: 500, color: C.accent }}>
-                      View all products
-                    </Link>
-                  </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            {/* Solutions dropdown */}
-            <div style={{ position: "relative" }} onMouseEnter={() => enter("Solutions")} onMouseLeave={leave}>
-              <button style={{ ...linkStyle, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, color: openDrop === "Solutions" ? "#fff" : C.navTextMuted }}>
-                Solutions <ChevronDown size={12} style={{ transform: openDrop === "Solutions" ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
-              </button>
-              {openDrop === "Solutions" && (
-                <div style={{ position: "absolute", top: "calc(100% + 12px)", left: -40, width: 380, background: "#fff", borderRadius: 8, boxShadow: C.dropdownShadow, padding: 8, zIndex: 200 }}>
-                  {SOLUTIONS.map(s => (
-                    <Link key={s.slug} href={`/solutions/${s.slug}`} className="mnav-drop-item" onClick={() => setOpenDrop(null)}
-                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 6, textDecoration: "none", color: C.text }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: C.accentLight, color: C.accent, flexShrink: 0 }}>
-                        {SOL_ICONS[s.slug] || <Building2 size={16} />}
-                      </div>
-                      <div>
-                        <div style={{ fontFamily: F.ui, fontSize: 13, fontWeight: 600, color: C.text }}>{s.name}</div>
-                        <div style={{ fontFamily: F.ui, fontSize: 11, color: C.textMuted, marginTop: 1 }}>{s.desc}</div>
-                      </div>
-                    </Link>
-                  ))}
-                  <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 4, paddingTop: 4 }}>
-                    <Link href="/solutions" className="mnav-drop-item" onClick={() => setOpenDrop(null)}
-                      style={{ display: "block", padding: "8px 12px", borderRadius: 6, textDecoration: "none", fontFamily: F.ui, fontSize: 13, fontWeight: 500, color: C.accent }}>
-                      View all solutions
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {NAV_LINKS.map(l => (
-              <Link key={l.label} href={l.href} className="mnav-link" style={linkStyle}>{l.label}</Link>
-            ))}
+            <Link href="/about" className="hover:text-white transition-colors no-underline text-[#9CA3AF]">About</Link>
+            <Link href="/contact" className="hover:text-white transition-colors no-underline text-[#9CA3AF]">Contact</Link>
           </div>
         )}
 
-        {/* Right */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        {/* Right Side */}
+        <div className="flex-1 flex justify-end items-center gap-6 text-[12px] font-bold tracking-wide">
           {!mob && (
             <>
-              <Link href="/auth/login" className="mnav-link" style={{ ...linkStyle, marginRight: 4 }}>Sign In</Link>
-              <Link href="/auth/login" style={{
-                fontFamily: F.ui, fontSize: 13, fontWeight: 600,
-                color: C.navBg, background: "#fff",
-                padding: "8px 20px", borderRadius: 6,
-                textDecoration: "none", transition: "opacity .15s",
-              }}>Get Started</Link>
+              <Link href="/auth/login" className="text-[#9CA3AF] hover:text-white transition-colors no-underline uppercase">Sign In</Link>
+              <Link href="/contact" className="bg-white text-[#000000] px-5 py-2 rounded-sm hover:bg-[#E5E7EB] transition-colors no-underline uppercase">
+                Request Demo
+              </Link>
             </>
           )}
           {mob && (
-            <button onClick={() => setMobileOpen(p => !p)} aria-label="Menu" style={{
-              width: 36, height: 36, borderRadius: 6,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", background: "rgba(255,255,255,0.1)",
-              border: "none", color: "#fff",
-            }}>
+            <button onClick={() => setMobileOpen(p => !p)} aria-label="Menu"
+              className="w-9 h-9 rounded-sm flex items-center justify-center cursor-pointer bg-[rgba(255,255,255,0.1)] border-none text-white">
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           )}
         </div>
       </nav>
 
-      {/* Mobile overlay */}
+      {/* Mobile Menu Overlay */}
       {mob && mobileOpen && (
-        <div style={{
-          position: "fixed", inset: 0, top: 56, zIndex: 99,
-          background: "#fff", overflowY: "auto", padding: "24px 20px 40px",
-        }}>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: C.textMuted, marginBottom: 12 }}>PRODUCTS</div>
-            {PRODUCTS.map(p => (
-              <Link key={p.slug} href={`/products/${p.slug}`} onClick={() => setMobileOpen(false)}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0", textDecoration: "none", color: C.text, borderBottom: `1px solid ${C.borderLight}` }}>
-                <div style={{ width: 28, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: C.accentLight, color: C.accent }}>
-                  {ICONS[p.icon] || <LayoutGrid size={16} />}
-                </div>
-                <span style={{ fontFamily: F.ui, fontSize: 14, fontWeight: 500 }}>{p.name}</span>
-              </Link>
-            ))}
-          </div>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: C.textMuted, marginBottom: 12 }}>SOLUTIONS</div>
-            {SOLUTIONS.map(s => (
-              <Link key={s.slug} href={`/solutions/${s.slug}`} onClick={() => setMobileOpen(false)}
-                style={{ display: "block", padding: "12px 0", textDecoration: "none", color: C.text, fontFamily: F.ui, fontSize: 14, fontWeight: 500, borderBottom: `1px solid ${C.borderLight}` }}>
-                {s.name}
-              </Link>
-            ))}
-          </div>
-          <div>
-            {[...NAV_LINKS].map(l => (
-              <Link key={l.label} href={l.href} onClick={() => setMobileOpen(false)}
-                style={{ display: "block", padding: "14px 0", textDecoration: "none", color: C.text, fontFamily: F.ui, fontSize: 15, fontWeight: 600, borderBottom: `1px solid ${C.borderLight}` }}>
-                {l.label}
-              </Link>
-            ))}
-          </div>
-          <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 10 }}>
-            <Link href="/auth/login" style={{
-              display: "block", textAlign: "center", fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-              color: "#fff", background: C.accent, padding: "14px 20px", borderRadius: 8, textDecoration: "none",
-            }}>Get Started</Link>
-            <Link href="/auth/login" style={{
-              display: "block", textAlign: "center", fontFamily: F.ui, fontSize: 15, fontWeight: 500,
-              color: C.textSub, padding: "14px 20px", borderRadius: 8, textDecoration: "none", border: `1px solid ${C.border}`,
-            }}>Sign In</Link>
+        <div className="fixed top-[56px] left-0 w-full h-[calc(100vh-56px)] bg-[#0A0A0A] text-white p-6 flex flex-col gap-6 overflow-y-auto z-[99]">
+          <div className="text-[10px] font-mono font-bold text-[#6B7280] tracking-widest uppercase">NAVIGATION</div>
+          <Link href="/" onClick={() => setMobileOpen(false)} className="text-[18px] font-bold border-b border-[#333333] pb-4 uppercase no-underline text-white">Home</Link>
+          <Link href="/products" onClick={() => setMobileOpen(false)} className="text-[18px] font-bold border-b border-[#333333] pb-4 uppercase no-underline text-white">Products</Link>
+          <Link href="/about" onClick={() => setMobileOpen(false)} className="text-[18px] font-bold border-b border-[#333333] pb-4 uppercase no-underline text-white">About</Link>
+          <Link href="/contact" onClick={() => setMobileOpen(false)} className="text-[18px] font-bold border-b border-[#333333] pb-4 uppercase no-underline text-white">Contact</Link>
+          <div className="mt-auto flex flex-col gap-4">
+            <Link href="/auth/login" onClick={() => setMobileOpen(false)}
+              className="block text-center py-4 border border-[#374151] rounded-sm text-white no-underline uppercase text-[13px] font-bold tracking-wide hover:bg-[#111827]">
+              Sign In
+            </Link>
+            <Link href="/contact" onClick={() => setMobileOpen(false)}
+              className="block text-center py-4 bg-white text-black rounded-sm no-underline uppercase text-[13px] font-bold tracking-wide">
+              Request Demo
+            </Link>
           </div>
         </div>
       )}

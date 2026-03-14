@@ -43,8 +43,8 @@ export default function PolisophicPage() {
           Corridor scoring, event tracking, and country risk profiles with AI-driven interpretation.
           Political risk is quantified deterministically; the AI explains causality, identifies patterns, and translates geopolitical events into actionable hedge intelligence.
         </p>
-        <Link href="/auth/login" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: "#fff", background: C.accent, padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
-          Get Started <ArrowRight size={16} />
+        <Link href="/contact" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: "#fff", background: C.accent, padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
+          Request Demo <ArrowRight size={16} />
         </Link>
       </section>
 
@@ -154,8 +154,8 @@ export default function PolisophicPage() {
       <section style={{ background: C.accent, padding: "80px 48px", textAlign: "center" }}>
         <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, color: "#fff", margin: "0 0 16px" }}>Quantify geopolitical risk</h2>
         <p style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>AI-interpreted corridor scoring, event tracking, and macro overlay integration.</p>
-        <Link href="/auth/login" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.accent, background: "#fff", padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
-          Get Started <ArrowRight size={16} />
+        <Link href="/contact" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.accent, background: "#fff", padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
+          Request Demo <ArrowRight size={16} />
         </Link>
       </section>
 

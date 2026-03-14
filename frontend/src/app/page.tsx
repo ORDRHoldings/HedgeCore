@@ -2,559 +2,478 @@
 
 import Link from "next/link";
 import {
-  LayoutGrid, TrendingUp, PieChart, FlaskConical, Globe, BookOpen, Newspaper,
-  ArrowRight, Upload, Settings, Calculator, ShieldCheck, Brain, CheckCircle2,
-  Shield, Users, Layers, FileCheck, Cpu, Eye, Mic, MessageSquare,
-  Building2, Landmark, BarChart3, Umbrella, Flame, Lock,
+  ArrowRight, Activity, Shield, Lock, BarChart2, FileText, Database, Globe,
+  BrainCircuit, CheckCircle, Layers, Zap, Briefcase, Building, Landmark,
+  ShieldAlert, BookOpen,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
-import { C, F, PRODUCTS, SOLUTIONS } from "@/components/marketing/theme";
 
-/* ── Icon resolver ── */
-const ICONS: Record<string, React.ReactNode> = {
-  LayoutGrid: <LayoutGrid size={22} strokeWidth={1.6} />,
-  TrendingUp: <TrendingUp size={22} strokeWidth={1.6} />,
-  PieChart: <PieChart size={22} strokeWidth={1.6} />,
-  FlaskConical: <FlaskConical size={22} strokeWidth={1.6} />,
-  Globe: <Globe size={22} strokeWidth={1.6} />,
-  BookOpen: <BookOpen size={22} strokeWidth={1.6} />,
-  Newspaper: <Newspaper size={22} strokeWidth={1.6} />,
-};
-
-/* ── Data ── */
-const STATS = [
-  { value: "7", label: "Products" },
-  { value: "219+", label: "API Endpoints" },
-  { value: "41", label: "Engine Modules" },
-  { value: "<50ms", label: "Latency" },
-  { value: "AI", label: "Powered Insights" },
+const products = [
+  { id: "treasury", name: "ORDR Treasury", desc: "Deterministic FX hedge calculation with 60 policy presets, 41 engine modules, 4-eyes governance, and WORM audit trail.", ai: "AI serves as communication layer -- chat, phone, voice. AI does not evaluate calculations.", icon: Shield },
+  { id: "market", name: "ORDR Market", desc: "The first Agentic charting system with AI integrated. Built for algorithmic trading. Python, JavaScript, natural language.", ai: "AI coaches trading discipline, reads charts, provides insight. Not a signal service.", icon: BarChart2, external: "https://ordr-market.vercel.app/" },
+  { id: "portfolio", name: "ORDR Portfolio", desc: "Multi-currency portfolio risk decomposition with deterministic R1-R8 risk taxonomy, concentration monitoring.", ai: "AI assists with customer management and institutional reports. All calculations deterministic.", icon: Layers },
+  { id: "labs", name: "ORDR Labs", desc: "Pure deterministic scenario studio with backtesting, Monte Carlo simulation, historical VaR/ES, crisis replay.", ai: "No AI involvement. Full sandbox isolation with frozen kernel.", icon: Zap },
+  { id: "polisophic", name: "ORDR Polisophic", desc: "Geopolitical risk intelligence powered by AI corridor scoring. 190+ countries monitored.", ai: "AI synthesizes risk signals into hedging recommendations.", icon: Globe },
+  { id: "hedgewiki", name: "ORDR HedgeWiki", desc: "AI-searchable ISDA definitions, IFRS 9 / ASC 815 reference library. Natural language queries.", ai: "AI navigates knowledge graph with citation-backed answers.", icon: BookOpen, external: "https://hedge-wiki.vercel.app/" },
+  { id: "finhub", name: "ORDR FinHub", desc: "AI-curated economic calendars, company research, signal detection. Macro data aggregation.", ai: "AI filters noise, prioritizes events relevant to portfolio.", icon: Activity },
 ];
 
-const PRODUCT_DETAILS: Record<string, string> = {
-  treasury: "Deterministic FX hedge calculation with 60 policy presets, 41 engine modules, 4-eyes governance, and WORM audit trail. AI serves as a communication layer -- chat, phone, and voice for status updates, customer management, and report writing. AI does not evaluate or influence calculations.",
-  market: "The first Agentic charting system with AI integrated. Built for algorithmic trading -- build algos for non-technical AND technical people in Python, JavaScript, and more. AI assistant coaches trading discipline, helps read charts better, and provides real-time market insight. Link execution to your platform.",
-  portfolio: "Multi-currency portfolio risk decomposition with deterministic R1-R8 risk taxonomy, concentration monitoring, and factor attribution. AI assists with customer management and writing institutional-grade reports. All risk calculations are fully deterministic.",
-  labs: "Pure deterministic scenario studio with backtesting, Monte Carlo simulation, historical VaR/ES, configurable shock packs, and vol-scaled stress testing. Full sandbox isolation with the same frozen kernel as production. No AI involvement.",
-  polisophic: "Geopolitical risk intelligence powered by AI corridor scoring. Monitors political, economic, and regulatory developments across 190+ countries. AI synthesizes risk signals into actionable hedging recommendations.",
-  hedgewiki: "AI-searchable ISDA definitions, IFRS 9 / ASC 815 reference library, and hedge accounting guidance. Natural language queries across the full regulatory corpus with contextual cross-references.",
-  finhub: "AI-curated economic calendars, company research, and signal detection. Aggregates macro data, earnings, central bank communications, and market events with intelligent prioritization and alerting.",
-};
-
-const AI_LAYER_STEPS = [
-  { icon: <Calculator size={20} />, title: "Engine Calculates", desc: "The deterministic engine processes inputs through 41 production modules. Same input always produces the same output. Sub-50ms. Hash-chained. Reproducible." },
-  { icon: <Brain size={20} />, title: "AI Communicates", desc: "AI is a communication and management layer for specific products. Treasury uses chat, voice, and phone for status updates and reports. Market uses AI for chart analysis and algo building. Polisophic uses AI for geopolitical intelligence. AI does not evaluate engine calculations." },
-  { icon: <Mic size={20} />, title: "AI Assists", desc: "Where AI is present, it assists through communication channels: status updates and report writing (Treasury), chart reading and algo building (Market), geopolitical analysis (Polisophic). AI is not involved in any calculation, risk scoring, or engine output." },
-  { icon: <CheckCircle2 size={20} />, title: "Human Decides", desc: "AI never auto-executes. Every trade, hedge, and decision is made by the human operator. The platform ensures 4-eyes governance and separation of duties on all execution." },
+const solutions = [
+  { id: "corporate-treasury", name: "Corporate Treasury", desc: "End-to-end FX risk management for corporate treasury operations", icon: Building },
+  { id: "risk-management", name: "Risk Management", desc: "Enterprise risk quantification, monitoring, and governance", icon: ShieldAlert },
+  { id: "asset-management", name: "Asset Management", desc: "Multi-currency portfolio hedging and exposure analysis", icon: Briefcase },
+  { id: "banking", name: "Banking & Capital Markets", desc: "Institutional FX infrastructure for banks and dealers", icon: Landmark },
+  { id: "insurance", name: "Insurance", desc: "ALM currency risk and regulatory hedge accounting", icon: FileText },
+  { id: "energy", name: "Energy & Commodities", desc: "Commodity-linked FX exposure and cross-currency hedging", icon: Zap },
 ];
 
-const CAPABILITIES = [
-  { icon: <Shield size={20} />, title: "WORM Audit Trail", desc: "Append-only event log with SHA-256 hash chain. Every calculation, decision, and approval is permanently recorded in a tamper-evident, regulation-proof audit ledger. Per-tenant hash chains with GENESIS_HASH verification." },
-  { icon: <Users size={20} />, title: "4-Eyes Governance", desc: "Maker-checker approval with enforced Separation of Duties. The tri-state pipeline (Sandbox, Staging, Ledger) ensures no calculation reaches production without multi-party review. Threshold-based escalation with 3-actor SoD." },
-  { icon: <Cpu size={20} />, title: "Deterministic Engine", desc: "Same inputs produce same outputs, always. 41 production modules with sub-50ms computation. Pure functions, no side effects, no randomness. Every result independently verifiable and reproducible." },
-  { icon: <FileCheck size={20} />, title: "IFRS 9 / ASC 815", desc: "Built-in prospective effectiveness testing with critical terms matching and statistical forecast validation. Hedge documentation generation, accounting framework alignment, and evidence grading for audit readiness." },
-  { icon: <Eye size={20} />, title: "Real-Time Risk Intelligence", desc: "R1-R8 risk taxonomy, exposure decomposition, concentration analysis, and scenario stress testing. All risk computations are deterministic and reproducible across the full risk surface." },
-  { icon: <Layers size={20} />, title: "Policy Engine", desc: "60 policy presets with maturity profiles, governance tiers, evidence grades, and 7-layer extension architecture. Extended overlays for volatility, geopolitical risk, netting, and prospective effectiveness." },
-];
+/* ── SVG Diagrams ── */
+const SvgArchitecture = () => (
+  <svg viewBox="0 0 940 560" className="w-full h-auto bg-white border border-[#E5E7EB] shadow-sm rounded-sm" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <defs>
+      <pattern id="grid-arch" width="20" height="20" patternUnits="userSpaceOnUse">
+        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#F4F5F7" strokeWidth="1"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#grid-arch)" />
+    {/* UI Layer */}
+    <rect x="40" y="40" width="860" height="120" fill="#FFFFFF" stroke="#D1D5DB" strokeWidth="1" rx="2" />
+    <text x="60" y="70" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 700, fill: "#6B7280", letterSpacing: "0.15em" }}>LAYER 01: USER INTERFACE [PRESENTATION]</text>
+    {["Terminal UI", "Charts Canvas", "Voice Bridge", "Chat Interface", "Report Viewer"].map((label, i) => (
+      <g key={label}>
+        <rect x={60 + i * 168} y={90} width={148} height={48} fill="#F9FAFB" stroke="#E5E7EB" rx="2" />
+        <text x={60 + i * 168 + 74} y={118} textAnchor="middle" style={{ fontSize: 13, fontWeight: 700, fill: "#111111" }}>{label}</text>
+      </g>
+    ))}
+    {/* AI Layer */}
+    <rect x="40" y="220" width="860" height="120" fill="#115e59" stroke="#0f766e" strokeWidth="1" rx="2" />
+    <text x="60" y="250" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 700, fill: "#99f6e4", letterSpacing: "0.15em" }}>LAYER 02: AGENTIC INTELLIGENCE [COMMUNICATION &amp; INSIGHT]</text>
+    {["Customer Mgmt", "Report Generation", "Chart Analysis", "Trading Coaching", "Geopolitical Intel"].map((label, i) => (
+      <g key={label}>
+        <rect x={60 + i * 168} y={270} width={148} height={48} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.2)" rx="2" />
+        <text x={60 + i * 168 + 74} y={298} textAnchor="middle" style={{ fontSize: 13, fontWeight: 600, fill: "white" }}>{label}</text>
+      </g>
+    ))}
+    {/* Engine Layer */}
+    <rect x="40" y="400" width="860" height="120" fill="#0f172a" stroke="#1e293b" strokeWidth="1" rx="2" />
+    <text x="60" y="430" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 700, fill: "#93c5fd", letterSpacing: "0.15em" }}>LAYER 03: DETERMINISTIC ENGINE [CORE COMPUTATION]</text>
+    {["kernel.py [41M]", "validator.py", "audit.py [SHA-256]", "Policy Engine", "WORM Storage"].map((label, i) => (
+      <g key={label}>
+        <rect x={60 + i * 168} y={450} width={148} height={48} fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" rx="2" />
+        <text x={60 + i * 168 + 74} y={478} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fill: "#e2e8f0", fontWeight: 500 }}>{label}</text>
+      </g>
+    ))}
+    {/* Connections */}
+    <g stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="3 3" fill="none">
+      <path d="M 470 160 L 470 220" />
+      <path d="M 470 340 L 470 400" />
+      <polygon points="466,215 474,215 470,220" fill="#9CA3AF" stroke="none" />
+      <polygon points="466,395 474,395 470,400" fill="#9CA3AF" stroke="none" />
+    </g>
+    <text x="485" y="195" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fill: "#6B7280", fontWeight: 700 }}>QUERIES / RESPONSES</text>
+    <text x="485" y="375" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fill: "#6B7280", fontWeight: 700 }}>READ ONLY [NEVER EXECUTES]</text>
+  </svg>
+);
 
-const WORKFLOW = [
-  { step: "01", icon: <Upload size={20} />, title: "Import Exposures", desc: "Upload FX positions from ERP, TMS, or spreadsheet. Automatic classification, validation, and enrichment with market data." },
-  { step: "02", icon: <Settings size={20} />, title: "Configure Policy", desc: "Select from 60 presets or build custom policies. Define hedge ratios, instruments, governance tiers, and risk parameters." },
-  { step: "03", icon: <Calculator size={20} />, title: "Calculate", desc: "Deterministic engine computes hedge recommendations. Sub-50ms, reproducible, auditable. Every calculation hash-chained." },
-  { step: "04", icon: <Brain size={20} />, title: "Review & Report", desc: "Review engine outputs and generate stakeholder reports. In Treasury, AI helps communicate status and write reports. AI does not evaluate or interpret calculations." },
-  { step: "05", icon: <ShieldCheck size={20} />, title: "Execute", desc: "4-eyes approval, governed execution, WORM audit trail. Every decision recorded, hash-chained, and immutable." },
-];
+const SvgHashChain = () => (
+  <svg viewBox="0 0 900 200" className="w-full h-auto border border-[#E5E7EB] bg-white rounded-sm" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+    <defs>
+      <pattern id="grid-hash" width="20" height="20" patternUnits="userSpaceOnUse">
+        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#F9FAFB" strokeWidth="1"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#grid-hash)" />
+    <g transform="translate(20, 50)">
+      {/* Block 0 */}
+      <rect x="0" y="0" width="150" height="100" fill="#0f172a" rx="2" />
+      <text x="10" y="25" style={{ fontSize: 12, fill: "#93c5fd", fontWeight: 700 }}>GENESIS_BLOCK</text>
+      <text x="10" y="50" style={{ fontSize: 10, fill: "white" }}>HASH: 0000...0000</text>
+      <text x="10" y="70" style={{ fontSize: 10, fill: "white" }}>TENANT: tnt_001</text>
+      <rect x="10" y="80" width="60" height="14" fill="#059669" rx="2" />
+      <text x="14" y="90" style={{ fontSize: 8, fill: "white", fontWeight: 700 }}>IMMUTABLE</text>
+      {/* Arrow 1 */}
+      <line x1="150" y1="50" x2="180" y2="50" stroke="#0f172a" strokeWidth="2" />
+      <polygon points="175,46 182,50 175,54" fill="#0f172a" />
+      {/* Block 1 */}
+      <rect x="180" y="0" width="150" height="100" fill="#FFFFFF" stroke="#D1D5DB" strokeWidth="1" rx="2" />
+      <text x="190" y="25" style={{ fontSize: 12, fill: "#111111", fontWeight: 700 }}>CALC_RUN_#1</text>
+      <text x="190" y="50" style={{ fontSize: 10, fill: "#4B5563" }}>HASH: 8f4e...a1b2</text>
+      <text x="190" y="70" style={{ fontSize: 10, fill: "#4B5563" }}>REQ_IDX: 44</text>
+      <rect x="190" y="80" width="65" height="14" fill="#F3F4F6" stroke="#E5E7EB" strokeWidth="1" rx="2" />
+      <text x="194" y="90" style={{ fontSize: 8, fill: "#4B5563", fontWeight: 700 }}>APPEND_ONLY</text>
+      {/* Arrow 2 */}
+      <line x1="330" y1="50" x2="360" y2="50" stroke="#0f172a" strokeWidth="2" />
+      <polygon points="355,46 362,50 355,54" fill="#0f172a" />
+      {/* Block 2 */}
+      <rect x="360" y="0" width="150" height="100" fill="#FFFFFF" stroke="#D1D5DB" strokeWidth="1" rx="2" />
+      <text x="370" y="25" style={{ fontSize: 12, fill: "#111111", fontWeight: 700 }}>POLICY_REV</text>
+      <text x="370" y="50" style={{ fontSize: 10, fill: "#4B5563" }}>HASH: c3d4...9f8e</text>
+      <text x="370" y="70" style={{ fontSize: 10, fill: "#4B5563" }}>USR: jdoe</text>
+      <rect x="370" y="80" width="45" height="14" fill="#F3F4F6" stroke="#E5E7EB" strokeWidth="1" rx="2" />
+      <text x="374" y="90" style={{ fontSize: 8, fill: "#4B5563", fontWeight: 700 }}>SEALED</text>
+      {/* Arrow 3 */}
+      <line x1="510" y1="50" x2="540" y2="50" stroke="#0f172a" strokeWidth="2" />
+      <polygon points="535,46 542,50 535,54" fill="#0f172a" />
+      {/* Block 3 */}
+      <rect x="540" y="0" width="150" height="100" fill="#FFFFFF" stroke="#D1D5DB" strokeWidth="1" rx="2" />
+      <text x="550" y="25" style={{ fontSize: 12, fill: "#111111", fontWeight: 700 }}>APPROVAL</text>
+      <text x="550" y="50" style={{ fontSize: 10, fill: "#4B5563" }}>HASH: 7a6b...5c4d</text>
+      <text x="550" y="70" style={{ fontSize: 10, fill: "#4B5563" }}>USR: msmith</text>
+      <rect x="550" y="80" width="45" height="14" fill="#F3F4F6" stroke="#E5E7EB" strokeWidth="1" rx="2" />
+      <text x="554" y="90" style={{ fontSize: 8, fill: "#4B5563", fontWeight: 700 }}>LOCKED</text>
+      {/* Arrow 4 */}
+      <line x1="690" y1="50" x2="720" y2="50" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="3 3" />
+      <polygon points="715,46 722,50 715,54" fill="#9CA3AF" />
+      {/* Block 4 */}
+      <rect x="720" y="0" width="140" height="100" fill="#F9FAFB" stroke="#D1D5DB" strokeWidth="1" strokeDasharray="4 4" rx="2" />
+      <text x="730" y="25" style={{ fontSize: 12, fill: "#6B7280", fontWeight: 700 }}>EXECUTION</text>
+      <text x="730" y="55" style={{ fontSize: 10, fill: "#9CA3AF" }}>[AWAITING</text>
+      <text x="730" y="70" style={{ fontSize: 10, fill: "#9CA3AF" }}> COMPUTATION]</text>
+    </g>
+  </svg>
+);
 
-const SOLUTION_ICONS: Record<string, React.ReactNode> = {
-  "corporate-treasury": <Building2 size={20} />,
-  "risk-management": <Shield size={20} />,
-  "asset-management": <BarChart3 size={20} />,
-  "banking": <Landmark size={20} />,
-  "insurance": <Umbrella size={20} />,
-  "energy": <Flame size={20} />,
-};
+const SvgPillars = () => (
+  <svg viewBox="0 0 900 300" className="w-full h-auto border border-[#E5E7EB] bg-white rounded-sm" style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+    <g transform="translate(0, 20)">
+      {[
+        { x: 10, fill: "#0f172a", title: "WORM AUDIT", textFill: "#93c5fd", items: ["SHA-256 Chain","Append-only log","Tenant chains","Tamper-evident"], reds: ["No UPDATE","No DELETE"] },
+        { x: 186, fill: "#115e59", title: "4-EYES GOV", textFill: "#99f6e4", items: ["Maker-checker","Separation Duty","Tri-state pipe","9 RBAC roles","41 permissions","Threshold-based"], reds: [] },
+        { x: 362, fill: "#0f172a", title: "DET. ENGINE", textFill: "#93c5fd", items: ["41 core modules","Sub-50ms latency","Pure functions","No side effects","Reproducible","Verifiable"], reds: [] },
+        { x: 538, fill: "#115e59", title: "AI INSIGHT", textFill: "#99f6e4", items: ["Customer Mgmt","Report writing","Chart analysis","Status updates","Voice & chat"], reds: [], yellows: ["Never executes"] },
+        { x: 714, fill: "#0f172a", title: "MULTI-CH", textFill: "#93c5fd", items: ["Voice (WebRTC)","Chat (NL)","Terminal UI","REST API","219+ endpoints","Mobile-ready"], reds: [] },
+      ].map((pillar) => (
+        <g key={pillar.title}>
+          <rect x={pillar.x} y="0" width="166" height="260" fill={pillar.fill} rx="2" />
+          <text x={pillar.x + 83} y="40" textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fill: "white", fontWeight: 700, letterSpacing: "0.05em" }}>{pillar.title}</text>
+          <line x1={pillar.x + 10} y1="55" x2={pillar.x + 156} y2="55" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+          {pillar.items.map((item, i) => (
+            <text key={item} x={pillar.x + 83} y={85 + i * 30} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fill: pillar.textFill }}>{item}</text>
+          ))}
+          {(pillar.reds || []).map((item, i) => (
+            <text key={item} x={pillar.x + 83} y={85 + (pillar.items.length + i) * 30} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fill: "#ef4444" }}>{item}</text>
+          ))}
+          {(pillar.yellows || []).map((item, i) => (
+            <text key={item} x={pillar.x + 83} y={85 + (pillar.items.length + i) * 30} textAnchor="middle" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fill: "#fde047" }}>{item}</text>
+          ))}
+        </g>
+      ))}
+    </g>
+  </svg>
+);
 
-export default function LandingPage() {
+export default function HomePage() {
   return (
     <MarketingLayout>
-      {/* ── Hero ── */}
-      <section style={{ padding: "100px 48px 80px", maxWidth: 960, margin: "0 auto", textAlign: "center" }}>
-        <div style={{
-          fontFamily: F.mono, fontSize: 12, fontWeight: 600,
-          letterSpacing: "0.15em", color: C.textMuted,
-          marginBottom: 20, textTransform: "uppercase",
-        }}>
-          Institutional FX Risk Management
-        </div>
-        <h1 style={{
-          fontFamily: F.heading, fontSize: 56, fontWeight: 800,
-          letterSpacing: "-0.03em", lineHeight: 1.08,
-          margin: "0 0 24px", color: C.text,
-        }}>
-          Deterministic Computation.{" "}
-          <span style={{ color: C.accent }}>Agentic Intelligence.</span>
-        </h1>
-        <p style={{
-          fontFamily: F.ui, fontSize: 19, color: C.textSub,
-          maxWidth: 680, margin: "0 auto 40px", lineHeight: 1.6,
-        }}>
-          The engines are deterministic -- same input always produces the same output.
-          AI is not used in any calculations. Where AI is present, it provides communication
-          and management capabilities: Market uses AI for chart analysis and algo building,
-          Polisophic for geopolitical intelligence, and Treasury for status updates and reports.
-        </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link href="/auth/login" style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-            color: "#fff", background: C.accent,
-            padding: "13px 32px", borderRadius: 6, textDecoration: "none",
-          }}>
-            Launch Terminal <ArrowRight size={16} />
-          </Link>
-          <Link href="/products" style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-            color: C.textSub, background: "transparent",
-            padding: "13px 32px", borderRadius: 6, textDecoration: "none",
-            border: `1.5px solid ${C.border}`,
-          }}>
-            Explore Products
-          </Link>
+      {/* Section 1: Hero */}
+      <section className="relative pt-[160px] pb-[120px] px-6 md:px-12 bg-white overflow-hidden border-b border-[#E5E7EB]">
+        <div className="absolute inset-0 bg-grid pointer-events-none" style={{ maskImage: "linear-gradient(to bottom, black 40%, transparent 100%)", WebkitMaskImage: "linear-gradient(to bottom, black 40%, transparent 100%)" }} />
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="max-w-4xl">
+            <div className="flex items-center gap-4 mb-8">
+              <span className="section-label" style={{ marginBottom: 0 }}>THE FINTECH ECOSYSTEM</span>
+              <div className="flex items-center gap-2 border border-[#E5E7EB] bg-[#F9FAFB] px-2.5 py-1 rounded-sm">
+                <span className="status-dot pulsing" />
+                <span className="font-mono text-[10px] text-[#4B5563] font-bold tracking-widest uppercase">SYS_ACTIVE</span>
+              </div>
+            </div>
+            <h1 className="text-[52px] md:text-[72px] leading-[1.05] font-extrabold mb-6 tracking-[-0.04em] text-[#111111]" style={{ fontFamily: "'Manrope', sans-serif" }}>
+              Deterministic Computation.<br />
+              <span className="text-[#1E3A5F]">Agentic Intelligence.</span>
+            </h1>
+            <p className="text-xl md:text-2xl text-[#4B5563] font-medium mb-8 leading-relaxed">
+              Seven products for enterprise, midsize, and retail. Treasury hedge governance, agentic charting, portfolio risk, scenario simulation, geopolitical intelligence, and knowledge navigation <span className="text-[#9CA3AF]">-- all on one deterministic platform.</span>
+            </p>
+            <div className="border-l-2 border-[#1E3A5F] pl-4 mb-10 max-w-3xl">
+              <p className="text-[14px] font-mono text-[#6B7280] leading-relaxed">
+                [ENGINE_RULE_01]: Engines are deterministic -- same input, same output, always.<br />
+                [ENGINE_RULE_02]: AI provides communication, chart analysis, and intelligence.<br />
+                [ENGINE_RULE_03]: AI never touches calculations.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <Link href="/contact" className="inline-flex items-center justify-center px-6 py-3 text-[13px] font-bold bg-[#1E3A5F] text-white border border-[#1E3A5F] hover:bg-[#162D4A] rounded-sm tracking-wide no-underline transition-all">
+                Request Demo →
+              </Link>
+              <Link href="/products" className="inline-flex items-center justify-center px-6 py-3 text-[13px] font-bold bg-white text-[#111111] border border-[#D1D5DB] hover:border-[#1E3A5F] rounded-sm tracking-wide no-underline transition-all">
+                Explore Products
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── Stats Strip ── */}
-      <section style={{ background: C.bgAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: "32px 48px" }}>
-        <div className="stats-strip" style={{ maxWidth: 1000, margin: "0 auto", display: "flex", justifyContent: "center", gap: 64 }}>
-          {STATS.map(s => (
-            <div key={s.label} style={{ textAlign: "center" }}>
-              <div style={{ fontFamily: F.mono, fontSize: 28, fontWeight: 800, color: C.accent }}>{s.value}</div>
-              <div style={{ fontFamily: F.ui, fontSize: 12, color: C.textMuted, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.label}</div>
+      {/* Section 2: Stats Strip */}
+      <section className="bg-white border-b border-[#E5E7EB]">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-5 divide-x divide-y md:divide-y-0 divide-[#E5E7EB]">
+          {[
+            { v: "7", l: "Products" }, { v: "3", l: "Market Tiers" }, { v: "41", l: "Engine Modules" },
+            { v: "<50ms", l: "Computation" }, { v: "SHA-256", l: "Audit Chain" },
+          ].map((stat) => (
+            <div key={stat.l} className="flex flex-col items-center justify-center py-10 px-4 hover:bg-[#F9FAFB] transition-colors">
+              <span className="font-mono text-[36px] font-extrabold text-[#111111] mb-1">{stat.v}</span>
+              <span className="font-mono text-[11px] font-bold tracking-[0.15em] text-[#6B7280] uppercase">{stat.l}</span>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── Architecture Diagram ── */}
-      <section style={{ padding: "80px 48px", maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <div style={{ fontFamily: F.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.15em", color: C.textMuted, marginBottom: 12, textTransform: "uppercase" }}>Architecture</div>
-          <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, margin: "0 0 12px", color: C.text }}>
-            The ORDR Platform Architecture
-          </h2>
-          <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, lineHeight: 1.6, maxWidth: 620, margin: "0 auto" }}>
-            Three layers, one principle: deterministic computation with intelligent assistance. The engine never guesses. The AI never executes.
+      {/* Section 3: Architecture */}
+      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row gap-12 items-end mb-12 border-b border-[#E5E7EB] pb-8">
+          <div className="flex-1">
+            <span className="section-label">ARCHITECTURE</span>
+            <h2 className="text-3xl md:text-[44px] font-extrabold" style={{ fontFamily: "'Manrope', sans-serif" }}>The ORDR Platform Architecture</h2>
+          </div>
+          <div className="flex-1">
+            <p className="text-[15px] text-[#4B5563] leading-relaxed">
+              Three layers, one principle: deterministic computation with intelligent assistance. The engine never guesses. The AI never executes. Strict separation of concerns enforced by cryptographically sealed governance pipelines.
+            </p>
+          </div>
+        </div>
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-[800px] p-1 bg-[#F9FAFB] border border-[#E5E7EB] rounded-sm">
+            <SvgArchitecture />
+          </div>
+        </div>
+      </section>
+
+      {/* Section 4: Interface Showcase */}
+      <section className="py-24 px-6 md:px-12 bg-[#F4F5F7] border-y border-[#E5E7EB]">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <span className="section-label justify-center">INTERFACE</span>
+            <h2 className="text-3xl md:text-[44px] font-extrabold" style={{ fontFamily: "'Manrope', sans-serif" }}>Built for professionals. Used by institutions.</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { id: "TRM_01", title: "Treasury Terminal", desc: "Hedge calculation output with hash envelope, policy governance, execution pipeline.", bullets: ["Deterministic kernel output","SHA-256 hash envelope","4-eyes execution gate","WORM audit log"] },
+              { id: "MKT_02", title: "ORDR Market", desc: "60fps Canvas 2D charting engine with AI-coached algo trading.", bullets: ["77+ indicators","Multi-language algo builder","Real-time data feeds","AI discipline coaching"] },
+              { id: "PRT_03", title: "Portfolio Risk", desc: "R1-R8 risk taxonomy with institutional exposure decomposition.", bullets: ["8 risk categories","Concentration analysis (HHI)","Multi-entity netting","Hedge plan generation"] },
+            ].map((item) => (
+              <div key={item.id} className="bg-[#0A0A0A] rounded-sm border border-[#374151] flex flex-col overflow-hidden group hover:border-[#4B5563] transition-colors shadow-xl">
+                <div className="border-b border-[#374151] px-4 py-2.5 flex items-center justify-between bg-[#111111]">
+                  <span className="font-mono text-[10px] text-[#9CA3AF] tracking-widest uppercase">PROCESS: {item.id}</span>
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#374151]" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#374151]" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#059669]" />
+                  </div>
+                </div>
+                <div className="p-8 flex-1">
+                  <h3 className="font-mono text-lg font-bold mb-3 text-white">{item.title}</h3>
+                  <p className="text-[#9CA3AF] text-[13px] mb-8 min-h-[40px] leading-relaxed">{item.desc}</p>
+                  <ul className="space-y-4 border-t border-[#374151] pt-6 list-none p-0 m-0">
+                    {item.bullets.map((b) => (
+                      <li key={b} className="flex items-start gap-3 text-[12px] font-mono text-[#D1D5DB]">
+                        <span className="text-[#059669] mt-0.5 shrink-0">&gt;</span>
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Section 5: Audit Trail */}
+      <section className="py-24 px-6 md:px-12 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <span className="section-label">AUDIT INFRASTRUCTURE</span>
+          <h2 className="text-3xl md:text-[44px] font-extrabold mb-6" style={{ fontFamily: "'Manrope', sans-serif" }}>Tamper-Evident Hash Chain</h2>
+          <p className="text-[16px] text-[#4B5563] max-w-3xl mb-12 border-l-2 border-[#E5E7EB] pl-4">
+            Every calculation, decision, and approval is permanently recorded in an append-only, cryptographically sealed audit trail. <strong className="text-[#111111]">No UPDATE, no DELETE -- ever.</strong>
           </p>
-        </div>
-
-        <div style={{ maxWidth: 940, margin: "0 auto" }}>
-          <svg
-            viewBox="0 0 940 560"
-            width="100%"
-            style={{ display: "block" }}
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Background */}
-            <rect x="0" y="0" width="940" height="560" rx="12" fill={C.bgAlt} stroke={C.border} strokeWidth="1" />
-
-            {/* Title */}
-            <text x="470" y="36" textAnchor="middle" fontFamily={F.mono} fontSize="11" fontWeight="700" fill={C.textMuted} letterSpacing="0.15em">
-              ORDR TERMINAL PLATFORM
-            </text>
-
-            {/* Layer 3 (top): User Interface */}
-            <rect x="40" y="56" width="860" height="120" rx="8" fill="#fff" stroke={C.border} strokeWidth="1" />
-            <rect x="40" y="56" width="860" height="30" rx="8" fill={C.bgMuted} />
-            <rect x="40" y="76" width="860" height="10" fill={C.bgMuted} />
-            <text x="470" y="76" textAnchor="middle" fontFamily={F.mono} fontSize="12" fontWeight="700" fill={C.text} letterSpacing="0.1em">
-              USER INTERFACE LAYER
-            </text>
-            {/* UI sub-items */}
-            <rect x="70" y="100" width="140" height="56" rx="6" fill={C.bgAlt} stroke={C.border} strokeWidth="0.5" />
-            <text x="140" y="124" textAnchor="middle" fontFamily={F.ui} fontSize="12" fontWeight="600" fill={C.text}>Terminal</text>
-            <text x="140" y="142" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill={C.textMuted}>Dashboard &amp; Widgets</text>
-
-            <rect x="230" y="100" width="140" height="56" rx="6" fill={C.bgAlt} stroke={C.border} strokeWidth="0.5" />
-            <text x="300" y="124" textAnchor="middle" fontFamily={F.ui} fontSize="12" fontWeight="600" fill={C.text}>Charts</text>
-            <text x="300" y="142" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill={C.textMuted}>Canvas 2D Engine</text>
-
-            <rect x="390" y="100" width="140" height="56" rx="6" fill={C.bgAlt} stroke={C.border} strokeWidth="0.5" />
-            <text x="460" y="124" textAnchor="middle" fontFamily={F.ui} fontSize="12" fontWeight="600" fill={C.text}>Voice</text>
-            <text x="460" y="142" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill={C.textMuted}>WebRTC Realtime</text>
-
-            <rect x="550" y="100" width="140" height="56" rx="6" fill={C.bgAlt} stroke={C.border} strokeWidth="0.5" />
-            <text x="620" y="124" textAnchor="middle" fontFamily={F.ui} fontSize="12" fontWeight="600" fill={C.text}>Chatbox</text>
-            <text x="620" y="142" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill={C.textMuted}>Natural Language</text>
-
-            <rect x="710" y="100" width="160" height="56" rx="6" fill={C.bgAlt} stroke={C.border} strokeWidth="0.5" />
-            <text x="790" y="124" textAnchor="middle" fontFamily={F.ui} fontSize="12" fontWeight="600" fill={C.text}>Reports</text>
-            <text x="790" y="142" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill={C.textMuted}>PDF / Export / API</text>
-
-            {/* Arrows: UI -> AI */}
-            <defs>
-              <marker id="aDown" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto">
-                <path d="M0,0 L8,3 L0,6 Z" fill={C.textMuted} />
-              </marker>
-              <marker id="aUp" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto">
-                <path d="M8,0 L0,3 L8,6 Z" fill={C.textMuted} />
-              </marker>
-            </defs>
-            <line x1="370" y1="176" x2="370" y2="212" stroke={C.textMuted} strokeWidth="1.5" strokeDasharray="4,3" markerEnd="url(#aDown)" />
-            <line x1="570" y1="212" x2="570" y2="176" stroke={C.textMuted} strokeWidth="1.5" strokeDasharray="4,3" markerEnd="url(#aUp)" />
-            <text x="320" y="200" textAnchor="middle" fontFamily={F.mono} fontSize="9" fill={C.textMuted}>QUERIES</text>
-            <text x="620" y="200" textAnchor="middle" fontFamily={F.mono} fontSize="9" fill={C.textMuted}>INSIGHTS</text>
-
-            {/* Layer 2 (middle): Agentic AI */}
-            <rect x="40" y="216" width="860" height="120" rx="8" fill="#1a6b5a" />
-            <text x="470" y="248" textAnchor="middle" fontFamily={F.mono} fontSize="12" fontWeight="700" fill="#fff" letterSpacing="0.1em">
-              AGENTIC AI LAYER
-            </text>
-            <line x1="100" y1="258" x2="840" y2="258" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-            {/* AI sub-items */}
-            <text x="140" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Customer Management</text>
-            <text x="300" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Report Generation</text>
-            <text x="470" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Chart Analysis (Market)</text>
-            <text x="630" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Trading Coaching (Market)</text>
-            <text x="790" y="280" textAnchor="middle" fontFamily={F.ui} fontSize="11" fill="rgba(255,255,255,0.8)">Geopolitical Intel (Polisophic)</text>
-            <text x="230" y="310" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.45)">Voice &amp; Chat Interface</text>
-            <text x="470" y="310" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.45)">Communication Layer</text>
-            <text x="710" y="310" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.45)">Never Auto-Executes</text>
-
-            {/* Arrows: AI -> Engine */}
-            <line x1="370" y1="336" x2="370" y2="372" stroke={C.textMuted} strokeWidth="1.5" strokeDasharray="4,3" markerEnd="url(#aDown)" />
-            <line x1="570" y1="372" x2="570" y2="336" stroke={C.textMuted} strokeWidth="1.5" strokeDasharray="4,3" markerEnd="url(#aUp)" />
-            <text x="320" y="360" textAnchor="middle" fontFamily={F.mono} fontSize="9" fill={C.textMuted}>COMPUTE</text>
-            <text x="620" y="360" textAnchor="middle" fontFamily={F.mono} fontSize="9" fill={C.textMuted}>RESULTS</text>
-
-            {/* Layer 1 (bottom): Deterministic Engine */}
-            <rect x="40" y="376" width="860" height="140" rx="8" fill={C.accent} />
-            <text x="470" y="408" textAnchor="middle" fontFamily={F.mono} fontSize="12" fontWeight="700" fill="#fff" letterSpacing="0.1em">
-              DETERMINISTIC ENGINE LAYER
-            </text>
-            <line x1="100" y1="418" x2="840" y2="418" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-            {/* Engine sub-items in boxes */}
-            <rect x="70" y="430" width="120" height="36" rx="4" fill="rgba(255,255,255,0.08)" />
-            <text x="130" y="453" textAnchor="middle" fontFamily={F.mono} fontSize="11" fill="rgba(255,255,255,0.8)">kernel.py</text>
-
-            <rect x="210" y="430" width="120" height="36" rx="4" fill="rgba(255,255,255,0.08)" />
-            <text x="270" y="453" textAnchor="middle" fontFamily={F.mono} fontSize="11" fill="rgba(255,255,255,0.8)">validator.py</text>
-
-            <rect x="350" y="430" width="100" height="36" rx="4" fill="rgba(255,255,255,0.08)" />
-            <text x="400" y="453" textAnchor="middle" fontFamily={F.mono} fontSize="11" fill="rgba(255,255,255,0.8)">audit.py</text>
-
-            <rect x="470" y="430" width="120" height="36" rx="4" fill="rgba(255,255,255,0.08)" />
-            <text x="530" y="453" textAnchor="middle" fontFamily={F.mono} fontSize="11" fill="rgba(255,255,255,0.8)">41 modules</text>
-
-            <rect x="610" y="430" width="140" height="36" rx="4" fill="rgba(255,255,255,0.08)" />
-            <text x="680" y="453" textAnchor="middle" fontFamily={F.mono} fontSize="11" fill="rgba(255,255,255,0.8)">SHA-256 chain</text>
-
-            <rect x="770" y="430" width="100" height="36" rx="4" fill="rgba(255,255,255,0.08)" />
-            <text x="820" y="453" textAnchor="middle" fontFamily={F.mono} fontSize="11" fill="rgba(255,255,255,0.8)">WORM</text>
-
-            <text x="230" y="498" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.4)">Sub-50ms latency</text>
-            <text x="470" y="498" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.4)">Same input = Same output, always</text>
-            <text x="710" y="498" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.4)">Tamper-evident audit trail</text>
-
-            {/* Bottom label */}
-            <text x="470" y="545" textAnchor="middle" fontFamily={F.mono} fontSize="9" fill={C.textMuted} letterSpacing="0.1em">
-              DETERMINISTIC COMPUTATION + AGENTIC INTELLIGENCE
-            </text>
-          </svg>
-        </div>
-      </section>
-
-      {/* ── Products Grid ── */}
-      <section style={{ padding: "80px 48px", background: C.bgAlt }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ marginBottom: 48 }}>
-            <div style={{ fontFamily: F.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.15em", color: C.textMuted, marginBottom: 12, textTransform: "uppercase" }}>Products</div>
-            <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, margin: "0 0 12px", color: C.text }}>
-              Seven products. One institutional platform.
-            </h2>
-            <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, lineHeight: 1.6, marginTop: 0, maxWidth: 640 }}>
-              Each product is purpose-built for a specific function in the hedge lifecycle.
-              Every product is powered by the same deterministic computation engine.
-            </p>
+          <div className="w-full overflow-x-auto mb-12">
+            <div className="min-w-[800px]"><SvgHashChain /></div>
           </div>
-          <div className="products-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-            {PRODUCTS.map((p, i) => (
-              <Link key={p.slug} href={`/products/${p.slug}`} style={{ textDecoration: "none", color: "inherit", ...(!!(i === 6) ? { gridColumn: "2 / 3" } : {}) }}>
-                <div style={{ padding: "24px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, height: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: C.accentLight, color: C.accent }}>
-                      {ICONS[p.icon] || <LayoutGrid size={22} />}
-                    </div>
-                    <div style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", color: C.text }}>{p.name}</div>
-                  </div>
-                  <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, flex: 1, margin: 0 }}>
-                    {PRODUCT_DETAILS[p.slug] || p.desc}
-                  </p>
-                  <div style={{ fontFamily: F.mono, fontSize: 12, fontWeight: 600, color: C.accent, display: "flex", alignItems: "center", gap: 4 }}>
-                    Learn More <ArrowRight size={14} />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── How the AI Layer Works ── */}
-      <section style={{ padding: "80px 48px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <div style={{ fontFamily: F.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.15em", color: C.textMuted, marginBottom: 12, textTransform: "uppercase" }}>Intelligence</div>
-            <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, margin: "0 0 12px", color: C.text }}>
-              How the AI Layer Works
-            </h2>
-            <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, lineHeight: 1.6, maxWidth: 600, margin: "0 auto" }}>
-              The AI layer provides insight and assistance without compromising the determinism
-              of the computation engine. Four principles govern how intelligence is delivered.
-            </p>
-          </div>
-          <div className="ai-layer-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}>
-            {AI_LAYER_STEPS.map((s, i) => (
-              <div key={s.title} style={{
-                padding: "28px 24px", border: `1px solid ${C.border}`,
-                borderRadius: 8, position: "relative", background: C.bg,
-              }}>
-                <div style={{
-                  fontFamily: F.mono, fontSize: 44, fontWeight: 900,
-                  color: C.bgMuted, position: "absolute", top: 12, right: 16, lineHeight: 1,
-                }}>
-                  {String(i + 1).padStart(2, "0")}
-                </div>
-                <div style={{
-                  width: 40, height: 40, borderRadius: 8,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: C.accentLight, color: C.accent, marginBottom: 16,
-                }}>
-                  {s.icon}
-                </div>
-                <div style={{ fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 8 }}>{s.title}</div>
-                <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, margin: 0 }}>{s.desc}</p>
+          <div className="grid grid-cols-1 md:grid-cols-4 border border-[#E5E7EB] rounded-sm divide-y md:divide-y-0 md:divide-x divide-[#E5E7EB] bg-[#F9FAFB]">
+            {[
+              { t: "WORM Storage", d: "Write Once, Read Many", I: Database },
+              { t: "SHA-256", d: "Per-tenant hash chain", I: Lock },
+              { t: "Zero Deletion", d: "No UPDATE, no DELETE", I: ShieldAlert },
+              { t: "Regulation-Ready", d: "IFRS 9 / ASC 815 aligned", I: FileText },
+            ].map((s) => (
+              <div key={s.t} className="p-6">
+                <s.I size={18} className="text-[#1E3A5F] mb-3" />
+                <h4 className="font-bold text-[#111111] mb-1 text-[14px]">{s.t}</h4>
+                <p className="text-[#6B7280] text-[13px]">{s.d}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Solutions Grid ── */}
-      <section style={{ background: C.bgAlt, padding: "80px 48px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ marginBottom: 48 }}>
-            <div style={{ fontFamily: F.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.15em", color: C.textMuted, marginBottom: 12, textTransform: "uppercase" }}>Solutions</div>
-            <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, margin: "0 0 12px", color: C.text }}>
-              Built for your industry
-            </h2>
-            <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, lineHeight: 1.6, maxWidth: 560 }}>
-              Six industry-specific solutions, each built on the same deterministic engine,
-              tailored to the unique requirements of your sector.
-            </p>
-          </div>
-          <div className="solutions-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-            {SOLUTIONS.map(s => (
-              <Link key={s.slug} href={`/solutions/${s.slug}`} style={{ textDecoration: "none", color: "inherit" }}>
-                <div style={{ padding: "24px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, height: "100%" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                    <div style={{ color: C.accent }}>{SOLUTION_ICONS[s.slug] || <LayoutGrid size={20} />}</div>
-                    <div style={{ fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.text }}>{s.name}</div>
-                  </div>
-                  <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.6, margin: 0 }}>{s.desc}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── The ORDR Architecture Detail ── */}
-      <section style={{ padding: "80px 48px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <div style={{ fontFamily: F.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.15em", color: C.textMuted, marginBottom: 12, textTransform: "uppercase" }}>Infrastructure</div>
-            <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, margin: "0 0 12px", color: C.text }}>
-              The ORDR Architecture
-            </h2>
-            <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, lineHeight: 1.6, maxWidth: 620, margin: "0 auto" }}>
-              Five pillars of institutional-grade infrastructure, designed for
-              regulated environments where audit compliance and data integrity are non-negotiable.
-            </p>
-          </div>
-
-          {/* Architecture detail SVG */}
-          <div style={{ maxWidth: 900, margin: "0 auto 48px" }}>
-            <svg
-              viewBox="0 0 900 300"
-              width="100%"
-              style={{ display: "block" }}
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Five pillars */}
-              <rect x="20" y="20" width="160" height="260" rx="8" fill={C.accent} />
-              <text x="100" y="60" textAnchor="middle" fontFamily={F.mono} fontSize="10" fontWeight="700" fill="#fff" letterSpacing="0.08em">WORM AUDIT</text>
-              <line x1="40" y1="72" x2="160" y2="72" stroke="rgba(255,255,255,0.15)" />
-              <text x="100" y="96" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">SHA-256 hash chain</text>
-              <text x="100" y="116" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Append-only logs</text>
-              <text x="100" y="136" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Per-tenant chains</text>
-              <text x="100" y="156" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">GENESIS_HASH</text>
-              <text x="100" y="176" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Tamper-evident</text>
-              <text x="100" y="196" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">No UPDATE</text>
-              <text x="100" y="216" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">No DELETE</text>
-
-              <rect x="200" y="20" width="160" height="260" rx="8" fill="#1a6b5a" />
-              <text x="280" y="60" textAnchor="middle" fontFamily={F.mono} fontSize="10" fontWeight="700" fill="#fff" letterSpacing="0.08em">4-EYES GOV</text>
-              <line x1="220" y1="72" x2="340" y2="72" stroke="rgba(255,255,255,0.15)" />
-              <text x="280" y="96" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Maker-checker</text>
-              <text x="280" y="116" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Separation of duties</text>
-              <text x="280" y="136" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Tri-state pipeline</text>
-              <text x="280" y="156" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">9 RBAC roles</text>
-              <text x="280" y="176" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">41 permissions</text>
-              <text x="280" y="196" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">Threshold-based</text>
-              <text x="280" y="216" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">3-actor SoD</text>
-
-              <rect x="380" y="20" width="160" height="260" rx="8" fill={C.accent} />
-              <text x="460" y="60" textAnchor="middle" fontFamily={F.mono} fontSize="10" fontWeight="700" fill="#fff" letterSpacing="0.08em">DET. ENGINE</text>
-              <line x1="400" y1="72" x2="520" y2="72" stroke="rgba(255,255,255,0.15)" />
-              <text x="460" y="96" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">41 modules</text>
-              <text x="460" y="116" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Sub-50ms latency</text>
-              <text x="460" y="136" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Pure functions</text>
-              <text x="460" y="156" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">No side effects</text>
-              <text x="460" y="176" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Hash-chained</text>
-              <text x="460" y="196" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">Reproducible</text>
-              <text x="460" y="216" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">Verifiable</text>
-
-              <rect x="560" y="20" width="160" height="260" rx="8" fill="#1a6b5a" />
-              <text x="640" y="60" textAnchor="middle" fontFamily={F.mono} fontSize="10" fontWeight="700" fill="#fff" letterSpacing="0.08em">AI INSIGHT</text>
-              <line x1="580" y1="72" x2="700" y2="72" stroke="rgba(255,255,255,0.15)" />
-              <text x="640" y="96" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Customer management</text>
-              <text x="640" y="116" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Report writing</text>
-              <text x="640" y="136" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Chart analysis</text>
-              <text x="640" y="156" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Status updates</text>
-              <text x="640" y="176" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Voice &amp; chat</text>
-              <text x="640" y="196" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">Market &amp; Polisophic</text>
-              <text x="640" y="216" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">Never executes</text>
-
-              <rect x="740" y="20" width="140" height="260" rx="8" fill={C.accent} />
-              <text x="810" y="60" textAnchor="middle" fontFamily={F.mono} fontSize="10" fontWeight="700" fill="#fff" letterSpacing="0.08em">MULTI-CH</text>
-              <line x1="760" y1="72" x2="860" y2="72" stroke="rgba(255,255,255,0.15)" />
-              <text x="810" y="96" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Voice (WebRTC)</text>
-              <text x="810" y="116" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Chat (NL)</text>
-              <text x="810" y="136" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Terminal UI</text>
-              <text x="810" y="156" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">REST API</text>
-              <text x="810" y="176" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.7)">Reports</text>
-              <text x="810" y="196" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">219+ endpoints</text>
-              <text x="810" y="216" textAnchor="middle" fontFamily={F.ui} fontSize="10" fill="rgba(255,255,255,0.5)">Mobile-ready</text>
-            </svg>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Workflow ── */}
-      <section style={{ padding: "80px 48px", background: C.bgAlt }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 56 }}>
-            <div style={{ fontFamily: F.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.15em", color: C.textMuted, marginBottom: 12, textTransform: "uppercase" }}>Workflow</div>
-            <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, margin: "0 0 12px", color: C.text }}>
-              Five steps. Full governance. AI-assisted.
-            </h2>
-            <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, lineHeight: 1.6, maxWidth: 580, margin: "0 auto" }}>
-              From raw exposure data to audited execution -- every step deterministic,
-              every decision recorded, with AI insight at the review stage.
-            </p>
-          </div>
-          <div className="workflow-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 20 }}>
-            {WORKFLOW.map(w => (
-              <div key={w.step} style={{ padding: "28px 20px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, position: "relative" }}>
-                <div style={{ fontFamily: F.mono, fontSize: 44, fontWeight: 900, color: C.bgMuted, position: "absolute", top: 12, right: 16, lineHeight: 1 }}>{w.step}</div>
-                <div style={{ width: 40, height: 40, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: C.accentLight, color: C.accent, marginBottom: 16 }}>
-                  {w.icon}
-                </div>
-                <div style={{ fontFamily: F.ui, fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 8 }}>{w.title}</div>
-                <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, margin: 0 }}>{w.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Platform Capabilities ── */}
-      <section style={{ padding: "80px 48px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ marginBottom: 48 }}>
-            <div style={{ fontFamily: F.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.15em", color: C.textMuted, marginBottom: 12, textTransform: "uppercase" }}>Platform</div>
-            <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, margin: "0 0 12px", color: C.text }}>
-              Built to institutional standards
-            </h2>
-            <p style={{ fontFamily: F.ui, fontSize: 15, color: C.textSub, lineHeight: 1.6, maxWidth: 580 }}>
-              Six pillars of enterprise infrastructure, each designed for environments
-              where regulatory compliance and data integrity are non-negotiable requirements.
-            </p>
-          </div>
-          <div className="cap-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
-            {CAPABILITIES.map(cap => (
-              <div key={cap.title} style={{ padding: "24px", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8 }}>
-                <div style={{ color: C.accent, marginBottom: 16 }}>{cap.icon}</div>
-                <div style={{ fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 8 }}>{cap.title}</div>
-                <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: 0 }}>{cap.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA ── */}
-      <section style={{ background: C.accent, padding: "80px 48px", textAlign: "center" }}>
-        <div style={{
-          fontFamily: F.mono, fontSize: 11, fontWeight: 600,
-          letterSpacing: "0.15em", color: "rgba(255,255,255,0.4)",
-          marginBottom: 16, textTransform: "uppercase",
-        }}>
-          Enterprise-Grade
-        </div>
-        <h2 style={{ fontFamily: F.heading, fontSize: 40, fontWeight: 700, color: "#fff", margin: "0 0 16px" }}>
-          Ready to transform your hedge operations?
-        </h2>
-        <p style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", maxWidth: 560, margin: "0 auto 32px", lineHeight: 1.6 }}>
-          Join the treasury teams and algorithmic traders that trust ORDR Terminal
-          for deterministic, auditable, AI-assisted risk management.
+      {/* Section 6: Products Grid */}
+      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white border-t border-[#E5E7EB]">
+        <span className="section-label">PRODUCTS</span>
+        <h2 className="text-3xl md:text-[44px] font-extrabold mb-6" style={{ fontFamily: "'Manrope', sans-serif" }}>Seven products. One ecosystem.</h2>
+        <p className="text-[16px] text-[#4B5563] max-w-3xl mb-16 border-l-2 border-[#E5E7EB] pl-4">
+          Enterprise treasury governance, professional trading tools, and retail-friendly charting -- each product powered by the same deterministic computation engine.
         </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link href="/auth/login" style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-            color: C.accent, background: "#fff",
-            padding: "13px 32px", borderRadius: 6, textDecoration: "none",
-          }}>
-            Launch Terminal <ArrowRight size={16} />
-          </Link>
-          <Link href="/contact" style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-            color: "#fff", background: "transparent",
-            padding: "13px 32px", borderRadius: 6, textDecoration: "none",
-            border: "1.5px solid rgba(255,255,255,0.3)",
-          }}>
-            Contact Sales
-          </Link>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {products.map((p, i) => {
+            const Icon = p.icon;
+            const isLast = i === products.length - 1;
+            const wrapper = (children: React.ReactNode) =>
+              p.external ? (
+                <a key={p.id} href={p.external} target="_blank" rel="noopener noreferrer" className={`mkt-card flex flex-col group cursor-pointer bg-[#F9FAFB] no-underline text-inherit ${isLast ? "lg:col-start-2" : ""}`}>{children}</a>
+              ) : (
+                <Link key={p.id} href={`/products/${p.id}`} className={`mkt-card flex flex-col group cursor-pointer bg-[#F9FAFB] no-underline text-inherit ${isLast ? "lg:col-start-2" : ""}`}>{children}</Link>
+              );
+            return wrapper(
+              <>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#E5E7EB]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-sm bg-white flex items-center justify-center text-[#1E3A5F] border border-[#D1D5DB]">
+                      <Icon size={16} />
+                    </div>
+                    <h3 className="font-mono text-[15px] font-bold group-hover:text-[#1E3A5F] transition-colors">{p.name}</h3>
+                  </div>
+                  <ArrowRight size={16} className="text-[#9CA3AF] group-hover:text-[#1E3A5F] transition-colors" />
+                </div>
+                <p className="text-[14px] text-[#4B5563] mb-6 flex-grow leading-relaxed">{p.desc}</p>
+                <div className="bg-white p-4 rounded-sm border border-[#E5E7EB] mt-auto">
+                  <div className="font-mono text-[9px] font-bold text-[#9CA3AF] mb-1 uppercase tracking-widest flex items-center gap-1.5">
+                    <BrainCircuit size={10} /> AI Boundary
+                  </div>
+                  <p className="text-[12px] text-[#6B7280] leading-snug">{p.ai}</p>
+                </div>
+              </>
+            );
+          })}
         </div>
       </section>
 
-      <style>{`
-        @media(max-width:900px){
-          .stats-strip{flex-wrap:wrap !important;gap:32px !important}
-          .workflow-grid{grid-template-columns:1fr 1fr !important}
-        }
-        @media(max-width:768px){
-          .products-grid, .solutions-grid, .cap-grid{grid-template-columns:1fr !important}
-          .ai-layer-grid{grid-template-columns:1fr 1fr !important}
-          .workflow-grid{grid-template-columns:1fr !important}
-        }
-        @media(max-width:480px){
-          .ai-layer-grid{grid-template-columns:1fr !important}
-          .stats-strip{gap:20px !important}
-        }
-      `}</style>
+      {/* Section 7: AI Works */}
+      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white border-t border-[#E5E7EB]">
+        <span className="section-label">INTELLIGENCE</span>
+        <h2 className="text-3xl md:text-[44px] font-extrabold mb-12" style={{ fontFamily: "'Manrope', sans-serif" }}>How the AI Layer Works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0 border border-[#E5E7EB] rounded-sm bg-[#F9FAFB]">
+          {[
+            { n: "01", t: "Engine Calculates", d: "The deterministic engine processes inputs through 41 production modules. Same input always produces the same output. Sub-50ms. Hash-chained. Reproducible." },
+            { n: "02", t: "AI Communicates", d: "AI is a communication and management layer for specific products. Treasury uses chat, voice, phone. Market uses AI for chart analysis. Polisophic for geopolitical intelligence. AI does not evaluate engine calculations." },
+            { n: "03", t: "AI Assists", d: "Where AI is present, it assists through communication channels: status updates, report writing, chart reading, algo building, geopolitical analysis. AI is not involved in any calculation." },
+            { n: "04", t: "Human Decides", d: "AI never auto-executes. Every trade, hedge, and decision is made by the human operator. 4-eyes governance and separation of duties on all execution." },
+          ].map((item, i) => (
+            <div key={item.n} className={`p-8 ${i !== 3 ? "border-b lg:border-b-0 lg:border-r border-[#E5E7EB]" : ""}`}>
+              <span className="font-mono text-[24px] font-bold text-[#D1D5DB] block mb-4">[{item.n}]</span>
+              <h3 className="font-bold text-[16px] mb-3 text-[#111111]">{item.t}</h3>
+              <p className="text-[13px] text-[#6B7280] leading-relaxed">{item.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Section 8: Solutions */}
+      <section className="py-24 px-6 md:px-12 bg-[#111111] text-white">
+        <div className="max-w-7xl mx-auto">
+          <span className="section-label text-[#9CA3AF]" style={{ ["--before-bg" as string]: "white" }}>SOLUTIONS</span>
+          <h2 className="text-3xl md:text-[44px] font-extrabold mb-12 text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>Built for your industry</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border border-[#374151] rounded-sm">
+            {solutions.map((s, i) => {
+              const Icon = s.icon;
+              return (
+                <Link key={s.id} href={`/solutions/${s.id}`} className="no-underline text-inherit">
+                  <div className={`p-8 cursor-pointer group hover:bg-[#1A1A1A] transition-colors border-[#374151] ${(i + 1) % 3 !== 0 ? "lg:border-r" : ""} ${i < 3 ? "border-b" : ""} ${i % 2 === 0 ? "md:border-r" : "md:border-r-0 lg:border-r"}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-10 h-10 rounded-sm bg-[#1A1A1A] flex items-center justify-center text-white border border-[#374151]">
+                        <Icon size={18} />
+                      </div>
+                      <ArrowRight size={16} className="text-[#4B5563] group-hover:text-white transition-colors" />
+                    </div>
+                    <h3 className="font-bold text-[16px] mb-2 text-white">{s.name}</h3>
+                    <p className="text-[13px] text-[#9CA3AF]">{s.desc}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Section 9: Infrastructure Detail */}
+      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white">
+        <span className="section-label">INFRASTRUCTURE</span>
+        <h2 className="text-3xl md:text-[44px] font-extrabold mb-12" style={{ fontFamily: "'Manrope', sans-serif" }}>The ORDR Architecture</h2>
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-[800px] p-1 bg-[#F9FAFB] border border-[#E5E7EB] rounded-sm">
+            <SvgPillars />
+          </div>
+        </div>
+      </section>
+
+      {/* Section 10: Workflow */}
+      <section className="py-24 px-6 md:px-12 bg-[#F4F5F7] border-y border-[#E5E7EB]">
+        <div className="max-w-7xl mx-auto">
+          <span className="section-label">WORKFLOW</span>
+          <h2 className="text-3xl md:text-[44px] font-extrabold mb-12" style={{ fontFamily: "'Manrope', sans-serif" }}>Five steps. Full governance. AI-assisted.</h2>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {[
+              { n: "01", t: "Import Exposures", d: "Upload FX positions from ERP, TMS, or spreadsheet. Automatic classification, validation, enrichment." },
+              { n: "02", t: "Configure Policy", d: "Select from 60 presets or build custom. Hedge ratios, instruments, governance tiers, risk parameters." },
+              { n: "03", t: "Calculate", d: "Deterministic engine computes. Sub-50ms, reproducible, auditable. Every calculation hash-chained." },
+              { n: "04", t: "Review & Report", d: "Review engine outputs. AI helps communicate status and write reports. AI does not evaluate calculations." },
+              { n: "05", t: "Execute", d: "4-eyes approval, governed execution, WORM audit trail. Every decision recorded, hash-chained, immutable." },
+            ].map((item) => (
+              <div key={item.n} className="bg-white border border-[#E5E7EB] p-6 rounded-sm relative shadow-sm">
+                <div className="absolute top-0 left-0 w-full h-1 bg-[#1E3A5F]" />
+                <span className="font-mono text-xs font-bold text-[#9CA3AF] mb-4 block">STEP {item.n}</span>
+                <h3 className="font-bold text-[14px] mb-2 text-[#111111]">{item.t}</h3>
+                <p className="text-[12px] text-[#6B7280] leading-relaxed">{item.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Section 11: Capabilities */}
+      <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white">
+        <span className="section-label">PLATFORM</span>
+        <h2 className="text-3xl md:text-[44px] font-extrabold mb-12" style={{ fontFamily: "'Manrope', sans-serif" }}>Built to institutional standards</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
+          {[
+            { t: "WORM Audit Trail", d: "Append-only event log with SHA-256 hash chain. Per-tenant chains with GENESIS_HASH verification." },
+            { t: "4-Eyes Governance", d: "Maker-checker with SoD. Tri-state pipeline. Threshold-based escalation with 3-actor SoD." },
+            { t: "Deterministic Engine", d: "41 modules, sub-50ms. Pure functions, no side effects, no randomness. Independently verifiable." },
+            { t: "IFRS 9 / ASC 815", d: "Prospective effectiveness testing, critical terms matching, dual-standard support, evidence grading." },
+            { t: "Real-Time Risk Intelligence", d: "R1-R8 taxonomy, exposure decomposition, concentration analysis, scenario stress testing." },
+            { t: "Policy Engine", d: "60 presets, 7-layer extension architecture, volatility overlays, geopolitical risk, netting." },
+          ].map((item) => (
+            <div key={item.t} className="flex gap-4 items-start">
+              <div className="w-6 h-6 rounded bg-[#F4F5F7] border border-[#E5E7EB] flex items-center justify-center shrink-0 mt-0.5">
+                <CheckCircle size={12} className="text-[#1E3A5F]" />
+              </div>
+              <div>
+                <h3 className="font-bold mb-1.5 text-[15px]">{item.t}</h3>
+                <p className="text-[13px] text-[#6B7280] leading-relaxed">{item.d}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Section 12: CTA */}
+      <section className="py-24 px-6 md:px-12 bg-[#0A0A0A] text-white text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-dark pointer-events-none" style={{ maskImage: "linear-gradient(to bottom, black, transparent)", WebkitMaskImage: "linear-gradient(to bottom, black, transparent)" }} />
+        <div className="max-w-3xl mx-auto relative z-10">
+          <span className="font-mono text-[11px] font-bold tracking-[0.2em] text-[#10B981] uppercase mb-6 block">ENTERPRISE-GRADE INFRASTRUCTURE</span>
+          <h2 className="text-[36px] md:text-[48px] font-extrabold mb-6 text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>See the platform in action</h2>
+          <p className="text-[16px] text-[#9CA3AF] mb-10 leading-relaxed max-w-2xl mx-auto">
+            Request a guided demo with live data. Enterprise treasury teams, professional traders, and risk managers -- experience the full deterministic ecosystem.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Link href="/contact" className="inline-flex items-center justify-center px-6 py-3 text-[13px] font-bold bg-white text-[#000000] border border-white hover:bg-[#E5E7EB] rounded-sm tracking-wide no-underline transition-all">
+              Request Demo →
+            </Link>
+            <Link href="/auth/login" className="inline-flex items-center justify-center px-6 py-3 text-[13px] font-bold bg-transparent text-white border border-[#374151] hover:border-white rounded-sm tracking-wide no-underline transition-all">
+              Sign In
+            </Link>
+          </div>
+        </div>
+      </section>
     </MarketingLayout>
   );
 }

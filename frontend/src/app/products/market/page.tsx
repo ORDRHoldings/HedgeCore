@@ -52,9 +52,9 @@ export default function MarketPage() {
           AI-integrated charting built for algorithmic trading. Build algorithms for technical and non-technical users alike.
           Python, JavaScript, or natural language. Link execution to your platform. AI coaches trading discipline -- not signals.
         </p>
-        <Link href="/auth/login" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: "#fff", background: C.accent, padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
-          Get Started <ArrowRight size={16} />
-        </Link>
+        <a href="https://ordr-market.vercel.app/" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: "#fff", background: C.accent, padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
+          Open ORDR Market <ArrowRight size={16} />
+        </a>
       </section>
 
       {/* Stats Strip */}
@@ -224,9 +224,9 @@ export default function MarketPage() {
       <section style={{ background: C.accent, padding: "80px 48px", textAlign: "center" }}>
         <h2 style={{ fontFamily: F.heading, fontSize: 36, fontWeight: 700, color: "#fff", margin: "0 0 16px" }}>Explore the agentic charting platform</h2>
         <p style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>AI-coached trading discipline. Multi-language algorithm builder. Professional canvas engine.</p>
-        <Link href="/auth/login" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.accent, background: "#fff", padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
-          Get Started <ArrowRight size={16} />
-        </Link>
+        <a href="https://ordr-market.vercel.app/" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: F.ui, fontSize: 15, fontWeight: 600, color: C.accent, background: "#fff", padding: "12px 28px", borderRadius: 6, textDecoration: "none" }}>
+          Open ORDR Market <ArrowRight size={16} />
+        </a>
       </section>
 
       <style>{`@media(max-width:768px){
