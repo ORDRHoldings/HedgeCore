@@ -56,10 +56,12 @@ export async function dashboardFetch(
   }
 
   const url = `${API_BASE}${path}`;
+  // Don't set Content-Type for FormData — the browser must set it (with boundary).
+  const isFormData = options?.body instanceof FormData;
   return fetch(url, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       Authorization: `Bearer ${token}`,
       ...csrfHeaders,
       ...(options?.headers ?? {}),
