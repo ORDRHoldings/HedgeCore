@@ -235,14 +235,37 @@ test.describe("Audit Lab — Full E2E Pipeline (3 Datasets)", () => {
 
       const runBtn = page.locator("button:has-text('RUN AUDIT ANALYSIS'), button:has-text('RUN AUDIT')").first();
       await runBtn.waitFor({ state: "visible", timeout: 15000 });
+
+      // Intercept the POST /runs response to capture errors
+      let runsApiStatus = 0;
+      let runsApiBody = "";
+      const runResponsePromise = page.waitForResponse(
+        r => r.url().includes("/audit-lab/runs") && r.request().method() === "POST",
+        { timeout: 120000 }
+      ).then(async r => {
+        runsApiStatus = r.status();
+        try { runsApiBody = await r.text(); } catch { /* ignore */ }
+      }).catch(() => {});
+
       await runBtn.click();
       console.log("  ✓ Clicked RUN AUDIT ANALYSIS");
 
       // Wait for redirect to run detail (Render cold-start can be slow)
-      await page.waitForURL(/audit-lab\/runs\//, { timeout: 120000 });
+      try {
+        await page.waitForURL(/audit-lab\/runs\//, { timeout: 120000 });
+      } catch (e) {
+        // Capture diagnostic info before re-throwing
+        await runResponsePromise;
+        const bodySnippet = (await page.locator("body").textContent() ?? "").slice(0, 800).replace(/\s+/g, " ");
+        console.log(`  ✗ URL never changed to /audit-lab/runs/`);
+        console.log(`  ✗ POST /runs status: ${runsApiStatus || "no response"}`);
+        console.log(`  ✗ POST /runs body: ${runsApiBody.slice(0, 300)}`);
+        console.log(`  ✗ Page content: ${bodySnippet}`);
+        throw e;
+      }
       const runUrl = page.url();
       result.runId = runUrl.split("/").pop()?.split("?")[0] ?? "—";
-      console.log(`  ✓ Run created — ID: ${result.runId}`);
+      console.log(`  ✓ Run created — ID: ${result.runId} (API status: ${runsApiStatus})`);
 
       // ── RUN DETAIL: KPIs ──────────────────────────────────────────────────
       await step(page, `${i + 1}-05 Read KPI Cards`);
