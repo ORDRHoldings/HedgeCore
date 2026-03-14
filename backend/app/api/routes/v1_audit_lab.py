@@ -258,7 +258,7 @@ async def upload_audit_dataset(
                 "fn": file.filename or "upload.csv",
                 "sh": source_hash,
                 "rc": len(rows),
-                "cp": sorted(currency_pairs),         # Python list — matches asyncpg jsonb codec
+                "cp": json.dumps(sorted(currency_pairs)),  # JSON string — asyncpg needs str for CAST(:x AS jsonb)
                 "cb": current_user.id,                # uuid.UUID
             },
         )
@@ -283,7 +283,7 @@ async def upload_audit_dataset(
                 "fc": row["fee_currency"],
                 "ref": row["reference"],
                 "rh": _row_hash(row),
-                "pw": row["parse_warnings"] or [],    # Python list — matches asyncpg jsonb codec
+                "pw": json.dumps(row["parse_warnings"] or []),  # JSON string for CAST(:x AS jsonb)
             })
         if txn_params:
             await session.execute(
