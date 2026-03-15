@@ -332,9 +332,9 @@ function RunViewerContent() {
   }
 
   return (
-    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, color: S.primary }}>
+    <div style={{ fontFamily: S.fontUI, color: S.primary, flex: 1 }}>
 
-      {/* ── Page header ── */}
+      {/* ── Context bar — run-specific dynamic state ── */}
       <div style={{
         height:        44,
         padding:       "0 24px",
@@ -345,24 +345,11 @@ function RunViewerContent() {
         justifyContent:"space-between",
         flexShrink:    0,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link
-            href="/position-desk"
-            style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2 }}
-          >
-            ← Position Desk
-          </Link>
-          <span style={{ color: S.soft }}>·</span>
-          <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary }}>
-            RUN VIEWER
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {runId && (
-            <>
-              <span style={{ color: S.soft }}>·</span>
-              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.purple, letterSpacing: "0.06em" }}>
-                {runId8}
-              </span>
-            </>
+            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.purple, letterSpacing: "0.06em", border: `1px solid color-mix(in srgb, ${S.purple} 25%, transparent)`, padding: "1px 6px", borderRadius: 2, background: `color-mix(in srgb, ${S.purple} 8%, transparent)` }}>
+              {runId8}
+            </span>
           )}
           {run && (
             <>
@@ -829,6 +816,24 @@ function RunViewerContent() {
                   VIEW AUDIT LEDGER →
                 </Link>
                 <Link
+                  href="/hedgewiki"
+                  style={{
+                    display:       "block",
+                    fontFamily:    S.fontMono,
+                    fontSize: 12,
+                    fontWeight:    600,
+                    letterSpacing: "0.07em",
+                    color:         S.secondary,
+                    background:    "transparent",
+                    padding:       "6px 14px",
+                    textDecoration:"none",
+                    textAlign:     "center",
+                    border:        `1px solid ${S.rim}`,
+                  }}
+                >
+                  HEDGE WIKI — KNOWLEDGE BASE →
+                </Link>
+                <Link
                   href={`/committee-pack?id=${encodeURIComponent(runId ?? "")}`}
                   style={{
                     display:       "block",
@@ -854,20 +859,6 @@ function RunViewerContent() {
         </div>
       )}
 
-      {/* ── Footer ── */}
-      <div style={{
-        height:         32,
-        display:        "flex",
-        alignItems:     "center",
-        justifyContent: "center",
-        background:     S.bgPanel,
-        borderTop:      `1px solid ${S.rim}`,
-        flexShrink:     0,
-      }}>
-        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>
-          {renderTs} &middot; ORDR RUN VIEWER &middot; AUDIT TRAIL
-        </span>
-      </div>
     </div>
   );
 }

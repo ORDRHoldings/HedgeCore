@@ -400,34 +400,18 @@ export default function HedgeWiki() {
 
   return (
 
-    <PageShell icon={Globe} title="HedgeWiki" breadcrumb={["Dashboard", "HedgeWiki"]} noPadding>
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary, flex: 1 }}>
+    <PageShell icon={Globe} title="Hedge Wiki" breadcrumb={["Governance", "Knowledge Base"]} noPadding>
+    <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column", background: S.bgDeep, fontFamily: S.fontUI, color: S.primary, flex: 1, minWidth: 0 }}>
 
-      {/* Header */}
+      {/* Context bar — search + stats (title handled by PageShell) */}
       <header style={{
         display: "flex", alignItems: "center", gap: 12, height: 44,
         padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, flexShrink: 0,
       }}>
-        <button onClick={() => router.push("/")} style={{
-          fontFamily: S.fontMono, fontSize: "0.75rem", color: S.tertiary,
-          background: "transparent", border: `1px solid ${S.rim}`,
-          padding: "2px 8px", cursor: "pointer", letterSpacing: "0.04em",
-        }}>← Home</button>
-        <span style={{ color: S.rim }}>|</span>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M3 2h7l3 3v9H3V2z" stroke="var(--accent-cyan)" strokeWidth="1.25" strokeLinejoin="round"/>
-          <path d="M10 2v3h3" stroke="var(--accent-cyan)" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
-          <path d="M5 7h6M5 9.5h4" stroke="var(--accent-cyan)" strokeWidth="1" strokeLinecap="round"/>
-        </svg>
-        <div>
-          <div style={{ fontFamily: S.fontUI, fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: S.primary, lineHeight: 1.1 }}>
-            HedgeWiki
-          </div>
-          <div style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", letterSpacing: "0.07em", color: S.tertiary }}>
-            GOVERNANCE KNOWLEDGE GRAPH · HEDGECORE LAYER
-          </div>
-        </div>
+        <span style={{ fontFamily: S.fontMono, fontSize: "0.6875rem", color: S.tertiary, letterSpacing: "0.06em" }}>
+          GOVERNANCE KNOWLEDGE GRAPH
+        </span>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input
@@ -685,7 +669,7 @@ export default function HedgeWiki() {
     </div>
     <HelpPanel config={HEDGEWIKI_HELP} storageKey="hedgewiki" />
     </div>
-  
+
     </PageShell>
     );
 }

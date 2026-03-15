@@ -451,16 +451,13 @@ function LineageContent() {
   const posId8 = positionId.slice(0, 8).toUpperCase();
 
   return (
-    <div style={{ background: S.bgDeep, minHeight: "100vh", fontFamily: S.fontUI, color: S.primary, display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+    <div style={{ fontFamily: S.fontUI, color: S.primary, display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
 
-      {/* ── Page header ── */}
+      {/* ── Context bar — position-specific dynamic state ── */}
       <div style={{ height: 44, padding: "0 20px", background: S.bgPanel, borderBottom: `1px solid ${S.rim}`, display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
         <Link href="/position-desk" style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, textDecoration: "none", border: `1px solid ${S.rim}`, padding: "2px 8px", borderRadius: 2, letterSpacing: "0.04em" }}>
           ← POSITION DESK
         </Link>
-        <span style={{ color: S.rim }}>|</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.primary }}>POSITION LINEAGE</span>
-        <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, border: `1px solid ${S.soft}`, padding: "1px 5px", borderRadius: 2, letterSpacing: "0.06em" }}>PROVENANCE GRAPH</span>
         {positionId && <Badge text={posId8} color={S.cyan} />}
         {lineage && <Badge text={lineage.summary.execution_status} color={statusColor(lineage.summary.execution_status)} />}
         <div style={{ flex: 1 }} />
@@ -759,20 +756,6 @@ function LineageContent() {
         </div>
       </div>
 
-      {/* ── Footer ── */}
-      <footer style={{
-        height:         32,
-        display:        "flex",
-        alignItems:     "center",
-        justifyContent: "center",
-        background:     S.bgPanel,
-        borderTop:      `1px solid ${S.rim}`,
-        flexShrink:     0,
-      }}>
-        <span suppressHydrationWarning style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, letterSpacing: "0.06em" }}>
-          {renderTs} &middot; ORDR LINEAGE VIEWER &middot; PROVENANCE
-        </span>
-      </footer>
     </div>
   );
 }
@@ -782,29 +765,31 @@ export default function LineagePage() {
   if (!_planAllowed) return null;
   return (
 
-    <PageShell icon={Globe} title="Position Lineage" breadcrumb={["Dashboard", "Lineage"]} noPadding>
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <PageShell icon={Globe} title="Position Lineage" breadcrumb={["Governance", "Position Lineage"]} noPadding>
+    <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
 
-    <Suspense
-      fallback={
-        <div style={{
-          padding: "60px 24px",
-          textAlign: "center",
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: "0.625rem",
-          color: "var(--text-tertiary)",
-          letterSpacing: "0.08em",
-        }}>
-          LOADING LINEAGE VIEWER…
-        </div>
-      }
-    >
-      <LineageContent />
-    </Suspense>
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <Suspense
+          fallback={
+            <div style={{
+              padding: "60px 24px",
+              textAlign: "center",
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: "0.625rem",
+              color: "var(--text-tertiary)",
+              letterSpacing: "0.08em",
+            }}>
+              LOADING LINEAGE VIEWER…
+            </div>
+          }
+        >
+          <LineageContent />
+        </Suspense>
+      </div>
 
-    <HelpPanelV2 module={LINEAGE_HELP} storageKey="lineage" />
+      <HelpPanelV2 module={LINEAGE_HELP} storageKey="lineage" />
     </div>
-  
+
     </PageShell>
     );
 }
