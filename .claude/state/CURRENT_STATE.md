@@ -1,18 +1,16 @@
 # ORDR Terminal — Current State
 
-> Last updated: 2026-03-14 (commit 732b2a0)
+> Last updated: 2026-03-15
 
 ## Recent Work
+- **IBKR Gateway live streaming for ORDR Market charts**: WebSocket server (`/ws/market`), `MarketStreamManager` with IBKR `reqMktData` streaming + fallback polling, frontend `useMarketWebSocket` hook, `ChartCore.tsx` rewritten to use real IBKR data (historical + live ticks)
+- **NEXUS initialized**: ordr-market project — 28 tables, 8 agents, genesis chain seeded
 - **IBKR paper trading integration**: ADR-0005 approved, IBKRExecutor service, 3 API endpoints, PhaseExecute rewrite with IBKR execution flow
-- **Login page colorful particles**: Treasury pastel palette with HSL color-shifting nodes
-- **Deep security audit**: Admin section (10 criticals), hedge desk pipeline (5 criticals), hedge desk workflow (6 highs), backend hardening (3 highs), DB model fixes (4 criticals)
-- **Total fixes**: 20 critical+high findings resolved across 35 files
-- **Tests**: 3531 passing (+56 new IBKR), 134 skipped (PG-only), 0 failed
+- **Deep security audit**: 20 critical+high findings resolved across 35 files
 
 ## Test Evidence
-- Backend: `3531 passed, 134 skipped, 0 failed` (19.31s)
-- Frontend: `tsc --noEmit` clean, `next build` passes
-- Pre-existing failure: `test_report_studio_governance.py::test_compute_report_hash_function_exists` (unrelated)
+- Backend: `3545 passed, 0 failed` (19.81s, excl. 2 pre-existing unrelated failures)
+- TypeScript: `tsc --noEmit` clean
 
 ## Open Items (from audit — not yet fixed)
 ### Medium Priority

@@ -1631,6 +1631,13 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass
 
+        # Shutdown real-time market stream manager (IBKR WebSocket bridge)
+        try:
+            from app.services.market_stream import get_stream_manager
+            await get_stream_manager().shutdown()
+        except Exception:
+            pass
+
         await shutdown_engine()
 
 

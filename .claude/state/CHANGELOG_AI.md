@@ -1,5 +1,21 @@
 # Changelog (AI-maintained)
 
+## 2026-03-15 — IBKR Gateway Live Data + WebSocket Streaming for ORDR Market Charts
+
+### IBKR Real-Time Data Pipeline (ordr-market)
+- **`backend/app/services/market_stream.py`** (new): `MarketStreamManager` singleton — dedicated IB connection (clientId+20), IBKR `reqMktData` streaming via `pendingTickersEvent`, fallback to 1.5s snapshot polling if Gateway unreachable
+- **`backend/app/api/routes/v1_ws_market.py`** (new): Public WebSocket at `/ws/market` — subscribe/unsubscribe/ping protocol, 30s keepalive
+- **`backend/app/api/router.py`**: Registered WS router
+- **`backend/app/main.py`**: Stream manager shutdown wired into lifespan finally block
+- **`ordr-market/src/hooks/useMarketWebSocket.ts`** (new): Frontend WS hook — auto-reconnect (3s), symbol re-subscribe without reconnect, `ws://`↔`wss://` auto-derived from `NEXT_PUBLIC_API_URL`
+- **`ordr-market/src/components/workspace/ChartCore.tsx`**: Replaced mock data generator with real IBKR data — `usePublicChartData` for historical OHLCV bars, `useMarketWebSocket` for live tick updates to last bar
+- **`ordr-market/.env.local`** (new): `NEXT_PUBLIC_API_URL=http://localhost:8000`
+- **NEXUS** (ordr-market): First-time init — 28 tables, 8 agents, genesis seeded
+
+### Test Evidence
+- Backend: `3545 passed, 0 failed` (excl. 2 pre-existing unrelated failures)
+- TypeScript: `tsc --noEmit` clean
+
 ## 2026-03-14 — IBKR Paper Trading + Colorful Login (commit 732b2a0)
 
 ### IBKR Integration (ADR-0005)
