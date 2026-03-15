@@ -197,6 +197,8 @@ export default function DevOpsTab({ token }: { token: string }) {
 
   useEffect(() => {
     fetchData();
+    const id = setInterval(fetchData, 30_000);
+    return () => clearInterval(id);
   }, [fetchData]);
 
   if (loading) {
