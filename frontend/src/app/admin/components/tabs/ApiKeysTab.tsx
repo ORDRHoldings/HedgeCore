@@ -40,6 +40,10 @@ interface ApiKeyListResponse {
 }
 
 // ---- Shapes from backend schemas/api_key_audit.py ----
+// Fields match ApiKeyAuditLogPublic schema.
+// Note: the underlying ApiKeyAuditLog model also has status_code, client_ip,
+// latency_ms, method, path — but ApiKeyAuditLogPublic does not expose them.
+// status_code is included here as optional for forward-compatibility.
 interface AuditEntry {
   id: string;
   api_key_id: string;
@@ -48,6 +52,7 @@ interface AuditEntry {
   user_agent: string | null;
   request_path: string | null;
   request_method: string | null;
+  status_code?: number | null;
   created_at: string;
 }
 
@@ -448,9 +453,14 @@ function RevokeCell({
         token,
         { method: "DELETE" }
       );
-      if (res.ok || res.status === 204) {
+      if (res.ok) {
+        // Backend returns 204 No Content — do NOT call res.json()
         onRevoked();
+        return;
       }
+      // Non-2xx: parse error body without assuming JSON on 204
+      const err = await res.json().catch(() => ({ detail: "Revoke failed" })) as { detail?: string };
+      console.error("Revoke failed:", err.detail ?? `HTTP ${res.status}`);
     } finally {
       setRevoking(false);
       setConfirming(false);
@@ -902,16 +912,16 @@ export default function ApiKeysTab({ token }: { token: string }) {
                           fontFamily: S.fontMono,
                           fontSize: 11,
                           fontWeight: 700,
-                          // status_code not present in audit schema — show event instead; status derived from event
-                          color: entry.event === "denied"
+                          color: entry.status_code != null
+                            ? statusCodeColor(entry.status_code)
+                            : entry.event === "denied"
                             ? S.fail
                             : entry.event === "used"
                             ? S.pass
                             : S.secondary,
                         }}
                       >
-                        {/* audit schema has no status_code — show placeholder */}
-                        —
+                        {entry.status_code ?? "—"}
                       </td>
                       <td
                         style={{
