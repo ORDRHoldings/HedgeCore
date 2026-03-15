@@ -28,6 +28,8 @@ from app.core.dependencies import get_current_user, require_superuser
 from app.main import app
 
 
+pytestmark = [pytest.mark.requires_postgres, pytest.mark.asyncio]
+
 _BEARER = {"Authorization": "Bearer fake-jwt-for-csrf-bypass"}
 
 

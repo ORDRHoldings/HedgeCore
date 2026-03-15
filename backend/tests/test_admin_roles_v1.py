@@ -162,4 +162,4 @@ class TestUnauthenticated:
         """With no auth override, middleware should reject unauthenticated request."""
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
             resp = await ac.get("/api/v1/admin/roles")
-        assert resp.status_code in (401, 403, 422)
+        assert resp.status_code in (401, 403)
