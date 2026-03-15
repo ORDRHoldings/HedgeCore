@@ -188,13 +188,13 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Admin", href: "/admin-monitor", icon: Monitor,
-    prefixes: ["/admin-monitor", "/devops"],
+    label: "Admin", href: "/admin", icon: Monitor,
+    prefixes: ["/admin", "/admin-monitor", "/devops"],
     header: "Platform Operations",
     superuserOnly: true,
     items: [
-      { label: "Operations Center", desc: "System health, services, DB stats",   href: "/admin-monitor",  icon: Monitor },
-      { label: "DevOps Console",    desc: "AI memory, risks, freeze, decisions", href: "/devops",         icon: Cpu },
+      { label: "Operations Center", desc: "System health, services, DB stats",   href: "/admin?tab=operations", icon: Monitor },
+      { label: "DevOps Console",    desc: "AI memory, risks, freeze, decisions", href: "/admin?tab=devops",     icon: Cpu },
     ],
   },
   {
