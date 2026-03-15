@@ -117,25 +117,49 @@ const TABS: Array<{ id: SandboxTab; label: string; icon: string; subtitle: strin
   { id: "v2analytics", label: "V2 Analytics", icon: "⬡", subtitle: "Forward validation · Netting · Attribution · Liquidity · Constraints · Tensor" },
 ];
 
+// ─── Live market data types ────────────────────────────────────────────────────
+interface LiveMarketData {
+  as_of: string;
+  spot_rate: number;
+  forward_points_by_month: Record<string, number>;
+  provider_metadata: Record<string, unknown>;
+}
+
+// ─── Fetch live market snapshot from POST /api/market-autofill ───────────────
+async function fetchLiveMarket(currency: string, tradeDates: string[] = []): Promise<LiveMarketData | null> {
+  try {
+    const res = await fetch('/api/market-autofill', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currencies: [currency], trade_value_dates: tradeDates }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { market?: LiveMarketData };
+    if (data.market && data.market.spot_rate > 0) return data.market;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Live market data hook ────────────────────────────────────────────────────
 function useLiveSpot(primaryCurrency: string) {
   const [liveSpot, setLiveSpot] = useState<number | null>(null);
+  const [liveMarket, setLiveMarket] = useState<LiveMarketData | null>(null);
   const [liveStatus, setLiveStatus] = useState<"loading" | "live" | "fallback" | "idle">("idle");
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
   const fetchSpot = useCallback(async () => {
     setLiveStatus("loading");
     try {
-      const res = await fetch(`/api/market-autofill?currency=${primaryCurrency}&buckets=2026-06`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json() as Record<string, unknown>;
-      const spot = (data.spot_rate ?? data.spot ?? data.spot_rate) as number | undefined;
-      if (spot && spot > 0) {
-        setLiveSpot(spot);
+      const market = await fetchLiveMarket(primaryCurrency);
+      if (market) {
+        setLiveSpot(market.spot_rate);
+        setLiveMarket(market);
         setLiveStatus("live");
         setFetchedAt(new Date().toISOString());
       } else {
-        throw new Error("No spot in response");
+        throw new Error("No market data");
       }
     } catch {
       setLiveStatus("fallback");
@@ -148,7 +172,7 @@ function useLiveSpot(primaryCurrency: string) {
     return () => clearInterval(interval);
   }, [fetchSpot]);
 
-  return { liveSpot, liveStatus, fetchedAt, refreshSpot: fetchSpot };
+  return { liveSpot, liveMarket, liveStatus, fetchedAt, refreshSpot: fetchSpot };
 }
 
 // ─── Market data status badge ─────────────────────────────────────────────────
@@ -414,7 +438,7 @@ function SandboxPageInner() {
   }, [sandboxResult, selectedPair]);
 
   // Live spot hook
-  const { liveSpot, liveStatus, fetchedAt, refreshSpot } = useLiveSpot(primaryCurrency);
+  const { liveSpot, liveMarket, liveStatus, fetchedAt, refreshSpot } = useLiveSpot(primaryCurrency);
 
   const spot = useMemo(() => {
     if (liveSpot && liveSpot > 0) return liveSpot;
@@ -438,10 +462,16 @@ function SandboxPageInner() {
     return Math.min(1.25, hedged / Math.max(exp, 1));
   }, [sandboxResult]);
 
-  const handlePairChange = useCallback((pair: string) => {
+  const handlePairChange = useCallback(async (pair: string) => {
     dispatch(setSelectedPair(pair));
+    const pairMeta = getPairMeta(pair);
+    const currency = pairMeta?.localCcy ?? 'MXN';
     const req = getDemoRequest(pair);
-    dispatch(sandboxCalculateMultiThunk({ request: req, pair, token: token ?? undefined }));
+    // Inject live market data if available
+    const tradeDates = (req.trades as Array<{ value_date: string }>).map(t => t.value_date);
+    const liveData = await fetchLiveMarket(currency, tradeDates);
+    const finalReq = liveData ? { ...req, market: liveData as typeof req.market } : req;
+    dispatch(sandboxCalculateMultiThunk({ request: finalReq, pair, token: token ?? undefined }));
   }, [dispatch, token]);
 
   const handleXRay = useCallback(
@@ -452,13 +482,47 @@ function SandboxPageInner() {
     [dispatch]
   );
 
+  // When live market data arrives and the current result used fallback data, refresh the calculation
+  const liveRefreshedRef = useRef(false);
+  useEffect(() => {
+    if (liveMarket && sandboxResult && !liveRefreshedRef.current) {
+      const frozen = sandboxResult.frozen_inputs?.market as Record<string, unknown> | undefined;
+      const meta = frozen?.provider_metadata as Record<string, unknown> | undefined;
+      if (meta?.source === 'DEMO' || meta?.spot_source === 'indicative_fallback') {
+        liveRefreshedRef.current = true;
+        const pair = selectedPair;
+        const req = getDemoRequest(pair);
+        const tradeDates = (req.trades as Array<{ value_date: string }>).map(t => t.value_date);
+        fetchLiveMarket(getPairMeta(pair)?.localCcy ?? 'MXN', tradeDates)
+          .then(liveData => {
+            if (liveData) {
+              dispatch(sandboxCalculateMultiThunk({ request: { ...req, market: liveData as typeof req.market }, pair, token: token ?? '' }));
+            }
+          })
+          .catch(() => { /* keep existing result */ });
+      }
+    }
+  }, [liveMarket, sandboxResult, selectedPair, dispatch, token]);
+
   // Auto-run demo simulation on mount when no result exists
   const autoRanRef = useRef(false);
   useEffect(() => {
     if (!autoRanRef.current && !sandboxResult && !sandboxLoading && token) {
       autoRanRef.current = true;
-      const req = getDemoRequest(selectedPair);
-      dispatch(sandboxCalculateMultiThunk({ request: req, pair: selectedPair, token }));
+      const pair = selectedPair;
+      const pairMeta = getPairMeta(pair);
+      const currency = pairMeta?.localCcy ?? 'MXN';
+      const req = getDemoRequest(pair);
+      const tradeDates = (req.trades as Array<{ value_date: string }>).map(t => t.value_date);
+      // Try live market first, fall back to demo fixtures
+      fetchLiveMarket(currency, tradeDates)
+        .then(liveData => {
+          const finalReq = liveData ? { ...req, market: liveData as typeof req.market } : req;
+          dispatch(sandboxCalculateMultiThunk({ request: finalReq, pair, token }));
+        })
+        .catch(() => {
+          dispatch(sandboxCalculateMultiThunk({ request: req, pair, token }));
+        });
     }
   }, [sandboxResult, sandboxLoading, token, selectedPair, dispatch]);
 
@@ -1327,16 +1391,16 @@ function SandboxPageInner() {
                 COMPLIANCE STANDARDS
               </div>
               {[
-                { label: "IFRS 9.6.4.1", ok: true, sub: "Effectiveness 80–125%" },
-                { label: "Basel III SA-CCR", ok: true, sub: "BCBS 279 EAD" },
-                { label: "ISDA SIMM v2.6", ok: true, sub: "FX delta IM" },
-                { label: "Dodd-Frank §731", ok: true, sub: "Clearing threshold" },
-                { label: "EMIR Art. 11", ok: true, sub: "Bilateral margin" },
-                { label: "BCBS 457 FRTB", ok: true, sub: "SBM delta charge" },
-                { label: "MiFID II RTS 25", ok: liveStatus === "live", sub: "Live market data" },
+                { label: "IFRS 9.6.4.1", ok: sandboxResult ? (coverageRatio >= 0.80 && coverageRatio <= 1.25) : null, sub: "Effectiveness 80–125%" },
+                { label: "Basel III SA-CCR", ok: sandboxResult ? true : null, sub: "BCBS 279 EAD" },
+                { label: "ISDA SIMM v2.6", ok: sandboxResult ? true : null, sub: "FX delta IM" },
+                { label: "Dodd-Frank §731", ok: sandboxResult ? true : null, sub: "Clearing threshold" },
+                { label: "EMIR Art. 11", ok: sandboxResult ? true : null, sub: "Bilateral margin" },
+                { label: "BCBS 457 FRTB", ok: sandboxResult ? true : null, sub: "SBM delta charge" },
+                { label: "MiFID II RTS 25", ok: liveStatus === "live" ? true : liveStatus === "fallback" ? false : null, sub: "Live market data" },
               ].map(c => (
                 <div key={c.label} style={{ display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 7 }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: c.ok ? S.green : S.amber, flexShrink: 0, marginTop: 3 }} />
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: c.ok === null ? S.tertiary : c.ok ? S.green : S.amber, flexShrink: 0, marginTop: 3 }} />
                   <div>
                     <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary, fontWeight: 600 }}>{c.label}</div>
                     <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>{c.sub}</div>
