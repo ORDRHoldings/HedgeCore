@@ -121,11 +121,14 @@ export default function LoginPage() {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
 
   useParticleField(canvasRef, {
-    colorful:       false,
-    connectionDist: 120,
-    lineOpacity:    0.12,
-    saturation:     0,
-    lightness:      40,
+    colorful:            true,
+    connectionDist:      145,
+    lineOpacity:         0.28,
+    saturation:          72,
+    lightness:           62,
+    speed:               2.2,
+    hueSpeedMultiplier:  5,
+    hues:                [210, 195, 225, 175, 255, 165],  // blue, cyan, indigo, teal, violet, mint
   });
 
   useEffect(() => {
@@ -509,7 +512,7 @@ export default function LoginPage() {
   return (
     <div style={{
       position: "fixed", inset: 0,
-      background: `linear-gradient(135deg, ${C.bg} 0%, ${C.bgDeep} 60%, #0f172a 100%)`,
+      background: C.bg,
       display: "flex", alignItems: "center", justifyContent: "center",
       overflow: "hidden",
       fontFamily: C.fontUI,
@@ -521,7 +524,7 @@ export default function LoginPage() {
         style={{
           position: "fixed", top: 0, left: 0,
           width: "100%", height: "100%",
-          zIndex: 1, opacity: 0.45,
+          zIndex: 1, opacity: 0.72,
           pointerEvents: "none",
         }}
       />
@@ -529,7 +532,7 @@ export default function LoginPage() {
       {/* Radial vignette */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 2, pointerEvents: "none",
-        background: "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 30%, rgba(11,17,32,0.55) 100%)",
+        background: "radial-gradient(ellipse 85% 85% at 50% 50%, transparent 25%, rgba(11,17,32,0.70) 100%)",
       }} />
 
       {/* Horizontal scan line — subtle depth */}

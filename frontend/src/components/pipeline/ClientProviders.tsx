@@ -50,7 +50,6 @@ const PIPELINE_PREFIXES = [
   "/sandbox",
   "/execution",
   "/market-intelligence",
-  "/position-desk",
 ];
 
 function VoiceShell() {

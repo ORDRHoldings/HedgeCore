@@ -34,7 +34,7 @@ const C = {
   navy1: "#0B1120",            // --bg-sidebar
   navy2: "#111827",            // --bg-deep
   navy3: "#1F2937",            // --bg-panel
-  headerGrad: "linear-gradient(135deg, #0B1120 0%, #111827 55%, #162036 100%)",
+  headerGrad: "#1F2937",               // --bg-panel (flat, no blue tint)
   cardBorder: "#374151",       // --border-rim
   cardShadow: "0 1px 4px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20)",
   cardHover: "0 4px 20px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.25)",
@@ -208,7 +208,7 @@ function GaugeArc({ value, max = 100, label, color, size = 100 }: { value: numbe
       <svg width={size} height={size / 2 + 12} viewBox={`0 0 ${size} ${size / 2 + 12}`}>
         <path
           d={`M 6 ${size / 2 + 6} A ${r} ${r} 0 0 1 ${size - 6} ${size / 2 + 6}`}
-          fill="none" stroke="#e2e8f0" strokeWidth={8} strokeLinecap="round"
+          fill="none" stroke={C.border} strokeWidth={8} strokeLinecap="round"
         />
         <path
           d={`M 6 ${size / 2 + 6} A ${r} ${r} 0 0 1 ${size - 6} ${size / 2 + 6}`}
@@ -233,7 +233,7 @@ function ProgressRing({ value, size = 48, color }: { value: number; size?: numbe
   const off = circ * (1 - Math.min(value / 100, 1));
   return (
     <svg width={size} height={size}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={4} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.border} strokeWidth={4} />
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={4}
         strokeDasharray={circ} strokeDashoffset={off} strokeLinecap="round"
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
@@ -366,26 +366,10 @@ export default function ScenarioStudioPage() {
 
         {/* ── Hero Header ─────────────────────────────────────────── */}
         <div style={{
-          background: C.headerGrad, padding: "36px 40px 28px",
-          position: "relative", overflow: "hidden",
+          background: C.headerGrad, padding: "28px 40px 24px",
+          borderBottom: `1px solid ${C.border}`,
         }}>
-          {/* Decorative grid */}
-          <div style={{
-            position: "absolute", inset: 0, opacity: 0.04,
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)`,
-            backgroundSize: "40px 40px",
-          }} />
-          {/* Decorative circles */}
-          <div style={{
-            position: "absolute", top: -60, right: -40, width: 260, height: 260, borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(28,98,242,0.12), transparent 70%)",
-          }} />
-          <div style={{
-            position: "absolute", bottom: -80, left: "30%", width: 200, height: 200, borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(99,102,241,0.08), transparent 70%)",
-          }} />
-
-          <div style={{ position: "relative", zIndex: 1 }}>
+          <div>
             {/* Title row */}
             <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 20 }}>
               <div style={{
@@ -398,7 +382,7 @@ export default function ScenarioStudioPage() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <h1 style={{ fontFamily: C.heading, fontSize: 22, fontWeight: 800, color: "#fff", margin: 0, letterSpacing: "-0.02em" }}>
+                  <h1 style={{ fontFamily: C.heading, fontSize: 22, fontWeight: 800, color: C.text1, margin: 0, letterSpacing: "-0.02em" }}>
                     ORDR Labs
                   </h1>
                   <span style={{
@@ -418,7 +402,7 @@ export default function ScenarioStudioPage() {
                     CHOLESKY + REGION-AWARE VOL
                   </span>
                 </div>
-                <p style={{ fontFamily: C.ui, fontSize: 14, color: "rgba(255,255,255,0.65)", margin: "6px 0 0", lineHeight: 1.6, maxWidth: 700 }}>
+                <p style={{ fontFamily: C.ui, fontSize: 14, color: C.text2, margin: "6px 0 0", lineHeight: 1.6, maxWidth: 700 }}>
                   Institutional-grade risk simulation studio. Quantify tail risk, validate hedge effectiveness
                   under extreme scenarios, and decompose portfolio risk factors &mdash; powered by Monte Carlo
                   simulation with Cholesky-correlated FX shocks.
@@ -438,8 +422,7 @@ export default function ScenarioStudioPage() {
               ].map((s) => (
                 <div key={s.step} style={{
                   padding: "14px 16px", borderRadius: 10,
-                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                  backdropFilter: "blur(8px)",
+                  background: C.pageBg, border: `1px solid ${C.border}`,
                   display: "flex", gap: 12, alignItems: "flex-start",
                 }}>
                   <div style={{
@@ -451,14 +434,14 @@ export default function ScenarioStudioPage() {
                   </div>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                      <span style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: "rgba(96,165,250,0.7)", letterSpacing: "0.1em" }}>
+                      <span style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.cyan, letterSpacing: "0.1em" }}>
                         {s.step}
                       </span>
-                      <span style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: "#e2e8f0", letterSpacing: "0.06em" }}>
+                      <span style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.text1, letterSpacing: "0.06em" }}>
                         {s.title}
                       </span>
                     </div>
-                    <span style={{ fontFamily: C.ui, fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.4 }}>
+                    <span style={{ fontFamily: C.ui, fontSize: 12, color: C.text3, lineHeight: 1.4 }}>
                       {s.desc}
                     </span>
                   </div>
@@ -570,10 +553,10 @@ export default function ScenarioStudioPage() {
                 style={{
                   fontFamily: C.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
                   padding: "8px 28px", borderRadius: 8,
-                  background: running ? C.bgSub : C.headerGrad,
+                  background: running ? C.bgSub : C.cyan,
                   color: running ? C.text4 : "#fff",
                   border: "none", cursor: running || !selectedRunId ? "not-allowed" : "pointer",
-                  boxShadow: running ? "none" : "0 2px 12px rgba(12,25,41,0.25)",
+                  boxShadow: running ? "none" : "0 2px 12px rgba(28,98,242,0.35)",
                   display: "flex", alignItems: "center", gap: 8,
                   transition: "all 0.2s",
                 }}
@@ -633,13 +616,14 @@ export default function ScenarioStudioPage() {
                 onClick={() => setTab(i)}
                 style={{
                   flex: 1, fontFamily: C.mono, fontSize: 12, fontWeight: tab === i ? 700 : 500,
-                  letterSpacing: "0.08em", color: tab === i ? "#fff" : C.text3,
+                  letterSpacing: "0.08em", color: tab === i ? C.cyan : C.text3,
                   padding: "10px 16px",
-                  background: tab === i ? C.headerGrad : "transparent",
-                  border: "none", borderRadius: 8,
+                  background: tab === i ? "rgba(28,98,242,0.18)" : "transparent",
+                  border: tab === i ? "1px solid rgba(28,98,242,0.35)" : "1px solid transparent",
+                  borderRadius: 8,
                   cursor: "pointer", transition: "all 0.2s",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  boxShadow: tab === i ? "0 2px 8px rgba(12,25,41,0.2)" : "none",
+                  boxShadow: "none",
                 }}
               >
                 <t.icon size={13} strokeWidth={tab === i ? 2 : 1.5} />
@@ -678,18 +662,18 @@ export default function ScenarioStudioPage() {
 
         {/* ── Footer ──────────────────────────────────────────────── */}
         <div style={{
-          background: C.headerGrad, padding: "16px 40px",
+          background: C.headerGrad, borderTop: `1px solid ${C.border}`, padding: "14px 40px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <FlaskConical size={14} color="rgba(255,255,255,0.4)" strokeWidth={1.5} />
-            <span style={{ fontFamily: C.mono, fontSize: 12, color: "rgba(255,255,255,0.4)", letterSpacing: "0.1em" }}>
+            <FlaskConical size={14} color={C.text3} strokeWidth={1.5} />
+            <span style={{ fontFamily: C.mono, fontSize: 12, color: C.text3, letterSpacing: "0.1em" }}>
               ORDR LABS v1.0
             </span>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
             {["MONTE CARLO", "CHOLESKY DECOMPOSITION", "FACTOR COVARIANCE", "INSTITUTIONAL STRESS"].map((t) => (
-              <span key={t} style={{ fontFamily: C.mono, fontSize: 12, color: "rgba(255,255,255,0.25)", letterSpacing: "0.08em" }}>
+              <span key={t} style={{ fontFamily: C.mono, fontSize: 12, color: C.text4, letterSpacing: "0.08em" }}>
                 {t}
               </span>
             ))}
@@ -973,7 +957,7 @@ function StressTab({ stress }: { stress: StressResult | null }) {
               </div>
 
               {/* Effectiveness bar */}
-              <div style={{ marginTop: 12, height: 6, borderRadius: 3, background: "#e2e8f0", overflow: "hidden" }}>
+              <div style={{ marginTop: 12, height: 6, borderRadius: 3, background: C.border, overflow: "hidden" }}>
                 <div style={{
                   width: `${Math.min(sc.hedge_effectiveness * 100, 100)}%`,
                   height: "100%", borderRadius: 3,
@@ -1088,7 +1072,7 @@ function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
           gap: 8, padding: "10px 16px", background: C.headerGrad, borderRadius: 8, marginBottom: 4,
         }}>
           {["CONFIDENCE", "HEDGED VaR", "UNHEDGED VaR", "HEDGED CVaR", "UNHEDGED CVaR"].map((h) => (
-            <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.8)", letterSpacing: "0.1em" }}>
+            <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.text1, letterSpacing: "0.1em" }}>
               {h}
             </span>
           ))}
@@ -1127,7 +1111,7 @@ function VaRTab({ mc }: { mc: MonteCarloResult | null }) {
           gap: 8, padding: "10px 16px", background: C.headerGrad, borderRadius: 8, marginBottom: 4,
         }}>
           {["PERCENTILE", "HEDGED P&L", "UNHEDGED P&L"].map((h) => (
-            <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.8)", letterSpacing: "0.1em" }}>
+            <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.text1, letterSpacing: "0.1em" }}>
               {h}
             </span>
           ))}
@@ -1268,7 +1252,7 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
               gap: 8, padding: "10px 16px", background: C.headerGrad, borderRadius: 8, marginBottom: 4,
             }}>
               {["FACTOR", "WEIGHT", "MCTR", "% VARIANCE"].map((h) => (
-                <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.8)", letterSpacing: "0.1em" }}>
+                <span key={h} style={{ fontFamily: C.mono, fontSize: 12, fontWeight: 700, color: C.text1, letterSpacing: "0.1em" }}>
                   {h}
                 </span>
               ))}
@@ -1290,7 +1274,7 @@ function RiskTab({ fcov, mc }: { fcov: FactorCovResult | null; mc: MonteCarloRes
                   {rc.mctr.toFixed(6)}
                 </span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ flex: 1, height: 8, borderRadius: 4, background: "#e2e8f0", overflow: "hidden" }}>
+                  <div style={{ flex: 1, height: 8, borderRadius: 4, background: C.border, overflow: "hidden" }}>
                     <div style={{
                       width: `${Math.min(rc.pct_of_variance * 100, 100)}%`,
                       height: "100%", borderRadius: 4,

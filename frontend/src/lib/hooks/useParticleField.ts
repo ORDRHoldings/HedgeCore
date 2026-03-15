@@ -21,6 +21,10 @@ interface ParticleFieldOpts {
   saturation?: number;
   /** Base lightness for nodes (50–100). Default 88. */
   lightness?: number;
+  /** Particle movement speed multiplier. Default 1.0 (base velocity 0.5). */
+  speed?: number;
+  /** How fast hue phases advance. Default 1.0. Higher = faster color cycling. */
+  hueSpeedMultiplier?: number;
 }
 
 // Soft treasury-inspired hues: cyan, blue, lavender, teal, soft rose, mint
@@ -42,14 +46,16 @@ export function useParticleField(
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const POINT_COUNT = 314;
-    const fillColor   = opts?.color ?? "#1C62F2";
-    const maxDist     = opts?.connectionDist ?? 140;
-    const lineAlpha   = opts?.lineOpacity ?? 0.38;
-    const colorful    = opts?.colorful ?? false;
-    const hues        = opts?.hues ?? DEFAULT_HUES;
-    const sat         = opts?.saturation ?? 40;
-    const lit         = opts?.lightness ?? 88;
+    const POINT_COUNT      = 314;
+    const fillColor        = opts?.color ?? "#1C62F2";
+    const maxDist          = opts?.connectionDist ?? 140;
+    const lineAlpha        = opts?.lineOpacity ?? 0.38;
+    const colorful         = opts?.colorful ?? false;
+    const hues             = opts?.hues ?? DEFAULT_HUES;
+    const sat              = opts?.saturation ?? 40;
+    const lit              = opts?.lightness ?? 88;
+    const speed            = opts?.speed ?? 1.0;
+    const hueSpeedMult     = opts?.hueSpeedMultiplier ?? 1.0;
 
     function init() {
       const dpr = window.devicePixelRatio || 1;
@@ -64,12 +70,12 @@ export function useParticleField(
         pts.push({
           x:  Math.random() * window.innerWidth,
           y:  Math.random() * window.innerHeight,
-          vx: (Math.random() - 0.5) * 0.5,
-          vy: (Math.random() - 0.5) * 0.5,
+          vx: (Math.random() - 0.5) * 0.5 * speed,
+          vy: (Math.random() - 0.5) * 0.5 * speed,
           r:  0.8 + Math.random() * 2.2,
           hueIdx:  Math.floor(Math.random() * hues.length),
           huePhase: Math.random() * Math.PI * 2,
-          hueSpeed: 0.003 + Math.random() * 0.008,
+          hueSpeed: (0.003 + Math.random() * 0.008) * hueSpeedMult,
         });
       }
       pointsRef.current = pts;
@@ -169,5 +175,5 @@ export function useParticleField(
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animRef.current);
     };
-  }, [canvasRef, opts?.color, opts?.connectionDist, opts?.lineOpacity, opts?.colorful, opts?.saturation, opts?.lightness, opts?.hues]);
+  }, [canvasRef, opts?.color, opts?.connectionDist, opts?.lineOpacity, opts?.colorful, opts?.saturation, opts?.lightness, opts?.hues, opts?.speed, opts?.hueSpeedMultiplier]);
 }
