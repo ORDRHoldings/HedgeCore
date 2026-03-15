@@ -24,38 +24,38 @@ import { PageShell } from "@/components/layout/PageShell";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
-// ── Design Tokens (app dark theme — matches globals.css) ─────────────
+// ── Design Tokens — CSS variable references, inherits app theme ──────
 const C = {
-  mono: "'IBM Plex Mono', monospace",
-  ui: "'IBM Plex Sans', sans-serif",
-  heading: "'Manrope', sans-serif",
-  pageBg: "#111827",           // --bg-deep / --terminal-bg
-  white: "#1F2937",            // --bg-panel (cards)
-  navy1: "#0B1120",            // --bg-sidebar
-  navy2: "#111827",            // --bg-deep
-  navy3: "#1F2937",            // --bg-panel
-  headerGrad: "#1F2937",               // --bg-panel (flat, no blue tint)
-  cardBorder: "#374151",       // --border-rim
+  mono:       "'IBM Plex Mono', monospace",
+  ui:         "'IBM Plex Sans', sans-serif",
+  heading:    "'Manrope', sans-serif",
+  pageBg:     "var(--bg-deep)",
+  white:      "var(--bg-panel)",
+  navy1:      "var(--bg-sidebar)",
+  navy2:      "var(--bg-deep)",
+  navy3:      "var(--bg-panel)",
+  headerGrad: "var(--bg-panel)",
+  cardBorder: "var(--border-rim)",
   cardShadow: "0 1px 4px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20)",
-  cardHover: "0 4px 20px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.25)",
-  text1: "#E5E7EB",            // --text-primary
-  text2: "#9CA3AF",            // --text-secondary
-  text3: "#6B7280",            // --text-tertiary
-  text4: "#4B5563",            // --text-disabled area
-  cyan: "#1C62F2",             // --terminal-accent
-  cyanLight: "#3B82F6",
-  cyanBg: "rgba(28,98,242,0.12)",
-  green: "#059669",            // --terminal-success
-  greenLight: "#10B981",
-  greenBg: "rgba(5,150,105,0.12)",
-  red: "#DC2626",              // --terminal-danger
-  redLight: "#F87171",
-  redBg: "rgba(220,38,38,0.10)",
-  amber: "#D97706",            // --terminal-warning
-  amberBg: "rgba(217,119,6,0.10)",
-  indigo: "#6366F1",
-  border: "#374151",           // --border-rim
-  bgSub: "#293548",            // --bg-sub
+  cardHover:  "0 4px 20px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.25)",
+  text1:      "var(--text-primary)",
+  text2:      "var(--text-secondary)",
+  text3:      "var(--text-tertiary)",
+  text4:      "var(--text-tertiary)",
+  cyan:       "var(--accent-cyan)",
+  cyanLight:  "var(--accent-blue)",
+  cyanBg:     "var(--accent-blue-dim)",
+  green:      "var(--accent-green)",
+  greenLight: "var(--status-pass)",
+  greenBg:    "rgba(5,150,105,0.12)",
+  red:        "var(--accent-red)",
+  redLight:   "var(--status-fail)",
+  redBg:      "rgba(220,38,38,0.10)",
+  amber:      "var(--accent-amber)",
+  amberBg:    "rgba(217,119,6,0.10)",
+  indigo:     "var(--accent-indigo)",
+  border:     "var(--border-rim)",
+  bgSub:      "var(--bg-sub)",
 } as const;
 
 // ── Types ────────────────────────────────────────────────────────────
