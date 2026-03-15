@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { PageShell } from "@/components/layout/PageShell";
@@ -63,11 +63,9 @@ function AdminContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const tabParam = (searchParams?.get("tab") ?? "operations") as AdminTab;
-  const [activeTab, setActiveTab] = useState<AdminTab>(tabParam);
+  const activeTab = (searchParams?.get("tab") ?? "operations") as AdminTab;
 
   const handleTabChange = (tab: AdminTab) => {
-    setActiveTab(tab);
     router.replace(`/admin?tab=${tab}`, { scroll: false });
   };
 
