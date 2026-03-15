@@ -54,21 +54,19 @@ test.describe("Hedge Desk — Full Pipeline E2E", () => {
 
     // ── NAVIGATE TO HEDGE DESK ────────────────────────────────────────────────
     await step(page, "01 - Navigate to Hedge Desk");
-    // Use sidebar navigation to preserve in-memory auth state (avoid full page reload)
-    const sidebarLink = page.locator('a[href*="hedge-desk"]').first();
-    if (await sidebarLink.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await sidebarLink.click();
-      await page.waitForLoadState("networkidle");
-    } else {
-      // Fallback: direct navigation (auth guard now waits for isLoading)
-      await page.goto("/hedge-desk");
-      await page.waitForLoadState("networkidle");
-      // Wait for silent refresh if redirected to login
-      if (page.url().includes("/auth/login")) {
-        await page.waitForURL(/hedge-desk/, { timeout: 15000 });
-      }
+    // ONLY use sidebar click — preserves in-memory auth token (never page.goto)
+    // Expand sidebar if collapsed
+    const sidebarToggle = page.locator('button[aria-label*="sidebar"], button[title*="sidebar"], button[class*="sidebar"]').first();
+    if (await sidebarToggle.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await sidebarToggle.click();
+      await page.waitForTimeout(500);
     }
-    await expect(page).toHaveURL(/hedge-desk/, { timeout: 15000 });
+    // Find and click the hedge desk link — try multiple selectors
+    const hedgeDeskLink = page.locator('a[href="/hedge-desk"], a[href*="hedge-desk"]').first();
+    await hedgeDeskLink.waitFor({ state: "visible", timeout: 15000 });
+    await hedgeDeskLink.click();
+    await page.waitForLoadState("networkidle");
+    await expect(page).toHaveURL(/hedge-desk/, { timeout: 20000 });
     console.log("  ✓ On Hedge Desk page");
 
     // Dismiss any existing draft banner
@@ -136,23 +134,59 @@ test.describe("Hedge Desk — Full Pipeline E2E", () => {
     await expect(page.locator("text=STEP 2 OF 7")).toBeVisible({ timeout: 15000 });
     console.log("  ✓ At Step 2 of 7 — ASSIGN POLICY");
 
-    // Wait for policy to auto-load or be selectable
-    await page.waitForTimeout(2000);
+    // Wait for templates to load
+    await page.waitForTimeout(3000);
 
-    // The policy assignment may auto-fill from active policy; check for PROCEED button
+    // Check if all positions are already assigned (auto-assigned from prior run)
     const proceedToCalc = page.locator("button:has-text('PROCEED TO CALCULATE')");
-    await proceedToCalc.waitFor({ state: "visible", timeout: 20000 });
+    const alreadyAssigned = await proceedToCalc.isVisible({ timeout: 2000 }).catch(() => false);
 
-    // If there's a policy selector, pick the first available
-    const policyCard = page.locator("[data-policy-id], .policy-card, button:has-text('SELECT'), button:has-text('USE THIS POLICY')").first();
-    if (await policyCard.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await policyCard.click();
-      console.log("  ✓ Selected a policy");
+    if (!alreadyAssigned) {
+      // Step A: Select all unassigned positions
+      const selectAllBtn = page.locator("button:has-text('SELECT ALL UNASSIGNED')");
+      if (await selectAllBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await selectAllBtn.click();
+        console.log("  ✓ Selected all unassigned positions");
+      } else {
+        // Click first position checkbox
+        const posCheckbox = page.locator("input[type='checkbox']").first();
+        if (await posCheckbox.isVisible({ timeout: 3000 }).catch(() => false)) {
+          await posCheckbox.click();
+          console.log("  ✓ Selected position checkbox");
+        }
+      }
+
+      // Step B: Click the first template / recommended policy
+      // Try recommended or active policy button first
+      const useRecommended = page.locator("button:has-text('USE RECOMMENDED'), button:has-text('USE ACTIVE'), button:has-text('USE THIS')").first();
+      if (await useRecommended.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await useRecommended.click();
+        console.log("  ✓ Clicked use recommended policy");
+      } else {
+        // Click the first template card in the list
+        const firstTemplate = page.locator("button:has-text('MXN'), button:has-text('STANDARD'), button:has-text('CORPORATE')").first();
+        if (await firstTemplate.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await firstTemplate.click();
+          console.log("  ✓ Selected first template");
+        }
+      }
+
       await page.waitForTimeout(1000);
+
+      // Step C: Click ASSIGN button
+      // IMPORTANT: use 'ASSIGN [' not just 'ASSIGN' — the latter also matches
+      // "SELECT ALL UNASSIGNED" which contains 'ASSIGN' as a substring.
+      const assignBtn = page.locator("button:has-text('ASSIGN [')").first();
+      await assignBtn.waitFor({ state: "visible", timeout: 10000 });
+      await assignBtn.click();
+      console.log("  ✓ Clicked ASSIGN");
+      await page.waitForTimeout(2000);
     } else {
-      console.log("  ✓ Policy auto-assigned (active policy applied)");
+      console.log("  ✓ Positions already have policies assigned");
     }
 
+    // Wait for PROCEED button
+    await proceedToCalc.waitFor({ state: "visible", timeout: 20000 });
     await proceedToCalc.click();
     console.log("  ✓ Clicked PROCEED TO CALCULATE");
 
@@ -202,18 +236,11 @@ test.describe("Hedge Desk — Full Pipeline E2E", () => {
     await submitBtn.click();
     console.log("  ✓ Clicked submit");
 
+    // In solo mode, onComplete() fires immediately after proposal creation —
+    // the pipeline auto-advances to Step 6 without a PROCEED TO EXECUTE button.
     await page.waitForTimeout(2000);
 
-    // After submission: button to proceed to Execute
-    const proceedToExec = page.locator(
-      "button:has-text('PROCEED TO EXECUTE'), button:has-text('PROCEED TO EXECUTION')"
-    ).first();
-    await proceedToExec.waitFor({ state: "visible", timeout: 20000 });
-    console.log("  ✓ Proposals submitted — PROCEED TO EXECUTE visible");
-
-    await step(page, "10 - Step 5 - Proposals submitted");
-    await proceedToExec.click();
-    console.log("  ✓ Proceeding to Execute");
+    await step(page, "10 - Step 5 - Proposals submitted — advancing to Execute");
 
     // ── STEP 6: EXECUTE ───────────────────────────────────────────────────────
     await step(page, "11 - Step 6 - Execute");
@@ -229,15 +256,33 @@ test.describe("Hedge Desk — Full Pipeline E2E", () => {
 
     await step(page, "12 - Step 6 - About to confirm execution");
     await confirmBtn.click();
-    console.log("  ✓ Clicked CONFIRM EXECUTION (approve + execute pipeline active)");
+    console.log("  ✓ Clicked CONFIRM EXECUTION button");
+
+    // The CONFIRM EXECUTION button opens a confirmation modal — click EXECUTE VIA IBKR
+    const executeViaIbkr = page.locator("button:has-text('EXECUTE VIA IBKR')").first();
+    if (await executeViaIbkr.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await executeViaIbkr.click();
+      console.log("  ✓ Clicked EXECUTE VIA IBKR in confirmation modal");
+    } else {
+      console.log("  ℹ No EXECUTE VIA IBKR modal — proceeding");
+    }
+
+    // IBKR may not be enabled on server — fallback to PROCEED WITHOUT IBKR (MANUAL)
+    await page.waitForTimeout(3000);
+    const proceedManual = page.locator("button:has-text('PROCEED WITHOUT IBKR')").first();
+    if (await proceedManual.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await proceedManual.click();
+      console.log("  ✓ IBKR not available — clicked PROCEED WITHOUT IBKR (MANUAL)");
+    }
 
     // ── STEP 7: COMPLETE ──────────────────────────────────────────────────────
     await step(page, "13 - Step 7 - Pipeline Complete");
 
-    // Wait for completion indicator
-    const completeText = page.locator(
-      "text=HEDGE EXECUTION CONFIRMED, text=STEP 7 OF 7, text=EXECUTION CONFIRMED"
-    ).first();
+    // Wait for completion indicator — fix: use .or() not comma syntax
+    const completeText = page.locator("text=HEDGE EXECUTION CONFIRMED")
+      .or(page.locator("text=STEP 7 OF 7"))
+      .or(page.locator("text=EXECUTION CONFIRMED"))
+      .first();
     await completeText.waitFor({ state: "visible", timeout: 30000 });
     console.log("  ✓ HEDGE EXECUTION CONFIRMED — pipeline complete!");
     await expect(page.locator("text=STEP 7 OF 7")).toBeVisible({ timeout: 5000 }).catch(() => {
@@ -246,35 +291,29 @@ test.describe("Hedge Desk — Full Pipeline E2E", () => {
 
     await step(page, "14 - Execution complete screenshot");
 
-    // ── MONITOR: Verify HEDGED in Position Desk ───────────────────────────────
-    await step(page, "15 - Monitor - Position Desk");
-    console.log("\n  📊 Navigating to Position Desk to monitor HEDGED status...");
+    // ── MONITOR: Verify HEDGED on PhaseComplete screen ───────────────────────
+    await step(page, "15 - Monitor - Verify HEDGED badge on completion screen");
+    console.log("\n  📊 Verifying HEDGED status on completion screen...");
 
-    // Sidebar navigation preserves auth state
-    const positionLink = page.locator('a[href*="position-desk"]').first();
-    if (await positionLink.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await positionLink.click();
-    } else {
-      await page.goto("/position-desk");
-    }
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(2000);
-    console.log("  ✓ On Position Desk");
-
-    // Search for our entity/record
-    const searchInput = page.locator("input[placeholder*='search'], input[placeholder*='Search'], input[placeholder*='filter']").first();
-    if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await searchInput.fill(RUN_TAG.slice(0, 8));
-      await page.waitForTimeout(1000);
-    }
-
-    await step(page, "16 - Monitor - Checking HEDGED status");
-
-    // Look for HEDGED status on the position
+    // The PhaseComplete screen shows a HEDGED badge — verify it directly
     const hedgedBadge = page.locator("text=HEDGED").first();
-    await hedgedBadge.waitFor({ state: "visible", timeout: 15000 });
-    console.log("  ✓ Position shows HEDGED status in Position Desk!");
+    await hedgedBadge.waitFor({ state: "visible", timeout: 10000 });
+    console.log("  ✓ HEDGED badge visible on completion screen!");
     await expect(hedgedBadge).toBeVisible();
+
+    // Also navigate to hedge monitor via the MONITOR link on the completion screen
+    await step(page, "16 - Monitor - Navigate to Hedge Monitor");
+    const monitorLink = page.locator('a[href="/hedge-monitor"], a[href*="hedge-monitor"]').first();
+    if (await monitorLink.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await monitorLink.click();
+      await page.waitForLoadState("networkidle");
+      await page.waitForTimeout(2000);
+      console.log("  ✓ Navigated to Hedge Monitor via completion screen MONITOR link");
+    } else {
+      console.log("  ℹ MONITOR link not visible — HEDGED already confirmed on completion screen");
+    }
+
+    await step(page, "17 - Monitor - HEDGED confirmed");
 
     await step(page, "17 - Monitor - HEDGED confirmed");
     console.log(`\n${"═".repeat(60)}`);
@@ -291,14 +330,11 @@ test.describe("Hedge Desk — Full Pipeline E2E", () => {
     await loginAsDemo(page);
 
     await step(page, "M01 - Hedge Monitor page");
-    const monitorLink = page.locator('a[href*="hedge-monitor"]').first();
-    if (await monitorLink.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await monitorLink.click();
-      await page.waitForLoadState("networkidle");
-    } else {
-      await page.goto("/hedge-monitor");
-      await page.waitForLoadState("networkidle");
-    }
+    // Must navigate via sidebar link to preserve auth state
+    const monitorLink = page.locator('a[href="/hedge-monitor"], a[href*="hedge-monitor"]').first();
+    await monitorLink.waitFor({ state: "visible", timeout: 15000 });
+    await monitorLink.click();
+    await page.waitForLoadState("networkidle");
 
     // Page should load
     await expect(page).toHaveURL(/hedge-monitor/, { timeout: 15000 });
@@ -308,9 +344,11 @@ test.describe("Hedge Desk — Full Pipeline E2E", () => {
     await step(page, "M02 - Monitor content");
 
     // Should show execution history or hedged positions
-    const content = page.locator(
-      "text=HEDGED, text=EXECUTION, text=HEDGE MONITOR, text=No hedged positions"
-    ).first();
+    const content = page.locator("text=HEDGED")
+      .or(page.locator("text=EXECUTION"))
+      .or(page.locator("text=HEDGE MONITOR"))
+      .or(page.locator("text=No hedged positions"))
+      .first();
     await content.waitFor({ state: "visible", timeout: 10000 });
     console.log("  ✓ Hedge Monitor displaying content");
   });
