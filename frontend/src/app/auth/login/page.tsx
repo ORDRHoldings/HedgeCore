@@ -512,7 +512,7 @@ export default function LoginPage() {
   return (
     <div style={{
       position: "fixed", inset: 0,
-      background: C.bg,
+      background: "#06080F",
       display: "flex", alignItems: "center", justifyContent: "center",
       overflow: "hidden",
       fontFamily: C.fontUI,
@@ -532,7 +532,7 @@ export default function LoginPage() {
       {/* Radial vignette */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 2, pointerEvents: "none",
-        background: "radial-gradient(ellipse 85% 85% at 50% 50%, transparent 25%, rgba(11,17,32,0.70) 100%)",
+        background: "radial-gradient(ellipse 85% 85% at 50% 50%, transparent 25%, rgba(6,8,15,0.75) 100%)",
       }} />
 
       {/* Horizontal scan line — subtle depth */}
@@ -554,11 +554,11 @@ export default function LoginPage() {
         position: "relative", zIndex: 10,
         width: 360,
         padding: "36px 32px 30px",
-        background: C.panelAlpha,
+        background: "rgba(14,20,36,0.96)",
         backdropFilter: "blur(24px) saturate(140%)",
         WebkitBackdropFilter: "blur(24px) saturate(140%)",
-        border: `1px solid ${C.border}`,
-        borderTop: `1px solid rgba(55,65,81,0.8)`,
+        border: `1px solid rgba(30,42,68,0.85)`,
+        borderTop: `1px solid rgba(42,58,90,0.80)`,
         borderRadius: 8,
         boxShadow: [
           "0 40px 80px rgba(0,0,0,0.55)",
