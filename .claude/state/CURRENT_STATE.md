@@ -3,6 +3,7 @@
 > Last updated: 2026-03-15
 
 ## Recent Work
+- **NEXUS autonomous learning system committed**: 48 files, 8 agents, SQLite-backed session/chain/integrity tracking. E2E fixtures (3 CSV datasets) + hedge desk e2e sidebar nav fix.
 - **Audit Lab POST /runs HTTP 500 fix**: Root cause — asyncpg type inference rejects Python `str` for `TIMESTAMPTZ` columns; fix: pass `buffer_start`/`buffer_end` as `datetime.date` objects directly. Added `CAST()` for UUID/JSONB params in all audit_runs/findings/reports INSERTs. Debug wrapper on `create_audit_run` surfaces errors as 500 detail. Test fix: `inspect.getsource(_create_audit_run_inner)` not wrapper. 442/442 audit_lab tests pass. Render deploy pending (manual trigger required).
 - **IBKR Gateway live streaming for ORDR Market charts**: WebSocket server (`/ws/market`), `MarketStreamManager` with IBKR `reqMktData` streaming + fallback polling, frontend `useMarketWebSocket` hook, `ChartCore.tsx` rewritten to use real IBKR data (historical + live ticks)
 - **NEXUS initialized**: ordr-market project — 28 tables, 8 agents, genesis chain seeded
