@@ -6,34 +6,34 @@ import { useAuth } from "../../../lib/authContext";
 import { classifyError, type ErrKind } from "@/lib/auth/loginClassifier";
 import { useParticleField } from "@/lib/hooks/useParticleField";
 
-// ─── App theme palette (matches globals.css exactly) ─────────────────────────
+// ─── Design tokens — CSS variable references, inherits app theme ─────────────
 const C = {
-  bg:          "#0B1120",           // --bg-sidebar
-  bgDeep:      "#111827",           // --bg-deep / --terminal-bg
-  panel:       "#1F2937",           // --bg-panel / --terminal-panel-bg
+  bg:          "var(--bg-sidebar)",
+  bgDeep:      "var(--bg-deep)",
+  panel:       "var(--bg-panel)",
   panelAlpha:  "rgba(31,41,55,0.97)",
-  border:      "#374151",           // --border-rim / --terminal-border
-  borderSoft:  "rgba(55,65,81,0.5)",
-  borderFocus: "#1C62F2",           // --terminal-accent
-  text1:       "#E5E7EB",           // --text-primary
-  text2:       "#9CA3AF",           // --text-secondary
-  text3:       "#6B7280",           // --text-tertiary
-  accent:      "#1C62F2",           // --terminal-accent
+  border:      "var(--border-rim)",
+  borderSoft:  "var(--border-soft)",
+  borderFocus: "var(--accent-cyan)",
+  text1:       "var(--text-primary)",
+  text2:       "var(--text-secondary)",
+  text3:       "var(--text-tertiary)",
+  accent:      "var(--accent-cyan)",
   accentHover: "#1a55d4",
   accentGlow:  "rgba(28,98,242,0.18)",
-  accentDim:   "rgba(28,98,242,0.10)",
-  green:       "#059669",           // --terminal-success / --accent-green
+  accentDim:   "var(--accent-blue-dim)",
+  green:       "var(--accent-green)",
   greenGlow:   "rgba(5,150,105,0.20)",
-  red:         "#DC2626",           // --terminal-danger / --accent-red
+  red:         "var(--accent-red)",
   redBg:       "rgba(220,38,38,0.06)",
   redBorder:   "rgba(220,38,38,0.18)",
-  amber:       "#D97706",           // --terminal-warning / --accent-amber
+  amber:       "var(--accent-amber)",
   amberBg:     "rgba(217,119,6,0.06)",
   amberBorder: "rgba(217,119,6,0.18)",
   // Input fields — white background, black text for readability
-  inputBg:     "#ffffff",
-  inputText:   "#111827",
-  inputPlaceholder: "#9CA3AF",
+  inputBg:          "#ffffff",
+  inputText:        "#111827",
+  inputPlaceholder: "var(--text-secondary)",
   fontHead:    "'Manrope','Inter',sans-serif",
   fontUI:      "'IBM Plex Sans','Inter',sans-serif",
   fontMono:    "'IBM Plex Mono','JetBrains Mono',monospace",
