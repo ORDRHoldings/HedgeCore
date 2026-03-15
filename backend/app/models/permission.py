@@ -152,8 +152,6 @@ class RolePermission(Base):
 
         nullable=False,
 
-        index=True,
-
     )
 
 
@@ -163,8 +161,6 @@ class RolePermission(Base):
         ForeignKey("permissions.id", ondelete="CASCADE"),
 
         nullable=False,
-
-        index=True,
 
     )
 

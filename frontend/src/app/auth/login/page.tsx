@@ -6,40 +6,45 @@ import { useAuth } from "../../../lib/authContext";
 import { classifyError, type ErrKind } from "@/lib/auth/loginClassifier";
 import { useParticleField } from "@/lib/hooks/useParticleField";
 
-// ─── Treasury dark palette ───────────────────────────────────────────────────
+// ─── App theme palette (matches globals.css exactly) ─────────────────────────
 const C = {
-  bg:          "#080E1A",           // deep navy
-  bgDeep:      "#0D1526",
-  panel:       "rgba(13,21,38,0.96)",
-  border:      "#1E2D45",
-  borderSoft:  "rgba(30,45,69,0.6)",
-  borderFocus: "#2D5FAA",
-  text1:       "#E2E8F0",
-  text2:       "#8898AA",
-  text3:       "#4A5568",
-  accent:      "#2563EB",           // institutional blue
-  accentGlow:  "rgba(37,99,235,0.22)",
-  accentDim:   "rgba(37,99,235,0.10)",
-  accentLight: "#3B82F6",
-  green:       "#059669",
-  greenGlow:   "rgba(5,150,105,0.25)",
-  red:         "#DC2626",
-  redBg:       "rgba(220,38,38,0.07)",
-  redBorder:   "rgba(220,38,38,0.2)",
-  amber:       "#D97706",
-  amberBg:     "rgba(217,119,6,0.07)",
-  amberBorder: "rgba(217,119,6,0.2)",
+  bg:          "#0B1120",           // --bg-sidebar
+  bgDeep:      "#111827",           // --bg-deep / --terminal-bg
+  panel:       "#1F2937",           // --bg-panel / --terminal-panel-bg
+  panelAlpha:  "rgba(31,41,55,0.97)",
+  border:      "#374151",           // --border-rim / --terminal-border
+  borderSoft:  "rgba(55,65,81,0.5)",
+  borderFocus: "#1C62F2",           // --terminal-accent
+  text1:       "#E5E7EB",           // --text-primary
+  text2:       "#9CA3AF",           // --text-secondary
+  text3:       "#6B7280",           // --text-tertiary
+  accent:      "#1C62F2",           // --terminal-accent
+  accentHover: "#1a55d4",
+  accentGlow:  "rgba(28,98,242,0.18)",
+  accentDim:   "rgba(28,98,242,0.10)",
+  green:       "#059669",           // --terminal-success / --accent-green
+  greenGlow:   "rgba(5,150,105,0.20)",
+  red:         "#DC2626",           // --terminal-danger / --accent-red
+  redBg:       "rgba(220,38,38,0.06)",
+  redBorder:   "rgba(220,38,38,0.18)",
+  amber:       "#D97706",           // --terminal-warning / --accent-amber
+  amberBg:     "rgba(217,119,6,0.06)",
+  amberBorder: "rgba(217,119,6,0.18)",
+  // Input fields — white background, black text for readability
+  inputBg:     "#ffffff",
+  inputText:   "#111827",
+  inputPlaceholder: "#9CA3AF",
   fontHead:    "'Manrope','Inter',sans-serif",
   fontUI:      "'IBM Plex Sans','Inter',sans-serif",
   fontMono:    "'IBM Plex Mono','JetBrains Mono',monospace",
 } as const;
 
-// ─── Environment badge ───────────────────────────────────────────────────────
+// ─── Environment badge ────────────────────────────────────────────────────────
 const APP_ENV   = (process.env.NEXT_PUBLIC_APP_ENV ?? "production").toLowerCase();
 const SHOW_ENV  = APP_ENV !== "production" && APP_ENV !== "demo";
 const ENV_LABEL = APP_ENV === "dev" ? "DEVELOPMENT" : APP_ENV.toUpperCase();
 
-// ─── Error config ────────────────────────────────────────────────────────────
+// ─── Error config ─────────────────────────────────────────────────────────────
 const ERR_MAP: Record<ErrKind, {
   icon: string; label: string;
   body: (raw: string) => string;
@@ -67,7 +72,7 @@ const ERR_MAP: Record<ErrKind, {
   },
 };
 
-// ─── Eye icons ───────────────────────────────────────────────────────────────
+// ─── Eye icons ────────────────────────────────────────────────────────────────
 function IconEyeOpen() {
   return (
     <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
@@ -87,7 +92,7 @@ function IconEyeClosed() {
   );
 }
 
-// ─── Main login page ─────────────────────────────────────────────────────────
+// ─── Main login page ──────────────────────────────────────────────────────────
 export default function LoginPage() {
   const [username,     setUsername]     = useState("");
   const [password,     setPassword]     = useState("");
@@ -116,11 +121,11 @@ export default function LoginPage() {
   const canvasRef   = useRef<HTMLCanvasElement>(null);
 
   useParticleField(canvasRef, {
-    colorful:       true,
-    connectionDist: 150,
-    lineOpacity:    0.22,
-    saturation:     35,
-    lightness:      86,
+    colorful:       false,
+    connectionDist: 120,
+    lineOpacity:    0.12,
+    saturation:     0,
+    lightness:      40,
   });
 
   useEffect(() => {
@@ -214,47 +219,56 @@ export default function LoginPage() {
   const inputHasError = !!error && errKind === "auth";
   const errCfg = errKind ? ERR_MAP[errKind] : null;
 
-  // ─── Input style ────────────────────────────────────────────────────────────
-  const inputStyle = (field: "user" | "pass", hasErr: boolean): React.CSSProperties => ({
-    width: "100%",
-    padding: "10px 14px",
-    background: "rgba(8,14,26,0.6)",
-    border: `1px solid ${hasErr ? C.red : focusField === field ? C.borderFocus : C.border}`,
-    borderRadius: 4,
-    fontFamily: C.fontMono,
-    fontSize: "14px",
-    color: C.text1,
-    outline: "none",
-    boxSizing: "border-box" as const,
-    caretColor: C.accentLight,
-    transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-    boxShadow: focusField === field && !hasErr
-      ? `0 0 0 3px ${C.accentDim}`
-      : hasErr
-      ? `0 0 0 3px rgba(220,38,38,0.08)`
-      : "none",
-    opacity: loading ? 0.5 : 1,
-    letterSpacing: "0.02em",
-  });
+  // ─── Shared input wrapper style ───────────────────────────────────────────
+  const fieldWrapStyle: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+  };
 
   const labelStyle: React.CSSProperties = {
-    display: "block",
     fontFamily: C.fontMono,
     fontSize: "10px",
-    fontWeight: 600,
+    fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.14em",
     color: C.text3,
-    marginBottom: 6,
   };
 
-  // ─── MFA panel ──────────────────────────────────────────────────────────────
+  // ─── Input style — white bg, black text ───────────────────────────────────
+  const inputStyle = (field: "user" | "pass", hasErr: boolean): React.CSSProperties => ({
+    width: "100%",
+    padding: "11px 14px",
+    background: loading ? "rgba(255,255,255,0.7)" : C.inputBg,
+    border: `1.5px solid ${
+      hasErr         ? C.red
+      : focusField === field ? C.borderFocus
+      : "#D1D5DB"
+    }`,
+    borderRadius: 5,
+    fontFamily: C.fontMono,
+    fontSize: "14px",
+    color: C.inputText,
+    outline: "none",
+    boxSizing: "border-box" as const,
+    caretColor: C.accent,
+    transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+    boxShadow: focusField === field && !hasErr
+      ? `0 0 0 3px ${C.accentDim}, 0 1px 3px rgba(0,0,0,0.10)`
+      : hasErr
+      ? `0 0 0 3px rgba(220,38,38,0.08)`
+      : "0 1px 2px rgba(0,0,0,0.08)",
+    opacity: loading ? 0.65 : 1,
+    letterSpacing: "0.01em",
+  });
+
+  // ─── MFA panel ─────────────────────────────────────────────────────────────
   const mfaContent = mfaChallenge ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ textAlign: "center" }}>
         <div style={{
-          fontFamily: C.fontMono, fontSize: "10px", fontWeight: 600,
-          textTransform: "uppercase", letterSpacing: "0.16em",
+          fontFamily: C.fontMono, fontSize: "10px", fontWeight: 700,
+          textTransform: "uppercase", letterSpacing: "0.18em",
           color: C.accent, marginBottom: 8,
         }}>
           MFA Required
@@ -264,7 +278,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div>
+      <div style={fieldWrapStyle}>
         <label style={labelStyle}>Authenticator Code</label>
         <input
           ref={mfaInputRef}
@@ -289,7 +303,7 @@ export default function LoginPage() {
         <div style={{
           padding: "10px 12px",
           background: C.redBg, border: `1px solid ${C.redBorder}`,
-          borderLeft: `2px solid ${C.red}`, borderRadius: 3,
+          borderLeft: `2px solid ${C.red}`, borderRadius: 4,
           fontFamily: C.fontMono, fontSize: "11px",
           color: C.red, letterSpacing: "0.04em",
         }}>
@@ -302,14 +316,12 @@ export default function LoginPage() {
         disabled={mfaLoading || mfaCode.length !== 6}
         className="no-scale"
         style={{
-          width: "100%", padding: "11px",
-          fontFamily: C.fontMono, fontSize: "12px", fontWeight: 600,
+          width: "100%", padding: "12px",
+          fontFamily: C.fontMono, fontSize: "12px", fontWeight: 700,
           textTransform: "uppercase", letterSpacing: "0.22em",
           color: "#fff",
-          background: (mfaLoading || mfaCode.length !== 6)
-            ? C.border
-            : C.accent,
-          border: "none", borderRadius: 4,
+          background: (mfaLoading || mfaCode.length !== 6) ? C.border : C.accent,
+          border: "none", borderRadius: 5,
           cursor: (mfaLoading || mfaCode.length !== 6) ? "not-allowed" : "pointer",
           transition: "all 0.2s ease",
           boxShadow: mfaCode.length === 6 ? `0 4px 16px ${C.accentGlow}` : "none",
@@ -320,22 +332,22 @@ export default function LoginPage() {
     </div>
   ) : null;
 
-  // ─── Login form ──────────────────────────────────────────────────────────────
+  // ─── Login form ────────────────────────────────────────────────────────────
   const loginForm = (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
 
       {/* Error banner */}
       {error && errCfg && (
         <div style={{
-          padding: "10px 12px",
+          padding: "10px 12px", marginBottom: 18,
           background: errCfg.bg, border: `1px solid ${errCfg.border}`,
-          borderLeft: `2px solid ${errCfg.color}`, borderRadius: 3,
-          marginBottom: 16, display: "flex", flexDirection: "column", gap: 4,
+          borderLeft: `3px solid ${errCfg.color}`, borderRadius: 4,
+          display: "flex", flexDirection: "column", gap: 4,
         }}>
           <div style={{
-            fontFamily: C.fontMono, fontSize: "10px", fontWeight: 600,
+            fontFamily: C.fontMono, fontSize: "10px", fontWeight: 700,
             color: errCfg.color, letterSpacing: "0.10em",
-            display: "flex", alignItems: "center", gap: 5,
+            display: "flex", alignItems: "center", gap: 6,
           }}>
             <span>{errCfg.icon}</span><span>{errCfg.label}</span>
           </div>
@@ -348,20 +360,20 @@ export default function LoginPage() {
       {/* Warmup banner */}
       {warmingUp && (
         <div style={{
-          padding: "10px 12px", marginBottom: 16,
+          padding: "10px 12px", marginBottom: 18,
           background: C.amberBg, border: `1px solid ${C.amberBorder}`,
-          borderLeft: `2px solid ${C.amber}`, borderRadius: 3,
+          borderLeft: `3px solid ${C.amber}`, borderRadius: 4,
           fontFamily: C.fontMono, fontSize: "10px",
           color: C.amber, letterSpacing: "0.04em",
-          display: "flex", alignItems: "center", gap: 7,
+          display: "flex", alignItems: "center", gap: 8,
         }}>
           <span className="login-spin">◷</span>
           Server initializing — cold start may take up to 30 seconds…
         </div>
       )}
 
-      {/* Terminal ID */}
-      <div style={{ marginBottom: 14 }}>
+      {/* ── Terminal ID ── */}
+      <div style={{ ...fieldWrapStyle, marginBottom: 16 }}>
         <label style={labelStyle} htmlFor="login-user">Terminal ID</label>
         <input
           id="login-user"
@@ -371,7 +383,7 @@ export default function LoginPage() {
           onChange={e => { setUsername(e.target.value); clearError(); }}
           onFocus={() => setFocusField("user")}
           onBlur={() => setFocusField(null)}
-          placeholder="User ID"
+          placeholder="Enter user ID"
           disabled={loading}
           autoComplete="username"
           style={inputStyle("user", inputHasError)}
@@ -379,8 +391,8 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* Access Key */}
-      <div style={{ marginBottom: 22 }}>
+      {/* ── Access Key ── */}
+      <div style={{ ...fieldWrapStyle, marginBottom: 24 }}>
         <label style={labelStyle} htmlFor="login-pass">Access Key</label>
         <div style={{ position: "relative" }}>
           <input
@@ -391,10 +403,10 @@ export default function LoginPage() {
             onFocus={() => setFocusField("pass")}
             onBlur={() => setFocusField(null)}
             onKeyDown={e => setCapsLock(e.getModifierState("CapsLock"))}
-            placeholder="••••••••••••"
+            placeholder="Enter access key"
             disabled={loading}
             autoComplete="current-password"
-            style={{ ...inputStyle("pass", inputHasError), paddingRight: 40 }}
+            style={{ ...inputStyle("pass", inputHasError), paddingRight: 42 }}
             aria-label="Access Key"
           />
           <button
@@ -404,9 +416,10 @@ export default function LoginPage() {
             className="no-scale"
             style={{
               position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-              background: "none", border: "none", padding: 0,
+              background: "none", border: "none", padding: 4,
               color: C.text3, cursor: "pointer",
               display: "flex", alignItems: "center",
+              transition: "color 0.15s",
             }}
             aria-label={showPwd ? "Hide password" : "Show password"}
           >
@@ -415,15 +428,15 @@ export default function LoginPage() {
         </div>
         {capsLock && (
           <span style={{
-            fontFamily: C.fontMono, fontSize: "10px", marginTop: 5,
-            color: C.amber, letterSpacing: "0.06em", display: "block",
+            fontFamily: C.fontMono, fontSize: "10px",
+            color: C.amber, letterSpacing: "0.06em",
           }}>
             ⚠ CAPS LOCK ON
           </span>
         )}
       </div>
 
-      {/* Submit */}
+      {/* ── Authenticate button ── */}
       <button
         type="submit"
         disabled={loading}
@@ -431,20 +444,21 @@ export default function LoginPage() {
         onMouseEnter={() => setBtnHovered(true)}
         onMouseLeave={() => setBtnHovered(false)}
         style={{
-          width: "100%", padding: "11px",
-          fontFamily: C.fontMono, fontSize: "12px", fontWeight: 600,
-          textTransform: "uppercase",
-          letterSpacing: "0.22em",
+          width: "100%", padding: "12px",
+          fontFamily: C.fontMono, fontSize: "12px", fontWeight: 700,
+          textTransform: "uppercase", letterSpacing: "0.22em",
           color: loading ? C.text3 : "#fff",
           background: loading
             ? C.border
             : btnHovered
-            ? C.accentLight
+            ? C.accentHover
             : C.accent,
-          border: "none", borderRadius: 4,
+          border: "none", borderRadius: 5,
           cursor: loading ? "not-allowed" : "pointer",
-          transition: "all 0.2s ease",
-          boxShadow: btnHovered && !loading ? `0 4px 20px ${C.accentGlow}` : "none",
+          transition: "background 0.15s ease, box-shadow 0.15s ease",
+          boxShadow: btnHovered && !loading
+            ? `0 6px 20px ${C.accentGlow}`
+            : "0 2px 8px rgba(28,98,242,0.20)",
         }}
       >
         {loading ? (
@@ -452,36 +466,38 @@ export default function LoginPage() {
             <span className="login-spin">⟳</span>
             Authenticating…
           </span>
-        ) : "Authenticate"}
+        ) : "Authenticate →"}
       </button>
 
-      {/* Security badges */}
+      {/* ── Security badges ── */}
       <div style={{
-        marginTop: 20, borderTop: `1px solid ${C.borderSoft}`, paddingTop: 14,
+        marginTop: 22,
+        borderTop: `1px solid ${C.borderSoft}`,
+        paddingTop: 16,
         display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 6,
       }}>
         {["AES-256", "Hash-Chained Audit", "RBAC", "4-Eyes"].map(badge => (
           <span key={badge} style={{
-            fontFamily: C.fontMono, fontSize: "9px", fontWeight: 500,
+            fontFamily: C.fontMono, fontSize: "9px", fontWeight: 600,
             letterSpacing: "0.08em", textTransform: "uppercase",
-            color: C.text3, padding: "3px 7px",
-            border: `1px solid ${C.border}`, borderRadius: 2,
+            color: C.text3, padding: "3px 8px",
+            border: `1px solid ${C.border}`, borderRadius: 3,
           }}>
             {badge}
           </span>
         ))}
       </div>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <div style={{
         marginTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center",
         fontFamily: C.fontMono, fontSize: "9px", color: C.text3, letterSpacing: "0.05em",
       }}>
         <span>© {new Date().getFullYear()} SYNEXIUN</span>
-        <span style={{ color: C.green, display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ color: C.green, display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{
-            width: 5, height: 5, borderRadius: "50%", background: C.green, display: "inline-block",
-            boxShadow: `0 0 6px ${C.greenGlow}`,
+            width: 5, height: 5, borderRadius: "50%", background: C.green,
+            display: "inline-block", boxShadow: `0 0 6px ${C.greenGlow}`,
           }} />
           Encrypted
         </span>
@@ -489,34 +505,40 @@ export default function LoginPage() {
     </form>
   );
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={{
       position: "fixed", inset: 0,
-      background: C.bg,
+      background: `linear-gradient(135deg, ${C.bg} 0%, ${C.bgDeep} 60%, #0f172a 100%)`,
       display: "flex", alignItems: "center", justifyContent: "center",
       overflow: "hidden",
       fontFamily: C.fontUI,
       color: C.text1,
     }}>
-      {/* Canvas particle field */}
+      {/* Particle field — subtle, monochrome */}
       <canvas
         ref={canvasRef}
         style={{
           position: "fixed", top: 0, left: 0,
           width: "100%", height: "100%",
-          zIndex: 1, opacity: 0.7,
+          zIndex: 1, opacity: 0.45,
           pointerEvents: "none",
         }}
       />
 
-      {/* Subtle radial vignette */}
+      {/* Radial vignette */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 2, pointerEvents: "none",
-        background: "radial-gradient(ellipse 70% 70% at 50% 50%, transparent 40%, rgba(8,14,26,0.6) 100%)",
+        background: "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 30%, rgba(11,17,32,0.55) 100%)",
       }} />
 
-      {/* Corner telemetry — minimal */}
+      {/* Horizontal scan line — subtle depth */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 2, pointerEvents: "none",
+        backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.012) 2px, rgba(255,255,255,0.012) 4px)",
+      }} />
+
+      {/* Corner telemetry */}
       <div className="login-telemetry" style={{ bottom: 20, left: 20 }}>
         SEC_LEVEL: AES-256{SHOW_ENV && <><br/>{ENV_LABEL}</>}
       </div>
@@ -524,44 +546,53 @@ export default function LoginPage() {
         ORDR_OS v4.0<br/>HANDSHAKE: WAIT
       </div>
 
-      {/* Main card */}
+      {/* ── Main card ── */}
       <div style={{
         position: "relative", zIndex: 10,
-        width: 348,
-        padding: "32px 28px 28px",
-        background: C.panel,
-        backdropFilter: "blur(20px) saturate(160%)",
-        WebkitBackdropFilter: "blur(20px) saturate(160%)",
+        width: 360,
+        padding: "36px 32px 30px",
+        background: C.panelAlpha,
+        backdropFilter: "blur(24px) saturate(140%)",
+        WebkitBackdropFilter: "blur(24px) saturate(140%)",
         border: `1px solid ${C.border}`,
-        borderRadius: 6,
-        boxShadow: `0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02), inset 0 1px 0 rgba(255,255,255,0.04)`,
+        borderTop: `1px solid rgba(55,65,81,0.8)`,
+        borderRadius: 8,
+        boxShadow: [
+          "0 40px 80px rgba(0,0,0,0.55)",
+          "0 0 0 1px rgba(255,255,255,0.03)",
+          "inset 0 1px 0 rgba(255,255,255,0.05)",
+        ].join(", "),
         opacity: mounted ? 1 : 0,
-        transform: mounted ? "translateY(0)" : "translateY(10px)",
-        transition: "opacity 0.4s ease, transform 0.4s ease",
+        transform: mounted ? "translateY(0) scale(1)" : "translateY(12px) scale(0.99)",
+        transition: "opacity 0.45s ease, transform 0.45s ease",
         willChange: "transform, opacity",
       }}>
+
         {/* Top accent line */}
         <div style={{
-          position: "absolute", top: 0, left: "25%", right: "25%", height: "1px",
+          position: "absolute", top: 0, left: "20%", right: "20%", height: "2px",
           background: `linear-gradient(90deg, transparent, ${C.accent}, transparent)`,
-          opacity: 0.6,
+          borderRadius: "0 0 2px 2px",
+          opacity: 0.7,
         }} />
 
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
+        {/* Logo + wordmark */}
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/ordr-logo-horizontal.png"
             alt="ORDR Terminal"
             style={{
-              width: 160, height: "auto", display: "block", margin: "0 auto",
-              filter: "brightness(0) invert(1)", opacity: 0.85,
+              width: 152, height: "auto",
+              display: "block", margin: "0 auto",
+              filter: "brightness(0) invert(1)",
+              opacity: 0.88,
             }}
           />
           <div style={{
             marginTop: 10,
             fontFamily: C.fontMono, fontSize: "9px",
-            textTransform: "uppercase", letterSpacing: "0.20em",
+            textTransform: "uppercase", letterSpacing: "0.22em",
             color: C.text3,
           }}>
             Institutional FX Hedge Governance
@@ -569,13 +600,17 @@ export default function LoginPage() {
         </div>
 
         {/* Divider */}
-        <div style={{ height: "1px", background: C.border, marginBottom: 22 }} />
+        <div style={{
+          height: "1px",
+          background: `linear-gradient(90deg, transparent, ${C.border}, transparent)`,
+          marginBottom: 24,
+        }} />
 
-        {/* Form */}
+        {/* Form content */}
         {mfaChallenge ? mfaContent : loginForm}
       </div>
 
-      {/* Keyframes */}
+      {/* Keyframes + global input styles */}
       <style>{`
         @keyframes loginSpin {
           from { transform: rotate(0deg); }
@@ -590,19 +625,26 @@ export default function LoginPage() {
           font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace;
           font-size: 10px;
           color: ${C.text3};
-          opacity: 0.45;
+          opacity: 0.35;
           pointer-events: none;
           z-index: 5;
           letter-spacing: 0.05em;
           line-height: 1.8;
         }
-        input::placeholder { color: ${C.text3}; opacity: 1; }
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover,
-        input:-webkit-autofill:focus {
-          -webkit-box-shadow: 0 0 0 1000px #0D1526 inset;
-          -webkit-text-fill-color: ${C.text1};
-          caret-color: ${C.accentLight};
+        #login-user::placeholder,
+        #login-pass::placeholder {
+          color: ${C.inputPlaceholder};
+          opacity: 1;
+        }
+        #login-user:-webkit-autofill,
+        #login-user:-webkit-autofill:hover,
+        #login-user:-webkit-autofill:focus,
+        #login-pass:-webkit-autofill,
+        #login-pass:-webkit-autofill:hover,
+        #login-pass:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+          -webkit-text-fill-color: ${C.inputText};
+          caret-color: ${C.accent};
         }
       `}</style>
     </div>

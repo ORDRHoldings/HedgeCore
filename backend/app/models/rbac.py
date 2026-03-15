@@ -72,7 +72,6 @@ class Role(Base):
         PGUUID(as_uuid=True),
         ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=True,
-        index=True,
         doc="Company this role belongs to. NULL = system-level seed role.",
     )
 

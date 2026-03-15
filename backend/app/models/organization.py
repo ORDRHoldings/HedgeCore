@@ -107,7 +107,6 @@ class Branch(Base):
         PGUUID(as_uuid=True),
         ForeignKey("companies.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
 
     name: Mapped[str] = mapped_column(
@@ -173,7 +172,6 @@ class Department(Base):
         PGUUID(as_uuid=True),
         ForeignKey("branches.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
 
     name: Mapped[str] = mapped_column(
