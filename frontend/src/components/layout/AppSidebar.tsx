@@ -142,12 +142,12 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Research", href: "/sandbox", icon: Zap, minTier: "enterprise" as PlanTier,
+    label: "Research", href: "/sandbox", icon: Zap,
     prefixes: ["/sandbox", "/scenario-studio", "/methodology"],
     header: "Research & Simulation",
     items: [
       { label: "Simulation Lab",  desc: "Stress testing, crisis library, what-if", href: "/sandbox",         icon: Terminal },
-      { label: "Scenario Studio", desc: "Monte Carlo stress-test simulations",     href: "/scenario-studio", icon: Zap },
+      { label: "ORDR Labs",       desc: "Monte Carlo VaR/CVaR simulation engine",  href: "/scenario-studio", icon: Zap },
       { label: "Methodology",     desc: "Calculation whitepaper & architecture",   href: "/methodology",     icon: Book },
     ],
   },

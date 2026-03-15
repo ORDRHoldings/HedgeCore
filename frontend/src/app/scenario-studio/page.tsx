@@ -24,38 +24,38 @@ import { PageShell } from "@/components/layout/PageShell";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
-// ── Design Tokens (white + navy gradient system) ─────────────────────
+// ── Design Tokens (app dark theme — matches globals.css) ─────────────
 const C = {
   mono: "'IBM Plex Mono', monospace",
   ui: "'IBM Plex Sans', sans-serif",
   heading: "'Manrope', sans-serif",
-  pageBg: "#f0f2f7",
-  white: "#FFFFFF",
-  navy1: "#0c1929",
-  navy2: "#162d50",
-  navy3: "#1a3a5f",
-  headerGrad: "linear-gradient(135deg, #0c1929 0%, #162d50 50%, #1a3a5f 100%)",
-  cardBorder: "#e2e8f0",
-  cardShadow: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
-  cardHover: "0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)",
-  text1: "#0f172a",
-  text2: "#334155",
-  text3: "#64748b",
-  text4: "#94a3b8",
-  cyan: "#1C62F2",
+  pageBg: "#111827",           // --bg-deep / --terminal-bg
+  white: "#1F2937",            // --bg-panel (cards)
+  navy1: "#0B1120",            // --bg-sidebar
+  navy2: "#111827",            // --bg-deep
+  navy3: "#1F2937",            // --bg-panel
+  headerGrad: "linear-gradient(135deg, #0B1120 0%, #111827 55%, #162036 100%)",
+  cardBorder: "#374151",       // --border-rim
+  cardShadow: "0 1px 4px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20)",
+  cardHover: "0 4px 20px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.25)",
+  text1: "#E5E7EB",            // --text-primary
+  text2: "#9CA3AF",            // --text-secondary
+  text3: "#6B7280",            // --text-tertiary
+  text4: "#4B5563",            // --text-disabled area
+  cyan: "#1C62F2",             // --terminal-accent
   cyanLight: "#3B82F6",
-  cyanBg: "rgba(28,98,242,0.06)",
-  green: "#059669",
+  cyanBg: "rgba(28,98,242,0.12)",
+  green: "#059669",            // --terminal-success
   greenLight: "#10B981",
-  greenBg: "#ecfdf5",
-  red: "#DC2626",
+  greenBg: "rgba(5,150,105,0.12)",
+  red: "#DC2626",              // --terminal-danger
   redLight: "#F87171",
-  redBg: "#fef2f2",
-  amber: "#D97706",
-  amberBg: "#fffbeb",
+  redBg: "rgba(220,38,38,0.10)",
+  amber: "#D97706",            // --terminal-warning
+  amberBg: "rgba(217,119,6,0.10)",
   indigo: "#6366F1",
-  border: "#E2E8F0",
-  bgSub: "#F8FAFC",
+  border: "#374151",           // --border-rim
+  bgSub: "#293548",            // --bg-sub
 } as const;
 
 // ── Types ────────────────────────────────────────────────────────────
