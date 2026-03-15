@@ -1,5 +1,54 @@
 # Changelog (AI-maintained)
 
+## 2026-03-15 — Admin Hub (8-Tab Unified Admin Section)
+
+### Summary
+Replaced two broken admin pages (`/admin-monitor`, `/devops`) with a unified, fully-tested 8-tab Admin Hub at `/admin`.
+
+### Frontend (10 commits: 279ee8f → b8aa115)
+- **`frontend/src/app/admin/page.tsx`** (new): Hub shell — PageShell, two-layer superuser auth gate (DeniedCard), tab routing via `?tab=` URL param, lazy `dynamic()` imports for all 8 tabs
+- **`frontend/src/app/admin/components/AdminTabBar.tsx`** (new): 8-tab bar with cyan active underline, exports `AdminTab` union type
+- **`frontend/src/app/admin/components/tabs/OperationsTab.tsx`** (new): Health KPIs, service status, DB tables, engine modules, error summary, live activity feed — 30s auto-refresh, restart actions
+- **`frontend/src/app/admin/components/tabs/UsersTab.tsx`** (new): Paginated cross-tenant user table, search, edit drawer, REVOKE SESSIONS 2-step confirm
+- **`frontend/src/app/admin/components/tabs/TenantsTab.tsx`** (new): Tenant list, create modal (auto-slug, 400 inline error), edit drawer, SUSPEND confirm
+- **`frontend/src/app/admin/components/tabs/RolesTab.tsx`** (new): Two-column RBAC catalog, permission groups, create role modal with checklist
+- **`frontend/src/app/admin/components/tabs/ApiKeysTab.tsx`** (new): Create/revoke flow with show-once token + COPY, audit log, DELETE 204 handling
+- **`frontend/src/app/admin/components/tabs/MetricsTab.tsx`** (new): KPI cards, CSS funnel chart, period selector (7d/30d/90d), activity feed
+- **`frontend/src/app/admin/components/tabs/ConfigTab.tsx`** (new): 4 independent sections (feature flags, maintenance mode, rate limits, CORS) with IN-MEMORY badges + per-section SAVE
+- **`frontend/src/app/admin/components/tabs/DevOpsTab.tsx`** (new): Sprint progress, risk heat map, architecture freeze, sessions, decisions, validations — 30s auto-refresh
+- **`frontend/src/components/layout/AppSidebar.tsx`**: Admin nav updated to `/admin`
+- Deleted: `frontend/src/app/admin-monitor/`, `frontend/src/app/devops/`
+
+### Backend tests (5 commits)
+- **`backend/tests/test_admin_users_v1.py`**: 7 tests (GET, PATCH, revoke-sessions, auth)
+- **`backend/tests/test_admin_tenants_v1.py`**: 5 tests marked `@requires_postgres` (ANY() syntax)
+- **`backend/tests/test_admin_roles_v1.py`**: 5 tests (roles, permissions, auth)
+- **`backend/tests/test_admin_config_v1.py`**: 7 tests (GET, PATCH feature flags, maintenance, CORS)
+- **`backend/tests/test_admin_metrics_v1.py`**: 11 tests marked `@requires_postgres`
+- **`frontend/e2e/admin.spec.ts`**: E2E spec covering all 8 tabs
+
+### Validation
+- 19 backend admin tests pass on SQLite; 16 skip (requires_postgres — correct)
+- TypeScript: `npx tsc --noEmit` — zero errors
+- Next.js build: clean
+- Pushed to master (f4202d6)
+
+---
+
+## 2026-03-15 — Governance Section UI/UX Overhaul
+
+### Summary
+Fixed broken layouts across all 5 governance pages (Staging Queue, Ledger, Run Viewer, Position Lineage, Hedge Wiki).
+
+### Commits: 76aa215
+- **`frontend/src/app/staging/page.tsx`**: Removed outer flex wrapper, added noPadding + refresh + cross-links
+- **`frontend/src/app/ledger/page.tsx`**: Complete rewrite — inline-styled table, PASS/WARN badges, cross-links
+- **`frontend/src/app/run-viewer/page.tsx`**: Removed redundant chrome layers, added wiki link
+- **`frontend/src/app/lineage/page.tsx`**: Added PageShell wrapper + HelpPanelV2 layout
+- **`frontend/src/app/hedgewiki/page.tsx`**: Fixed outer div, updated breadcrumb to Governance
+
+---
+
 ## 2026-03-15 — Audit Lab POST /runs HTTP 500 Fix
 
 ### Root Cause

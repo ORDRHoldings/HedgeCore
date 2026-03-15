@@ -1,28 +1,27 @@
 # Current Sprint
 
-Sprint: Policy Engine Hardening
-Started: 2026-03-08
+Sprint: Admin Hub
+Started: 2026-03-15
 
 ## Goals
-1. Close 8 post-reconstruction gaps in policy engine
-2. Wire overlay modules (vol, geo, netting) with activation contracts
-3. Add backtesting engine for historical validation
-4. Harden governance (dual-key enforcement, multi-tenant isolation)
-5. Register all new API routes
+1. Replace broken /admin-monitor + /devops with unified Admin Hub
+2. 8 tabs: Operations, Users, Tenants, Roles, API Keys, Metrics, Config, DevOps
+3. Backend unit tests for all admin route modules
+4. E2E Playwright spec for all tabs
 
 ## Items
 | # | Item | Status | Priority |
 |---|------|--------|----------|
-| 1 | Phase 1 — Forward curve ingestion service + 4 endpoints | DONE | high |
-| 2 | Phase 2 — Wizard deepening (ExtendedPolicyConfig AI output) | DONE | high |
-| 3 | Phase 3 — Volatility overlay module + snapshot service + 3 endpoints | DONE | high |
-| 4 | Phase 4 — Geopolitical overlay module + snapshot service + 4 endpoints | DONE | high |
-| 5 | Phase 5 — Backtesting engine (single/multi-period + comparison) | DONE | high |
-| 6 | Phase 6 — Netting overlay module (same-pair + cross-flow) | DONE | high |
-| 7 | Phase 7 — Governance hardening (dual-key + multi-tenant tests) | DONE | high |
-| 8 | Route registration — 3 new modules in api/router.py | DONE | high |
-| 9 | State files + changelog update | DONE | medium |
+| 1 | Backend tests — users, tenants, roles, config, metrics | DONE | high |
+| 2 | Frontend hub shell + AdminTabBar + sidebar update | DONE | high |
+| 3 | OperationsTab + DevOpsTab | DONE | high |
+| 4 | UsersTab + TenantsTab | DONE | high |
+| 5 | RolesTab + ApiKeysTab | DONE | high |
+| 6 | MetricsTab + ConfigTab | DONE | high |
+| 7 | Delete old broken pages + full build | DONE | high |
+| 8 | E2E spec (admin.spec.ts) | DONE | medium |
+| 9 | Final validation + push | DONE | medium |
 
 ## Completed: 9/9
 
-## Previous Sprint: Hedge Desk Redesign (COMPLETED 2026-03-07, 10/10 items)
+## Previous Sprint: Policy Engine Hardening (COMPLETED 2026-03-08, 9/9 items)
