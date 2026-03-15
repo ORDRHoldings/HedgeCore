@@ -43,7 +43,7 @@ const S = {
   amber:     "var(--accent-amber)",
   pass:      "var(--status-pass,#22c55e)",
   fail:      "var(--accent-red,#ef4444)",
-  purple:    "#93C5FD",
+  purple:    "var(--accent-indigo)",
 } as const;
 
 // ── Trace step config ──────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ const STEP_META: Record<string, StepMeta> = {
   VALIDATE: { icon: "V",  color: S.cyan,     phase: "Risk Validation" },
   NORMALIZE:{ icon: "N",  color: S.secondary,phase: "Data Normalization" },
   KERNEL:   { icon: "K",  color: S.amber,    phase: "Hedge Computation" },
-  SCENARIO: { icon: "S",  color: "#818cf8",  phase: "Scenario Analysis" },
+  SCENARIO: { icon: "S",  color: "var(--accent-indigo)",  phase: "Scenario Analysis" },
   AUDIT:    { icon: "A",  color: S.pass,     phase: "Audit Sealing" },
 };
 

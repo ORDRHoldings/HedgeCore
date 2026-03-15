@@ -30,7 +30,7 @@ const S = {
   amber:    "var(--accent-amber)",
   pass:     "var(--status-pass,#2ECC71)",
   fail:     "var(--accent-red,#E74C3C)",
-  royal:    "#1C62F2",
+  royal:    "var(--accent-cyan)",
 } as const;
 
 // ── Types ──────────────────────────────────────────────────────────────────────

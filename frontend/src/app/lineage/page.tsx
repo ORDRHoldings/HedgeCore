@@ -44,8 +44,8 @@ const S = {
   amber:     "var(--accent-amber)",
   pass:      "var(--status-pass,#22c55e)",
   fail:      "var(--accent-red,#ef4444)",
-  purple:    "#93C5FD",
-  indigo:    "#818cf8",
+  purple:    "var(--accent-indigo)",
+  indigo:    "var(--accent-indigo)",
 } as const;
 
 // ── Node type config ───────────────────────────────────────────────────────────
