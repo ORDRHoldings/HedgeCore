@@ -1,5 +1,21 @@
 # Changelog (AI-maintained)
 
+## 2026-03-15 — Audit Lab POST /runs HTTP 500 Fix
+
+### Root Cause
+- asyncpg infers `TIMESTAMPTZ` OID for `market_snapshots.as_of` column; passing Python `str` values for `buffer_start`/`buffer_end` raises `DataError: invalid input for query argument $2: expected datetime.date, got 'str'`
+
+### Fix (5 commits: a0ca117, 26b9c1a, 77ca4ed, 3abd259, 30b3c6f)
+- **`v1_audit_lab.py`**: Pass `buffer_start`/`buffer_end` as `datetime.date` objects (removed `str()` wrapping); added `CAST()` for all UUID/JSONB params in `audit_runs`, `audit_findings`, `audit_reports` INSERTs; `create_audit_run` thin wrapper + `_create_audit_run_inner` for error surfacing
+- **`test_audit_lab_upgrade.py`**: `inspect.getsource(_create_audit_run_inner)` instead of wrapper
+- **`main.py`**: Debug exception handler (reverted to safe form in final commit)
+
+### Validation
+- 442/442 audit_lab tests pass (`python -m pytest tests/ -k audit_lab -q`)
+- Render deploy pending manual trigger
+
+---
+
 ## 2026-03-15 — IBKR Gateway Live Data + WebSocket Streaming for ORDR Market Charts
 
 ### IBKR Real-Time Data Pipeline (ordr-market)
