@@ -14,6 +14,14 @@
 
 ## Completed This Session
 
+- **Admin Hub Command Center Upgrade** (2026-03-18)
+  - MetricsTab: trend delta badges + enhanced funnel with drop-off %
+  - DevOpsTab: fixed sprint doneCount=0 bug
+  - UsersTab: added CreateUserModal (POST /v1/admin/users)
+  - RolesTab: added EditPermissionsModal for non-system roles
+  - Backend: prev_period comparison in metrics, done_count in devops, POST /v1/admin/users
+  - 742 lines changed, 4602 tests passing, TypeScript: 0 errors
+
 - **Market Data TwelveData Fallback** (Risk ID-2 mitigated, 2026-03-18)
   - Backend live routes: IBKR → TwelveData → 503 (was: IBKR only → 503 in prod)
   - 4602 tests passing (26 market data live tests updated + 1 new)

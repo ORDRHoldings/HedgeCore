@@ -1,5 +1,21 @@
 # Changelog (AI-maintained)
 
+## 2026-03-18 — Admin Hub Command Center Upgrade
+
+### Summary
+Transformed admin hub into a modern professional command center with data presentation features. 742 lines of new/changed code across 7 files. Tests: 4602 passed, 0 failed. TypeScript: 0 errors.
+
+### Backend changes
+- **`v1_admin_metrics.py`**: Added `prev_period` block to GET /v1/admin/metrics — compares current window to same-length prior window (signups, DAU, calc_runs, audit_runs).
+- **`v1_devops.py`**: Added `done_count` scalar to /v1/devops/status response — fixes frontend sprint progress always showing 0%.
+- **`v1_admin_users.py`**: Added `POST /v1/admin/users` endpoint — superuser-only user creation (email, password, full_name, is_superuser, company_id). Returns 409 on duplicate email.
+
+### Frontend changes
+- **`MetricsTab.tsx`**: Added `TrendBadge` component (▲/▼/— with %) on all 4 trending KPI cards (signups, active users, calc runs, audit runs). 4-column KPI grid with 28px numbers. Enhanced conversion funnel: 32px gradient bars with overlaid labels + `▼ N pp drop-off` rows between steps.
+- **`DevOpsTab.tsx`**: Fixed hardcoded `doneCount = 0` bug — now uses `data.done_count ?? 0`. Added `done_count?` to DevOpsData interface.
+- **`UsersTab.tsx`**: Added `CreateUserModal` — email, password, full_name, superuser toggle. "+ CREATE USER" button in toolbar. POSTs to `/v1/admin/users`, prepends created user to list.
+- **`RolesTab.tsx`**: Added `EditPermissionsModal` for non-system roles — full permission checklist pre-populated from current role. PUTs to `/v1/admin/roles/{id}/permissions`. "EDIT PERMISSIONS" button in right pane header, hidden for system roles.
+
 ## 2026-03-18 — Market Data TwelveData Fallback: Risk ID-2 mitigated (commit 905ef79)
 
 ### Summary

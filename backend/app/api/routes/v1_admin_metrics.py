@@ -90,6 +90,35 @@ async def get_metrics(
     except Exception:
         pass
 
+    # Previous period comparison
+    prev_start = since - timedelta(days=days)
+    prev_end = since
+
+    prev_signups = (await session.execute(
+        text("SELECT COUNT(*) FROM users WHERE created_at >= :s AND created_at < :e"),
+        {"s": prev_start, "e": prev_end},
+    )).scalar() or 0
+
+    prev_dau = (await session.execute(
+        text("""SELECT COUNT(DISTINCT actor_id) FROM audit_events
+                WHERE created_at >= :s AND created_at < :e AND actor_id IS NOT NULL"""),
+        {"s": prev_start, "e": prev_end},
+    )).scalar() or 0
+
+    prev_calc_runs = (await session.execute(
+        text("SELECT COUNT(*) FROM calculation_runs WHERE created_at >= :s AND created_at < :e"),
+        {"s": prev_start, "e": prev_end},
+    )).scalar() or 0
+
+    prev_audit_runs = 0
+    try:
+        prev_audit_runs = (await session.execute(
+            text("SELECT COUNT(*) FROM audit_runs WHERE created_at >= :s AND created_at < :e"),
+            {"s": prev_start, "e": prev_end},
+        )).scalar() or 0
+    except Exception:
+        pass
+
     return {
         "period_days": days,
         "total_users": int(total_users),
@@ -104,6 +133,12 @@ async def get_metrics(
         # Stub metrics (no billing table yet)
         "mrr_usd": 0,
         "conversions_in_period": 0,
+        "prev_period": {
+            "signups": int(prev_signups),
+            "active_users": int(prev_dau),
+            "calc_runs": int(prev_calc_runs),
+            "audit_runs": int(prev_audit_runs),
+        },
     }
 @router.get("/metrics/funnel")
 async def get_funnel(

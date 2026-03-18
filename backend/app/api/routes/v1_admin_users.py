@@ -20,6 +20,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.db import get_async_session
 from app.core.dependencies import require_superuser
+from app.core.security import hash_password
 from app.crud import refresh_token as rt_crud
 from app.models.rbac import Role, UserRole
 from app.models.user import User
@@ -54,6 +55,12 @@ class PatchUserRequest(BaseModel):
     is_superuser: bool | None = None
     full_name: str | None = None
     job_title: str | None = None
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str | None = None
+    is_superuser: bool = False
+    company_id: str | None = None
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -129,6 +136,53 @@ async def list_admin_users(
 
     pages = max(1, (total + size - 1) // size)
     return AdminUserListResponse(items=items, total=total, page=page, size=size, pages=pages)
+@router.post("", response_model=AdminUserItem, status_code=201)
+async def create_admin_user(
+    data: CreateUserRequest,
+    session: AsyncSession = Depends(get_async_session),
+    _su: User = Depends(require_superuser),
+) -> AdminUserItem:
+    """Create a new user (admin only). Superuser only."""
+    from sqlalchemy import select as sa_select
+    existing = (await session.execute(
+        sa_select(User).where(User.email == data.email.lower())
+    )).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=409, detail="Email already registered")
+
+    company_id_val = None
+    if data.company_id:
+        try:
+            company_id_val = UUID(data.company_id)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid company_id UUID")
+
+    new_user = User(
+        email=data.email.lower(),
+        hashed_password=hash_password(data.password),
+        full_name=data.full_name,
+        is_active=True,
+        is_superuser=data.is_superuser,
+        company_id=company_id_val,
+    )
+    session.add(new_user)
+    await session.commit()
+    await session.refresh(new_user)
+
+    return AdminUserItem(
+        id=str(new_user.id),
+        email=new_user.email,
+        full_name=new_user.full_name,
+        job_title=None,
+        is_active=new_user.is_active,
+        is_superuser=new_user.is_superuser,
+        plan_tier=None,
+        company_id=str(new_user.company_id) if new_user.company_id else None,
+        company_name=None,
+        roles=[],
+        mfa_enabled=False,
+        created_at=new_user.created_at.isoformat() if new_user.created_at else None,
+    )
 @router.patch("/{user_id}", response_model=dict)
 async def patch_admin_user(
     user_id: UUID,

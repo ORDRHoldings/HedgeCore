@@ -97,6 +97,7 @@ async def devops_status(
             "validations": [],
             "file_facts_count": 0,
             "work_items": [],
+            "done_count": 0,
         }
 
     return {
@@ -119,6 +120,7 @@ async def devops_status(
         "work_items": _query(
             "SELECT * FROM work_items WHERE status != 'done'"
         ),
+        "done_count": _scalar("SELECT COUNT(*) FROM work_items WHERE status = 'done'"),
     }
 
 

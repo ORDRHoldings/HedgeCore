@@ -565,6 +565,274 @@ function CreateRoleModal({
   );
 }
 
+// ---- Edit permissions modal ----
+
+function EditPermissionsModal({
+  role,
+  groups,
+  token,
+  onClose,
+  onSaved,
+}: {
+  role: RoleWithPermissions;
+  groups: PermissionGroupOut[];
+  token: string;
+  onClose: () => void;
+  onSaved: (updated: RoleWithPermissions) => void;
+}) {
+  const [selected, setSelected] = useState<string[]>(role.permissions);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  function togglePerm(codename: string) {
+    setSelected((prev) =>
+      prev.includes(codename) ? prev.filter((c) => c !== codename) : [...prev, codename]
+    );
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await dashboardFetch(`/v1/admin/roles/${role.id}/permissions`, token, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ permission_codenames: selected }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { detail?: string }).detail ?? `HTTP ${res.status}`);
+      }
+      const updated: RoleWithPermissions = await res.json();
+      onSaved(updated);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        style={{
+          background: S.bgPanel,
+          border: `1px solid ${S.rim}`,
+          borderRadius: 6,
+          width: 560,
+          maxHeight: "80vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 16px",
+            borderBottom: `1px solid ${S.rim}`,
+          }}
+        >
+          <div>
+            <span
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: 12,
+                fontWeight: 700,
+                color: S.cyan,
+                letterSpacing: "0.08em",
+              }}
+            >
+              EDIT PERMISSIONS
+            </span>
+            <span
+              style={{
+                fontFamily: S.fontMono,
+                fontSize: 10,
+                color: S.tertiary,
+                marginLeft: 10,
+              }}
+            >
+              {role.name.toUpperCase()}
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              color: S.tertiary,
+              cursor: "pointer",
+              fontSize: 16,
+              lineHeight: 1,
+              padding: 0,
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ overflowY: "auto", flex: 1, padding: 16 }}>
+          {error && (
+            <div
+              style={{
+                fontFamily: S.fontUI,
+                fontSize: 12,
+                color: S.fail,
+                background: "rgba(255,80,80,0.08)",
+                border: `1px solid ${S.fail}`,
+                borderRadius: 4,
+                padding: "8px 10px",
+                marginBottom: 12,
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <div
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 10,
+              color: S.tertiary,
+              letterSpacing: "0.06em",
+              marginBottom: 8,
+            }}
+          >
+            PERMISSIONS ({selected.length} selected)
+          </div>
+
+          {groups.map((g) => (
+            <div key={g.module} style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  fontFamily: S.fontMono,
+                  fontSize: 10,
+                  color: S.amber,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  marginBottom: 4,
+                  paddingBottom: 3,
+                  borderBottom: `1px solid ${S.rim}`,
+                }}
+              >
+                {g.module}
+              </div>
+              {g.permissions.map((perm) => (
+                <label
+                  key={perm.codename}
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 8,
+                    padding: "4px 0",
+                    cursor: "pointer",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(perm.codename)}
+                    onChange={() => togglePerm(perm.codename)}
+                    style={{ marginTop: 2, accentColor: S.cyan }}
+                  />
+                  <div>
+                    <span
+                      style={{ fontFamily: S.fontUI, fontSize: 12, color: S.primary }}
+                    >
+                      {perm.action}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 10,
+                        color: S.tertiary,
+                        marginLeft: 6,
+                      }}
+                    >
+                      {perm.codename}
+                    </span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 8,
+            padding: "12px 16px",
+            borderTop: `1px solid ${S.rim}`,
+          }}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 11,
+              background: "transparent",
+              border: `1px solid ${S.rim}`,
+              color: S.secondary,
+              borderRadius: 4,
+              padding: "6px 14px",
+              cursor: "pointer",
+            }}
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              fontFamily: S.fontMono,
+              fontSize: 11,
+              background: S.cyan,
+              border: "none",
+              color: S.bgDeep,
+              borderRadius: 4,
+              padding: "6px 14px",
+              cursor: saving ? "not-allowed" : "pointer",
+              opacity: saving ? 0.6 : 1,
+              fontWeight: 700,
+            }}
+          >
+            {saving ? "SAVING…" : "SAVE PERMISSIONS"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---- Main component ----
 
 export default function RolesTab({ token }: { token: string }) {
@@ -574,6 +842,7 @@ export default function RolesTab({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const fetchRoles = useCallback(async () => {
     setLoading(true);
@@ -625,10 +894,19 @@ export default function RolesTab({ token }: { token: string }) {
     });
   }
 
+  useEffect(() => {
+    setShowEdit(false);
+  }, [selectedId]);
+
   function handleCreated(role: RoleWithPermissions) {
     setShowCreate(false);
     setRoles((prev) => [...prev, role]);
     setSelectedId(role.id);
+  }
+
+  function handleRoleUpdated(updated: RoleWithPermissions) {
+    setRoles((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    setShowEdit(false);
   }
 
   return (
@@ -786,6 +1064,25 @@ export default function RolesTab({ token }: { token: string }) {
                     SYSTEM
                   </span>
                 )}
+                {!selectedRole.is_system && (
+                  <button
+                    onClick={() => setShowEdit(true)}
+                    style={{
+                      fontFamily: S.fontMono,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.07em",
+                      padding: "4px 12px",
+                      cursor: "pointer",
+                      background: `color-mix(in srgb,${S.cyan} 12%,transparent)`,
+                      color: S.cyan,
+                      border: `1px solid ${S.cyan}`,
+                      borderRadius: 3,
+                    }}
+                  >
+                    EDIT PERMISSIONS
+                  </button>
+                )}
               </div>
               {selectedRole.description && (
                 <div
@@ -896,6 +1193,17 @@ export default function RolesTab({ token }: { token: string }) {
           onClose={() => setShowCreate(false)}
           onCreated={handleCreated}
           token={token}
+        />
+      )}
+
+      {/* Edit permissions modal */}
+      {showEdit && selectedRole && !selectedRole.is_system && (
+        <EditPermissionsModal
+          role={selectedRole}
+          groups={groups}
+          token={token}
+          onClose={() => setShowEdit(false)}
+          onSaved={handleRoleUpdated}
         />
       )}
     </div>

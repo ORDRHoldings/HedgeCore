@@ -81,6 +81,7 @@ interface DevOpsData {
   validations: Validation[];
   file_facts_count: number;
   work_items: WorkItem[];
+  done_count?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -227,8 +228,8 @@ export default function DevOpsTab({ token }: { token: string }) {
   const openCount = allWorkItems.filter(w => w.status === "open").length;
   const inProgressCount = allWorkItems.filter(w => w.status === "in_progress").length;
   const blockedCount = allWorkItems.filter(w => w.status === "blocked").length;
-  // done items are filtered out by backend (status != 'done'), so we read from sprint text or show 0
-  const doneCount = 0;
+  // done items are filtered out by backend (status != 'done'), so we read from backend done_count field
+  const doneCount = data.done_count ?? 0;
   const total = openCount + inProgressCount + blockedCount + doneCount;
   const donePercent = total > 0 ? Math.round((doneCount / total) * 100) : 0;
 

@@ -21,6 +21,13 @@ const S = {
   fail:      "var(--status-fail)",
 } as const;
 
+interface PrevPeriod {
+  signups: number;
+  active_users: number;
+  calc_runs: number;
+  audit_runs: number;
+}
+
 interface PlatformMetrics {
   total_users: number;
   signups_in_period: number;
@@ -33,6 +40,8 @@ interface PlatformMetrics {
   audit_runs_in_period: number;
   mrr_usd: number;
   period_days: number;
+  conversions_in_period?: number;
+  prev_period?: PrevPeriod;
 }
 
 interface FunnelStep {
@@ -49,6 +58,37 @@ interface ActivityEvent {
   company_name?: string | null;
   hash?: string | null;
   created_at: string;
+}
+
+function calcDelta(current: number, prev: number): { pct: number; dir: "up" | "down" | "flat" } {
+  if (prev === 0) return { pct: 0, dir: "flat" };
+  const pct = Math.round(((current - prev) / prev) * 100);
+  return { pct: Math.abs(pct), dir: pct > 0 ? "up" : pct < 0 ? "down" : "flat" };
+}
+
+function TrendBadge({ current, prev }: { current: number; prev: number }) {
+  const delta = calcDelta(current, prev);
+  if (delta.dir === "flat" && delta.pct === 0 && prev === 0) return null;
+  const color = delta.dir === "up" ? S.pass : delta.dir === "down" ? S.fail : S.tertiary;
+  const arrow = delta.dir === "up" ? "▲" : delta.dir === "down" ? "▼" : "—";
+  return (
+    <span style={{
+      fontFamily: S.fontMono,
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: "0.05em",
+      color,
+      background: `color-mix(in srgb,${color} 10%,transparent)`,
+      border: `1px solid color-mix(in srgb,${color} 25%,transparent)`,
+      padding: "2px 7px",
+      borderRadius: 3,
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 3,
+    }}>
+      {arrow} {delta.pct}%
+    </span>
+  );
 }
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -83,11 +123,15 @@ function KpiCard({
   label,
   value,
   color,
+  prev,
 }: {
   label: string;
   value: number | string;
   color: string;
+  prev?: number;
 }) {
+  const numericValue = typeof value === "number" ? value : null;
+  const hasTrend = prev !== undefined && numericValue !== null;
   return (
     <div style={{
       background: S.bgSub,
@@ -96,6 +140,7 @@ function KpiCard({
       display: "flex",
       flexDirection: "column",
       gap: 6,
+      minWidth: 150,
     }}>
       <span style={{
         fontFamily: S.fontMono,
@@ -109,13 +154,25 @@ function KpiCard({
       </span>
       <span style={{
         fontFamily: S.fontMono,
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 700,
         color,
         lineHeight: 1,
       }}>
         {typeof value === "number" ? value.toLocaleString() : value}
       </span>
+      {hasTrend && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+          <TrendBadge current={numericValue as number} prev={prev as number} />
+          <span style={{
+            fontFamily: S.fontMono,
+            fontSize: 10,
+            color: S.tertiary,
+          }}>
+            vs prev period
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -265,17 +322,37 @@ export default function MetricsTab({ token }: { token: string }) {
       <SectionCard title={`PLATFORM KPIs — LAST ${days} DAYS`}>
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))",
+          gridTemplateColumns: "repeat(4,minmax(150px,1fr))",
           gap: 12,
         }}>
           <KpiCard label="TOTAL USERS" value={metrics?.total_users ?? 0} color={S.cyan} />
-          <KpiCard label="SIGNUPS IN PERIOD" value={metrics?.signups_in_period ?? 0} color={S.pass} />
-          <KpiCard label="ACTIVE USERS" value={metrics?.active_users_in_period ?? 0} color={S.pass} />
+          <KpiCard
+            label="SIGNUPS IN PERIOD"
+            value={metrics?.signups_in_period ?? 0}
+            color={S.pass}
+            prev={metrics?.prev_period?.signups}
+          />
+          <KpiCard
+            label="ACTIVE USERS"
+            value={metrics?.active_users_in_period ?? 0}
+            color={S.pass}
+            prev={metrics?.prev_period?.active_users}
+          />
           <KpiCard label="TOTAL COMPANIES" value={metrics?.total_companies ?? 0} color={S.cyan} />
           <KpiCard label="SMB COMPANIES" value={metrics?.smb_companies ?? 0} color={S.secondary} />
           <KpiCard label="ENTERPRISE COMPANIES" value={metrics?.enterprise_companies ?? 0} color={S.amber} />
-          <KpiCard label="CALC RUNS" value={metrics?.calc_runs_in_period ?? 0} color={S.amber} />
-          <KpiCard label="AUDIT RUNS" value={metrics?.audit_runs_in_period ?? 0} color={S.secondary} />
+          <KpiCard
+            label="CALC RUNS"
+            value={metrics?.calc_runs_in_period ?? 0}
+            color={S.amber}
+            prev={metrics?.prev_period?.calc_runs}
+          />
+          <KpiCard
+            label="AUDIT RUNS"
+            value={metrics?.audit_runs_in_period ?? 0}
+            color={S.secondary}
+            prev={metrics?.prev_period?.audit_runs}
+          />
         </div>
       </SectionCard>
 
@@ -286,27 +363,86 @@ export default function MetricsTab({ token }: { token: string }) {
             No funnel data
           </div>
         ) : (
-          <div>
-            {funnelSteps.map((step) => (
-              <div key={step.label} style={{ marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
-                    {step.label}
-                  </span>
-                  <span style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
-                    {step.count} ({step.pct}%)
-                  </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {funnelSteps.map((step, idx) => {
+              const prev = idx > 0 ? funnelSteps[idx - 1] : null;
+              const dropPp = prev !== null ? prev.pct - step.pct : 0;
+              return (
+                <div key={step.label}>
+                  {/* Drop-off row between steps */}
+                  {prev !== null && dropPp > 0 && (
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "4px 0 4px 8px",
+                      marginBottom: 4,
+                    }}>
+                      <span style={{
+                        fontFamily: S.fontMono,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: S.amber,
+                        letterSpacing: "0.04em",
+                      }}>
+                        ▼ -{dropPp} pp drop-off
+                      </span>
+                    </div>
+                  )}
+                  {/* Funnel step bar */}
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{
+                      position: "relative",
+                      background: S.bgSub,
+                      border: `1px solid ${S.rim}`,
+                      height: 32,
+                      overflow: "hidden",
+                    }}>
+                      {/* Colored fill */}
+                      <div style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        height: "100%",
+                        width: `${step.pct}%`,
+                        background: `linear-gradient(90deg, ${S.cyan}, color-mix(in srgb,${S.cyan} 45%,${S.bgSub}))`,
+                        transition: "width 0.5s ease-out",
+                      }} />
+                      {/* Left label */}
+                      <span style={{
+                        position: "absolute",
+                        left: 10,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        fontFamily: S.fontMono,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: S.primary,
+                        letterSpacing: "0.06em",
+                        zIndex: 1,
+                        whiteSpace: "nowrap" as const,
+                      }}>
+                        {step.label.toUpperCase()} ({step.count})
+                      </span>
+                      {/* Right label */}
+                      <span style={{
+                        position: "absolute",
+                        right: 10,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        fontFamily: S.fontMono,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: step.pct > 0 ? S.cyan : S.tertiary,
+                        zIndex: 1,
+                      }}>
+                        {step.pct}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ background: S.bgSub, height: 24, position: "relative", overflow: "hidden" }}>
-                  <div style={{
-                    height: "100%",
-                    width: `${step.pct}%`,
-                    background: `linear-gradient(90deg, ${S.cyan}, color-mix(in srgb, ${S.cyan} 60%, ${S.pass}))`,
-                    transition: "width 0.5s ease",
-                  }} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </SectionCard>

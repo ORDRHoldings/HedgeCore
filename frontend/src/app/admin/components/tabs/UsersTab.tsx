@@ -467,6 +467,153 @@ function UserDrawer({ user, token, onClose, onSaved }: DrawerProps) {
   );
 }
 
+// ---------- Create User Modal ----------
+
+interface CreateUserRequest {
+  email: string;
+  password: string;
+  full_name: string;
+  is_superuser: boolean;
+}
+
+interface CreateUserModalProps {
+  token: string;
+  onClose: () => void;
+  onCreated: (user: AdminUser) => void;
+}
+
+function CreateUserModal({ token, onClose, onCreated }: CreateUserModalProps) {
+  const [draft, setDraft] = useState<CreateUserRequest>({
+    email: "",
+    password: "",
+    full_name: "",
+    is_superuser: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!draft.email.trim() || !draft.password.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await dashboardFetch("/v1/admin/users", token, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: draft.email.trim(),
+          password: draft.password,
+          full_name: draft.full_name.trim() || null,
+          is_superuser: draft.is_superuser,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError((body as { detail?: string }).detail ?? `HTTP ${res.status}`);
+        return;
+      }
+      const created = await res.json() as AdminUser;
+      onCreated(created);
+      onClose();
+    } catch {
+      setError("Network error.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const labelStyle: React.CSSProperties = {
+    fontFamily: S.fontMono, fontSize: 10, fontWeight: 700,
+    letterSpacing: "0.08em", color: S.tertiary,
+    marginBottom: 4, textTransform: "uppercase", display: "block",
+  };
+  const inputStyle: React.CSSProperties = {
+    fontFamily: S.fontUI, fontSize: 13, color: S.primary,
+    background: S.bgDeep, border: `1px solid ${S.rim}`,
+    padding: "7px 10px", width: "100%", outline: "none", boxSizing: "border-box",
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100,
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, width: 400, maxWidth: "90vw" }}>
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "14px 20px", borderBottom: `1px solid ${S.rim}`,
+        }}>
+          <span style={{ fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", color: S.cyan }}>
+            CREATE USER
+          </span>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: S.tertiary, fontSize: 18, cursor: "pointer" }}>×</button>
+        </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label style={labelStyle}>Email *</label>
+            <input style={inputStyle} type="email" required value={draft.email}
+              onChange={e => setDraft(d => ({ ...d, email: e.target.value }))} />
+          </div>
+          <div>
+            <label style={labelStyle}>Password *</label>
+            <input style={inputStyle} type="password" required minLength={8} value={draft.password}
+              onChange={e => setDraft(d => ({ ...d, password: e.target.value }))} />
+          </div>
+          <div>
+            <label style={labelStyle}>Full Name</label>
+            <input style={inputStyle} value={draft.full_name}
+              onChange={e => setDraft(d => ({ ...d, full_name: e.target.value }))} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Superuser</label>
+            <button type="button"
+              onClick={() => setDraft(d => ({ ...d, is_superuser: !d.is_superuser }))}
+              style={{
+                fontFamily: S.fontMono, fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
+                padding: "2px 10px", cursor: "pointer",
+                color: draft.is_superuser ? S.amber : S.tertiary,
+                background: draft.is_superuser ? `color-mix(in srgb,${S.amber} 10%,transparent)` : "transparent",
+                border: `1px solid ${draft.is_superuser ? S.amber : S.rim}`,
+              }}>
+              {draft.is_superuser ? "YES" : "NO"}
+            </button>
+          </div>
+          {error && <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.fail }}>{error}</div>}
+          <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
+            <button type="submit" disabled={saving} style={{
+              fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+              padding: "7px 20px", cursor: saving ? "not-allowed" : "pointer",
+              background: `color-mix(in srgb,${S.cyan} 15%,transparent)`,
+              color: S.cyan, border: `1px solid ${S.cyan}`, opacity: saving ? 0.6 : 1,
+            }}>
+              {saving ? "CREATING…" : "CREATE"}
+            </button>
+            <button type="button" onClick={onClose} style={{
+              fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+              padding: "7px 16px", cursor: "pointer", background: "none",
+              color: S.tertiary, border: `1px solid ${S.soft}`,
+            }}>
+              CANCEL
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ---------- Main component ----------
 
 export default function UsersTab({ token }: { token: string }) {
@@ -477,6 +624,7 @@ export default function UsersTab({ token }: { token: string }) {
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   const fetchPage = useCallback(
     async (p: number) => {
@@ -550,6 +698,18 @@ export default function UsersTab({ token }: { token: string }) {
           background: S.bgPanel,
         }}
       >
+        <button
+          onClick={() => setShowCreate(true)}
+          style={{
+            fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.07em",
+            padding: "6px 14px", cursor: "pointer",
+            background: `color-mix(in srgb,${S.cyan} 15%,transparent)`,
+            color: S.cyan, border: `1px solid ${S.cyan}`,
+            whiteSpace: "nowrap",
+          }}
+        >
+          + CREATE USER
+        </button>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -823,6 +983,17 @@ export default function UsersTab({ token }: { token: string }) {
                   }
                 : prev,
             );
+          }}
+        />
+      )}
+
+      {/* Create user modal */}
+      {showCreate && (
+        <CreateUserModal
+          token={token}
+          onClose={() => setShowCreate(false)}
+          onCreated={(newUser) => {
+            setData(prev => prev ? { ...prev, items: [newUser, ...prev.items] } : prev);
           }}
         />
       )}
