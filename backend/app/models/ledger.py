@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Boolean, DateTime, String, event
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -19,7 +19,8 @@ from app.core.db import Base
 class LedgerEntry(Base):
     """Immutable record of an authorized hedge execution.
 
-    Protected by PostgreSQL trigger: BEFORE UPDATE OR DELETE -> RAISE EXCEPTION.
+    Protected by SQLAlchemy ORM event listeners (cross-DB) and PostgreSQL
+    trigger (production): BEFORE UPDATE OR DELETE -> RAISE EXCEPTION.
     """
 
     __tablename__ = "ledger_entries"
@@ -75,6 +76,20 @@ class LedgerEntry(Base):
 
     def __repr__(self) -> str:
         return f"<LedgerEntry {self.ledger_id} order={self.order_id}>"
+
+
+@event.listens_for(LedgerEntry, "before_update")
+def _block_ledger_update(mapper, connection, target):
+    raise RuntimeError(
+        f"LedgerEntry {target.ledger_id!r} is immutable — WORM policy violation: updates are forbidden."
+    )
+
+
+@event.listens_for(LedgerEntry, "before_delete")
+def _block_ledger_delete(mapper, connection, target):
+    raise RuntimeError(
+        f"LedgerEntry {target.ledger_id!r} is immutable — WORM policy violation: deletes are forbidden."
+    )
 
 
 class AnchorHash(Base):

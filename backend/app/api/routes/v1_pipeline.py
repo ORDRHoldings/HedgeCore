@@ -15,7 +15,12 @@ Mutation endpoints enforce inline permission checks via rbac_service.
 
 
 
+import io
+import json
+import zipfile
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
@@ -575,7 +580,7 @@ async def export_ledger(
 
 ):
 
-    """Export ledger entry as PDF, Excel, or ZIP (tenant-scoped)."""
+    """Export ledger entry as PDF metadata, Excel metadata, or ZIP archive (tenant-scoped)."""
 
     await _check_permission(session, current_user, "pipeline.approve")
     _company_id = str(current_user.company_id) if current_user.company_id else None
@@ -594,6 +599,54 @@ async def export_ledger(
 
 
 
+    if fmt == "zip":
+        # Build in-memory ZIP containing full ledger JSON + human-readable provenance
+        def _safe_dump(obj) -> dict:
+            try:
+                return obj.model_dump(mode="json") if obj is not None else {}
+            except Exception:
+                return {}
+
+        def _safe_isoformat(dt) -> str | None:
+            try:
+                return dt.isoformat() if dt else None
+            except Exception:
+                return None
+
+        ledger_dict = {
+            "meta": {
+                "ledger_id": entry.ledger_id,
+                "order_id": entry.order_id,
+                "staging_id": entry.staging_id,
+                "authorized_at": _safe_isoformat(entry.authorized_at),
+                "root_hash": entry.root_hash,
+                "replay_verified": entry.replay_verified,
+            },
+            "provenance_chain": _safe_dump(entry.provenance_chain),
+            "frozen_artifact": _safe_dump(entry.freeze_artifact),
+        }
+        pc = _safe_dump(entry.provenance_chain)
+        provenance_lines = [f"{k}: {v}" for k, v in pc.items()] if isinstance(pc, dict) else []
+        provenance_text = "\n".join(provenance_lines) or "No provenance chain available."
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(
+                f"ledger-{ledger_id}.json",
+                json.dumps(ledger_dict, indent=2, default=str),
+            )
+            zf.writestr(
+                f"provenance-{ledger_id}.txt",
+                provenance_text,
+            )
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename=ledger-{ledger_id}.zip"},
+        )
+
+    # pdf and excel: return structured JSON metadata document
     return {
 
         "ledger_id": ledger_id,
@@ -603,6 +656,17 @@ async def export_ledger(
         "status": "export_available",
 
         "message": f"Export in {fmt} format for {ledger_id}",
+
+        "meta": {
+            "order_id": entry.order_id,
+            "staging_id": entry.staging_id,
+            "authorized_by": str(entry.authorized_by),
+            "authorized_at": entry.authorized_at.isoformat() if entry.authorized_at else None,
+            "signature_hash": entry.signature_hash,
+            "root_hash": entry.root_hash,
+            "replay_verified": entry.replay_verified,
+            "company_id": entry.company_id,
+        },
 
     }
 

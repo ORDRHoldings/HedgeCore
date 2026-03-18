@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, String, Text
+from sqlalchemy import CheckConstraint, DateTime, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -20,6 +20,13 @@ class Proposal(Base):
     """A frozen sandbox calculation result that can be submitted to staging."""
 
     __tablename__ = "proposals"
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('DRAFT', 'SUBMITTED', 'RETURNED', 'AUTHORIZED', 'REJECTED')",
+            name="ck_proposals_status",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True),
