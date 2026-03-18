@@ -237,7 +237,7 @@ class TestCacheTenantLeakFix:
         """Return the source block of the cache fast-path inside get_run_detail."""
         import re
         path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\FXDemo\backend"
+            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\backend"
             r"\app\api\routes\v1_calculate.py"
         )
         with open(path, encoding="utf-8") as f:
@@ -289,7 +289,7 @@ class TestReportAIAuthContract:
     def test_route_source_checks_authorization_header(self):
         """The route handler must inspect the Authorization header."""
         path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\FXDemo\frontend"
+            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
             r"\src\app\api\report-ai\route.ts"
         )
         with open(path, encoding="utf-8") as f:
@@ -303,7 +303,7 @@ class TestReportAIAuthContract:
     def test_route_returns_401_for_missing_auth(self):
         """The route must explicitly return 401 when auth is missing."""
         path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\FXDemo\frontend"
+            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
             r"\src\app\api\report-ai\route.ts"
         )
         with open(path, encoding="utf-8") as f:
@@ -316,7 +316,7 @@ class TestReportAIAuthContract:
     def test_route_checks_bearer_scheme(self):
         """The route must validate the Bearer scheme specifically."""
         path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\FXDemo\frontend"
+            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
             r"\src\app\api\report-ai\route.ts"
         )
         with open(path, encoding="utf-8") as f:
@@ -329,7 +329,7 @@ class TestReportAIAuthContract:
     def test_auth_check_precedes_body_parse(self):
         """Auth check must appear before body.goal is accessed (fail-fast)."""
         path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\FXDemo\frontend"
+            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
             r"\src\app\api\report-ai\route.ts"
         )
         with open(path, encoding="utf-8") as f:
@@ -352,7 +352,7 @@ class TestReportFingerprintingContract:
 
     def _get_page_source(self) -> str:
         path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\FXDemo\frontend"
+            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
             r"\src\app\reports\page.tsx"
         )
         with open(path, encoding="utf-8") as f:
@@ -434,7 +434,7 @@ class TestPresetLibraryInvariants:
 
     def _source(self) -> str:
         path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\FXDemo\frontend"
+            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
             r"\src\constants\reportPresets.ts"
         )
         with open(path, encoding="utf-8") as f:
@@ -516,7 +516,7 @@ class TestLineageContract:
 
     def _source(self) -> str:
         path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\FXDemo\frontend"
+            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
             r"\src\constants\reportPresets.ts"
         )
         with open(path, encoding="utf-8") as f:
@@ -569,7 +569,7 @@ class TestReportStateMachineGating:
 
     def _source(self) -> str:
         path = (
-            r"D:\Synexiun\1-SynexFund\HedgeCalc\FXDemo\frontend"
+            r"D:\Synexiun\1-SynexFund\HedgeCalc\TreasuryFX\frontend"
             r"\src\app\reports\page.tsx"
         )
         with open(path, encoding="utf-8") as f:

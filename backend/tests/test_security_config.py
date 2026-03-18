@@ -40,7 +40,7 @@ class TestSecretResolution:
 
     def test_gitignore_contains_env(self):
         """Verify .gitignore blocks .env files."""
-        gitignore = pathlib.Path(__file__).parents[3] / ".gitignore"
+        gitignore = pathlib.Path(__file__).parents[2] / ".gitignore"
         assert gitignore.exists(), ".gitignore must exist at repo root"
         content = gitignore.read_text()
         assert ".env" in content, ".gitignore must block .env files"
@@ -48,7 +48,7 @@ class TestSecretResolution:
     def test_no_plaintext_dev_secrets_in_tracked_files(self):
         """Dev secret values must not appear in non-.env.example tracked files."""
         import subprocess
-        repo_root = pathlib.Path(__file__).parents[3]
+        repo_root = pathlib.Path(__file__).parents[2]
         result = subprocess.run(
             ["git", "grep", "-l", "***REDACTED_JWT_SECRET***"],
             capture_output=True,

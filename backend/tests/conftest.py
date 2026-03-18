@@ -186,6 +186,41 @@ def fix_asyncio_cleanup():
         asyncio.set_event_loop(asyncio.new_event_loop())
 
 # ---------------------------------------------------------------------
+# Rate limiter reset — prevent cross-test state contamination
+# ---------------------------------------------------------------------
+@pytest.fixture(autouse=True)
+def reset_rate_limiter_state():
+    """Clear in-memory rate limiter buckets before each test.
+
+    RateLimiterMiddleware._buckets is an instance dict on the middleware object
+    embedded in the app's middleware stack. Without this reset, tests that make
+    many requests (or deliberately exhaust the limit) bleed state into later
+    tests, causing spurious 429 responses.
+    """
+    def _clear():
+        try:
+            from app.main import app
+            from app.middleware.rate_limit import RateLimitMiddleware
+            # Use app.middleware_stack — set lazily by Starlette on first dispatch.
+            # build_middleware_stack() creates a NEW instance each call — wrong.
+            stack = app.middleware_stack
+            if stack is None:
+                return
+            node = stack
+            while node is not None:
+                if isinstance(node, RateLimitMiddleware):
+                    node._buckets.clear()
+                    break
+                node = getattr(node, "app", None)
+        except Exception:
+            pass
+
+    _clear()
+    yield
+    _clear()
+
+
+# ---------------------------------------------------------------------
 # Extra safety: pytest session finish hook
 # ---------------------------------------------------------------------
 def pytest_sessionfinish(session, exitstatus):
