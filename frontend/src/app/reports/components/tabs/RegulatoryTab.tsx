@@ -5,6 +5,11 @@ import { T } from "@/lib/design/tokens";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { Download, FileCode2, FileText, FileArchive, FileDown } from "lucide-react";
 
+interface LeiStatus {
+  lei_configured:       boolean;
+  reporting_entity_lei: string;
+}
+
 interface Props {
   token: string;
 }
@@ -84,6 +89,7 @@ export default function RegulatoryTab({ token }: Props) {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [leiStatus, setLeiStatus] = useState<LeiStatus | null>(null);
 
   const fetchRuns = useCallback(async () => {
     setLoading(true);
@@ -117,9 +123,22 @@ export default function RegulatoryTab({ token }: Props) {
     }
   }, [token]);
 
+  const fetchLeiStatus = useCallback(async () => {
+    try {
+      const res = await dashboardFetch("/v1/settings/regulatory", token);
+      if (res.ok) {
+        const d = await res.json() as LeiStatus;
+        setLeiStatus(d);
+      }
+    } catch {
+      // silent — show nothing on failure
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchRuns();
-  }, [fetchRuns]);
+    fetchLeiStatus();
+  }, [fetchRuns, fetchLeiStatus]);
 
   const handleDownload = async (card: FormatCard) => {
     if (!selectedRun) return;
@@ -146,6 +165,54 @@ export default function RegulatoryTab({ token }: Props) {
 
   return (
     <div style={{ padding: 24, background: T.bgDeep, minHeight: "60vh" }}>
+
+      {/* LEI status banner */}
+      {leiStatus !== null && (
+        leiStatus.lei_configured ? (
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 20,
+            padding: "5px 12px",
+            borderRadius: 3,
+            border: `1px solid ${T.pass}40`,
+            background: `color-mix(in srgb, ${T.pass} 8%, transparent)`,
+          }}>
+            <span style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: T.pass }}>
+              ✓ LEI CONFIGURED
+            </span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.secondary }}>
+              {leiStatus.reporting_entity_lei.slice(0, 8)}...
+            </span>
+          </div>
+        ) : (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 20,
+            padding: "10px 14px",
+            borderRadius: 3,
+            border: `1px solid ${T.warn}`,
+            borderLeft: `3px solid ${T.warn}`,
+            background: `color-mix(in srgb, ${T.warn} 8%, transparent)`,
+            fontFamily: T.fontUI,
+            fontSize: 12,
+            color: T.primary,
+          }}>
+            <span style={{ fontFamily: T.fontMono, fontWeight: 700, color: T.warn }}>⚠</span>
+            LEI not configured — exports will use NOT_PROVIDED placeholder. Configure in{" "}
+            <a
+              href="/settings?tab=regulatory"
+              style={{ color: T.accent, textDecoration: "underline", cursor: "pointer" }}
+            >
+              Settings → Regulatory
+            </a>.
+          </div>
+        )
+      )}
+
       {/* Run selector */}
       <div style={{ marginBottom: 24, maxWidth: 420 }}>
         <label

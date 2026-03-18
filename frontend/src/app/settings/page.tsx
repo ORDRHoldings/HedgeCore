@@ -35,6 +35,7 @@ const TAB_TO_PARAM: Partial<Record<SettingsTab, string>> = {
   API_KEY_MGMT:  "api_key_mgmt",
   ORGANISATION:  "organisation",
   AUDIT_TRAIL:   "audit_trail",
+  REGULATORY:    "regulatory",
 };
 import { useSettings } from "./hooks/useSettings";
 import { useGovernedSave } from "./hooks/useGovernedSave";
@@ -55,6 +56,7 @@ import ApiKeyManagementTab from "./components/tabs/ApiKeyManagementTab";
 import OrganisationTab  from "./components/tabs/OrganisationTab";
 import AuditTrailTab    from "./components/tabs/AuditTrailTab";
 import AppearanceTab    from "./components/tabs/AppearanceTab";
+import RegulatorySettingsTab from "./components/tabs/RegulatorySettingsTab";
 
 import { PageShell } from "@/components/layout/PageShell";
 import { Settings } from "lucide-react";
@@ -180,8 +182,9 @@ function SettingsPageInner() {
       case "SECURITY":      return <SecurityTab         token={tok} />;
       case "USERS_ROLES":   return <UsersRolesTab       token={tok} />;
       case "API_KEY_MGMT":  return <ApiKeyManagementTab token={tok} />;
-      case "ORGANISATION":  return <OrganisationTab     token={tok} />;
-      case "AUDIT_TRAIL":   return <AuditTrailTab        token={tok} />;
+      case "ORGANISATION":  return <OrganisationTab          token={tok} />;
+      case "AUDIT_TRAIL":   return <AuditTrailTab             token={tok} />;
+      case "REGULATORY":    return <RegulatorySettingsTab     token={tok} />;
       default:              return null;
     }
   };

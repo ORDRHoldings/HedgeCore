@@ -15,7 +15,8 @@ export type SettingsTab =
   | "USERS_ROLES"
   | "API_KEY_MGMT"
   | "ORGANISATION"
-  | "AUDIT_TRAIL";
+  | "AUDIT_TRAIL"
+  | "REGULATORY";
 
 // ── Data interfaces ────────────────────────────────────────────────────────────
 export interface OrgSettings {
@@ -207,6 +208,7 @@ export const TABS: TabDef[] = [
   // Group: ORGANISATION
   { key: "ORGANISATION",  label: "Organisation",     group: "ORG" },
   { key: "AUDIT_TRAIL",   label: "Audit Trail",      badge: "WORM",        group: "ORG" },
+  { key: "REGULATORY",    label: "Regulatory",       badge: "LEI",         group: "ORG" },
 ];
 
 // URL hash → tab mapping (backward-compat + new tabs)
@@ -222,4 +224,5 @@ export const HASH_MAP: Record<string, SettingsTab> = {
   api_key_mgmt:  "API_KEY_MGMT",
   organisation:  "ORGANISATION",
   audit_trail:   "AUDIT_TRAIL",
+  regulatory:    "REGULATORY",
 };
