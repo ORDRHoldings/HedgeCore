@@ -1,5 +1,25 @@
 # Changelog (AI-maintained)
 
+## 2026-03-18 — Coverage Push Round 3: +534 new tests, 68% → 75.6% (commits 6f264b0..a1737ed)
+
+### Summary
+Crossed 75% coverage target. Added 9 test files covering services and route handlers. 4601 passed, 0 failed, 75.6% coverage.
+
+### Changes
+- **`test_ep_service_coverage.py`** (40 tests): execution_proposal_service — proposal lifecycle, SoD checks, second approval, execute gate
+- **`test_api_keys_service_coverage.py`** (26 tests): create/rotate/revoke/verify API keys
+- **`test_pipeline_db_coverage.py`** (51 tests): proposal/staging/ledger CRUD, converters
+- **`test_rbac_service_coverage.py`** (31 tests): roles, permissions, hierarchy — 100% coverage
+- **`test_snapshot_services_coverage.py`** (78 tests): geo/volatility/options/market snapshot services
+- **`test_positions_coverage.py`** (45 tests): all v1_positions endpoints
+- **`test_policies_coverage.py`** (38 tests): all v1_policies endpoints
+- **`test_pipeline_routes_coverage.py`** (48 tests): staging/ledger/replay pipeline routes
+- **`test_risk_analytics_coverage.py`** (43 tests): VaR, stress, scenario, exposure endpoints
+- **`test_audit_lab_routes_coverage.py`** (51 tests): all 13 audit lab endpoints
+- **`test_export_routes_coverage.py`** (32 tests): export positions/runs/policy/audit
+- **`test_reports_routes_coverage.py`** (43 tests): saved reports CRUD, schedules, regulatory exports
+- **`test_hedge_effectiveness_coverage.py`** (34 tests): dataset upload, assessments, IFRS9, evidence binder
+
 ## 2026-03-18 — Coverage Push Round 2: +143 new tests, 66% → 68% (commits a01ec25..6f264b0)
 
 ### Summary
