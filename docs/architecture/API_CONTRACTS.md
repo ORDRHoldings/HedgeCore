@@ -56,11 +56,30 @@
 | `/v1/proposals/{id}/approve` | POST | JWT | Checker approval (SoD) |
 | `/v1/proposals/{id}/reject` | POST | JWT | Checker rejection |
 
-## Audit
+## Audit (Governance)
 | Endpoint | Method | Auth | Purpose |
 |----------|--------|------|---------|
 | `/v1/audit` | GET | JWT | Query audit events |
 | `/v1/audit/chain/verify` | GET | JWT | Verify hash chain integrity |
+
+## Audit Lab
+| Endpoint | Method | Auth | Purpose |
+|----------|--------|------|---------|
+| `/v1/audit-lab/datasets/upload` | POST | JWT | Upload CSV, create dataset + parse rows |
+| `/v1/audit-lab/datasets` | GET | JWT | List datasets |
+| `/v1/audit-lab/runs` | POST | JWT | Create audit run (engine analysis) |
+| `/v1/audit-lab/runs` | GET | JWT | List audit runs |
+| `/v1/audit-lab/runs/{run_id}` | GET | JWT | Get run detail (stats, findings, transactions) |
+| `/v1/audit-lab/runs/{run_id}/export` | GET | JWT | Export run (board summary / evidence binder / xlsx) |
+| `/v1/audit-lab/runs/{run_id}/transactions` | GET | JWT | Paginated transaction rows for a run |
+| `/v1/audit-lab/runs/{run_id}/exposure-gaps` | GET | JWT | Currency exposure gap analysis |
+| `/v1/audit-lab/compare` | GET | JWT | Compare two runs side-by-side |
+| `/v1/audit-lab/trends` | GET | JWT | Markup trend data across runs |
+| `/v1/audit-lab/audit-trail` | GET | JWT | Immutable activity log for audit lab actions |
+| `/v1/audit-lab/review-queue` | GET | JWT | Transactions flagged for manual review |
+| `/v1/audit-lab/review-queue/{transaction_id}/resolve` | POST | JWT | Resolve a review-queue item |
+| `/v1/audit-lab/schedules` | POST | JWT | Create recurring audit schedule |
+| `/v1/audit-lab/schedules` | GET | JWT | List audit schedules |
 
 ## Admin
 | Endpoint | Method | Auth | Purpose |
