@@ -4,14 +4,14 @@
  * Audit Lab — run detail: summary cards + findings table + evidence hash rail.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import dynamic from "next/dynamic";
 
 import { PageShell } from "@/components/layout/PageShell";
-import { Microscope } from "lucide-react";
+import { Microscope, Lock } from "lucide-react";
 
 const MarkupByMonthChart = dynamic(() => import("@/components/audit-lab/MarkupByMonthChart"), { ssr: false });
 const RateScatterChart = dynamic(() => import("@/components/audit-lab/RateScatterChart"), { ssr: false });
@@ -119,6 +119,7 @@ export default function AuditRunDetailPage() {
   const [activeTab, setActiveTab] = useState<"findings" | "pairs" | "counterparties" | "transactions" | "evidence">("findings");
   const [transactions, setTransactions] = useState<Array<Record<string, unknown>>>([]);
   const [txnLoaded, setTxnLoaded] = useState(false);
+  const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !run_id) return;
@@ -211,54 +212,85 @@ export default function AuditRunDetailPage() {
             <h1 style={{ fontFamily: S.fontMono, fontSize: 18, fontWeight: 700, color: S.primary, margin: 0 }}>
               Audit Analysis Report
             </h1>
-            <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary, marginTop: 4 }}>
-              v{run.methodology_version} · {new Date(run.created_at).toLocaleString()} · {run.status}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
+              <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
+                v{run.methodology_version} · {new Date(run.created_at).toLocaleString()}
+              </span>
+              <span style={{
+                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                color: S.green, background: `color-mix(in srgb, ${S.green} 8%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${S.green} 20%, transparent)`,
+                padding: "2px 8px", borderRadius: 2,
+              }}>
+                ✓ {run.status}
+              </span>
+              {run.run_hash && (
+                <span
+                  title={`SHA-256 Run Hash: ${run.run_hash}`}
+                  style={{
+                    fontFamily: S.fontMono, fontSize: 11, color: S.tertiary,
+                    background: S.bgSub, border: `1px solid ${S.soft}`,
+                    padding: "2px 8px", borderRadius: 2, cursor: "help",
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                  }}
+                >
+                  <Lock size={10} style={{ color: S.tertiary }} />
+                  {run.run_hash.slice(0, 12)}…
+                </span>
+              )}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              style={{
-                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-                color: S.primary, background: S.bgPanel,
-                border: `1px solid ${S.rim}`, padding: "8px 16px", cursor: "pointer", borderRadius: 2,
-              }}
-            >
-              {exporting ? "EXPORTING…" : "↓ EVIDENCE BINDER"}
-            </button>
-            <button
-              onClick={handleBoardSummary}
-              disabled={exportingBoard}
-              style={{
-                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-                color: S.primary, background: S.bgPanel,
-                border: `1px solid ${S.rim}`, padding: "8px 16px", cursor: "pointer", borderRadius: 2,
-              }}
-            >
-              {exportingBoard ? "EXPORTING…" : "↓ BOARD SUMMARY"}
-            </button>
-            <button
-              onClick={handleXlsxExport}
-              disabled={exportingXlsx}
-              style={{
-                fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
-                color: S.primary, background: S.bgPanel,
-                border: `1px solid ${S.rim}`, padding: "8px 16px", cursor: "pointer", borderRadius: 2,
-              }}
-            >
-              {exportingXlsx ? "EXPORTING…" : "↓ XLSX DATA"}
-            </button>
-          </div>
+<div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+  {/* Board Summary — primary CTA */}
+  <button
+    onClick={handleBoardSummary}
+    disabled={exportingBoard}
+    style={{
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+      color: S.bgPanel, background: exportingBoard ? S.tertiary : S.cyan,
+      border: "none", padding: "9px 18px", cursor: exportingBoard ? "not-allowed" : "pointer",
+      borderRadius: 2,
+    }}
+  >
+    {exportingBoard ? "EXPORTING…" : "↓ BOARD SUMMARY"}
+  </button>
+  {/* Evidence Binder — secondary */}
+  <button
+    onClick={handleExport}
+    disabled={exporting}
+    style={{
+      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+      color: S.primary, background: "transparent",
+      border: `1px solid ${S.rim}`, padding: "9px 18px", cursor: exporting ? "not-allowed" : "pointer",
+      borderRadius: 2,
+    }}
+  >
+    {exporting ? "EXPORTING…" : "↓ EVIDENCE BINDER"}
+  </button>
+  {/* XLSX — tertiary */}
+  <button
+    onClick={handleXlsxExport}
+    disabled={exportingXlsx}
+    style={{
+      fontFamily: S.fontMono, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em",
+      color: S.tertiary, background: "transparent",
+      border: "none", padding: "9px 12px", cursor: exportingXlsx ? "not-allowed" : "pointer",
+      textDecoration: "underline",
+    }}
+  >
+    {exportingXlsx ? "…" : "↓ XLSX"}
+  </button>
+</div>
         </div>
       </div>
 
       {/* KPI cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
-        <KpiCard label="Total Markup Cost" value={fmt(s.total_markup_usd)} color={s.total_markup_usd > 0 ? S.red : S.primary} />
-        <KpiCard label="Explicit Fees" value={fmt(s.total_fees_usd)} sub={`Confidence: ${s.fee_confidence}`} />
-        <KpiCard label="Rate Variance" value={fmt(s.total_rate_variance_usd ?? s.total_unhedged_impact_usd)} sub="Reference baseline — analytical what-if" color={S.amber} />
-        <KpiCard label="Total Quantified Cost" value={fmt(s.total_loss_usd)} color={S.red} sub={`Data quality: ${s.data_quality_score?.toFixed(0)}%`} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
+        <KpiCard label="Total Markup Cost"     value={fmt(s.total_markup_usd)}                                        color={s.total_markup_usd > 0 ? S.red : S.primary} />
+        <KpiCard label="Explicit Fees"         value={fmt(s.total_fees_usd)}                                          sub={`Confidence: ${s.fee_confidence}`} />
+        <KpiCard label="Rate Variance"         value={fmt(s.total_rate_variance_usd ?? s.total_unhedged_impact_usd)}  sub="vs. benchmark mid-rate" color={S.amber} />
+        <KpiCard label="Total Quantified Cost" value={fmt(s.total_loss_usd)}                                          color={S.red} />
+        <KpiCard label="Data Quality"          value={`${s.data_quality_score != null ? s.data_quality_score.toFixed(0) : "—"}%`} color={s.data_quality_score != null && s.data_quality_score >= 85 ? S.green : s.data_quality_score != null && s.data_quality_score >= 65 ? S.amber : S.red} sub={s.markup_rejections_count > 0 ? `${s.markup_rejections_count} rows flagged` : "All rows clean"} />
       </div>
 
       {/* Markup by month chart */}
@@ -276,7 +308,7 @@ export default function AuditRunDetailPage() {
             pairs: "By Pair",
             counterparties: "By Counterparty",
             transactions: "Transactions",
-            evidence: "Evidence Rail",
+            evidence: "Verification",
           };
           return (
             <button
@@ -302,27 +334,53 @@ export default function AuditRunDetailPage() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: S.bgSub }}>
-                {["Type", "Pair", "Severity", "Amount (USD)", "Narrative"].map(h => (
-                  <th key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>{h}</th>
+                {(["Type", "Pair", "Severity", "Amount (USD)", "Narrative", "expand"] as const).map(h => (
+                  <th key={h} style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", color: S.tertiary, textAlign: "left", padding: "10px 16px", borderBottom: `1px solid ${S.soft}`, textTransform: "uppercase" }}>
+                    {h === "expand" ? "" : h}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {run.findings.map(f => (
-                <tr key={f.id} style={{ borderBottom: `1px solid ${S.soft}` }}>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>{f.finding_type}</td>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{f.currency_pair ?? "—"}</td>
-                  <td style={{ padding: "10px 16px" }}>
-                    <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: SevColor(f.severity), background: `color-mix(in srgb, ${SevColor(f.severity)} 10%, transparent)`, padding: "2px 8px", borderRadius: 2 }}>
-                      {f.severity}
-                    </span>
-                  </td>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: f.amount_usd > 0 ? S.red : S.green }}>{fmt(f.amount_usd)}</td>
-                  <td style={{ padding: "10px 16px", fontFamily: S.fontUI, fontSize: 12, color: S.secondary, maxWidth: 400 }}>{f.narrative}</td>
-                </tr>
+                <React.Fragment key={f.id}>
+                  <tr
+                    onClick={() => setExpandedFinding(expandedFinding === f.id ? null : f.id)}
+                    style={{ borderBottom: expandedFinding === f.id ? "none" : `1px solid ${S.soft}`, cursor: "pointer" }}
+                    onMouseEnter={e => ((e.currentTarget as HTMLTableRowElement).style.background = S.bgSub)}
+                    onMouseLeave={e => ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")}
+                  >
+                    <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.cyan }}>{f.finding_type}</td>
+                    <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{f.currency_pair ?? "—"}</td>
+                    <td style={{ padding: "10px 16px" }}>
+                      <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: SevColor(f.severity), background: `color-mix(in srgb, ${SevColor(f.severity)} 10%, transparent)`, padding: "2px 8px", borderRadius: 2, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {f.severity === "HIGH" ? "▲" : f.severity === "MEDIUM" ? "●" : "▼"} {f.severity}
+                      </span>
+                    </td>
+                    <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: f.amount_usd > 0 ? S.red : S.green }}>{fmt(f.amount_usd)}</td>
+                    <td style={{ padding: "10px 16px", fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: expandedFinding === f.id ? "normal" : "nowrap", display: "block", maxWidth: 340 }}>
+                        {f.narrative}
+                      </span>
+                    </td>
+                    <td style={{ padding: "10px 16px", fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, whiteSpace: "nowrap" }}>
+                      {expandedFinding === f.id ? "▲ collapse" : "▼ expand"}
+                    </td>
+                  </tr>
+                  {expandedFinding === f.id && (
+                    <tr style={{ borderBottom: `1px solid ${S.soft}`, background: S.bgSub }}>
+                      <td colSpan={6} style={{ padding: "12px 16px 16px 48px", fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.7 }}>
+                        {f.narrative}
+                        <div style={{ marginTop: 8, fontFamily: S.fontMono, fontSize: 11, color: S.tertiary }}>
+                          FINDING ID: {f.id} · HASH: {f.finding_hash?.slice(0, 20) ?? "—"}…
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
               {run.findings.length === 0 && (
-                <tr><td colSpan={5} style={{ padding: "24px 16px", fontFamily: S.fontUI, fontSize: 13, color: S.tertiary, textAlign: "center" }}>No findings.</td></tr>
+                <tr><td colSpan={6} style={{ padding: "24px 16px", fontFamily: S.fontUI, fontSize: 13, color: S.tertiary, textAlign: "center" }}>No findings.</td></tr>
               )}
             </tbody>
           </table>
@@ -418,8 +476,16 @@ export default function AuditRunDetailPage() {
         {/* Evidence rail tab */}
         {activeTab === "evidence" && (
           <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ background: `color-mix(in srgb, ${S.green} 5%, transparent)`, border: `1px solid color-mix(in srgb, ${S.green} 20%, transparent)`, padding: "12px 16px", marginBottom: 4 }}>
+              <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.green, marginBottom: 4 }}>
+                ✓ TAMPER-EVIDENT AUDIT CHAIN
+              </div>
+              <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, lineHeight: 1.65 }}>
+                Every analysis is cryptographically fingerprinted using SHA-256. These hashes prove this result was never modified after it was computed. Share them with your auditor, legal team, or board.
+              </div>
+            </div>
             <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", color: S.tertiary, textTransform: "uppercase", marginBottom: 4 }}>
-              SHA-256 Evidence Chain
+              SHA-256 FINGERPRINTS
             </div>
             {[
               { label: "RUN HASH", value: run.run_hash, color: S.cyan },
