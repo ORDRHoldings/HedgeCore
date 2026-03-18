@@ -1,5 +1,15 @@
 # Changelog (AI-maintained)
 
+## 2026-03-18 — Coverage Push Round 2: +143 new tests, 66% → 68% (commits a01ec25..6f264b0)
+
+### Summary
+Added 3 new test files covering pipeline service, execution proposals routes, and v1_calculate routes. 4041 passed, 0 failed, 68% coverage.
+
+### Changes
+- **`tests/test_pipeline_service_coverage.py`** (45 tests): sandbox_calculate, proposal creation/staging/ledger ops
+- **`tests/test_execution_proposals_coverage.py`** (62 tests): all proposal endpoints, auth rejection, approve/reject flows, MFA gate, SoD checks
+- **`tests/test_calculate_coverage.py`** (36 tests): calculate endpoint, input validation, RBAC, rate limit, schema gate, market snapshot path, list/get runs
+
 ## 2026-03-18 — Coverage Push: +243 new tests, 64% → 66% (commits 4eecf5d..a01ec25)
 
 ### Summary
