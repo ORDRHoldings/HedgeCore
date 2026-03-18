@@ -1,5 +1,45 @@
 # Changelog (AI-maintained)
 
+## 2026-03-18 — Audit Lab UX Overhaul (6 commits, pushed to master)
+
+### Summary
+Complete UX overhaul of the Audit Lab section — rebuilt as a trust-building first-impression surface for prospective clients. Six chunks delivered via subagent-driven development with two-stage spec + quality review per chunk.
+
+### Changes
+- **`frontend/src/lib/fixtures/audit-lab-demo.ts`**: Enriched `DEMO_DATASET` — markupByMonth (3 months), 11 transactions with `spread_classification`, 3 findings, 3 trustSignals; `getDemoCounterpartyStats()` helper
+- **`frontend/src/app/audit-lab/demo/page.tsx`**: Rebuilt from 80→230 lines — six-act narrative: hero h1, 4-cell KPI strip, MarkupByMonthChart (ECharts, SSR-safe dynamic()), CounterpartyMatrix callout, findings with SevBadge, trust rail, CTA → signup/login, disclaimer
+- **`frontend/src/app/audit-lab/upload/page.tsx`**: Added `downloadSampleCsv()`, `lastYearPeriod()` helpers; sample CSV download button; renamed progress steps; hidden UUID; benchmark tooltip; enriched upload success banner
+- **`frontend/src/app/audit-lab/page.tsx`**: Removed BETA badge; datasets empty state with guided "Upload" CTA + "See a sample result" link; run list shows source filename + period + row count from `datasetMap`
+- **`frontend/src/app/audit-lab/runs/[run_id]/page.tsx`**: 5-KPI grid, export hierarchy (Board Summary primary / Evidence Binder secondary / XLSX tertiary), SHA-256 hash badge (12-char preview + full title), expandable findings rows with `React.Fragment key`, Verification tab with tamper-evident context block
+- **`frontend/src/components/layout/AppSidebar.tsx`**: "Activity Log" label (was "Audit Trail") to fix naming collision with governance `/audit-trail`
+- **`frontend/src/app/audit-lab/audit-trail/page.tsx`**: Title/heading renamed to "Activity Log"; breadcrumb updated
+
+### Validation
+- `npx tsc --noEmit` — EXIT:0 (clean)
+- `npx next build` — all pages compiled successfully
+- Pushed: `bd39911..dfbc180` → origin/master (7 commits including frontend-v2 deletion)
+
+## 2026-03-15 — Simulation Lab Live Data Wiring
+
+### Summary
+Fixed the Simulation Lab (`/sandbox`) to use live market data from the app's actual data sources instead of static BIS/EOD hardcoded values.
+
+### Changes (commit bd39911)
+- **`frontend/src/app/sandbox/page.tsx`**:
+  - Fixed critical GET→POST bug in `useLiveSpot`: was calling `GET /api/market-autofill` (405 always) — changed to `POST` with JSON body
+  - Extracted `fetchLiveMarket(currency, tradeDates)` helper: calls `POST /api/market-autofill` returning full `LiveMarketData` (spot + forward_points + provider_metadata)
+  - `handlePairChange`: now async, injects live market snapshot into `CalculateRequest` before dispatching to engine
+  - Auto-run effect: fetches live market before initial calculation, falls back to demo fixtures only if API unreachable
+  - `liveRefreshed` effect: silently re-runs calculation when live data arrives after render if result used fallback data
+  - Compliance badges: IFRS 9 now tied to actual `coverageRatio` (80–125%), others show grey until calculation runs, MiFID II RTS 25 reflects actual live data status
+
+### Data Flow (after fix)
+`POST /api/market-autofill` → IBKR `GET /v1/market-data/live/fx-rates` (primary) → exchangerate-api.com (fallback) → BIS demo (last resort)
+Forwards: Finnhub CME futures (primary) → carry-differential estimate (fallback)
+Injects: `market.spot_rate`, `market.forward_points_by_month`, `market.provider_metadata` into `CalculateRequest` before `POST /sandbox/calculate`
+
+---
+
 ## 2026-03-15 — Admin Hub (8-Tab Unified Admin Section)
 
 ### Summary
