@@ -4,7 +4,7 @@
  * Audit Lab — list of uploaded datasets and past runs.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -41,6 +41,7 @@ interface Dataset {
 
 interface DecisionRun {
   run_id: string;
+  dataset_id: string;
   run_hash: string;
   methodology_version: string;
   status: string;
@@ -74,6 +75,10 @@ export default function AuditLabPage() {
   const [runs, setRuns] = useState<DecisionRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const datasetMap = useMemo(
+    () => Object.fromEntries(datasets.map(ds => [ds.id, ds])),
+    [datasets],
+  );
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -107,9 +112,8 @@ export default function AuditLabPage() {
       {/* Page header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+          <div style={{ marginBottom: 6 }}>
             <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: S.tertiary }}>AUDIT LAB</span>
-            <Badge label="BETA" color={S.amber} />
           </div>
           <h1 style={{ fontFamily: S.fontMono, fontSize: 22, fontWeight: 700, color: S.primary, margin: 0, letterSpacing: "-0.02em" }}>
             FX Transaction Audit
@@ -143,9 +147,28 @@ export default function AuditLabPage() {
           <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "20px 24px" }}>
             <SectionHeader label="Uploaded Datasets" />
             {datasets.length === 0 ? (
-              <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.tertiary, padding: "24px 0", textAlign: "center" }}>
-                No datasets uploaded yet.{" "}
-                <Link href="/audit-lab/upload" style={{ color: S.cyan, textDecoration: "none" }}>Upload one →</Link>
+              <div style={{ padding: "28px 0", textAlign: "center" }}>
+                <div style={{ fontFamily: S.fontMono, fontSize: 13, fontWeight: 700, color: S.primary, marginBottom: 8 }}>
+                  No datasets yet
+                </div>
+                <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.tertiary, marginBottom: 16, lineHeight: 1.6, maxWidth: 280, margin: "0 auto 16px" }}>
+                  Upload a CSV or XLSX of your FX transactions to start your first audit. A sample file is available on the upload page.
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
+                  <Link
+                    href="/audit-lab/upload"
+                    style={{
+                      fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em",
+                      color: S.bgPanel, background: S.cyan, padding: "9px 20px",
+                      textDecoration: "none", borderRadius: 2, display: "inline-block",
+                    }}
+                  >
+                    + UPLOAD YOUR DATA
+                  </Link>
+                  <Link href="/audit-lab/demo" style={{ fontFamily: S.fontUI, fontSize: 12, color: S.cyan, textDecoration: "none" }}>
+                    See a sample result first →
+                  </Link>
+                </div>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -213,12 +236,20 @@ export default function AuditLabPage() {
                     onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = S.soft}
                     >
                       <div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.primary, marginBottom: 3, fontWeight: 600 }}>
-                          {run.run_id.slice(0, 16)}…
-                        </div>
-                        <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
-                          v{run.methodology_version} · {new Date(run.created_at).toLocaleString()}
-                        </div>
+                        {(() => {
+                          const ds = datasetMap[run.dataset_id ?? ""];
+                          return (
+                            <>
+                              <div style={{ fontFamily: S.fontUI, fontSize: 13, fontWeight: 600, color: S.primary, marginBottom: 3 }}>
+                                {ds ? ds.source_filename : `Run ${run.run_id.slice(0, 8)}…`}
+                              </div>
+                              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
+                                {ds ? `${ds.period_start} → ${ds.period_end} · ${ds.row_count} rows` : `v${run.methodology_version}`}
+                                {" · "}{new Date(run.created_at).toLocaleDateString()}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                       <Badge label={run.status} color={run.status === "COMPLETED" ? S.green : S.amber} />
                     </div>
