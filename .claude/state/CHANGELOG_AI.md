@@ -1,5 +1,19 @@
 # Changelog (AI-maintained)
 
+## 2026-03-18 — Test Suite Hardening (commit f083b1d, pushed to master)
+
+### Summary
+Resolved 22 cross-test contamination failures. Test baseline: 3658 passed, 0 failed, 150 skipped (PG-only), 64% coverage. Coverage risk mitigated.
+
+### Changes
+- **`backend/tests/conftest.py`**: Added `reset_rate_limiter_state` autouse fixture — traverses `app.middleware_stack` to find `RateLimitMiddleware` instance and clears `_buckets` before/after each test. Fixes spurious 429 contamination across test files.
+- **`backend/tests/test_report_studio_governance.py`**: Fixed 9 hardcoded `FXDemo` absolute paths → `TreasuryFX`. Tests had been copied from sibling project without updating paths, causing `FileNotFoundError` on all 34 governance assertions.
+- **`backend/tests/test_security_config.py`**: Fixed `parents[3]` → `parents[2]` for repo root resolution. `.gitignore` lives at `TreasuryFX/` (2 levels up from tests/), not `HedgeCalc/` (3 levels).
+
+### Validation
+- Full suite: `3658 passed, 0 failed, 150 skipped in 22s`
+- Coverage: 64% (up from 59%, risk ID 3 mitigated)
+
 ## 2026-03-18 — Audit Lab UX Overhaul (6 commits, pushed to master)
 
 ### Summary
