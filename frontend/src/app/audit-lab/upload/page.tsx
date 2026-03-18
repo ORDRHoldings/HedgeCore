@@ -61,6 +61,32 @@ function Input({ value, onChange, type = "text", placeholder }: {
 
 type Phase = "upload" | "run" | "done";
 
+/** Returns { start: "YYYY-01-01", end: "YYYY-12-31" } for the previous calendar year */
+function lastYearPeriod() {
+  const y = new Date().getFullYear() - 1;
+  return { start: `${y}-01-01`, end: `${y}-12-31` };
+}
+
+function downloadSampleCsv() {
+  const rows = [
+    "trade_date,currency_sold,currency_bought,amount_sold,amount_bought,counterparty,reference",
+    "2025-10-03,EUR,USD,800000,872400,HSBC,TXN-001",
+    "2025-10-05,EUR,USD,2000000,2172000,Deutsche Bank,TXN-002",
+    "2025-10-08,GBP,USD,500000,631500,HSBC,TXN-003",
+    "2025-11-02,EUR,USD,600000,653820,HSBC,TXN-004",
+    "2025-11-10,GBP,USD,800000,1017600,Deutsche Bank,TXN-005",
+    "2025-12-04,EUR,USD,1500000,1629750,Deutsche Bank,TXN-006",
+    "2025-12-15,EUR,USD,900000,978300,Deutsche Bank,TXN-007",
+  ].join("\n");
+  const blob = new Blob([rows], { type: "text/csv" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = "sample-fx-transactions.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AuditLabUploadPage() {
   return (
     <Suspense>
@@ -77,8 +103,9 @@ function AuditLabUploadPageInner() {
 
   const [phase, setPhase] = useState<Phase>(existingDatasetId ? "run" : "upload");
   const [file, setFile] = useState<File | null>(null);
-  const [periodStart, setPeriodStart] = useState("2025-01-01");
-  const [periodEnd, setPeriodEnd] = useState("2025-12-31");
+  const defaultPeriod = lastYearPeriod();
+  const [periodStart, setPeriodStart] = useState(defaultPeriod.start);
+  const [periodEnd,   setPeriodEnd]   = useState(defaultPeriod.end);
   const [benchmarkSource, setBenchmarkSource] = useState<"market_snapshot" | "budget_rate">("market_snapshot");
   const [budgetRate, setBudgetRate] = useState("");
   const [datasetId, setDatasetId] = useState<string>(existingDatasetId ?? "");
@@ -195,9 +222,22 @@ function AuditLabUploadPageInner() {
         <h1 style={{ fontFamily: S.fontMono, fontSize: 20, fontWeight: 700, color: S.primary, margin: 0 }}>
           Upload FX Transaction Dataset
         </h1>
-        <p style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, marginTop: 6 }}>
-          CSV, XLSX, or PDF with columns: trade_date, currency_sold, currency_bought, amount_sold, amount_bought. Aliases supported.
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 6, flexWrap: "wrap" }}>
+          <p style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, margin: 0 }}>
+            CSV, XLSX, or PDF with columns: trade_date, currency_sold, currency_bought, amount_sold, amount_bought. Aliases supported.
+          </p>
+          <button
+            onClick={downloadSampleCsv}
+            style={{
+              fontFamily: S.fontMono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+              color: S.cyan, background: "transparent", flexShrink: 0,
+              border: `1px solid color-mix(in srgb, var(--accent-cyan) 30%, transparent)`,
+              padding: "4px 12px", cursor: "pointer", borderRadius: 2, whiteSpace: "nowrap",
+            }}
+          >
+            ↓ SAMPLE CSV
+          </button>
+        </div>
       </div>
 
       {/* Progress steps */}
@@ -212,7 +252,7 @@ function AuditLabUploadPageInner() {
               color: phase === p ? S.bgPanel : (["upload","run","done"].indexOf(phase) > i ? S.bgPanel : S.tertiary),
             }}>{i + 1}</div>
             <span style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: phase === p ? 700 : 400, color: phase === p ? S.primary : S.tertiary, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              {p === "upload" ? "Upload CSV" : p === "run" ? "Configure & Run" : "Done"}
+              {p === "upload" ? "Upload File" : p === "run" ? "Configure" : "View Results"}
             </span>
             {i < 2 && <span style={{ color: S.soft, fontSize: 16 }}>›</span>}
           </div>
@@ -295,7 +335,7 @@ function AuditLabUploadPageInner() {
                 borderRadius: 2, alignSelf: "flex-start",
               }}
             >
-              {uploading ? "UPLOADING…" : "UPLOAD & PARSE"}
+              {uploading ? "UPLOADING…" : "UPLOAD & CONTINUE →"}
             </button>
           </div>
         )}
@@ -307,17 +347,20 @@ function AuditLabUploadPageInner() {
               <div style={{ background: `color-mix(in srgb, ${S.green} 6%, transparent)`, border: `1px solid color-mix(in srgb, ${S.green} 25%, transparent)`, padding: "12px 16px" }}>
                 <div style={{ fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, color: S.green, marginBottom: 4 }}>DATASET UPLOADED SUCCESSFULLY</div>
                 <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.secondary }}>
-                  {(uploadResult as Record<string,number>).row_count} rows parsed · {((uploadResult as Record<string,string[]>).currency_pairs_detected ?? []).join(", ")}
+                  {(uploadResult as Record<string,number>).row_count > 0
+                    ? `${(uploadResult as Record<string,number>).row_count} rows parsed`
+                    : "Dataset ready"
+                  }
+                  {((uploadResult as Record<string,string[]>).currency_pairs_detected ?? []).length > 0
+                    ? ` · ${((uploadResult as Record<string,string[]>).currency_pairs_detected ?? []).join(", ")}`
+                    : ""
+                  }
+                  {(uploadResult as Record<string,boolean>)._reused && " · Using existing dataset"}
                 </div>
               </div>
             )}
 
-            <div>
-              <Label>Dataset ID</Label>
-              <div style={{ fontFamily: S.fontMono, fontSize: 12, color: S.cyan, padding: "8px 12px", background: S.bgSub, border: `1px solid ${S.soft}` }}>
-                {datasetId}
-              </div>
-            </div>
+            {/* datasetId kept in state for the API call — not shown to user */}
 
             <div>
               <Label>Benchmark Source</Label>
@@ -338,10 +381,16 @@ function AuditLabUploadPageInner() {
                   </button>
                 ))}
               </div>
-              <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 6 }}>
+              <div style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, marginTop: 6, lineHeight: 1.6 }}>
                 {benchmarkSource === "market_snapshot"
-                  ? "Uses stored market snapshots as the benchmark mid-rate for markup calculation."
-                  : "Uses a fixed budget rate as the reference baseline for unhedged impact."}
+                  ? (
+                      <>
+                        <strong style={{ color: S.secondary }}>Recommended for most audits.</strong>{" "}
+                        Compares each trade rate against the interbank mid-rate at time of trade. Best for quantifying bank markup cost.
+                      </>
+                    )
+                  : "Compares your trade rates against a fixed rate you set. Best for FX budget variance analysis. You will be asked to enter the rate below."
+                }
               </div>
             </div>
 
