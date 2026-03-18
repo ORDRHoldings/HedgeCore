@@ -265,3 +265,7 @@ router.include_router(v1_market_data_live_router)
 # WebSocket: real-time market streaming for ORDR Market charting app (owns /ws/market)
 from app.api.routes.v1_ws_market import router as v1_ws_market_router
 router.include_router(v1_ws_market_router)
+
+# Regulatory LEI & framework settings (owns /v1/settings/regulatory)
+from app.api.routes.v1_regulatory_settings import router as v1_regulatory_settings_router
+router.include_router(v1_regulatory_settings_router)

@@ -48,6 +48,7 @@ from app.core.db import get_async_session
 from app.core.security import get_current_user
 from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 from app.models.calculation_run import CalculationRun
+from app.models.organization import Company
 from app.models.position import Position
 from app.models.report_schedule import ReportSchedule
 from app.models.saved_report import SavedReport
@@ -736,18 +737,37 @@ def _positions_to_dicts(positions: list[Position]) -> list[dict]:
     ]
 
 
-def _build_reg_run_data(
-    run: CalculationRun, current_user: User, run_id: str,
+async def _build_reg_run_data(
+    run: CalculationRun,
+    current_user: User,
+    run_id: str,
+    session: AsyncSession,
 ) -> dict:
-    """Build run_data dict for regulatory export functions."""
+    """Build run_data dict for regulatory export functions.
+
+    Reads LEI and framework settings from company.settings["regulatory"].
+    Falls back to "NOT_PROVIDED" when no regulatory settings exist yet.
+    """
+    reg: dict = {}
+    try:
+        company = await session.get(Company, current_user.company_id)
+        if company is not None:
+            settings = company.settings or {}
+            reg = settings.get("regulatory", {})
+    except Exception:
+        logger.warning(
+            "RPT-09: failed to load regulatory settings for company=%s",
+            current_user.company_id,
+        )
+
     return {
         "run_id": run_id,
         "trade_date": run.created_at.strftime("%Y-%m-%d") if run.created_at else "",
         "value_date": "",
-        "reporting_entity_lei": "NOT_PROVIDED",
-        "counterparty_lei": "NOT_PROVIDED",
-        "executing_entity_lei": "NOT_PROVIDED",
-        "venue": "XOFF",
+        "reporting_entity_lei": reg.get("reporting_entity_lei") or "NOT_PROVIDED",
+        "counterparty_lei": reg.get("counterparty_lei") or "NOT_PROVIDED",
+        "executing_entity_lei": reg.get("executing_entity_lei") or "NOT_PROVIDED",
+        "venue": reg.get("venue") or "XOFF",
         "decision_maker": current_user.email,
         "generated_by": current_user.email,
         "report_date": datetime.now(UTC).strftime("%Y-%m-%d"),
@@ -778,7 +798,7 @@ async def download_emir(
 
     hedge_plan = (run.run_envelope or {}).get("hedge_plan") or {}
     buckets: list[dict] = hedge_plan.get("buckets", [])
-    run_data = _build_reg_run_data(run, current_user, run_id)
+    run_data = await _build_reg_run_data(run, current_user, run_id, session)
 
     content = export_emir_xml(
         run_data, buckets, _positions_to_dicts(positions)
@@ -819,7 +839,7 @@ async def download_mifid(
 
     hedge_plan = (run.run_envelope or {}).get("hedge_plan") or {}
     buckets: list[dict] = hedge_plan.get("buckets", [])
-    run_data = _build_reg_run_data(run, current_user, run_id)
+    run_data = await _build_reg_run_data(run, current_user, run_id, session)
 
     content = export_mifid_xml(
         run_data, buckets, _positions_to_dicts(positions)
@@ -860,7 +880,7 @@ async def download_dodd_frank(
 
     hedge_plan = (run.run_envelope or {}).get("hedge_plan") or {}
     buckets: list[dict] = hedge_plan.get("buckets", [])
-    run_data = _build_reg_run_data(run, current_user, run_id)
+    run_data = await _build_reg_run_data(run, current_user, run_id, session)
 
     # Build hash chain from audit events
     from sqlalchemy import select as sa_select

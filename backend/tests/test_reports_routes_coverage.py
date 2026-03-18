@@ -1125,6 +1125,25 @@ class TestDownloadBankPdf:
 # GET /{run_id}/emir
 # ---------------------------------------------------------------------------
 
+def _make_reg_db_get(calc_run):
+    """Return a side_effect for db.get that distinguishes CalculationRun vs Company."""
+    from app.models.organization import Company as CompanyModel
+    from app.models.calculation_run import CalculationRun as CalcRunModel
+
+    company_mock = MagicMock()
+    company_mock.settings = {}
+
+    async def _get(model_class, pk):
+        name = model_class.__name__ if hasattr(model_class, "__name__") else str(model_class)
+        if "Company" in name:
+            return company_mock
+        if "CalculationRun" in name:
+            return calc_run
+        return None
+
+    return _get
+
+
 class TestDownloadEmir:
     @pytest.mark.asyncio
     async def test_emir_success(self):
@@ -1132,7 +1151,7 @@ class TestDownloadEmir:
         calc_run = _make_calc_run()
 
         db = AsyncMock()
-        db.get = AsyncMock(return_value=calc_run)
+        db.get = AsyncMock(side_effect=_make_reg_db_get(calc_run))
 
         pos_result = MagicMock()
         pos_scalars = MagicMock()
@@ -1186,7 +1205,7 @@ class TestDownloadMifid:
         calc_run = _make_calc_run()
 
         db = AsyncMock()
-        db.get = AsyncMock(return_value=calc_run)
+        db.get = AsyncMock(side_effect=_make_reg_db_get(calc_run))
 
         pos_result = MagicMock()
         pos_scalars = MagicMock()
@@ -1240,7 +1259,7 @@ class TestDownloadDoddFrank:
         calc_run = _make_calc_run()
 
         db = AsyncMock()
-        db.get = AsyncMock(return_value=calc_run)
+        db.get = AsyncMock(side_effect=_make_reg_db_get(calc_run))
 
         pos_result = MagicMock()
         pos_scalars = MagicMock()
