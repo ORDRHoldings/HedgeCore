@@ -141,7 +141,7 @@ export default function AuditTrailPage() {
   }, [events, typeFilter, search]);
 
   return (
-    <PageShell icon={Microscope} title="Audit Trail" breadcrumb={["Audit Lab", "Audit Trail"]}>
+    <PageShell icon={Microscope} title="Activity Log" breadcrumb={["Audit Lab", "Activity Log"]}>
       <div style={{ fontFamily: S.fontUI }}>
       {/* Breadcrumb + header */}
       <div style={{ marginBottom: 24 }}>
@@ -151,13 +151,13 @@ export default function AuditTrailPage() {
         }}>
           <a href="/audit-lab" style={{ color: S.cyan, textDecoration: "none" }}>AUDIT LAB</a>
           {" / "}
-          <span>AUDIT TRAIL</span>
+          <span>ACTIVITY LOG</span>
         </div>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div>
             <h1 style={{ fontFamily: S.fontMono, fontSize: 18, fontWeight: 700, color: S.primary, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>
               <ShieldCheck size={20} style={{ color: S.cyan }} />
-              Audit Trail
+              Activity Log
             </h1>
             <p style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary, marginTop: 6 }}>
               Immutable event log. All entries are hash-chained and tamper-evident.
