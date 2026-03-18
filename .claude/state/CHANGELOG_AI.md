@@ -1,5 +1,14 @@
 # Changelog (AI-maintained)
 
+## 2026-03-18 — Market Data TwelveData Fallback: Risk ID-2 mitigated (commit 905ef79)
+
+### Summary
+Backend live market data routes now fall back to TwelveData when IBKR is disabled (production). Previously all 5 endpoints returned 503 in production. Now: IBKR (primary) → TwelveData (institutional fallback) → 503. Tests: 4602 passed, 0 failed.
+
+### Changes
+- **`backend/app/api/routes/v1_market_data_live.py`**: Added `_get_td_provider()` lazy-init singleton. All data endpoints (fx-rates, equity-quotes, quote, fx-change) now try IBKR first, fall back to TwelveData if IBKR disabled or fails. `source` field in response reflects active provider (`"ibkr"` vs `"twelvedata"`).
+- **`backend/tests/test_market_data_live.py`**: Updated all test patches to use `_get_ibkr_provider` (was `_get_provider`). Added `_td_provider` reset in fixture. Added `test_twelvedata_fallback_when_ibkr_disabled` test. Updated behavior tests: provider fail → 503 (was 502) since fallback chain exhausted. 26 tests, all passing.
+
 ## 2026-03-18 — Regulatory Reporting Fix: Risk ID-5 mitigated (commits c955f0e..b85a6c6)
 
 ### Summary
