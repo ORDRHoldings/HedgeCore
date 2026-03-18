@@ -1,5 +1,19 @@
 # Changelog (AI-maintained)
 
+## 2026-03-18 — Regulatory Reporting Fix: Risk ID-5 mitigated (commits c955f0e..b85a6c6)
+
+### Summary
+EMIR/MiFID II/Dodd-Frank exports now read real LEI data from company settings instead of hardcoded "NOT_PROVIDED". Added full regulatory settings UI. Tests: 4601 passed, 0 failed.
+
+### Changes
+- **`backend/app/api/routes/v1_regulatory_settings.py`** (new): `GET /v1/settings/regulatory` + `PATCH /v1/settings/regulatory` — reads/writes `company.settings["regulatory"]` JSONB (no migration). Returns `lei_configured` derived flag.
+- **`backend/app/api/routes/v1_reports.py`**: `_build_reg_run_data()` made async, now queries company for LEI. All 3 callers (emir, mifid, dodd-frank) updated.
+- **`backend/app/api/router.py`**: Registered `v1_regulatory_settings_router`.
+- **`frontend/src/app/settings/types/settings.ts`**: Added `REGULATORY` tab to union, TABS, and HASH_MAP.
+- **`frontend/src/app/settings/page.tsx`**: Wired `RegulatorySettingsTab`.
+- **`frontend/src/app/settings/components/tabs/RegulatorySettingsTab.tsx`** (new): LEI form with 3 LEI inputs, venue code, framework checkboxes (EMIR/MIFID2/DODD_FRANK), financial counterparty toggle, status banner (green/amber), save button.
+- **`frontend/src/app/reports/components/tabs/RegulatoryTab.tsx`**: LEI status banner above run selector — amber warning with link to settings when unconfigured, green badge when ready.
+
 ## 2026-03-18 — Coverage Push Round 3: +534 new tests, 68% → 75.6% (commits 6f264b0..a1737ed)
 
 ### Summary
