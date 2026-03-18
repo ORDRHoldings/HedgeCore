@@ -11,8 +11,14 @@ import Link from "next/link";
 import { ShieldCheck, Lock, FileDown, TrendingDown, AlertTriangle, ArrowRight } from "lucide-react";
 import { DEMO_DATASET, getDemoCounterpartyStats } from "@/lib/fixtures/audit-lab-demo";
 
-const MarkupByMonthChart = dynamic(() => import("@/components/audit-lab/MarkupByMonthChart"), { ssr: false });
-const CounterpartyMatrix  = dynamic(() => import("@/components/audit-lab/CounterpartyMatrix"),  { ssr: false });
+const MarkupByMonthChart = dynamic(() => import("@/components/audit-lab/MarkupByMonthChart"), {
+  ssr: false,
+  loading: () => <div style={{ height: 240, background: "var(--bg-sub)", border: "1px solid var(--border-soft)" }} />,
+});
+const CounterpartyMatrix  = dynamic(() => import("@/components/audit-lab/CounterpartyMatrix"),  {
+  ssr: false,
+  loading: () => <div style={{ height: 180, background: "var(--bg-sub)", border: "1px solid var(--border-soft)" }} />,
+});
 
 const S = {
   fontUI:    "var(--font-terminal,'IBM Plex Sans',sans-serif)",
@@ -38,14 +44,14 @@ function fmt(n: number) {
   }).format(n);
 }
 
-function SevColor(sev: string) {
+function sevColor(sev: string) {
   if (sev === "HIGH")   return S.red;
   if (sev === "MEDIUM") return S.amber;
   return S.green;
 }
 
 function SevBadge({ sev }: { sev: string }) {
-  const color = SevColor(sev);
+  const color = sevColor(sev);
   const marker = sev === "HIGH" ? "▲ HIGH" : sev === "MEDIUM" ? "● MED" : "▼ LOW";
   return (
     <span style={{
@@ -173,7 +179,7 @@ export default function AuditLabDemoPage() {
           }}>
             COUNTERPARTY PERFORMANCE MATRIX
           </div>
-          <CounterpartyMatrix transactions={d.transactions as never[]} />
+          <CounterpartyMatrix transactions={d.transactions} />
         </div>
 
         {/* Act 4: Findings */}
@@ -219,8 +225,8 @@ export default function AuditLabDemoPage() {
         {/* Act 5: Trust rail */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 48 }}>
           {d.trustSignals.map((sig, i) => {
-            const icons = [ShieldCheck, Lock, FileDown] as const;
-            const Icon = icons[i];
+            const iconList = [ShieldCheck, Lock, FileDown];
+            const Icon = iconList[i] ?? ShieldCheck;
             return (
               <div key={sig.label} style={{
                 background: S.bgPanel, border: `1px solid ${S.rim}`,
@@ -249,7 +255,7 @@ export default function AuditLabDemoPage() {
 
         {/* Act 6: CTA */}
         <div style={{ background: S.bgPanel, border: `1px solid ${S.rim}`, padding: "36px 40px", textAlign: "center" }}>
-          <AlertTriangle size={20} style={{ color: S.amber, marginBottom: 12 }} />
+          <AlertTriangle size={20} aria-hidden="true" style={{ color: S.amber, marginBottom: 12 }} />
           <h2 style={{ fontFamily: S.fontUI, fontSize: 22, fontWeight: 700, color: S.primary, margin: "0 0 10px" }}>
             Is your bank doing this to you?
           </h2>
