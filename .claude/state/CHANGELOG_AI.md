@@ -1,5 +1,19 @@
 # Changelog (AI-maintained)
 
+## 2026-03-18 — Coverage Push: +243 new tests, 64% → 66% (commits 4eecf5d..a01ec25)
+
+### Summary
+Added 4 new test files covering dashboard routes, engine modules, auth routes, and policy service. 3901 passed, 0 failed, 66% coverage.
+
+### Changes
+- **`tests/test_dashboard_routes.py`** (39 tests): dashboard summary, recent-runs, pending-approvals, team-activity, aggregate — auth rejection + happy paths + helper unit tests
+- **`tests/test_engine_coverage.py`** (165 tests): `strategy_selector.py` helpers (`_as_*`, `_clamp01`, axis helpers, `select_strategies`) + `instrument_catalog.py` validators and models
+- **`tests/test_auth_coverage.py`** (21 tests): register validation, login failures, refresh bad token, `/me` auth checks, logout
+- **`tests/test_policy_service_coverage.py`** (19 tests): get_active_policy, list_revisions, activate_policy, create/update/delete template, deactivate
+
+### Note
+Engine agent surfaced pre-existing bug: `strategy_selector.py` references `DisclosureCode.DISCLOSED_AXIS_ALIAS_MAPPING` which doesn't exist in the enum — any alias-mapped axis call raises `AttributeError`. Flagged, not introduced.
+
 ## 2026-03-18 — Test Suite Hardening (commit f083b1d, pushed to master)
 
 ### Summary
