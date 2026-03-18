@@ -2,15 +2,16 @@
 Live market data routes -- /api/v1/market-data/live
 
 Endpoints:
-  GET /v1/market-data/live/fx-rates       -> live FX spot rates from IBKR
-  GET /v1/market-data/live/equity-quotes  -> live equity/ETF quotes from IBKR
+  GET /v1/market-data/live/fx-rates       -> live FX spot rates
+  GET /v1/market-data/live/equity-quotes  -> live equity/ETF quotes
   GET /v1/market-data/live/macro          -> macro instruments (DXY, VIX, etc.)
   GET /v1/market-data/live/quote          -> single instrument quote
   GET /v1/market-data/live/fx-change      -> FX daily % change
 
+Provider priority: IBKR (if enabled) → TwelveData (if API key set) → 503
 Public endpoints (no JWT required) — market data is publicly available.
 Called server-to-server by Next.js API routes.
-In-memory TTL cache prevents excessive IBKR polling.
+In-memory TTL cache prevents excessive provider polling.
 """
 
 from __future__ import annotations
@@ -119,9 +120,10 @@ _CACHE_TTL_CHANGE = 60.0   # 60 seconds for FX change
 # ---------------------------------------------------------------------------
 
 _ibkr_provider = None
+_td_provider = None
 
 
-def _get_provider():
+def _get_ibkr_provider():
     """Lazy-init the IBKR provider singleton."""
     global _ibkr_provider
     if _ibkr_provider is not None:
@@ -139,14 +141,39 @@ def _get_provider():
         return None
 
 
+# Keep old name for backward compat inside this module
+_get_provider = _get_ibkr_provider
+
+
+def _get_td_provider():
+    """Lazy-init TwelveData provider singleton. Returns None if key not configured."""
+    global _td_provider
+    if _td_provider is not None:
+        return _td_provider
+    if not settings.TWELVEDATA_API_KEY:
+        return None
+    try:
+        from app.services.market_data.twelvedata_provider import TwelveDataProvider
+        _td_provider = TwelveDataProvider(
+            api_key=settings.TWELVEDATA_API_KEY,
+            base_url=settings.TWELVEDATA_BASE_URL,
+            rate_limit=settings.TWELVEDATA_RATE_LIMIT,
+        )
+        _log.info("TwelveData provider lazy-initialized for live routes")
+        return _td_provider
+    except Exception as exc:
+        _log.warning("TwelveData provider init failed: %s", exc)
+        return None
+
+
 def _require_ibkr():
-    """Return provider or raise 503."""
+    """Return IBKR provider or raise 503."""
     if not settings.IBKR_ENABLED:
         raise HTTPException(
             status_code=503,
             detail="IBKR integration is disabled in server configuration",
         )
-    provider = _get_provider()
+    provider = _get_ibkr_provider()
     if provider is None:
         raise HTTPException(
             status_code=503,
@@ -156,7 +183,7 @@ def _require_ibkr():
 
 
 async def _ensure_connected(provider):
-    """Ensure provider is connected, raise 502 on failure."""
+    """Ensure IBKR provider is connected, raise 502 on failure."""
     if not provider.is_connected:
         try:
             await provider.connect()
@@ -170,6 +197,10 @@ async def _ensure_connected(provider):
             status_code=502,
             detail="IBKR Gateway not connected after connect attempt",
         )
+
+
+def _no_provider_503(detail: str = "No market data provider available") -> HTTPException:
+    return HTTPException(status_code=503, detail=detail)
 
 
 # ---------------------------------------------------------------------------
@@ -245,7 +276,7 @@ async def live_fx_rates(
     request: Request,
     pairs: str = Query(default=None, description="Comma-separated FX pairs, e.g. EURUSD,USDJPY"),
 ):
-    """Live FX spot rates from IBKR Gateway."""
+    """Live FX spot rates. Provider chain: IBKR → TwelveData."""
     pair_list = [p.strip().upper() for p in pairs.split(",")] if pairs else DEFAULT_FX_PAIRS
 
     cache_key = f"fx_rates:{'|'.join(sorted(pair_list))}"
@@ -253,14 +284,33 @@ async def live_fx_rates(
     if cached is not None:
         return cached
 
-    provider = _require_ibkr()
-    await _ensure_connected(provider)
+    spots = None
+    source = "ibkr"
 
-    try:
-        spots = await provider.fetch_fx_spot(pair_list)
-    except Exception as exc:
-        _log.error("IBKR fetch_fx_spot failed: %s", exc)
-        raise HTTPException(status_code=502, detail=f"IBKR data fetch failed: {exc}")
+    # ── Primary: IBKR ─────────────────────────────────────────────────────
+    if settings.IBKR_ENABLED:
+        try:
+            provider = _get_ibkr_provider()
+            if provider is not None:
+                await _ensure_connected(provider)
+                spots = await provider.fetch_fx_spot(pair_list)
+        except Exception as exc:
+            _log.warning("IBKR fx-rates failed, trying TwelveData: %s", exc)
+            spots = None
+
+    # ── Fallback: TwelveData ──────────────────────────────────────────────
+    if not spots:
+        td = _get_td_provider()
+        if td is not None:
+            try:
+                spots = await td.fetch_fx_spot(pair_list)
+                source = "twelvedata"
+            except Exception as exc:
+                _log.error("TwelveData fx-rates failed: %s", exc)
+                spots = None
+
+    if not spots:
+        raise _no_provider_503("No market data provider available for FX rates (configure TWELVEDATA_API_KEY or enable IBKR)")
 
     rates = []
     for s in spots:
@@ -277,7 +327,7 @@ async def live_fx_rates(
 
     response = FXRatesResponse(
         rates=rates,
-        source="ibkr",
+        source=source,
         as_of=as_of,
         connected=True,
     )
@@ -294,7 +344,7 @@ async def live_equity_quotes(
     request: Request,
     symbols: str = Query(default=None, description="Comma-separated equity symbols, e.g. SPY,QQQ"),
 ):
-    """Live equity / ETF quotes from IBKR Gateway."""
+    """Live equity / ETF quotes. Provider chain: IBKR → TwelveData."""
     sym_list = [s.strip().upper() for s in symbols.split(",")] if symbols else DEFAULT_EQUITY_SYMBOLS
 
     cache_key = f"equity_quotes:{'|'.join(sorted(sym_list))}"
@@ -302,14 +352,33 @@ async def live_equity_quotes(
     if cached is not None:
         return cached
 
-    provider = _require_ibkr()
-    await _ensure_connected(provider)
+    equities = None
+    source = "ibkr"
 
-    try:
-        equities = await provider.fetch_equity_quotes(sym_list)
-    except Exception as exc:
-        _log.error("IBKR fetch_equity_quotes failed: %s", exc)
-        raise HTTPException(status_code=502, detail=f"IBKR data fetch failed: {exc}")
+    # ── Primary: IBKR ─────────────────────────────────────────────────────
+    if settings.IBKR_ENABLED:
+        try:
+            provider = _get_ibkr_provider()
+            if provider is not None:
+                await _ensure_connected(provider)
+                equities = await provider.fetch_equity_quotes(sym_list)
+        except Exception as exc:
+            _log.warning("IBKR equity-quotes failed, trying TwelveData: %s", exc)
+            equities = None
+
+    # ── Fallback: TwelveData ──────────────────────────────────────────────
+    if not equities:
+        td = _get_td_provider()
+        if td is not None:
+            try:
+                equities = await td.fetch_equity_quotes(sym_list)
+                source = "twelvedata"
+            except Exception as exc:
+                _log.error("TwelveData equity-quotes failed: %s", exc)
+                equities = None
+
+    if not equities:
+        raise _no_provider_503("No market data provider available for equity quotes (configure TWELVEDATA_API_KEY or enable IBKR)")
 
     quotes = []
     for eq in equities:
@@ -333,7 +402,7 @@ async def live_equity_quotes(
 
     response = EquityQuotesResponse(
         quotes=quotes,
-        source="ibkr",
+        source=source,
         as_of=as_of,
     )
     _cache.set(cache_key, response)
@@ -444,52 +513,65 @@ async def live_quote(
     symbol: str = Query(..., description="Symbol, e.g. EURUSD or SPY"),
     type: str = Query(default="fx", description="Instrument type: fx or equity"),
 ):
-    """Single instrument quote from IBKR Gateway."""
+    """Single instrument quote. Provider chain: IBKR → TwelveData."""
     symbol = symbol.strip().upper()
     instrument_type = type.strip().lower()
 
-    provider = _require_ibkr()
-    await _ensure_connected(provider)
-
-    if instrument_type == "equity":
+    # ── IBKR primary ──────────────────────────────────────────────────────
+    if settings.IBKR_ENABLED:
         try:
-            equities = await provider.fetch_equity_quotes([symbol])
+            provider = _get_ibkr_provider()
+            if provider is not None:
+                await _ensure_connected(provider)
+                if instrument_type == "equity":
+                    equities = await provider.fetch_equity_quotes([symbol])
+                    if equities:
+                        eq = equities[0]
+                        return SingleQuoteResponse(
+                            symbol=eq.symbol, bid=None, ask=None,
+                            mid=round(eq.price, 4),
+                            last=round(eq.close, 4) if eq.close else None,
+                            source="ibkr",
+                        )
+                else:
+                    spots = await provider.fetch_fx_spot([symbol])
+                    if spots:
+                        s = spots[0]
+                        return SingleQuoteResponse(
+                            symbol=s.pair,
+                            bid=round(s.bid, 6), ask=round(s.ask, 6), mid=round(s.mid, 6),
+                            last=None, source="ibkr",
+                        )
         except Exception as exc:
-            _log.error("IBKR fetch_equity_quotes(%s) failed: %s", symbol, exc)
-            raise HTTPException(status_code=502, detail=f"IBKR data fetch failed: {exc}")
+            _log.warning("IBKR quote(%s) failed, trying TwelveData: %s", symbol, exc)
 
-        if not equities:
-            raise HTTPException(status_code=404, detail=f"No data returned for equity symbol: {symbol}")
-
-        eq = equities[0]
-        return SingleQuoteResponse(
-            symbol=eq.symbol,
-            bid=None,
-            ask=None,
-            mid=round(eq.price, 4),
-            last=round(eq.close, 4) if eq.close else None,
-            source="ibkr",
-        )
-    else:
-        # FX
+    # ── TwelveData fallback ───────────────────────────────────────────────
+    td = _get_td_provider()
+    if td is not None:
         try:
-            spots = await provider.fetch_fx_spot([symbol])
+            if instrument_type == "equity":
+                equities = await td.fetch_equity_quotes([symbol])
+                if equities:
+                    eq = equities[0]
+                    return SingleQuoteResponse(
+                        symbol=eq.symbol, bid=None, ask=None,
+                        mid=round(eq.price, 4),
+                        last=round(eq.close, 4) if eq.close else None,
+                        source="twelvedata",
+                    )
+            else:
+                spots = await td.fetch_fx_spot([symbol])
+                if spots:
+                    s = spots[0]
+                    return SingleQuoteResponse(
+                        symbol=s.pair,
+                        bid=round(s.bid, 6), ask=round(s.ask, 6), mid=round(s.mid, 6),
+                        last=None, source="twelvedata",
+                    )
         except Exception as exc:
-            _log.error("IBKR fetch_fx_spot(%s) failed: %s", symbol, exc)
-            raise HTTPException(status_code=502, detail=f"IBKR data fetch failed: {exc}")
+            _log.error("TwelveData quote(%s) failed: %s", symbol, exc)
 
-        if not spots:
-            raise HTTPException(status_code=404, detail=f"No data returned for FX pair: {symbol}")
-
-        s = spots[0]
-        return SingleQuoteResponse(
-            symbol=s.pair,
-            bid=round(s.bid, 6),
-            ask=round(s.ask, 6),
-            mid=round(s.mid, 6),
-            last=None,
-            source="ibkr",
-        )
+    raise _no_provider_503(f"No market data provider available for symbol: {symbol}")
 
 
 # ---------------------------------------------------------------------------
@@ -501,7 +583,7 @@ async def live_fx_change(
     request: Request,
     pairs: str = Query(default=None, description="Comma-separated FX pairs"),
 ):
-    """FX daily percentage change from IBKR (current vs previous close)."""
+    """FX daily % change (current vs previous close). Provider chain: IBKR → TwelveData."""
     pair_list = [p.strip().upper() for p in pairs.split(",")] if pairs else DEFAULT_FX_PAIRS
 
     cache_key = f"fx_change:{'|'.join(sorted(pair_list))}"
@@ -509,15 +591,36 @@ async def live_fx_change(
     if cached is not None:
         return cached
 
-    provider = _require_ibkr()
-    await _ensure_connected(provider)
+    spots = None
+    provider = None
+    source = "ibkr"
 
-    # Fetch current spot rates
-    try:
-        spots = await provider.fetch_fx_spot(pair_list)
-    except Exception as exc:
-        _log.error("IBKR fetch_fx_spot for change calc failed: %s", exc)
-        raise HTTPException(status_code=502, detail=f"IBKR spot fetch failed: {exc}")
+    # ── Primary: IBKR ─────────────────────────────────────────────────────
+    if settings.IBKR_ENABLED:
+        try:
+            provider = _get_ibkr_provider()
+            if provider is not None:
+                await _ensure_connected(provider)
+                spots = await provider.fetch_fx_spot(pair_list)
+        except Exception as exc:
+            _log.warning("IBKR fx-change failed, trying TwelveData: %s", exc)
+            provider = None
+            spots = None
+
+    # ── Fallback: TwelveData ──────────────────────────────────────────────
+    if not spots:
+        td = _get_td_provider()
+        if td is not None:
+            try:
+                spots = await td.fetch_fx_spot(pair_list)
+                provider = td
+                source = "twelvedata"
+            except Exception as exc:
+                _log.error("TwelveData fx-change failed: %s", exc)
+                spots = None
+
+    if not spots:
+        raise _no_provider_503("No market data provider available for FX change (configure TWELVEDATA_API_KEY or enable IBKR)")
 
     spot_map = {s.pair: s.mid for s in spots}
 
@@ -531,7 +634,6 @@ async def live_fx_change(
         try:
             bars = await provider.fetch_historical_ohlc(pair, interval="1day", outputsize=2)
             if bars and len(bars) >= 1:
-                # bars[-1] is the most recent completed daily bar (yesterday)
                 prev_close = bars[-1].close
                 if prev_close and prev_close > 0:
                     pct = ((current_mid - prev_close) / prev_close) * 100
@@ -541,9 +643,9 @@ async def live_fx_change(
             else:
                 changes[pair] = 0.0
         except Exception as exc:
-            _log.warning("IBKR historical OHLC for %s failed: %s", pair, exc)
+            _log.warning("%s historical OHLC for %s failed: %s", source, pair, exc)
             changes[pair] = 0.0
 
-    response = FXChangeResponse(changes=changes, source="ibkr")
+    response = FXChangeResponse(changes=changes, source=source)
     _cache.set(cache_key, response)
     return response

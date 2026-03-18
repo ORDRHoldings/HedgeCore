@@ -70,13 +70,15 @@ def _make_ohlc(symbol: str, close: float):
 
 @pytest.fixture(autouse=True)
 def _clear_cache():
-    """Clear the TTL cache before each test and reset provider singleton."""
+    """Clear the TTL cache before each test and reset provider singletons."""
     from app.api.routes import v1_market_data_live
     v1_market_data_live._cache._store.clear()
     v1_market_data_live._ibkr_provider = None
+    v1_market_data_live._td_provider = None
     yield
     v1_market_data_live._cache._store.clear()
     v1_market_data_live._ibkr_provider = None
+    v1_market_data_live._td_provider = None
 
 
 @pytest.fixture
@@ -122,7 +124,8 @@ class TestFXRates:
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -144,7 +147,8 @@ class TestFXRates:
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -163,7 +167,8 @@ class TestFXRates:
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -180,20 +185,47 @@ class TestFXRates:
         assert mock_provider.fetch_fx_spot.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_provider_fetch_error_returns_502(self, authed_client):
+    async def test_all_providers_fail_returns_503(self, authed_client):
+        """When IBKR fetch fails and TwelveData is unavailable, return 503."""
         mock_provider = MagicMock()
         mock_provider.is_connected = True
         mock_provider.fetch_fx_spot = AsyncMock(side_effect=Exception("IB Gateway timeout"))
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
                 resp = await client.get("/api/v1/market-data/live/fx-rates", headers=_BEARER)
 
-        assert resp.status_code == 502
+        assert resp.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_twelvedata_fallback_when_ibkr_disabled(self, authed_client):
+        """When IBKR is disabled, TwelveData serves as the live data source."""
+        td_mock = MagicMock()
+        td_mock.fetch_fx_spot = AsyncMock(return_value=[
+            _make_spot("EURUSD", mid=1.0900, bid=1.0898, ask=1.0902),
+        ])
+
+        with (
+            patch("app.api.routes.v1_market_data_live.settings") as ms,
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=td_mock),
+        ):
+            ms.IBKR_ENABLED = False
+            async with authed_client as client:
+                resp = await client.get(
+                    "/api/v1/market-data/live/fx-rates?pairs=EURUSD", headers=_BEARER,
+                )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["source"] == "twelvedata"
+        assert body["connected"] is True
+        assert body["rates"][0]["symbol"] == "EURUSD"
+        assert body["rates"][0]["mid"] == 1.09
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +254,8 @@ class TestEquityQuotes:
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -255,7 +288,8 @@ class TestEquityQuotes:
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -308,6 +342,7 @@ class TestMacro:
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
             patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
             patch("app.api.routes.v1_market_data_live.asyncio.sleep", new_callable=AsyncMock),
             patch(
                 "app.services.market_data.ibkr_provider._ensure_ib_insync",
@@ -360,6 +395,7 @@ class TestMacro:
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
             patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
             patch("app.api.routes.v1_market_data_live.asyncio.sleep", new_callable=AsyncMock),
             patch(
                 "app.services.market_data.ibkr_provider._ensure_ib_insync",
@@ -393,7 +429,8 @@ class TestQuote:
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -419,7 +456,8 @@ class TestQuote:
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -434,14 +472,16 @@ class TestQuote:
         assert body["source"] == "ibkr"
 
     @pytest.mark.asyncio
-    async def test_no_data_returns_404(self, authed_client):
+    async def test_no_data_returns_503(self, authed_client):
+        """When IBKR returns empty and TwelveData unavailable, 503 is returned."""
         mock_provider = MagicMock()
         mock_provider.is_connected = True
         mock_provider.fetch_fx_spot = AsyncMock(return_value=[])
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -449,7 +489,7 @@ class TestQuote:
                     "/api/v1/market-data/live/quote?symbol=XXXYYY&type=fx", headers=_BEARER,
                 )
 
-        assert resp.status_code == 404
+        assert resp.status_code == 503
 
     @pytest.mark.asyncio
     async def test_missing_symbol_returns_422(self, authed_client):
@@ -489,7 +529,8 @@ class TestFXChange:
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -517,7 +558,8 @@ class TestFXChange:
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -533,12 +575,15 @@ class TestFXChange:
         """If a requested pair has no spot data, change should be 0."""
         mock_provider = MagicMock()
         mock_provider.is_connected = True
-        mock_provider.fetch_fx_spot = AsyncMock(return_value=[])
+        mock_provider.fetch_fx_spot = AsyncMock(return_value=[
+            _make_spot("USDJPY", mid=150.0),  # different pair from requested
+        ])
         mock_provider.fetch_historical_ohlc = AsyncMock(return_value=[])
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
@@ -559,32 +604,35 @@ class TestConnectionEdgeCases:
 
     @pytest.mark.asyncio
     async def test_provider_init_failure_returns_503(self, authed_client):
+        """When IBKR init returns None and TwelveData is unavailable → 503."""
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=None),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=None),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
                 resp = await client.get("/api/v1/market-data/live/fx-rates", headers=_BEARER)
 
         assert resp.status_code == 503
-        assert "unavailable" in resp.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_connect_failure_returns_502(self, authed_client):
+    async def test_connect_failure_falls_to_503(self, authed_client):
+        """When IBKR connect fails and TwelveData unavailable → 503."""
         mock_provider = MagicMock()
         mock_provider.is_connected = False
         mock_provider.connect = AsyncMock(side_effect=Exception("Connection refused"))
 
         with (
             patch("app.api.routes.v1_market_data_live.settings") as ms,
-            patch("app.api.routes.v1_market_data_live._get_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_ibkr_provider", return_value=mock_provider),
+            patch("app.api.routes.v1_market_data_live._get_td_provider", return_value=None),
         ):
             ms.IBKR_ENABLED = True
             async with authed_client as client:
                 resp = await client.get("/api/v1/market-data/live/fx-rates", headers=_BEARER)
 
-        assert resp.status_code == 502
+        assert resp.status_code == 503
 
     @pytest.mark.asyncio
     async def test_auth_required(self):
