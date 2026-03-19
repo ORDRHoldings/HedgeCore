@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   ArrowRight, Activity, Shield, Lock, BarChart2, FileText, Database, Globe,
   BrainCircuit, CheckCircle, Layers, Zap, Briefcase, Building, Landmark,
-  ShieldAlert, BookOpen,
+  ShieldAlert, BookOpen, TrendingUp,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 
@@ -16,6 +16,7 @@ const products = [
   { id: "polisophic", name: "ORDR Polisophic", desc: "Geopolitical risk intelligence powered by AI corridor scoring. 190+ countries monitored.", ai: "AI synthesizes risk signals into hedging recommendations.", icon: Globe },
   { id: "hedgewiki", name: "ORDR HedgeWiki", desc: "AI-searchable ISDA definitions, IFRS 9 / ASC 815 reference library. Natural language queries.", ai: "AI navigates knowledge graph with citation-backed answers.", icon: BookOpen, external: "https://hedge-wiki.vercel.app/" },
   { id: "finhub", name: "ORDR FinHub", desc: "AI-curated economic calendars, company research, signal detection. Macro data aggregation.", ai: "AI filters noise, prioritizes events relevant to portfolio.", icon: Activity },
+  { id: "fund", name: "ORDR Fund", desc: "Pooled capital management for private fund managers. Capital tracking, pro-rata allocation, period locking, cashflow workflows, and dual-portal reporting.", ai: "No AI involvement. Pure deterministic allocation engine with WORM audit trail.", icon: TrendingUp },
 ];
 
 const solutions = [
@@ -309,7 +310,7 @@ export default function HomePage() {
       {/* Section 6: Products Grid */}
       <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white border-t border-[#E5E7EB]">
         <span className="section-label">PRODUCTS</span>
-        <h2 className="text-3xl md:text-[44px] font-extrabold mb-6" style={{ fontFamily: "'Manrope', sans-serif" }}>Seven products. One ecosystem.</h2>
+        <h2 className="text-3xl md:text-[44px] font-extrabold mb-6" style={{ fontFamily: "'Manrope', sans-serif" }}>Eight products. One ecosystem.</h2>
         <p className="text-[16px] text-[#4B5563] max-w-3xl mb-16 border-l-2 border-[#E5E7EB] pl-4">
           Enterprise treasury governance, professional trading tools, and retail-friendly charting -- each product powered by the same deterministic computation engine.
         </p>
