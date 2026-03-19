@@ -1,5 +1,22 @@
 # Changelog (AI-maintained)
 
+## 2026-03-18 — UI Polish: TradingView, Login Dark Theme, Particle Fix (commit ce9e7ef)
+
+### Summary
+Three frontend UX improvements. Dashboard Market Pulse now features a TradingView Advanced Chart with FX news feed. Login page stripped of all blue accents — now black on dark gray. Particle animation calmed from jittery to smooth drift. 152 lines changed. Build: 0 errors.
+
+### Changes
+- **`dashboard/page.tsx`**: Replaced 6-column FX rate card grid with 2-column layout: TradingView Advanced Chart widget (left, 420px, interactive watchlist for 6 FX pairs) + compact rate cards (right, 300px). Added TradingView Timeline widget for live FX news & analysis (340px). Added `useRef` import, `TradingViewChart` and `TradingViewTimeline` inline components.
+- **`auth/login/page.tsx`**: Changed design tokens — `accent` from `var(--accent-cyan)` to `#888888`, `accentHover` to `#999999`, `accentGlow` to `rgba(255,255,255,0.06)`, `borderFocus` to `#555555`, `panelAlpha` to `rgba(10,10,14,0.97)`. Buttons now `#1a1a1e` with `1px solid rgba(255,255,255,0.08)` border. Top accent line uses white gradient. Particle config: speed 2.2→0.5, saturation 72→0, connectionDist 145→120, lineOpacity 0.28→0.12, hueSpeedMultiplier 5→0, hues monochrome.
+
+## 2026-03-18 — Mission Control Dashboard Upgrade (commit a38be03)
+
+### Summary
+Transformed the Mission Control page from a basic 3-card layout into a data-rich command center. Added Market Pulse (6 FX rate cards + macro indicators), Operations (Recent Runs table + Governance Pipeline visualization), and Team Activity timeline. 491 lines added, 6 parallel API fetches with 30s auto-refresh.
+
+### Changes
+- **`dashboard/page.tsx`**: Added `SectionHeader`, `FxRateCard`, `MacroCard`, `PipelineStage`, `WidgetSkeleton` components. New `WidgetState` interface with `fetchWidgets()` fetching 6 endpoints via Promise.allSettled. Market Pulse: 6-column FX rate grid + macro indicator row. Operations: 2-column grid with Recent Runs table (5 rows) + Pipeline Status (Sandbox→Staging→Ledger). Team Activity: timeline with status dots, module tags, timestamps.
+
 ## 2026-03-18 — Admin Hub Command Center Upgrade
 
 ### Summary
