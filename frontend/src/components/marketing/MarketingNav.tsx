@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Menu, X, ChevronDown } from "lucide-react";
 import {
-  Shield, BarChart2, Layers, Zap, Globe, BookOpen, Activity,
+  Shield, BarChart2, Layers, Zap, Globe, BookOpen, Activity, TrendingUp,
   Building, ShieldAlert, Briefcase, Landmark, FileText,
 } from "lucide-react";
 
@@ -16,6 +16,7 @@ const PRODUCTS = [
   { id: "polisophic", name: "ORDR Polisophic", desc: "Geopolitical risk intelligence", icon: Globe, external: null },
   { id: "hedgewiki", name: "ORDR HedgeWiki", desc: "ISDA / IFRS 9 / ASC 815 reference", icon: BookOpen, external: "https://hedge-wiki.vercel.app/" },
   { id: "finhub", name: "ORDR FinHub", desc: "AI-curated market intelligence", icon: Activity, external: null },
+  { id: "fund", name: "ORDR Fund", desc: "Pooled capital management for private funds", icon: TrendingUp, external: null },
 ];
 
 const SOLUTIONS = [

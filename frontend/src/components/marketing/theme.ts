@@ -21,6 +21,7 @@ export const PRODUCTS: Product[] = [
   { name: "ORDR Polisophic", slug: "polisophic", desc: "Geopolitical risk intelligence and corridor scoring", icon: "Globe" },
   { name: "ORDR HedgeWiki", slug: "hedgewiki", desc: "ISDA definitions, IFRS 9 / ASC 815 reference library", icon: "BookOpen" },
   { name: "ORDR FinHub", slug: "finhub", desc: "Economic calendars, company research, signal detection", icon: "Newspaper" },
+  { name: "ORDR Fund", slug: "fund", desc: "Pooled capital management for private fund managers", icon: "BarChart3" },
 ];
 
 // ── Solutions catalogue ──────────────────────────────────────────────────────

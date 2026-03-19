@@ -10,6 +10,7 @@ const PRODUCTS = [
   { name: "ORDR Polisophic", href: "/products/polisophic" },
   { name: "ORDR HedgeWiki", href: "https://hedge-wiki.vercel.app/", external: true },
   { name: "ORDR FinHub", href: "/products/finhub" },
+  { name: "ORDR Fund", href: "/products/fund" },
 ];
 
 const SOLUTIONS = [

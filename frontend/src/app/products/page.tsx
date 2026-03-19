@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  Shield, BarChart2, Layers, Zap, Globe, BookOpen, Activity,
+  Shield, BarChart2, Layers, Zap, Globe, BookOpen, Activity, TrendingUp,
   ArrowRight, BrainCircuit,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
@@ -15,6 +15,7 @@ const products = [
   { id: "polisophic", name: "ORDR Polisophic", desc: "Geopolitical risk intelligence powered by AI corridor scoring. 190+ countries monitored.", ai: "AI synthesizes risk signals into hedging recommendations.", icon: Globe },
   { id: "hedgewiki", name: "ORDR HedgeWiki", desc: "AI-searchable ISDA definitions, IFRS 9 / ASC 815 reference library. Natural language queries.", ai: "AI navigates knowledge graph with citation-backed answers.", icon: BookOpen, external: "https://hedge-wiki.vercel.app/" },
   { id: "finhub", name: "ORDR FinHub", desc: "AI-curated economic calendars, company research, signal detection. Macro data aggregation.", ai: "AI filters noise, prioritizes events relevant to portfolio.", icon: Activity },
+  { id: "fund", name: "ORDR Fund", desc: "Pooled capital management for private fund managers. Capital tracking, pro-rata allocation, period locking, cashflow workflows, and dual-portal reporting.", ai: "No AI involvement. Pure deterministic allocation engine with WORM audit trail.", icon: TrendingUp },
 ];
 
 export default function ProductsPage() {
@@ -23,7 +24,7 @@ export default function ProductsPage() {
       <div className="bg-[#F4F5F7] pt-[84px] pb-24 min-h-screen">
         <div className="max-w-7xl mx-auto px-6 md:px-12 text-center mb-16">
           <span className="section-label justify-center text-center mb-4">ORDR TERMINAL PLATFORM</span>
-          <h1 className="text-[44px] md:text-[64px] font-extrabold mb-6 tracking-[-0.04em]" style={{ fontFamily: "'Manrope', sans-serif" }}>Seven Products. One Ecosystem.</h1>
+          <h1 className="text-[44px] md:text-[64px] font-extrabold mb-6 tracking-[-0.04em]" style={{ fontFamily: "'Manrope', sans-serif" }}>Eight Products. One Ecosystem.</h1>
           <p className="text-xl md:text-[22px] text-[#4B5563] max-w-3xl mx-auto leading-relaxed">
             Enterprise treasury governance, professional trading tools, and retail-friendly charting -- all on one deterministic platform. AI is not used in calculations.
           </p>
