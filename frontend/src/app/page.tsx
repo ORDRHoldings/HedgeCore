@@ -183,7 +183,7 @@ export default function HomePage() {
               <span className="text-[#1E3A5F]">Agentic Intelligence.</span>
             </h1>
             <p className="text-xl md:text-2xl text-[#4B5563] font-medium mb-8 leading-relaxed">
-              Seven products for enterprise, midsize, and retail. Treasury hedge governance, agentic charting, portfolio risk, scenario simulation, geopolitical intelligence, and knowledge navigation <span className="text-[#9CA3AF]">-- all on one deterministic platform.</span>
+              Eight products for enterprise, midsize, and retail. Treasury hedge governance, agentic charting, portfolio risk, scenario simulation, geopolitical intelligence, knowledge navigation, and pooled capital management <span className="text-[#9CA3AF]">-- all on one deterministic platform.</span>
             </p>
             <div className="border-l-2 border-[#1E3A5F] pl-4 mb-10 max-w-3xl">
               <p className="text-[14px] font-mono text-[#6B7280] leading-relaxed">
@@ -208,7 +208,7 @@ export default function HomePage() {
       <section className="bg-white border-b border-[#E5E7EB]">
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-5 divide-x divide-y md:divide-y-0 divide-[#E5E7EB]">
           {[
-            { v: "7", l: "Products" }, { v: "3", l: "Market Tiers" }, { v: "41", l: "Engine Modules" },
+            { v: "8", l: "Products" }, { v: "3", l: "Market Tiers" }, { v: "41", l: "Engine Modules" },
             { v: "<50ms", l: "Computation" }, { v: "SHA-256", l: "Audit Chain" },
           ].map((stat) => (
             <div key={stat.l} className="flex flex-col items-center justify-center py-10 px-4 hover:bg-[#F9FAFB] transition-colors">
