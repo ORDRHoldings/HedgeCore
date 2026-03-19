@@ -1,5 +1,31 @@
 # Changelog (AI-maintained)
 
+## 2026-03-19 — Sprint Complete: Market Intelligence & Portfolio Expansion (commit 856b576)
+
+### Summary
+Full sprint 5 options delivered in one session: watchlist backend persistence, portfolio correlation heatmap + concentration alerts + hedge recommendations, settings audit (all 12 tabs already complete), governance hash chain visualization + audit event grouping, and custom alert rules engine. 9/9 items. 5 commits. Build: 0 errors across all.
+
+### Changes Summary
+- **Option A** (05b4a00): Watchlist backend (UserWatchlist model, /v1/watchlists CRUD), useMarketTicker WebSocket hook, WatchlistsTab backend sync + localStorage fallback
+- **Option B** (052b566): Portfolio Multi — 26×26 correlation heatmap, concentration bar chart with alerts, 5 hedge recommendations panel
+- **Option C** (no code): Settings audit confirmed all 12 tabs fully implemented
+- **Option D** (66e972a): Ledger CHAIN VIEW (blockchain block visualization), Audit Trail GROUPED VIEW (entity grouping + impact analysis)
+- **Option E** (856b576): Signals Alert Rules Engine — custom rule builder, live WebSocket evaluation, cooldown enforcement, fired alerts log
+
+## 2026-03-19 — Option A: Watchlist Backend Persistence + WebSocket Ticker (commit 05b4a00)
+
+### Summary
+Full-stack Option A complete. Watchlists now backed by PostgreSQL (`user_watchlists` table) with owner-scoped CRUD API. Frontend WatchlistsTab rewired to backend-first load with localStorage fallback and debounced save. New `useMarketTicker` WebSocket hook delivers live bid/ask/mid ticks from `/ws/market` with auto-reconnect. Build verified, 10 files changed, 651 insertions.
+
+### Changes
+- **`backend/app/models/user_watchlist.py`** (NEW): UserWatchlist model — UUID PK, user_id FK w/ CASCADE, name (unique per user), symbols (JSON), timestamps. SQLite-compat JSON type.
+- **`backend/app/api/routes/v1_watchlists.py`** (NEW): CRUD router at `/v1/watchlists`. GET (list), POST (create, 409 on dupe), PUT (update symbols by ID), DELETE (404 on miss). Owner-scoped; symbols normalized to uppercase.
+- **`backend/app/main.py`**: DDL for `user_watchlists` table (JSONB, UUID PK, user FK, index) added to `_ensure_tables()`.
+- **`backend/app/api/router.py`**: Registered `v1_watchlists_router`.
+- **`frontend/src/lib/hooks/useMarketTicker.ts`** (NEW): WebSocket hook — derives wss:// URL from `NEXT_PUBLIC_API_URL`, subscribes/unsubscribes symbol delta on change, reconnects after 3s, returns `TickMap` (bid/ask/mid/ts per symbol).
+- **`frontend/src/app/market-intelligence/page.tsx`**: Passes `token` prop from `useAuth()` to `WatchlistsTab`.
+- **`frontend/src/app/market-intelligence/components/tabs/WatchlistsTab.tsx`**: Full rewrite — backend-first load, localStorage fallback, background create if no server watchlists, debounced 800ms PUT save, `SyncBadge` (SYNCED/LOCAL), live price strip with ticks in symbol pills.
+
 ## 2026-03-18 — UI Polish: TradingView, Login Dark Theme, Particle Fix (commit ce9e7ef)
 
 ### Summary
