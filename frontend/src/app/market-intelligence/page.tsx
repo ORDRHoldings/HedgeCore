@@ -28,7 +28,7 @@ import WatchlistsTab from "./components/tabs/WatchlistsTab";
 import SignalsTab from "./components/tabs/SignalsTab";
 
 function MarketIntelligenceInner() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -91,7 +91,7 @@ function MarketIntelligenceInner() {
       case "COMPANIES":
         return <CompaniesTab />;
       case "WATCHLISTS":
-        return <WatchlistsTab userId={user?.id} />;
+        return <WatchlistsTab userId={user?.id} token={token ?? undefined} />;
       case "SIGNALS":
         return <SignalsTab />;
       default:

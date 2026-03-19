@@ -1472,6 +1472,17 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
     FOR EACH ROW EXECUTE FUNCTION execution_packets_worm();
 EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
 
+        # User watchlists — mutable user preference table (not WORM)
+        """CREATE TABLE IF NOT EXISTS user_watchlists (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL DEFAULT 'My Watchlist',
+    symbols JSONB NOT NULL DEFAULT '[]',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uix_user_watchlists_user_name UNIQUE (user_id, name))""",
+        "CREATE INDEX IF NOT EXISTS ix_user_watchlists_user ON user_watchlists(user_id)",
+
     ]
 
     # ── Advisory lock: serialise DDL across concurrent instances ────────────────

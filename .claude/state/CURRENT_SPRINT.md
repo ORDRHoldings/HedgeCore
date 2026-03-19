@@ -1,13 +1,37 @@
 # Current Sprint
 
-Sprint: Admin Hub
-Started: 2026-03-15
+Sprint: Market Intelligence & Portfolio Expansion
+Started: 2026-03-19
 
 ## Goals
-1. Replace broken /admin-monitor + /devops with unified Admin Hub
-2. 8 tabs: Operations, Users, Tenants, Roles, API Keys, Metrics, Config, DevOps
-3. Backend unit tests for all admin route modules
-4. E2E Playwright spec for all tabs
+1. Wire Watchlist backend persistence + real-time WebSocket ticks (Option A)
+2. Portfolio Multi-Currency Matrix — correlation heatmap, concentration alerts (Option B)
+3. Settings tab audit + complete any stubs (Option C)
+4. Governance visualization — ledger hash chain, merkle layout (Option D)
+5. Signals alerting engine — custom rules, alert triggers (Option E)
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 1 | [A] Backend: UserWatchlist model + CRUD routes + migration | TODO | high |
+| 2 | [A] Frontend: WatchlistsTab → backend sync + localStorage fallback | TODO | high |
+| 3 | [A] Frontend: useMarketTicker hook → WebSocket live prices in watchlist | TODO | high |
+| 4 | [B] Portfolio Multi: 26-pair correlation heatmap + concentration alerts | TODO | high |
+| 5 | [B] Portfolio Multi: hedging recommendations panel | TODO | medium |
+| 6 | [C] Settings: audit all 12 tabs, build out any stubs | TODO | medium |
+| 7 | [D] Ledger: hash chain visualization + merkle tree layout | TODO | medium |
+| 8 | [D] Audit Trail: event grouping + impact analysis | TODO | low |
+| 9 | [E] Signals: custom alert rules engine (frontend UI) | TODO | low |
+
+## Completed: 0/9
+
+## Previous Sprint: Admin Hub (COMPLETED 2026-03-15, 9/9 items)
+
+---
+
+# Sprint: Admin Hub
+Started: 2026-03-15
+Completed: 2026-03-18
 
 ## Items
 | # | Item | Status | Priority |
@@ -23,30 +47,3 @@ Started: 2026-03-15
 | 9 | Final validation + push | DONE | medium |
 
 ## Completed: 9/9
-
-## Previous Sprint: Policy Engine Hardening (COMPLETED 2026-03-08, 9/9 items)
-
----
-
-# Sprint: Audit Lab UX Overhaul
-Started: 2026-03-18
-Completed: 2026-03-18
-
-## Goals
-1. Rebuild demo page as a trust-building first-impression surface
-2. Fix upload flow UX (sample CSV, dynamic dates, clean labels)
-3. Improve hub listing (guided empty state, human-readable runs)
-4. Enhance run detail (exports, hash badge, findings expand, verification tab)
-5. Fix navigation naming collision (Activity Log vs Audit Trail)
-
-## Items
-| # | Item | Status | Priority |
-|---|------|--------|----------|
-| 1 | Enrich fixture + rebuild demo page (narrative, charts, trust signals, CTA) | DONE | high |
-| 2 | Upload flow — sample CSV, dynamic dates, clean progress labels | DONE | high |
-| 3 | Hub page — BETA removal, guided empty state, human-readable run list | DONE | high |
-| 4 | Run detail — export hierarchy, hash badge, findings expand, verification tab, 5 KPIs | DONE | high |
-| 5 | Navigation — rename "Activity Log", fix sidebar collision | DONE | medium |
-| 6 | Final validation (tsc + build) + push to master | DONE | medium |
-
-## Completed: 6/6

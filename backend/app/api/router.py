@@ -269,3 +269,7 @@ router.include_router(v1_ws_market_router)
 # Regulatory LEI & framework settings (owns /v1/settings/regulatory)
 from app.api.routes.v1_regulatory_settings import router as v1_regulatory_settings_router
 router.include_router(v1_regulatory_settings_router)
+
+# User watchlists — backend-persisted symbol lists (owns /v1/watchlists)
+from app.api.routes.v1_watchlists import router as v1_watchlists_router
+router.include_router(v1_watchlists_router)
