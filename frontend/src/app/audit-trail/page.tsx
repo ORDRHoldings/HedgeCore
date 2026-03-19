@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../../lib/authContext";
 import { useRouter } from "next/navigation";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -40,7 +40,7 @@ const S = {
 
 // ── UI Types ──────────────────────────────────────────────────────────────────
 type EventType = "PROPOSAL" | "APPROVAL" | "EXECUTION" | "POLICY" | "IMPORT" | "SYSTEM";
-type TabKey    = "all" | "proposals" | "approvals" | "executions" | "policy" | "imports";
+type TabKey    = "all" | "proposals" | "approvals" | "executions" | "policy" | "imports" | "grouped";
 
 interface AuditEvent {
   id:         string;
@@ -151,6 +151,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "executions", label: "Executions"    },
   { key: "policy",     label: "Policy Changes"},
   { key: "imports",    label: "Data Imports"  },
+  { key: "grouped",    label: "Grouped View"  },
 ];
 
 const TAB_TYPE_MAP: Record<TabKey, EventType | null> = {
@@ -160,6 +161,7 @@ const TAB_TYPE_MAP: Record<TabKey, EventType | null> = {
   executions: "EXECUTION",
   policy:     "POLICY",
   imports:    "IMPORT",
+  grouped:    null,
 };
 
 // ── Badge helper ──────────────────────────────────────────────────────────────
@@ -178,6 +180,186 @@ function Badge({ label, color }: { label: string; color: string }) {
     }}>
       {label}
     </span>
+  );
+}
+
+// ── Grouped View ──────────────────────────────────────────────────────────────
+interface EventGroup {
+  key:     string;
+  label:   string;
+  entity:  string;
+  events:  AuditEvent[];
+}
+
+function GroupedView({ events }: { events: AuditEvent[] }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const groups: EventGroup[] = useMemo(() => {
+    const map = new Map<string, AuditEvent[]>();
+    for (const evt of events) {
+      // Pick best entity key
+      const ids = evt.relatedIds;
+      const entityKey =
+        (ids.proposal_id   ? `proposal:${ids.proposal_id}`   : null) ??
+        (ids.position_id   ? `position:${ids.position_id}`   : null) ??
+        (ids.run_id        ? `run:${ids.run_id}`              : null) ??
+        (ids.policy_id     ? `policy:${ids.policy_id}`        : null) ??
+        `type:${evt.type}`;
+      const arr = map.get(entityKey) ?? [];
+      arr.push(evt);
+      map.set(entityKey, arr);
+    }
+    return Array.from(map.entries()).map(([key, evts]) => {
+      const [entityType, entityId] = key.split(":");
+      const sorted = [...evts].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+      return {
+        key,
+        label: entityId ? `${entityType.toUpperCase()} · ${entityId}…` : entityType.toUpperCase(),
+        entity: entityType,
+        events: sorted,
+      };
+    }).sort((a, b) => {
+      const aLast = a.events[a.events.length - 1]?.timestamp ?? "";
+      const bLast = b.events[b.events.length - 1]?.timestamp ?? "";
+      return bLast.localeCompare(aLast);
+    });
+  }, [events]);
+
+  if (events.length === 0) {
+    return (
+      <div style={{ padding: "40px 24px", textAlign: "center" }}>
+        <div style={{ fontFamily: S.fontUI, fontSize: 13, color: S.secondary }}>
+          No events to group.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ fontFamily: S.fontMono, fontSize: 11, color: S.tertiary, letterSpacing: "0.06em", marginBottom: 4 }}>
+        {groups.length} ENTITY GROUPS · {events.length} EVENTS
+      </div>
+      {groups.map(group => {
+        const isOpen = expanded === group.key;
+        const typeBreakdown = group.events.reduce((acc, e) => {
+          acc[e.type] = (acc[e.type] ?? 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        const firstEvt = group.events[0];
+        const lastEvt  = group.events[group.events.length - 1];
+        const impact = lastEvt?.type === "EXECUTION" ? "EXECUTED"
+          : lastEvt?.type === "APPROVAL" ? "APPROVED"
+          : lastEvt?.type === "POLICY" ? "POLICY UPDATED"
+          : group.events.length > 1 ? "IN PROGRESS"
+          : "INITIATED";
+
+        return (
+          <div key={group.key} style={{
+            background: S.bgPanel, border: `1px solid ${S.rim}`, borderRadius: 4, overflow: "hidden",
+          }}>
+            {/* Group header */}
+            <div
+              onClick={() => setExpanded(isOpen ? null : group.key)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "10px 16px", cursor: "pointer",
+                background: isOpen ? `color-mix(in srgb, ${S.cyan} 5%, ${S.bgSub})` : S.bgSub,
+                borderBottom: isOpen ? `1px solid ${S.rim}` : "none",
+              }}
+            >
+              <span style={{
+                fontFamily: S.fontMono, fontSize: 11, fontWeight: 700,
+                color: S.cyan, letterSpacing: "0.06em",
+              }}>
+                {group.label}
+              </span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>
+                {group.events.length} events
+              </span>
+              <div style={{ flex: 1 }} />
+              {/* Type breakdown */}
+              {Object.entries(typeBreakdown).map(([type, count]) => (
+                <span key={type} style={{
+                  fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                  color: TYPE_COLORS[type as EventType] ?? S.tertiary,
+                  padding: "1px 5px", borderRadius: 2,
+                  border: `1px solid ${TYPE_COLORS[type as EventType] ?? S.rim}`,
+                  background: `${TYPE_COLORS[type as EventType] ?? S.tertiary}15`,
+                }}>
+                  {type} ×{count}
+                </span>
+              ))}
+              {/* Impact */}
+              <span style={{
+                fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                color: impact === "EXECUTED" ? S.pass : impact === "APPROVED" ? S.pass : impact === "IN PROGRESS" ? S.amber : S.tertiary,
+                padding: "1px 6px", borderRadius: 2,
+                border: `1px solid ${impact === "EXECUTED" || impact === "APPROVED" ? S.pass : impact === "IN PROGRESS" ? S.amber : S.rim}`,
+              }}>
+                {impact}
+              </span>
+              <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, marginLeft: 4 }}>
+                {isOpen ? "▲" : "▼"}
+              </span>
+            </div>
+
+            {/* Impact summary (always visible) */}
+            {!isOpen && (
+              <div style={{
+                padding: "8px 16px",
+                fontFamily: S.fontUI, fontSize: 11, color: S.secondary,
+                display: "flex", gap: 16, flexWrap: "wrap",
+              }}>
+                <span>
+                  <span style={{ color: S.tertiary }}>First: </span>
+                  {firstEvt?.timestamp.slice(0, 16)} · {firstEvt?.description.slice(0, 60)}{firstEvt && firstEvt.description.length > 60 ? "…" : ""}
+                </span>
+                {group.events.length > 1 && (
+                  <span>
+                    <span style={{ color: S.tertiary }}>Last: </span>
+                    {lastEvt?.timestamp.slice(0, 16)} · {lastEvt?.description.slice(0, 40)}{lastEvt && lastEvt.description.length > 40 ? "…" : ""}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Expanded event list */}
+            {isOpen && (
+              <div style={{ padding: "8px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
+                {group.events.map((evt, ei) => (
+                  <div key={evt.id} style={{
+                    display: "flex", alignItems: "flex-start", gap: 12,
+                    paddingBottom: ei < group.events.length - 1 ? 6 : 0,
+                    borderBottom: ei < group.events.length - 1 ? `1px solid ${S.soft}` : "none",
+                  }}>
+                    {/* Timeline dot */}
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", flexShrink: 0, marginTop: 4,
+                      background: TYPE_COLORS[evt.type] ?? S.tertiary,
+                    }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 2 }}>
+                        <span style={{ fontFamily: S.fontMono, fontSize: 10, color: S.tertiary }}>{evt.timestamp.slice(0, 16)}</span>
+                        <span style={{
+                          fontFamily: S.fontMono, fontSize: 9, fontWeight: 700,
+                          color: TYPE_COLORS[evt.type] ?? S.tertiary,
+                          padding: "0 4px", border: `1px solid ${TYPE_COLORS[evt.type] ?? S.rim}`,
+                          borderRadius: 2,
+                        }}>{evt.type}</span>
+                        <span style={{ fontFamily: S.fontUI, fontSize: 10, color: S.tertiary }}>{evt.actor}</span>
+                      </div>
+                      <div style={{ fontFamily: S.fontUI, fontSize: 11, color: S.secondary }}>{evt.description}</div>
+                    </div>
+                    <span style={{ fontFamily: S.fontMono, fontSize: 9, color: S.tertiary, flexShrink: 0 }}>{evt.hash}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -866,15 +1048,19 @@ export default function AuditTrailPage() {
               </div>
             )}
 
-            {/* Events */}
-            {!loading && !fetchError && filteredEvents.map((evt) => (
-              <EventRow
-                key={evt.id}
-                event={evt}
-                expanded={expandedId === evt.id}
-                onToggle={() => setExpandedId((prev) => (prev === evt.id ? null : evt.id))}
-              />
-            ))}
+            {/* Events (flat or grouped) */}
+            {!loading && !fetchError && activeTab === "grouped" ? (
+              <GroupedView events={filteredEvents} />
+            ) : (
+              !loading && !fetchError && filteredEvents.map((evt) => (
+                <EventRow
+                  key={evt.id}
+                  event={evt}
+                  expanded={expandedId === evt.id}
+                  onToggle={() => setExpandedId((prev) => (prev === evt.id ? null : evt.id))}
+                />
+              ))
+            )}
           </div>
         </div>
 
