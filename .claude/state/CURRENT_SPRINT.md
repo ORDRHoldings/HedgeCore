@@ -21,9 +21,10 @@ Started: 2026-03-19
 | 6 | [C] Settings: audit all 12 tabs, build out any stubs | DONE | medium |
 | 7 | [D] Ledger: hash chain visualization + merkle tree layout | DONE | medium |
 | 8 | [D] Audit Trail: event grouping + impact analysis | DONE | low |
-| 9 | [E] Signals: custom alert rules engine (frontend UI) | IN_PROGRESS | low |
+| 9 | [E] Signals: custom alert rules engine (frontend UI) | DONE | low |
 
-## Completed: 8/9
+## Completed: 9/9
+## Sprint Status: COMPLETE ✓
 
 ## Previous Sprint: Admin Hub (COMPLETED 2026-03-15, 9/9 items)
 
