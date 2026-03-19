@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/authContext";
@@ -328,6 +328,65 @@ function WidgetSkeleton({ height }: { height?: number }) {
   );
 }
 
+/* ── TradingView Widgets ───────────────────────────────────────────────── */
+function TradingViewChart() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.innerHTML = "";
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      autosize: true,
+      symbol: "FX:EURUSD",
+      interval: "D",
+      timezone: "Etc/UTC",
+      theme: "dark",
+      style: "1",
+      locale: "en",
+      backgroundColor: "rgba(14,17,23,1)",
+      gridColor: "rgba(255,255,255,0.04)",
+      allow_symbol_change: true,
+      watchlist: ["FX:EURUSD","FX:USDJPY","FX:GBPUSD","FX:AUDUSD","FX:USDCHF","FX:USDCAD"],
+      hide_side_toolbar: false,
+      calendar: false,
+      support_host: "https://www.tradingview.com",
+    });
+    el.appendChild(script);
+    return () => { if (el) el.innerHTML = ""; };
+  }, []);
+  return <div ref={ref} className="tradingview-widget-container" style={{ height: "100%", width: "100%" }} />;
+}
+
+function TradingViewTimeline() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.innerHTML = "";
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-timeline.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      feedMode: "market",
+      market: "forex",
+      isTransparent: true,
+      displayMode: "regular",
+      width: "100%",
+      height: "100%",
+      colorTheme: "dark",
+      locale: "en",
+    });
+    el.appendChild(script);
+    return () => { if (el) el.innerHTML = ""; };
+  }, []);
+  return <div ref={ref} className="tradingview-widget-container" style={{ height: "100%", width: "100%" }} />;
+}
+
 /* ── Page ────────────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const router = useRouter();
@@ -536,33 +595,79 @@ export default function DashboardPage() {
       {/* ── Market Pulse ──────────────────────────────────────────────── */}
       <SectionHeader title="MARKET PULSE" badge={widgets.fxRates.length > 0 ? "LIVE" : undefined} />
 
-      {!widgets.loaded ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12 }}>
-          {Array.from({ length: 6 }).map((_, i) => <WidgetSkeleton key={i} height={130} />)}
-        </div>
-      ) : widgets.fxRates.length > 0 ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12 }}>
-          {widgets.fxRates.map(rate => (
-            <FxRateCard
-              key={rate.symbol}
-              pair={rate.symbol}
-              mid={rate.mid}
-              bid={rate.bid}
-              ask={rate.ask}
-              change={widgets.fxChanges[rate.symbol] ?? 0}
-            />
-          ))}
-        </div>
-      ) : (
+      {/* TradingView chart + compact FX rates */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 16 }}>
         <div style={{
           background: T.bgPanel, border: `1px solid ${T.rim}`, borderRadius: 4,
-          padding: "24px 20px", textAlign: "center" as const,
-          fontFamily: T.fontMono, fontSize: 11, color: T.tertiary,
-          letterSpacing: "0.08em",
+          overflow: "hidden", height: 420,
         }}>
-          MARKET DATA UNAVAILABLE
+          <TradingViewChart />
         </div>
-      )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {!widgets.loaded ? (
+            Array.from({ length: 6 }).map((_, i) => <WidgetSkeleton key={i} height={58} />)
+          ) : widgets.fxRates.length > 0 ? (
+            widgets.fxRates.map(rate => {
+              const change = widgets.fxChanges[rate.symbol] ?? 0;
+              const isUp = change > 0;
+              const isDown = change < 0;
+              const changeColor = isUp ? T.pass : isDown ? T.fail : T.tertiary;
+              const arrow = isUp ? "\u25B2" : isDown ? "\u25BC" : "\u2014";
+              const pairDisplay = rate.symbol.length >= 6
+                ? `${rate.symbol.slice(0, 3)}/${rate.symbol.slice(3)}`
+                : rate.symbol;
+              return (
+                <div key={rate.symbol} style={{
+                  background: T.bgPanel, border: `1px solid ${T.rim}`, borderRadius: 4,
+                  padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}>
+                  <div>
+                    <div style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 600, color: T.secondary }}>
+                      {pairDisplay}
+                    </div>
+                    <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary, marginTop: 1 }}>
+                      B {rate.bid.toFixed(rate.bid >= 100 ? 2 : 4)} / A {rate.ask.toFixed(rate.ask >= 100 ? 2 : 4)}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" as const }}>
+                    <div style={{ fontFamily: T.fontMono, fontSize: 16, fontWeight: 700, color: T.primary }}>
+                      {rate.mid.toFixed(rate.mid >= 100 ? 2 : 4)}
+                    </div>
+                    <div style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, color: changeColor }}>
+                      {arrow} {change > 0 ? "+" : ""}{change.toFixed(2)}%
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div style={{
+              background: T.bgPanel, border: `1px solid ${T.rim}`, borderRadius: 4,
+              padding: "24px 16px", textAlign: "center" as const,
+              fontFamily: T.fontMono, fontSize: 11, color: T.tertiary,
+            }}>
+              NO DATA
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* FX News feed */}
+      <div style={{
+        background: T.bgPanel, border: `1px solid ${T.rim}`, borderRadius: 4,
+        overflow: "hidden", height: 340, marginTop: 16,
+      }}>
+        <div style={{
+          padding: "10px 16px", borderBottom: `1px solid ${T.rim}`,
+          fontFamily: T.fontMono, fontSize: 10, fontWeight: 700,
+          letterSpacing: "0.1em", color: T.tertiary,
+        }}>
+          FX NEWS & ANALYSIS
+        </div>
+        <div style={{ height: "calc(100% - 37px)" }}>
+          <TradingViewTimeline />
+        </div>
+      </div>
 
       {/* Macro indicators */}
       {widgets.macro.length > 0 && (

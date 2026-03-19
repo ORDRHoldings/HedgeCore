@@ -11,17 +11,17 @@ const C = {
   bg:          "var(--bg-sidebar)",
   bgDeep:      "var(--bg-deep)",
   panel:       "var(--bg-panel)",
-  panelAlpha:  "rgba(31,41,55,0.97)",
+  panelAlpha:  "rgba(10,10,14,0.97)",
   border:      "var(--border-rim)",
   borderSoft:  "var(--border-soft)",
-  borderFocus: "var(--accent-cyan)",
+  borderFocus: "#555555",
   text1:       "var(--text-primary)",
   text2:       "var(--text-secondary)",
   text3:       "var(--text-tertiary)",
-  accent:      "var(--accent-cyan)",
-  accentHover: "#1a55d4",
-  accentGlow:  "rgba(28,98,242,0.18)",
-  accentDim:   "var(--accent-blue-dim)",
+  accent:      "#888888",
+  accentHover: "#999999",
+  accentGlow:  "rgba(255,255,255,0.06)",
+  accentDim:   "rgba(255,255,255,0.04)",
   green:       "var(--accent-green)",
   greenGlow:   "rgba(5,150,105,0.20)",
   red:         "var(--accent-red)",
@@ -122,13 +122,13 @@ export default function LoginPage() {
 
   useParticleField(canvasRef, {
     colorful:            true,
-    connectionDist:      145,
-    lineOpacity:         0.28,
-    saturation:          72,
-    lightness:           62,
-    speed:               2.2,
-    hueSpeedMultiplier:  5,
-    hues:                [210, 195, 225, 175, 255, 165],  // blue, cyan, indigo, teal, violet, mint
+    connectionDist:      120,
+    lineOpacity:         0.12,
+    saturation:          0,
+    lightness:           75,
+    speed:               0.5,
+    hueSpeedMultiplier:  0,
+    hues:                [0],
   });
 
   useEffect(() => {
@@ -323,11 +323,11 @@ export default function LoginPage() {
           fontFamily: C.fontMono, fontSize: "12px", fontWeight: 700,
           textTransform: "uppercase", letterSpacing: "0.22em",
           color: "#fff",
-          background: (mfaLoading || mfaCode.length !== 6) ? C.border : C.accent,
-          border: "none", borderRadius: 5,
+          background: (mfaLoading || mfaCode.length !== 6) ? C.border : "#1a1a1e",
+          border: "1px solid rgba(255,255,255,0.08)", borderRadius: 5,
           cursor: (mfaLoading || mfaCode.length !== 6) ? "not-allowed" : "pointer",
           transition: "all 0.2s ease",
-          boxShadow: mfaCode.length === 6 ? `0 4px 16px ${C.accentGlow}` : "none",
+          boxShadow: mfaCode.length === 6 ? "0 4px 16px rgba(0,0,0,0.30)" : "none",
         }}
       >
         {mfaLoading ? "Verifying…" : "Verify & Continue"}
@@ -454,14 +454,14 @@ export default function LoginPage() {
           background: loading
             ? C.border
             : btnHovered
-            ? C.accentHover
-            : C.accent,
-          border: "none", borderRadius: 5,
+            ? "#2a2a2e"
+            : "#1a1a1e",
+          border: "1px solid rgba(255,255,255,0.08)", borderRadius: 5,
           cursor: loading ? "not-allowed" : "pointer",
           transition: "background 0.15s ease, box-shadow 0.15s ease",
           boxShadow: btnHovered && !loading
-            ? `0 6px 20px ${C.accentGlow}`
-            : "0 2px 8px rgba(28,98,242,0.20)",
+            ? "0 6px 20px rgba(0,0,0,0.40)"
+            : "0 2px 8px rgba(0,0,0,0.30)",
         }}
       >
         {loading ? (
@@ -574,7 +574,7 @@ export default function LoginPage() {
         {/* Top accent line */}
         <div style={{
           position: "absolute", top: 0, left: "20%", right: "20%", height: "2px",
-          background: `linear-gradient(90deg, transparent, ${C.accent}, transparent)`,
+          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)",
           borderRadius: "0 0 2px 2px",
           opacity: 0.7,
         }} />
@@ -647,7 +647,7 @@ export default function LoginPage() {
         #login-pass:-webkit-autofill:focus {
           -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
           -webkit-text-fill-color: ${C.inputText};
-          caret-color: ${C.accent};
+          caret-color: #888888;
         }
       `}</style>
     </div>
