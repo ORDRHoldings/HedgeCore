@@ -120,7 +120,7 @@ function GroupCard({ group }: { group: PairGroup }) {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: S.sub }}>
-            {["Pair", "Settlement", "Spot Ref", "1M Vol", "ADV"].map(h => (
+            {["Pair", "Settlement", "1M Vol", "ADV"].map(h => (
               <th key={h} style={{
                 padding: "7px 14px", fontFamily: S.fontMono, fontSize: 12, fontWeight: 700,
                 color: S.tertiary, textAlign: "left", borderBottom: `1px solid ${S.rim}`,
@@ -143,9 +143,6 @@ function GroupCard({ group }: { group: PairGroup }) {
                 </div>
               </td>
               <td style={{ padding: "9px 14px", fontFamily: S.fontUI, fontSize: 12, color: S.secondary }}>{p.settlementType}</td>
-              <td style={{ padding: "9px 14px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>
-                {p.demoSpot.toLocaleString("en", { maximumFractionDigits: 4, minimumFractionDigits: 2 })}
-              </td>
               <td style={{ padding: "9px 14px", fontFamily: S.fontMono, fontSize: 12, color: S.primary }}>{p.vol1m}%</td>
               <td style={{ padding: "9px 14px", fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
                 ${p.adv_mn >= 1000 ? `${(p.adv_mn / 1000).toFixed(0)}B` : `${p.adv_mn.toLocaleString()}M`}

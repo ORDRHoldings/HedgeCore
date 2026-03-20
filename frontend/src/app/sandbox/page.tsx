@@ -24,30 +24,6 @@ const DEFAULT_POLICY: PolicyConfig = {
   min_trade_size_usd: 0,
 };
 
-// ─── Fallback spot rate (BIS-calibrated USD/MXN baseline) ─────────────────────
-const FALLBACK_SPOT_USDMXN = 18.97;
-
-// ─── Demo simulation payload (runs without prior position data) ────────────────
-const today = new Date();
-const m1 = new Date(today.getFullYear(), today.getMonth() + 1, 28).toISOString().slice(0, 10);
-const m2 = new Date(today.getFullYear(), today.getMonth() + 2, 28).toISOString().slice(0, 10);
-const m3 = new Date(today.getFullYear(), today.getMonth() + 3, 28).toISOString().slice(0, 10);
-const DEMO_REQUEST: CalculateRequest = {
-  trades: [
-    { record_id: "DEMO-001", entity: "DemoCompany", type: "AR",  currency: "MXN", amount: 5_000_000, value_date: m1, status: "CONFIRMED", description: "Demo Q+1 export receivable" },
-    { record_id: "DEMO-002", entity: "DemoCompany", type: "AP",  currency: "MXN", amount: 2_500_000, value_date: m2, status: "FORECAST",  description: "Demo supplier payment" },
-    { record_id: "DEMO-003", entity: "DemoCompany", type: "AR",  currency: "MXN", amount: 3_200_000, value_date: m3, status: "CONFIRMED", description: "Demo Q+3 export receivable" },
-    { record_id: "DEMO-004", entity: "DemoBranch",  type: "AP",  currency: "MXN", amount: 1_800_000, value_date: m2, status: "FORECAST",  description: "Demo branch import" },
-  ],
-  hedges: [],
-  market: {
-    as_of: today.toISOString().slice(0, 10),
-    spot_rate: FALLBACK_SPOT_USDMXN,
-    forward_points_by_month: { [m1.slice(0, 7)]: 0.0220, [m2.slice(0, 7)]: 0.0440, [m3.slice(0, 7)]: 0.0660 },
-    provider_metadata: { source: "DEMO", primary_currency: "MXN" },
-  },
-  policy: DEFAULT_POLICY,
-};
 
 import HelpPanelV2 from "@/components/help/HelpPanelV2";
 import { SANDBOX_HELP } from "@/lib/help";
@@ -346,7 +322,7 @@ function WidgetMode({ currency, notional, tab }: { currency: string; notional: n
   const { sandboxResult, sandboxLoading } = useSelector((s: RootState) => s.pipeline);
   const { liveSpot, liveStatus } = useLiveSpot(currency);
 
-  const spot = liveSpot ?? (sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined)?.spot_rate as number ?? FALLBACK_SPOT_USDMXN;
+  const spot = liveSpot ?? (sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined)?.spot_rate as number ?? 0;
 
   return (
     <div style={{
@@ -380,7 +356,7 @@ function WidgetMode({ currency, notional, tab }: { currency: string; notional: n
             <ScenarioStressTester
               sandboxResult={sandboxResult}
               defaultPolicy={DEFAULT_POLICY}
-              defaultSpot={liveSpot ?? FALLBACK_SPOT_USDMXN}
+              defaultSpot={liveSpot ?? 0}
             />
           )}
           {tab === "attribution" && <RiskAttributionPanel sandboxResult={sandboxResult} spot={spot} />}
@@ -443,13 +419,14 @@ function SandboxPageInner() {
   const spot = useMemo(() => {
     if (liveSpot && liveSpot > 0) return liveSpot;
     const m = sandboxResult?.frozen_inputs?.market as Record<string, unknown> | undefined;
-    return (m?.spot_rate as number | undefined) ?? FALLBACK_SPOT_USDMXN;
+    return (m?.spot_rate as number | undefined) ?? 0;
   }, [liveSpot, sandboxResult]);
 
   const notionalUSD = useMemo(() => {
     const plan = sandboxResult?.calculate_response?.hedge_plan;
     const summary = plan?.summary as Record<string, number> | undefined;
-    return (summary?.total_commercial_exposure_mxn ?? 10_000_000) / spot;
+    const exposure = summary?.total_commercial_exposure_mxn ?? 10_000_000;
+    return spot > 0 ? exposure / spot : 0;
   }, [sandboxResult, spot]);
 
   // Coverage ratio
@@ -681,7 +658,6 @@ function SandboxPageInner() {
                 background: `color-mix(in srgb, ${S.green} 10%, transparent)`,
               }}>DELIVERABLE</span>
             )}
-            <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>Spot fallback: {meta.demoSpot.toLocaleString("en", { maximumFractionDigits: 4, minimumFractionDigits: 2 })}</span>
             <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>ADV: ${meta.adv_mn.toLocaleString()}M</span>
             <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>1M Vol: {meta.vol1m}%</span>
           </div>

@@ -124,9 +124,6 @@ export default function PairSelector({ value, onChange }: Props) {
                     <span style={{ flex: 1, fontWeight: p.id === value ? 700 : 400 }}>
                       {p.label}
                     </span>
-                    <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
-                      {p.demoSpot.toLocaleString("en", { maximumFractionDigits: 4, minimumFractionDigits: 2 })}
-                    </span>
                     {p.isNdf && (
                       <span style={{
                         fontFamily: S.fontMono, fontSize: 12, color: S.amber,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fxRateCache } from "@/lib/market/cache";
-import { buildFxRates, buildFallbackRates, FX_TARGET_PAIRS } from "@/lib/market/transforms";
+import { buildFxRates, FX_TARGET_PAIRS } from "@/lib/market/transforms";
 import { logger } from "@/lib/logger";
 
 // IBKR backend (primary)
@@ -124,8 +124,10 @@ export async function GET() {
     return NextResponse.json({ rates, cachedAt: ts, source: "live" });
   } catch (err) {
     const duration_ms = Date.now() - t1;
-    const rates = buildFallbackRates();
-    logger.info({ endpoint: "/api/market/fx/rates", duration_ms, cached: false, status: 200, source: "fallback", error: String(err) });
-    return NextResponse.json({ rates, cachedAt: ts, source: "fallback" });
+    logger.warn({ endpoint: "/api/market/fx/rates", duration_ms, cached: false, status: 503, source: "unavailable", error: String(err) });
+    return NextResponse.json(
+      { error: "FX rates unavailable", detail: "IBKR and exchangerate-api.com both unreachable." },
+      { status: 503 },
+    );
   }
 }

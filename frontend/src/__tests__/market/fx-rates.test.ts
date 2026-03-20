@@ -1,30 +1,25 @@
 /**
  * fx-rates.test.ts
  *
- * Unit tests for the /api/market/fx/rates route logic.
- *
- * Tests the pure buildFxRates / buildFallbackRates functions in isolation,
- * matching the pattern used in reportAI.test.ts (test logic, not HTTP layer).
+ * Unit tests for the buildFxRates transform function.
+ * Hardcoded fallback rates removed — live data only.
  */
 
-import { buildFxRates, buildFallbackRates } from "../../lib/market/transforms";
-import type { FxRateEntry } from "../../lib/market/types";
+import { buildFxRates } from "../../lib/market/transforms";
 
-// ─── buildFxRates ─────────────────────────────────────────────────────────────
+const SAMPLE_QUOTE: Record<string, number> = {
+  MXN: 20.35,
+  EUR: 0.9263,
+  GBP: 0.7921,
+  JPY: 150.40,
+  CAD: 1.437,
+  CHF: 0.8981,
+  AUD: 1.581,
+  CNH: 7.265,
+};
 
 describe("buildFxRates", () => {
-  const SAMPLE_QUOTE: Record<string, number> = {
-    MXN: 20.35,
-    EUR: 0.9263,
-    GBP: 0.7921,
-    JPY: 150.40,
-    CAD: 1.437,
-    CHF: 0.8981,
-    AUD: 1.581,
-    CNH: 7.265,
-  };
-
-  it("returns 8 rate entries for standard quote", () => {
+  it("returns 8 rate entries for a full quote", () => {
     const rates = buildFxRates(SAMPLE_QUOTE);
     expect(rates).toHaveLength(8);
   });
@@ -44,8 +39,7 @@ describe("buildFxRates", () => {
   it("EURUSD mid is inverted (1/EUR quote)", () => {
     const rates = buildFxRates(SAMPLE_QUOTE);
     const eurusd = rates.find((r) => r.symbol === "EURUSD")!;
-    const expected = 1 / 0.9263;
-    expect(eurusd.mid).toBeCloseTo(expected, 3);
+    expect(eurusd.mid).toBeCloseTo(1 / 0.9263, 3);
   });
 
   it("GBPUSD mid is inverted (1/GBP quote)", () => {
@@ -76,7 +70,7 @@ describe("buildFxRates", () => {
     }
   });
 
-  it("all numeric fields are valid numbers", () => {
+  it("all numeric fields are valid finite numbers", () => {
     const rates = buildFxRates(SAMPLE_QUOTE);
     for (const r of rates) {
       expect(typeof r.bid).toBe("number");
@@ -86,55 +80,16 @@ describe("buildFxRates", () => {
     }
   });
 
-  it("missing CNH key falls back to BIS fallback rate", () => {
+  it("missing CNH key omits USDCNH from results", () => {
     const quoteNoCNH = { ...SAMPLE_QUOTE };
     delete (quoteNoCNH as Record<string, number>)["CNH"];
     const rates = buildFxRates(quoteNoCNH);
-    const usdcnh = rates.find((r) => r.symbol === "USDCNH")!;
-    expect(usdcnh.mid).toBeGreaterThan(0);
-    expect(isFinite(usdcnh.mid)).toBe(true);
+    expect(rates).toHaveLength(7);
+    expect(rates.find((r) => r.symbol === "USDCNH")).toBeUndefined();
   });
 
-  it("empty quote object returns fallback-rate-based entries (not NaN)", () => {
+  it("empty quote returns empty array (no live data = no rates)", () => {
     const rates = buildFxRates({});
-    expect(rates).toHaveLength(8);
-    for (const r of rates) {
-      expect(isFinite(r.mid)).toBe(true);
-      expect(r.mid).toBeGreaterThan(0);
-    }
-  });
-});
-
-// ─── buildFallbackRates ───────────────────────────────────────────────────────
-
-describe("buildFallbackRates", () => {
-  let rates: FxRateEntry[];
-  beforeEach(() => { rates = buildFallbackRates(); });
-
-  it("returns 8 entries", () => {
-    expect(rates).toHaveLength(8);
-  });
-
-  it("all mids are positive finite numbers", () => {
-    for (const r of rates) {
-      expect(r.mid).toBeGreaterThan(0);
-      expect(isFinite(r.mid)).toBe(true);
-    }
-  });
-
-  it("USDMXN is roughly 20.35 (BIS calibrated)", () => {
-    const r = rates.find((r) => r.symbol === "USDMXN")!;
-    expect(r.mid).toBeCloseTo(20.35, 1);
-  });
-
-  it("EURUSD is above 1.0 (EUR stronger than USD per BIS calibration)", () => {
-    const r = rates.find((r) => r.symbol === "EURUSD")!;
-    expect(r.mid).toBeGreaterThan(1.0);
-  });
-
-  it("is deterministic (same output on repeated calls)", () => {
-    const r1 = buildFallbackRates();
-    const r2 = buildFallbackRates();
-    expect(r1).toEqual(r2);
+    expect(rates).toHaveLength(0);
   });
 });

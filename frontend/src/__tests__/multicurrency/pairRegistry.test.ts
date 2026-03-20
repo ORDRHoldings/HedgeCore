@@ -41,12 +41,6 @@ describe("pairRegistry", () => {
     expect(getNdfPairs().length).toBeGreaterThan(0);
   });
 
-  it("all pairs have positive demoSpot", () => {
-    PAIR_REGISTRY.forEach(p => {
-      expect(p.demoSpot).toBeGreaterThan(0);
-    });
-  });
-
   it("all pair IDs are unique", () => {
     const ids = PAIR_REGISTRY.map(p => p.id);
     expect(new Set(ids).size).toBe(ids.length);

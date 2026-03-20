@@ -19,65 +19,10 @@ from .provider_base import (
 UTC = timezone.utc
 _log = logging.getLogger(__name__)
 
-# Tenor → year-fraction for CIP forward point calculation
+# Tenor → year-fraction mapping (used for CIP forward point calculation)
 _TENOR_YEARS: dict[str, float] = {
     "1M": 1 / 12, "3M": 3 / 12, "6M": 6 / 12, "9M": 9 / 12, "12M": 1.0,
 }
-
-# Indicative deposit/OIS rates (annualized %) — institutional calibration.
-# Replace with live rate feed (e.g. IBKR bond yields, Bloomberg SOFR/ESTR) for production.
-_INDICATIVE_RATES: dict[str, dict[str, float]] = {
-    "USD": {"1M": 5.33, "3M": 5.40, "6M": 5.35, "12M": 5.10},
-    "EUR": {"1M": 3.75, "3M": 3.85, "6M": 3.70, "12M": 3.50},
-    "GBP": {"1M": 5.25, "3M": 5.30, "6M": 5.15, "12M": 4.90},
-    "JPY": {"1M": -0.05, "3M": 0.00, "6M": 0.10, "12M": 0.30},
-    "MXN": {"1M": 11.00, "3M": 11.10, "6M": 10.80, "12M": 10.25},
-    "BRL": {"1M": 13.75, "3M": 13.50, "6M": 12.80, "12M": 11.50},
-    "COP": {"1M": 12.25, "3M": 12.00, "6M": 11.50, "12M": 10.75},
-    "CLP": {"1M": 9.50, "3M": 9.25, "6M": 8.75, "12M": 8.00},
-    "PEN": {"1M": 7.00, "3M": 6.80, "6M": 6.50, "12M": 6.00},
-    "CAD": {"1M": 5.00, "3M": 4.95, "6M": 4.85, "12M": 4.60},
-    "CHF": {"1M": 1.75, "3M": 1.80, "6M": 1.70, "12M": 1.50},
-    "CNY": {"1M": 2.80, "3M": 2.85, "6M": 2.75, "12M": 2.60},
-    "INR": {"1M": 6.50, "3M": 6.70, "6M": 6.60, "12M": 6.40},
-    "SGD": {"1M": 3.80, "3M": 3.85, "6M": 3.75, "12M": 3.60},
-    "KRW": {"1M": 3.50, "3M": 3.55, "6M": 3.45, "12M": 3.30},
-    "HKD": {"1M": 5.30, "3M": 5.35, "6M": 5.30, "12M": 5.05},
-    "AUD": {"1M": 4.35, "3M": 4.40, "6M": 4.30, "12M": 4.10},
-    "NZD": {"1M": 5.50, "3M": 5.45, "6M": 5.30, "12M": 5.00},
-    "ZAR": {"1M": 8.25, "3M": 8.40, "6M": 8.20, "12M": 7.80},
-    "TRY": {"1M": 45.00, "3M": 42.00, "6M": 38.00, "12M": 35.00},
-}
-
-def _get_rate(ccy: str, tenor: str) -> float:
-    """Get annualized rate for ccy/tenor, linearly interpolating if tenor not in table."""
-    curve = _INDICATIVE_RATES.get(ccy, {})
-    if not curve:
-        return 0.0
-    if tenor in curve:
-        return curve[tenor] / 100.0
-    # Interpolate: 9M = avg(6M, 12M)
-    months = _TENOR_YEARS.get(tenor, 0.0) * 12
-    if months == 0:
-        return 0.0
-    lower_t, upper_t = None, None
-    for t, y in sorted(_TENOR_YEARS.items(), key=lambda x: x[1]):
-        if t in curve and y * 12 <= months:
-            lower_t = t
-        if t in curve and y * 12 >= months and upper_t is None:
-            upper_t = t
-    if lower_t and upper_t and lower_t != upper_t:
-        r_lo = curve[lower_t] / 100.0
-        r_hi = curve[upper_t] / 100.0
-        m_lo = _TENOR_YEARS[lower_t] * 12
-        m_hi = _TENOR_YEARS[upper_t] * 12
-        frac = (months - m_lo) / (m_hi - m_lo)
-        return r_lo + frac * (r_hi - r_lo)
-    if lower_t:
-        return curve[lower_t] / 100.0
-    if upper_t:
-        return curve[upper_t] / 100.0
-    return 0.0
 
 
 # Lazy import ib_insync — not available on Render (IBKR is optional)
@@ -346,21 +291,11 @@ class IBKRProvider(MarketDataProvider):
     ) -> float:
         """Covered interest rate parity forward points.
 
-        F = S × (1 + r_quote × T) / (1 + r_base × T)
-        Forward points = F - S
-
-        For USD/XXX pairs: base=USD, quote=XXX
-        For XXX/USD pairs: base=XXX, quote=USD
+        Requires live interest rate data from IBKR bond/money-market feeds.
+        Returns 0.0 when no live rate source is connected — forward curve
+        must be sourced from CME futures or a dedicated rate feed.
         """
-        tenor_years = _TENOR_YEARS.get(tenor, 0.0)
-        if tenor_years == 0.0:
-            return 0.0
-
-        r_base = _get_rate(base_ccy, tenor)
-        r_quote = _get_rate(quote_ccy, tenor)
-
-        fwd = spot * (1.0 + r_quote * tenor_years) / (1.0 + r_base * tenor_years)
-        return fwd - spot
+        return 0.0
 
     async def _fetch_options_raw(self, underlying: str, expiry: str | None = None) -> list[dict]:
         """Fetch options chain from IBKR."""

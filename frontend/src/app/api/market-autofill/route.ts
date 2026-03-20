@@ -40,25 +40,6 @@ const CME_SYMBOLS: Record<string, string[]> = {
   CNH: ['CNH1!', 'CNH2!'],            // Chinese Yuan (offshore)
 };
 
-// ── Carry assumptions (bps/month) — fallback for non-CME currencies ───────
-const CARRY_BPS_MONTH: Record<string, number> = {
-  MXN: 48,  BRL: 95,  CLP: 18,  COP: 32,  TRY: 142, ZAR: 60,
-  INR: 22,  IDR: 35,  PHP: 15,  THB: 12,  KRW: 8,   TWD: 5,
-  HUF: 25,  PLN: 20,  CZK: 18,  RON: 22,
-  EUR: -5,  GBP: -2,  CHF: -8,  SEK: 3,   NOK: 5,   DKK: -5,
-  JPY: -10, CAD: 2,   AUD: 8,   NZD: 10,
-  CNY: 5,   HKD: 1,   SGD: 3,   RUB: 120,
-};
-
-// ── Fallback demo spots (EOD 2026-02-27, DXY ~99.11) ─────────────────────
-const DEMO_SPOTS: Record<string, number> = {
-  MXN: 20.35, BRL: 5.87,  CLP: 972.0,  COP: 4278.0,
-  EUR: 0.9263, GBP: 0.7921, CHF: 0.8981, SEK: 10.24, NOK: 10.87, DKK: 6.93,
-  PLN: 4.08,  CZK: 23.10, HUF: 368.0,
-  JPY: 150.40, CNY: 7.26, HKD: 7.78,  KRW: 1435.0, SGD: 1.341, TWD: 32.48, INR: 86.50,
-  AUD: 1.581, NZD: 1.728, CAD: 1.437,
-  ZAR: 18.91, TRY: 36.20, RUB: 90.10,
-};
 
 // ── Fetch spot rate from IBKR backend for a single currency pair ──────────
 async function fetchIbkrSpotRate(currency: string): Promise<number | null> {
@@ -253,43 +234,6 @@ async function buildCMEForwardPoints(
   return { points, source: 'cme_futures' };
 }
 
-// ── Carry-based forward estimation (fallback) ─────────────────────────────
-function estimateForwardPoints(spot: number, currency: string, requiredBuckets: string[]): Record<string, number> {
-  const now = new Date();
-  const buckets: Record<string, number> = {};
-  const bpsPerMonth = CARRY_BPS_MONTH[currency] ?? 20;
-
-  let maxMonths = 12;
-  if (requiredBuckets.length > 0) {
-    for (const bucket of requiredBuckets) {
-      const [y, m] = bucket.split('-').map(Number);
-      if (!isNaN(y) && !isNaN(m)) {
-        const mOut = (y - now.getFullYear()) * 12 + (m - (now.getMonth() + 1));
-        if (mOut > maxMonths) maxMonths = mOut;
-      }
-    }
-    maxMonths = Math.min(maxMonths + 1, 36);
-  }
-
-  for (let m = 1; m <= maxMonths; m++) {
-    const d = new Date(now);
-    d.setMonth(d.getMonth() + m);
-    const bucket = d.toISOString().slice(0, 7);
-    buckets[bucket] = parseFloat((spot * (bpsPerMonth / 10000) * m).toFixed(4));
-  }
-
-  for (const bucket of requiredBuckets) {
-    if (!(bucket in buckets)) {
-      const [y, m] = bucket.split('-').map(Number);
-      if (!isNaN(y) && !isNaN(m)) {
-        const mAgo = Math.max(1, (now.getFullYear() - y) * 12 + ((now.getMonth() + 1) - m));
-        buckets[bucket] = parseFloat((spot * (bpsPerMonth / 10000) * mAgo).toFixed(4));
-      }
-    }
-  }
-
-  return buckets;
-}
 
 // ── Request handler ───────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
@@ -338,13 +282,15 @@ export async function POST(req: NextRequest) {
     }
 
     if (spot === null) {
-      spot = DEMO_SPOTS[primaryCurrency] ?? 1.0;
-      spotSource = 'indicative_fallback';
+      return NextResponse.json(
+        { error: 'Spot rate unavailable', detail: 'IBKR and exchangerate-api.com both unreachable. Configure a live data provider.' },
+        { status: 503 },
+      );
     }
 
-    // ── Step 2: Forward points from CME futures (preferred) ─────────────
+    // ── Step 2: Forward points from CME futures ──────────────────────────
     let forwardPoints: Record<string, number>;
-    let forwardSource: 'cme_futures' | 'carry_estimate' | 'indicative_fallback' = 'carry_estimate';
+    let forwardSource: 'cme_futures' | 'unavailable' = 'unavailable';
 
     const cmeResult = await buildCMEForwardPoints(primaryCurrency, spot, requiredBuckets, maxMonths);
 
@@ -352,8 +298,8 @@ export async function POST(req: NextRequest) {
       forwardPoints = cmeResult.points;
       forwardSource = 'cme_futures';
     } else {
-      forwardPoints = estimateForwardPoints(spot, primaryCurrency, requiredBuckets);
-      forwardSource = (spotSource === 'live' || spotSource === 'ibkr') ? 'carry_estimate' : 'indicative_fallback';
+      // No live forward data — return empty rather than hardcoded estimates
+      forwardPoints = {};
     }
 
     // ── Step 3: Assemble market snapshot ────────────────────────────────
@@ -363,22 +309,19 @@ export async function POST(req: NextRequest) {
       ? `${primaryCurrency}/USD`
       : `USD/${primaryCurrency}`;
 
-    const isLive = spotSource === 'live' || spotSource === 'ibkr';
-    const dataClass = isLive ? 'LIVE' : 'INDICATIVE_FALLBACK';
+    const dataClass = 'LIVE';
 
     let note: string;
-    if (!isLive) {
-      note = 'Indicative fallback rates (BIS EOD 2026-02-27) — IBKR and exchangerate-api.com unreachable.';
-    } else if (spotSource === 'ibkr') {
+    if (spotSource === 'ibkr') {
       if (forwardSource === 'cme_futures') {
         note = `Live spot from IBKR. Forward rates from CME futures (${(CME_SYMBOLS[primaryCurrency] ?? []).join(', ')}).`;
       } else {
-        note = `Live spot from IBKR. Forward points estimated from carry differentials.`;
+        note = `Live spot from IBKR. No CME forward data available — set FINNHUB_API_KEY for forward curves.`;
       }
     } else if (forwardSource === 'cme_futures') {
       note = `Live spot from exchangerate-api.com. Forward rates from CME futures (${(CME_SYMBOLS[primaryCurrency] ?? []).join(', ')}).`;
     } else {
-      note = `Live spot from exchangerate-api.com. Forward points estimated from carry differentials.`;
+      note = `Live spot from exchangerate-api.com. No CME forward data available — set FINNHUB_API_KEY for forward curves.`;
     }
 
     const market = {
@@ -386,7 +329,7 @@ export async function POST(req: NextRequest) {
       spot_rate: spot,
       forward_points_by_month: forwardPoints,
       provider_metadata: {
-        source:              isLive ? `${spotSource}_${forwardSource}` : 'indicative_fallback',
+        source:              `${spotSource}_${forwardSource}`,
         data_class:          dataClass,
         spot_source:         spotSource,
         forward_source:      forwardSource,

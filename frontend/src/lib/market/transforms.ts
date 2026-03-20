@@ -21,28 +21,21 @@ export const FX_TARGET_PAIRS: PairDef[] = [
   { symbol: "USDCNH", quoteKey: "CNH",  invert: false, spreadPct: 0.04 },
 ];
 
-// BIS-calibrated fallback rates (EOD 2026-02-27)
-export const FX_FALLBACK_RATES: Record<string, number> = {
-  MXN: 20.35, EUR: 0.9263, GBP: 0.7921, JPY: 150.40,
-  CAD: 1.437,  CHF: 0.8981, AUD: 1.581,  CNH: 7.265,
-};
-
 export function buildFxRates(quote: Record<string, number>): FxRateEntry[] {
-  return FX_TARGET_PAIRS.map(({ symbol, quoteKey, invert, spreadPct }) => {
-    const raw = quote[quoteKey] ?? FX_FALLBACK_RATES[quoteKey] ?? 1;
+  const results: FxRateEntry[] = [];
+  for (const { symbol, quoteKey, invert, spreadPct } of FX_TARGET_PAIRS) {
+    const raw = quote[quoteKey];
+    if (!raw || raw <= 0) continue; // skip pairs with no live data
     const mid = invert ? 1 / raw : raw;
     const halfSpread = mid * (spreadPct / 100) / 2;
-    return {
+    results.push({
       symbol,
       bid: parseFloat((mid - halfSpread).toFixed(6)),
       ask: parseFloat((mid + halfSpread).toFixed(6)),
       mid: parseFloat(mid.toFixed(6)),
-    };
-  });
-}
-
-export function buildFallbackRates(): FxRateEntry[] {
-  return buildFxRates(FX_FALLBACK_RATES);
+    });
+  }
+  return results;
 }
 
 // ── FX News ───────────────────────────────────────────────────────────────────

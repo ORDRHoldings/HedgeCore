@@ -51,24 +51,6 @@ let _cache: {
   ts: number;
 } | null = null;
 
-// Fallback — EOD 2026-02-27 (SPY/QQQ confirmed live; others estimated)
-const FALLBACK_QUOTES: QuoteResult[] = [
-  { symbol: 'SPY',  name: 'S&P 500',         price: 685.99, change: -3.31, changePercent: -0.48, latestTradingDay: '2026-02-27', category: 'market' },
-  { symbol: 'QQQ',  name: 'Nasdaq 100',       price: 607.29, change: -1.95, changePercent: -0.32, latestTradingDay: '2026-02-27', category: 'market' },
-  { symbol: 'DIA',  name: 'Dow Jones',        price: 434.6,  change: -1.87, changePercent: -0.43, latestTradingDay: '2026-02-27', category: 'market' },
-  { symbol: 'IWM',  name: 'Russell 2000',     price: 217.2,  change: -2.14, changePercent: -0.98, latestTradingDay: '2026-02-27', category: 'market' },
-  { symbol: 'XLK',  name: 'Technology',       price: 224.5,  change: -2.18, changePercent: -0.96, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLF',  name: 'Financials',       price: 49.2,   change: -0.44, changePercent: -0.89, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLE',  name: 'Energy',           price: 87.5,   change: -0.81, changePercent: -0.92, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLV',  name: 'Healthcare',       price: 147.1,  change:  0.43, changePercent:  0.29, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLY',  name: 'Consumer Discr.',  price: 215.4,  change: -3.12, changePercent: -1.43, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLP',  name: 'Consumer Staples', price: 79.8,   change:  0.18, changePercent:  0.23, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLI',  name: 'Industrials',      price: 135.2,  change: -0.96, changePercent: -0.71, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLU',  name: 'Utilities',        price: 78.4,   change:  0.62, changePercent:  0.80, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLB',  name: 'Materials',        price: 89.6,   change: -0.74, changePercent: -0.82, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLRE', name: 'Real Estate',      price: 41.8,   change:  0.31, changePercent:  0.75, latestTradingDay: '2026-02-27', category: 'sector' },
-  { symbol: 'XLC',  name: 'Communications',   price: 106.5,  change: -0.88, changePercent: -0.82, latestTradingDay: '2026-02-27', category: 'sector' },
-];
 
 // Finnhub /quote: { c=current, d=change, dp=changePct, pc=prevClose, t=unixTs }
 async function fetchFinnhubQuote(
@@ -182,15 +164,7 @@ export async function GET() {
   // ── Primary: IBKR backend (single batch call) ─────────────────────────────
   const ibkrResults = await fetchIbkrEquityQuotes();
   if (ibkrResults && ibkrResults.length > 0) {
-    // Fill in any missing symbols from fallback
-    const ibkrSymbols = new Set(ibkrResults.map((r) => r.symbol));
     results = [...ibkrResults];
-    for (const def of SYMBOLS) {
-      if (!ibkrSymbols.has(def.symbol)) {
-        const fb = FALLBACK_QUOTES.find((f) => f.symbol === def.symbol);
-        if (fb) results.push(fb);
-      }
-    }
     liveCount = ibkrResults.length;
     dataSource = 'ibkr';
   } else {
@@ -199,17 +173,19 @@ export async function GET() {
       const raw = await Promise.all(
         SYMBOLS.map(s => fetchFinnhubQuote(s.symbol, s.name, s.category))
       );
-      raw.forEach((r, idx) => {
+      raw.forEach(r => {
         if (r) { results.push(r); liveCount++; }
-        else {
-          const fb = FALLBACK_QUOTES.find(f => f.symbol === SYMBOLS[idx]!.symbol);
-          if (fb) results.push(fb);
-        }
       });
     }
 
-    if (results.length === 0) results = [...FALLBACK_QUOTES];
-    dataSource = liveCount > 0 ? 'live' : 'fallback';
+    dataSource = liveCount > 0 ? 'live' : 'unavailable';
+  }
+
+  if (results.length === 0) {
+    return NextResponse.json(
+      { error: 'Market data unavailable', detail: 'IBKR and Finnhub both unreachable. Configure IBKR_ENABLED or FINNHUB_API_KEY.' },
+      { status: 503 },
+    );
   }
 
   const symbolOrder = SYMBOLS.map(s => s.symbol);
@@ -231,9 +207,7 @@ export async function GET() {
     timestamp:  new Date().toISOString(),
     note: dataSource === 'ibkr'
       ? `IBKR live data as of ${latestDay}. ${liveCount}/${results.length} symbols live.`
-      : dataSource === 'live'
-        ? `Finnhub data as of ${latestDay}. ${liveCount}/${results.length} symbols live.`
-        : 'Using reference data — configure IBKR or FINNHUB_API_KEY for live quotes.',
+      : `Finnhub data as of ${latestDay}. ${liveCount}/${results.length} symbols live.`,
   });
   response.headers.set(
     'Cache-Control',

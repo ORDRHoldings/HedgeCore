@@ -20,28 +20,6 @@ _FX_PAIRS = [
     "USDAUD", "USDNZD",                                    # Oceania
 ]
 
-# Indicative fallback rates (last-resort when all providers are down)
-_FALLBACK_RATES: dict[str, float] = {
-    "USDMXN": 17.24, "USDBRL": 4.97, "USDCOP": 4150.0, "USDCLP": 950.0, "USDPEN": 3.73,
-    "EURUSD": 1.085, "GBPUSD": 1.270, "USDJPY": 149.5, "USDCAD": 1.36, "USDCHF": 0.895,
-    "USDCNY": 7.24, "USDINR": 83.1, "USDSGD": 1.34, "USDKRW": 1325.0, "USDHKD": 7.82,
-    "USDAUD": 1.53, "USDNZD": 1.62,
-}
-
-
-def _build_fallback_rate(pair: str, timestamp: str) -> dict:
-    fb = _FALLBACK_RATES.get(pair, 1.0)
-    spread = fb * 0.0002
-    return {
-        "symbol": pair,
-        "mid": fb,
-        "bid": round(fb - spread, 6),
-        "ask": round(fb + spread, 6),
-        "change_pct": 0.0,
-        "source": "indicative_fallback",
-        "timestamp": timestamp,
-    }
-
 
 async def _fetch_via_twelvedata(requested: list[str]) -> list[dict] | None:
     """Try TwelveData provider. Returns list of rate dicts or None on failure."""
@@ -117,7 +95,6 @@ async def _fetch_via_yfinance(requested: list[str], timestamp: str) -> list[dict
                 })
             except Exception as exc:
                 logger.warning("yfinance FX %s failed: %s", pair, exc)
-                rates.append(_build_fallback_rate(pair, timestamp))
 
         return rates if rates else None
     except Exception as exc:
@@ -138,7 +115,7 @@ async def get_fx_rates(pairs: str | None = None):
         if pairs
         else _FX_PAIRS
     )
-    unknown = [p for p in requested if p not in _FX_PAIRS and p not in _FALLBACK_RATES]
+    unknown = [p for p in requested if p not in _FX_PAIRS]
     if unknown:
         raise HTTPException(status_code=422, detail=f"Unsupported pair(s): {unknown}")
 
@@ -149,7 +126,7 @@ async def get_fx_rates(pairs: str | None = None):
     if rates and len(rates) == len(requested):
         return {"rates": rates, "source": "live", "timestamp": timestamp, "count": len(rates)}
 
-    # Partial TwelveData — fill gaps
+    # Partial TwelveData — fill gaps from yfinance
     if rates:
         covered = {r["symbol"] for r in rates}
         missing = [p for p in requested if p not in covered]
@@ -157,8 +134,6 @@ async def get_fx_rates(pairs: str | None = None):
             yf_rates = await _fetch_via_yfinance(missing, timestamp)
             if yf_rates:
                 rates.extend(yf_rates)
-            else:
-                rates.extend(_build_fallback_rate(p, timestamp) for p in missing)
         return {"rates": rates, "source": "partial", "timestamp": timestamp, "count": len(rates)}
 
     # 2. Try yfinance (fallback)
@@ -166,9 +141,8 @@ async def get_fx_rates(pairs: str | None = None):
     if rates:
         return {"rates": rates, "source": "live", "timestamp": timestamp, "count": len(rates)}
 
-    # 3. Hardcoded fallbacks (last resort)
-    rates = [_build_fallback_rate(p, timestamp) for p in requested]
-    return {"rates": rates, "source": "indicative_fallback", "timestamp": timestamp, "count": len(rates)}
+    # 3. No live data available — refuse to serve stale prices
+    raise HTTPException(status_code=503, detail="FX rate data unavailable — all providers unreachable. Configure TWELVEDATA_API_KEY or ensure network access.")
 
 
 @router.get("/sectors")
