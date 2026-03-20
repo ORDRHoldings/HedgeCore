@@ -81,6 +81,21 @@
 | `/v1/audit-lab/schedules` | POST | JWT | Create recurring audit schedule |
 | `/v1/audit-lab/schedules` | GET | JWT | List audit schedules |
 
+## Reports
+| Endpoint | Method | Auth | Perm | Returns | Notes |
+|----------|--------|------|------|---------|-------|
+| `/v1/reports/{run_id}/emir` | GET | JWT | reports.export | application/xml | EMIR trade report XML |
+| `/v1/reports/{run_id}/mifid` | GET | JWT | reports.export | application/xml | MiFID II transaction report XML |
+| `/v1/reports/{run_id}/dodd-frank` | GET | JWT | reports.export | application/xml | Dodd-Frank swap data report XML |
+| `/v1/reports/{run_id}/isda` | GET | JWT | reports.export | application/xml | ISDA trade confirmation XML; transaction list built from hedge_plan.buckets in run_envelope |
+| `/v1/reports/{run_id}/finra-17a4` | GET | JWT | reports.export | text/plain | FINRA 17a-4 pipe-delimited with SHA-256 hash chain; findings derived from audit_flags in run_envelope; hash chain from recent audit events |
+
+## Hedge Effectiveness
+| Endpoint | Method | Auth | Perm | Returns | Notes |
+|----------|--------|------|------|---------|-------|
+| `/v1/hedge-effectiveness/runs/{run_id}/ifrs9-xml` | GET | JWT | reports.export | application/xml | IFRS 9 hedge effectiveness evidence XML; includes dollar-offset ratio, regression stats, per-period data, and audit hashes |
+| `/v1/hedge-effectiveness/runs/{run_id}/asc815-xml` | GET | JWT | reports.export | application/xml | ASC 815 hedge effectiveness evidence XML; same structure as ifrs9-xml with standard label overridden to ASC_815 |
+
 ## Admin
 | Endpoint | Method | Auth | Purpose |
 |----------|--------|------|---------|
