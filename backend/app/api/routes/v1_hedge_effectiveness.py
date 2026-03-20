@@ -22,6 +22,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +38,7 @@ from app.models.hedge_effectiveness import HedgeEffectivenessDataset, HedgeEffec
 from app.models.user import User
 from app.services import rbac_service
 from app.services.audit_emit import emit_audit
+from app.services.regulatory_export import export_ifrs9_xml
 
 router = APIRouter(prefix="/v1/hedge-effectiveness", tags=["hedge-effectiveness"])
 # -- Permission helper -------------------------------------------------------
@@ -47,6 +49,56 @@ async def _require(session: AsyncSession, user: User, codename: str) -> None:
     perms = await rbac_service.get_permissions_by_user(session, user.id)
     if codename not in perms and "calculate.run_production" not in perms:
         raise HTTPException(status_code=403, detail=f"Missing permission: {codename}")
+
+
+def _build_ifrs9_run_data(
+    run: HedgeEffectivenessRun,
+    ds: HedgeEffectivenessDataset,
+    current_user: User,
+) -> dict:
+    """Build run_data dict for export_ifrs9_xml from ORM objects."""
+    return {
+        "run_id": str(run.id),
+        "standard": run.standard or "IFRS_9",
+        "hedge_type": ds.hedge_type or "",
+        "currency_pair": ds.currency_pair or "",
+        "designation_date": ds.designation_date or "",
+        "methodology_version": run.methodology_version or "",
+        "overall_effective": run.overall_effective,
+        "dollar_offset_ratio": float(run.dollar_offset_ratio) if run.dollar_offset_ratio is not None else None,
+        "dollar_offset_effective": run.dollar_offset_effective,
+        "regression_r_squared": float(run.regression_r_squared) if run.regression_r_squared is not None else None,
+        "regression_slope": float(run.regression_slope) if run.regression_slope is not None else None,
+        "regression_effective": run.regression_effective,
+        "run_hash": run.run_hash or "",
+        "inputs_hash": run.inputs_hash or "",
+        "outputs_hash": run.outputs_hash or "",
+        "dataset_name": ds.name or "",
+        "generated_by": current_user.email,
+        "report_date": datetime.now(UTC).strftime("%Y-%m-%d"),
+    }
+
+
+async def _fetch_eff_run_and_dataset(
+    session: AsyncSession,
+    run_id: str,
+    company_id,
+) -> tuple[HedgeEffectivenessRun, HedgeEffectivenessDataset]:
+    """Fetch HedgeEffectivenessRun + dataset, tenant-scoped. Raises 404 if not found."""
+    stmt = (
+        select(HedgeEffectivenessRun, HedgeEffectivenessDataset)
+        .join(HedgeEffectivenessDataset, HedgeEffectivenessDataset.id == HedgeEffectivenessRun.dataset_id)
+        .where(
+            HedgeEffectivenessRun.id == uuid.UUID(run_id),
+            HedgeEffectivenessRun.company_id == company_id,
+        )
+    )
+    result = await session.execute(stmt)
+    row = result.one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="Assessment run not found.")
+    return row
+
 # -- Request schemas ---------------------------------------------------------
 
 class DatasetPeriod(BaseModel):
@@ -562,3 +614,115 @@ async def export_run(
         "report": report,
         "trace_bundle": run.trace_bundle,
     }
+# -- Endpoint: Download IFRS 9 XML ------------------------------------------
+
+@router.get("/runs/{run_id}/ifrs9-xml")
+async def download_ifrs9_xml(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    GET /v1/hedge-effectiveness/runs/{run_id}/ifrs9-xml
+
+    Download IFRS 9 hedge effectiveness evidence as XML.
+    Includes assessment results, periods, and audit trace hashes.
+
+    Requires: reports.export
+    """
+    await _require(session, current_user, "reports.export")
+
+    run, ds = await _fetch_eff_run_and_dataset(
+        session, run_id, current_user.company_id
+    )
+
+    run_data = _build_ifrs9_run_data(run, ds, current_user)
+
+    # Extract periods from stored dataset
+    data = ds.data_json if isinstance(ds.data_json, list) else (
+        json.loads(ds.data_json) if isinstance(ds.data_json, str) else []
+    )
+    periods = [
+        {
+            "period_index": p.get("period_index", i),
+            "period_date": p.get("period_date", ""),
+            "hedged_item_fv_change": float(p.get("hedged_item_fv_change", 0)),
+            "instrument_fv_change": float(p.get("instrument_fv_change", 0)),
+        }
+        for i, p in enumerate(data)
+    ]
+
+    content = export_ifrs9_xml(run_data, {}, periods, standard="IFRS_9")
+
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="REGULATORY_EXPORT",
+        description=f"IFRS 9 XML export for effectiveness run {run_id[:8]}",
+        entity_type="hedge_effectiveness_run",
+        entity_id=run_id,
+        payload={"format": "ifrs9_xml", "run_id": run_id},
+    )
+
+    filename = f"ifrs9-evidence-{run_id[:8]}.xml"
+    return StreamingResponse(
+        io.BytesIO(content.encode("utf-8")),
+        media_type="application/xml; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+# -- Endpoint: Download ASC 815 XML -----------------------------------------
+
+@router.get("/runs/{run_id}/asc815-xml")
+async def download_asc815_xml(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    GET /v1/hedge-effectiveness/runs/{run_id}/asc815-xml
+
+    Download ASC 815 hedge effectiveness evidence as XML.
+    Same structure as IFRS 9 export but labelled ASC_815.
+
+    Requires: reports.export
+    """
+    await _require(session, current_user, "reports.export")
+
+    run, ds = await _fetch_eff_run_and_dataset(
+        session, run_id, current_user.company_id
+    )
+
+    run_data = _build_ifrs9_run_data(run, ds, current_user)
+    run_data["standard"] = "ASC_815"
+
+    data = ds.data_json if isinstance(ds.data_json, list) else (
+        json.loads(ds.data_json) if isinstance(ds.data_json, str) else []
+    )
+    periods = [
+        {
+            "period_index": p.get("period_index", i),
+            "period_date": p.get("period_date", ""),
+            "hedged_item_fv_change": float(p.get("hedged_item_fv_change", 0)),
+            "instrument_fv_change": float(p.get("instrument_fv_change", 0)),
+        }
+        for i, p in enumerate(data)
+    ]
+
+    content = export_ifrs9_xml(run_data, {}, periods, standard="ASC_815")
+
+    await emit_audit(
+        session=session,
+        user=current_user,
+        event_type="REGULATORY_EXPORT",
+        description=f"ASC 815 XML export for effectiveness run {run_id[:8]}",
+        entity_type="hedge_effectiveness_run",
+        entity_id=run_id,
+        payload={"format": "asc815_xml", "run_id": run_id},
+    )
+
+    filename = f"asc815-evidence-{run_id[:8]}.xml"
+    return StreamingResponse(
+        io.BytesIO(content.encode("utf-8")),
+        media_type="application/xml; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

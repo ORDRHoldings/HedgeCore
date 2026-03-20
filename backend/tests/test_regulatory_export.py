@@ -662,6 +662,22 @@ def _sample_eff_periods() -> list[dict]:
 from app.services.regulatory_export import export_ifrs9_xml
 
 
+def test_ifrs9_xml_round_trip() -> None:
+    """export_ifrs9_xml with full run_data produces parseable XML with all key fields."""
+    xml = export_ifrs9_xml(
+        _sample_eff_run_data(),
+        {},
+        _sample_eff_periods(),
+        standard="IFRS_9",
+    )
+    parseable = xml.replace("ordr:", "").replace("xmlns:ordr=", "xmlns=")
+    root = ET.fromstring(parseable)
+    assert root is not None
+    assert "eff-run-001" in xml
+    assert "<overallEffective>true</overallEffective>" in xml
+    assert xml.count("<period seq=") == 2
+
+
 def test_isda_export_via_public_api() -> None:
     """Confirm export_isda_xml produces a full ISDA-namespace XML document."""
     xml = export_isda_xml(_sample_run(), _sample_transactions())
