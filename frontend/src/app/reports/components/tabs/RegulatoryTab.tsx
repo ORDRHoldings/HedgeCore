@@ -62,6 +62,26 @@ const FORMAT_CARDS: FormatCard[] = [
     icon: FileText,
   },
   {
+    id: "isda",
+    title: "ISDA Trade Confirmation",
+    description: "ISDA-format XML trade confirmation envelope with transaction legs",
+    format: "XML",
+    formatColor: T.accent,
+    endpoint: (runId) => `/v1/reports/${runId}/isda`,
+    filename: (runId) => `isda-confirmation-${runId.slice(0, 8)}.xml`,
+    icon: FileCode2,
+  },
+  {
+    id: "finra-17a4",
+    title: "FINRA Rule 17a-4",
+    description: "Immutable audit record with SHA-256 hash chain for books-and-records compliance",
+    format: "TXT",
+    formatColor: T.warn,
+    endpoint: (runId) => `/v1/reports/${runId}/finra-17a4`,
+    filename: (runId) => `finra-17a4-${runId.slice(0, 8)}.txt`,
+    icon: FileText,
+  },
+  {
     id: "bank-pdf",
     title: "Bank Compliance PDF",
     description: "Formatted compliance report for bank counterparty submissions",
@@ -83,6 +103,40 @@ const FORMAT_CARDS: FormatCard[] = [
   },
 ];
 
+interface EffFormatCard {
+  id: string;
+  title: string;
+  description: string;
+  format: string;
+  formatColor: string;
+  endpoint: (runId: string) => string;
+  filename: (runId: string) => string;
+  icon: typeof FileCode2;
+}
+
+const EFF_FORMAT_CARDS: EffFormatCard[] = [
+  {
+    id: "ifrs9",
+    title: "IFRS 9 Evidence XML",
+    description: "Hedge effectiveness evidence binder under IAS 39 / IFRS 9 with audit trace hashes",
+    format: "XML",
+    formatColor: T.accent,
+    endpoint: (runId) => `/v1/hedge-effectiveness/runs/${runId}/ifrs9-xml`,
+    filename: (runId) => `ifrs9-evidence-${runId.slice(0, 8)}.xml`,
+    icon: FileCode2,
+  },
+  {
+    id: "asc815",
+    title: "ASC 815 Evidence XML",
+    description: "Hedge effectiveness evidence binder under US GAAP ASC 815 with audit trace hashes",
+    format: "XML",
+    formatColor: T.accent,
+    endpoint: (runId) => `/v1/hedge-effectiveness/runs/${runId}/asc815-xml`,
+    filename: (runId) => `asc815-evidence-${runId.slice(0, 8)}.xml`,
+    icon: FileCode2,
+  },
+];
+
 export default function RegulatoryTab({ token }: Props) {
   const [runs, setRuns] = useState<RunOption[]>([]);
   const [selectedRun, setSelectedRun] = useState<string>("");
@@ -90,6 +144,10 @@ export default function RegulatoryTab({ token }: Props) {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [leiStatus, setLeiStatus] = useState<LeiStatus | null>(null);
+  const [effRuns, setEffRuns] = useState<RunOption[]>([]);
+  const [selectedEffRun, setSelectedEffRun] = useState<string>("");
+  const [effLoading, setEffLoading] = useState(true);
+  const [downloadingEff, setDownloadingEff] = useState<string | null>(null);
 
   const fetchRuns = useCallback(async () => {
     setLoading(true);
@@ -135,10 +193,44 @@ export default function RegulatoryTab({ token }: Props) {
     }
   }, [token]);
 
+  const fetchEffRuns = useCallback(async () => {
+    setEffLoading(true);
+    try {
+      const res = await dashboardFetch("/v1/hedge-effectiveness/runs?limit=50", token);
+      if (res.ok) {
+        const data = await res.json();
+        const items: Array<{ run_id?: string; standard?: string; created_at?: string }> =
+          Array.isArray(data) ? data : data.items ?? [];
+        setEffRuns(
+          items.map((r) => {
+            const id = r.run_id ?? "";
+            const std = r.standard ?? "";
+            const date = r.created_at
+              ? new Date(r.created_at).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "";
+            return {
+              id,
+              label: `${id.slice(0, 8)}${std ? ` [${std}]` : ""}${date ? ` - ${date}` : ""}`,
+            };
+          }),
+        );
+      }
+    } catch {
+      setEffRuns([]);
+    } finally {
+      setEffLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchRuns();
     fetchLeiStatus();
-  }, [fetchRuns, fetchLeiStatus]);
+    fetchEffRuns();
+  }, [fetchRuns, fetchLeiStatus, fetchEffRuns]);
 
   const handleDownload = async (card: FormatCard) => {
     if (!selectedRun) return;
@@ -160,6 +252,29 @@ export default function RegulatoryTab({ token }: Props) {
       // silently handle
     } finally {
       setDownloading(null);
+    }
+  };
+
+  const handleEffDownload = async (card: EffFormatCard) => {
+    if (!selectedEffRun) return;
+    setDownloadingEff(card.id);
+    try {
+      const res = await dashboardFetch(card.endpoint(selectedEffRun), token);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = card.filename(selectedEffRun);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+    } catch {
+      // silently handle
+    } finally {
+      setDownloadingEff(null);
     }
   };
 
@@ -385,6 +500,153 @@ export default function RegulatoryTab({ token }: Props) {
         Regulatory reports are generated from deterministic calculation runs.
         These documents are for internal compliance workflows and do not
         constitute legal or regulatory advice.
+      </div>
+
+      {/* Hedge Accounting Evidence */}
+      <hr style={{ border: "none", borderTop: `1px solid ${T.rim}`, margin: "32px 0" }} />
+
+      <div style={{ marginBottom: 16 }}>
+        <span style={{
+          fontFamily: T.fontMono,
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase" as const,
+          color: T.tertiary,
+        }}>
+          HEDGE ACCOUNTING EVIDENCE — IFRS 9 / ASC 815
+        </span>
+      </div>
+
+      {/* Effectiveness run selector */}
+      <div style={{ marginBottom: 24, maxWidth: 420 }}>
+        <label
+          style={{
+            display: "block",
+            fontFamily: T.fontMono,
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase" as const,
+            color: T.tertiary,
+            marginBottom: 8,
+          }}
+        >
+          SELECT EFFECTIVENESS RUN
+        </label>
+        <select
+          value={selectedEffRun}
+          onChange={(e) => setSelectedEffRun(e.target.value)}
+          disabled={effLoading}
+          style={{
+            width: "100%",
+            fontFamily: T.fontMono,
+            fontSize: 13,
+            color: T.primary,
+            background: T.bgPanel,
+            border: `1px solid ${T.rim}`,
+            borderRadius: 6,
+            padding: "10px 14px",
+            outline: "none",
+            cursor: "pointer",
+            appearance: "auto" as const,
+          }}
+        >
+          <option value="">
+            {effLoading ? "Loading runs..." : "-- Select an effectiveness run --"}
+          </option>
+          {effRuns.map((run) => (
+            <option key={run.id} value={run.id}>
+              {run.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Effectiveness format cards */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        {EFF_FORMAT_CARDS.map((card) => {
+          const isHovered = hoveredCard === card.id;
+          const isDisabled = !selectedEffRun;
+          const isDownloading = downloadingEff === card.id;
+          const CardIcon = card.icon;
+
+          return (
+            <div
+              key={card.id}
+              onMouseEnter={() => setHoveredCard(card.id)}
+              onMouseLeave={() => setHoveredCard(null)}
+              style={{
+                background: T.bgPanel,
+                border: `1px solid ${isHovered && !isDisabled ? T.accent : T.rim}`,
+                borderRadius: 6,
+                padding: 20,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                transition: "border-color 0.15s",
+                opacity: isDisabled ? 0.6 : 1,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <CardIcon size={20} color={T.secondary} />
+                <span
+                  style={{
+                    fontFamily: T.fontMono,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    color: card.formatColor,
+                    background: T.bgSub,
+                    border: `1px solid ${T.soft}`,
+                    borderRadius: 3,
+                    padding: "3px 8px",
+                  }}
+                >
+                  {card.format}
+                </span>
+              </div>
+              <span style={{ fontFamily: T.fontUI, fontSize: 14, fontWeight: 700, color: T.primary }}>
+                {card.title}
+              </span>
+              <span style={{ fontFamily: T.fontUI, fontSize: 12, color: T.secondary, lineHeight: 1.5 }}>
+                {card.description}
+              </span>
+              <button
+                onClick={() => handleEffDownload(card)}
+                disabled={isDisabled || isDownloading}
+                style={{
+                  marginTop: "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  fontFamily: T.fontMono,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase" as const,
+                  color: isDisabled ? T.disabled : T.primary,
+                  background: T.bgSub,
+                  border: `1px solid ${isDisabled ? T.soft : T.rim}`,
+                  borderRadius: 4,
+                  padding: "8px 16px",
+                  cursor: isDisabled ? "not-allowed" : "pointer",
+                }}
+              >
+                <Download size={13} />
+                {isDownloading ? "DOWNLOADING..." : "DOWNLOAD"}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
