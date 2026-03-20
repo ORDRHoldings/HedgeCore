@@ -1,5 +1,18 @@
 # Changelog (AI-maintained)
 
+## 2026-03-20 — Sprint Complete: Regulatory Reporting Exports (commit 62abe85)
+
+### Summary
+Full regulatory exports sprint delivered. 7 items, 6 files changed. Added export_ifrs9_xml pure service function (6th serializer, ordr: namespace). Added ISDA and FINRA-17a4 endpoints to v1_reports.py following existing EMIR/MiFID pattern. Added IFRS9-xml and ASC815-xml endpoints to v1_hedge_effectiveness.py with tenant-scoped helpers. Extended RegulatoryTab.tsx: 7-card trade-repo section + new hedge accounting section (IFRS9 + ASC815 with separate run selector). API_CONTRACTS.md updated. 4615 tests pass, frontend build clean.
+
+### Changes
+- **`backend/app/services/regulatory_export.py`**: Added `export_ifrs9_xml(run_data, results, periods, *, standard)` — XML with `ordr:` namespace, sections: header/hedgeDesignation/effectivenessResults/periods/auditTrace.
+- **`backend/tests/test_regulatory_export.py`**: Added `TestExportIfrs9Xml` (11 tests), `test_isda_export_via_public_api`, `test_ifrs9_xml_round_trip`.
+- **`backend/app/api/routes/v1_reports.py`**: Added `GET /{run_id}/isda` (ISDA XML, builds transactions from buckets) and `GET /{run_id}/finra-17a4` (pipe-delimited TXT, SHA-256 hash chain from AuditEvent).
+- **`backend/app/api/routes/v1_hedge_effectiveness.py`**: Added `_build_ifrs9_run_data`, `_fetch_eff_run_and_dataset` helpers + `GET /runs/{run_id}/ifrs9-xml` and `GET /runs/{run_id}/asc815-xml` endpoints.
+- **`frontend/src/app/reports/components/tabs/RegulatoryTab.tsx`**: ISDA + FINRA-17a4 added to FORMAT_CARDS. New `EffFormatCard` interface. `EFF_FORMAT_CARDS` (IFRS9 + ASC815). `fetchEffRuns` reads `r.run_id`. Hedge accounting section with HR divider, section header, effectiveness run selector, card grid.
+- **`docs/architecture/API_CONTRACTS.md`**: Documented ISDA, FINRA-17a4, IFRS9-xml, ASC815-xml endpoints.
+
 ## 2026-03-19 — Sprint Complete: Market Intelligence & Portfolio Expansion (commit 856b576)
 
 ### Summary

@@ -1,6 +1,32 @@
 # Current Sprint
 
-Sprint: Market Intelligence & Portfolio Expansion
+Sprint: Regulatory Reporting Exports
+Started: 2026-03-20
+Completed: 2026-03-20
+
+## Goals
+Add ISDA, FINRA-17a4, IFRS9, and ASC815 regulatory export downloads to Reports Studio.
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 1 | export_ifrs9_xml service function + 11 unit tests | DONE | high |
+| 2 | GET /{run_id}/isda endpoint (v1_reports.py) | DONE | high |
+| 3 | GET /{run_id}/finra-17a4 endpoint (v1_reports.py) | DONE | high |
+| 4 | GET /runs/{run_id}/ifrs9-xml endpoint (v1_hedge_effectiveness.py) | DONE | high |
+| 5 | GET /runs/{run_id}/asc815-xml endpoint (v1_hedge_effectiveness.py) | DONE | high |
+| 6 | RegulatoryTab.tsx — 4 new cards + hedge accounting section | DONE | high |
+| 7 | API_CONTRACTS.md — document 4 new endpoints | DONE | medium |
+
+## Completed: 7/7
+## Sprint Status: COMPLETE ✓
+## Validation: 4615 passed, 154 skipped, 0 failed. Frontend build clean.
+
+## Previous Sprint: Market Intelligence & Portfolio Expansion (COMPLETED 2026-03-19, 9/9 items)
+
+---
+
+# Sprint: Market Intelligence & Portfolio Expansion
 Started: 2026-03-19
 
 ## Goals
