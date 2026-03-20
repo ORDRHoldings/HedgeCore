@@ -905,9 +905,8 @@ async def download_finra_17a4(
     ]
 
     # Build hash chain from recent audit events
-    from sqlalchemy import select as sa_select
     hash_q = (
-        sa_select(AuditEvent.event_hash)
+        select(AuditEvent.event_hash)
         .where(AuditEvent.company_id == current_user.company_id)
         .order_by(AuditEvent.created_at.desc())
         .limit(10)
@@ -996,9 +995,8 @@ async def download_dodd_frank(
     run_data = await _build_reg_run_data(run, current_user, run_id, session)
 
     # Build hash chain from audit events
-    from sqlalchemy import select as sa_select
     hash_q = (
-        sa_select(AuditEvent.event_hash)
+        select(AuditEvent.event_hash)
         .where(AuditEvent.company_id == current_user.company_id)
         .order_by(AuditEvent.created_at.desc())
         .limit(10)
