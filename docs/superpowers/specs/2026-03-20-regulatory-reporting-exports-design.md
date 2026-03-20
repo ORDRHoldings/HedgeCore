@@ -32,6 +32,7 @@
 | `backend/app/api/routes/v1_reports.py` | Add `GET /{run_id}/isda`, `GET /{run_id}/finra-17a4` |
 | `backend/app/api/routes/v1_hedge_effectiveness.py` | Add `GET /runs/{run_id}/ifrs9-xml`, `GET /runs/{run_id}/asc815-xml` |
 | `frontend/src/app/reports/components/tabs/RegulatoryTab.tsx` | Restructure into two sections, add 4 new cards |
+| `docs/architecture/API_CONTRACTS.md` | Add 4 new endpoint entries |
 
 ---
 
@@ -57,35 +58,35 @@ def export_ifrs9_xml(
 - `periods` — list of dicts with `period_start`, `period_end`, `hedged_change`, `instrument_change`, `ratio`, `effective` (bool)
 - `standard` — `"IFRS_9"` or `"ASC_815"`
 
-**Output XML structure:**
+**Output XML structure** — uses prefixed namespace to match existing codebase convention:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<hedgeAccountingEvidence xmlns="urn:ordr:hedge-accounting:2024" standard="IFRS_9">
-  <header>
+<ordr:hedgeAccountingEvidence xmlns:ordr="urn:ordr:hedge-accounting:2024" standard="IFRS_9">
+  <ordr:header>
     <runId>...</runId>
-    <standard>IFRS_9</standard>          <!-- or ASC_815 -->
+    <standard>IFRS_9</standard>
     <methodologyVersion>...</methodologyVersion>
     <generatedAt>...</generatedAt>
     <generatedBy>...</generatedBy>
     <runHash>...</runHash>
     <inputsHash>...</inputsHash>
     <outputsHash>...</outputsHash>
-  </header>
-  <hedgeDesignation>
+  </ordr:header>
+  <ordr:hedgeDesignation>
     <datasetName>...</datasetName>
     <currencyPair>...</currencyPair>
-    <hedgeType>...</hedgeType>           <!-- CASH_FLOW / FAIR_VALUE / NET_INVESTMENT -->
+    <hedgeType>...</hedgeType>
     <periodCount>N</periodCount>
-  </hedgeDesignation>
-  <effectivenessResults>
+  </ordr:hedgeDesignation>
+  <ordr:effectivenessResults>
     <overallEffective>true</overallEffective>
     <dollarOffsetRatio>0.97</dollarOffsetRatio>
     <regressionRSquared>0.94</regressionRSquared>
     <regressionSlope>0.96</regressionSlope>
-    <thresholdLower>0.80</thresholdLower>   <!-- IFRS 9: 80-125% / ASC 815: 80-125% -->
+    <thresholdLower>0.80</thresholdLower>
     <thresholdUpper>1.25</thresholdUpper>
-  </effectivenessResults>
-  <periods>
+  </ordr:effectivenessResults>
+  <ordr:periods>
     <period seq="1">
       <periodStart>...</periodStart>
       <periodEnd>...</periodEnd>
@@ -94,23 +95,25 @@ def export_ifrs9_xml(
       <offsetRatio>...</offsetRatio>
       <effective>true</effective>
     </period>
-    <!-- ... -->
-  </periods>
-  <auditTrace>
+  </ordr:periods>
+  <ordr:auditTrace>
+    <!-- Intentionally mirrors <header> hashes for standalone trace verification -->
     <runHash>...</runHash>
     <inputsHash>...</inputsHash>
     <outputsHash>...</outputsHash>
     <traceNote>SHA-256 hash chain. Verify via GET /v1/hedge-effectiveness/runs/{run_id}/export</traceNote>
-  </auditTrace>
-</hedgeAccountingEvidence>
+  </ordr:auditTrace>
+</ordr:hedgeAccountingEvidence>
 ```
 
 **Rules:**
 - Pure function, no DB/IO
 - Uses `_x()` and `_now_iso()` helpers already in the file
-- `standard` appears in the root element attribute and `<standard>` tag
+- Uses `ordr:` prefix to match existing codebase namespace convention (`isda:`, `emir:`, `mifid:`)
+- `standard` appears in the root element attribute and inner `<standard>` tag
 - `thresholdLower` / `thresholdUpper` are always `0.80` / `1.25` (same for IFRS 9 and ASC 815)
-- If `periods` is empty, emit `<periods/>` self-closing
+- `<auditTrace>` duplication of header hashes is intentional — enables standalone trace verification
+- If `periods` is empty, emit `<ordr:periods/>` self-closing
 
 ---
 
@@ -118,7 +121,7 @@ def export_ifrs9_xml(
 
 **File:** `backend/app/api/routes/v1_reports.py`
 
-Add import at top (alongside existing regulatory imports):
+Update import (alongside existing regulatory imports):
 ```python
 from app.services.regulatory_export import (
     export_emir_xml,
@@ -129,29 +132,59 @@ from app.services.regulatory_export import (
 )
 ```
 
-**Endpoint 1:**
+**Endpoint 1 — ISDA XML:**
 ```python
 @router.get("/{run_id}/isda")
 async def download_isda(run_id, session, current_user):
     """GET /v1/reports/{run_id}/isda — ISDA XML trade confirmation. Requires reports.export."""
 ```
 - `await _require(session, current_user, "reports.export")`
-- Fetch run via `_fetch_run`, positions via `_fetch_positions`
-- Extract `buckets` from `run.run_envelope.hedge_plan.buckets`
-- Call `export_isda_xml(run_data, buckets)` — `run_data` maps to `export_isda_xml` parameter shape (run_id, trade_date, value_date, counterparty, currency_base, currency_quote, notional, rate); populate from run envelope where available, default empty string otherwise
-- Emit audit event via `_emit_report_audit(session, current_user, run_id, "isda")`
-- Return `StreamingResponse` with `application/xml`, filename `isda-{run_id[:8]}.xml`
+- Fetch run via `_fetch_run(session, run_id, current_user.company_id)` — 404 if not found
+- Fetch positions via `_fetch_positions(session, run.position_ids or [], current_user.company_id)`
+- Build `run_data` via `await _build_reg_run_data(run, current_user, run_id, session)` — provides `run_id`, `trade_date`, `value_date`, `reporting_entity_lei`, etc. Then supplement with ISDA-specific keys that `export_isda_xml` reads from `run_data` (`counterparty`, `currency_base`, `currency_quote`, `notional`, `rate`):
+  ```python
+  run_data = await _build_reg_run_data(run, current_user, run_id, session)
+  envelope = run.run_envelope or {}
+  hedge_plan = envelope.get("hedge_plan") or {}
+  buckets = hedge_plan.get("buckets", [])
+  # Supplement with ISDA trade-level keys from run envelope
+  run_data["counterparty"] = run_data.get("counterparty_lei", "")
+  run_data["currency_base"] = hedge_plan.get("base_currency", "")
+  run_data["currency_quote"] = hedge_plan.get("quote_currency", "USD")
+  run_data["notional"] = str(hedge_plan.get("total_notional", ""))
+  run_data["rate"] = str(hedge_plan.get("blended_rate", ""))
+  ```
+- Build `transactions` by mapping hedge plan buckets to ISDA transaction shape. The `export_isda_xml` second parameter is `transactions: list[dict]` expecting keys `transaction_id`, `direction`, `currency`, `amount`, `rate`, `value_date`. Map from `buckets`:
+  ```python
+  transactions = [
+      {
+          "transaction_id": str(b.get("position_id", ""))[:12] or f"TXN-{i}",
+          "direction": "BUY" if float(b.get("hedge_notional", 0) or 0) >= 0 else "SELL",
+          "currency": b.get("currency", ""),
+          "amount": str(abs(float(b.get("hedge_notional", 0) or 0))),
+          "rate": str(b.get("hedge_rate", "")),
+          "value_date": b.get("value_date", ""),
+      }
+      for i, b in enumerate(buckets)
+  ]
+  ```
+  Note: if the run envelope does not contain these keys, the fields default to empty string — structurally valid XML, semantically incomplete. This is acceptable for v1 since the platform does not yet have a structured counterparty registry.
+- Call `export_isda_xml(run_data, transactions)`
+- Emit: `await _emit_report_audit(session, current_user, run_id, "isda")`
+- Return `StreamingResponse(io.BytesIO(content.encode()), media_type="application/xml")`, filename `isda-{run_id[:8]}.xml`
 
-**Endpoint 2:**
+**Endpoint 2 — FINRA 17a-4:**
 ```python
 @router.get("/{run_id}/finra-17a4")
 async def download_finra(run_id, session, current_user):
     """GET /v1/reports/{run_id}/finra-17a4 — FINRA 17a-4 immutable record. Requires reports.export."""
 ```
-- Same auth pattern
-- Build `findings` list from `run.run_envelope.get("findings", [])` — each finding needs `finding_id`, `timestamp`, `category`, `severity`, `description`; if `findings` is empty, pass `[]`
-- Fetch last 10 audit event hashes as `hash_chain` (same pattern as Dodd-Frank endpoint)
+- Same auth + fetch pattern
+- `run_data` via `_build_reg_run_data` — relevant keys used by `export_finra_17a4`: `run_id`, `generated_by`, `report_date`
+- `findings` from `(run.run_envelope or {}).get("findings", [])` — each must have `finding_id`, `timestamp`, `category`, `severity`, `description`; pass `[]` if absent
+- `hash_chain` — last 10 audit event hashes (same pattern as Dodd-Frank endpoint)
 - Call `export_finra_17a4(run_data, findings, hash_chain)`
+- Emit: `await _emit_report_audit(session, current_user, run_id, "finra-17a4")`
 - Return `text/plain`, filename `finra-17a4-{run_id[:8]}.txt`
 
 ---
@@ -165,7 +198,7 @@ Add import:
 from app.services.regulatory_export import export_ifrs9_xml
 ```
 
-**Helper** (private, add near bottom):
+**Helper** (pure mapping function, no async needed):
 ```python
 def _build_ifrs9_run_data(run, ds, current_user) -> dict:
     return {
@@ -181,25 +214,51 @@ def _build_ifrs9_run_data(run, ds, current_user) -> dict:
     }
 ```
 
-**Endpoint 1:**
+**Shared fetch pattern** (both endpoints use this exact query — tenant isolation via `company_id`):
+```python
+stmt = (
+    select(HedgeEffectivenessRun, HedgeEffectivenessDataset)
+    .join(HedgeEffectivenessDataset, HedgeEffectivenessDataset.id == HedgeEffectivenessRun.dataset_id)
+    .where(
+        HedgeEffectivenessRun.id == uuid.UUID(run_id),
+        HedgeEffectivenessRun.company_id == company_id,  # REQUIRED — tenant scope
+    )
+)
+result = await session.execute(stmt)
+row = result.one_or_none()
+if not row:
+    raise HTTPException(status_code=404, detail="Assessment run not found.")
+run, ds = row
+```
+
+**Endpoint 1 — IFRS 9:**
 ```python
 @router.get("/runs/{run_id}/ifrs9-xml")
 async def export_ifrs9(run_id, session, current_user):
     """GET /v1/hedge-effectiveness/runs/{run_id}/ifrs9-xml — IFRS 9 evidence XML."""
 ```
-- Fetch `HedgeEffectivenessRun` + `HedgeEffectivenessDataset` (same join as existing `/export` endpoint)
-- Extract `periods` from `run.report_json.get("periods", [])`
-- Extract `results` from run ORM fields: `dollar_offset_ratio`, `regression_r_squared`, `regression_slope`, `overall_effective`
-- Call `export_ifrs9_xml(run_data, results, periods, standard="IFRS_9")`
+- Fetch run+dataset using shared pattern above (company_id from `current_user.company_id`)
+- `results = { "dollar_offset_ratio": run.dollar_offset_ratio, "regression_r_squared": run.regression_r_squared, "regression_slope": run.regression_slope, "overall_effective": run.overall_effective }`
+- `report = run.report_json if isinstance(run.report_json, dict) else json.loads(run.report_json or "{}")`
+- `periods = report.get("periods", [])`
+- Call `export_ifrs9_xml(_build_ifrs9_run_data(run, ds, current_user), results, periods, standard="IFRS_9")`
+- Emit audit using the existing `emit_audit` signature from `app.services.audit_emit`:
+  ```python
+  await emit_audit(
+      session=session,
+      user=current_user,
+      event_type="SYSTEM",
+      description=f"Regulatory export: ifrs9-xml run_id={run_id}",
+      entity_type="hedge_effectiveness_run",
+      entity_id=run_id,
+      payload={"format": "ifrs9-xml"},
+  )
+  ```
 - Return `StreamingResponse`, `application/xml`, filename `ifrs9-evidence-{run_id[:8]}.xml`
 
-**Endpoint 2:**
-```python
-@router.get("/runs/{run_id}/asc815-xml")
-async def export_asc815(run_id, session, current_user):
-    """GET /v1/hedge-effectiveness/runs/{run_id}/asc815-xml — ASC 815 evidence XML."""
-```
+**Endpoint 2 — ASC 815:**
 - Identical to above, `standard="ASC_815"`, filename `asc815-evidence-{run_id[:8]}.xml`
+- Audit description: `f"Regulatory export: asc815-xml run_id={run_id}"`, payload `{"format": "asc815-xml"}`
 
 ---
 
@@ -207,15 +266,30 @@ async def export_asc815(run_id, session, current_user):
 
 **File:** `frontend/src/app/reports/components/tabs/RegulatoryTab.tsx`
 
+### Interface additions
+Define a separate interface for hedge accounting cards (avoids TypeScript error from missing `formatColor`/`icon` on `FormatCard`):
+```typescript
+interface EffFormatCard {
+  id: string;
+  title: string;
+  description: string;
+  format: string;
+  formatColor: string;   // always T.accent for XML
+  endpoint: (runId: string) => string;
+  filename: (runId: string) => string;
+  icon: typeof FileCode2;
+}
+```
+
 ### State additions
 ```typescript
 const [effRuns, setEffRuns] = useState<RunOption[]>([]);
 const [selectedEffRun, setSelectedEffRun] = useState<string>("");
 const [effLoading, setEffLoading] = useState(true);
+const [downloadingEff, setDownloadingEff] = useState<string | null>(null);
 ```
 
-### Data fetch additions
-`fetchEffRuns` — `GET /v1/hedge-effectiveness/runs`:
+### Data fetch — `fetchEffRuns`
 ```typescript
 const fetchEffRuns = useCallback(async () => {
   setEffLoading(true);
@@ -223,21 +297,25 @@ const fetchEffRuns = useCallback(async () => {
     const res = await dashboardFetch("/v1/hedge-effectiveness/runs", token);
     if (res.ok) {
       const data = await res.json();
-      const items = Array.isArray(data) ? data : data.items ?? [];
-      setEffRuns(items.map((r) => ({
-        id: r.id,
-        label: `${r.id.slice(0, 8)} — ${r.standard ?? ""} ${r.overall_effective ? "✓" : "✗"} ${r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}`,
-      })));
+      const items: Array<{ run_id?: string; standard?: string; overall_effective?: boolean; created_at?: string }> =
+        Array.isArray(data) ? data : data.items ?? [];
+      setEffRuns(
+        items.map((r) => {
+          const id = r.run_id ?? "";   // API returns run_id, not id
+          const date = r.created_at ? new Date(r.created_at).toLocaleDateString() : "";
+          const pass = r.overall_effective ? "✓ PASS" : "✗ FAIL";
+          return { id, label: `${id.slice(0, 8)} — ${r.standard ?? ""} ${pass} ${date}` };
+        }),
+      );
     }
   } catch { setEffRuns([]); }
   finally { setEffLoading(false); }
 }, [token]);
 ```
 
-Add `fetchEffRuns()` to the `useEffect`.
+Add `fetchEffRuns()` to the existing `useEffect`.
 
-### FORMAT_CARDS update
-Add to existing array:
+### `FORMAT_CARDS` additions (2 new entries, appended to existing array)
 ```typescript
 {
   id: "isda",
@@ -246,7 +324,7 @@ Add to existing array:
   format: "XML",
   formatColor: T.accent,
   endpoint: (runId) => `/v1/reports/${runId}/isda`,
-  filename: (runId) => `isda-confirmation-${runId.slice(0, 8)}.xml`,
+  filename: (runId) => `isda-${runId.slice(0, 8)}.xml`,   // matches backend Content-Disposition
   icon: FileCode2,
 },
 {
@@ -261,77 +339,151 @@ Add to existing array:
 },
 ```
 
-### New `EFF_FORMAT_CARDS` constant
+### `EFF_FORMAT_CARDS` constant
 ```typescript
-const EFF_FORMAT_CARDS = [
+const EFF_FORMAT_CARDS: EffFormatCard[] = [
   {
     id: "ifrs9",
     title: "IFRS 9 Evidence",
     description: "Hedge accounting evidence XML — designation, effectiveness ratios, period results, audit trace",
     format: "XML",
-    endpoint: (runId: string) => `/v1/hedge-effectiveness/runs/${runId}/ifrs9-xml`,
-    filename: (runId: string) => `ifrs9-evidence-${runId.slice(0, 8)}.xml`,
+    formatColor: T.accent,
+    endpoint: (runId) => `/v1/hedge-effectiveness/runs/${runId}/ifrs9-xml`,
+    filename: (runId) => `ifrs9-evidence-${runId.slice(0, 8)}.xml`,
+    icon: FileCode2,
   },
   {
     id: "asc815",
     title: "ASC 815 Evidence",
     description: "US GAAP hedge accounting evidence XML — same structure, ASC 815 standard flag",
     format: "XML",
-    endpoint: (runId: string) => `/v1/hedge-effectiveness/runs/${runId}/asc815-xml`,
-    filename: (runId: string) => `asc815-evidence-${runId.slice(0, 8)}.xml`,
+    formatColor: T.accent,
+    endpoint: (runId) => `/v1/hedge-effectiveness/runs/${runId}/asc815-xml`,
+    filename: (runId) => `asc815-evidence-${runId.slice(0, 8)}.xml`,
+    icon: FileCode2,
   },
 ];
 ```
 
+### `handleEffDownload` function (separate from existing `handleDownload`)
+```typescript
+const handleEffDownload = async (card: EffFormatCard) => {
+  if (!selectedEffRun) return;
+  setDownloadingEff(card.id);
+  try {
+    const res = await dashboardFetch(card.endpoint(selectedEffRun), token);
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = card.filename(selectedEffRun);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+  } catch { /* silent */ }
+  finally { setDownloadingEff(null); }
+};
+```
+
 ### Layout structure
 ```
-<div>                                    ← outer wrapper
-  {LEI status banner}                    ← unchanged
+<div>
+  {LEI status banner}                         ← unchanged
 
-  <SectionHeader>TRADE REPOSITORY FILINGS</SectionHeader>
-  {calc run selector}                    ← unchanged
-  <div grid>                             ← 7 cards (existing 5 + ISDA + FINRA)
-    {FORMAT_CARDS.map(...)}
+  {/* Section 1 */}
+  <SectionLabel>TRADE REPOSITORY FILINGS</SectionLabel>
+  {calc run selector}                         ← unchanged (selectedRun)
+  <div grid>                                  ← 7 cards
+    {FORMAT_CARDS.map(card => (
+      <FormatCardUI card={card}
+        isDisabled={!selectedRun}
+        isDownloading={downloading === card.id}
+        onDownload={() => handleDownload(card)} />
+    ))}
   </div>
 
-  <Divider />                            ← <hr> with section label
+  {/* Divider */}
+  <hr style={{ margin: "32px 0", borderColor: T.rim }} />
 
-  <SectionHeader>HEDGE ACCOUNTING EVIDENCE</SectionHeader>
-  {eff run selector}                     ← new, loads from /hedge-effectiveness/runs
-  {effRuns.length === 0 && !effLoading
-    ? <EmptyState "No effectiveness assessments — run one at /hedge-effectiveness" />
-    : <div grid>{EFF_FORMAT_CARDS.map(...)}</div>
+  {/* Section 2 */}
+  <SectionLabel>HEDGE ACCOUNTING EVIDENCE</SectionLabel>
+  {eff run selector}                          ← new (selectedEffRun)
+    disabled={effLoading}, opacity 0.6 while effLoading
+  {effLoading
+    ? null   ← selector shows "Loading..." already
+    : effRuns.length === 0
+      ? <EmptyState link="/hedge-effectiveness" />
+      : <div grid>
+          {EFF_FORMAT_CARDS.map(card => (
+            <EffCardUI card={card}
+              isDisabled={!selectedEffRun}
+              isDownloading={downloadingEff === card.id}
+              onDownload={() => handleEffDownload(card)} />
+          ))}
+        </div>
   }
 
-  {disclaimer}                           ← unchanged, moved to bottom
+  {disclaimer}                                ← unchanged, at bottom
 </div>
 ```
 
-The `handleDownload` function is reused for both sections — pass `card.endpoint(selectedEffRun)` for eff cards. Add a second download state `downloadingEff` to avoid collision with `downloading`.
+---
+
+## Task 5: Update `API_CONTRACTS.md`
+
+**File:** `docs/architecture/API_CONTRACTS.md`
+
+Add entries for all 4 new endpoints:
+
+| Endpoint | Method | Auth | Permission | Response |
+|----------|--------|------|------------|----------|
+| `/v1/reports/{run_id}/isda` | GET | JWT | `reports.export` | `application/xml` — ISDA trade confirmation |
+| `/v1/reports/{run_id}/finra-17a4` | GET | JWT | `reports.export` | `text/plain` — FINRA 17a-4 immutable record |
+| `/v1/hedge-effectiveness/runs/{run_id}/ifrs9-xml` | GET | JWT | tenant-scoped | `application/xml` — IFRS 9 evidence binder |
+| `/v1/hedge-effectiveness/runs/{run_id}/asc815-xml` | GET | JWT | tenant-scoped | `application/xml` — ASC 815 evidence binder |
 
 ---
 
 ## Testing
 
-**Backend:**
-- `test_regulatory_export.py` — unit test `export_ifrs9_xml()` with sample data: verify root element has `standard` attribute, verify `<overallEffective>` tag present, verify periods serialised
-- `test_v1_reports_regulatory.py` — smoke test ISDA and FINRA-17a4 endpoints return 200 with correct content-type (mock `_fetch_run` and service calls)
-- `test_v1_hedge_effectiveness_export.py` — smoke test IFRS9 and ASC815 endpoints return 200
+**Backend — unit tests:**
+- `backend/tests/services/test_regulatory_export.py` — test `export_ifrs9_xml()`:
+  - Verify root element tag contains `ordr:hedgeAccountingEvidence`
+  - Verify `standard="IFRS_9"` attribute on root element
+  - Verify `<overallEffective>` tag present
+  - Verify period count matches input list length
+  - Verify `standard="ASC_815"` when passed explicitly
+
+**Backend — route smoke tests:**
+- `backend/tests/api/test_v1_reports_regulatory.py` — ISDA + FINRA-17a4:
+  - Mock `_fetch_run` to return a fake run, mock service functions
+  - Assert status 200, correct content-type header, content-disposition filename
+  - Assert 404 when run not found
+
+- `backend/tests/api/test_v1_hedge_effectiveness_export.py` — IFRS9 + ASC815:
+  - Same pattern — mock DB query, assert 200 + content-type
 
 **Frontend:**
-- TypeScript check: `npx tsc --noEmit`
-- Build check: `npx next build`
+- `npx tsc --noEmit` — must pass clean
+- `npx next build` — must pass clean
 
 ---
 
 ## Completion Criteria
 
-- [ ] `export_ifrs9_xml()` passes unit tests
+- [ ] `export_ifrs9_xml()` passes unit tests (IFRS_9 and ASC_815 variants)
 - [ ] All 4 new endpoints return correct content-type and filename headers
 - [ ] ISDA and FINRA-17a4 endpoints require `reports.export` permission and emit audit events
-- [ ] IFRS9/ASC815 endpoints are tenant-scoped (company_id filter on run fetch)
+- [ ] IFRS9/ASC815 endpoints are tenant-scoped via `company_id` WHERE clause
+- [ ] IFRS9/ASC815 endpoints emit audit events via `emit_audit`
 - [ ] `RegulatoryTab` shows 7 trade repository cards + 2 hedge accounting cards
-- [ ] Effectiveness run selector loads from live API with standard + pass/fail label
+- [ ] Effectiveness run selector reads `run_id` field from API response (not `id`)
+- [ ] Eff cards use `EffFormatCard` interface — `npx tsc --noEmit` clean
 - [ ] Empty state shown when no effectiveness runs exist
-- [ ] `npx tsc --noEmit` clean
+- [ ] Cards visually disabled (opacity 0.6) while `effLoading` is true
+- [ ] Frontend and backend filenames consistent for ISDA (`isda-{run_id[:8]}.xml`)
+- [ ] `API_CONTRACTS.md` updated with 4 new endpoint entries
 - [ ] `npx next build` clean
