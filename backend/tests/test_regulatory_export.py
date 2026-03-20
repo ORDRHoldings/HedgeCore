@@ -662,6 +662,14 @@ def _sample_eff_periods() -> list[dict]:
 from app.services.regulatory_export import export_ifrs9_xml
 
 
+def test_isda_export_via_public_api() -> None:
+    """Confirm export_isda_xml produces a full ISDA-namespace XML document."""
+    xml = export_isda_xml(_sample_run(), _sample_transactions())
+    assert xml.startswith("<?xml")
+    assert 'xmlns:isda=' in xml
+    assert "<runId>run-001</runId>" in xml
+
+
 class TestExportIfrs9Xml:
     def test_valid_xml(self) -> None:
         """Output must be well-formed XML."""

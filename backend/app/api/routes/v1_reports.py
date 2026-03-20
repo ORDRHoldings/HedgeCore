@@ -33,9 +33,11 @@ from typing import Any, Literal
 from uuid import UUID
 
 from app.services.regulatory_export import (
-    export_emir_xml,
-    export_mifid_xml,
     export_dodd_frank,
+    export_emir_xml,
+    export_finra_17a4,
+    export_isda_xml,
+    export_mifid_xml,
 )
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -811,6 +813,117 @@ async def download_emir(
     return StreamingResponse(
         io.BytesIO(content.encode("utf-8")),
         media_type="application/xml; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{run_id}/isda")
+async def download_isda(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    GET /v1/reports/{run_id}/isda
+
+    Generate ISDA-format XML trade confirmation for the given calculation run.
+
+    Requires: reports.export
+    """
+    await _require(session, current_user, "reports.export")
+
+    run = await _fetch_run(session, run_id, current_user.company_id)
+    run_data = await _build_reg_run_data(run, current_user, run_id, session)
+
+    # Supplement with envelope fields expected by export_isda_xml
+    envelope = run.run_envelope or {}
+    run_data.setdefault("counterparty", envelope.get("counterparty", ""))
+    run_data.setdefault("currency_base", envelope.get("currency_base", ""))
+    run_data.setdefault("currency_quote", envelope.get("currency_quote", ""))
+    run_data.setdefault("notional", envelope.get("notional", ""))
+    run_data.setdefault("rate", envelope.get("rate", ""))
+
+    # Build transaction list from hedge buckets
+    hedge_plan = envelope.get("hedge_plan") or {}
+    buckets: list[dict] = hedge_plan.get("buckets", [])
+    transactions = [
+        {
+            "transaction_id": b.get("position_id", f"txn-{i}"),
+            "direction": "BUY" if float(b.get("hedge_notional", 0) or 0) >= 0 else "SELL",
+            "currency": b.get("currency", ""),
+            "amount": abs(float(b.get("hedge_notional", 0) or 0)),
+            "rate": b.get("hedge_rate", ""),
+            "value_date": b.get("value_date", ""),
+        }
+        for i, b in enumerate(buckets, 1)
+    ]
+
+    content = export_isda_xml(run_data, transactions)
+
+    await _emit_report_audit(session, current_user, run_id, "isda")
+    logger.info("RPT-09: ISDA export run=%s user=%s", run_id, current_user.email)
+
+    filename = f"isda-confirmation-{run_id[:8]}.xml"
+    return StreamingResponse(
+        io.BytesIO(content.encode("utf-8")),
+        media_type="application/xml; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{run_id}/finra-17a4")
+async def download_finra_17a4(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    GET /v1/reports/{run_id}/finra-17a4
+
+    Generate FINRA Rule 17a-4 immutable record for the given calculation run.
+    Pipe-delimited text format with SHA-256 hash chain.
+
+    Requires: reports.export
+    """
+    await _require(session, current_user, "reports.export")
+
+    run = await _fetch_run(session, run_id, current_user.company_id)
+    run_data = await _build_reg_run_data(run, current_user, run_id, session)
+
+    # Derive findings from run envelope audit flags
+    envelope = run.run_envelope or {}
+    findings_raw: list[dict] = (envelope.get("audit_flags") or [])
+    findings = [
+        {
+            "finding_id": f.get("flag_id", f"F-{i:03d}"),
+            "timestamp": f.get("timestamp", run_data.get("report_date", "")),
+            "category": f.get("category", "AUDIT_FINDING"),
+            "severity": f.get("severity", "INFO"),
+            "description": f.get("description", ""),
+        }
+        for i, f in enumerate(findings_raw, 1)
+    ]
+
+    # Build hash chain from recent audit events
+    from sqlalchemy import select as sa_select
+    hash_q = (
+        sa_select(AuditEvent.event_hash)
+        .where(AuditEvent.company_id == current_user.company_id)
+        .order_by(AuditEvent.created_at.desc())
+        .limit(10)
+    )
+    hash_rows = (await session.execute(hash_q)).scalars().all()
+    hash_chain = list(reversed(hash_rows)) if hash_rows else []
+
+    content = export_finra_17a4(run_data, findings, hash_chain)
+
+    await _emit_report_audit(session, current_user, run_id, "finra-17a4")
+    logger.info("RPT-09: FINRA 17a-4 export run=%s user=%s", run_id, current_user.email)
+
+    filename = f"finra-17a4-{run_id[:8]}.txt"
+    return StreamingResponse(
+        io.BytesIO(content.encode("utf-8")),
+        media_type="text/plain; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
