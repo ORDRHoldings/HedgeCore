@@ -14,7 +14,7 @@ const C = {
   panelAlpha:  "rgba(10,10,14,0.97)",
   border:      "var(--border-rim)",
   borderSoft:  "var(--border-soft)",
-  borderFocus: "#555555",
+  borderFocus: "rgba(255,255,255,0.28)",
   text1:       "var(--text-primary)",
   text2:       "var(--text-secondary)",
   text3:       "var(--text-tertiary)",
@@ -30,10 +30,10 @@ const C = {
   amber:       "var(--accent-amber)",
   amberBg:     "rgba(217,119,6,0.06)",
   amberBorder: "rgba(217,119,6,0.18)",
-  // Input fields — white background, black text for readability
-  inputBg:          "#ffffff",
-  inputText:        "#111827",
-  inputPlaceholder: "var(--text-secondary)",
+  // Input fields — dark glass, light text
+  inputBg:          "rgba(255,255,255,0.06)",
+  inputText:        "#dddde4",
+  inputPlaceholder: "rgba(255,255,255,0.28)",
   fontHead:    "'Manrope','Inter',sans-serif",
   fontUI:      "'IBM Plex Sans','Inter',sans-serif",
   fontMono:    "'IBM Plex Mono','JetBrains Mono',monospace",
@@ -122,11 +122,11 @@ export default function LoginPage() {
 
   useParticleField(canvasRef, {
     colorful:            true,
-    connectionDist:      120,
-    lineOpacity:         0.12,
+    connectionDist:      90,
+    lineOpacity:         0.07,
     saturation:          0,
     lightness:           75,
-    speed:               0.5,
+    speed:               0.3,
     hueSpeedMultiplier:  0,
     hues:                [0],
   });
@@ -242,11 +242,11 @@ export default function LoginPage() {
   const inputStyle = (field: "user" | "pass", hasErr: boolean): React.CSSProperties => ({
     width: "100%",
     padding: "11px 14px",
-    background: loading ? "rgba(255,255,255,0.7)" : C.inputBg,
+    background: loading ? "rgba(255,255,255,0.04)" : C.inputBg,
     border: `1.5px solid ${
       hasErr         ? C.red
       : focusField === field ? C.borderFocus
-      : "#D1D5DB"
+      : "rgba(255,255,255,0.10)"
     }`,
     borderRadius: 5,
     fontFamily: C.fontMono,
@@ -645,7 +645,7 @@ export default function LoginPage() {
         #login-pass:-webkit-autofill,
         #login-pass:-webkit-autofill:hover,
         #login-pass:-webkit-autofill:focus {
-          -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+          -webkit-box-shadow: 0 0 0 1000px #0d0d11 inset;
           -webkit-text-fill-color: ${C.inputText};
           caret-color: #888888;
         }
