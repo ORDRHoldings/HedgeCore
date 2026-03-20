@@ -2,12 +2,13 @@
 
 Regulatory format exports for Audit Lab and Report Studio.
 
-Provides five serialisation helpers:
+Provides six serialisation helpers:
   - export_isda_xml      : ISDA-style XML trade confirmation envelope
   - export_finra_17a4    : FINRA Rule 17a-4 immutable record (pipe-delimited text)
   - export_emir_xml      : EMIR Article 9 trade report (XML)
   - export_mifid_xml     : MiFID II RTS 25 transaction report (XML)
   - export_dodd_frank    : Dodd-Frank Title VII swap data report (pipe-delimited text)
+  - export_ifrs9_xml     : IFRS 9 / ASC 815 hedge effectiveness evidence (XML)
 
 All functions are pure (no DB / IO) and return strings.
 """
@@ -514,6 +515,91 @@ def export_dodd_frank(
         generated_at,
     ]
     lines.append("|".join(trailer_parts))
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# IFRS 9 / ASC 815 Hedge Effectiveness XML export
+# ---------------------------------------------------------------------------
+
+def export_ifrs9_xml(
+    run_data: dict,
+    results: dict,
+    periods: list[dict],
+    *,
+    standard: str = "IFRS_9",
+) -> str:
+    """Generate IFRS 9 / ASC 815 hedge effectiveness evidence XML.
+
+    Parameters
+    ----------
+    run_data : dict
+        Assessment run metadata.  Expected keys:
+          run_id, standard, hedge_type, currency_pair, designation_date,
+          methodology_version, overall_effective, dollar_offset_ratio,
+          dollar_offset_effective, regression_r_squared, regression_slope,
+          regression_effective, run_hash, inputs_hash, outputs_hash,
+          dataset_name, generated_by, report_date.
+    results : dict
+        Top-level effectiveness result dict (may be empty).
+    periods : list[dict]
+        Per-period data points.  Each dict should contain:
+          period_index, period_date, hedged_item_fv_change,
+          instrument_fv_change.
+    standard : str
+        Override the accounting standard label (default "IFRS_9").
+
+    Returns
+    -------
+    str
+        Well-formed XML string for the hedge effectiveness evidence binder.
+    """
+    generated_at = _now_iso()
+    used_standard = standard or run_data.get("standard", "IFRS_9")
+
+    lines: list[str] = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<ordr:hedgeEffectivenessReport xmlns:ordr="urn:ordr:hedge-effectiveness:2024">',
+        "  <ordr:header>",
+        f"    <runId>{_x(run_data.get('run_id', ''))}</runId>",
+        f"    <standard>{_x(used_standard)}</standard>",
+        f"    <hedgeType>{_x(run_data.get('hedge_type', ''))}</hedgeType>",
+        f"    <currencyPair>{_x(run_data.get('currency_pair', ''))}</currencyPair>",
+        f"    <designationDate>{_x(run_data.get('designation_date', ''))}</designationDate>",
+        f"    <methodologyVersion>{_x(run_data.get('methodology_version', ''))}</methodologyVersion>",
+        f"    <generatedAt>{generated_at}</generatedAt>",
+        f"    <reportDate>{_x(run_data.get('report_date', generated_at[:10]))}</reportDate>",
+        f"    <generatedBy>{_x(run_data.get('generated_by', ''))}</generatedBy>",
+        "  </ordr:header>",
+        "  <hedgeDesignation>",
+        f"    <datasetName>{_x(run_data.get('dataset_name', ''))}</datasetName>",
+        "  </hedgeDesignation>",
+        "  <effectivenessResults>",
+        f"    <overallEffective>{str(bool(run_data.get('overall_effective'))).lower()}</overallEffective>",
+        f"    <dollarOffsetRatio>{_x(str(run_data.get('dollar_offset_ratio', '')))}</dollarOffsetRatio>",
+        f"    <dollarOffsetEffective>{str(bool(run_data.get('dollar_offset_effective'))).lower()}</dollarOffsetEffective>",
+        f"    <regressionRSquared>{_x(str(run_data.get('regression_r_squared', '')))}</regressionRSquared>",
+        f"    <regressionSlope>{_x(str(run_data.get('regression_slope', '')))}</regressionSlope>",
+        f"    <regressionEffective>{str(bool(run_data.get('regression_effective'))).lower()}</regressionEffective>",
+        "  </effectivenessResults>",
+        "  <periods>",
+    ]
+
+    for i, p in enumerate(periods, 1):
+        lines.append(f'    <period seq="{i}">')
+        lines.append(f"      <periodDate>{_x(p.get('period_date', ''))}</periodDate>")
+        lines.append(f"      <hedgedItemFvChange>{_x(str(p.get('hedged_item_fv_change', '')))}</hedgedItemFvChange>")
+        lines.append(f"      <instrumentFvChange>{_x(str(p.get('instrument_fv_change', '')))}</instrumentFvChange>")
+        lines.append("    </period>")
+
+    lines.append("  </periods>")
+    lines.append("  <auditTrace>")
+    lines.append(f"    <runHash>{_x(run_data.get('run_hash', ''))}</runHash>")
+    lines.append(f"    <inputsHash>{_x(run_data.get('inputs_hash', ''))}</inputsHash>")
+    lines.append(f"    <outputsHash>{_x(run_data.get('outputs_hash', ''))}</outputsHash>")
+    lines.append("  </auditTrace>")
+    lines.append("</ordr:hedgeEffectivenessReport>")
 
     return "\n".join(lines)
 

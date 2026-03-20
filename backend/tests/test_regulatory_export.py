@@ -613,3 +613,124 @@ class TestExportDoddFrank:
         header = text.split("\n")[0]
         assert header.startswith("HEADER")
         assert "NOT_PROVIDED" in header
+
+
+# ---------------------------------------------------------------------------
+# IFRS 9 / ASC 815 XML tests
+# ---------------------------------------------------------------------------
+
+def _sample_eff_run_data() -> dict:
+    return {
+        "run_id": "eff-run-001",
+        "standard": "IFRS_9",
+        "hedge_type": "cash_flow",
+        "currency_pair": "EUR/USD",
+        "designation_date": "2026-01-01",
+        "methodology_version": "1.0.0",
+        "overall_effective": True,
+        "dollar_offset_ratio": 0.978,
+        "dollar_offset_effective": True,
+        "regression_r_squared": 0.9923,
+        "regression_slope": -0.995,
+        "regression_effective": True,
+        "run_hash": "abc123def456",
+        "inputs_hash": "aaabbbccc111",
+        "outputs_hash": "ddd222eee333",
+        "dataset_name": "Q1 2026 EUR hedges",
+        "generated_by": "audit_lab",
+        "report_date": "2026-03-20",
+    }
+
+
+def _sample_eff_periods() -> list[dict]:
+    return [
+        {
+            "period_index": 0,
+            "period_date": "2026-01-31",
+            "hedged_item_fv_change": -12500.0,
+            "instrument_fv_change": 12250.0,
+        },
+        {
+            "period_index": 1,
+            "period_date": "2026-02-28",
+            "hedged_item_fv_change": -8300.0,
+            "instrument_fv_change": 8125.0,
+        },
+    ]
+
+
+from app.services.regulatory_export import export_ifrs9_xml
+
+
+class TestExportIfrs9Xml:
+    def test_valid_xml(self) -> None:
+        """Output must be well-formed XML."""
+        xml = export_ifrs9_xml(_sample_eff_run_data(), {}, _sample_eff_periods())
+        parseable = xml.replace("ordr:", "").replace("xmlns:ordr=", "xmlns=")
+        ET.fromstring(parseable)
+
+    def test_namespace_prefix(self) -> None:
+        xml = export_ifrs9_xml(_sample_eff_run_data(), {}, _sample_eff_periods())
+        assert 'xmlns:ordr="urn:ordr:hedge-effectiveness:2024"' in xml
+
+    def test_header_fields(self) -> None:
+        xml = export_ifrs9_xml(_sample_eff_run_data(), {}, _sample_eff_periods())
+        assert "<runId>eff-run-001</runId>" in xml
+        assert "<standard>IFRS_9</standard>" in xml
+        assert "<hedgeType>cash_flow</hedgeType>" in xml
+        assert "<currencyPair>EUR/USD</currencyPair>" in xml
+        assert "<designationDate>2026-01-01</designationDate>" in xml
+        assert "<methodologyVersion>1.0.0</methodologyVersion>" in xml
+        assert "<generatedAt>" in xml
+
+    def test_hedge_designation(self) -> None:
+        xml = export_ifrs9_xml(_sample_eff_run_data(), {}, _sample_eff_periods())
+        assert "<datasetName>Q1 2026 EUR hedges</datasetName>" in xml
+
+    def test_effectiveness_results(self) -> None:
+        xml = export_ifrs9_xml(_sample_eff_run_data(), {}, _sample_eff_periods())
+        assert "<overallEffective>true</overallEffective>" in xml
+        assert "<dollarOffsetRatio>0.978</dollarOffsetRatio>" in xml
+        assert "<dollarOffsetEffective>true</dollarOffsetEffective>" in xml
+        assert "<regressionRSquared>0.9923</regressionRSquared>" in xml
+        assert "<regressionSlope>-0.995</regressionSlope>" in xml
+        assert "<regressionEffective>true</regressionEffective>" in xml
+
+    def test_periods_present(self) -> None:
+        xml = export_ifrs9_xml(_sample_eff_run_data(), {}, _sample_eff_periods())
+        assert xml.count("<period seq=") == 2
+        assert "<periodDate>2026-01-31</periodDate>" in xml
+        assert "<hedgedItemFvChange>-12500.0</hedgedItemFvChange>" in xml
+        assert "<instrumentFvChange>12250.0</instrumentFvChange>" in xml
+
+    def test_empty_periods(self) -> None:
+        xml = export_ifrs9_xml(_sample_eff_run_data(), {}, [])
+        parseable = xml.replace("ordr:", "").replace("xmlns:ordr=", "xmlns=")
+        ET.fromstring(parseable)
+        assert "<periods>" in xml
+        assert "<period seq=" not in xml
+
+    def test_audit_trace(self) -> None:
+        xml = export_ifrs9_xml(_sample_eff_run_data(), {}, [])
+        assert "<runHash>abc123def456</runHash>" in xml
+        assert "<inputsHash>aaabbbccc111</inputsHash>" in xml
+        assert "<outputsHash>ddd222eee333</outputsHash>" in xml
+
+    def test_missing_keys_default(self) -> None:
+        xml = export_ifrs9_xml({}, {}, [])
+        parseable = xml.replace("ordr:", "").replace("xmlns:ordr=", "xmlns=")
+        ET.fromstring(parseable)
+        assert "<runId></runId>" in xml
+
+    def test_xml_escaping(self) -> None:
+        run = _sample_eff_run_data()
+        run["dataset_name"] = "Hedge & <Special>"
+        xml = export_ifrs9_xml(run, {}, [])
+        assert "Hedge &amp; &lt;Special&gt;" in xml
+
+    def test_asc815_standard(self) -> None:
+        """standard kwarg is honoured — affects header only."""
+        xml = export_ifrs9_xml(
+            _sample_eff_run_data(), {}, [], standard="ASC_815"
+        )
+        assert "<standard>ASC_815</standard>" in xml
