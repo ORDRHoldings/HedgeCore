@@ -273,42 +273,36 @@ class TestIBKRProvider:
         assert "no gateway" in health.error
 
     def test_cip_forward_points_usdmxn(self):
-        """CIP: USDMXN should have positive forward points (MXN rate > USD rate)."""
+        """CIP returns 0.0 — requires live IBKR bond feeds (not yet connected)."""
         from app.services.market_data.ibkr_provider import IBKRProvider
         pts = IBKRProvider._compute_cip_forward_points(17.24, "USD", "MXN", "12M")
-        # MXN 10.25% vs USD 5.10% → positive carry → forward points > 0
-        assert pts > 0.0
-        # Sanity: USDMXN 12M points should be roughly 0.8-1.0 at spot ~17.24
-        assert 0.3 < pts < 2.0
+        assert pts == 0.0
 
     def test_cip_forward_points_eurusd(self):
-        """CIP: EURUSD forward points positive (r_USD > r_EUR → F > S)."""
+        """CIP returns 0.0 — requires live IBKR bond feeds (not yet connected)."""
         from app.services.market_data.ibkr_provider import IBKRProvider
         pts = IBKRProvider._compute_cip_forward_points(1.085, "EUR", "USD", "12M")
-        # F = S × (1 + r_USD) / (1 + r_EUR), r_USD 5.10% > r_EUR 3.50% → F > S
-        assert pts > 0.0
-        assert 0.0 < pts < 0.03
+        assert pts == 0.0
 
     def test_cip_forward_points_usdjpy(self):
-        """CIP: USDJPY should have large negative points (JPY rate << USD rate)."""
+        """CIP returns 0.0 — requires live IBKR bond feeds (not yet connected)."""
         from app.services.market_data.ibkr_provider import IBKRProvider
         pts = IBKRProvider._compute_cip_forward_points(149.50, "USD", "JPY", "12M")
-        # JPY 0.30% vs USD 5.10% → big negative
-        assert pts < -5.0
+        assert pts == 0.0
 
     def test_cip_forward_points_unknown_ccy(self):
-        """Unknown currency returns 0.0 (no rate data)."""
+        """CIP returns 0.0 for any currency pair until bond feeds are connected."""
         from app.services.market_data.ibkr_provider import IBKRProvider
         pts = IBKRProvider._compute_cip_forward_points(1.0, "USD", "XYZ", "12M")
-        # XYZ has 0% rate, USD 5.10% → slightly negative
-        assert pts < 0.0
+        assert pts == 0.0
 
     def test_cip_forward_points_scaling_with_tenor(self):
-        """Longer tenors should produce larger absolute points."""
+        """CIP returns 0.0 for all tenors until bond feeds are connected."""
         from app.services.market_data.ibkr_provider import IBKRProvider
-        pts_1m = abs(IBKRProvider._compute_cip_forward_points(17.24, "USD", "MXN", "1M"))
-        pts_12m = abs(IBKRProvider._compute_cip_forward_points(17.24, "USD", "MXN", "12M"))
-        assert pts_12m > pts_1m
+        pts_1m = IBKRProvider._compute_cip_forward_points(17.24, "USD", "MXN", "1M")
+        pts_12m = IBKRProvider._compute_cip_forward_points(17.24, "USD", "MXN", "12M")
+        assert pts_1m == 0.0
+        assert pts_12m == 0.0
 
 
 # ═══════════════════════════════════════════════════════════
