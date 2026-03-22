@@ -352,6 +352,14 @@ class Settings(BaseSettings):
     MARKET_DATA_OPTIONS_INTERVAL_SEC: int = 3600
 
     # ------------------------------------------------------------------
+    # HedgeWiki Integration
+    # ------------------------------------------------------------------
+    HEDGEWIKI_BASE_URL: str = "https://hedgewiki.onrender.com"
+    HEDGEWIKI_API_KEY: str = ""
+    HEDGEWIKI_TIMEOUT: float = 15.0
+    HEDGEWIKI_ENABLED: bool = True
+
+    # ------------------------------------------------------------------
 
     # ? API Key / Service Token Settings
 

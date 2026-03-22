@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Printer, Globe } from "lucide-react"
+import { HedgeWikiPanel } from "@/components/hedgewiki/HedgeWikiPanel";
 import HelpPanel from "@/components/layout/HelpPanel";
 import { HEDGEWIKI_HELP } from "@/lib/helpContent";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
@@ -650,8 +651,33 @@ export default function HedgeWiki() {
               </div>
             </section>
           )}
+
+          {/* HedgeWiki Live Knowledge Panel */}
+          <div style={{ marginTop: 16 }}>
+            <HedgeWikiPanel slug={entry.id} mode="full" />
+          </div>
         </div>
 
+      </div>
+
+      {/* Powered by HedgeWiki */}
+      <div style={{
+        margin: "0 20px", padding: "12px 16px",
+        background: S.bgPanel, borderRadius: 8, border: `1px solid ${S.rim}`,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 11, fontFamily: S.fontMono, color: S.tertiary }}>
+          Knowledge powered by HedgeWiki — {Object.keys(ENTRIES).length} articles loaded
+        </span>
+        <a
+          href="https://hedge-wiki.vercel.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontSize: 11, color: S.cyan, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}
+        >
+          <Globe size={12} /> Open HedgeWiki
+        </a>
       </div>
 
       <footer style={{

@@ -273,3 +273,7 @@ router.include_router(v1_regulatory_settings_router)
 # User watchlists — backend-persisted symbol lists (owns /v1/watchlists)
 from app.api.routes.v1_watchlists import router as v1_watchlists_router
 router.include_router(v1_watchlists_router)
+
+# HedgeWiki integration proxy (owns /v1/hedgewiki)
+from app.api.routes.v1_hedgewiki import router as v1_hedgewiki_router
+router.include_router(v1_hedgewiki_router)

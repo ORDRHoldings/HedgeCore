@@ -1627,6 +1627,22 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Market data init skipped: {e}")
 
+    # ── HedgeWiki integration client ──────────────────────────────────
+    if settings.HEDGEWIKI_ENABLED:
+        try:
+            from app.services.hedgewiki_client import HedgeWikiClient
+            app.state.hedgewiki = HedgeWikiClient(
+                base_url=settings.HEDGEWIKI_BASE_URL,
+                api_key=settings.HEDGEWIKI_API_KEY,
+                timeout=settings.HEDGEWIKI_TIMEOUT,
+            )
+            logger.info("HedgeWiki integration client initialized (%s)", settings.HEDGEWIKI_BASE_URL)
+        except Exception as e:
+            logger.warning(f"HedgeWiki client init skipped: {e}")
+            app.state.hedgewiki = None
+    else:
+        app.state.hedgewiki = None
+
     try:
 
         yield
@@ -1639,6 +1655,13 @@ async def lifespan(app: FastAPI):
             sched = get_scheduler()
             if sched and sched.is_running:
                 sched.stop()
+        except Exception:
+            pass
+
+        # Shutdown HedgeWiki client
+        try:
+            if hasattr(app.state, 'hedgewiki') and app.state.hedgewiki:
+                await app.state.hedgewiki.close()
         except Exception:
             pass
 
