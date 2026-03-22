@@ -1,11 +1,41 @@
 # Current Sprint
 
-Sprint: Regulatory Reporting Exports
-Started: 2026-03-20
-Completed: 2026-03-20
+Sprint: Live Market Data Integration
+Started: 2026-03-22
 
 ## Goals
-Add ISDA, FINRA-17a4, IFRS9, and ASC815 regulatory export downloads to Reports Studio.
+Wire all 5 live providers end-to-end, validate sandbox autofill→calculate flow,
+rotate production secrets, and close the remaining HIGH risks.
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 1 | Secret rotation — Render + Vercel env vars | open | high |
+| 2 | IBKR: enable when TWS running — verify CIP forward points live | open | high |
+| 3 | Sandbox end-to-end: autofill → calculate with live spot | open | high |
+| 4 | Wire Twelve Data to backend market routes (complement yfinance) | open | medium |
+| 5 | Dashboard FX rates widget: verify live data renders | open | medium |
+| 6 | frontend-v2: reconcile deleted files or remove from git tracking | open | medium |
+| 7 | Close risk #2 (market data feed) once IBKR confirmed live | open | low |
+
+## Completed: 0/7
+## Sprint Status: IN PROGRESS
+
+## Provider Status (2026-03-22)
+| Provider | Status | Key |
+|---|---|---|
+| yfinance | ✅ live | none needed |
+| Twelve Data | ✅ live | 76ffbba2... |
+| Alpha Vantage | ✅ live | 00GCMPHP... |
+| Finnhub | ✅ live | d6h68mpr... |
+| exchangerate-api.com | ✅ live | none needed |
+| IBKR | ⏳ pending | requires TWS on port 4001 |
+
+---
+
+# Sprint: Regulatory Reporting Exports — COMPLETE ✓
+Started: 2026-03-20
+Completed: 2026-03-20
 
 ## Items
 | # | Item | Status | Priority |
@@ -19,7 +49,6 @@ Add ISDA, FINRA-17a4, IFRS9, and ASC815 regulatory export downloads to Reports S
 | 7 | API_CONTRACTS.md — document 4 new endpoints | DONE | medium |
 
 ## Completed: 7/7
-## Sprint Status: COMPLETE ✓
 ## Validation: 4615 passed, 154 skipped, 0 failed. Frontend build clean.
 
 ## Previous Sprint: Market Intelligence & Portfolio Expansion (COMPLETED 2026-03-19, 9/9 items)

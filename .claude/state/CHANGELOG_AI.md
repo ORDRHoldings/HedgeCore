@@ -1,5 +1,17 @@
 # Changelog (AI-maintained)
 
+## 2026-03-22 — Sprint: Live Market Data Integration (commits 8f5e911, a3eb5e5)
+- Removed all hardcoded BIS spot rates and carry assumptions (14 files, -432 lines)
+- All provider failures now return 503 instead of stale fallback data
+- Fixed Twelve Data: new key + User-Agent header on httpx client (was 403)
+- Verified 5 providers live: Twelve Data, Alpha Vantage, Finnhub, exchangerate-api.com, yfinance
+- IBKR fully wired (ib_insync installed, graceful fallback) — needs TWS on port 4001
+- JWT_SECRET added to local backend/.env (rotate Render/Vercel env vars separately)
+- Fixed StopMug editable install path collision: backend/conftest.py + pytest.ini pythonpath
+- Updated 5 CIP tests to assert 0.0 (live-only contract, no hardcoded rates)
+- Result: 4615 passed, 0 failed, 154 skipped
+- Risk #5 closed; new sprint "Live Market Data Integration" opened (7 items)
+
 ## 2026-03-20 — Sprint Complete: Regulatory Reporting Exports (commit 62abe85)
 
 ### Summary
