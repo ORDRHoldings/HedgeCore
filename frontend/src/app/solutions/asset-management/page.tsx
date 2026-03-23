@@ -3,32 +3,41 @@
 import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, Globe, PieChart, History, BookOpen,
-  TrendingUp, Brain, Wallet, BarChart3, FileCheck,
-  Target, Layers, DollarSign, LineChart, Shield,
+  TrendingUp, Brain, BarChart3, FileCheck,
+  Target, Layers, DollarSign, LineChart, Shield, Lock, Users,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
 
+const STATS = [
+  { value: "$245M", label: "Typical AUM tracked" },
+  { value: "14", label: "Currencies managed" },
+  { value: "4 min", label: "AI LP report generation" },
+  { value: "Pro-rata", label: "Allocation method" },
+  { value: "Dual portal", label: "Manager + LP access" },
+  { value: "WORM", label: "Allocation audit" },
+];
+
 const CHALLENGES = [
   {
-    icon: <Globe size={20} />,
-    title: "Multi-Fund Currency Complexity",
-    desc: "Asset managers with global mandates face dozens of currency exposures across multiple funds, each with distinct investment policies, benchmark constraints, and investor reporting obligations. Aggregating currency risk across a fund complex requires systematic decomposition that accounts for overlapping exposures, netting opportunities, and fund-specific hedge mandates. Manual aggregation across fund administrator reports, custodian feeds, and internal position systems introduces errors that compound at the portfolio level.",
-  },
-  {
-    icon: <Target size={20} />,
-    title: "Benchmark Tracking & Hedge Drift",
-    desc: "Currency hedging that is not systematically monitored drifts from target ratios as underlying asset values, currency rates, and cashflows change. A fund with a 50% EUR hedge target may find itself at 43% or 58% within weeks if hedge positions are not rebalanced against the evolving exposure. This drift creates tracking error against currency-hedged benchmarks that investors and consultants monitor closely. Without continuous monitoring, portfolio managers discover drift in monthly reports rather than in real time.",
+    icon: <BarChart3 size={20} />,
+    title: "AUM Tracking in Spreadsheets",
+    desc: "Fund managers track capital allocations, period returns, and LP contributions across multiple spreadsheets. Pro-rata errors compound silently — a mis-allocated basis point in Q1 creates a cascading discrepancy across four quarters of LP statements. There is no period locking, no hash chain, and no audit trail connecting a capital balance to the calculation that produced it.",
   },
   {
     icon: <DollarSign size={20} />,
-    title: "Cost Optimization Pressure",
-    desc: "Hedge execution costs -- forward points, bid-ask spreads, roll costs, and margin requirements -- directly reduce fund returns. In a low-return environment, a 20-basis-point improvement in hedge execution efficiency can meaningfully affect performance rankings. Optimizing costs requires analyzing the trade-off between hedge precision and execution cost across multiple currency pairs, tenors, and instruments. Most asset managers lack the quantitative infrastructure to systematically evaluate these trade-offs.",
+    title: "Hedge Cost Opacity",
+    desc: "Currency hedging costs are underreported or inconsistently allocated across fund tranches. Forward points, roll costs, and bid-ask spreads are absorbed into blended returns rather than allocated transparently to the currency strategies that incurred them. LPs cannot verify hedge attribution, and fund managers cannot defend their cost allocation methodology to institutional investors or consultants.",
   },
   {
     icon: <FileCheck size={20} />,
-    title: "Investor & Regulatory Reporting",
-    desc: "Fund prospectus constraints, regulatory disclosures (UCITS, AIFMD, SEC), and investor reporting demand documented hedge rationale and execution evidence for every hedge action. Institutional investors and consultants expect transparent attribution of FX hedging impact on portfolio returns. Producing these reports requires not just accurate calculations but a complete audit trail that connects hedge decisions to policy parameters, market data, and approval workflows.",
+    title: "LP Reporting Manual Assembly",
+    desc: "Quarterly LP reports take 2-3 weeks to assemble from raw data. NAV calculations reference custodian feeds, performance fee waterfalls are computed in separate spreadsheets, FX attribution is pulled from a third system, and the final document is assembled in Word. Every number touched by hand is a source of error. Every revision cycle introduces new reconciliation risk.",
+  },
+  {
+    icon: <Lock size={20} />,
+    title: "No Period Controls",
+    desc: "Without period locking, historical NAV calculations can be retroactively adjusted — intentionally or accidentally. Audit trails are incomplete. When an LP questions a Q2 return figure during a Q4 audit, the fund manager may not be able to demonstrate that the Q2 number was not subsequently modified. ORDR enforces period locks backed by WORM semantics: once sealed, no retroactive edits are permitted.",
   },
 ];
 
@@ -36,7 +45,7 @@ const CAPABILITIES = [
   {
     icon: <PieChart size={20} />,
     title: "Multi-Currency Exposure Decomposition",
-    desc: "Full portfolio decomposition across currency pairs with confirmed and forecast cashflow bucketing by maturity tenor. The engine breaks down gross and net exposure by fund, strategy, and currency pair, identifying natural hedges and netting opportunities. Each decomposition is deterministic and reproducible -- the same position book always produces the same exposure breakdown, enabling reliable period-over-period comparison.",
+    desc: "Full portfolio decomposition across currency pairs with confirmed and forecast cashflow bucketing by maturity tenor. The engine breaks down gross and net exposure by fund, strategy, and currency pair, identifying natural hedges and netting opportunities. Each decomposition is deterministic and reproducible — the same position book always produces the same exposure breakdown.",
     product: "ORDR Portfolio",
   },
   {
@@ -46,36 +55,36 @@ const CAPABILITIES = [
     product: "ORDR Treasury",
   },
   {
+    icon: <Users size={20} />,
+    title: "LP Portal & Dual Access",
+    desc: "Fund managers and LPs access the same underlying data through role-scoped portals. LPs see their NAV, contributions, allocations, and return attribution. Managers see fund-level aggregates, policy configuration, and approval queues. The same WORM-sealed calculation backs both views — there is no separate LP version of the numbers.",
+    product: "ORDR Fund",
+  },
+  {
     icon: <Brain size={20} />,
-    title: "AI Cost Analysis & Optimization",
-    desc: "The Agentic AI layer analyzes hedge execution costs across rolling windows, identifies patterns in forward point movements, and evaluates alternative tenor structures that reduce carry cost. It monitors roll costs as hedge maturities approach and alerts portfolio managers when market conditions favor early or deferred rolls. The AI interprets cost data from the deterministic engine -- it never overrides cost calculations, but it helps managers understand the cost implications of their hedging decisions.",
-    product: "ORDR Treasury",
+    title: "AI LP Report Generation",
+    desc: "The Agentic AI generates quarterly LP report drafts in under 4 minutes from the deterministic ledger. The draft includes NAV reconciliation, performance attribution, hedge cost allocation, and period-over-period comparison. All numbers pull directly from sealed calculation runs — no manual assembly. Human review and approval is required before the report is released to the LP portal.",
+    product: "ORDR Fund",
   },
   {
     icon: <LineChart size={20} />,
     title: "Performance Attribution",
-    desc: "Isolate the impact of FX hedging on portfolio returns with transparent, reproducible attribution calculations. Decompose total return into asset return, currency return, and hedge contribution. The deterministic engine ensures that attribution results are independently verifiable -- auditors and investors can reconstruct the calculation from the same inputs and confirm identical outputs.",
+    desc: "Isolate the impact of FX hedging on fund returns with transparent, reproducible attribution calculations. Decompose total return into asset return, currency return, and hedge contribution. The deterministic engine ensures that attribution results are independently verifiable — LPs and consultants can reconstruct the calculation from the same inputs and confirm identical outputs.",
     product: "ORDR Portfolio",
   },
   {
     icon: <History size={20} />,
-    title: "Backtesting & Historical Analysis",
-    desc: "Single and multi-period backtesting with policy comparison enables systematic evaluation of alternative hedge strategies against historical market data. SHA-256 hashed report integrity ensures that backtesting results cannot be retroactively modified. The AI assistant interprets backtesting outputs and highlights periods where policy parameters would have produced different outcomes, supporting evidence-based policy refinement.",
-    product: "ORDR Labs",
-  },
-  {
-    icon: <BookOpen size={20} />,
-    title: "Regulatory Reference Library",
-    desc: "ISDA definitions, IFRS 9 and ASC 815 hedge accounting guidance, UCITS currency overlay regulations, and AIFMD reporting requirements in a searchable reference library. Cross-referenced with policy templates to ensure that hedge strategies align with applicable regulatory frameworks. The AI assistant can answer natural-language questions about regulatory requirements and their implications for specific hedge structures.",
-    product: "ORDR HedgeWiki",
+    title: "Period Locking & Audit Trail",
+    desc: "Period locks are enforced by WORM semantics — once a period is closed, the calculation hash is sealed and no retroactive modification is permitted. The full audit trail connects every LP balance, allocation, and return figure to a specific calculation run, timestamp, and approving user. Period-over-period reconciliation is automated and cryptographically verifiable.",
+    product: "ORDR Fund",
   },
 ];
 
 const PRODUCTS_USED = [
-  { name: "ORDR Treasury", desc: "Hedge calculation, policy governance, and execution pipeline" },
+  { name: "ORDR Fund", desc: "AUM tracking, LP portal, period locking, AI report generation" },
   { name: "ORDR Portfolio", desc: "Multi-currency decomposition and performance attribution" },
-  { name: "ORDR Labs", desc: "Backtesting, scenario analysis, and Monte Carlo simulation" },
-  { name: "ORDR HedgeWiki", desc: "Regulatory reference and hedge accounting guidance" },
+  { name: "ORDR Treasury", desc: "Hedge calculation, policy governance, execution pipeline" },
+  { name: "ORDR FinHub", desc: "Macro data, forward curves, volatility surfaces" },
 ];
 
 export default function AssetManagementPage() {
@@ -108,29 +117,63 @@ export default function AssetManagementPage() {
           fontFamily: F.ui, fontSize: 18, color: C.textSub,
           maxWidth: 640, margin: "0 auto 16px", lineHeight: 1.7,
         }}>
-          Multi-currency portfolio hedging with AI-powered cost optimization insights,
-          performance attribution, and systematic hedge plan generation. Deterministic
-          calculations ensure auditability while the Agentic AI layer monitors drift,
-          evaluates costs, and communicates recommendations in real time.
+          Multi-currency portfolio risk for fund managers. AUM tracking, LP reporting,
+          hedge cost optimization, and institutional audit — all in one ecosystem.
+          Deterministic calculations, period locking, and WORM-sealed LP reports.
         </p>
         <p style={{
           fontFamily: F.ui, fontSize: 15, color: C.textMuted,
           maxWidth: 580, margin: "0 auto 36px", lineHeight: 1.6,
         }}>
           Purpose-built for portfolio managers, currency overlay teams, and fund
-          risk officers managing multi-currency mandates.
+          risk officers managing multi-currency mandates and institutional LP relationships.
         </p>
-        <Link href="/auth/login" style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-          color: "#fff", background: C.accent,
-          padding: "13px 32px", borderRadius: 8, textDecoration: "none",
-        }}>
-          Get Started <ArrowRight size={16} />
-        </Link>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <Link href="/auth/login" style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            fontFamily: F.ui, fontSize: 15, fontWeight: 600,
+            color: "#fff", background: C.accent,
+            padding: "13px 32px", borderRadius: 8, textDecoration: "none",
+          }}>
+            Get Started <ArrowRight size={16} />
+          </Link>
+          <Link href="/contact" style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            fontFamily: F.ui, fontSize: 15, fontWeight: 600,
+            color: C.textSub, border: `1.5px solid ${C.border}`,
+            padding: "13px 32px", borderRadius: 8, textDecoration: "none",
+          }}>
+            Request Demo
+          </Link>
+        </div>
       </section>
 
-      {/* Challenges */}
+      {/* Stats Strip */}
+      <section style={{ background: C.accent, padding: "40px 48px" }}>
+        <div style={{
+          maxWidth: 1100, margin: "0 auto",
+          display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 24,
+        }}>
+          {STATS.map((s) => (
+            <div key={s.label} style={{ textAlign: "center" }}>
+              <div style={{
+                fontFamily: F.mono, fontSize: 22, fontWeight: 800,
+                color: "#FFFFFF", marginBottom: 4, letterSpacing: "-0.02em",
+              }}>
+                {s.value}
+              </div>
+              <div style={{
+                fontFamily: F.ui, fontSize: 12, color: "rgba(255,255,255,0.65)",
+                lineHeight: 1.4,
+              }}>
+                {s.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* The Problem */}
       <section style={{ background: C.bgAlt, padding: "96px 48px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{
@@ -188,9 +231,80 @@ export default function AssetManagementPage() {
         </div>
       </section>
 
-      {/* SVG Diagram: Asset Management Flow */}
-      <section style={{ padding: "96px 48px", maxWidth: 1100, margin: "0 auto" }}>
+      {/* Sample LP Report Terminal */}
+      <section style={{ padding: "96px 48px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{
+            fontFamily: F.mono, fontSize: 11, fontWeight: 600,
+            letterSpacing: "0.1em", color: C.textMuted,
+            marginBottom: 12, textAlign: "center", textTransform: "uppercase",
+          }}>
+            SAMPLE OUTPUT
+          </div>
+          <h2 style={{
+            fontFamily: F.heading, fontSize: 36, fontWeight: 700,
+            letterSpacing: "-0.02em", margin: "0 0 12px", textAlign: "center", color: C.text,
+          }}>
+            Sample LP Report Draft
+          </h2>
+          <p style={{
+            fontFamily: F.ui, fontSize: 15, color: C.textSub,
+            maxWidth: 600, margin: "0 auto 40px", textAlign: "center", lineHeight: 1.6,
+          }}>
+            Generated by the AI in under 4 minutes from the deterministic ledger. All figures
+            pull from WORM-sealed calculation runs. Human approval required before release.
+          </p>
+          <div style={{
+            background: "#0A0A0A", border: "1px solid #1E293B",
+            borderRadius: 12, padding: "32px 36px", overflowX: "auto",
+          }}>
+            <div style={{
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+              color: "#E2E8F0", lineHeight: 1.9, whiteSpace: "pre",
+            }}>
+              <span style={{ color: "#E2E8F0", fontWeight: 700 }}>{"ORDR FUND · LP REPORT DRAFT\n"}</span>
+              <span style={{ color: "#F59E0B" }}>{"Generated by AI · Pending human review\n"}</span>
+              <span style={{ color: "#6B7280" }}>{"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"FUND         "}</span><span>{"Meridian FX Opportunities Fund I\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"PERIOD       "}</span><span>{"Q1 2026 (Jan 1 – Mar 31)\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"LP           "}</span><span>{"Cornerstone Pension Fund\n"}</span>
+              {"\n"}
+              <span style={{ color: "#93C5FD" }}>{"OPENING NAV (Jan 1)   "}</span><span>{"$12,450,000\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"Contributions          "}</span><span>{"$1,500,000\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"Withdrawals            "}</span><span>{"        $0\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"P&L (gross)            "}</span><span style={{ color: "#22C55E" }}>{"  $287,400\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"Management Fees        "}</span><span>{"   $62,250\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"Performance Fees       "}</span><span>{"   $28,740  "}</span><span style={{ color: "#6B7280" }}>{"(20% above 5% hurdle)\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"CLOSING NAV (Mar 31)  "}</span><span style={{ fontWeight: 700 }}>{"$14,146,410\n"}</span>
+              {"\n"}
+              <span style={{ color: "#93C5FD" }}>{"Return (gross)             "}</span><span style={{ color: "#22C55E" }}>{"+2.31%  "}</span><span style={{ color: "#6B7280" }}>{"(annualized: 9.24%)\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"Sharpe Ratio               "}</span><span>{"1.42\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"Max Drawdown               "}</span><span style={{ color: "#F59E0B" }}>{"-1.8%\n"}</span>
+              {"\n"}
+              <span style={{ color: "#93C5FD" }}>{"HEDGE COSTS ALLOCATED     "}</span><span>{"$14,200\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"FX ATTRIBUTION:\n"}</span>
+              <span>{"  EUR/USD long       "}</span><span style={{ color: "#22C55E" }}>{"+$142,000\n"}</span>
+              <span>{"  GBP/USD short       "}</span><span style={{ color: "#EF4444" }}>{"-$34,200\n"}</span>
+              <span>{"  JPY hedges          "}</span><span style={{ color: "#22C55E" }}>{"+$91,400\n"}</span>
+              <span>{"  Other               "}</span><span style={{ color: "#22C55E" }}>{"+$88,200\n"}</span>
+              {"\n"}
+              <span style={{ color: "#93C5FD" }}>{"AUDIT HASH  "}</span><span style={{ color: "#6B7280" }}>{"7a6b...5c4d · WORM SEALED\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"PERIOD LOCK "}</span><span style={{ color: "#22C55E" }}>{"Confirmed · No retroactive edits permitted\n"}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SVG Diagram */}
+      <section style={{ background: C.bgAlt, padding: "96px 48px", maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <div style={{
+            fontFamily: F.mono, fontSize: 11, fontWeight: 600,
+            letterSpacing: "0.1em", color: C.textMuted,
+            marginBottom: 12, textTransform: "uppercase",
+          }}>
+            WORKFLOW
+          </div>
           <h2 style={{
             fontFamily: F.heading, fontSize: 36, fontWeight: 700,
             letterSpacing: "-0.02em", margin: "0 0 16px", color: C.text,
@@ -205,33 +319,25 @@ export default function AssetManagementPage() {
             </marker>
           </defs>
 
-          {/* Row 1: Portfolio Sources */}
+          {/* Portfolio Inputs */}
           <rect x="20" y="30" width="220" height="120" rx="8" fill="#F7F8FA" stroke="#E5E7EB" strokeWidth="1" />
-          <text x="130" y="55" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#999999" letterSpacing="0.08em">
-            PORTFOLIO INPUTS
-          </text>
+          <text x="130" y="55" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#999999" letterSpacing="0.08em">PORTFOLIO INPUTS</text>
           {["Fund Positions", "NAV Data", "Benchmark Weights"].map((label, i) => (
             <g key={label}>
               <rect x="35" y={68 + i * 26} width="190" height="20" rx="4" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1" />
-              <text x="130" y={82 + i * 26} textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">
-                {label}
-              </text>
+              <text x="130" y={82 + i * 26} textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">{label}</text>
             </g>
           ))}
 
           <line x1="240" y1="90" x2="290" y2="90" stroke="#1E3A5F" strokeWidth="1.5" markerEnd="url(#amArrow)" />
 
-          {/* Exposure Decomposition */}
+          {/* Decomposition */}
           <rect x="300" y="30" width="180" height="120" rx="8" fill="#EEEEF2" stroke="#E5E7EB" strokeWidth="1" />
-          <text x="390" y="55" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#555555" letterSpacing="0.08em">
-            DECOMPOSITION
-          </text>
+          <text x="390" y="55" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#555555" letterSpacing="0.08em">DECOMPOSITION</text>
           {["Currency Exposure", "Netting Analysis", "Maturity Bucketing"].map((label, i) => (
             <g key={label}>
               <rect x="315" y={68 + i * 26} width="150" height="20" rx="4" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1" />
-              <text x="390" y={82 + i * 26} textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">
-                {label}
-              </text>
+              <text x="390" y={82 + i * 26} textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">{label}</text>
             </g>
           ))}
 
@@ -239,15 +345,11 @@ export default function AssetManagementPage() {
 
           {/* Hedge Engine */}
           <rect x="540" y="30" width="180" height="120" rx="8" fill="#EEEEF2" stroke="#E5E7EB" strokeWidth="1" />
-          <text x="630" y="55" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#555555" letterSpacing="0.08em">
-            HEDGE ENGINE
-          </text>
+          <text x="630" y="55" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#555555" letterSpacing="0.08em">HEDGE ENGINE</text>
           {["Plan Generation", "Cost Optimization", "Policy Compliance"].map((label, i) => (
             <g key={label}>
               <rect x="555" y={68 + i * 26} width="150" height="20" rx="4" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1" />
-              <text x="630" y={82 + i * 26} textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">
-                {label}
-              </text>
+              <text x="630" y={82 + i * 26} textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">{label}</text>
             </g>
           ))}
 
@@ -255,28 +357,19 @@ export default function AssetManagementPage() {
 
           {/* Output */}
           <rect x="780" y="30" width="200" height="120" rx="8" fill="#F7F8FA" stroke="#E5E7EB" strokeWidth="1" />
-          <text x="880" y="55" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#999999" letterSpacing="0.08em">
-            OUTPUT
-          </text>
-          {["Hedge Orders", "Attribution Report", "Investor Reporting"].map((label, i) => (
+          <text x="880" y="55" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#999999" letterSpacing="0.08em">OUTPUT</text>
+          {["LP Reports (AI)", "Attribution Report", "Investor Portal"].map((label, i) => (
             <g key={label}>
               <rect x="795" y={68 + i * 26} width="170" height="20" rx="4" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1" />
-              <text x="880" y={82 + i * 26} textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">
-                {label}
-              </text>
+              <text x="880" y={82 + i * 26} textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">{label}</text>
             </g>
           ))}
 
           {/* AI Layer */}
           <rect x="200" y="190" width="600" height="70" rx="8" fill="#1E3A5F" />
-          <text x="500" y="215" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="rgba(255,255,255,0.6)" letterSpacing="0.08em">
-            AGENTIC AI LAYER: CONTINUOUS MONITORING & OPTIMIZATION INSIGHT
-          </text>
-          <text x="500" y="240" textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)">
-            Drift detection -- Cost analysis -- Rebalance recommendations -- Natural language Q&A
-          </text>
+          <text x="500" y="215" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="rgba(255,255,255,0.6)" letterSpacing="0.08em">AGENTIC AI LAYER: LP REPORT GENERATION · DRIFT MONITORING · COST ANALYSIS</text>
+          <text x="500" y="240" textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)">Draft in 4 min — human approval required — numbers sealed from ledger only</text>
 
-          {/* Dashed connections */}
           {[130, 390, 630, 880].map((x) => (
             <line key={x} x1={x} y1="150" x2={x} y2="190"
               stroke="#1E3A5F" strokeWidth="1" strokeDasharray="3,3" opacity="0.3" />
@@ -284,19 +377,15 @@ export default function AssetManagementPage() {
 
           {/* Governance bar */}
           <rect x="200" y="300" width="600" height="50" rx="8" fill="#FFFFFF" stroke="#1E3A5F" strokeWidth="1.5" />
-          <text x="500" y="322" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#555555" letterSpacing="0.08em">
-            GOVERNANCE: WORM AUDIT -- POLICY VERSION CONTROL -- HASH CHAIN
-          </text>
-          <text x="500" y="340" textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="9" fill="#999999">
-            Complete audit trail for investor reporting, regulatory disclosure, and compliance review
-          </text>
+          <text x="500" y="322" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#555555" letterSpacing="0.08em">GOVERNANCE: WORM AUDIT — PERIOD LOCKING — POLICY VERSION CONTROL — HASH CHAIN</text>
+          <text x="500" y="340" textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="9" fill="#999999">Complete audit trail for LP reporting, regulatory disclosure, and compliance review</text>
 
           <line x1="500" y1="260" x2="500" y2="300" stroke="#1E3A5F" strokeWidth="1" strokeDasharray="3,3" opacity="0.3" />
         </svg>
       </section>
 
       {/* Capabilities */}
-      <section style={{ background: C.bgAlt, padding: "96px 48px" }}>
+      <section style={{ padding: "96px 48px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{
             fontFamily: F.mono, fontSize: 11, fontWeight: 600,
@@ -314,7 +403,7 @@ export default function AssetManagementPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24 }}>
             {CAPABILITIES.map((c) => (
               <div key={c.title} style={{
-                background: C.bg, border: `1px solid ${C.border}`,
+                background: C.bgAlt, border: `1px solid ${C.border}`,
                 borderRadius: 12, padding: "28px 24px",
               }}>
                 <div style={{
@@ -353,7 +442,7 @@ export default function AssetManagementPage() {
       </section>
 
       {/* Products Used */}
-      <section style={{ padding: "80px 48px" }}>
+      <section style={{ background: C.bgAlt, padding: "80px 48px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <h2 style={{
             fontFamily: F.heading, fontSize: 28, fontWeight: 700,
@@ -364,7 +453,7 @@ export default function AssetManagementPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
             {PRODUCTS_USED.map((p) => (
               <div key={p.name} style={{
-                background: C.bgAlt, border: `1px solid ${C.border}`,
+                background: C.bg, border: `1px solid ${C.border}`,
                 borderRadius: 10, padding: "24px 20px", textAlign: "center",
               }}>
                 <div style={{
@@ -397,8 +486,8 @@ export default function AssetManagementPage() {
           fontFamily: F.ui, fontSize: 16, color: "rgba(255,255,255,0.7)",
           maxWidth: 520, margin: "0 auto 32px", lineHeight: 1.6,
         }}>
-          Systematic, auditable hedge management with AI-powered cost optimization
-          and real-time drift monitoring for multi-currency portfolios.
+          Systematic, auditable hedge management with AI-generated LP reports,
+          period locking, and real-time drift monitoring for multi-currency portfolios.
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           <Link href="/auth/login" style={{
@@ -428,6 +517,7 @@ export default function AssetManagementPage() {
           h2{font-size:24px !important}
           div[style*="grid-template-columns: repeat(2"]{grid-template-columns:1fr !important}
           div[style*="grid-template-columns: repeat(4"]{grid-template-columns:repeat(2,1fr) !important}
+          div[style*="grid-template-columns: repeat(6"]{grid-template-columns:repeat(3,1fr) !important}
           svg{min-height:320px}
         }
       `}</style>

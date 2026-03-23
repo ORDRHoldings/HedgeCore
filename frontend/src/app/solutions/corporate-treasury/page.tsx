@@ -4,10 +4,19 @@ import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, FileSpreadsheet, Search, ShieldAlert, FileText,
   Calculator, Lock, Settings, ClipboardCheck, Brain, MessageSquare,
-  Phone, Mic, Eye, Clock, CheckCircle, Shield,
+  Phone, Mic, Eye, Shield, CheckCircle,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
+
+const STATS = [
+  { value: "< 50ms", label: "Hedge calculation speed" },
+  { value: "96.2%", label: "IFRS 9 pass rate (typical)" },
+  { value: "60+", label: "Policy presets available" },
+  { value: "4-eyes", label: "Governance requirement" },
+  { value: "7yr", label: "Audit retention" },
+  { value: "WORM", label: "No UPDATE, no DELETE" },
+];
 
 const CHALLENGES = [
   {
@@ -160,6 +169,31 @@ export default function CorporateTreasuryPage() {
           }}>
             Request Demo
           </Link>
+        </div>
+      </section>
+
+      {/* Stats Strip */}
+      <section style={{ background: C.accent, padding: "40px 48px" }}>
+        <div style={{
+          maxWidth: 1100, margin: "0 auto",
+          display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 24,
+        }}>
+          {STATS.map((s) => (
+            <div key={s.label} style={{ textAlign: "center" }}>
+              <div style={{
+                fontFamily: F.mono, fontSize: 26, fontWeight: 800,
+                color: "#FFFFFF", marginBottom: 4, letterSpacing: "-0.02em",
+              }}>
+                {s.value}
+              </div>
+              <div style={{
+                fontFamily: F.ui, fontSize: 12, color: "rgba(255,255,255,0.65)",
+                lineHeight: 1.4,
+              }}>
+                {s.label}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -323,8 +357,65 @@ export default function CorporateTreasuryPage() {
         </svg>
       </section>
 
-      {/* Capabilities */}
+      {/* Sample Calculation Output */}
       <section style={{ background: C.bgAlt, padding: "96px 48px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{
+            fontFamily: F.mono, fontSize: 11, fontWeight: 600,
+            letterSpacing: "0.1em", color: C.textMuted,
+            marginBottom: 12, textAlign: "center", textTransform: "uppercase",
+          }}>
+            SAMPLE OUTPUT
+          </div>
+          <h2 style={{
+            fontFamily: F.heading, fontSize: 36, fontWeight: 700,
+            letterSpacing: "-0.02em", margin: "0 0 12px", textAlign: "center", color: C.text,
+          }}>
+            Sample Calculation Output
+          </h2>
+          <p style={{
+            fontFamily: F.ui, fontSize: 15, color: C.textSub,
+            maxWidth: 600, margin: "0 auto 40px", textAlign: "center", lineHeight: 1.6,
+          }}>
+            This is what the ORDR kernel actually produces. Every run is hash-sealed and submitted
+            for 4-eyes approval before anything reaches the ledger.
+          </p>
+          <div style={{
+            background: "#0A0A0A", border: "1px solid #1E293B",
+            borderRadius: 12, padding: "32px 36px", overflowX: "auto",
+          }}>
+            <div style={{
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+              color: "#E2E8F0", lineHeight: 1.9, whiteSpace: "pre",
+            }}>
+              <span style={{ color: "#E2E8F0", fontWeight: 700 }}>ORDR TREASURY · CALCULATION RUN #1847{"\n"}</span>
+              <span style={{ color: "#6B7280" }}>{"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"}{"\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"TIMESTAMP    "}</span><span>{"2026-03-23T09:14:32.048Z\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"POLICY       "}</span><span>{"MODERATE_HEDGE_60PCT_v3\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"KERNEL       "}</span><span>{"v1.4.1 · 41 modules · 48ms\n"}</span>
+              {"\n"}
+              <span style={{ color: "#93C5FD" }}>{"POSITIONS PROCESSED:  "}</span><span>{"24/24\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"CURRENCIES:           "}</span><span>{"EUR, GBP, JPY, CHF, CAD, AUD, MXN, BRL\n"}</span>
+              {"\n"}
+              <span style={{ color: "#93C5FD" }}>{"EUR/USD  PAYABLE    "}</span><span>{"$4,200,000  90D → FWD  $2,520,000  (60%)  rate 1.0842\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"GBP/USD  RECEIVABLE "}</span><span>{"$1,800,000  60D → COLL $1,800,000 (100%)  rate 1.2634\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"JPY/USD  PAYABLE  "}</span><span>{"¥320,000,000  30D → NDF  ¥192,000,000 (60%)  rate 149.82\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"CHF/USD  PAYABLE    "}</span><span>{"$  940,000  90D → FWD  $  564,000  (60%)  rate 0.9021\n"}</span>
+              <span style={{ color: "#6B7280" }}>{"... +20 positions\n"}</span>
+              {"\n"}
+              <span style={{ color: "#93C5FD" }}>{"HEDGE COST (EST)     "}</span><span>{"0.23% annualized\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"EFFECTIVENESS (FWD)  "}</span><span style={{ color: "#22C55E" }}>{"96.2%  → IFRS 9: PASS\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"HASH                 "}</span><span style={{ color: "#6B7280" }}>{"8f4e2b9a1c3d5e7f...a1b2c3d4\n"}</span>
+              {"\n"}
+              <span style={{ color: "#6B7280" }}>{"[SUBMITTED FOR 4-EYES APPROVAL]\n"}</span>
+              <span style={{ color: "#93C5FD" }}>{"MAKER: "}</span><span>{"jsmith@corp.com · 2026-03-23T09:16:00Z\n"}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Capabilities */}
+      <section style={{ padding: "96px 48px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{
             fontFamily: F.mono, fontSize: 11, fontWeight: 600,
@@ -346,10 +437,10 @@ export default function CorporateTreasuryPage() {
             A deterministic computation engine for accuracy and auditability, combined with
             an Agentic AI assistant for insight, evaluation, and communication.
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24, marginBottom: 40 }}>
             {CAPABILITIES.map((c) => (
               <div key={c.title} style={{
-                background: C.bg, border: `1px solid ${C.border}`,
+                background: C.bgAlt, border: `1px solid ${C.border}`,
                 borderRadius: 12, padding: "28px 24px",
               }}>
                 <div style={{
@@ -383,6 +474,80 @@ export default function CorporateTreasuryPage() {
                 </p>
               </div>
             ))}
+          </div>
+
+          {/* IFRS 9 Effectiveness Report Card */}
+          <div style={{
+            border: `1px solid ${C.border}`, borderRadius: 12,
+            overflow: "hidden",
+          }}>
+            <div style={{
+              background: C.accent, padding: "16px 28px",
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <CheckCircle size={18} color="#fff" />
+              <span style={{
+                fontFamily: F.mono, fontSize: 12, fontWeight: 700,
+                color: "#fff", letterSpacing: "0.08em",
+              }}>
+                IFRS 9 EFFECTIVENESS REPORT — SPECIMEN
+              </span>
+              <span style={{
+                marginLeft: "auto", fontFamily: F.mono, fontSize: 10,
+                color: "rgba(255,255,255,0.55)", letterSpacing: "0.05em",
+              }}>
+                WORM-SEALED · READ-ONLY
+              </span>
+            </div>
+            <div style={{
+              background: C.bgAlt, padding: "28px 28px",
+              display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0,
+            }}>
+              {[
+                { label: "Hedge Pair", value: "EUR/USD Forward" },
+                { label: "Method", value: "Critical Terms Match" },
+                { label: "Hedge Ratio", value: "60%" },
+                { label: "Prospective Test", value: "PASS (96.2%)", highlight: true },
+                { label: "Designation Date", value: "2026-03-23" },
+                { label: "Standard", value: "IFRS 9 / IAS 39" },
+              ].map((row, i) => (
+                <div key={row.label} style={{
+                  padding: "16px 20px",
+                  borderBottom: i < 3 ? `1px solid ${C.border}` : undefined,
+                  borderRight: (i % 3 !== 2) ? `1px solid ${C.border}` : undefined,
+                }}>
+                  <div style={{
+                    fontFamily: F.mono, fontSize: 10, fontWeight: 600,
+                    color: C.textMuted, letterSpacing: "0.08em",
+                    marginBottom: 6, textTransform: "uppercase",
+                  }}>
+                    {row.label}
+                  </div>
+                  <div style={{
+                    fontFamily: F.mono, fontSize: 14, fontWeight: 700,
+                    color: row.highlight ? "#22C55E" : C.text,
+                  }}>
+                    {row.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{
+              background: "#0A0A0A", padding: "14px 28px",
+              display: "flex", alignItems: "center", gap: 16,
+            }}>
+              <span style={{
+                fontFamily: F.mono, fontSize: 10, color: "#6B7280",
+                letterSpacing: "0.05em",
+              }}>
+                EVIDENCE:
+              </span>
+              <span style={{
+                fontFamily: F.mono, fontSize: 10, color: "#93C5FD",
+              }}>
+                WORM-sealed · hash c3d4...9f8e · no retroactive edits permitted
+              </span>
+            </div>
           </div>
         </div>
       </section>

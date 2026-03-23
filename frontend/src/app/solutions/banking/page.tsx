@@ -2,73 +2,97 @@
 
 import Link from "next/link";
 import {
-  ChevronLeft, ArrowRight, Scale, ShieldCheck, TrendingUp, BookOpen,
-  Lock, BarChart3, FileText, Workflow, Brain, Users,
-  Building, Monitor, Gavel, Network, Database, Eye,
+  ChevronLeft, ArrowRight, Monitor, Gavel, BarChart3, Network,
+  TrendingUp, Lock, BookOpen, Brain, Workflow, Building,
+  Activity, ShieldCheck,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
 
+const STATS = [
+  { value: "60fps", label: "Chart rendering speed" },
+  { value: "77+", label: "Technical indicators" },
+  { value: "219+", label: "API endpoints" },
+  { value: "4-eyes", label: "Execution governance" },
+  { value: "Python/JS", label: "Algo languages" },
+  { value: "SHA-256", label: "Trade audit chain" },
+];
+
 const CHALLENGES = [
   {
-    icon: <Network size={20} />,
-    title: "Client Flow Management",
-    desc: "Banks managing FX hedging programs for corporate clients must track exposures, generate hedge recommendations, and execute trades across hundreds of client accounts with distinct policy parameters, credit limits, and reporting requirements. Each client relationship involves a unique combination of currency pairs, maturity profiles, and governance constraints. Managing this complexity with generic trading systems or manual processes creates operational risk that scales linearly with client count, eventually exceeding the capacity of even well-resourced FX desks.",
+    icon: <Monitor size={20} />,
+    title: "Charting tools don't scale",
+    desc: "Bloomberg and TradingView are consumer tools. Banks need customizable, API-driven charting that integrates with internal systems — not a third-party SaaS that can't be white-labeled, rate-limited, or extended with proprietary indicators.",
+  },
+  {
+    icon: <Brain size={20} />,
+    title: "No discipline enforcement",
+    desc: "Prop traders drift from strategy without realizing it. Without systematic tracking, behavioral biases compound across sessions. A trader who overperforms on Mondays and bleeds on Fridays won't see the pattern until it's already a drawdown.",
   },
   {
     icon: <Gavel size={20} />,
-    title: "Regulatory Compliance Burden",
-    desc: "EMIR trade reporting, MiFID II best execution documentation, FRTB capital adequacy calculations, and Basel III/IV liquidity requirements demand systematic compliance infrastructure across the entire trading lifecycle. Each regulatory regime has distinct documentation standards, timing requirements, and data format specifications. Banks that rely on manual compliance processes face escalating costs, increasing error rates, and growing regulatory scrutiny. The penalty for non-compliance is not just financial -- it threatens the institution's ability to operate in regulated markets.",
+    title: "Compliance-grade audit gaps",
+    desc: "FX desk trades need tamper-evident records. Email trails and screen recordings don't satisfy FINRA 17a-4 or MiFID II archival requirements. Every calculation, approval, and execution needs a hash-chained, append-only record that regulators can independently verify.",
   },
   {
-    icon: <Monitor size={20} />,
-    title: "Operational Efficiency",
-    desc: "FX desks at regional and mid-tier banks operate with smaller teams than their bulge-bracket counterparts but face the same regulatory and operational requirements. Automating hedge calculation, policy application, and audit trail generation is not a luxury -- it is a survival requirement. Manual processes that were adequate when the desk handled 50 client relationships become untenable at 200. Without systematic infrastructure, operational risk grows faster than revenue, and the cost-to-serve for smaller client relationships becomes uneconomic.",
-  },
-  {
-    icon: <BarChart3 size={20} />,
-    title: "Risk Limit Architecture",
-    desc: "Managing FX risk limits across client accounts, desk-level aggregations, and institution-wide thresholds requires a hierarchical limit framework that is enforced in real time. When a client hedge proposal would breach a desk limit, the system must identify the conflict before execution -- not in the end-of-day risk report. Most banks lack the integrated infrastructure to check client-level, desk-level, and enterprise-level limits simultaneously against a single proposed transaction.",
+    icon: <Network size={20} />,
+    title: "Siloed market data",
+    desc: "Macro calendars, earnings events, and FX signals live in separate platforms. Analysts waste hours correlating data manually — cross-referencing a Bloomberg window with a Reuters feed with an internal spreadsheet to get a picture that should load in a single panel.",
   },
 ];
 
 const CAPABILITIES = [
   {
-    icon: <Building size={20} />,
-    title: "Multi-Tenant Client Hedging",
-    desc: "Run client hedging programs on a single platform with tenant-isolated position books, policy configurations, and audit trails. Each client operates in a governed sandbox with distinct hedge parameters, approval workflows, and reporting outputs. The deterministic engine ensures that client hedge calculations are reproducible and verifiable, while tenant isolation means that no client can access another client's data, positions, or policy configurations.",
-    product: "ORDR Treasury",
-  },
-  {
-    icon: <Lock size={20} />,
-    title: "Compliance-Grade Audit Trail",
-    desc: "Append-only, SHA-256 hash-chained event log satisfies SOX, EMIR, and MiFID II record-keeping requirements. Every calculation, approval, and execution event is recorded with immutable provenance. The WORM (Write Once, Read Many) architecture ensures that no audit record can be modified or deleted after creation. Each event includes the previous event's hash, creating a tamper-evident chain that regulators can independently verify.",
-    product: "ORDR Treasury",
-  },
-  {
-    icon: <TrendingUp size={20} />,
-    title: "AI-Powered Market Intelligence",
-    desc: "ORDR Market provides Canvas 2D charting with 23 technical indicators, drawing tools, and multi-timeframe analysis. The Agentic AI layer is the first agentic charting system -- it coaches trading discipline, helps interpret technical patterns and market structure, and can assist desk analysts in building algorithmic strategies in Python or JavaScript. The AI monitors market conditions in real time and alerts when conditions affect client exposure profiles.",
+    icon: <BarChart3 size={20} />,
+    title: "60fps Canvas Charting — 77+ Indicators",
+    desc: "ORDR Market renders at 60fps using Canvas 2D with hardware-accelerated compositing. 77+ technical indicators including EMA, MACD, RSI, Bollinger Bands, Ichimoku, and custom Python-computed overlays. Multi-timeframe analysis with synchronized crosshairs across panels. Built for institutional use — not throttled, not sampled.",
     product: "ORDR Market",
   },
   {
-    icon: <Workflow size={20} />,
-    title: "Tri-State Governance Pipeline",
-    desc: "Every execution proposal passes through three stages: Sandbox (draft and calculate), Staging (review and approve), and Ledger (execute and record). 4-eyes approval with enforced separation of duties ensures that no single individual can both create and approve a trade. The governance pipeline is configurable per client, supporting different approval thresholds, escalation rules, and committee requirements based on transaction size and risk profile.",
+    icon: <Activity size={20} />,
+    title: "Algo Builder — Python & JavaScript Engine",
+    desc: "Write, backtest, and deploy trading algorithms in Python or JavaScript directly inside ORDR Market. The algo engine executes on live tick data with configurable signal logic, position sizing rules, and risk limits. Signal audit trail is SHA-256 hash-chained — every trade decision is reproducible and defensible.",
+    product: "ORDR Market",
+  },
+  {
+    icon: <Lock size={20} />,
+    title: "WORM Audit Chain — FINRA 17a-4 / MiFID II",
+    desc: "Append-only, SHA-256 hash-chained event log satisfies SOX, EMIR, and MiFID II record-keeping requirements. Every calculation, approval, and execution event is recorded with immutable provenance. No record can be modified or deleted after creation — each event includes the previous event's hash, creating a tamper-evident chain regulators can independently verify.",
     product: "ORDR Treasury",
   },
   {
-    icon: <Brain size={20} />,
-    title: "Agentic AI for Desk Operations",
-    desc: "The AI assistant monitors pending approvals, tracks client exposure changes, and surfaces operational insights across the desk's entire client book. Desk managers can ask natural-language questions about aggregated positions, limit utilization, and client activity patterns. The AI interprets deterministic engine outputs and presents them in decision-ready format, reducing the time between calculation and action.",
+    icon: <Workflow size={20} />,
+    title: "Tri-State Governance — Sandbox → Staging → Ledger",
+    desc: "Every execution proposal passes through three stages before it touches the ledger. 4-eyes approval with enforced separation of duties ensures that no single individual can both create and approve a trade. The governance pipeline is configurable per desk — different thresholds, escalation rules, and committee requirements based on transaction size.",
+    product: "ORDR Treasury",
+  },
+  {
+    icon: <Building size={20} />,
+    title: "Multi-Tenant Client Hedging",
+    desc: "Run client hedging programs on a single platform with tenant-isolated position books, policy configurations, and audit trails. Each client operates in a governed sandbox with distinct hedge parameters, approval workflows, and reporting outputs. Tenant isolation means no client can access another client's data, positions, or policy configurations.",
     product: "ORDR Treasury",
   },
   {
     icon: <BookOpen size={20} />,
     title: "Regulatory Reference Library",
-    desc: "ISDA definitions, EMIR trade reporting guidance, MiFID II best execution requirements, and hedge accounting standards in a searchable reference library. Cross-referenced with ORDR policy templates to ensure that hedge strategies comply with applicable regulatory frameworks. The AI can answer natural-language questions about regulatory requirements and flag potential compliance issues in proposed hedge structures.",
+    desc: "ISDA definitions, EMIR trade reporting guidance, MiFID II best execution requirements, and hedge accounting standards in a searchable reference library — cross-referenced with ORDR policy templates to ensure hedge strategies comply with applicable regulatory frameworks.",
     product: "ORDR HedgeWiki",
   },
+];
+
+const PRODUCTS = [
+  { name: "ORDR Market", desc: "60fps charting, 77+ indicators, algo trading" },
+  { name: "ORDR Journal", desc: "Trade review, session analytics, AI coaching" },
+  { name: "ORDR FinHub", desc: "Macro calendar, FX signals, earnings events" },
+  { name: "ORDR Portfolio", desc: "Desk-level risk and position aggregation" },
+];
+
+const JOURNAL_STATS = [
+  { label: "Sessions this month", value: "22" },
+  { label: "Win rate", value: "67.3%" },
+  { label: "Avg R:R", value: "1 : 2.1" },
+  { label: "Profit factor", value: "1.84" },
+  { label: "Max drawdown", value: "-3.2%" },
 ];
 
 export default function BankingPage() {
@@ -101,10 +125,8 @@ export default function BankingPage() {
           fontFamily: F.ui, fontSize: 18, color: C.textSub,
           maxWidth: 640, margin: "0 auto 16px", lineHeight: 1.7,
         }}>
-          Institutional FX infrastructure with AI-powered market analytics, compliance-grade
-          governance, and multi-tenant client hedging programs. The deterministic engine handles
-          every calculation while the Agentic AI provides real-time market intelligence,
-          operational insight, and trading discipline coaching through ORDR Market.
+          Institutional FX infrastructure for banks, dealers, and prop trading desks.
+          60fps charting, 77+ indicators, algo trading, and governance-grade audit.
         </p>
         <p style={{
           fontFamily: F.ui, fontSize: 15, color: C.textMuted,
@@ -123,8 +145,33 @@ export default function BankingPage() {
         </Link>
       </section>
 
+      {/* Stats Strip */}
+      <section style={{ background: C.bgAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: "40px 48px" }}>
+        <div style={{
+          maxWidth: 1100, margin: "0 auto",
+          display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 24,
+        }}>
+          {STATS.map((s) => (
+            <div key={s.label} style={{ textAlign: "center" }}>
+              <div style={{
+                fontFamily: F.mono, fontSize: 28, fontWeight: 700,
+                color: C.accent, letterSpacing: "-0.02em", marginBottom: 4,
+              }}>
+                {s.value}
+              </div>
+              <div style={{
+                fontFamily: F.ui, fontSize: 12, color: C.textMuted,
+                lineHeight: 1.4,
+              }}>
+                {s.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Challenges */}
-      <section style={{ background: C.bgAlt, padding: "96px 48px" }}>
+      <section style={{ background: C.bg, padding: "96px 48px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{
             fontFamily: F.mono, fontSize: 11, fontWeight: 600,
@@ -141,38 +188,30 @@ export default function BankingPage() {
           </h2>
           <p style={{
             fontFamily: F.ui, fontSize: 15, color: C.textSub,
-            maxWidth: 640, margin: "0 auto 48px", textAlign: "center", lineHeight: 1.6,
+            maxWidth: 620, margin: "0 auto 48px", textAlign: "center", lineHeight: 1.6,
           }}>
             Regulated financial institutions face unique infrastructure requirements that
-            generic treasury management systems and trading platforms cannot adequately address.
+            generic trading platforms and treasury management systems cannot adequately address.
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24 }}>
             {CHALLENGES.map((c) => (
               <div key={c.title} style={{
-                background: C.bg, border: `1px solid ${C.border}`,
+                background: C.bgAlt, border: `1px solid ${C.border}`,
                 borderRadius: 12, padding: "28px 24px",
               }}>
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 10, marginBottom: 12,
-                }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                   <div style={{
                     width: 36, height: 36, borderRadius: 8,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "rgba(220, 38, 38, 0.06)", color: "#DC2626",
+                    background: "rgba(220,38,38,0.06)", color: "#DC2626",
                   }}>
                     {c.icon}
                   </div>
-                  <h3 style={{
-                    fontFamily: F.heading, fontSize: 17, fontWeight: 700,
-                    margin: 0, color: C.text,
-                  }}>
+                  <h3 style={{ fontFamily: F.heading, fontSize: 17, fontWeight: 700, margin: 0, color: C.text }}>
                     {c.title}
                   </h3>
                 </div>
-                <p style={{
-                  fontFamily: F.ui, fontSize: 14, color: C.textSub,
-                  lineHeight: 1.7, margin: 0,
-                }}>
+                <p style={{ fontFamily: F.ui, fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: 0 }}>
                   {c.desc}
                 </p>
               </div>
@@ -181,98 +220,181 @@ export default function BankingPage() {
         </div>
       </section>
 
-      {/* SVG Diagram: Banking Flow */}
-      <section style={{ padding: "96px 48px", maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <h2 style={{
-            fontFamily: F.heading, fontSize: 36, fontWeight: 700,
-            letterSpacing: "-0.02em", margin: "0 0 16px", color: C.text,
+      {/* Terminal Panel */}
+      <section style={{ padding: "96px 48px", background: C.bgAlt }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <div style={{
+              fontFamily: F.mono, fontSize: 11, fontWeight: 600,
+              letterSpacing: "0.1em", color: C.textMuted,
+              marginBottom: 12, textTransform: "uppercase",
+            }}>
+              LIVE TERMINAL OUTPUT
+            </div>
+            <h2 style={{
+              fontFamily: F.heading, fontSize: 36, fontWeight: 700,
+              letterSpacing: "-0.02em", margin: "0 0 16px", color: C.text,
+            }}>
+              ORDR Market — Algo Builder
+            </h2>
+            <p style={{
+              fontFamily: F.ui, fontSize: 15, color: C.textSub,
+              maxWidth: 560, margin: "0 auto", lineHeight: 1.6,
+            }}>
+              Sample output from a live mean-reversion strategy running on EUR/USD H1.
+              Every signal, entry, and AI coaching note is WORM-sealed at write time.
+            </p>
+          </div>
+          <div style={{
+            background: "#0d1117", border: "1px solid #30363d",
+            borderRadius: 12, padding: "28px 32px", fontFamily: F.mono,
+            fontSize: 13, lineHeight: 1.8, color: "#c9d1d9",
+            overflowX: "auto",
           }}>
-            Institutional FX Infrastructure
-          </h2>
+            <div style={{ color: "#e6c767", fontWeight: 700, marginBottom: 4 }}>
+              ORDR MARKET · ALGO BUILDER · Python Engine
+            </div>
+            <div style={{ color: "#444d56", marginBottom: 12 }}>
+              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            </div>
+            <div><span style={{ color: "#8b949e" }}>SYMBOL  </span><span style={{ color: "#79c0ff" }}>EUR/USD</span>  ·  H1  ·  Live</div>
+            <div style={{ marginBottom: 8 }}>
+              <span style={{ color: "#8b949e" }}>BID     </span>
+              <span style={{ color: "#3fb950" }}>1.08412</span>
+              {"  "}
+              <span style={{ color: "#8b949e" }}>ASK  </span>
+              <span style={{ color: "#f85149" }}>1.08418</span>
+              {"  "}
+              <span style={{ color: "#8b949e" }}>SPREAD  </span>0.6 pips
+            </div>
+            <div style={{ color: "#444d56", marginBottom: 8 }}>─────────────────────────────────────────</div>
+            <div><span style={{ color: "#8b949e" }}>STRATEGY  </span>Mean Reversion EMA Cross</div>
+            <div>
+              <span style={{ color: "#8b949e" }}>STATUS    </span>
+              <span style={{ color: "#3fb950", fontWeight: 600 }}>RUNNING</span>
+              {"  "}·  23 trades today
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <span style={{ color: "#8b949e" }}>P&amp;L       </span>
+              <span style={{ color: "#3fb950" }}>+$4,280</span>
+              {"  "}(gross){"  "}
+              <span style={{ color: "#8b949e" }}>Sharpe </span>1.84
+            </div>
+            <div style={{ color: "#444d56", marginBottom: 8 }}>─────────────────────────────────────────</div>
+            <div style={{ color: "#8b949e", marginBottom: 2 }}>SIGNAL</div>
+            <div style={{ paddingLeft: 8 }}>
+              <span style={{ color: "#e6c767" }}>[09:32:14]</span>  EMA9 crossed above EMA21
+            </div>
+            <div style={{ paddingLeft: 8 }}>
+              <span style={{ color: "#8b949e" }}>RSI(14): </span>52.3  →  Neutral
+            </div>
+            <div style={{ paddingLeft: 8 }}>
+              <span style={{ color: "#8b949e" }}>MACD: </span>
+              <span style={{ color: "#3fb950" }}>Bullish divergence confirmed</span>
+            </div>
+            <div style={{ paddingLeft: 8, marginBottom: 8 }}>
+              <span style={{ color: "#8b949e" }}>ATR(14): </span>0.00083  →  Normal volatility
+            </div>
+            <div style={{ color: "#444d56", marginBottom: 8 }}>─────────────────────────────────────────</div>
+            <div>
+              <span style={{ color: "#8b949e" }}>ENTRY     </span>
+              <span style={{ color: "#79c0ff" }}>1.08395</span>
+              {"  "}
+              <span style={{ color: "#8b949e" }}>SIZE  </span>200,000  LONG
+            </div>
+            <div>
+              <span style={{ color: "#8b949e" }}>STOP      </span>
+              <span style={{ color: "#f85149" }}>1.08295</span>
+              {"  "}(-$200)
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <span style={{ color: "#8b949e" }}>TARGET    </span>
+              <span style={{ color: "#3fb950" }}>1.08595</span>
+              {"  "}(+$400){"  "}R:R 1:2
+            </div>
+            <div style={{ color: "#444d56", marginBottom: 8 }}>─────────────────────────────────────────</div>
+            <div style={{ color: "#bc8cff", marginBottom: 2 }}>AI COACH</div>
+            <div style={{ paddingLeft: 8, color: "#c9d1d9", fontStyle: "italic", marginBottom: 8 }}>
+              &quot;Position sized conservatively. Stop placement technically sound.
+              Note: 3rd consecutive long on EUR/USD — watch for directional bias drift.&quot;
+            </div>
+            <div style={{ color: "#444d56", marginBottom: 8 }}>─────────────────────────────────────────</div>
+            <div>
+              <span style={{ color: "#8b949e" }}>AUDIT     </span>
+              <span style={{ color: "#e6c767" }}>HASH 8f4e...b2c3</span>
+              {"  "}·{"  "}
+              <span style={{ color: "#3fb950", fontWeight: 600 }}>WORM SEALED</span>
+            </div>
+          </div>
         </div>
-        <svg viewBox="0 0 1000 460" width="100%" style={{ display: "block" }}>
-          <defs>
-            <marker id="bkArrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-              <path d="M0,0 L8,3 L0,6" fill="#1E3A5F" />
-            </marker>
-          </defs>
+      </section>
 
-          {/* Client Layer */}
-          <rect x="20" y="30" width="960" height="80" rx="8" fill="#F7F8FA" stroke="#E5E7EB" strokeWidth="1" />
-          <text x="500" y="52" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#999999" letterSpacing="0.08em">
-            CLIENT ACCOUNTS (MULTI-TENANT, ISOLATED)
-          </text>
-          {["Corporate A", "Corporate B", "Fund Manager", "Insurance Co.", "Pension Fund"].map((label, i) => (
-            <g key={label}>
-              <rect x={45 + i * 188} y="65" width="168" height="32" rx="6" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1" />
-              <text x={129 + i * 188} y="85" textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">
-                {label}
-              </text>
-            </g>
-          ))}
-
-          {/* Arrows down */}
-          <line x1="500" y1="110" x2="500" y2="140" stroke="#1E3A5F" strokeWidth="1.5" markerEnd="url(#bkArrow)" />
-
-          {/* FX Desk Operations */}
-          <rect x="120" y="145" width="760" height="90" rx="8" fill="#1E3A5F" />
-          <text x="500" y="170" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="rgba(255,255,255,0.6)" letterSpacing="0.08em">
-            FX DESK OPERATIONS + AGENTIC AI
-          </text>
-          {["Client Advisory", "Hedge Calculation", "Market Intelligence", "Limit Monitoring"].map((label, i) => (
-            <g key={label}>
-              <rect x={145 + i * 185} y="185" width="165" height="35" rx="6" fill="rgba(255,255,255,0.12)" />
-              <text x={227 + i * 185} y="207" textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#FFFFFF">
-                {label}
-              </text>
-            </g>
-          ))}
-
-          {/* Arrows down */}
-          <line x1="500" y1="235" x2="500" y2="265" stroke="#1E3A5F" strokeWidth="1.5" markerEnd="url(#bkArrow)" />
-
-          {/* Deterministic Engine */}
-          <rect x="120" y="270" width="370" height="80" rx="8" fill="#EEEEF2" stroke="#E5E7EB" strokeWidth="1" />
-          <text x="305" y="293" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#555555" letterSpacing="0.08em">
-            DETERMINISTIC ENGINE
-          </text>
-          {["Hedge Kernel", "Risk Taxonomy", "Effectiveness"].map((label, i) => (
-            <g key={label}>
-              <rect x={140 + i * 115} y="305" width="100" height="30" rx="6" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1" />
-              <text x={190 + i * 115} y="324" textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">
-                {label}
-              </text>
-            </g>
-          ))}
-
-          {/* ORDR Market */}
-          <rect x="510" y="270" width="370" height="80" rx="8" fill="#EEEEF2" stroke="#E5E7EB" strokeWidth="1" />
-          <text x="695" y="293" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#555555" letterSpacing="0.08em">
-            ORDR MARKET
-          </text>
-          {["Canvas Charting", "23 Indicators", "AI Coach"].map((label, i) => (
-            <g key={label}>
-              <rect x={530 + i * 115} y="305" width="100" height="30" rx="6" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="1" />
-              <text x={580 + i * 115} y="324" textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="10" fontWeight="500" fill="#1E3A5F">
-                {label}
-              </text>
-            </g>
-          ))}
-
-          {/* Compliance & Governance */}
-          <rect x="120" y="380" width="760" height="55" rx="8" fill="#FFFFFF" stroke="#1E3A5F" strokeWidth="1.5" />
-          <text x="500" y="405" textAnchor="middle" fontFamily="'IBM Plex Mono', monospace" fontSize="10" fontWeight="600" fill="#555555" letterSpacing="0.08em">
-            COMPLIANCE: WORM AUDIT -- EMIR REPORTING -- MiFID II BEST EXECUTION -- FRTB CAPITAL
-          </text>
-          <text x="500" y="425" textAnchor="middle" fontFamily="'IBM Plex Sans', sans-serif" fontSize="9" fill="#999999">
-            Every transaction, calculation, and approval recorded with SHA-256 hash-chain integrity
-          </text>
-
-          {/* Connection lines */}
-          <line x1="305" y1="350" x2="305" y2="380" stroke="#1E3A5F" strokeWidth="1" strokeDasharray="3,3" opacity="0.4" />
-          <line x1="695" y1="350" x2="695" y2="380" stroke="#1E3A5F" strokeWidth="1" strokeDasharray="3,3" opacity="0.4" />
-        </svg>
+      {/* Trade Journal Sample */}
+      <section style={{ padding: "96px 48px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center" }}>
+            <div>
+              <div style={{
+                fontFamily: F.mono, fontSize: 11, fontWeight: 600,
+                letterSpacing: "0.1em", color: C.textMuted,
+                marginBottom: 12, textTransform: "uppercase",
+              }}>
+                ORDR JOURNAL
+              </div>
+              <h2 style={{
+                fontFamily: F.heading, fontSize: 32, fontWeight: 700,
+                letterSpacing: "-0.02em", margin: "0 0 16px", color: C.text,
+              }}>
+                Session-level performance analytics with AI behavioral flags
+              </h2>
+              <p style={{
+                fontFamily: F.ui, fontSize: 15, color: C.textSub,
+                lineHeight: 1.7, margin: "0 0 24px",
+              }}>
+                ORDR Journal tracks every session, calculates win rate, R:R, profit factor,
+                and drawdown — then surfaces behavioral patterns that quantitative metrics alone miss.
+              </p>
+              <div style={{
+                background: "#0d1117", border: "1px solid #f85149",
+                borderRadius: 8, padding: "16px 20px",
+                fontFamily: F.mono, fontSize: 12, color: "#f85149",
+              }}>
+                <span style={{ fontWeight: 700 }}>AI FLAG  </span>
+                &quot;Overtrading detected on Fridays — 31% of losses concentrated on Friday afternoon sessions.&quot;
+              </div>
+            </div>
+            <div style={{
+              background: "#0d1117", border: "1px solid #30363d",
+              borderRadius: 12, padding: "28px 32px",
+            }}>
+              <div style={{
+                fontFamily: F.mono, fontSize: 11, fontWeight: 600,
+                letterSpacing: "0.08em", color: "#e6c767",
+                marginBottom: 16, textTransform: "uppercase",
+              }}>
+                Monthly Performance Summary
+              </div>
+              {JOURNAL_STATS.map((s) => (
+                <div key={s.label} style={{
+                  display: "flex", justifyContent: "space-between",
+                  borderBottom: "1px solid #21262d", padding: "10px 0",
+                  fontFamily: F.mono, fontSize: 13,
+                }}>
+                  <span style={{ color: "#8b949e" }}>{s.label}</span>
+                  <span style={{ color: "#c9d1d9", fontWeight: 600 }}>{s.value}</span>
+                </div>
+              ))}
+              <div style={{
+                marginTop: 16, padding: "10px 0",
+                display: "flex", justifyContent: "space-between",
+                fontFamily: F.mono, fontSize: 13,
+              }}>
+                <span style={{ color: "#8b949e" }}>Sessions flagged</span>
+                <span style={{ color: "#f85149", fontWeight: 700 }}>4 of 22</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Capabilities */}
@@ -297,9 +419,7 @@ export default function BankingPage() {
                 background: C.bg, border: `1px solid ${C.border}`,
                 borderRadius: 12, padding: "28px 24px",
               }}>
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 12, marginBottom: 14,
-                }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
                   <div style={{
                     width: 40, height: 40, borderRadius: 8,
                     display: "flex", alignItems: "center", justifyContent: "center",
@@ -314,16 +434,10 @@ export default function BankingPage() {
                     {c.product.toUpperCase()}
                   </span>
                 </div>
-                <h3 style={{
-                  fontFamily: F.heading, fontSize: 17, fontWeight: 700,
-                  margin: "0 0 10px", color: C.text,
-                }}>
+                <h3 style={{ fontFamily: F.heading, fontSize: 17, fontWeight: 700, margin: "0 0 10px", color: C.text }}>
                   {c.title}
                 </h3>
-                <p style={{
-                  fontFamily: F.ui, fontSize: 14, color: C.textSub,
-                  lineHeight: 1.7, margin: 0,
-                }}>
+                <p style={{ fontFamily: F.ui, fontSize: 14, color: C.textSub, lineHeight: 1.7, margin: 0 }}>
                   {c.desc}
                 </p>
               </div>
@@ -332,12 +446,40 @@ export default function BankingPage() {
         </div>
       </section>
 
-      {/* ORDR Market Callout */}
-      <section style={{ padding: "96px 48px" }}>
+      {/* Products Strip */}
+      <section style={{ padding: "80px 48px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{
-            background: C.accent, borderRadius: 16, padding: "56px 48px",
+          <h2 style={{
+            fontFamily: F.heading, fontSize: 28, fontWeight: 700,
+            letterSpacing: "-0.02em", margin: "0 0 32px", textAlign: "center", color: C.text,
           }}>
+            Products for Banking &amp; Capital Markets
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
+            {PRODUCTS.map((p) => (
+              <div key={p.name} style={{
+                background: C.bgAlt, border: `1px solid ${C.border}`,
+                borderRadius: 10, padding: "24px 20px", textAlign: "center",
+              }}>
+                <div style={{
+                  fontFamily: F.mono, fontSize: 13, fontWeight: 700,
+                  color: C.accent, marginBottom: 8, letterSpacing: "0.02em",
+                }}>
+                  {p.name}
+                </div>
+                <p style={{ fontFamily: F.ui, fontSize: 13, color: C.textSub, lineHeight: 1.5, margin: 0 }}>
+                  {p.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ORDR Market Callout */}
+      <section style={{ padding: "0 48px 96px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ background: C.accent, borderRadius: 16, padding: "56px 48px" }}>
             <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
               <div style={{
                 fontFamily: F.mono, fontSize: 11, fontWeight: 600,
@@ -350,25 +492,25 @@ export default function BankingPage() {
                 fontFamily: F.heading, fontSize: 32, fontWeight: 800,
                 color: "#fff", margin: "0 0 16px", letterSpacing: "-0.02em",
               }}>
-                ORDR Market: The First Agentic Charting System
+                ORDR Market: 60fps. 77+ Indicators. Algo Trading.
               </h2>
               <p style={{
-                fontFamily: F.ui, fontSize: 15, color: "rgba(255,255,255,0.7)",
+                fontFamily: F.ui, fontSize: 15, color: "rgba(255,255,255,0.75)",
                 lineHeight: 1.7, margin: "0 0 12px",
               }}>
-                ORDR Market goes beyond traditional charting platforms. The Agentic AI coaches
-                trading discipline, helps desk analysts read chart patterns, identify regime changes,
-                and build algorithmic strategies in Python or JavaScript. It monitors market conditions
-                in real time and correlates price action with client exposure profiles.
+                The first institutional charting platform with an integrated Agentic AI coach.
+                Coaches trading discipline, interprets technical patterns, and can help desk analysts
+                build algorithmic strategies in Python or JavaScript. Not a consumer product —
+                an institutional platform with API-driven extensibility and governance-grade audit.
               </p>
-              <p style={{
-                fontFamily: F.ui, fontSize: 15, color: "rgba(255,255,255,0.7)",
-                lineHeight: 1.7, margin: 0,
-              }}>
-                Canvas 2D rendering with 23 technical indicators, professional drawing tools,
-                and 60fps animation. Combined with an AI that understands both the chart and
-                your client book.
-              </p>
+              <div style={{ display: "flex", gap: 32, justifyContent: "center", marginTop: 28, flexWrap: "wrap" }}>
+                {["60fps Canvas 2D", "77+ Indicators", "Python Algo Engine", "SHA-256 Signal Audit"].map((f) => (
+                  <div key={f} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <ShieldCheck size={14} color="rgba(255,255,255,0.6)" />
+                    <span style={{ fontFamily: F.ui, fontSize: 13, color: "rgba(255,255,255,0.8)" }}>{f}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -386,8 +528,9 @@ export default function BankingPage() {
           fontFamily: F.ui, fontSize: 16, color: "rgba(255,255,255,0.7)",
           maxWidth: 520, margin: "0 auto 32px", lineHeight: 1.6,
         }}>
-          Built for the compliance, governance, and operational standards of regulated
-          financial institutions. Deterministic engine. Agentic AI. Complete audit trail.
+          60fps charting, 77+ indicators, algo trading, 4-eyes governance, and a SHA-256
+          hash-chained audit trail. Built for the compliance and operational standards of
+          regulated financial institutions.
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
           <Link href="/auth/login" style={{
@@ -401,7 +544,7 @@ export default function BankingPage() {
           <Link href="/contact" style={{
             display: "inline-flex", alignItems: "center", gap: 8,
             fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-            color: "rgba(255,255,255,0.8)",
+            color: "rgba(255,255,255,0.85)",
             border: "1.5px solid rgba(255,255,255,0.3)",
             padding: "13px 32px", borderRadius: 8, textDecoration: "none",
           }}>
@@ -413,10 +556,12 @@ export default function BankingPage() {
       <style>{`
         @media(max-width:768px){
           section{padding:60px 20px !important}
-          h1{font-size:36px !important}
-          h2{font-size:24px !important}
+          h1{font-size:32px !important}
+          h2{font-size:22px !important}
+          div[style*="grid-template-columns: repeat(6"]{grid-template-columns:repeat(3,1fr) !important}
+          div[style*="grid-template-columns: repeat(4"]{grid-template-columns:repeat(2,1fr) !important}
+          div[style*="grid-template-columns: 1fr 1fr"]{grid-template-columns:1fr !important}
           div[style*="grid-template-columns: repeat(2"]{grid-template-columns:1fr !important}
-          svg{min-height:380px}
         }
       `}</style>
     </MarketingLayout>
