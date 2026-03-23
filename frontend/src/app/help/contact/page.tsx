@@ -582,7 +582,7 @@ function ContactPageInner() {
               </div>
               <div style={{ padding: "14px 16px" }}>
                 <a
-                  href="mailto:ordr-support@synexiun.com"
+                  href="mailto:support@ordrterminal.com"
                   style={{
                     fontFamily: S.fontUI,
                     fontSize: 13,
@@ -592,7 +592,7 @@ function ContactPageInner() {
                     marginBottom: 12,
                   }}
                 >
-                  ordr-support@synexiun.com
+                  support@ordrterminal.com
                 </a>
                 <p style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary, margin: 0, lineHeight: 1.5 }}>
                   Email support for urgent matters or when the platform is unavailable.

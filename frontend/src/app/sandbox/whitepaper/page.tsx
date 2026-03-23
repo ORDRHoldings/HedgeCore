@@ -799,7 +799,7 @@ React iframe integration:
             color: TOKEN.tert, textAlign: "center",
             margin: "16px 0 0",
           }}>
-            HedgeCore ORDR Terminal · © 2025 Synexiun Capital ·
+            ORDR Terminal · © 2026 ORDR Edge ·
             Not investment advice · Regulatory thresholds are indicative ·
             Run {runLabel}
           </p>

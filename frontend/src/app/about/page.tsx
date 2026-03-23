@@ -8,7 +8,6 @@ import {
   Brain,
   Layers,
   Mail,
-  Github,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 import { C, F } from "@/components/marketing/theme";
@@ -428,7 +427,7 @@ export default function AboutPage() {
               contact@ordrterminal.com
             </a>
             <a
-              href="https://github.com/Synexiun"
+              href="https://ordredge.com"
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -437,8 +436,7 @@ export default function AboutPage() {
                 textDecoration: "none",
               }}
             >
-              <Github size={16} />
-              github.com/Synexiun
+              ordredge.com
             </a>
           </div>
         </div>

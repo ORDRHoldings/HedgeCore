@@ -30,7 +30,7 @@ const SECTIONS = [
   },
   {
     heading: "6. Intellectual Property",
-    body: "ORDR Terminal, including its calculation engine, algorithms, API design, user interface, and documentation, is proprietary software owned by Synexiun. You are granted a limited, non-exclusive, non-transferable license to access and use the platform during your subscription period. You retain full ownership of your input data — FX positions, exposure submissions, policy configurations — and the calculation outputs generated from that data.",
+    body: "ORDR Terminal, including its calculation engine, algorithms, API design, user interface, and documentation, is proprietary software owned by ORDR Edge. You are granted a limited, non-exclusive, non-transferable license to access and use the platform during your subscription period. You retain full ownership of your input data — FX positions, exposure submissions, policy configurations — and the calculation outputs generated from that data.",
   },
   {
     heading: "7. Termination",
