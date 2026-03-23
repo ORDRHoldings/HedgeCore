@@ -174,25 +174,30 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="max-w-4xl">
             <div className="flex items-center gap-4 mb-8">
-              <span className="section-label" style={{ marginBottom: 0 }}>THE FINTECH ECOSYSTEM</span>
+              <span className="section-label" style={{ marginBottom: 0 }}>ORDR TERMINAL · INSTITUTIONAL FINTECH</span>
               <div className="flex items-center gap-2 border border-[#E5E7EB] bg-[#F9FAFB] px-2.5 py-1 rounded-sm">
                 <span className="status-dot pulsing" />
-                <span className="font-mono text-[10px] text-[#4B5563] font-bold tracking-widest uppercase">SYS_ACTIVE</span>
+                <span className="font-mono text-[10px] text-[#4B5563] font-bold tracking-widest uppercase">LIVE PLATFORM</span>
               </div>
             </div>
             <h1 className="text-[52px] md:text-[72px] leading-[1.05] font-extrabold mb-6 tracking-[-0.04em] text-[#111111]" style={{ fontFamily: "'Manrope', sans-serif" }}>
-              Deterministic Computation.<br />
-              <span className="text-[#1E3A5F]">Agentic Intelligence.</span>
+              Your FX audit is clean.<br />
+              <span className="text-[#1E3A5F]">Your governance holds.</span>
             </h1>
-            <p className="text-xl md:text-2xl text-[#4B5563] font-medium mb-8 leading-relaxed">
-              Ten products for enterprise, midsize, and retail. Treasury hedge governance, agentic charting, portfolio risk, scenario simulation, geopolitical intelligence, knowledge navigation, pooled capital management, institutional trading journal, and gold-backed digital assets <span className="text-[#9CA3AF]">-- all on one deterministic platform.</span>
+            <p className="text-xl md:text-2xl text-[#4B5563] font-medium mb-10 leading-relaxed max-w-3xl">
+              That&apos;s week one with ORDR Terminal. Stop managing FX exposure in spreadsheets. Hedge ratios calculated in under 50ms, policy enforced, 4-eyes approved, IFRS&nbsp;9 evidence auto-generated — every run hash-sealed and permanently auditable.
             </p>
-            <div className="border-l-2 border-[#1E3A5F] pl-4 mb-10 max-w-3xl">
-              <p className="text-[14px] font-mono text-[#6B7280] leading-relaxed">
-                [ENGINE_RULE_01]: Engines are deterministic -- same input, same output, always.<br />
-                [ENGINE_RULE_02]: AI provides communication, chart analysis, and intelligence.<br />
-                [ENGINE_RULE_03]: AI never touches calculations.
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 max-w-3xl">
+              {[
+                { headline: "Same-day hedge plan", sub: "Upload exposures → policy → calculation → governance in one session" },
+                { headline: "Audit-ready on day one", sub: "SHA-256 hash chain, WORM log, IFRS 9 / ASC 815 evidence auto-built per run" },
+                { headline: "No spreadsheet required", sub: "Deterministic engine replaces manual calculation with reproducible, verifiable output" },
+              ].map((item) => (
+                <div key={item.headline} className="border border-[#E5E7EB] rounded-sm p-4 bg-[#F9FAFB]">
+                  <div className="font-bold text-[14px] text-[#111111] mb-1.5">{item.headline}</div>
+                  <div className="text-[12px] text-[#6B7280] leading-relaxed">{item.sub}</div>
+                </div>
+              ))}
             </div>
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <Link href="/contact" className="inline-flex items-center justify-center px-6 py-3 text-[13px] font-bold bg-[#1E3A5F] text-white border border-[#1E3A5F] hover:bg-[#162D4A] rounded-sm tracking-wide no-underline transition-all">
@@ -201,6 +206,11 @@ export default function HomePage() {
               <Link href="/products" className="inline-flex items-center justify-center px-6 py-3 text-[13px] font-bold bg-white text-[#111111] border border-[#D1D5DB] hover:border-[#1E3A5F] rounded-sm tracking-wide no-underline transition-all">
                 Explore Products
               </Link>
+            </div>
+            <div className="border-l-2 border-[#E5E7EB] pl-4 max-w-3xl">
+              <p className="text-[12px] font-mono text-[#9CA3AF] leading-relaxed">
+                Architecture: deterministic engine → AI communication layer → human decision. AI never evaluates calculations.
+              </p>
             </div>
           </div>
         </div>
@@ -312,9 +322,9 @@ export default function HomePage() {
       {/* Section 6: Products Grid */}
       <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white border-t border-[#E5E7EB]">
         <span className="section-label">PRODUCTS</span>
-        <h2 className="text-3xl md:text-[44px] font-extrabold mb-6" style={{ fontFamily: "'Manrope', sans-serif" }}>Eight products. One ecosystem.</h2>
+        <h2 className="text-3xl md:text-[44px] font-extrabold mb-6" style={{ fontFamily: "'Manrope', sans-serif" }}>Ten products. One ecosystem.</h2>
         <p className="text-[16px] text-[#4B5563] max-w-3xl mb-16 border-l-2 border-[#E5E7EB] pl-4">
-          Enterprise treasury governance, professional trading tools, and retail-friendly charting -- each product powered by the same deterministic computation engine.
+          Enterprise treasury governance, professional trading tools, and gold-backed digital assets -- each product powered by the same deterministic computation engine.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((p, i) => {
@@ -350,21 +360,92 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Section 7: AI Works */}
+      {/* Section 7: ICP Conversion Paths */}
       <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white border-t border-[#E5E7EB]">
-        <span className="section-label">INTELLIGENCE</span>
-        <h2 className="text-3xl md:text-[44px] font-extrabold mb-12" style={{ fontFamily: "'Manrope', sans-serif" }}>How the AI Layer Works</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0 border border-[#E5E7EB] rounded-sm bg-[#F9FAFB]">
+        <span className="section-label">WHO IT&apos;S FOR</span>
+        <h2 className="text-3xl md:text-[44px] font-extrabold mb-4" style={{ fontFamily: "'Manrope', sans-serif" }}>Pick your role.</h2>
+        <p className="text-[16px] text-[#4B5563] max-w-3xl mb-12 border-l-2 border-[#E5E7EB] pl-4">Here&apos;s what changes in week one.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
-            { n: "01", t: "Engine Calculates", d: "The deterministic engine processes inputs through 41 production modules. Same input always produces the same output. Sub-50ms. Hash-chained. Reproducible." },
-            { n: "02", t: "AI Communicates", d: "AI is a communication and management layer for specific products. Treasury uses chat, voice, phone. Market uses AI for chart analysis. Polisophic for geopolitical intelligence. AI does not evaluate engine calculations." },
-            { n: "03", t: "AI Assists", d: "Where AI is present, it assists through communication channels: status updates, report writing, chart reading, algo building, geopolitical analysis. AI is not involved in any calculation." },
-            { n: "04", t: "Human Decides", d: "AI never auto-executes. Every trade, hedge, and decision is made by the human operator. 4-eyes governance and separation of duties on all execution." },
-          ].map((item, i) => (
-            <div key={item.n} className={`p-8 ${i !== 3 ? "border-b lg:border-b-0 lg:border-r border-[#E5E7EB]" : ""}`}>
-              <span className="font-mono text-[24px] font-bold text-[#D1D5DB] block mb-4">[{item.n}]</span>
-              <h3 className="font-bold text-[16px] mb-3 text-[#111111]">{item.t}</h3>
-              <p className="text-[13px] text-[#6B7280] leading-relaxed">{item.d}</p>
+            {
+              role: "Head of Treasury",
+              tag: "CORPORATE TREASURY",
+              outcome: "Hedge plan built, approved, and audit-logged before your Friday report.",
+              details: [
+                "Upload FX positions from ERP, TMS, or spreadsheet in minutes",
+                "Engine calculates hedge ratios across 41 modules in under 50ms",
+                "60 policy presets or custom — enforced automatically, not manually",
+                "4-eyes approval with Separation of Duties — no single-person risk",
+                "IFRS 9 / ASC 815 effectiveness evidence auto-generated per run",
+                "Month-end report: hash-sealed, auditor-ready, no manual assembly",
+              ],
+              accent: "#1E3A5F",
+              bg: "#F0F4FF",
+            },
+            {
+              role: "Fund Manager",
+              tag: "ASSET MANAGEMENT",
+              outcome: "40+ positions tracked, risk decomposed, LP report auto-drafted.",
+              details: [
+                "Multi-currency portfolio with R1-R8 risk taxonomy decomposition",
+                "Concentration monitoring with HHI alerts — no surprise blow-ups",
+                "AI drafts LP investor update from live data — you review and send",
+                "4-eyes capital allocation with WORM audit trail per period",
+                "Period locking and cashflow workflow built-in",
+                "Dual portal: full manager view + limited partner read-only access",
+              ],
+              accent: "#065F46",
+              bg: "#F0FDF4",
+            },
+            {
+              role: "Risk Manager",
+              tag: "ENTERPRISE RISK",
+              outcome: "Board-ready risk decomposition report — generated, not assembled.",
+              details: [
+                "R1-R8 taxonomy: directional, basis, gamma, theta, vega, liquidity, counterparty, operational",
+                "Multi-entity exposure netting with full attribution trail",
+                "Scenario studio: Monte Carlo, historical VaR/ES, crisis replay",
+                "Geopolitical risk scoring across 190+ countries, AI corridor analysis",
+                "Every model run SHA-256 sealed — reproducible months later",
+                "Regulatory export: ISDA, FINRA 17a-4, IFRS 9 XML, ASC 815 XML",
+              ],
+              accent: "#7C2D12",
+              bg: "#FFF7ED",
+            },
+            {
+              role: "Institutional Trader",
+              tag: "PROFESSIONAL TRADING",
+              outcome: "60fps charts, 77+ indicators, Python algos, AI coaching — not signals.",
+              details: [
+                "Canvas 2D charting at 60fps — no freeze on large tick datasets",
+                "77+ technical indicators with custom overlays and multi-timeframe",
+                "Python, JavaScript, and natural language algo builder",
+                "AI reads your chart, flags discipline drift — never tells you what to trade",
+                "ORDR Journal: equity curve, P&L attribution, behavioral drift detection",
+                "ORDR FinHub: macro calendar, signal detection, curated economic data",
+              ],
+              accent: "#1D4ED8",
+              bg: "#EFF6FF",
+            },
+          ].map((icp) => (
+            <div key={icp.role} className="border border-[#E5E7EB] rounded-sm overflow-hidden bg-white shadow-sm">
+              <div className="px-6 py-4 border-b border-[#E5E7EB]" style={{ background: icp.bg }}>
+                <div className="font-mono text-[10px] font-bold tracking-widest uppercase mb-1" style={{ color: icp.accent }}>{icp.tag}</div>
+                <div className="font-bold text-[18px] text-[#111111]">{icp.role}</div>
+              </div>
+              <div className="px-6 py-5">
+                <div className="border-l-2 pl-4 mb-5 text-[14px] font-medium text-[#111111] leading-relaxed" style={{ borderColor: icp.accent }}>
+                  {icp.outcome}
+                </div>
+                <ul className="space-y-2.5 list-none p-0 m-0">
+                  {icp.details.map((d) => (
+                    <li key={d} className="flex items-start gap-2.5 text-[13px] text-[#4B5563] leading-relaxed">
+                      <CheckCircle size={13} className="shrink-0 mt-0.5" style={{ color: icp.accent }} />
+                      {d}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           ))}
         </div>
@@ -397,14 +478,68 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Section 9: Infrastructure Detail */}
+      {/* Section 9: How It Works in Practice */}
       <section className="py-24 px-6 md:px-12 max-w-7xl mx-auto bg-white">
-        <span className="section-label">INFRASTRUCTURE</span>
-        <h2 className="text-3xl md:text-[44px] font-extrabold mb-12" style={{ fontFamily: "'Manrope', sans-serif" }}>The ORDR Architecture</h2>
-        <div className="w-full overflow-x-auto">
-          <div className="min-w-[800px] p-1 bg-[#F9FAFB] border border-[#E5E7EB] rounded-sm">
-            <SvgPillars />
+        <span className="section-label">IN PRACTICE</span>
+        <h2 className="text-3xl md:text-[44px] font-extrabold mb-4" style={{ fontFamily: "'Manrope', sans-serif" }}>From exposure to audit artifact in one session.</h2>
+        <p className="text-[16px] text-[#4B5563] max-w-3xl mb-12 border-l-2 border-[#E5E7EB] pl-4">A corporate treasurer uploads 24 FX positions on Monday morning. Here is what the platform produces — and when.</p>
+        <div className="w-full overflow-x-auto mb-6">
+          <div className="min-w-[700px] grid grid-cols-4 gap-0 border border-[#E5E7EB] rounded-sm overflow-hidden">
+            {[
+              {
+                step: "01", label: "INPUT", title: "Exposure Upload", time: "08:14:32",
+                detail: "24 FX positions imported",
+                code: ["EUR/USD · 4,200,000 · PAYABLE · 90D","GBP/USD · 1,800,000 · RECEIVABLE · 60D","JPY/USD · 320,000,000 · PAYABLE · 30D","... +21 positions","VALIDATED: 24/24 · 0 ERRORS"],
+                accent: "#1E3A5F",
+              },
+              {
+                step: "02", label: "ENGINE", title: "Hedge Calculation", time: "08:14:32.048",
+                detail: "kernel.py · 41 modules · 48ms",
+                code: ["POLICY: MODERATE_HEDGE_60PCT","EUR/USD FWD: 4.2M × 60% = 2.52M","GBP/USD OPT: collar + 30D window","JPY/USD: NDF 3M tenor","HASH: 8f4e2b9a...a1b2c3d4"],
+                accent: "#059669",
+              },
+              {
+                step: "03", label: "GOVERNANCE", title: "4-Eyes Approval", time: "09:42:15",
+                detail: "Maker submitted · Checker approved",
+                code: ["MAKER: jsmith@corp.com [SUBMITTED]","CHECKER: mwilson@corp.com [APPROVED]","SoD: ENFORCED (different users)","POLICY GATE: PASSED","EXECUTION: AUTHORIZED"],
+                accent: "#7C3AED",
+              },
+              {
+                step: "04", label: "ARTIFACT", title: "IFRS 9 Report", time: "09:42:16",
+                detail: "Auto-generated · WORM sealed",
+                code: ["EFFECTIVENESS: 96.2% PASS","METHOD: CRITICAL TERMS MATCH","STANDARD: IAS 39 / IFRS 9","EXPORT: ifrs9_2026Q1.xml","CHAIN: c3d4...9f8e · IMMUTABLE"],
+                accent: "#B8860B",
+              },
+            ].map((item, i) => (
+              <div key={item.step} className={`bg-[#0A0A0A] flex flex-col ${i < 3 ? "border-r border-[#1E293B]" : ""}`}>
+                <div className="px-4 py-3 border-b border-[#1E293B] flex items-center justify-between">
+                  <span className="font-mono text-[9px] font-bold tracking-widest uppercase" style={{ color: item.accent }}>[{item.step}] {item.label}</span>
+                  <span className="font-mono text-[9px] text-[#4B5563]">{item.time}</span>
+                </div>
+                <div className="px-4 py-3 border-b border-[#1E293B]">
+                  <div className="font-mono text-[12px] font-bold text-white mb-0.5">{item.title}</div>
+                  <div className="font-mono text-[10px]" style={{ color: item.accent }}>{item.detail}</div>
+                </div>
+                <div className="px-4 py-4 flex-1 space-y-1.5">
+                  {item.code.map((line) => (
+                    <div key={line} className="font-mono text-[10px] text-[#6B7280] leading-relaxed">{line}</div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { t: "Total session time", v: "~90 minutes including approvals" },
+            { t: "Outputs generated", v: "Hedge plan PDF · IFRS 9 XML · WORM audit log · hash-chain export" },
+            { t: "Manual steps required", v: "Zero — upload, configure, approve, artifact." },
+          ].map((item) => (
+            <div key={item.t} className="border border-[#E5E7EB] rounded-sm p-5 bg-[#F9FAFB]">
+              <div className="font-mono text-[10px] font-bold text-[#9CA3AF] uppercase tracking-widest mb-1.5">{item.t}</div>
+              <div className="text-[14px] text-[#111111] font-medium">{item.v}</div>
+            </div>
+          ))}
         </div>
       </section>
 
