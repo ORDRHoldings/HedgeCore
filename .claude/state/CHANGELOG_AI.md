@@ -1,5 +1,12 @@
 # Changelog (AI-maintained)
 
+## 2026-03-23 — Landing page: ORDR Journal + GOLDX Coin (commit 81f255c)
+- Added Section 12 (ORDR Journal) + Section 13 (GOLDX Coin) to home landing page
+- Built /products/ordr-journal — equity curve SVG, P&L bar chart, 8-feature grid, live demo CTA
+- Built /products/goldx — XAU/USD price chart, tokenomics donut, how-it-works, ecosystem cards
+- Stats strip updated 8→10 products; hero copy updated accordingly
+- Build: tsc --noEmit clean, next build clean
+
 ## 2026-03-22 — Sprint: Live Market Data Integration (commits 8f5e911, a3eb5e5)
 - Removed all hardcoded BIS spot rates and carry assumptions (14 files, -432 lines)
 - All provider failures now return 503 instead of stale fallback data
