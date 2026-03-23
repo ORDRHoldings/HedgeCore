@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import {
   ChevronLeft, ArrowRight, Coins, Shield, Zap, Globe, FileText, TrendingUp,
@@ -89,55 +90,11 @@ const INTEGRATIONS = [
   },
 ];
 
-// SVG chart data: 13 points for Mar'25 through Mar'26
-// Realistic gold price path
-const CHART_POINTS = [
-  { month: "Mar'25", price: 2180 },
-  { month: "Apr",    price: 2120 },
-  { month: "May",    price: 2080 },
-  { month: "Jun",    price: 2050 },
-  { month: "Jul",    price: 2110 },
-  { month: "Aug",    price: 2220 },
-  { month: "Sep",    price: 2390 },
-  { month: "Oct",    price: 2650 },
-  { month: "Nov",    price: 2720 },
-  { month: "Dec",    price: 2800 },
-  { month: "Jan'26", price: 2870 },
-  { month: "Feb",    price: 2920 },
-  { month: "Mar'26", price: 2980 },
-];
-
-const Y_LABELS = [1800, 1900, 2000, 2100, 2200, 2300, 2400, 2500, 2600, 2700, 2800, 2900, 3000];
-const CHART_W = 900;
-const CHART_H = 320;
-const PAD_L = 72;
-const PAD_R = 24;
-const PAD_T = 24;
-const PAD_B = 48;
-const Y_MIN = 1800;
-const Y_MAX = 3000;
-const PLOT_W = CHART_W - PAD_L - PAD_R;
-const PLOT_H = CHART_H - PAD_T - PAD_B;
-
-function priceToY(price: number): number {
-  return PAD_T + PLOT_H - ((price - Y_MIN) / (Y_MAX - Y_MIN)) * PLOT_H;
-}
-
-function idxToX(i: number): number {
-  return PAD_L + (i / (CHART_POINTS.length - 1)) * PLOT_W;
-}
-
-const linePoints = CHART_POINTS.map((p, i) => `${idxToX(i)},${priceToY(p.price)}`).join(" ");
-const areaPoints =
-  `${PAD_L},${PAD_T + PLOT_H} ` +
-  CHART_POINTS.map((p, i) => `${idxToX(i)},${priceToY(p.price)}`).join(" ") +
-  ` ${PAD_L + PLOT_W},${PAD_T + PLOT_H}`;
-
-// Tokenomics donut: using stroke-dasharray on a circle r=100, circumference=628.3
+// Tokenomics donut config
 const DONUT_CX = 150;
 const DONUT_CY = 150;
 const DONUT_R = 100;
-const DONUT_CIRC = 2 * Math.PI * DONUT_R; // ~628.3
+const DONUT_CIRC = 2 * Math.PI * DONUT_R;
 
 const SEGMENTS = [
   { pct: 0.70, color: GOLD,      label: "Physical Gold Reserves", labelColor: GOLD },
@@ -146,12 +103,10 @@ const SEGMENTS = [
   { pct: 0.05, color: "#6B7280", label: "Development Fund",       labelColor: "#6B7280" },
 ];
 
-// Build stroke-dasharray offsets
 let cumPct = 0;
 const donutRings = SEGMENTS.map((seg) => {
   const dash = seg.pct * DONUT_CIRC;
   const gap = DONUT_CIRC - dash;
-  // rotate so segment starts at top (-90deg = -DONUT_CIRC/4 offset)
   const offset = -(cumPct * DONUT_CIRC) + DONUT_CIRC / 4;
   cumPct += seg.pct;
   return { ...seg, dash, gap, offset };
@@ -167,11 +122,87 @@ const VAULT_DATA = [
 ];
 
 export default function GoldXPage() {
+  // TradingView Advanced Chart — XAU/USD monthly
+  useEffect(() => {
+    const container = document.getElementById("tv-gold-chart");
+    if (!container) return;
+    const widget = container.querySelector(".tradingview-widget-container__widget");
+    if (!widget) return;
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      autosize: true,
+      symbol: "TVC:GOLD",
+      interval: "M",
+      timezone: "Etc/UTC",
+      theme: "light",
+      style: "1",
+      locale: "en",
+      backgroundColor: "rgba(255,255,255,0)",
+      gridColor: "rgba(240,240,244,1)",
+      hide_top_toolbar: false,
+      hide_legend: false,
+      save_image: false,
+      calendar: false,
+      hide_volume: true,
+      support_host: "https://www.tradingview.com",
+    });
+    container.appendChild(script);
+    return () => { if (container) container.innerHTML = '<div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>'; };
+  }, []);
+
+  // TradingView Symbol Info — live price strip
+  useEffect(() => {
+    const container = document.getElementById("tv-gold-info");
+    if (!container) return;
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      symbol: "TVC:GOLD",
+      width: "100%",
+      locale: "en",
+      colorTheme: "light",
+      isTransparent: true,
+    });
+    container.appendChild(script);
+    return () => { if (container) container.innerHTML = ""; };
+  }, []);
+
+  // TradingView Mini Chart — compact ticker for hero
+  useEffect(() => {
+    const container = document.getElementById("tv-gold-mini");
+    if (!container) return;
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      symbol: "TVC:GOLD",
+      width: "100%",
+      height: 220,
+      locale: "en",
+      dateRange: "12M",
+      colorTheme: "light",
+      isTransparent: false,
+      autosize: false,
+      largeChartUrl: "",
+    });
+    container.appendChild(script);
+    return () => { if (container) container.innerHTML = ""; };
+  }, []);
+
   return (
     <MarketingLayout>
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section style={{ padding: "80px 48px 64px", maxWidth: 860, margin: "0 auto", textAlign: "center" }}>
+      <section style={{ padding: "80px 48px 64px", maxWidth: 1100, margin: "0 auto" }}>
         <Link
           href="/products"
           style={{
@@ -183,55 +214,80 @@ export default function GoldXPage() {
           <ChevronLeft size={14} /> All Products
         </Link>
 
-        <div style={{
-          display: "inline-block", fontFamily: F.mono, fontSize: 11, fontWeight: 700,
-          letterSpacing: "0.15em", color: GOLD, textTransform: "uppercase",
-          marginBottom: 20,
-        }}>
-          [GOLDX · GOLD-BACKED DIGITAL ASSET]
-        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 48, alignItems: "center" }}>
+          <div>
+            <div style={{
+              display: "inline-block", fontFamily: F.mono, fontSize: 11, fontWeight: 700,
+              letterSpacing: "0.15em", color: GOLD, textTransform: "uppercase",
+              marginBottom: 20,
+            }}>
+              [GOLDX · GOLD-BACKED DIGITAL ASSET]
+            </div>
 
-        <h1 style={{
-          fontFamily: F.heading, fontSize: 48, fontWeight: 800,
-          letterSpacing: "-0.03em", lineHeight: 1.1,
-          margin: "0 0 20px", color: C.text,
-        }}>
-          GOLDX — Digital Gold, Physical Backing
-        </h1>
+            <h1 style={{
+              fontFamily: F.heading, fontSize: 48, fontWeight: 800,
+              letterSpacing: "-0.03em", lineHeight: 1.1,
+              margin: "0 0 20px", color: C.text,
+            }}>
+              GOLDX — Digital Gold, Physical Backing
+            </h1>
 
-        <p style={{
-          fontFamily: F.ui, fontSize: 17, color: C.textSub,
-          maxWidth: 680, margin: "0 auto 32px", lineHeight: 1.7,
-        }}>
-          Every GOLDX token is backed 1:1 by physical gold held in audited vaults.
-          The transparency of blockchain, the security of gold.
-        </p>
+            <p style={{
+              fontFamily: F.ui, fontSize: 17, color: C.textSub,
+              maxWidth: 580, margin: "0 0 32px", lineHeight: 1.7,
+            }}>
+              Every GOLDX token is backed 1:1 by physical gold held in audited vaults.
+              The transparency of blockchain, the security of gold. Live XAU/USD price tracking.
+            </p>
 
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <a
-            href="https://goldx-sandy.vercel.app/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-              color: "#fff", background: GOLD,
-              padding: "12px 28px", borderRadius: 6, textDecoration: "none",
-            }}
-          >
-            Explore GOLDX <ArrowRight size={16} />
-          </a>
-          <Link
-            href="/products"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              fontFamily: F.ui, fontSize: 15, fontWeight: 600,
-              color: C.text, border: `1px solid ${C.border}`,
-              padding: "12px 28px", borderRadius: 6, textDecoration: "none",
-            }}
-          >
-            ORDR Ecosystem
-          </Link>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <a
+                href="https://goldx-sandy.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  fontFamily: F.ui, fontSize: 15, fontWeight: 600,
+                  color: "#fff", background: GOLD,
+                  padding: "12px 28px", borderRadius: 6, textDecoration: "none",
+                }}
+              >
+                Explore GOLDX <ArrowRight size={16} />
+              </a>
+              <Link
+                href="/products"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  fontFamily: F.ui, fontSize: 15, fontWeight: 600,
+                  color: C.text, border: `1px solid ${C.border}`,
+                  padding: "12px 28px", borderRadius: 6, textDecoration: "none",
+                }}
+              >
+                ORDR Ecosystem
+              </Link>
+            </div>
+          </div>
+
+          {/* Live mini chart in hero */}
+          <div style={{
+            border: `1px solid ${C.border}`, borderRadius: 8,
+            overflow: "hidden", boxShadow: C.cardShadow,
+          }}>
+            <div style={{
+              padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
+              background: C.bgAlt, display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} />
+              <span style={{ fontFamily: F.mono, fontSize: 10, fontWeight: 700, color: C.textMuted, letterSpacing: "0.1em" }}>
+                XAU/USD · LIVE · TRADINGVIEW
+              </span>
+            </div>
+            <div
+              id="tv-gold-mini"
+              className="tradingview-widget-container"
+              style={{ height: 220 }}
+            />
+          </div>
         </div>
       </section>
 
@@ -278,177 +334,61 @@ export default function GoldXPage() {
         </div>
       </section>
 
-      {/* ── Gold Price Chart ─────────────────────────────────────────────── */}
+      {/* ── Live Gold Chart (TradingView) ─────────────────────────────────── */}
       <section style={{ padding: "80px 48px", maxWidth: 1100, margin: "0 auto" }}>
         <div style={{
           fontFamily: F.mono, fontSize: 11, fontWeight: 700,
           letterSpacing: "0.15em", color: C.textMuted,
           textTransform: "uppercase", marginBottom: 12,
         }}>
-          GOLD MARKET DATA
+          LIVE MARKET DATA · TRADINGVIEW
         </div>
         <h2 style={{
           fontFamily: F.heading, fontSize: 32, fontWeight: 800,
           margin: "0 0 12px", color: C.text,
         }}>
-          Gold Spot Price — 12 Month History (XAU/USD)
+          Gold Spot Price — XAU/USD (Live)
         </h2>
         <p style={{
           fontFamily: F.ui, fontSize: 15, color: C.textSub,
           margin: "0 0 36px", lineHeight: 1.7, maxWidth: 640,
         }}>
-          GOLDX token value tracks XAU/USD in real time. Live gold prices sourced from institutional feeds.
+          GOLDX token value tracks XAU/USD in real time. Chart and price data sourced live from TradingView.
         </p>
 
         <div style={{
           background: C.bg, border: `1px solid ${C.border}`,
-          borderRadius: 8, padding: "24px 16px 16px",
+          borderRadius: 8, overflow: "hidden",
           boxShadow: C.cardShadow,
         }}>
-          <svg
-            viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{ width: "100%", height: "auto" }}
+          {/* Live price info strip */}
+          <div
+            id="tv-gold-info"
+            className="tradingview-widget-container"
+            style={{ borderBottom: `1px solid ${C.border}` }}
+          />
+
+          {/* Advanced chart */}
+          <div
+            id="tv-gold-chart"
+            className="tradingview-widget-container"
+            style={{ height: 460 }}
           >
-            {/* Grid lines */}
-            {Y_LABELS.map((y) => {
-              const cy = priceToY(y);
-              return (
-                <g key={y}>
-                  <line
-                    x1={PAD_L} y1={cy} x2={PAD_L + PLOT_W} y2={cy}
-                    stroke="#F0F0F4" strokeWidth="1"
-                  />
-                  <text
-                    x={PAD_L - 8} y={cy + 4}
-                    fontFamily="IBM Plex Mono, monospace"
-                    fontSize="9" fill="#AAAAAA" textAnchor="end"
-                  >
-                    ${y.toLocaleString()}
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* Vertical grid lines */}
-            {CHART_POINTS.map((p, i) => {
-              const cx = idxToX(i);
-              return (
-                <line
-                  key={p.month}
-                  x1={cx} y1={PAD_T} x2={cx} y2={PAD_T + PLOT_H}
-                  stroke="#F0F0F4" strokeWidth="1"
-                />
-              );
-            })}
-
-            {/* Area fill */}
-            <polygon points={areaPoints} fill="rgba(184,134,11,0.08)" />
-
-            {/* Price line */}
-            <polyline
-              points={linePoints}
-              stroke={GOLD}
-              strokeWidth="2.5"
-              fill="none"
-              strokeLinejoin="round"
-              strokeLinecap="round"
+            <div
+              className="tradingview-widget-container__widget"
+              style={{ height: "100%", width: "100%" }}
             />
+          </div>
 
-            {/* Data point dots */}
-            {CHART_POINTS.map((p, i) => (
-              <circle
-                key={`dot-${p.month}`}
-                cx={idxToX(i)}
-                cy={priceToY(p.price)}
-                r="3"
-                fill={GOLD}
-              />
-            ))}
-
-            {/* X-axis labels */}
-            {CHART_POINTS.map((p, i) => (
-              <text
-                key={`lbl-${p.month}`}
-                x={idxToX(i)}
-                y={PAD_T + PLOT_H + 18}
-                fontFamily="IBM Plex Mono, monospace"
-                fontSize="9" fill="#999999" textAnchor="middle"
-              >
-                {p.month}
-              </text>
-            ))}
-
-            {/* Current price badge */}
-            <rect
-              x={idxToX(CHART_POINTS.length - 1) - 80}
-              y={priceToY(2980) - 30}
-              width={160} height={24}
-              rx="4" fill={GOLD}
-            />
-            <text
-              x={idxToX(CHART_POINTS.length - 1)}
-              y={priceToY(2980) - 13}
-              fontFamily="IBM Plex Mono, monospace"
-              fontSize="10" fontWeight="700"
-              fill="#FFFFFF" textAnchor="middle"
-            >
-              XAU/USD  $2,987.40
-            </text>
-
-            {/* Change label */}
-            <rect
-              x={PAD_L + 8}
-              y={PAD_T + 8}
-              width={110} height={22}
-              rx="4" fill="rgba(16,185,129,0.12)"
-            />
-            <text
-              x={PAD_L + 63}
-              y={PAD_T + 23}
-              fontFamily="IBM Plex Mono, monospace"
-              fontSize="10" fontWeight="700"
-              fill="#059669" textAnchor="middle"
-            >
-              +37.2% / 12M
-            </text>
-          </svg>
-
-          {/* Data strip below chart */}
+          {/* TradingView attribution */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
-            borderTop: `1px solid ${C.border}`, marginTop: 8,
+            padding: "10px 20px", borderTop: `1px solid ${C.border}`,
+            background: C.bgAlt, display: "flex", alignItems: "center", gap: 8,
           }}>
-            {[
-              { label: "Current", value: "$2,987.40" },
-              { label: "52W High", value: "$3,004.80" },
-              { label: "52W Low",  value: "$2,041.20" },
-              { label: "YTD",      value: "+18.4%" },
-            ].map((d, i) => (
-              <div
-                key={d.label}
-                style={{
-                  padding: "16px 20px",
-                  borderRight: i < 3 ? `1px solid ${C.border}` : "none",
-                  textAlign: "center",
-                }}
-              >
-                <div style={{
-                  fontFamily: F.mono, fontSize: 10, fontWeight: 700,
-                  letterSpacing: "0.1em", color: C.textMuted,
-                  textTransform: "uppercase", marginBottom: 4,
-                }}>
-                  {d.label}
-                </div>
-                <div style={{
-                  fontFamily: F.mono, fontSize: 16, fontWeight: 800,
-                  color: d.label === "YTD" ? "#059669" : C.text,
-                }}>
-                  {d.value}
-                </div>
-              </div>
-            ))}
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e" }} />
+            <span style={{ fontFamily: F.mono, fontSize: 10, color: C.textMuted }}>
+              Live data via TradingView · Symbol: TVC:GOLD · Updates in real time
+            </span>
           </div>
         </div>
       </section>
@@ -485,10 +425,7 @@ export default function GoldXPage() {
                 xmlns="http://www.w3.org/2000/svg"
                 style={{ width: "100%", maxWidth: 280, height: "auto" }}
               >
-                {/* Background circle */}
                 <circle cx={DONUT_CX} cy={DONUT_CY} r={DONUT_R} stroke="#E5E7EB" strokeWidth="36" fill="none" />
-
-                {/* Segment rings */}
                 {donutRings.map((seg) => (
                   <circle
                     key={seg.label}
@@ -503,8 +440,6 @@ export default function GoldXPage() {
                     strokeLinecap="butt"
                   />
                 ))}
-
-                {/* Center label */}
                 <text
                   x={DONUT_CX} y={DONUT_CY - 8}
                   fontFamily="IBM Plex Mono, monospace"
@@ -523,7 +458,6 @@ export default function GoldXPage() {
                 </text>
               </svg>
 
-              {/* Legend */}
               <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", maxWidth: 280 }}>
                 {SEGMENTS.map((seg) => (
                   <div key={seg.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -531,9 +465,7 @@ export default function GoldXPage() {
                       width: 12, height: 12, borderRadius: 2,
                       background: seg.color, flexShrink: 0,
                     }} />
-                    <div style={{
-                      fontFamily: F.ui, fontSize: 13, color: C.textSub, flex: 1,
-                    }}>
+                    <div style={{ fontFamily: F.ui, fontSize: 13, color: C.textSub, flex: 1 }}>
                       {seg.label}
                     </div>
                     <div style={{
@@ -575,9 +507,7 @@ export default function GoldXPage() {
                       borderBottom: i < VAULT_DATA.length - 1 ? `1px solid ${C.border}` : "none",
                     }}
                   >
-                    <div style={{
-                      fontFamily: F.ui, fontSize: 13, color: C.textMuted,
-                    }}>
+                    <div style={{ fontFamily: F.ui, fontSize: 13, color: C.textMuted }}>
                       {row.label}
                     </div>
                     <div style={{
@@ -767,11 +697,15 @@ export default function GoldXPage() {
       </section>
 
       <style>{`
+        @media (max-width: 900px) {
+          .goldx-hero-grid   { grid-template-columns: 1fr !important; }
+        }
         @media (max-width: 768px) {
           .goldx-feat-grid  { grid-template-columns: 1fr !important; }
           .goldx-steps-grid { grid-template-columns: 1fr !important; }
           .goldx-int-grid   { grid-template-columns: 1fr !important; }
         }
+        .tradingview-widget-container__widget { height: 100%; width: 100%; }
       `}</style>
     </MarketingLayout>
   );
