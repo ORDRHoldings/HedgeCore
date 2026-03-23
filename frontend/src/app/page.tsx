@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   ArrowRight, Activity, Shield, Lock, BarChart2, FileText, Database, Globe,
   BrainCircuit, CheckCircle, Layers, Zap, Briefcase, Building, Landmark,
-  ShieldAlert, BookOpen, TrendingUp,
+  ShieldAlert, BookOpen, TrendingUp, NotebookPen, Coins,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 
@@ -17,6 +17,8 @@ const products = [
   { id: "hedgewiki", name: "ORDR HedgeWiki", desc: "AI-searchable ISDA definitions, IFRS 9 / ASC 815 reference library. Natural language queries.", ai: "AI navigates knowledge graph with citation-backed answers.", icon: BookOpen, external: "https://hedge-wiki.vercel.app/" },
   { id: "finhub", name: "ORDR FinHub", desc: "AI-curated economic calendars, company research, signal detection. Macro data aggregation.", ai: "AI filters noise, prioritizes events relevant to portfolio.", icon: Activity },
   { id: "fund", name: "ORDR Fund", desc: "Pooled capital management for private fund managers. Capital tracking, pro-rata allocation, period locking, cashflow workflows, and dual-portal reporting.", ai: "No AI involvement. Pure deterministic allocation engine with WORM audit trail.", icon: TrendingUp },
+  { id: "ordr-journal", name: "ORDR Journal", desc: "Institutional trading journal with equity curve analytics, monthly P&L breakdown, AI pattern review, psychological tracking, and full strategy comparison.", ai: "AI identifies behavioral patterns, overtrading signals, and setup quality drift from journal entries.", icon: NotebookPen, external: "https://ordr-journal-client.vercel.app/" },
+  { id: "goldx", name: "GOLDX Coin", desc: "Gold-backed digital asset. Every GOLDX token backed 1:1 by .999 fine gold in audited vaults. Blockchain-native, DeFi compatible, physically redeemable.", ai: "No AI involvement. Deterministic proof-of-reserves with on-chain vault balance.", icon: Coins, external: "https://goldx-sandy.vercel.app/" },
 ];
 
 const solutions = [
@@ -183,7 +185,7 @@ export default function HomePage() {
               <span className="text-[#1E3A5F]">Agentic Intelligence.</span>
             </h1>
             <p className="text-xl md:text-2xl text-[#4B5563] font-medium mb-8 leading-relaxed">
-              Eight products for enterprise, midsize, and retail. Treasury hedge governance, agentic charting, portfolio risk, scenario simulation, geopolitical intelligence, knowledge navigation, and pooled capital management <span className="text-[#9CA3AF]">-- all on one deterministic platform.</span>
+              Ten products for enterprise, midsize, and retail. Treasury hedge governance, agentic charting, portfolio risk, scenario simulation, geopolitical intelligence, knowledge navigation, pooled capital management, institutional trading journal, and gold-backed digital assets <span className="text-[#9CA3AF]">-- all on one deterministic platform.</span>
             </p>
             <div className="border-l-2 border-[#1E3A5F] pl-4 mb-10 max-w-3xl">
               <p className="text-[14px] font-mono text-[#6B7280] leading-relaxed">
@@ -208,7 +210,7 @@ export default function HomePage() {
       <section className="bg-white border-b border-[#E5E7EB]">
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-5 divide-x divide-y md:divide-y-0 divide-[#E5E7EB]">
           {[
-            { v: "8", l: "Products" }, { v: "3", l: "Market Tiers" }, { v: "41", l: "Engine Modules" },
+            { v: "10", l: "Products" }, { v: "3", l: "Market Tiers" }, { v: "41", l: "Engine Modules" },
             { v: "<50ms", l: "Computation" }, { v: "SHA-256", l: "Audit Chain" },
           ].map((stat) => (
             <div key={stat.l} className="flex flex-col items-center justify-center py-10 px-4 hover:bg-[#F9FAFB] transition-colors">
@@ -456,7 +458,196 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Section 12: CTA */}
+      {/* Section 12: ORDR Journal Showcase */}
+      <section className="py-24 px-6 md:px-12 bg-white border-t border-[#E5E7EB]">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row gap-16 items-center">
+            {/* Left: text */}
+            <div className="flex-1">
+              <span className="section-label">ORDR JOURNAL</span>
+              <h2 className="text-3xl md:text-[44px] font-extrabold mb-6" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                The Institutional Trading Journal
+              </h2>
+              <p className="text-[16px] text-[#4B5563] mb-6 leading-relaxed max-w-xl">
+                Track every trade, measure every decision. Real-time equity curve, monthly P&L breakdown, win rate, Sharpe ratio, max drawdown — all in one place. Built for professional traders who treat their journal as an edge.
+              </p>
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                {[
+                  { t: "Equity Curve", d: "Cumulative P&L with drawdown shading" },
+                  { t: "AI Pattern Review", d: "Behavioral drift & overtrading flags" },
+                  { t: "Strategy Compare", d: "Side-by-side setup performance" },
+                  { t: "Daily Journal", d: "Pre-market, intraday, post-session" },
+                ].map((f) => (
+                  <div key={f.t} className="border border-[#E5E7EB] rounded-sm p-4 bg-[#F9FAFB]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle size={12} className="text-[#1E3A5F]" />
+                      <span className="font-mono text-[12px] font-bold text-[#111111]">{f.t}</span>
+                    </div>
+                    <p className="text-[12px] text-[#6B7280]">{f.d}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <a href="https://ordr-journal-client.vercel.app/" target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] font-bold bg-[#1E3A5F] text-white rounded-sm no-underline hover:bg-[#162D4A] transition-colors">
+                  Open Live Demo <ArrowRight size={14} />
+                </a>
+                <Link href="/products/ordr-journal"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] font-bold text-[#1E3A5F] border border-[#1E3A5F] rounded-sm no-underline hover:bg-[#F4F5F7] transition-colors">
+                  Learn More
+                </Link>
+              </div>
+            </div>
+            {/* Right: SVG preview */}
+            <div className="flex-1 w-full">
+              <div className="border border-[#E5E7EB] rounded-sm overflow-hidden shadow-sm bg-[#F9FAFB] p-1">
+                <svg viewBox="0 0 560 340" className="w-full h-auto" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                  <rect width="560" height="340" fill="#F9FAFB" />
+                  {/* Title bar */}
+                  <rect width="560" height="36" fill="#0f172a" />
+                  <text x="14" y="22" style={{ fontSize: 10, fill: "#93c5fd", fontWeight: 700, letterSpacing: "0.1em" }}>ORDR JOURNAL · EQUITY CURVE</text>
+                  <circle cx="536" cy="18" r="5" fill="#059669" />
+                  {/* Grid */}
+                  {[1,2,3,4,5].map(i => (
+                    <line key={i} x1="50" y1={40 + i * 48} x2="540" y2={40 + i * 48} stroke="#E5E7EB" strokeWidth="1" />
+                  ))}
+                  {/* Y labels */}
+                  {[["$25k",40],["$20k",88],["$15k",136],["$10k",184],["$5k",232],["$0",280]].map(([l,y]) => (
+                    <text key={String(l)} x="44" y={Number(y)+4} textAnchor="end" style={{ fontSize: 9, fill: "#9CA3AF" }}>{l}</text>
+                  ))}
+                  {/* Area fill */}
+                  <polygon points="50,232 90,220 140,200 190,188 240,196 290,180 340,168 390,152 440,144 490,136 540,120 540,280 50,280" fill="rgba(30,58,95,0.07)" />
+                  {/* Drawdown area Apr-Jun */}
+                  <polygon points="190,188 240,196 290,180 290,240 240,240 190,240" fill="rgba(239,68,68,0.08)" />
+                  {/* Equity line */}
+                  <polyline points="50,232 90,220 140,200 190,188 240,196 290,180 340,168 390,152 440,144 490,136 540,120" fill="none" stroke="#1E3A5F" strokeWidth="2.5" strokeLinejoin="round" />
+                  {/* End dot */}
+                  <circle cx="540" cy="120" r="4" fill="#1E3A5F" />
+                  {/* Labels */}
+                  <text x="244" y="258" style={{ fontSize: 9, fill: "#EF4444", fontWeight: 700 }}>MAX DD -8.3%</text>
+                  <rect x="454" y="108" width="82" height="18" fill="#1E3A5F" rx="2" />
+                  <text x="495" y="121" textAnchor="middle" style={{ fontSize: 9, fill: "white", fontWeight: 700 }}>+14.2% RETURN</text>
+                  {/* X labels */}
+                  {[["Jan",50],["Mar",140],["May",240],["Jul",330],["Sep",420],["Dec",510]].map(([m,x]) => (
+                    <text key={String(m)} x={Number(x)} y="298" textAnchor="middle" style={{ fontSize: 9, fill: "#9CA3AF" }}>{m}</text>
+                  ))}
+                  {/* Stats row */}
+                  {[["WIN RATE","64.2%",14],["SHARPE","1.87",154],["AVG R:R","1:2.1",294],["PROFIT F.","1.84",434]].map(([l,v,x]) => (
+                    <g key={String(l)}>
+                      <rect x={Number(x)} y="310" width="126" height="22" fill="white" stroke="#E5E7EB" strokeWidth="1" rx="1" />
+                      <text x={Number(x)+63} y="325" textAnchor="middle" style={{ fontSize: 9, fill: "#6B7280" }}>{l}: <tspan style={{ fill: "#111111", fontWeight: 700 }}>{v}</tspan></text>
+                    </g>
+                  ))}
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Section 13: GOLDX Showcase */}
+      <section className="py-24 px-6 md:px-12 bg-[#0f172a] text-white border-t border-[#1e293b]">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row-reverse gap-16 items-center">
+            {/* Left (right in visual): text */}
+            <div className="flex-1">
+              <span className="font-mono text-[10px] font-bold tracking-[0.2em] text-[#B8860B] uppercase mb-4 flex items-center gap-2">
+                <span className="w-4 h-px bg-[#B8860B] inline-block" /> GOLDX COIN
+              </span>
+              <h2 className="text-3xl md:text-[44px] font-extrabold mb-6 text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                Digital Gold.<br />Physical Backing.
+              </h2>
+              <p className="text-[16px] text-[#94a3b8] mb-6 leading-relaxed max-w-xl">
+                Every GOLDX token is backed 1:1 by .999 fine gold held in independently audited vaults across Zurich, Singapore, and New York. The transparency of blockchain. The security of gold.
+              </p>
+              <div className="grid grid-cols-3 gap-3 mb-8">
+                {[
+                  { v: "1:1", l: "Gold Backing" },
+                  { v: "100%", l: "Audited" },
+                  { v: "T+0", l: "Redemption" },
+                ].map((s) => (
+                  <div key={s.l} className="border border-[#334155] rounded-sm p-4 text-center bg-[#1e293b]">
+                    <div className="font-mono text-[22px] font-extrabold mb-1" style={{ color: "#B8860B" }}>{s.v}</div>
+                    <div className="font-mono text-[9px] font-bold tracking-widest text-[#64748b] uppercase">{s.l}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3 mb-8">
+                {[
+                  "Physical redemption available — your gold, your terms",
+                  "ERC-20 compatible, DeFi-ready, ISO 4217 compliant",
+                  "Proof-of-reserves published on-chain, queryable via API",
+                  "Integrated with ORDR Treasury, Fund, and Market",
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-3 text-[13px] text-[#94a3b8]">
+                    <span style={{ color: "#B8860B" }} className="mt-0.5 shrink-0">▸</span>
+                    {item}
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <a href="https://goldx-sandy.vercel.app/" target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] font-bold text-white rounded-sm no-underline transition-colors"
+                  style={{ background: "#B8860B" }}>
+                  Explore GOLDX <ArrowRight size={14} />
+                </a>
+                <Link href="/products/goldx"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] font-bold text-white border border-[#334155] rounded-sm no-underline hover:border-[#B8860B] transition-colors">
+                  Full Details
+                </Link>
+              </div>
+            </div>
+            {/* Right (left in visual): SVG gold chart */}
+            <div className="flex-1 w-full">
+              <div className="rounded-sm overflow-hidden border border-[#334155]" style={{ background: "#0a0a0a" }}>
+                <svg viewBox="0 0 560 340" className="w-full h-auto" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                  <rect width="560" height="340" fill="#0a0a0a" />
+                  {/* Title bar */}
+                  <rect width="560" height="36" fill="#111111" />
+                  <text x="14" y="22" style={{ fontSize: 10, fill: "#B8860B", fontWeight: 700, letterSpacing: "0.1em" }}>GOLDX · XAU/USD · 12 MONTH</text>
+                  <circle cx="536" cy="18" r="5" fill="#B8860B" />
+                  {/* Grid */}
+                  {[1,2,3,4,5].map(i => (
+                    <line key={i} x1="55" y1={40 + i * 46} x2="545" y2={40 + i * 46} stroke="#1e293b" strokeWidth="1" />
+                  ))}
+                  {/* Y labels */}
+                  {[["$3000",40],["$2800",86],["$2600",132],["$2400",178],["$2200",224],["$2000",270]].map(([l,y]) => (
+                    <text key={String(l)} x="50" y={Number(y)+4} textAnchor="end" style={{ fontSize: 9, fill: "#475569" }}>{l}</text>
+                  ))}
+                  {/* Area under gold line */}
+                  <polygon points="60,224 110,234 160,240 210,228 260,218 310,200 360,186 410,168 460,152 510,130 545,86 545,270 60,270"
+                    fill="rgba(184,134,11,0.12)" />
+                  {/* Gold price line */}
+                  <polyline points="60,224 110,234 160,240 210,228 260,218 310,200 360,186 410,168 460,152 510,130 545,86"
+                    fill="none" stroke="#B8860B" strokeWidth="2.5" strokeLinejoin="round" />
+                  {/* End dot */}
+                  <circle cx="545" cy="86" r="4" fill="#B8860B" />
+                  {/* Price badge */}
+                  <rect x="430" y="72" width="110" height="20" fill="#B8860B" rx="2" />
+                  <text x="485" y="86" textAnchor="middle" style={{ fontSize: 9, fill: "white", fontWeight: 700 }}>$2,987.40 ▲</text>
+                  {/* Change badge */}
+                  <rect x="430" y="96" width="110" height="18" fill="#14532d" rx="2" />
+                  <text x="485" y="108" textAnchor="middle" style={{ fontSize: 9, fill: "#4ade80", fontWeight: 700 }}>+37.2% / 12M</text>
+                  {/* X labels */}
+                  {[["Mar'25",60],["Jun",195],["Sep",340],["Dec",460],["Mar'26",545]].map(([m,x]) => (
+                    <text key={String(m)} x={Number(x)} y="288" textAnchor="middle" style={{ fontSize: 9, fill: "#475569" }}>{m}</text>
+                  ))}
+                  {/* Token info row */}
+                  {[["SUPPLY","10M GOLDX",14],["CIRCULATING","3.85M",168],["VAULT OZ","3,847",322],["BACKING","100%",448]].map(([l,v,x]) => (
+                    <g key={String(l)}>
+                      <rect x={Number(x)} y="302" width="132" height="30" fill="#111111" stroke="#334155" strokeWidth="1" rx="1" />
+                      <text x={Number(x)+66} y="313" textAnchor="middle" style={{ fontSize: 8, fill: "#64748b" }}>{l}</text>
+                      <text x={Number(x)+66} y="326" textAnchor="middle" style={{ fontSize: 10, fill: "#B8860B", fontWeight: 700 }}>{v}</text>
+                    </g>
+                  ))}
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Section 14: CTA */}
       <section className="py-24 px-6 md:px-12 bg-[#0A0A0A] text-white text-center relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-dark pointer-events-none" style={{ maskImage: "linear-gradient(to bottom, black, transparent)", WebkitMaskImage: "linear-gradient(to bottom, black, transparent)" }} />
         <div className="max-w-3xl mx-auto relative z-10">
