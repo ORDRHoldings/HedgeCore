@@ -42,6 +42,12 @@ export default function MarketPage() {
         <Link href="/products" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: F.mono, fontSize: 12, color: C.textMuted, textDecoration: "none", marginBottom: 24 }}>
           <ChevronLeft size={14} /> All Products
         </Link>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#EFF6FF", border: "1px solid #93c5fd", borderRadius: 4, padding: "6px 14px", marginBottom: 20 }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#3B82F6", display: "inline-block" }} />
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 700, color: "#1D4ED8", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            LAUNCHING MID-APRIL 2026
+          </span>
+        </div>
         <h1 style={{ fontFamily: F.heading, fontSize: 48, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 16px", color: C.text }}>
           ORDR Market
         </h1>

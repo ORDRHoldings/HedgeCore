@@ -44,6 +44,12 @@ export default function PortfolioPage() {
         <Link href="/products" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: F.mono, fontSize: 12, color: C.textMuted, textDecoration: "none", marginBottom: 24 }}>
           <ChevronLeft size={14} /> All Products
         </Link>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#FFFBEB", border: "1px solid #fcd34d", borderRadius: 4, padding: "6px 14px", marginBottom: 20 }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#F59E0B", display: "inline-block" }} />
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 700, color: "#92400E", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            BETA · APRIL 1, 2026
+          </span>
+        </div>
         <h1 style={{ fontFamily: F.heading, fontSize: 48, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 16px", color: C.text }}>ORDR Portfolio</h1>
         <p style={{ fontFamily: F.ui, fontSize: 20, color: C.textSub, maxWidth: 700, margin: "0 auto 12px", lineHeight: 1.6 }}>
           Deterministic Portfolio Risk Decomposition with Institutional Reporting

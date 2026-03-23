@@ -35,6 +35,12 @@ export default function LabsPage() {
         <Link href="/products" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: F.mono, fontSize: 12, color: C.textMuted, textDecoration: "none", marginBottom: 24 }}>
           <ChevronLeft size={14} /> All Products
         </Link>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#F0FDF4", border: "1px solid #86efac", borderRadius: 4, padding: "6px 14px", marginBottom: 20 }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22C55E", display: "inline-block" }} />
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 700, color: "#065F46", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            LIVE · AVAILABLE NOW
+          </span>
+        </div>
         <h1 style={{ fontFamily: F.heading, fontSize: 48, fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.1, margin: "0 0 16px", color: C.text }}>ORDR Labs</h1>
         <p style={{ fontFamily: F.ui, fontSize: 20, color: C.textSub, maxWidth: 700, margin: "0 auto 12px", lineHeight: 1.6 }}>
           Scenario Studio, Backtesting, and Monte Carlo Simulation
