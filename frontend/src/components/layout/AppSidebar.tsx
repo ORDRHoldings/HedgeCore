@@ -76,13 +76,14 @@ interface NavSection {
 const NAV: NavSection[] = [
   {
     label: "Dashboard", href: "/dashboard", icon: LayoutDashboard,
-    prefixes: ["/dashboard", "/portfolio-risk", "/polisophic", "/portfolio-multi"],
+    prefixes: ["/dashboard", "/portfolio", "/portfolio-risk", "/polisophic", "/portfolio-multi"],
     header: "Overview",
     items: [
       { label: "Summary",             desc: "KPIs, P&L snapshot, FX exposure",               href: "/dashboard",        icon: LayoutDashboard },
-      { label: "Portfolio Risk",       desc: "R1-R8 risk taxonomy decomposition",              href: "/portfolio-risk",   icon: BarChart3, minTier: "enterprise" as PlanTier },
-      { label: "Polisophic",           desc: "Political & macro risk intelligence",             href: "/polisophic",       icon: Globe, minTier: "enterprise" as PlanTier },
-      { label: "Multi-Pair Portfolio", desc: "26-pair exposure matrix",                        href: "/portfolio-multi",  icon: BarChart3, minTier: "enterprise" as PlanTier },
+      { label: "ORDR Portfolio",      desc: "Multi-currency risk hub · R1-R8 · BETA",         href: "/portfolio",        icon: BarChart3, minTier: "professional" as PlanTier },
+      { label: "Portfolio Risk",      desc: "R1-R8 risk taxonomy decomposition",              href: "/portfolio-risk",   icon: BarChart3, minTier: "professional" as PlanTier },
+      { label: "Multi-Pair Matrix",   desc: "26-pair correlation heatmap · concentration",    href: "/portfolio-multi",  icon: BarChart3, minTier: "professional" as PlanTier },
+      { label: "Polisophic",          desc: "Political & macro risk intelligence",             href: "/polisophic",       icon: Globe, minTier: "enterprise" as PlanTier },
     ],
   },
   {

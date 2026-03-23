@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useAuth } from "../../lib/authContext";
+import { dashboardFetch } from "@/lib/api/dashboardClient";
 import { PAIR_REGISTRY, GROUP_LABELS, getPairsByGroup, type PairGroup } from "../../constants/pairRegistry";
 import { usePlanRedirect } from "@/lib/hooks/usePlanRedirect";
 import { PageShell } from "@/components/layout/PageShell";
-import { BarChart3, AlertTriangle, TrendingDown, Layers } from "lucide-react";
+import { BarChart3, AlertTriangle, TrendingDown, Layers, RefreshCw } from "lucide-react";
 
 const S = {
   fontMono: "var(--font-terminal-mono,'IBM Plex Mono',monospace)",
@@ -82,16 +83,14 @@ function corrColor(v: number): string {
   }
 }
 
-// ── Demo exposure data (USD thousands) ────────────────────────────────────────
-const DEMO_EXPOSURE: Record<string, number> = {
+// ── Fallback demo exposure (used when no live positions exist) ─────────────────
+const FALLBACK_EXPOSURE: Record<string, number> = {
   EUR: 45_000, JPY: 32_000, GBP: 28_000, BRL: 18_000, INR: 15_000,
   MXN: 12_000, AUD: 10_000, ZAR: 8_000,  KRW: 7_500,  TRY: 6_000,
   CHF: 5_500,  PLN: 4_800,  IDR: 4_200,  CAD: 3_800,  TWD: 3_500,
   THB: 3_000,  MYR: 2_800,  PHP: 2_500,  HUF: 2_200,  NZD: 2_000,
   COP: 1_800,  SEK: 1_500,  CLP: 1_200,  PEN: 900,    NOK: 800,   DKK: 600,
 };
-
-const TOTAL_EXP = Object.values(DEMO_EXPOSURE).reduce((a, b) => a + b, 0);
 
 // ── GroupCard ──────────────────────────────────────────────────────────────────
 function GroupCard({ group }: { group: PairGroup }) {
@@ -282,19 +281,23 @@ function CorrelationHeatmap() {
 }
 
 // ── ConcentrationPanel ─────────────────────────────────────────────────────────
-function ConcentrationPanel() {
+function ConcentrationPanel({ exposure, totalExp, dataSource }: {
+  exposure: Record<string, number>;
+  totalExp: number;
+  dataSource: "live" | "demo";
+}) {
   const sorted = useMemo(() => {
-    return Object.entries(DEMO_EXPOSURE)
+    return Object.entries(exposure)
       .map(([ccy, amt]) => ({
         ccy,
         amt,
-        pct: amt / TOTAL_EXP * 100,
+        pct: amt / totalExp * 100,
         isNdf: PAIR_REGISTRY.find(p => p.localCcy === ccy)?.isNdf ?? false,
         group: GROUP_OF[ccy] ?? "G10",
         vol1m: PAIR_REGISTRY.find(p => p.localCcy === ccy)?.vol1m ?? 8,
       }))
       .sort((a, b) => b.amt - a.amt);
-  }, []);
+  }, [exposure, totalExp]);
 
   const alerts = sorted.filter(r => r.pct >= 15);
   const warnings = sorted.filter(r => r.pct >= 8 && r.pct < 15);
@@ -305,7 +308,7 @@ function ConcentrationPanel() {
         fontFamily: S.fontMono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
         color: S.tertiary, marginBottom: 16, textTransform: "uppercase",
       }}>
-        Currency Concentration · Demo Portfolio · Total ${(TOTAL_EXP / 1000).toFixed(1)}M USD
+        Currency Concentration · {dataSource === "live" ? "Live Portfolio" : "Demo Portfolio"} · Total ${(totalExp / 1000).toFixed(1)}M USD
       </div>
 
       {/* Alert banners */}
@@ -568,10 +571,42 @@ function RecommendationsPanel() {
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function PortfolioMultiPage() {
-  const _planAllowed = usePlanRedirect("enterprise");
-  const { user } = useAuth();
+  const _planAllowed = usePlanRedirect("professional");
+  const { user, token } = useAuth();
   const [view, setView] = useState<ViewMode>("PAIRS");
   const [activeGroup, setActiveGroup] = useState<PairGroup | "ALL">("ALL");
+
+  // ── Live exposure from API ─────────────────────────────────────────────
+  const [liveExposure, setLiveExposure] = useState<Record<string, number> | null>(null);
+  const [liveTotalExp, setLiveTotalExp] = useState<number>(0);
+  const [dataSource, setDataSource] = useState<"live" | "demo">("demo");
+
+  const loadExposure = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await dashboardFetch("/v1/analytics/portfolio", token);
+      if (!res.ok) return;
+      const d = await res.json();
+      const map: Record<string, number> = {};
+      let total = 0;
+      for (const c of (d.currencies ?? [])) {
+        // store in thousands to match the original scale used in the page
+        map[c.currency] = Math.round(c.gross_exposure_usd);
+        total += c.gross_exposure_usd;
+      }
+      if (Object.keys(map).length > 0) {
+        setLiveExposure(map);
+        setLiveTotalExp(total);
+        setDataSource("live");
+      }
+    } catch { /* silently fall back to demo */ }
+  }, [token]);
+
+  useEffect(() => { loadExposure(); }, [loadExposure]);
+
+  // Use live data if available, else fall back to demo
+  const EXPOSURE = liveExposure ?? FALLBACK_EXPOSURE;
+  const TOTAL_EXP = dataSource === "live" ? liveTotalExp : Object.values(FALLBACK_EXPOSURE).reduce((a, b) => a + b, 0);
 
   if (!_planAllowed) return null;
 
@@ -601,12 +636,23 @@ export default function PortfolioMultiPage() {
           <span style={{ fontFamily: S.fontMono, fontSize: 12, color: S.tertiary }}>
             {PAIR_REGISTRY.length} pairs · {allNdf} NDF · {allDeliverable} Deliverable
           </span>
+          <span style={{
+            fontFamily: S.fontMono, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
+            color: dataSource === "live" ? S.green : S.amber,
+            border: `1px solid ${dataSource === "live" ? S.green : S.amber}`,
+            padding: "1px 6px", borderRadius: 2,
+          }}>
+            {dataSource === "live" ? "LIVE" : "DEMO"}
+          </span>
           <div style={{ flex: 1 }} />
-          {user && (
-            <span style={{ fontFamily: S.fontUI, fontSize: 12, color: S.tertiary }}>
-              {user.full_name ?? user.email}
-            </span>
-          )}
+          <button onClick={loadExposure} style={{
+            display: "flex", alignItems: "center", gap: 5,
+            fontFamily: S.fontMono, fontSize: 10, color: S.tertiary,
+            background: "transparent", border: `1px solid ${S.rim}`,
+            borderRadius: 3, padding: "3px 8px", cursor: "pointer",
+          }}>
+            <RefreshCw size={10} /> REFRESH
+          </button>
         </div>
 
         {/* KPI strip */}
@@ -682,7 +728,7 @@ export default function PortfolioMultiPage() {
           )}
 
           {view === "HEATMAP" && <CorrelationHeatmap />}
-          {view === "CONCENTRATION" && <ConcentrationPanel />}
+          {view === "CONCENTRATION" && <ConcentrationPanel exposure={EXPOSURE} totalExp={TOTAL_EXP} dataSource={dataSource} />}
           {view === "RECOMMENDATIONS" && <RecommendationsPanel />}
         </div>
       </div>
