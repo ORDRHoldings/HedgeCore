@@ -1,5 +1,17 @@
 # Changelog (AI-maintained)
 
+## 2026-03-24 — Backend audit fixes + brand cleanup (commit 20612ec)
+- Gated `_sync_seed_users()` to non-production ENV — prevents bcrypt rehashing on every prod boot
+- Moved APScheduler into lifespan context manager; removed deprecated `@app.on_event` decorators
+- Stripped localhost entries from production CORS_ALLOW_ORIGINS in render.yaml
+- Solutions index page (`/solutions`) fully rewritten with 6 solution cards, platform stats, terminal panels, SVG diagram, 3-pillar proof section
+- Brand cleanup: removed all "Synexiun" and GitHub references from frontend; rebranded to ORDR Terminal / ORDR Edge
+- Contact page (`/contact`) overhauled: inquiry tiles, qualification form, right sidebar, ICP profiles, FAQ accordion
+- ORDR Portfolio hub (`/portfolio`) created: KPI strip, currency breakdown table, run history, nav cards
+- Portfolio multi-pair page wired to live `/v1/analytics/portfolio` data with LIVE/DEMO badge
+- AppSidebar updated: added `/portfolio` entry, downgraded tier gate to "professional" for portfolio pages
+- Tests: 4670 passed, 154 skipped, 0 failed
+
 ## 2026-03-23 — Landing page: ORDR Journal + GOLDX Coin (commit 81f255c)
 - Added Section 12 (ORDR Journal) + Section 13 (GOLDX Coin) to home landing page
 - Built /products/ordr-journal — equity curve SVG, P&L bar chart, 8-feature grid, live demo CTA
