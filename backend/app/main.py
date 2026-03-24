@@ -1609,15 +1609,33 @@ async def lifespan(app: FastAPI):
 
 
 
+    # Demo seed users — only resync passwords in non-production environments.
+    # In production there are no demo users and bcrypt hashing on every boot
+    # causes unnecessary DB writes that race with concurrent auth flows.
+    if settings.ENV not in ("production", "prod"):
+        try:
+            await _sync_seed_users()
+        except Exception as e:
+            logger.warning(f"?? _sync_seed_users skipped: {e}")
+    else:
+        logger.debug("_sync_seed_users: skipped in production environment")
+
+
+
+    # ── Synex kernel governance layer ─────────────────────────────────────
     try:
-
-        await _sync_seed_users()
-
+        from app.core.kernel import init_kernel
+        init_kernel()
+        logger.info("Synex kernel governance layer initialized")
     except Exception as e:
+        logger.warning(f"Kernel initialization skipped: {e}")
 
-        logger.warning(f"?? _sync_seed_users skipped: {e}")
-
-
+    # ── Heartbeat emitter (diode → synex-core) ────────────────────────
+    try:
+        from app.core.kernel import start_heartbeat
+        await start_heartbeat()
+    except Exception as e:
+        logger.warning(f"Heartbeat start skipped: {e}")
 
     # ── Market data providers ─────────────────────────────────────────────
     try:
@@ -1643,11 +1661,38 @@ async def lifespan(app: FastAPI):
     else:
         app.state.hedgewiki = None
 
+    # ── APScheduler — audit table cleanup at 03:30 UTC ────────────────────
+    _audit_scheduler = AsyncIOScheduler(timezone="UTC")
+    _audit_scheduler.add_job(
+        cleanup_audit_tables,
+        CronTrigger(hour=3, minute=30),
+        id="audit_cleanup",
+        replace_existing=True,
+    )
+    _audit_scheduler.start()
+    app.state.scheduler = _audit_scheduler
+    logger.info("Scheduler started — audit_cleanup at 03:30 UTC daily")
+
     try:
 
         yield
 
     finally:
+
+        # Stop APScheduler
+        try:
+            _sched = getattr(app.state, "scheduler", None)
+            if _sched and _sched.running:
+                _sched.shutdown(wait=False)
+        except Exception:
+            pass
+
+        # Stop kernel heartbeat emitter
+        try:
+            from app.core.kernel import stop_heartbeat
+            await stop_heartbeat()
+        except Exception:
+            pass
 
         # Stop market data scheduler
         try:
@@ -1773,6 +1818,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 # -------------------------------------------------------------------
 
 app.add_middleware(GZipMiddleware, minimum_size=512)
+
+# Synexiun governance enforcement (kill switch + budget)
+from app.middleware.governance import GovernanceMiddleware
+app.add_middleware(GovernanceMiddleware)
 
 app.add_middleware(AuditHeadersMiddleware)
 
@@ -1935,6 +1984,13 @@ def health():
     return {"status": "ok", "service": settings.APP_NAME}
 
 
+@app.get("/api/kernel/health", tags=["system"])
+def kernel_health_endpoint():
+    """Synex kernel governance health check."""
+    from app.core.kernel import kernel_health
+    return kernel_health()
+
+
 
 
 
@@ -1980,45 +2036,4 @@ def redoc_docs():
 
 
 
-# -------------------------------------------------------------------
-
-# Scheduler
-
-# -------------------------------------------------------------------
-
-@app.on_event("startup")
-
-async def on_startup():
-
-    scheduler = AsyncIOScheduler(timezone="UTC")
-
-    scheduler.add_job(
-
-        cleanup_audit_tables,
-
-        CronTrigger(hour=3, minute=30),
-
-        id="audit_cleanup",
-
-        replace_existing=True,
-
-    )
-
-    scheduler.start()
-
-    app.state.scheduler = scheduler
-
-
-
-
-
-@app.on_event("shutdown")
-
-async def on_shutdown():
-
-    scheduler = getattr(app.state, "scheduler", None)
-
-    if scheduler:
-
-        scheduler.shutdown(wait=False)
-
+# Scheduler lifecycle is managed inside the lifespan context manager above.
