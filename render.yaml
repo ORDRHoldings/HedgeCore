@@ -56,6 +56,8 @@ services:
         fromGroup: hedgecore-secrets
       - key: ALLOW_INDICATIVE_FALLBACK
         value: "false"
+      - key: SYNEX_CORE_URL
+        value: https://synex-core.onrender.com
 
   # ── Preview Backend (dev branch) ────────────────────────────────────────────
   - type: web
@@ -89,6 +91,8 @@ services:
         value: '["http://localhost:3000","http://127.0.0.1:3000","https://hedgecore-git-dev-synexiun-projects.vercel.app"]'
       - key: ALLOW_INDICATIVE_FALLBACK
         value: "true"
+      - key: SYNEX_CORE_URL
+        value: https://synex-core.onrender.com
 
 databases:
   # ── Production Database ──────────────────────────────────────────────────────
