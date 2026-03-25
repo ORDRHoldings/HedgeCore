@@ -1572,14 +1572,13 @@ async def lifespan(app: FastAPI):
             "NEVER use SQLite mode in production or staging."
         )
 
-    # ── Alembic forward migrations ────────────────────────────────────────────
-    # Runs BEFORE _ensure_tables() so new Alembic revisions apply first.
-    # _ensure_tables() is the legacy bootstrap bridge (being retired in v2).
-    try:
-        from app.core.db_migrations import run_alembic_upgrade
-        run_alembic_upgrade()
-    except Exception as _ae:
-        logger.warning(f"Alembic runner failed (non-fatal): {_ae}")
+    # ── Alembic migrations: run manually, not at boot ─────────────────────────
+    # Running alembic upgrade head at boot adds DB connection latency to the
+    # critical startup path — on free-tier cold starts this causes health-check
+    # timeouts. Instead, run migrations manually before each deploy:
+    #   cd backend && DATABASE_URL="<sync_url>" alembic upgrade head
+    # The db_migrations.py helper is available for scripted use.
+    # See docs/ops/alembic-runbook.md for the full workflow.
 
     try:
 
