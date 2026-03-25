@@ -92,9 +92,8 @@ services:
       - key: ASYNC_DATABASE_URL
         fromGroup: hedgecore-preview-secrets
       - key: CORS_ALLOW_ORIGINS
-        fromGroup: hedgecore-preview-secrets
-        # Default value to set in hedgecore-preview-secrets env group:
-        # ["http://localhost:3000","http://127.0.0.1:3000","https://hedgecore-git-dev-synexiun-projects.vercel.app"]
+        value: '["http://localhost:3000","http://127.0.0.1:3000","https://hedgecore-git-dev-synexiun-projects.vercel.app"]'
+        # TODO: move to fromGroup: hedgecore-preview-secrets once the key is set in Render dashboard
       - key: ALLOW_INDICATIVE_FALLBACK
         value: "true"
       - key: SYNEX_CORE_URL
