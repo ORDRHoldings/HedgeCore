@@ -162,7 +162,8 @@ class TwelveDataProvider(MarketDataProvider):
         params["apikey"] = self._api_key
         await self._throttle()
         url = f"{self._base_url}{path}?{urlencode(params)}"
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        headers = {"User-Agent": "ORDR-Terminal/1.0"}
+        async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
             resp = await client.get(url)
             resp.raise_for_status()
             return resp.json()

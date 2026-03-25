@@ -21,9 +21,17 @@ async def system_health():
     """
     Internal health check (used by API + middleware validation).
     """
+    governance = {}
+    try:
+        from app.core.kernel import kernel_health
+        governance = kernel_health()
+    except Exception:
+        pass
+
     return {
         "status": "ok",
         "component": "api",
+        "governance": governance,
     }
 
 
