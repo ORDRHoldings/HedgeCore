@@ -50,6 +50,14 @@ class TwelveDataProvider(MarketDataProvider):
         if not data:
             return []
 
+        # Top-level error (e.g. invalid key, plan restriction) — log and bail early
+        if "code" in data and "close" not in data:
+            _log.error(
+                "TwelveData API error (code=%s): %s — check TWELVEDATA_API_KEY and plan tier",
+                data.get("code"), data.get("message", "no message"),
+            )
+            return []
+
         # Single symbol returns dict directly; multi returns dict of dicts
         if len(td_symbols) == 1 and "symbol" in data:
             data = {td_symbols[0]: data}
@@ -59,7 +67,10 @@ class TwelveDataProvider(MarketDataProvider):
         for td_sym in td_symbols:
             item = data.get(td_sym)
             if not item or "code" in item or "close" not in item:
-                _log.warning("TwelveData: no data for %s", td_sym)
+                _log.warning(
+                    "TwelveData: no data for %s (code=%s, msg=%s)",
+                    td_sym, (item or {}).get("code", "?"), (item or {}).get("message", "?"),
+                )
                 continue
             ordr_pair = self._from_td_symbol(td_sym)
             close = float(item["close"])
