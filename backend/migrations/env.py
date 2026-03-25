@@ -32,17 +32,53 @@ for path in (BASE_DIR, APP_DIR):
 # -------------------------------------------------------------------
 from app.core.config import settings
 
-# Base anchor (all models should extend this)
-from app.models.user import Base
+# ── Import ALL models to register full schema with Alembic ──────────────
+from app.models.user import Base  # Base anchor
 
-# Explicit imports to register models for Alembic autogeneration
-import app.models.audit_log          # ? core API audit middleware logs
-import app.models.auth_audit_log     # ? structured auth event logs
-import app.models.refresh_token      # ? JWT refresh token registry (if present)
-import app.models.proposal           # ? pipeline proposals
-import app.models.staging            # ? staging artifacts + approvals
-import app.models.ledger             # ? ledger entries + anchor hashes
-import app.models.audit_lab          # ? audit lab tables (datasets, transactions, runs, findings, reports)
+# Import every model module found in app/models/ (except __init__.py and user.py).
+# These populate Base.metadata so alembic autogenerate sees the full schema.
+# Each import is wrapped in try/except so a single broken module never
+# prevents Alembic from running migrations for the rest of the schema.
+import logging as _logging
+_env_log = _logging.getLogger("alembic.env")
+
+def _safe_import(module_name: str) -> None:
+    try:
+        __import__(module_name)
+    except Exception as _exc:  # noqa: BLE001
+        _env_log.warning("alembic env.py: could not import %s — %s", module_name, _exc)
+
+_safe_import("app.models.api_key")
+_safe_import("app.models.api_key_audit")
+_safe_import("app.models.audit_event")
+_safe_import("app.models.audit_lab")
+_safe_import("app.models.audit_log")
+_safe_import("app.models.auth_audit_log")
+_safe_import("app.models.calculation_run")
+_safe_import("app.models.connector")
+_safe_import("app.models.equity_snapshot")
+_safe_import("app.models.execution_proposal")
+_safe_import("app.models.hedge_effectiveness")
+_safe_import("app.models.import_batch")
+_safe_import("app.models.ledger")
+_safe_import("app.models.market_data")
+_safe_import("app.models.market_snapshot")
+_safe_import("app.models.options_snapshot")
+_safe_import("app.models.organization")
+_safe_import("app.models.permission")
+_safe_import("app.models.policy")
+_safe_import("app.models.policy_favorite")
+_safe_import("app.models.policy_revision")
+_safe_import("app.models.position")
+_safe_import("app.models.proposal")
+_safe_import("app.models.rbac")
+_safe_import("app.models.refresh_token")
+_safe_import("app.models.report_schedule")
+_safe_import("app.models.saved_report")
+_safe_import("app.models.staging")
+_safe_import("app.models.support_ticket")
+_safe_import("app.models.user_mfa")
+_safe_import("app.models.user_watchlist")
 
 # -------------------------------------------------------------------
 # ?? Alembic configuration

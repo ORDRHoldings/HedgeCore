@@ -16,6 +16,10 @@
 #   See docs/ops/render-cli.md and scripts/render/ for scripted workflows.
 
 services:
+  # ⚠️  INFRA RISK: Both services run on free tier (plan: free).
+  # Free tier cold-starts after ~15 min inactivity → schema readiness check
+  # may fail on first request → 503. Upgrade path: plan: starter ($7/mo).
+
   # ── Production Backend (master branch) ──────────────────────────────────────
   - type: web
     name: hedgecore
@@ -89,6 +93,7 @@ services:
         fromGroup: hedgecore-preview-secrets
       - key: CORS_ALLOW_ORIGINS
         value: '["http://localhost:3000","http://127.0.0.1:3000","https://hedgecore-git-dev-synexiun-projects.vercel.app"]'
+        # TODO: move to fromGroup: hedgecore-preview-secrets once the key is set in Render dashboard
       - key: ALLOW_INDICATIVE_FALLBACK
         value: "true"
       - key: SYNEX_CORE_URL

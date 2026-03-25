@@ -13,6 +13,7 @@ CANONICAL, INSTITUTIONAL, NGINX-SAFE
 
 
 import logging
+import os
 import traceback
 from contextlib import asynccontextmanager
 from typing import Any
@@ -313,26 +314,37 @@ async def _sync_seed_users():
             await session.flush()
         except Exception as e:
             logger.warning(f"_sync_seed_users dedup policy_templates failed (non-fatal): {e}")
-        # Step 2: update passwords for all seed users
+        # Step 2: update passwords for seed users — only if hash fails verification
+        from app.core.security import verify_password
+        updated_count = 0
         for email, pw, full_name, job_title, role_name, branch_id, dept_id in EMPLOYEES:
             try:
                 r = await session.execute(select(User).where(User.email == email))
                 user = r.scalars().first()
                 if user:
-                    user.hashed_password = hash_password(pw)
                     user.is_active = True
+                    # Only rehash if stored hash no longer matches (avoids slow bcrypt every boot)
+                    if not user.hashed_password or not verify_password(pw, user.hashed_password):
+                        user.hashed_password = hash_password(pw)
+                        updated_count += 1
             except Exception as e:
                 logger.warning(f"_sync_seed_users update {email} failed: {e}")
                 continue
         try:
             await session.commit()
-            logger.info("_sync_seed_users: passwords resynced for seed users")
+            logger.info(f"_sync_seed_users: {updated_count} seed user(s) password-updated (skipped {len(EMPLOYEES) - updated_count} unchanged)")
         except Exception as e:
             logger.warning(f"_sync_seed_users commit failed: {e}")
 
 async def _ensure_tables():
 
     """Create any missing tables (non-destructive -- skips existing)."""
+
+    logger.warning(
+        "_ensure_tables() is the legacy schema bootstrap bridge. "
+        "New schema changes must use Alembic revisions (alembic revision --autogenerate). "
+        "This function will be removed in v2 once all tables are managed by Alembic."
+    )
 
     # Import all model modules to register with Base.metadata
     import importlib
@@ -1544,7 +1556,30 @@ async def lifespan(app: FastAPI):
 
     rebuild_all_schemas()
 
+    # ── SQLite demo mode detection ────────────────────────────────────────────
+    _db_url_check = str(
+        os.environ.get("ASYNC_DATABASE_URL", "")
+        or os.environ.get("DATABASE_URL", "")
+        or ""
+    )
+    if "sqlite" in _db_url_check.lower():
+        logger.warning(
+            "⚠️  SQLITE DEMO MODE ACTIVE ⚠️  "
+            "This deployment uses SQLite (ALLOW_SQLITE_DEMO=true). "
+            "SQLite does NOT support: advisory locks, WORM triggers, "
+            "concurrent writes, or pg_advisory_lock serialisation. "
+            "Features that work in SQLite may silently fail in PostgreSQL prod. "
+            "NEVER use SQLite mode in production or staging."
+        )
 
+    # ── Alembic forward migrations ────────────────────────────────────────────
+    # Runs BEFORE _ensure_tables() so new Alembic revisions apply first.
+    # _ensure_tables() is the legacy bootstrap bridge (being retired in v2).
+    try:
+        from app.core.db_migrations import run_alembic_upgrade
+        run_alembic_upgrade()
+    except Exception as _ae:
+        logger.warning(f"Alembic runner failed (non-fatal): {_ae}")
 
     try:
 

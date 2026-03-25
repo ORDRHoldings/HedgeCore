@@ -168,6 +168,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "RateLimitMiddleware: Redis unavailable (%s), falling back to in-memory", exc
                 )
 
+        # Emit startup observability for rate-limiting backend
+        if redis_url and not self._redis_bucket:
+            logger.warning(
+                "⚠️  Rate limiter: REDIS_URL configured but Redis unreachable — "
+                "falling back to IN-MEMORY token bucket. "
+                "NOT safe for multi-node deployments."
+            )
+        elif not redis_url:
+            logger.info(
+                "Rate limiter: no REDIS_URL set — using IN-MEMORY token bucket "
+                "(single-node only). Set REDIS_URL for multi-node rate limiting."
+            )
+        else:
+            logger.info("✅ Rate limiter: Redis backend active (%s)", redis_url)
+
         # In-memory fallback buckets
         self._buckets: dict[str, TokenBucket] = {}
 
