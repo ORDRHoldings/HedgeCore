@@ -1,5 +1,4 @@
 alembic==1.16.5
-synex-kernel>=0.1.0
 annotated-types==0.7.0
 gunicorn
 anyio==4.11.0
