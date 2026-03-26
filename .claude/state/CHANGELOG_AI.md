@@ -1,5 +1,38 @@
 # Changelog (AI-maintained)
 
+## 2026-03-25 — Infrastructure hardening + live market data fix (commits d1af599–b8db71f)
+
+### Summary
+Two-session run. Resolved 11 architectural audit issues (hardening branch → master), fixed production market data pipeline, stamped production DB, and added cold-start mitigation.
+
+### Key Fixes
+- **`fix(middleware)`**: `/api/v1/market-data/live/*` added to public_prefixes in APIKeyAuthMiddleware. Was returning 401, silently falling back to exchangerate-api.com. Now live via TwelveData: EURUSD 1.1564, USDJPY 159.35, USDMXN 17.78.
+- **Production DB stamp**: `alembic_version` → `2026_03_24_baseline` via direct psql (PYTHONPATH conflict with D:\StopMug forced bypass).
+- **`infra(render)`**: `hedgecore-keepalive` cron — pings `/api/health` every 14 min, prevents free-tier cold-start 503s. Activate via blueprint sync.
+- **Governance files committed**: `policy_rules.py` (22 SIG_* constants) + `test_kernel_governance.py` (18 tests).
+- **ordr-market**: Chart engine refactor + indicators (ADX, Bollinger, Ichimoku, RSI, Supertrend, VWAP, Volume Profile).
+
+### 11 Hardening Issues (all resolved)
+1. DDL-as-code → Alembic migrations, 31-model env.py
+2. Seed user rehash → bcrypt verify-before-hash
+3. Deprecated `@app.on_event` → lifespan context manager
+4. Alembic baseline migration created and stamped in prod
+5. SQLite backdoor → WARNING log + ALLOW_INDICATIVE_FALLBACK=false in prod
+6. CORS localhost → removed from production
+7. Free-tier cold starts → keepalive cron (RISK-INF-01, severity MEDIUM)
+8. OpenAI phantom dep → commented out
+9. Redis fallback → startup observability logging
+10. Tenant isolation → 18 tests (cross-tenant, SoD)
+11. synex-kernel → removed from requirements.txt (private, not on PyPI)
+
+### Test Baseline
+4684 passed, 0 failed, 156 skipped
+
+### Sprint: Live Market Data Integration — 4/7 complete
+- Done: #3 sandbox autofill, #4 TwelveData wired, #5 dashboard FX verified, #6 frontend-v2 (no-op)
+- Blocked: #2 IBKR (needs TWS port 4001), #7 risk closure
+- Manual: #1 secret rotation (Render + Vercel dashboards)
+
 ## 2026-03-24 — Backend audit fixes + brand cleanup (commit 20612ec)
 - Gated `_sync_seed_users()` to non-production ENV — prevents bcrypt rehashing on every prod boot
 - Moved APScheduler into lifespan context manager; removed deprecated `@app.on_event` decorators
