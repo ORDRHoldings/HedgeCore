@@ -89,6 +89,7 @@ export function useMarketWebSocket(symbol: string): UseMarketWebSocketResult {
     const prev = symbolRef.current;
     symbolRef.current = symbol;
     setTick(null);
+    clearReconnect(); // cancel any pending reconnect with stale symbol
 
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {

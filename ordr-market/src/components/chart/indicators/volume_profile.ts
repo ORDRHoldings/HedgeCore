@@ -127,8 +127,8 @@ export function computeVolumeProfile(
   return {
     levels,
     poc: minPrice + (pocIdx + 0.5) * binSize,
-    vahPrice: minPrice + (vaHigh + 1) * binSize,
-    valPrice: minPrice + vaLow * binSize,
+    vahPrice: minPrice + (vaHigh + 0.5) * binSize,
+    valPrice: minPrice + (vaLow + 0.5) * binSize,
     totalVolume,
   };
 }

@@ -1,9 +1,37 @@
 /**
  * ORDR Market — Strategy Transpilers
  *
- * PineScript → JavaScript: regex-based transpiler for common Pine patterns.
- * Python → JavaScript: regex-based transpiler for Python-style strategies.
- * JavaScript: passed through unchanged.
+ * Regex-based transpilers for simple strategy patterns. NOT a full parser.
+ *
+ * ## Supported (PineScript)
+ * - //@version, strategy(), indicator() declarations (stripped)
+ * - input.int(), input.float(), input.bool() → api.param()
+ * - ta.ema/sma/wma/rsi/atr/highest/lowest → api.*()
+ * - ta.crossover(), ta.crossunder()
+ * - ta.macd(), ta.bb() (basic forms)
+ * - close/open/high/low/volume, close[N] historical access
+ * - strategy.entry(long/short), strategy.close(), strategy.close_all()
+ * - plot() with color constants
+ * - if/else if/else indentation blocks → JS braces
+ *
+ * ## Supported (Python)
+ * - def on_bar(api): → stripped
+ * - True/False/None, and/or/not, ==/!=, # comments
+ * - if/elif/else indentation blocks → JS braces
+ *
+ * ## NOT Supported (will silently fail or produce incorrect output)
+ * - Nested function calls: ta.ema(ta.sma(close, 5), 10)
+ * - Multi-line expressions or string continuations
+ * - Custom function definitions (def/function beyond on_bar)
+ * - Pine's iff() function
+ * - security() multi-timeframe calls
+ * - Variable-length array operations (array.*)
+ * - Pine's var keyword (persistent variables)
+ * - for...in loops, list comprehensions (Python)
+ * - Type annotations (Python)
+ * - Ternary with complex nesting
+ *
+ * For complex strategies, write directly in JavaScript using the api.* interface.
  */
 
 import type { Language } from './types';
@@ -50,6 +78,13 @@ export function transpilePine(code: string): string {
   // Bollinger bands
   js = js.replace(/ta\.bb\s*\(([^)]*)\)/g, '(api.bb())');
 
+  // Strategy orders — MUST run before bare OHLCV replacement
+  // (otherwise \bclose\b captures the "close" in "strategy.close()")
+  js = js.replace(/strategy\.entry\s*\("([^"]+)"\s*,\s*strategy\.long[^)]*\)/g,  'api.buy("$1")');
+  js = js.replace(/strategy\.entry\s*\("([^"]+)"\s*,\s*strategy\.short[^)]*\)/g, 'api.short("$1")');
+  js = js.replace(/strategy\.close_all\s*\([^)]*\)/g,      'api.close_position()');
+  js = js.replace(/strategy\.close\s*\("([^"]+)"[^)]*\)/g, 'api.sell("$1")');
+
   // series[n] historical access → api.closes[api.index - n]
   js = js.replace(/\bclose\s*\[(\d+)\]/g, 'api.closes[api.closes.length - 1 - $1]');
   js = js.replace(/\bopen\s*\[(\d+)\]/g,  'api.opens[api.opens.length   - 1 - $1]');
@@ -63,12 +98,6 @@ export function transpilePine(code: string): string {
   js = js.replace(/\blow\b(?!\s*\[)/g,   'api.low');
   js = js.replace(/\bvolume\b(?!\s*\[)/g,'api.volume');
   js = js.replace(/\bbar_index\b/g,      'api.index');
-
-  // Strategy orders
-  js = js.replace(/strategy\.entry\s*\("([^"]+)"\s*,\s*strategy\.long[^)]*\)/g,  'api.buy("$1")');
-  js = js.replace(/strategy\.entry\s*\("([^"]+)"\s*,\s*strategy\.short[^)]*\)/g, 'api.short("$1")');
-  js = js.replace(/strategy\.close\s*\("([^"]+)"[^)]*\)/g, 'api.sell("$1")');
-  js = js.replace(/strategy\.close_all\s*\([^)]*\)/g,      'api.close_position()');
 
   // plot()
   js = js.replace(
@@ -142,7 +171,7 @@ function convertIndentToBlocks(code: string): string {
       result.push(' '.repeat(indentStack[indentStack.length - 1]) + '}');
     }
 
-    const isBlock = /^(if|else if|else|for|while)\b/.test(trimmed);
+    const isBlock = /^(if|else if|elif|else|for|while)\b/.test(trimmed);
     if (isBlock) {
       const converted = trimmed
         .replace(/^if\s+(.+?)\s*:?\s*$/, 'if ($1) {')

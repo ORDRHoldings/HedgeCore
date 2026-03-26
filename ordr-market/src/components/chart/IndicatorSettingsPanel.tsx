@@ -303,6 +303,8 @@ function ParamRow({
     [commit, localValue, param, onChange],
   );
 
+  const isSelect = param.type === "select" && Array.isArray(param.options);
+
   return (
     <div
       style={{
@@ -324,34 +326,60 @@ function ParamRow({
       >
         {param.label}
       </label>
-      <input
-        type="number"
-        value={localValue}
-        min={param.min}
-        max={param.max}
-        step={param.step}
-        onChange={(e) => setLocalValue(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setFocused(false);
-          commit();
-        }}
-        onKeyDown={handleKeyDown}
-        style={{
-          width: 64,
-          padding: "4px 6px",
-          background: INPUT_BG,
-          border: `1px solid ${focused ? ACCENT : BORDER}`,
-          borderRadius: 4,
-          fontFamily: FONT_MONO,
-          fontSize: 12,
-          color: TEXT_PRIMARY,
-          textAlign: "right",
-          outline: "none",
-          transition: "border-color 0.15s",
-        }}
-        data-testid={`param-input-${param.key}`}
-      />
+      {isSelect ? (
+        <select
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={{
+            width: 120,
+            padding: "4px 6px",
+            background: INPUT_BG,
+            border: `1px solid ${BORDER}`,
+            borderRadius: 4,
+            fontFamily: FONT_MONO,
+            fontSize: 11,
+            color: TEXT_PRIMARY,
+            outline: "none",
+            cursor: "pointer",
+          }}
+          data-testid={`param-select-${param.key}`}
+        >
+          {param.options!.map((opt) => (
+            <option key={String(opt.value)} value={Number(opt.value)}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type="number"
+          value={localValue}
+          min={param.min}
+          max={param.max}
+          step={param.step}
+          onChange={(e) => setLocalValue(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            commit();
+          }}
+          onKeyDown={handleKeyDown}
+          style={{
+            width: 64,
+            padding: "4px 6px",
+            background: INPUT_BG,
+            border: `1px solid ${focused ? ACCENT : BORDER}`,
+            borderRadius: 4,
+            fontFamily: FONT_MONO,
+            fontSize: 12,
+            color: TEXT_PRIMARY,
+            textAlign: "right",
+            outline: "none",
+            transition: "border-color 0.15s",
+          }}
+          data-testid={`param-input-${param.key}`}
+        />
+      )}
     </div>
   );
 }

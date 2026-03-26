@@ -286,12 +286,52 @@ export function createDrawing(
     channelFillOpacity: 0.15,
     channelFillColor: "",
     brushSize: 2,
+    brushPoints: [],
     text: "",
     fontSize: 14,
     fontBold: false,
     fontItalic: false,
     backgroundColor: "",
     borderRadius: 4,
+    // Fib
+    fibLevels: FIB_LEVELS.slice(),
+    fibShowExtensions: false,
+    // Gann
+    gannShowAngles: true,
+    gannShowPriceTime: false,
+    // Line innovations
+    eventType: undefined,
+    confluenceZoneEnabled: false,
+    rRatios: [1, 2, 3],
+    // Channel innovations
+    fibSubdivisions: false,
+    showMeanReversionZone: false,
+    // Elliott Wave
+    waveDegree: "intermediate",
+    waveLabeling: "arabic",
+    // Shape innovations
+    atrCircleEnabled: false,
+    atrPeriod: 14,
+    phiEllipse: false,
+    formationTag: undefined,
+    tradeDirection: undefined,
+    tradeUnits: 1,
+    sentimentTag: undefined,
+    measuredArcMode: false,
+    // Measurement/Annotation innovations
+    hedgeCostBps: 0,
+    scenarioBranches: [],
+    institutionalTag: undefined,
+    teamRole: undefined,
+    alertEnabled: false,
+    alertTriggered: false,
+    policyLinkForwardRate: undefined,
+    policyLinkHedgeRatio: undefined,
+    signalStrength: undefined,
+    eventTaxonomy: undefined,
+    atrMultiple: 1,
+    // Position tool
+    patternLabels: [],
     ...overrides,
   };
 }

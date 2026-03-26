@@ -42,6 +42,8 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     category: "overlay",
     params: [
       { key: "period", label: "Period", type: "number", default: 20, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
     ],
     color: "#FFD54F",
   },
@@ -50,6 +52,8 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     category: "overlay",
     params: [
       { key: "period", label: "Period", type: "number", default: 50, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
     ],
     color: "#FF8A65",
   },
@@ -58,6 +62,8 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     category: "overlay",
     params: [
       { key: "period", label: "Period", type: "number", default: 200, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
     ],
     color: "#FF5252",
   },
@@ -66,6 +72,8 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     category: "overlay",
     params: [
       { key: "period", label: "Period", type: "number", default: 20, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
     ],
     color: "#26C6DA",
   },
@@ -74,6 +82,8 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     category: "overlay",
     params: [
       { key: "period", label: "Period", type: "number", default: 50, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
     ],
     color: "#00E676",
   },
@@ -82,6 +92,8 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     category: "overlay",
     params: [
       { key: "period", label: "Period", type: "number", default: 9, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
     ],
     color: "#00E676",
   },
@@ -90,13 +102,18 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     category: "overlay",
     params: [
       { key: "period", label: "Period", type: "number", default: 20, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
     ],
     color: "#FF4081",
   },
   {
     id: "vwap", name: "Volume Weighted Average Price", shortName: "VWAP",
     category: "overlay",
-    params: [],
+    params: [
+      { key: "showBands", label: "SD Bands", type: "number", default: 0, min: 0, max: 1, step: 1 },
+      { key: "bandMult", label: "Band Mult", type: "number", default: 1, min: 0.5, max: 4, step: 0.5 },
+    ],
     color: "#E91E63",
   },
   {
@@ -126,6 +143,16 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     params: [
       { key: "period", label: "Period", type: "number", default: 20, min: 2, max: 200, step: 1 },
       { key: "stdDev", label: "Std Dev", type: "number", default: 2, min: 0.5, max: 5, step: 0.5 },
+      { key: "source", label: "Source", type: "select", default: 0,
+        options: [
+          { value: 0, label: "Close" },
+          { value: 1, label: "HLC/3" },
+          { value: 2, label: "HL/2" },
+          { value: 3, label: "OHLC/4" },
+          { value: 4, label: "Weighted" },
+        ],
+      },
+      { key: "showSqueeze", label: "Squeeze", type: "number", default: 1, min: 0, max: 1, step: 1 },
     ],
     color: "#2196F3",
   },
@@ -144,6 +171,7 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     category: "overlay",
     params: [
       { key: "period", label: "Period", type: "number", default: 20, min: 2, max: 200, step: 1 },
+      { key: "showBreakout", label: "Breakouts", type: "number", default: 1, min: 0, max: 1, step: 1 },
     ],
     color: "#00BCD4",
   },
@@ -189,7 +217,19 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     id: "rsi", name: "Relative Strength Index", shortName: "RSI",
     category: "subpane",
     params: [
-      { key: "period", label: "Period", type: "number", default: 14, min: 2, max: 100, step: 1 },
+      { key: "period",       label: "Period",       type: "number", default: 14,  min: 2,  max: 100, step: 1 },
+      { key: "obLevel",      label: "OB Level",     type: "number", default: 70,  min: 50, max: 95,  step: 1 },
+      { key: "osLevel",      label: "OS Level",     type: "number", default: 30,  min: 5,  max: 50,  step: 1 },
+      { key: "signalPeriod", label: "Signal EMA",   type: "number", default: 0,   min: 0,  max: 50,  step: 1 },
+      { key: "source", label: "Source", type: "select", default: 0,
+        options: [
+          { value: 0, label: "Close" },
+          { value: 1, label: "HLC/3" },
+          { value: 2, label: "HL/2" },
+          { value: 3, label: "OHLC/4" },
+          { value: 4, label: "Weighted Close" },
+        ],
+      },
     ],
     color: "#7B1FA2",
   },
@@ -197,9 +237,9 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     id: "macd", name: "MACD", shortName: "MACD",
     category: "subpane",
     params: [
-      { key: "fast", label: "Fast", type: "number", default: 12, min: 2, max: 100, step: 1 },
-      { key: "slow", label: "Slow", type: "number", default: 26, min: 2, max: 200, step: 1 },
-      { key: "signal", label: "Signal", type: "number", default: 9, min: 2, max: 50, step: 1 },
+      { key: "fast",   label: "Fast",   type: "number", default: 12, min: 2,  max: 100, step: 1 },
+      { key: "slow",   label: "Slow",   type: "number", default: 26, min: 2,  max: 200, step: 1 },
+      { key: "signal", label: "Signal", type: "number", default: 9,  min: 2,  max: 50,  step: 1 },
     ],
     color: "#2962FF",
   },
@@ -207,8 +247,10 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     id: "stochastic", name: "Stochastic", shortName: "STOCH",
     category: "subpane",
     params: [
-      { key: "kPeriod", label: "K Period", type: "number", default: 14, min: 2, max: 100, step: 1 },
-      { key: "dPeriod", label: "D Period", type: "number", default: 3, min: 1, max: 50, step: 1 },
+      { key: "kPeriod", label: "K Period", type: "number", default: 14, min: 2,  max: 100, step: 1 },
+      { key: "dPeriod", label: "D Period", type: "number", default: 3,  min: 1,  max: 50,  step: 1 },
+      { key: "obLevel", label: "OB Level", type: "number", default: 80, min: 55, max: 95,  step: 1 },
+      { key: "osLevel", label: "OS Level", type: "number", default: 20, min: 5,  max: 45,  step: 1 },
     ],
     color: "#FF6D00",
   },
@@ -216,10 +258,12 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     id: "stochRSI", name: "Stochastic RSI", shortName: "SRSI",
     category: "subpane",
     params: [
-      { key: "rsiPeriod", label: "RSI Period", type: "number", default: 14, min: 2, max: 100, step: 1 },
-      { key: "stochPeriod", label: "Stoch Period", type: "number", default: 14, min: 2, max: 100, step: 1 },
-      { key: "kSmooth", label: "K Smooth", type: "number", default: 3, min: 1, max: 20, step: 1 },
-      { key: "dSmooth", label: "D Smooth", type: "number", default: 3, min: 1, max: 20, step: 1 },
+      { key: "rsiPeriod",   label: "RSI Period",   type: "number", default: 14, min: 2,  max: 100, step: 1 },
+      { key: "stochPeriod", label: "Stoch Period", type: "number", default: 14, min: 2,  max: 100, step: 1 },
+      { key: "kSmooth",     label: "K Smooth",     type: "number", default: 3,  min: 1,  max: 20,  step: 1 },
+      { key: "dSmooth",     label: "D Smooth",     type: "number", default: 3,  min: 1,  max: 20,  step: 1 },
+      { key: "obLevel",     label: "OB Level",     type: "number", default: 80, min: 55, max: 95,  step: 1 },
+      { key: "osLevel",     label: "OS Level",     type: "number", default: 20, min: 5,  max: 45,  step: 1 },
     ],
     color: "#FF6D00",
   },
@@ -227,7 +271,9 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     id: "williamsR", name: "Williams %R", shortName: "W%R",
     category: "subpane",
     params: [
-      { key: "period", label: "Period", type: "number", default: 14, min: 2, max: 100, step: 1 },
+      { key: "period",  label: "Period",   type: "number", default: 14,  min: 2,   max: 100, step: 1 },
+      { key: "obLevel", label: "OB Level", type: "number", default: -20, min: -45, max: -5,  step: 1 },
+      { key: "osLevel", label: "OS Level", type: "number", default: -80, min: -95, max: -55, step: 1 },
     ],
     color: "#FF6D00",
   },
@@ -235,7 +281,9 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     id: "cci", name: "CCI", shortName: "CCI",
     category: "subpane",
     params: [
-      { key: "period", label: "Period", type: "number", default: 20, min: 2, max: 200, step: 1 },
+      { key: "period",  label: "Period",   type: "number", default: 20,   min: 2,    max: 200,  step: 1 },
+      { key: "obLevel", label: "OB Level", type: "number", default: 100,  min: 50,   max: 300,  step: 10 },
+      { key: "osLevel", label: "OS Level", type: "number", default: -100, min: -300, max: -50,  step: 10 },
     ],
     color: "#2196F3",
   },
@@ -243,9 +291,23 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     id: "adx", name: "ADX", shortName: "ADX",
     category: "subpane",
     params: [
-      { key: "period", label: "Period", type: "number", default: 14, min: 2, max: 100, step: 1 },
+      { key: "period",      label: "Period",    type: "number", default: 14, min: 2,  max: 100, step: 1 },
+      { key: "threshold",   label: "Threshold", type: "number", default: 25, min: 10, max: 60,  step: 1 },
+      { key: "showPlusDI",  label: "+DI",       type: "number", default: 1,  min: 0,  max: 1,   step: 1 },
+      { key: "showMinusDI", label: "-DI",       type: "number", default: 1,  min: 0,  max: 1,   step: 1 },
+      { key: "showADX",     label: "ADX Line",  type: "number", default: 1,  min: 0,  max: 1,   step: 1 },
     ],
     color: "#787B86",
+  },
+  {
+    id: "atr", name: "Average True Range", shortName: "ATR",
+    category: "subpane",
+    params: [
+      { key: "period",      label: "Period",    type: "number", default: 14, min: 2,  max: 200, step: 1 },
+      { key: "percentMode", label: "% of Price",type: "number", default: 0,  min: 0,  max: 1,   step: 1 },
+      { key: "maPeriod",    label: "MA Period", type: "number", default: 0,  min: 0,  max: 100, step: 1 },
+    ],
+    color: "#26C6DA",
   },
   {
     id: "obv", name: "On-Balance Volume", shortName: "OBV",
@@ -272,23 +334,49 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
 
   // --- MA Variants ---
   { id: "wma", name: "Weighted Moving Average", shortName: "WMA", category: "overlay",
-    params: [{ key: "period", label: "Period", type: "number", default: 20, min: 2, max: 500, step: 1 }], color: "#FF9800" },
+    params: [
+      { key: "period", label: "Period", type: "number", default: 20, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
+    ], color: "#FF9800" },
   { id: "smma", name: "Smoothed Moving Average", shortName: "SMMA", category: "overlay",
-    params: [{ key: "period", label: "Period", type: "number", default: 20, min: 2, max: 500, step: 1 }], color: "#FF7043" },
+    params: [
+      { key: "period", label: "Period", type: "number", default: 20, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
+    ], color: "#FF7043" },
   { id: "alma", name: "Arnaud Legoux MA", shortName: "ALMA", category: "overlay",
     params: [
       { key: "period", label: "Period", type: "number", default: 21, min: 2, max: 500, step: 1 },
       { key: "sigma", label: "Sigma", type: "number", default: 6, min: 1, max: 20, step: 1 },
       { key: "offset", label: "Offset", type: "number", default: 0.85, min: 0, max: 1, step: 0.05 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
     ], color: "#AB47BC" },
   { id: "dema", name: "Double EMA", shortName: "DEMA", category: "overlay",
-    params: [{ key: "period", label: "Period", type: "number", default: 20, min: 2, max: 500, step: 1 }], color: "#26C6DA" },
+    params: [
+      { key: "period", label: "Period", type: "number", default: 20, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
+    ], color: "#26C6DA" },
   { id: "lsma", name: "Least Squares MA", shortName: "LSMA", category: "overlay",
-    params: [{ key: "period", label: "Period", type: "number", default: 25, min: 2, max: 500, step: 1 }], color: "#66BB6A" },
+    params: [
+      { key: "period", label: "Period", type: "number", default: 25, min: 2, max: 500, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
+    ], color: "#66BB6A" },
   { id: "mcginley", name: "McGinley Dynamic", shortName: "McGinley", category: "overlay",
-    params: [{ key: "period", label: "Period", type: "number", default: 14, min: 2, max: 200, step: 1 }], color: "#FFA726" },
+    params: [
+      { key: "period", label: "Period", type: "number", default: 14, min: 2, max: 200, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
+    ], color: "#FFA726" },
   { id: "vwma", name: "Volume Weighted MA", shortName: "VWMA", category: "overlay",
-    params: [{ key: "period", label: "Period", type: "number", default: 20, min: 2, max: 200, step: 1 }], color: "#EC407A" },
+    params: [
+      { key: "period", label: "Period", type: "number", default: 20, min: 2, max: 200, step: 1 },
+      { key: "thickness", label: "Thickness", type: "number", default: 1.5, min: 0.5, max: 5, step: 0.5 },
+      { key: "priceColor", label: "Price Color", type: "number", default: 0, min: 0, max: 1, step: 1 },
+    ], color: "#EC407A" },
 
   // --- Overlay bands / special ---
   { id: "envelope", name: "Envelope", shortName: "ENV", category: "overlay",
@@ -300,11 +388,15 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     params: [
       { key: "period", label: "Period", type: "number", default: 10, min: 2, max: 100, step: 1 },
       { key: "multiplier", label: "Multiplier", type: "number", default: 3, min: 0.5, max: 10, step: 0.5 },
+      { key: "showArrows", label: "Arrows", type: "number", default: 1, min: 0, max: 1, step: 1 },
+      { key: "showFill", label: "Fill", type: "number", default: 0, min: 0, max: 1, step: 1 },
+      { key: "showLabel", label: "Label", type: "number", default: 1, min: 0, max: 1, step: 1 },
     ], color: "#26A69A" },
   { id: "chandelierExit", name: "Chandelier Exit", shortName: "CE", category: "overlay",
     params: [
       { key: "period", label: "Period", type: "number", default: 22, min: 2, max: 100, step: 1 },
       { key: "multiplier", label: "Multiplier", type: "number", default: 3, min: 0.5, max: 10, step: 0.5 },
+      { key: "showArrows", label: "Arrows", type: "number", default: 1, min: 0, max: 1, step: 1 },
     ], color: "#26A69A" },
   { id: "chandeKrollStop", name: "Chande Kroll Stop", shortName: "CKS", category: "overlay",
     params: [
@@ -322,7 +414,9 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
   { id: "autoFib", name: "Auto Fibonacci", shortName: "AutoFib", category: "overlay",
     params: [{ key: "lookback", label: "Lookback", type: "number", default: 50, min: 20, max: 300, step: 5 }], color: "#26A69A" },
   { id: "maRibbon", name: "MA Ribbon", shortName: "Ribbon", category: "overlay",
-    params: [], color: "#EF5350" },
+    params: [
+      { key: "showFill", label: "Trend Fill", type: "number", default: 1, min: 0, max: 1, step: 1 },
+    ], color: "#EF5350" },
 
   // --- New oscillators ---
   { id: "ao", name: "Awesome Oscillator", shortName: "AO", category: "subpane",
@@ -457,7 +551,8 @@ export function getDefaultParams(id: string): Record<string, number> {
   if (!schema) return {};
   const defaults: Record<string, number> = {};
   for (const p of schema.params) {
-    if (p.type === "number") {
+    // Both "number" and "select" (with numeric option values) are stored as numbers
+    if (p.type === "number" || p.type === "select") {
       defaults[p.key] = p.default as number;
     }
   }

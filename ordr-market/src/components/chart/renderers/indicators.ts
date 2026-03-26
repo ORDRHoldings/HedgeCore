@@ -1,6 +1,6 @@
 import type {
   IndicatorPoint,
-  BandPoint,
+  BandPoint, // used in drawBands + drawVWAP bands
   MACDPoint,
   IchimokuPoint,
   PivotPointData,
@@ -11,6 +11,7 @@ import type {
   ZigzagPoint,
   AutoFibData,
   MARibbonData,
+  RSISubPane,
 } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
 import type { PriceScale } from "../core/data";
@@ -18,6 +19,14 @@ import { priceToY, indexToX } from "../core/data";
 import { THEME } from "../core/theme";
 
 // ── Overlay line (SMA, EMA) ────────────────────────────
+
+export interface DrawLineOpts {
+  /** Color each segment by price-vs-MA (bull = price >= MA) */
+  priceColored?: boolean;
+  bullColor?: string;
+  bearColor?: string;
+  dash?: number[];
+}
 
 export function drawIndicatorLine(
   ctx: CanvasRenderingContext2D,
@@ -28,26 +37,55 @@ export function drawIndicatorLine(
   color: string,
   lineWidth: number = 1.5,
   scale: PriceScale = "linear",
+  opts?: DrawLineOpts,
 ): void {
   if (points.length < 2) return;
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
 
-  ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
-  ctx.beginPath();
-  let started = false;
+  if (opts?.dash) ctx.setLineDash(opts.dash);
 
-  for (const pt of points) {
-    const idx = bars.findIndex(b => b.t === pt.t);
-    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+  if (opts?.priceColored) {
+    const bullColor = opts.bullColor ?? "#26A69A";
+    const bearColor = opts.bearColor ?? "#EF5350";
+    const coords: { x: number; y: number; close: number; maVal: number }[] = [];
 
-    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const y = priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight, scale);
-    if (!started) { ctx.moveTo(x, y); started = true; }
-    else ctx.lineTo(x, y);
+    for (const pt of points) {
+      const idx = bars.findIndex(b => b.t === pt.t);
+      if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+      const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+      const y = priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight, scale);
+      const bar = bars[idx] as { t: number; c?: number };
+      coords.push({ x, y, close: bar.c ?? pt.value, maVal: pt.value });
+    }
+
+    ctx.lineWidth = lineWidth;
+    for (let i = 1; i < coords.length; i++) {
+      ctx.strokeStyle = coords[i].close >= coords[i].maVal ? bullColor : bearColor;
+      ctx.beginPath();
+      ctx.moveTo(coords[i - 1].x, coords[i - 1].y);
+      ctx.lineTo(coords[i].x, coords[i].y);
+      ctx.stroke();
+    }
+  } else {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    let started = false;
+
+    for (const pt of points) {
+      const idx = bars.findIndex(b => b.t === pt.t);
+      if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+
+      const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+      const y = priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight, scale);
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
   }
-  ctx.stroke();
+
+  if (opts?.dash) ctx.setLineDash([]);
 }
 
 // ── Band overlay (Bollinger, Keltner) ──────────────────
@@ -134,59 +172,108 @@ export function drawBands(
 
 export function drawRSI(
   ctx: CanvasRenderingContext2D,
-  points: IndicatorPoint[],
+  data: RSISubPane,
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
 ): void {
+  const { points, signal, obLevel, osLevel, period } = data;
   const { subPaneTop, subPaneHeight, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex } = viewport;
-  if (subPaneHeight === 0) return;
+  if (subPaneHeight === 0 || points.length < 2) return;
 
-  // Background + border
+  const pw = layout.canvasWidth - layout.priceAxisWidth;
+  const yVal = (v: number) => subPaneTop + subPaneHeight * (1 - v / 100);
+  const yOB = yVal(obLevel);
+  const yOS = yVal(osLevel);
+  const yMid = yVal(50);
+
+  // Background
   ctx.fillStyle = THEME.subPaneBg;
-  ctx.fillRect(0, subPaneTop, layout.canvasWidth - layout.priceAxisWidth, subPaneHeight);
+  ctx.fillRect(0, subPaneTop, pw, subPaneHeight);
   ctx.strokeStyle = THEME.subPaneBorder;
   ctx.lineWidth = 0.5;
   ctx.beginPath();
   ctx.moveTo(0, subPaneTop);
-  ctx.lineTo(layout.canvasWidth - layout.priceAxisWidth, subPaneTop);
+  ctx.lineTo(pw, subPaneTop);
   ctx.stroke();
 
-  // RSI label
-  ctx.font = "10px 'IBM Plex Mono', monospace";
+  // OB zone fill (top → OB line) — light red
+  ctx.fillStyle = "rgba(239,83,80,0.10)";
+  ctx.fillRect(0, subPaneTop, pw, yOB - subPaneTop);
+  // OS zone fill (OS line → bottom) — light green
+  ctx.fillStyle = "rgba(38,166,154,0.10)";
+  ctx.fillRect(0, yOS, pw, subPaneTop + subPaneHeight - yOS);
+
+  // Guide lines
+  const dash = (y: number, color: string) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 0.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(pw, y);
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  dash(yOB, THEME.level30_70);
+  dash(yOS, THEME.level70_30);
+  dash(yMid, THEME.zeroLine);
+
+  // Level labels at right edge
+  ctx.font = "9px 'IBM Plex Mono', monospace";
   ctx.fillStyle = THEME.axisText;
-  ctx.textAlign = "left";
-  ctx.fillText("RSI(14)", 6, subPaneTop + 12);
+  ctx.textAlign = "right";
+  ctx.fillText(String(obLevel), pw - 3, yOB - 2);
+  ctx.fillText(String(osLevel), pw - 3, yOS + 9);
+  ctx.fillText("50", pw - 3, yMid - 2);
 
-  // 30/70 lines
-  const y30 = subPaneTop + subPaneHeight * (1 - 30/100);
-  const y70 = subPaneTop + subPaneHeight * (1 - 70/100);
-  ctx.strokeStyle = THEME.level30_70;
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
-  ctx.moveTo(0, y70); ctx.lineTo(layout.canvasWidth - layout.priceAxisWidth, y70);
-  ctx.stroke();
-  ctx.strokeStyle = THEME.level70_30;
-  ctx.beginPath();
-  ctx.moveTo(0, y30); ctx.lineTo(layout.canvasWidth - layout.priceAxisWidth, y30);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // RSI line
-  ctx.strokeStyle = THEME.rsiColor;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  let started = false;
+  // Collect visible points
+  const vis: { idx: number; pt: IndicatorPoint }[] = [];
   for (const pt of points) {
     const idx = bars.findIndex(b => b.t === pt.t);
     if (idx < startIndex - 1 || idx > endIndex + 1) continue;
-    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const y = subPaneTop + subPaneHeight * (1 - pt.value / 100);
-    if (!started) { ctx.moveTo(x, y); started = true; }
-    else ctx.lineTo(x, y);
+    vis.push({ idx, pt });
   }
-  ctx.stroke();
+  if (vis.length < 2) return;
+
+  // RSI line — color by zone (segment-by-segment)
+  for (let i = 0; i < vis.length - 1; i++) {
+    const a = vis[i], b = vis[i + 1];
+    const x1 = indexToX(a.idx, startIndex, endIndex, chartLeft, chartWidth);
+    const x2 = indexToX(b.idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y1 = yVal(a.pt.value);
+    const y2 = yVal(b.pt.value);
+    const avg = (a.pt.value + b.pt.value) / 2;
+    ctx.strokeStyle = avg > obLevel ? "#ef5350" : avg < osLevel ? "#26a69a" : THEME.rsiColor;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  // Signal EMA line (dashed orange)
+  if (signal.length >= 2) {
+    ctx.strokeStyle = "#FFA726";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath();
+    let started = false;
+    for (const pt of signal) {
+      const idx = bars.findIndex(b => b.t === pt.t);
+      if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+      const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+      const y = yVal(pt.value);
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Label with current value
+  const last = vis[vis.length - 1].pt;
+  const valStr = last.value.toFixed(2);
+  ctx.font = "10px 'IBM Plex Mono', monospace";
+  ctx.fillStyle = THEME.axisText;
+  ctx.textAlign = "left";
+  ctx.fillText(`RSI(${period}) ${valStr}`, 6, subPaneTop + 12);
 }
 
 // ── MACD sub-pane ──────────────────────────────────────
@@ -202,19 +289,15 @@ export function drawMACD(
   const { startIndex, endIndex } = viewport;
   if (subPaneHeight === 0) return;
 
+  const pw = layout.canvasWidth - layout.priceAxisWidth;
   ctx.fillStyle = THEME.subPaneBg;
-  ctx.fillRect(0, subPaneTop, layout.canvasWidth - layout.priceAxisWidth, subPaneHeight);
+  ctx.fillRect(0, subPaneTop, pw, subPaneHeight);
   ctx.strokeStyle = THEME.subPaneBorder;
   ctx.lineWidth = 0.5;
   ctx.beginPath();
   ctx.moveTo(0, subPaneTop);
-  ctx.lineTo(layout.canvasWidth - layout.priceAxisWidth, subPaneTop);
+  ctx.lineTo(pw, subPaneTop);
   ctx.stroke();
-
-  ctx.font = "10px 'IBM Plex Mono', monospace";
-  ctx.fillStyle = THEME.axisText;
-  ctx.textAlign = "left";
-  ctx.fillText("MACD(12,26,9)", 6, subPaneTop + 12);
 
   // Find max abs value for scaling
   let maxAbs = 0;
@@ -228,24 +311,37 @@ export function drawMACD(
   if (maxAbs === 0 || visible.length < 2) return;
 
   const midY = subPaneTop + subPaneHeight / 2;
-  const scale = (subPaneHeight / 2 - 10) / maxAbs;
+  const sc = (subPaneHeight / 2 - 10) / maxAbs;
   const range = endIndex - startIndex || 1;
   const barWidth = Math.max(1, (chartWidth / range) * 0.5);
 
   // Zero line
   ctx.strokeStyle = THEME.zeroLine;
   ctx.lineWidth = 0.5;
+  ctx.setLineDash([4, 4]);
   ctx.beginPath();
-  ctx.moveTo(0, midY);
-  ctx.lineTo(layout.canvasWidth - layout.priceAxisWidth, midY);
+  ctx.moveTo(0, midY); ctx.lineTo(pw, midY);
   ctx.stroke();
+  ctx.setLineDash([]);
 
-  // Histogram
-  for (const { idx, pt } of visible) {
+  // Gradient histogram — color by momentum direction:
+  //   pos & growing  → bright green  (#26a69a)
+  //   pos & shrinking → dim green    (#1a5c56)
+  //   neg & shrinking → bright red   (#ef5350)
+  //   neg & growing  → dim red       (#7a2b2a)
+  for (let i = 0; i < visible.length; i++) {
+    const { idx, pt } = visible[i];
+    const prevHist = i > 0 ? visible[i - 1].pt.histogram : pt.histogram;
+    const growing = Math.abs(pt.histogram) >= Math.abs(prevHist);
+    let color: string;
+    if (pt.histogram >= 0) color = growing ? "#26a69a" : "#1a5c56";
+    else                   color = growing ? "#ef5350" : "#7a2b2a";
+
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const h = pt.histogram * scale;
-    ctx.fillStyle = pt.histogram >= 0 ? THEME.macdHistPos : THEME.macdHistNeg;
-    ctx.fillRect(x - barWidth / 2, midY - (h > 0 ? h : 0), barWidth, Math.abs(h));
+    const h = pt.histogram * sc;
+    ctx.fillStyle = color;
+    if (h >= 0) ctx.fillRect(x - barWidth / 2, midY - h, barWidth, h);
+    else        ctx.fillRect(x - barWidth / 2, midY,     barWidth, -h);
   }
 
   // MACD line
@@ -254,7 +350,7 @@ export function drawMACD(
   ctx.beginPath();
   visible.forEach(({ idx, pt }, i) => {
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const y = midY - pt.macd * scale;
+    const y = midY - pt.macd * sc;
     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   });
   ctx.stroke();
@@ -265,10 +361,33 @@ export function drawMACD(
   ctx.beginPath();
   visible.forEach(({ idx, pt }, i) => {
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const y = midY - pt.signal * scale;
+    const y = midY - pt.signal * sc;
     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   });
   ctx.stroke();
+
+  // Signal-cross markers (small circle where MACD crosses signal)
+  for (let i = 1; i < visible.length; i++) {
+    const prev = visible[i - 1].pt;
+    const curr = visible[i].pt;
+    const crossed = (prev.macd - prev.signal) * (curr.macd - curr.signal) < 0;
+    if (!crossed) continue;
+    const { idx } = visible[i];
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = midY - curr.signal * sc;
+    const bullCross = curr.macd > curr.signal;
+    ctx.fillStyle = bullCross ? "#26a69a" : "#ef5350";
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Label with current MACD value
+  const last = visible[visible.length - 1].pt;
+  ctx.font = "10px 'IBM Plex Mono', monospace";
+  ctx.fillStyle = THEME.axisText;
+  ctx.textAlign = "left";
+  ctx.fillText(`MACD(12,26,9) ${last.macd.toFixed(4)}`, 6, subPaneTop + 12);
 }
 
 // ── VWAP overlay ──────────────────────────────────────
@@ -280,7 +399,12 @@ export function drawVWAP(
   layout: ChartLayout,
   viewport: Viewport,
   scale: PriceScale = "linear",
+  bands?: BandPoint[],
 ): void {
+  // Draw SD bands first (behind the VWAP line)
+  if (bands && bands.length >= 2) {
+    drawBands(ctx, bands, bars, layout, viewport, "rgba(233,30,99,0.07)", "rgba(233,30,99,0.35)", scale);
+  }
   drawIndicatorLine(ctx, points, bars, layout, viewport, THEME.vwapColor, 2, scale);
 }
 
@@ -407,6 +531,96 @@ export function drawTEMA(
   drawIndicatorLine(ctx, points, bars, layout, viewport, "#FF4081", 1.5, scale);
 }
 
+// ── Bollinger Bands (dedicated — squeeze + solid mid) ─
+
+export function drawBollinger(
+  ctx: CanvasRenderingContext2D,
+  points: BandPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  fillColor: string,
+  lineColor: string,
+  scale: PriceScale = "linear",
+  showSqueeze: boolean = true,
+): void {
+  if (points.length < 2) return;
+  const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
+  const { startIndex, endIndex, priceMin, priceMax } = viewport;
+
+  type VisPt = { x: number; upperY: number; lowerY: number; midY: number; bwPrice: number };
+  const vis: VisPt[] = [];
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    vis.push({
+      x,
+      upperY: priceToY(pt.upper, priceMin, priceMax, mainTop, mainHeight, scale),
+      lowerY: priceToY(pt.lower, priceMin, priceMax, mainTop, mainHeight, scale),
+      midY:   priceToY(pt.middle, priceMin, priceMax, mainTop, mainHeight, scale),
+      bwPrice: pt.upper - pt.lower,
+    });
+  }
+  if (vis.length < 2) return;
+
+  // Average bandwidth for squeeze threshold
+  const avgBW = vis.reduce((s, p) => s + p.bwPrice, 0) / vis.length;
+
+  // Draw fill in segments — squeeze gets yellow tint
+  for (let i = 1; i < vis.length; i++) {
+    const sq = showSqueeze && vis[i].bwPrice < avgBW * 0.75;
+    ctx.fillStyle = sq ? "rgba(255,235,59,0.12)" : fillColor;
+    ctx.beginPath();
+    ctx.moveTo(vis[i - 1].x, vis[i - 1].upperY);
+    ctx.lineTo(vis[i].x,     vis[i].upperY);
+    ctx.lineTo(vis[i].x,     vis[i].lowerY);
+    ctx.lineTo(vis[i - 1].x, vis[i - 1].lowerY);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Upper band (dashed)
+  ctx.strokeStyle = lineColor; ctx.lineWidth = 1; ctx.setLineDash([3, 2]);
+  ctx.beginPath();
+  for (let i = 0; i < vis.length; i++) {
+    if (i === 0) ctx.moveTo(vis[i].x, vis[i].upperY);
+    else ctx.lineTo(vis[i].x, vis[i].upperY);
+  }
+  ctx.stroke();
+
+  // Lower band (dashed)
+  ctx.beginPath();
+  for (let i = 0; i < vis.length; i++) {
+    if (i === 0) ctx.moveTo(vis[i].x, vis[i].lowerY);
+    else ctx.lineTo(vis[i].x, vis[i].lowerY);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Middle band — solid, slightly thicker
+  ctx.strokeStyle = lineColor; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < vis.length; i++) {
+    if (i === 0) ctx.moveTo(vis[i].x, vis[i].midY);
+    else ctx.lineTo(vis[i].x, vis[i].midY);
+  }
+  ctx.stroke();
+
+  // Squeeze indicator dots at bottom edge of chart area
+  if (showSqueeze) {
+    const dotY = mainTop + mainHeight - 4;
+    ctx.fillStyle = "#FFD54F";
+    for (let i = 0; i < vis.length; i++) {
+      if (vis[i].bwPrice < avgBW * 0.75) {
+        ctx.beginPath();
+        ctx.arc(vis[i].x, dotY, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
 // ── Donchian Channel overlay ──────────────────────────
 
 export function drawDonchian(
@@ -418,6 +632,50 @@ export function drawDonchian(
   scale: PriceScale = "linear",
 ): void {
   drawBands(ctx, points, bars, layout, viewport, "rgba(0,188,212,0.06)", "#00BCD4", scale);
+}
+
+// ── Donchian with breakout markers ────────────────────
+
+export function drawDonchianBands(
+  ctx: CanvasRenderingContext2D,
+  points: BandPoint[],
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  fillColor: string,
+  lineColor: string,
+  scale: PriceScale = "linear",
+  showBreakout: boolean = true,
+): void {
+  drawBands(ctx, points, bars, layout, viewport, fillColor, lineColor, scale);
+
+  if (!showBreakout || points.length === 0) return;
+
+  const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
+  const { startIndex, endIndex, priceMin, priceMax } = viewport;
+
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    if (idx < 0 || idx >= bars.length) continue;
+    const bar = bars[idx] as { t: number; c?: number; h?: number; l?: number };
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+
+    // High touches upper band — bearish breakout marker
+    if (bar.h !== undefined && bar.h >= pt.upper) {
+      ctx.fillStyle = "#EF5350";
+      ctx.beginPath();
+      ctx.arc(x, priceToY(pt.upper, priceMin, priceMax, mainTop, mainHeight, scale), 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Low touches lower band — bullish breakout marker
+    if (bar.l !== undefined && bar.l <= pt.lower) {
+      ctx.fillStyle = "#26A69A";
+      ctx.beginPath();
+      ctx.arc(x, priceToY(pt.lower, priceMin, priceMax, mainTop, mainHeight, scale), 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 }
 
 // ── Parabolic SAR dots overlay ────────────────────────
@@ -434,22 +692,48 @@ export function drawParabolicSAR(
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
 
+  // Track trend direction across all points (not just visible) for correct reversal detection
+  let prevBull: boolean | null = null;
+
   for (const pt of points) {
     const idx = bars.findIndex(b => b.t === pt.t);
-    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
     if (idx < 0 || idx >= bars.length) continue;
 
     const bar = bars[idx] as { t: number; c: number };
+    const isBull = pt.value <= bar.c; // SAR below price = bullish trend
+    const isReversal = prevBull !== null && isBull !== prevBull;
+    prevBull = isBull;
+
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
     const y = priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight, scale);
 
-    // SAR above close = bearish (red), below close = bullish (green)
-    const closePrice = bar.c;
-    ctx.fillStyle = pt.value > closePrice ? "#EF5350" : "#26A69A";
-
+    // SAR dot
+    ctx.fillStyle = isBull ? "#26A69A" : "#EF5350";
     ctx.beginPath();
     ctx.arc(x, y, 2, 0, Math.PI * 2);
     ctx.fill();
+
+    // Reversal triangle marker
+    if (isReversal) {
+      const ts = 6;
+      ctx.fillStyle = isBull ? "#26A69A" : "#EF5350";
+      ctx.beginPath();
+      if (isBull) {
+        // Bullish reversal: upward triangle above SAR dot
+        ctx.moveTo(x, y - ts - 5);
+        ctx.lineTo(x - ts, y - 5);
+        ctx.lineTo(x + ts, y - 5);
+      } else {
+        // Bearish reversal: downward triangle below SAR dot
+        ctx.moveTo(x, y + ts + 5);
+        ctx.lineTo(x - ts, y + 5);
+        ctx.lineTo(x + ts, y + 5);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 }
 
@@ -517,26 +801,93 @@ export function drawSuperTrend(
   layout: ChartLayout,
   viewport: Viewport,
   scale: PriceScale = "linear",
+  cfg: { showArrows: boolean; showFill: boolean; showLabel: boolean } = { showArrows: true, showFill: false, showLabel: true },
 ): void {
   if (points.length < 2) return;
-  const { startIndex, endIndex } = viewport;
+  const { startIndex, endIndex, priceMin, priceMax } = viewport;
   const { chartLeft, chartWidth, mainTop, mainHeight } = layout;
-  ctx.lineWidth = 2;
-  let lastX = 0, lastY = 0, lastDir: "up" | "down" | null = null;
+
+  type Coord = { x: number; y: number; closeY: number; dir: "up" | "down"; isFlip: boolean };
+  const vis: Coord[] = [];
+
+  // Track direction across all points (including non-visible) for correct flip detection
+  let prevDirAll: "up" | "down" | null = null;
+
   for (const pt of points) {
     const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < 0) continue;
+
+    const isFlip = prevDirAll !== null && pt.direction !== prevDirAll;
+    prevDirAll = pt.direction;
+
     if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const y = priceToY(pt.value, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
-    const color = pt.direction === "up" ? "#26A69A" : "#EF5350";
-    if (lastDir !== null && lastDir === pt.direction) {
-      ctx.strokeStyle = color;
+    const y = priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight, scale);
+    const bar = bars[idx] as { t: number; c?: number };
+    const closeY = priceToY(bar.c ?? pt.value, priceMin, priceMax, mainTop, mainHeight, scale);
+    vis.push({ x, y, closeY, dir: pt.direction, isFlip });
+  }
+  if (vis.length < 2) return;
+
+  // Fill between price and ST line
+  if (cfg.showFill) {
+    for (let i = 1; i < vis.length; i++) {
+      if (vis[i].dir !== vis[i - 1].dir) continue;
+      ctx.fillStyle = vis[i].dir === "up" ? "rgba(38,166,154,0.10)" : "rgba(239,83,80,0.10)";
       ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(x, y);
-      ctx.stroke();
+      ctx.moveTo(vis[i - 1].x, vis[i - 1].closeY);
+      ctx.lineTo(vis[i].x,     vis[i].closeY);
+      ctx.lineTo(vis[i].x,     vis[i].y);
+      ctx.lineTo(vis[i - 1].x, vis[i - 1].y);
+      ctx.closePath();
+      ctx.fill();
     }
-    lastX = x; lastY = y; lastDir = pt.direction;
+  }
+
+  // ST line segments (colored by direction, skip over flips)
+  ctx.lineWidth = 2;
+  for (let i = 1; i < vis.length; i++) {
+    if (vis[i].dir !== vis[i - 1].dir) continue;
+    ctx.strokeStyle = vis[i].dir === "up" ? "#26A69A" : "#EF5350";
+    ctx.beginPath();
+    ctx.moveTo(vis[i - 1].x, vis[i - 1].y);
+    ctx.lineTo(vis[i].x,     vis[i].y);
+    ctx.stroke();
+  }
+
+  // Flip direction arrows
+  if (cfg.showArrows) {
+    let prevDir: "up" | "down" | null = null;
+    for (let i = 0; i < vis.length; i++) {
+      if (prevDir !== null && vis[i].dir !== prevDir) {
+        const ts = 6;
+        ctx.fillStyle = vis[i].dir === "up" ? "#26A69A" : "#EF5350";
+        ctx.beginPath();
+        if (vis[i].dir === "up") {
+          ctx.moveTo(vis[i].x, vis[i].y - ts - 6);
+          ctx.lineTo(vis[i].x - ts, vis[i].y - 6);
+          ctx.lineTo(vis[i].x + ts, vis[i].y - 6);
+        } else {
+          ctx.moveTo(vis[i].x, vis[i].y + ts + 6);
+          ctx.lineTo(vis[i].x - ts, vis[i].y + 6);
+          ctx.lineTo(vis[i].x + ts, vis[i].y + 6);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+      prevDir = vis[i].dir;
+    }
+  }
+
+  // Current direction label
+  if (cfg.showLabel) {
+    const last = vis[vis.length - 1];
+    ctx.font = "bold 11px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = last.dir === "up" ? "#26A69A" : "#EF5350";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.fillText(last.dir === "up" ? "▲ BULL" : "▼ BEAR", chartLeft + chartWidth - 4, mainTop + 4);
   }
 }
 
@@ -549,10 +900,12 @@ export function drawChandelierExit(
   layout: ChartLayout,
   viewport: Viewport,
   scale: PriceScale = "linear",
+  showArrows: boolean = true,
 ): void {
   if (points.length < 2) return;
-  const { startIndex, endIndex } = viewport;
+  const { startIndex, endIndex, priceMin, priceMax } = viewport;
   const { chartLeft, chartWidth, mainTop, mainHeight } = layout;
+
   // Draw longStop (green dashed)
   ctx.strokeStyle = "#26A69A"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
   ctx.beginPath(); let s1 = false;
@@ -560,10 +913,11 @@ export function drawChandelierExit(
     const idx = bars.findIndex(b => b.t === pt.t);
     if (idx < startIndex - 1 || idx > endIndex + 1) continue;
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const y = priceToY(pt.longStop, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    const y = priceToY(pt.longStop, priceMin, priceMax, mainTop, mainHeight, scale);
     if (!s1) { ctx.moveTo(x, y); s1 = true; } else ctx.lineTo(x, y);
   }
   ctx.stroke();
+
   // Draw shortStop (red dashed)
   ctx.strokeStyle = "#EF5350"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
   ctx.beginPath(); let s2 = false;
@@ -571,11 +925,41 @@ export function drawChandelierExit(
     const idx = bars.findIndex(b => b.t === pt.t);
     if (idx < startIndex - 1 || idx > endIndex + 1) continue;
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const y = priceToY(pt.shortStop, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, scale);
+    const y = priceToY(pt.shortStop, priceMin, priceMax, mainTop, mainHeight, scale);
     if (!s2) { ctx.moveTo(x, y); s2 = true; } else ctx.lineTo(x, y);
   }
   ctx.stroke();
   ctx.setLineDash([]);
+
+  // Flip arrows: detect when active stop changes (close crosses a stop)
+  if (showArrows) {
+    let prevDir: "bull" | "bear" | null = null;
+    for (const pt of points) {
+      const idx = bars.findIndex(b => b.t === pt.t);
+      if (idx < 0) continue;
+      const bar = bars[idx] as { t: number; c?: number };
+      const close = bar.c ?? 0;
+      // Active direction: if close is above the longStop, we're in uptrend
+      const dir: "bull" | "bear" = close >= pt.longStop ? "bull" : "bear";
+      const isFlip = prevDir !== null && dir !== prevDir;
+      prevDir = dir;
+      if (!isFlip || idx < startIndex - 1 || idx > endIndex + 1) continue;
+
+      const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+      const stopPrice = dir === "bull" ? pt.longStop : pt.shortStop;
+      const y = priceToY(stopPrice, priceMin, priceMax, mainTop, mainHeight, scale);
+      const ts = 6;
+      ctx.fillStyle = dir === "bull" ? "#26A69A" : "#EF5350";
+      ctx.beginPath();
+      if (dir === "bull") {
+        ctx.moveTo(x, y - ts - 5); ctx.lineTo(x - ts, y - 5); ctx.lineTo(x + ts, y - 5);
+      } else {
+        ctx.moveTo(x, y + ts + 5); ctx.lineTo(x - ts, y + 5); ctx.lineTo(x + ts, y + 5);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
 }
 
 // ── Chande Kroll Stop overlay ─────────────────────────
@@ -727,7 +1111,51 @@ export function drawMARibbon(
   layout: ChartLayout,
   viewport: Viewport,
   scale: PriceScale = "linear",
+  showFill: boolean = true,
 ): void {
+  if (ribbons.length === 0) return;
+
+  // Trend fill between fastest (ribbons[0]) and slowest (ribbons[last])
+  if (showFill && ribbons.length >= 2) {
+    const fast = ribbons[0];
+    const slow = ribbons[ribbons.length - 1];
+    const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
+    const { startIndex, endIndex, priceMin, priceMax } = viewport;
+
+    const fastVis: { x: number; y: number; val: number }[] = [];
+    const slowVis: { x: number; y: number; val: number }[] = [];
+
+    for (const pt of fast.points) {
+      const idx = bars.findIndex(b => b.t === pt.t);
+      if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+      fastVis.push({
+        x: indexToX(idx, startIndex, endIndex, chartLeft, chartWidth),
+        y: priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight, scale),
+        val: pt.value,
+      });
+    }
+    for (const pt of slow.points) {
+      const idx = bars.findIndex(b => b.t === pt.t);
+      if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+      slowVis.push({
+        x: indexToX(idx, startIndex, endIndex, chartLeft, chartWidth),
+        y: priceToY(pt.value, priceMin, priceMax, mainTop, mainHeight, scale),
+        val: pt.value,
+      });
+    }
+
+    if (fastVis.length >= 2 && slowVis.length >= 2) {
+      const isBull = fastVis[fastVis.length - 1].val >= slowVis[slowVis.length - 1].val;
+      ctx.fillStyle = isBull ? "rgba(38,166,154,0.10)" : "rgba(239,83,80,0.10)";
+      ctx.beginPath();
+      ctx.moveTo(fastVis[0].x, fastVis[0].y);
+      for (let i = 1; i < fastVis.length; i++) ctx.lineTo(fastVis[i].x, fastVis[i].y);
+      for (let i = slowVis.length - 1; i >= 0; i--) ctx.lineTo(slowVis[i].x, slowVis[i].y);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
   for (const ribbon of ribbons) {
     if (ribbon.points.length < 2) continue;
     drawIndicatorLine(ctx, ribbon.points, bars, layout, viewport, ribbon.color, 1, scale);

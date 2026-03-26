@@ -81,6 +81,7 @@ const OSCILLATOR_ITEMS: DropdownItem[] = [
   { key: "williamsR", label: "Williams %R", color: "#FF6D00", isSubPane: true },
   { key: "cci", label: "CCI (20)", color: "#2196F3", isSubPane: true },
   { key: "adx", label: "ADX (14)", color: "#787B86", isSubPane: true },
+  { key: "atr", label: "ATR (14)", color: "#26C6DA", isSubPane: true },
   { key: "ao", label: "Awesome Oscillator", color: "#26A69A", isSubPane: true },
   { key: "bop", label: "Balance of Power", color: "#9E9E9E", isSubPane: true },
   { key: "bullBearPower", label: "Bull Bear Power", color: "#26A69A", isSubPane: true },

@@ -166,9 +166,10 @@ export interface StrategyAPI {
   highest(period: number): number;
   lowest(period: number): number;
 
-  // Cross detection (order-stable across bars)
-  crossover(a: number, b: number): boolean;
-  crossunder(a: number, b: number): boolean;
+  // Cross detection (key-stable across bars)
+  // Optional `key` parameter prevents drift when calls are inside conditionals
+  crossover(a: number, b: number, key?: string): boolean;
+  crossunder(a: number, b: number, key?: string): boolean;
 
   // Position state
   position: 'long' | 'short' | null;

@@ -19,16 +19,18 @@ import type {
   ZigzagPoint, AutoFibData, MARibbonData,
   BullBearPoint, KlingerPoint, PPOPoint, RVIPoint, SMIPoint, TSIPoint,
   VortexPoint, AroonPoint,
+  RSISubPane, StochSubPane, WilliamsRSubPane, CCISubPane, ADXSubPane, ATRSubPane,
 } from "./indicators/types";
 import {
-  computeSMA, computeEMA, computeRSI, computeMACD,
-  computeBollinger, computeKeltner,
+  computeSMA, computeEMA, emaFromValues, computeRSI, computeMACD,
+  computeATR, computeBollinger, computeKeltner,
   computeStochastic, computeStochRSI, computeWilliamsR,
   computeCCI, computeADX, computeMFI, computeCMF, computeOBV,
-  computeVWAP, computeIchimoku, computeHMA, computeTEMA,
+  computeVWAP, computeVWAPBands, computeIchimoku, computeHMA, computeTEMA,
   computeDonchian, computeParabolicSAR, computePivotPoints,
   computeVolumeProfile,
 } from "./indicators";
+import type { RSISource } from "./indicators";
 import {
   computeWMA, computeSMMA, computeALMA, computeDEMA, computeLSMA,
   computeMcGinley, computeVWMA, computeEnvelope,
@@ -88,6 +90,8 @@ import {
 } from "./renderers/oscillators";
 import { drawVolumeProfile } from "./renderers/volumeProfile";
 import { drawCurrentPriceLine, drawOHLCLegend, drawIndicatorLegend } from "./renderers/priceLine";
+import { renderChart } from "./renderers/ChartRenderer";
+import type { IndicatorBundle as IndicatorBundleType } from "./renderers/ChartRenderer";
 import {
   drawLineChart, drawAreaChart, drawBarChart,
   drawHollowCandles, drawHeikinAshi, drawBaseline,
@@ -175,33 +179,18 @@ const DEFAULT_CONFIG: ChartIndicatorConfig = {
   correlation: false, adr: false,
 };
 
-interface IndicatorBundle {
-  overlayLines: { points: IndicatorPoint[]; color: string; label: string }[];
-  bands: { points: BandPoint[]; fill: string; line: string; label: string }[];
-  vwap: IndicatorPoint[];
-  ichimoku: IchimokuPoint[];
-  parabolicSAR: IndicatorPoint[];
-  pivotPoints: PivotPointData | null;
-  volumeProfile: VolumeProfileData | null;
-  subPaneData: Record<string, unknown>;
-  sr: SRLevel[];
-  fvg: FVGZone[];
-  trend: TrendLine[];
-  supertrend: SuperTrendPoint[];
-  chandelierExit: ChandelierPoint[];
-  chandeKrollStop: ChandeKrollPoint[];
-  alligator: AlligatorPoint[];
-  zigzag: ZigzagPoint[];
-  autoFib: AutoFibData | null;
-  maRibbon: MARibbonData[];
-}
+// IndicatorBundle type is defined in and re-exported from ChartRenderer
+type IndicatorBundle = IndicatorBundleType;
 
 const EMPTY_BUNDLE: IndicatorBundle = {
-  overlayLines: [], bands: [], vwap: [], ichimoku: [],
+  overlayLines: [], bands: [], vwap: [], vwapBands: [], ichimoku: [],
   parabolicSAR: [], pivotPoints: null, volumeProfile: null,
   subPaneData: {}, sr: [], fvg: [], trend: [],
   supertrend: [], chandelierExit: [], chandeKrollStop: [],
   alligator: [], zigzag: [], autoFib: null, maRibbon: [],
+  maRibbonShowFill: true,
+  supertrendCfg: { showArrows: true, showFill: false, showLabel: true },
+  chandelierShowArrows: true,
 };
 
 /* ─── Indicator chip color/label maps ─── */
@@ -291,10 +280,6 @@ const SUBPANE_META: Record<string, { label: string; color: string }> = {
   correlation: { label: "Correlation", color: "#26A69A" },
   adr: { label: "ADR(14)", color: "#FFD54F" },
 };
-
-function withPane(layout: ChartLayout, pane: SubPaneLayout): ChartLayout {
-  return { ...layout, subPaneTop: pane.top, subPaneHeight: pane.height };
-}
 
 /* ═══════════════════════════════════════════════════════
    Component
@@ -453,26 +438,28 @@ function ChartEngineInner({
     if (bars.length < 5) return EMPTY_BUNDLE;
 
     const overlayLines: IndicatorBundle["overlayLines"] = [];
-    if (effectiveConfig.sma20) overlayLines.push({ points: computeSMA(bars, p("sma20", "period", 20)), color: THEME.sma1Color, label: formatIndicatorLabel("sma20", { period: p("sma20", "period", 20) }) });
-    if (effectiveConfig.sma50) overlayLines.push({ points: computeSMA(bars, p("sma50", "period", 50)), color: THEME.sma2Color, label: formatIndicatorLabel("sma50", { period: p("sma50", "period", 50) }) });
-    if (effectiveConfig.sma200) overlayLines.push({ points: computeSMA(bars, p("sma200", "period", 200)), color: "#FF5252", label: formatIndicatorLabel("sma200", { period: p("sma200", "period", 200) }) });
-    if (effectiveConfig.ema20) overlayLines.push({ points: computeEMA(bars, p("ema20", "period", 20)), color: THEME.emaColor, label: formatIndicatorLabel("ema20", { period: p("ema20", "period", 20) }) });
-    if (effectiveConfig.ema50) overlayLines.push({ points: computeEMA(bars, p("ema50", "period", 50)), color: "#00E676", label: formatIndicatorLabel("ema50", { period: p("ema50", "period", 50) }) });
-    if (effectiveConfig.hma9) overlayLines.push({ points: computeHMA(bars, p("hma9", "period", 9)), color: "#00E676", label: formatIndicatorLabel("hma9", { period: p("hma9", "period", 9) }) });
-    if (effectiveConfig.tema20) overlayLines.push({ points: computeTEMA(bars, p("tema20", "period", 20)), color: "#FF4081", label: formatIndicatorLabel("tema20", { period: p("tema20", "period", 20) }) });
-    if (effectiveConfig.wma) overlayLines.push({ points: computeWMA(bars, p("wma", "period", 20)), color: "#FF9800", label: formatIndicatorLabel("wma", { period: p("wma", "period", 20) }) });
-    if (effectiveConfig.smma) overlayLines.push({ points: computeSMMA(bars, p("smma", "period", 20)), color: "#FF7043", label: formatIndicatorLabel("smma", { period: p("smma", "period", 20) }) });
-    if (effectiveConfig.alma) overlayLines.push({ points: computeALMA(bars, p("alma", "period", 21), p("alma", "sigma", 6), p("alma", "offset", 0.85)), color: "#AB47BC", label: formatIndicatorLabel("alma", { period: p("alma", "period", 21), sigma: p("alma", "sigma", 6), offset: p("alma", "offset", 0.85) }) });
-    if (effectiveConfig.dema) overlayLines.push({ points: computeDEMA(bars, p("dema", "period", 20)), color: "#26C6DA", label: formatIndicatorLabel("dema", { period: p("dema", "period", 20) }) });
-    if (effectiveConfig.lsma) overlayLines.push({ points: computeLSMA(bars, p("lsma", "period", 25)), color: "#66BB6A", label: formatIndicatorLabel("lsma", { period: p("lsma", "period", 25) }) });
-    if (effectiveConfig.mcginley) overlayLines.push({ points: computeMcGinley(bars, p("mcginley", "period", 14)), color: "#FFA726", label: formatIndicatorLabel("mcginley", { period: p("mcginley", "period", 14) }) });
-    if (effectiveConfig.vwma) overlayLines.push({ points: computeVWMA(bars, p("vwma", "period", 20)), color: "#EC407A", label: formatIndicatorLabel("vwma", { period: p("vwma", "period", 20) }) });
+    if (effectiveConfig.sma20) overlayLines.push({ points: computeSMA(bars, p("sma20", "period", 20)), color: THEME.sma1Color, label: formatIndicatorLabel("sma20", { period: p("sma20", "period", 20) }), thickness: p("sma20", "thickness", 1.5), priceColored: p("sma20", "priceColor", 0) !== 0 });
+    if (effectiveConfig.sma50) overlayLines.push({ points: computeSMA(bars, p("sma50", "period", 50)), color: THEME.sma2Color, label: formatIndicatorLabel("sma50", { period: p("sma50", "period", 50) }), thickness: p("sma50", "thickness", 1.5), priceColored: p("sma50", "priceColor", 0) !== 0 });
+    if (effectiveConfig.sma200) overlayLines.push({ points: computeSMA(bars, p("sma200", "period", 200)), color: "#FF5252", label: formatIndicatorLabel("sma200", { period: p("sma200", "period", 200) }), thickness: p("sma200", "thickness", 1.5), priceColored: p("sma200", "priceColor", 0) !== 0 });
+    if (effectiveConfig.ema20) overlayLines.push({ points: computeEMA(bars, p("ema20", "period", 20)), color: THEME.emaColor, label: formatIndicatorLabel("ema20", { period: p("ema20", "period", 20) }), thickness: p("ema20", "thickness", 1.5), priceColored: p("ema20", "priceColor", 0) !== 0 });
+    if (effectiveConfig.ema50) overlayLines.push({ points: computeEMA(bars, p("ema50", "period", 50)), color: "#00E676", label: formatIndicatorLabel("ema50", { period: p("ema50", "period", 50) }), thickness: p("ema50", "thickness", 1.5), priceColored: p("ema50", "priceColor", 0) !== 0 });
+    if (effectiveConfig.hma9) overlayLines.push({ points: computeHMA(bars, p("hma9", "period", 9)), color: "#00E676", label: formatIndicatorLabel("hma9", { period: p("hma9", "period", 9) }), thickness: p("hma9", "thickness", 1.5), priceColored: p("hma9", "priceColor", 0) !== 0 });
+    if (effectiveConfig.tema20) overlayLines.push({ points: computeTEMA(bars, p("tema20", "period", 20)), color: "#FF4081", label: formatIndicatorLabel("tema20", { period: p("tema20", "period", 20) }), thickness: p("tema20", "thickness", 1.5), priceColored: p("tema20", "priceColor", 0) !== 0 });
+    if (effectiveConfig.wma) overlayLines.push({ points: computeWMA(bars, p("wma", "period", 20)), color: "#FF9800", label: formatIndicatorLabel("wma", { period: p("wma", "period", 20) }), thickness: p("wma", "thickness", 1.5), priceColored: p("wma", "priceColor", 0) !== 0 });
+    if (effectiveConfig.smma) overlayLines.push({ points: computeSMMA(bars, p("smma", "period", 20)), color: "#FF7043", label: formatIndicatorLabel("smma", { period: p("smma", "period", 20) }), thickness: p("smma", "thickness", 1.5), priceColored: p("smma", "priceColor", 0) !== 0 });
+    if (effectiveConfig.alma) overlayLines.push({ points: computeALMA(bars, p("alma", "period", 21), p("alma", "sigma", 6), p("alma", "offset", 0.85)), color: "#AB47BC", label: formatIndicatorLabel("alma", { period: p("alma", "period", 21), sigma: p("alma", "sigma", 6), offset: p("alma", "offset", 0.85) }), thickness: p("alma", "thickness", 1.5), priceColored: p("alma", "priceColor", 0) !== 0 });
+    if (effectiveConfig.dema) overlayLines.push({ points: computeDEMA(bars, p("dema", "period", 20)), color: "#26C6DA", label: formatIndicatorLabel("dema", { period: p("dema", "period", 20) }), thickness: p("dema", "thickness", 1.5), priceColored: p("dema", "priceColor", 0) !== 0 });
+    if (effectiveConfig.lsma) overlayLines.push({ points: computeLSMA(bars, p("lsma", "period", 25)), color: "#66BB6A", label: formatIndicatorLabel("lsma", { period: p("lsma", "period", 25) }), thickness: p("lsma", "thickness", 1.5), priceColored: p("lsma", "priceColor", 0) !== 0 });
+    if (effectiveConfig.mcginley) overlayLines.push({ points: computeMcGinley(bars, p("mcginley", "period", 14)), color: "#FFA726", label: formatIndicatorLabel("mcginley", { period: p("mcginley", "period", 14) }), thickness: p("mcginley", "thickness", 1.5), priceColored: p("mcginley", "priceColor", 0) !== 0 });
+    if (effectiveConfig.vwma) overlayLines.push({ points: computeVWMA(bars, p("vwma", "period", 20)), color: "#EC407A", label: formatIndicatorLabel("vwma", { period: p("vwma", "period", 20) }), thickness: p("vwma", "thickness", 1.5), priceColored: p("vwma", "priceColor", 0) !== 0 });
 
     const bandsList: IndicatorBundle["bands"] = [];
     if (effectiveConfig.bollinger) {
       const bbPeriod = p("bollinger", "period", 20);
       const bbStdDev = p("bollinger", "stdDev", 2);
-      bandsList.push({ points: computeBollinger(bars, bbPeriod, bbStdDev), fill: THEME.bbFill, line: THEME.bbLine, label: formatIndicatorLabel("bollinger", { period: bbPeriod, stdDev: bbStdDev }) });
+      const bbSrc = p("bollinger", "source", 0);
+      const bbSqueeze = p("bollinger", "showSqueeze", 1) !== 0;
+      bandsList.push({ points: computeBollinger(bars, bbPeriod, bbStdDev, bbSrc), fill: THEME.bbFill, line: THEME.bbLine, label: formatIndicatorLabel("bollinger", { period: bbPeriod, stdDev: bbStdDev }), type: "bollinger", showSqueeze: bbSqueeze });
     }
     if (effectiveConfig.keltner) {
       const kcEma = p("keltner", "emaPeriod", 20);
@@ -482,7 +469,8 @@ function ChartEngineInner({
     }
     if (effectiveConfig.donchian) {
       const dcPeriod = p("donchian", "period", 20);
-      bandsList.push({ points: computeDonchian(bars, dcPeriod), fill: "rgba(0,188,212,0.06)", line: "#00BCD4", label: formatIndicatorLabel("donchian", { period: dcPeriod }) });
+      const dcBreakout = p("donchian", "showBreakout", 1) !== 0;
+      bandsList.push({ points: computeDonchian(bars, dcPeriod), fill: "rgba(0,188,212,0.06)", line: "#00BCD4", label: formatIndicatorLabel("donchian", { period: dcPeriod }), type: "donchian", showBreakout: dcBreakout });
     }
     if (effectiveConfig.envelope) {
       const envPeriod = p("envelope", "period", 20);
@@ -491,6 +479,9 @@ function ChartEngineInner({
     }
 
     const vwap = effectiveConfig.vwap ? computeVWAP(bars) : [];
+    const vwapBands = effectiveConfig.vwap && p("vwap", "showBands", 0) !== 0
+      ? computeVWAPBands(bars, p("vwap", "bandMult", 1))
+      : [];
     const ichimoku = effectiveConfig.ichimoku ? computeIchimoku(bars, p("ichimoku", "tenkan", 9), p("ichimoku", "kijun", 26), p("ichimoku", "senkouB", 52)) : [];
     const parabolicSAR = effectiveConfig.parabolicSAR ? computeParabolicSAR(bars, p("parabolicSAR", "afStart", 0.02), p("parabolicSAR", "afMax", 0.2)) : [];
     const pivotPointsArr = effectiveConfig.pivotPoints ? computePivotPoints(bars) : [];
@@ -498,23 +489,63 @@ function ChartEngineInner({
     const volumeProfile = effectiveConfig.volumeProfile ? computeVolumeProfile(bars, p("volumeProfile", "numLevels", 50)) : null;
 
     const supertrend = effectiveConfig.supertrend ? computeSuperTrend(bars, p("supertrend", "period", 10), p("supertrend", "multiplier", 3)) : [];
+    const supertrendCfg = { showArrows: p("supertrend", "showArrows", 1) !== 0, showFill: p("supertrend", "showFill", 0) !== 0, showLabel: p("supertrend", "showLabel", 1) !== 0 };
     const chandelierExit = effectiveConfig.chandelierExit ? computeChandelierExit(bars, p("chandelierExit", "period", 22), p("chandelierExit", "multiplier", 3)) : [];
+    const chandelierShowArrows = p("chandelierExit", "showArrows", 1) !== 0;
     const chandeKrollStop = effectiveConfig.chandeKrollStop ? computeChandeKrollStop(bars, p("chandeKrollStop", "p", 10), p("chandeKrollStop", "q", 9), p("chandeKrollStop", "x", 1.5)) : [];
     const alligator = effectiveConfig.alligator ? computeAlligator(bars) : [];
     const zigzag = effectiveConfig.zigzag ? computeZigzag(bars, p("zigzag", "deviation", 5)) : [];
     const autoFib = effectiveConfig.autoFib ? computeAutoFib(bars, p("autoFib", "lookback", 50)) : null;
     const maRibbon = effectiveConfig.maRibbon ? computeMARibbon(bars) : [];
+    const maRibbonShowFill = !!effectiveConfig.maRibbon && p("maRibbon", "showFill", 1) !== 0;
 
     const subPaneData: Record<string, unknown> = {};
     for (const sp of effectiveSubPanes) {
       switch (sp) {
-        case "rsi": subPaneData.rsi = computeRSI(bars, p("rsi", "period", 14)); break;
+        case "rsi": {
+          const rsiPeriod = p("rsi", "period", 14);
+          const rsiSigPer = p("rsi", "signalPeriod", 0);
+          const RSI_SOURCES: RSISource[] = ["close", "hlc3", "hl2", "ohlc4", "hl2c3"];
+          const rsiSrc = RSI_SOURCES[p("rsi", "source", 0)] ?? "close";
+          const rsiPts = computeRSI(bars, rsiPeriod, rsiSrc);
+          const rsiSig: IndicatorPoint[] = rsiSigPer > 0 && rsiPts.length >= rsiSigPer
+            ? emaFromValues(rsiPts.map(pt => pt.value), rsiSigPer)
+                .map((v, i) => ({ t: rsiPts[i + rsiSigPer - 1].t, value: v }))
+            : [];
+          subPaneData.rsi = { points: rsiPts, signal: rsiSig, obLevel: p("rsi", "obLevel", 70), osLevel: p("rsi", "osLevel", 30), period: rsiPeriod } as RSISubPane;
+          break;
+        }
         case "macd": subPaneData.macd = computeMACD(bars, p("macd", "fast", 12), p("macd", "slow", 26), p("macd", "signal", 9)); break;
-        case "stochastic": subPaneData.stochastic = computeStochastic(bars, p("stochastic", "kPeriod", 14), p("stochastic", "dPeriod", 3)); break;
-        case "stochRSI": subPaneData.stochRSI = computeStochRSI(bars, p("stochRSI", "rsiPeriod", 14), p("stochRSI", "stochPeriod", 14), p("stochRSI", "kSmooth", 3), p("stochRSI", "dSmooth", 3)); break;
-        case "williamsR": subPaneData.williamsR = computeWilliamsR(bars, p("williamsR", "period", 14)); break;
-        case "cci": subPaneData.cci = computeCCI(bars, p("cci", "period", 20)); break;
-        case "adx": subPaneData.adx = computeADX(bars, p("adx", "period", 14)); break;
+        case "stochastic": subPaneData.stochastic = { points: computeStochastic(bars, p("stochastic", "kPeriod", 14), p("stochastic", "dPeriod", 3)), obLevel: p("stochastic", "obLevel", 80), osLevel: p("stochastic", "osLevel", 20) } as StochSubPane; break;
+        case "stochRSI": subPaneData.stochRSI = { points: computeStochRSI(bars, p("stochRSI", "rsiPeriod", 14), p("stochRSI", "stochPeriod", 14), p("stochRSI", "kSmooth", 3), p("stochRSI", "dSmooth", 3)), obLevel: p("stochRSI", "obLevel", 80), osLevel: p("stochRSI", "osLevel", 20) } as StochSubPane; break;
+        case "williamsR": subPaneData.williamsR = { points: computeWilliamsR(bars, p("williamsR", "period", 14)), obLevel: p("williamsR", "obLevel", -20), osLevel: p("williamsR", "osLevel", -80) } as WilliamsRSubPane; break;
+        case "cci": subPaneData.cci = { points: computeCCI(bars, p("cci", "period", 20)), obLevel: p("cci", "obLevel", 100), osLevel: p("cci", "osLevel", -100) } as CCISubPane; break;
+        case "adx": subPaneData.adx = { points: computeADX(bars, p("adx", "period", 14)), threshold: p("adx", "threshold", 25), showPlusDI: p("adx", "showPlusDI", 1) !== 0, showMinusDI: p("adx", "showMinusDI", 1) !== 0, showADX: p("adx", "showADX", 1) !== 0 } as ADXSubPane; break;
+        case "atr": {
+          const atrPeriod = p("atr", "period", 14);
+          const atrPct = p("atr", "percentMode", 0) !== 0;
+          const atrMaPer = p("atr", "maPeriod", 0);
+          const rawATR = computeATR(bars, atrPeriod);
+          const atrOffset = atrPeriod - 1;
+          const atrPts: IndicatorPoint[] = rawATR.map((v, i) => ({
+            t: bars[atrOffset + i].t,
+            value: atrPct ? (v / bars[atrOffset + i].c) * 100 : v,
+          }));
+          const atrMa: IndicatorPoint[] = atrMaPer > 0 && atrPts.length >= atrMaPer
+            ? (() => {
+                const ma: IndicatorPoint[] = [];
+                let sum = 0;
+                for (let i = 0; i < atrMaPer; i++) sum += atrPts[i].value;
+                for (let i = atrMaPer - 1; i < atrPts.length; i++) {
+                  if (i >= atrMaPer) sum += atrPts[i].value - atrPts[i - atrMaPer].value;
+                  ma.push({ t: atrPts[i].t, value: sum / atrMaPer });
+                }
+                return ma;
+              })()
+            : [];
+          subPaneData.atr = { points: atrPts, ma: atrMa, percentMode: atrPct, period: atrPeriod } as ATRSubPane;
+          break;
+        }
         case "obv": subPaneData.obv = computeOBV(bars); break;
         case "mfi": subPaneData.mfi = computeMFI(bars, p("mfi", "period", 14)); break;
         case "cmf": subPaneData.cmf = computeCMF(bars, p("cmf", "period", 20)); break;
@@ -563,7 +594,7 @@ function ChartEngineInner({
     const fvg = effectiveConfig.fvg ? detectFVG(bars) : [];
     const trend = effectiveConfig.trendlines ? detectTrendlines(bars) : [];
 
-    return { overlayLines, bands: bandsList, vwap, ichimoku, parabolicSAR, pivotPoints, volumeProfile, subPaneData, sr, fvg, trend, supertrend, chandelierExit, chandeKrollStop, alligator, zigzag, autoFib, maRibbon };
+    return { overlayLines, bands: bandsList, vwap, vwapBands, ichimoku, parabolicSAR, pivotPoints, volumeProfile, subPaneData, sr, fvg, trend, supertrend, supertrendCfg, chandelierExit, chandelierShowArrows, chandeKrollStop, alligator, zigzag, autoFib, maRibbon, maRibbonShowFill };
   }, [bars, effectiveConfig, effectiveSubPanes, indicatorParams, p]);
 
   // Load drawings
@@ -748,234 +779,28 @@ function ChartEngineInner({
     });
   }, [pair]);
 
-  /* ─── Render ─── */
+  /* ─── Render (delegated to ChartRenderer) ─── */
   const render = useCallback(() => {
-    // Sync chart theme with CSS variables (reads :root vars set by ThemeProvider)
-    syncThemeWithCSS();
-
-    const canvas = canvasRef.current;
-    if (!canvas || bars.length === 0) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = dimensions.w * dpr;
-    canvas.height = dimensions.h * dpr;
-    canvas.style.width = `${dimensions.w}px`;
-    canvas.style.height = `${dimensions.h}px`;
-    ctx.scale(dpr, dpr);
-
-    const zoom = zoomRef.current;
-    const rawViewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
-
-    // Apply price axis zoom factor, then vertical price offset
-    const viewport = (() => {
-      let vp = rawViewport;
-      // Price axis zoom (drag-to-scale)
-      if (priceZoomRef.current !== 1.0) {
-        const mid = (vp.priceMin + vp.priceMax) / 2;
-        const halfRange = ((vp.priceMax - vp.priceMin) / 2) * priceZoomRef.current;
-        vp = { ...vp, priceMin: mid - halfRange, priceMax: mid + halfRange };
-      }
-      // Vertical pan offset
-      if (zoom.priceOffset !== 0) {
-        vp = { ...vp, priceMin: vp.priceMin + zoom.priceOffset, priceMax: vp.priceMax + zoom.priceOffset };
-      }
-      return vp;
-    })();
-
-    const ch = crosshairRef.current;
-
-    // Reference price for percent scale (first visible bar's close)
-    const refBarIdx = Math.max(0, Math.floor(zoom.startIndex));
-    const refPrice = bars[refBarIdx]?.c || bars[0]?.c || 1;
-
-    // Background
-    ctx.fillStyle = THEME.canvasBg;
-    ctx.fillRect(0, 0, dimensions.w, dimensions.h);
-
-    // Watermark — faded pair name
-    ctx.save();
-    ctx.font = `bold ${Math.min(layout.mainHeight * 0.18, 120)}px 'IBM Plex Mono', monospace`;
-    ctx.fillStyle = "rgba(42,46,57,0.18)";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const watermarkText = pair.length > 3 ? `${pair.slice(0, 3)}/${pair.slice(3)}` : pair;
-    ctx.fillText(watermarkText, layout.chartLeft + layout.chartWidth / 2, layout.mainTop + layout.mainHeight / 2);
-    ctx.restore();
-
-    // Session highlighting (behind everything)
-    if (enabledSessions.length > 0) {
-      drawSessions(ctx, bars, layout, viewport, enabledSessions);
-    }
-
-    // Layer 1: Behind candles
-    if (indicators.sr.length > 0) drawSRLevels(ctx, indicators.sr, layout, viewport, priceScale);
-    if (indicators.fvg.length > 0) drawFVGZones(ctx, indicators.fvg, layout, viewport, priceScale);
-    if (indicators.trend.length > 0) drawTrendlines(ctx, indicators.trend, bars, layout, viewport, priceScale);
-    for (const band of indicators.bands) drawBands(ctx, band.points, bars, layout, viewport, band.fill, band.line, priceScale);
-    if (indicators.ichimoku.length > 0) drawIchimoku(ctx, indicators.ichimoku, bars, layout, viewport, priceScale);
-
-    // Layer 2: Price data (chart type dispatch)
-    switch (effectiveChartType) {
-      case "candles":
-        drawCandlesticks(ctx, bars, layout, viewport, priceScale);
-        break;
-      case "hollow":
-        drawHollowCandles(ctx, bars, layout, viewport, priceScale);
-        break;
-      case "bars":
-        drawBarChart(ctx, bars, layout, viewport, priceScale);
-        break;
-      case "line":
-        drawLineChart(ctx, bars, layout, viewport, priceScale);
-        break;
-      case "area":
-        drawAreaChart(ctx, bars, layout, viewport, priceScale);
-        break;
-      case "heikinAshi":
-        drawHeikinAshi(ctx, bars, layout, viewport, priceScale);
-        break;
-      case "baseline":
-        drawBaseline(ctx, bars, layout, viewport, priceScale);
-        break;
-    }
-
-    // Layer 3: Overlays on top
-    for (const line of indicators.overlayLines) drawIndicatorLine(ctx, line.points, bars, layout, viewport, line.color, 1.5, priceScale);
-    if (indicators.vwap.length > 0) drawVWAP(ctx, indicators.vwap, bars, layout, viewport, priceScale);
-    if (indicators.parabolicSAR.length > 0) drawParabolicSAR(ctx, indicators.parabolicSAR, bars, layout, viewport, priceScale);
-    if (indicators.pivotPoints) drawPivotPoints(ctx, indicators.pivotPoints, layout, viewport, priceScale);
-    if (indicators.supertrend.length > 0) drawSuperTrend(ctx, indicators.supertrend, bars, layout, viewport, priceScale);
-    if (indicators.chandelierExit.length > 0) drawChandelierExit(ctx, indicators.chandelierExit, bars, layout, viewport, priceScale);
-    if (indicators.chandeKrollStop.length > 0) drawChandeKrollStop(ctx, indicators.chandeKrollStop, bars, layout, viewport, priceScale);
-    if (indicators.alligator.length > 0) drawAlligator(ctx, indicators.alligator, bars, layout, viewport, priceScale);
-    if (indicators.zigzag.length > 0) drawZigzag(ctx, indicators.zigzag, bars, layout, viewport, priceScale);
-    if (indicators.autoFib) drawAutoFib(ctx, indicators.autoFib, layout, viewport, priceScale);
-    if (indicators.maRibbon.length > 0) drawMARibbon(ctx, indicators.maRibbon, bars, layout, viewport, priceScale);
-
-    // Layer 4: Current price line
-    drawCurrentPriceLine(ctx, bars, layout, viewport, pair, priceScale);
-
-    // Layer 5: Volume
-    drawVolume(ctx, bars, layout, viewport);
-    if (indicators.volumeProfile) drawVolumeProfile(ctx, indicators.volumeProfile, layout, viewport, priceScale);
-
-    // Layer 6: Sub-panes
-    for (let i = 0; i < effectiveSubPanes.length; i++) {
-      const pane = layout.subPanes[i];
-      if (!pane) continue;
-      const type = effectiveSubPanes[i];
-      const d = indicators.subPaneData;
-      switch (type) {
-        case "rsi": drawRSI(ctx, d.rsi as IndicatorPoint[], bars, withPane(layout, pane), viewport); break;
-        case "macd": drawMACD(ctx, d.macd as MACDPoint[], bars, withPane(layout, pane), viewport); break;
-        case "stochastic": drawStochastic(ctx, d.stochastic as StochasticPoint[], bars, layout, viewport, pane); break;
-        case "stochRSI": drawStochRSI(ctx, d.stochRSI as StochasticPoint[], bars, layout, viewport, pane); break;
-        case "williamsR": drawWilliamsR(ctx, d.williamsR as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "cci": drawCCI(ctx, d.cci as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "adx": drawADX(ctx, d.adx as ADXPoint[], bars, layout, viewport, pane); break;
-        case "obv": drawOBV(ctx, d.obv as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "mfi": drawMFI(ctx, d.mfi as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "cmf": drawCMF(ctx, d.cmf as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "ao": drawAO(ctx, d.ao as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "bop": drawBOP(ctx, d.bop as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "bbtrend": drawBBTrend(ctx, d.bbtrend as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "bullBearPower": drawBullBearPower(ctx, d.bullBearPower as BullBearPoint[], bars, layout, viewport, pane); break;
-        case "chaikinOsc": drawChaikinOsc(ctx, d.chaikinOsc as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "cmo": drawCMO(ctx, d.cmo as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "choppiness": drawChoppiness(ctx, d.choppiness as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "chopZone": drawChopZone(ctx, d.chopZone as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "connorsRSI": drawConnorsRSI(ctx, d.connorsRSI as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "coppock": drawCoppock(ctx, d.coppock as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "dpo": drawDPO(ctx, d.dpo as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "eom": drawEOM(ctx, d.eom as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "efi": drawEFI(ctx, d.efi as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "fisher": drawFisher(ctx, d.fisher as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "klinger": drawKlinger(ctx, d.klinger as KlingerPoint[], bars, layout, viewport, pane); break;
-        case "kst": drawKST(ctx, d.kst as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "massIndex": drawMassIndex(ctx, d.massIndex as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "momentum": drawMomentum(ctx, d.momentum as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "ppo": drawPPO(ctx, d.ppo as PPOPoint[], bars, layout, viewport, pane); break;
-        case "roc": drawROC(ctx, d.roc as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "rvi": drawRVI(ctx, d.rvi as RVIPoint[], bars, layout, viewport, pane); break;
-        case "smi": drawSMI(ctx, d.smi as SMIPoint[], bars, layout, viewport, pane); break;
-        case "trix": drawTRIX(ctx, d.trix as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "tsi": drawTSI(ctx, d.tsi as TSIPoint[], bars, layout, viewport, pane); break;
-        case "ultimateOscillator": drawUltimateOscillator(ctx, d.ultimateOscillator as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "vortex": drawVortex(ctx, d.vortex as VortexPoint[], bars, layout, viewport, pane); break;
-        case "aroon": drawAroon(ctx, d.aroon as AroonPoint[], bars, layout, viewport, pane); break;
-        case "adl": drawADL(ctx, d.adl as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "cvd": drawCVD(ctx, d.cvd as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "cvi": drawCVI(ctx, d.cvi as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "netVolume": drawNetVolume(ctx, d.netVolume as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "pvt": drawPVT(ctx, d.pvt as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "volumeOscillator": drawVolumeOscillator(ctx, d.volumeOscillator as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "bbPercentB": drawBBPercentB(ctx, d.bbPercentB as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "bbWidth": drawBBWidth(ctx, d.bbWidth as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "histVol": drawHistVol(ctx, d.histVol as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "correlation": drawCorrelation(ctx, d.correlation as IndicatorPoint[], bars, layout, viewport, pane); break;
-        case "adr": drawADRPane(ctx, d.adr as IndicatorPoint[], bars, layout, viewport, pane); break;
-      }
-    }
-
-    // Layer 7: Drawings (apply drag override if active, respect hide toggle)
-    if (!hideDrawingsRef.current) {
-      let renderDrawings = drawings;
-      if (dragOverrideRef.current) {
-        const ov = dragOverrideRef.current;
-        renderDrawings = drawings.map(d => d.id === ov.id ? { ...d, points: ov.points } : d);
-      }
-      drawDrawings(ctx, renderDrawings, layout, viewport, pair, priceScale, selectedDrawingId, hoveredDrawingId, bars);
-
-    // Layer 7b: Rubber-band preview (drawing in progress)
-    const currentPoints = drawingPointsRef.current;
-    const currentMode = drawingModeRef.current;
-    if (currentMode && currentPoints.length > 0 && ch.visible) {
-      const neededPoints = currentMode === "horizontal" ? 1 : 2;
-      if (currentPoints.length < neededPoints) {
-        let rbx = ch.x, rby = ch.y;
-        if (shiftHeldRef.current && currentMode !== "horizontal") {
-          const p0 = currentPoints[0];
-          const p0x = indexToX(p0.index, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth);
-          const p0y = priceToY(p0.price, viewport.priceMin, viewport.priceMax, layout.mainTop, layout.mainHeight, priceScale);
-          if (currentMode === "rectangle") {
-            // Shift = square constraint (equal width and height in pixels)
-            const dx = ch.x - p0x;
-            const dy = ch.y - p0y;
-            const side = Math.max(Math.abs(dx), Math.abs(dy));
-            rbx = p0x + side * Math.sign(dx || 1);
-            rby = p0y + side * Math.sign(dy || 1);
-          } else {
-            // Shift-snap to 15° increments for trendlines
-            const snapped = shiftSnapPoint(p0x, p0y, ch.x, ch.y);
-            rbx = snapped.x;
-            rby = snapped.y;
-          }
-        }
-        drawRubberBand(ctx, currentPoints[0], rbx, rby, layout, viewport, priceScale, currentMode, undefined, magneticSnapResultRef.current);
-      }
-    }
-
-    } // end hideDrawingsRef check
-
-    // Layer 8: Axes
-    drawPriceAxis(ctx, layout, viewport, pair, priceScale, refPrice);
-    drawTimeAxis(ctx, layout, viewport, bars, interval);
-
-    // Layer 8b: Drawing price axis labels (on top of axes)
-    if (!hideDrawingsRef.current) {
-      drawDrawingPriceLabels(ctx, drawings, layout, viewport, priceScale, selectedDrawingId);
-    }
-
-    // Layer 9: Crosshair
-    drawCrosshair(ctx, ch, layout, viewport, bars, pair, crosshairMode, priceScale, refPrice);
-
-    // Layer 10: OHLC Legend — Row 1 (top-left)
-    drawOHLCLegend(ctx, bars, layout, viewport, pair, ch.visible ? ch.snapIndex : -1);
-
-    // Layer 11: Indicator chips — Row 2 (below OHLC)
-    drawIndicatorLegend(ctx, indicators.overlayLines, indicators.bands, layout);
+    renderChart(
+      {
+        canvas: canvasRef.current,
+        zoom: zoomRef.current,
+        priceZoom: priceZoomRef.current,
+        crosshair: crosshairRef.current,
+        drawingPoints: drawingPointsRef.current,
+        drawingMode: drawingModeRef.current,
+        shiftHeld: shiftHeldRef.current,
+        hideDrawings: hideDrawingsRef.current,
+        dragOverride: dragOverrideRef.current,
+        magneticSnapResult: magneticSnapResultRef.current,
+      },
+      {
+        bars, layout, indicators, drawings, pair, interval,
+        subPanes: effectiveSubPanes, dimensions,
+        chartType: effectiveChartType, enabledSessions,
+        priceScale, crosshairMode, selectedDrawingId, hoveredDrawingId,
+      },
+    );
   }, [bars, layout, indicators, drawings, pair, interval, effectiveSubPanes, dimensions, effectiveChartType, enabledSessions, priceScale, crosshairMode, selectedDrawingId, hoveredDrawingId]);
 
   /* ─── Animation loop ─── */

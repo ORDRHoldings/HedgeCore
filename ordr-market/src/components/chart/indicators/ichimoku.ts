@@ -50,25 +50,25 @@ export function computeIchimoku(
 
     if (tenkanVal === null || kijunVal === null) continue;
 
-    // Senkou A at this bar = (Tenkan + Kijun)/2 from `kijunPeriod` bars ago
-    // But for display we associate it with current bar's timestamp
-    // Senkou A: displaced forward from where it was computed
-    const senkouASourceIdx = i - kijunPeriod;
+    // Senkou Span A & B: displaced forward by kijunPeriod from source
+    // Both use the same sourceIdx and the same fallback logic for consistency
+    const senkouSourceIdx = i - kijunPeriod;
+
+    // Senkou A: (Tenkan + Kijun) / 2 from kijunPeriod bars ago
     const senkouA =
-      senkouASourceIdx >= 0 &&
-      tenkan[senkouASourceIdx] !== null &&
-      kijun[senkouASourceIdx] !== null
-        ? ((tenkan[senkouASourceIdx] as number) + (kijun[senkouASourceIdx] as number)) / 2
+      senkouSourceIdx >= 0 &&
+      tenkan[senkouSourceIdx] !== null &&
+      kijun[senkouSourceIdx] !== null
+        ? ((tenkan[senkouSourceIdx] as number) + (kijun[senkouSourceIdx] as number)) / 2
         : (tenkanVal + kijunVal) / 2;
 
-    // Senkou B: displaced forward from where it was computed
-    const senkouBSourceIdx = i - kijunPeriod;
+    // Senkou B: midpoint over senkouBPeriod from kijunPeriod bars ago
     const senkouB =
-      senkouBSourceIdx >= 0 && senkouBRaw[senkouBSourceIdx] !== null
-        ? (senkouBRaw[senkouBSourceIdx] as number)
+      senkouSourceIdx >= 0 && senkouBRaw[senkouSourceIdx] !== null
+        ? (senkouBRaw[senkouSourceIdx] as number)
         : senkouBRaw[i] !== null
           ? (senkouBRaw[i] as number)
-          : 0;
+          : (tenkanVal + kijunVal) / 2;
 
     // Chikou: current close, but displayed `kijunPeriod` bars back.
     // We store the chikou value at the current index for the data point.

@@ -21,19 +21,15 @@ export function computeSuperTrend(bars: Bar[], period = 10, multiplier = 3): Sup
     if (i < period) {
       atr[i] = tr;
     } else if (i === period) {
-      atr[i] =
-        bars
-          .slice(1, period + 1)
-          .reduce(
-            (s, b, j) =>
-              s +
-              Math.max(
-                b.h - b.l,
-                Math.abs(b.h - bars[j].c),
-                Math.abs(b.l - bars[j].c),
-              ),
-            0,
-          ) / period;
+      let trSum = 0;
+      for (let j = 1; j <= period; j++) {
+        trSum += Math.max(
+          bars[j].h - bars[j].l,
+          Math.abs(bars[j].h - bars[j - 1].c),
+          Math.abs(bars[j].l - bars[j - 1].c),
+        );
+      }
+      atr[i] = trSum / period;
     } else {
       atr[i] = (atr[i - 1] * (period - 1) + tr) / period;
     }

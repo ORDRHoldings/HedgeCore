@@ -2,6 +2,7 @@
 export { computeSMA } from "./sma";
 export { computeEMA, emaFromValues } from "./ema";
 export { computeRSI } from "./rsi";
+export type { RSISource } from "./rsi";
 export { computeMACD } from "./macd";
 export { computeATR } from "./atr";
 export { computeBollinger } from "./bollinger";
@@ -18,7 +19,7 @@ export { computeADX } from "./adx";
 export { computeMFI } from "./mfi";
 export { computeCMF } from "./cmf";
 export { computeOBV } from "./obv";
-export { computeVWAP } from "./vwap";
+export { computeVWAP, computeVWAPBands } from "./vwap";
 export { computeVolumeProfile } from "./volume_profile";
 
 // --- Overlays ---
@@ -44,6 +45,13 @@ export type {
   VolumeProfileLevel,
   VolumeProfileData,
   PivotPointData,
+  // Sub-pane data bundles
+  RSISubPane,
+  StochSubPane,
+  WilliamsRSubPane,
+  CCISubPane,
+  ADXSubPane,
+  ATRSubPane,
 } from "./types";
 
 // --- New Overlay/Trend indicators ---

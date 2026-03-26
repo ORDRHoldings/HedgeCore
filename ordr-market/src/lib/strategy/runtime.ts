@@ -11,31 +11,48 @@ import {
 } from '@/components/chart/indicators';
 import type { IndicatorPoint } from '@/components/chart/indicators';
 
-// ── Crossover tracker (order-stable) ─────────────────────────────────────────
+// ── Crossover tracker (key-stable) ──────────────────────────────────────────
+// Uses explicit string keys when provided, falling back to call-order index.
+// Explicit keys prevent drift when crossover calls are inside conditionals
+// (e.g., `if (cond) api.crossover(a, b, 'rsi_cross')`) — the key stays
+// stable regardless of whether the branch executes on every bar.
 class CrossoverTracker {
-  private history = new Map<number, { a: number; b: number }>();
+  private history = new Map<string, { a: number; b: number }>();
   private callCount = 0;
 
   resetBar(): void { this.callCount = 0; }
 
-  crossover(a: number, b: number): boolean {
-    const key = this.callCount++;
-    const prev = this.history.get(key) ?? { a: NaN, b: NaN };
-    this.history.set(key, { a, b });
+  crossover(a: number, b: number, key?: string): boolean {
+    const k = key ?? `_${this.callCount++}`;
+    const prev = this.history.get(k) ?? { a: NaN, b: NaN };
+    this.history.set(k, { a, b });
     return !isNaN(prev.a) && prev.a <= prev.b && a > b;
   }
 
-  crossunder(a: number, b: number): boolean {
-    const key = this.callCount++;
-    const prev = this.history.get(key) ?? { a: NaN, b: NaN };
-    this.history.set(key, { a, b });
+  crossunder(a: number, b: number, key?: string): boolean {
+    const k = key ?? `_${this.callCount++}`;
+    const prev = this.history.get(k) ?? { a: NaN, b: NaN };
+    this.history.set(k, { a, b });
     return !isNaN(prev.a) && prev.a >= prev.b && a < b;
   }
+}
+
+// ── Timestamp → index map (built once per run, O(1) lookups) ────────────────
+function buildTimeIndex(bars: Bar[]): Map<number, number> {
+  const map = new Map<number, number>();
+  for (let i = 0; i < bars.length; i++) map.set(bars[i].t, i);
+  return map;
 }
 
 // ── Series cache ──────────────────────────────────────────────────────────────
 class SeriesCache {
   private cache = new Map<string, number[]>();
+  private timeIndex: Map<number, number> | null = null;
+
+  private getTimeIndex(bars: Bar[]): Map<number, number> {
+    if (!this.timeIndex) this.timeIndex = buildTimeIndex(bars);
+    return this.timeIndex;
+  }
 
   get(key: string, bars: Bar[], compute: () => IndicatorPoint[] | number[]): number[] {
     if (this.cache.has(key)) return this.cache.get(key)!;
@@ -48,10 +65,11 @@ class SeriesCache {
       const offset = bars.length - raw.length;
       (raw as number[]).forEach((v, i) => { aligned[offset + i] = v; });
     } else {
-      // IndicatorPoint[] — align by timestamp
+      // IndicatorPoint[] — align by timestamp via O(1) Map lookup
+      const tIdx = this.getTimeIndex(bars);
       (raw as IndicatorPoint[]).forEach(pt => {
-        const idx = bars.findIndex(b => b.t === pt.t);
-        if (idx >= 0) aligned[idx] = pt.value;
+        const idx = tIdx.get(pt.t);
+        if (idx !== undefined) aligned[idx] = pt.value;
       });
     }
 
@@ -69,9 +87,10 @@ class SeriesCache {
     const u = new Array<number>(bars.length).fill(NaN);
     const m = new Array<number>(bars.length).fill(NaN);
     const l = new Array<number>(bars.length).fill(NaN);
+    const tIdx = this.getTimeIndex(bars);
     compute().forEach(pt => {
-      const i = bars.findIndex(b => b.t === pt.t);
-      if (i >= 0) { u[i] = pt.upper; m[i] = pt.middle; l[i] = pt.lower; }
+      const i = tIdx.get(pt.t);
+      if (i !== undefined) { u[i] = pt.upper; m[i] = pt.middle; l[i] = pt.lower; }
     });
     this.cache.set(uk, u); this.cache.set(mk, m); this.cache.set(lk, l);
     return { upper: u, middle: m, lower: l };
@@ -87,9 +106,10 @@ class SeriesCache {
     const m = new Array<number>(bars.length).fill(NaN);
     const s = new Array<number>(bars.length).fill(NaN);
     const h = new Array<number>(bars.length).fill(NaN);
+    const tIdx = this.getTimeIndex(bars);
     compute().forEach(pt => {
-      const i = bars.findIndex(b => b.t === pt.t);
-      if (i >= 0) { m[i] = pt.macd; s[i] = pt.signal; h[i] = pt.histogram; }
+      const i = tIdx.get(pt.t);
+      if (i !== undefined) { m[i] = pt.macd; s[i] = pt.signal; h[i] = pt.histogram; }
     });
     this.cache.set(mk, m); this.cache.set(sk, s); this.cache.set(hk, h);
     return { macd: m, signal: s, hist: h };
@@ -104,9 +124,10 @@ class SeriesCache {
     }
     const k = new Array<number>(bars.length).fill(NaN);
     const d = new Array<number>(bars.length).fill(NaN);
+    const tIdx = this.getTimeIndex(bars);
     compute().forEach(pt => {
-      const i = bars.findIndex(b => b.t === pt.t);
-      if (i >= 0) { k[i] = pt.k; d[i] = pt.d; }
+      const i = tIdx.get(pt.t);
+      if (i !== undefined) { k[i] = pt.k; d[i] = pt.d; }
     });
     this.cache.set(kk, k); this.cache.set(dk, d);
     return { k, d };
@@ -127,6 +148,32 @@ export interface RuntimeState {
   entryTime: number | null;
 }
 
+// ── Pre-built OHLCV arrays (built once, sliced lazily) ────────────────────────
+interface OHLCVArrays {
+  closes: number[];
+  opens: number[];
+  highs: number[];
+  lows: number[];
+  volumes: number[];
+}
+
+function buildOHLCVArrays(bars: Bar[]): OHLCVArrays {
+  const len = bars.length;
+  const closes  = new Array<number>(len);
+  const opens   = new Array<number>(len);
+  const highs   = new Array<number>(len);
+  const lows    = new Array<number>(len);
+  const volumes = new Array<number>(len);
+  for (let i = 0; i < len; i++) {
+    closes[i]  = bars[i].c;
+    opens[i]   = bars[i].o;
+    highs[i]   = bars[i].h;
+    lows[i]    = bars[i].l;
+    volumes[i] = bars[i].v;
+  }
+  return { closes, opens, highs, lows, volumes };
+}
+
 // ── Build context ─────────────────────────────────────────────────────────────
 export function buildAPI(
   bars: Bar[],
@@ -137,10 +184,14 @@ export function buildAPI(
   pendingOrders: PendingOrder[],
   pendingPlots: Map<string, PlotCall[]>,
   userParams: Map<string, number>,
+  ohlcv?: OHLCVArrays,
 ): StrategyAPI {
   const bar = bars[index];
-  const slice = bars.slice(0, index + 1);
   const n = (arr: number[]) => arr[index] ?? NaN;
+
+  // Use pre-built OHLCV arrays with slice instead of rebuilding per bar
+  const src = ohlcv ?? buildOHLCVArrays(bars);
+  const end = index + 1;
 
   return {
     close:  bar.c,
@@ -151,11 +202,11 @@ export function buildAPI(
     index,
     time:   bar.t,
 
-    closes:  slice.map(b => b.c),
-    opens:   slice.map(b => b.o),
-    highs:   slice.map(b => b.h),
-    lows:    slice.map(b => b.l),
-    volumes: slice.map(b => b.v),
+    closes:  src.closes.slice(0, end),
+    opens:   src.opens.slice(0, end),
+    highs:   src.highs.slice(0, end),
+    lows:    src.lows.slice(0, end),
+    volumes: src.volumes.slice(0, end),
 
     sma: (period: number) => n(seriesCache.get(`sma_${period}`, bars, () => computeSMA(bars, period))),
     ema: (period: number) => n(seriesCache.get(`ema_${period}`, bars, () => computeEMA(bars, period))),
@@ -180,16 +231,20 @@ export function buildAPI(
 
     highest: (period: number) => {
       const start = Math.max(0, index - period + 1);
-      return Math.max(...bars.slice(start, index + 1).map(b => b.h));
+      let max = -Infinity;
+      for (let i = start; i <= index; i++) if (bars[i].h > max) max = bars[i].h;
+      return max;
     },
 
     lowest: (period: number) => {
       const start = Math.max(0, index - period + 1);
-      return Math.min(...bars.slice(start, index + 1).map(b => b.l));
+      let min = Infinity;
+      for (let i = start; i <= index; i++) if (bars[i].l < min) min = bars[i].l;
+      return min;
     },
 
-    crossover:  (a, b) => crossTracker.crossover(a, b),
-    crossunder: (a, b) => crossTracker.crossunder(a, b),
+    crossover:  (a, b, key?) => crossTracker.crossover(a, b, key),
+    crossunder: (a, b, key?) => crossTracker.crossunder(a, b, key),
 
     position:     state.position,
     entryPrice:   state.entryPrice,
@@ -218,4 +273,5 @@ export function buildAPI(
   };
 }
 
-export { CrossoverTracker, SeriesCache };
+export { CrossoverTracker, SeriesCache, buildOHLCVArrays };
+export type { OHLCVArrays };

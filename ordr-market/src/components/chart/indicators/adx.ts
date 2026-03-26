@@ -66,7 +66,7 @@ export function computeADX(
 
     const pdi = smoothTR === 0 ? 0 : (smoothPlusDM / smoothTR) * 100;
     const mdi = smoothTR === 0 ? 0 : (smoothMinusDM / smoothTR) * 100;
-    diValues.push({ plusDI: pdi, minusDI: mdi, t: bars[i + 1].t });
+    diValues.push({ plusDI: pdi, minusDI: mdi, t: bars[i].t });
   }
 
   // DX values

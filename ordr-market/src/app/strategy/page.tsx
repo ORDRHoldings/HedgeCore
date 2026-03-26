@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser, logout } from '@/lib/auth';
-import { runBacktest } from '@/lib/strategy/engine';
+import { runBacktestSandboxed } from '@/lib/strategy/runSandboxed';
 import { TEMPLATES, DEFAULT_TEMPLATE } from '@/lib/strategy/templates';
 import {
   saveStrategy, loadStrategy, listUserStrategies, newStrategyId, deleteStrategy,
@@ -343,7 +343,7 @@ export default function StrategyPage() {
     await new Promise(r => setTimeout(r, 50));
     try {
       const bars = generateBars(500, config.interval);
-      const res  = runBacktest(bars, code, lang, config);
+      const res  = await runBacktestSandboxed(bars, code, lang, config);
       setResult(res);
       setRightTab(res.error ? 'overview' : 'equity');
     } finally {

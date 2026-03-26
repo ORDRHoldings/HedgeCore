@@ -41,11 +41,31 @@ function uid(): string {
 }
 
 function token(): string {
+  if (typeof globalThis.crypto?.getRandomValues === 'function') {
+    const bytes = new Uint8Array(24);
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  }
+  // SSR fallback — demo only
   return Array.from({ length: 5 }, () => Math.random().toString(36).slice(2)).join('');
 }
 
-/** Deterministic hash — demo only, not cryptographically secure */
-function hash(str: string): string {
+/** SHA-256 hash via Web Crypto API (async, cryptographically secure) */
+async function hash(str: string): Promise<string> {
+  if (typeof globalThis.crypto?.subtle?.digest === 'function') {
+    const data = new TextEncoder().encode(str);
+    const buf = await globalThis.crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('');
+  }
+  // SSR / test fallback — Node.js crypto
+  if (typeof require !== 'undefined') {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const nodeCrypto = require('crypto');
+      return nodeCrypto.createHash('sha256').update(str).digest('hex');
+    } catch { /* fall through */ }
+  }
+  // Last resort: DJB2 (non-crypto, only reached in exotic environments)
   let h = 5381;
   for (let i = 0; i < str.length; i++) {
     h = ((h << 5) + h) ^ str.charCodeAt(i);
@@ -57,13 +77,13 @@ function initials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-// ── Seed demo users ───────────────────────────────────────────────────────────
+// ── Seed demo users (pre-computed SHA-256 password hashes) ────────────────────
 const DEMO_USERS: User[] = [
   {
     id: 'user_demo_01',
     username: 'DemoTrader',
     email: 'demo@ordr.market',
-    passwordHash: hash('demo123'),
+    passwordHash: 'd3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791', // SHA-256('demo123')
     createdAt: Date.now() - 86400000 * 30,
     plan: 'free',
     credits: 250,
@@ -76,7 +96,7 @@ const DEMO_USERS: User[] = [
     id: 'user_pro_01',
     username: 'ProAlgo',
     email: 'pro@ordr.market',
-    passwordHash: hash('pro123'),
+    passwordHash: 'cb1513ece93b4a593042a5c181ab2e123260f197a51a92b758c1697839067669', // SHA-256('pro123')
     createdAt: Date.now() - 86400000 * 90,
     plan: 'pro',
     credits: 5000,
@@ -140,11 +160,11 @@ function toPublic(user: User): PublicUser {
 }
 
 // ── Auth API ──────────────────────────────────────────────────────────────────
-export function register(
+export async function register(
   email: string,
   username: string,
   password: string,
-): AuthResult {
+): Promise<AuthResult> {
   const users = loadUsers();
   if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
     return { ok: false, error: 'Email already registered.' };
@@ -159,7 +179,7 @@ export function register(
     id: 'user_' + uid(),
     username,
     email,
-    passwordHash: hash(password),
+    passwordHash: await hash(password),
     createdAt: Date.now(),
     plan: 'free',
     credits: 100,
@@ -176,11 +196,11 @@ export function register(
   return { ok: true, user: toPublic(newUser), token: sess.token };
 }
 
-export function login(email: string, password: string): AuthResult {
+export async function login(email: string, password: string): Promise<AuthResult> {
   const users = loadUsers();
   const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
   if (!user) return { ok: false, error: 'No account found for that email.' };
-  if (user.passwordHash !== hash(password)) return { ok: false, error: 'Incorrect password.' };
+  if (user.passwordHash !== await hash(password)) return { ok: false, error: 'Incorrect password.' };
 
   const sess: Session = { token: token(), userId: user.id, expiresAt: Date.now() + 86400000 * 7 };
   saveSession(sess);

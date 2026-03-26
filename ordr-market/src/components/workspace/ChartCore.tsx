@@ -65,10 +65,10 @@ export function ChartCore() {
   // Live tick from WebSocket (updates last bar in real-time)
   const { tick, connected: wsConnected } = useMarketWebSocket(state.symbol);
 
-  // Merge live tick into last bar
+  // Merge live tick into last bar (single array copy, not slice+spread)
   const bars = useMemo<Bar[]>(() => {
     if (!fetchedBars.length) return fetchedBars;
-    if (!tick || tick.mid <= 0) return fetchedBars;
+    if (!tick || !Number.isFinite(tick.mid) || tick.mid <= 0) return fetchedBars;
 
     const last = fetchedBars[fetchedBars.length - 1];
     const liveBar: Bar = {
@@ -77,7 +77,9 @@ export function ChartCore() {
       h: Math.max(last.h, tick.mid),
       l: Math.min(last.l, tick.mid),
     };
-    return [...fetchedBars.slice(0, -1), liveBar];
+    const result = fetchedBars.slice();
+    result[result.length - 1] = liveBar;
+    return result;
   }, [fetchedBars, tick]);
 
   const handlePairChange = (pair: string) => {

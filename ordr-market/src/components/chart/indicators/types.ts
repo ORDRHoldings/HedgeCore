@@ -114,3 +114,46 @@ export interface SMIPoint { t: number; smi: number; signal: number; }
 export interface TSIPoint { t: number; tsi: number; signal: number; }
 export interface VortexPoint { t: number; viPlus: number; viMinus: number; }
 export interface AroonPoint { t: number; up: number; down: number; oscillator: number; }
+
+// ── Sub-pane data bundles (points + config passed as one object) ───────────────
+
+export interface RSISubPane {
+  points: IndicatorPoint[];
+  signal: IndicatorPoint[];   // EMA of RSI (empty when signalPeriod === 0)
+  obLevel: number;            // overbought level (default 70)
+  osLevel: number;            // oversold level (default 30)
+  period: number;
+}
+
+export interface StochSubPane {
+  points: StochasticPoint[];
+  obLevel: number;            // default 80
+  osLevel: number;            // default 20
+}
+
+export interface WilliamsRSubPane {
+  points: IndicatorPoint[];
+  obLevel: number;            // default -20
+  osLevel: number;            // default -80
+}
+
+export interface CCISubPane {
+  points: IndicatorPoint[];
+  obLevel: number;            // default 100
+  osLevel: number;            // default -100
+}
+
+export interface ADXSubPane {
+  points: ADXPoint[];
+  threshold: number;          // trend strength threshold (default 25)
+  showPlusDI: boolean;
+  showMinusDI: boolean;
+  showADX: boolean;
+}
+
+export interface ATRSubPane {
+  points: IndicatorPoint[];   // ATR values (absolute or % of price)
+  ma: IndicatorPoint[];       // SMA of ATR (empty when maPeriod === 0)
+  percentMode: boolean;       // true → show as % of close
+  period: number;
+}

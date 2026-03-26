@@ -18,6 +18,11 @@ import type {
   TSIPoint,
   VortexPoint,
   AroonPoint,
+  StochSubPane,
+  WilliamsRSubPane,
+  CCISubPane,
+  ADXSubPane,
+  ATRSubPane,
 } from "../indicators/types";
 import type { ChartLayout, Viewport, SubPaneLayout } from "../core/data";
 import { indexToX } from "../core/data";
@@ -161,23 +166,33 @@ function autoScaleRange(
   return { min: lo - range * padding, max: hi + range * padding };
 }
 
-// ── Stochastic (14,3,3) ───────────────────────────────
+// ── Stochastic ────────────────────────────────────────
 
 export function drawStochastic(
   ctx: CanvasRenderingContext2D,
-  points: StochasticPoint[],
+  data: StochSubPane,
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
   pane: SubPaneLayout,
 ): void {
+  const { points, obLevel, osLevel } = data;
   if (points.length < 2 || pane.height === 0) return;
   drawPaneBg(ctx, layout, pane);
-  drawPaneLabel(ctx, "Stoch(14,3,3)", pane);
 
-  // Guide lines at 80 and 20
-  drawGuide100(ctx, layout, pane, 80, THEME.level30_70);
-  drawGuide100(ctx, layout, pane, 20, THEME.level70_30);
+  const pw = layout.canvasWidth - layout.priceAxisWidth;
+
+  // OB / OS zone fills
+  const yOB = pane.top + pane.height * (1 - obLevel / 100);
+  const yOS = pane.top + pane.height * (1 - osLevel / 100);
+  ctx.fillStyle = "rgba(239,83,80,0.10)";
+  ctx.fillRect(0, pane.top, pw, yOB - pane.top);
+  ctx.fillStyle = "rgba(38,166,154,0.10)";
+  ctx.fillRect(0, yOS, pw, pane.top + pane.height - yOS);
+
+  drawGuide100(ctx, layout, pane, obLevel, THEME.level30_70);
+  drawGuide100(ctx, layout, pane, osLevel, THEME.level70_30);
+  drawGuide100(ctx, layout, pane, 50, THEME.zeroLine);
 
   // K line
   drawFixedRangeLine(
@@ -189,24 +204,56 @@ export function drawStochastic(
     ctx, points.map(p => ({ t: p.t, v: p.d })),
     bars, layout, viewport, pane, 0, 100, THEME.stochD, 1,
   );
+
+  // K/D crossover circles in OB or OS zone
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1], curr = points[i];
+    const crossed = (prev.k - prev.d) * (curr.k - curr.d) < 0;
+    if (!crossed) continue;
+    const inZone = curr.k > obLevel || curr.k < osLevel;
+    if (!inZone) continue;
+    const idx = bars.findIndex(b => b.t === curr.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = valueToY(curr.k, 0, 100, pane);
+    const bullCross = curr.k > prev.k;
+    ctx.fillStyle = bullCross ? "#26a69a" : "#ef5350";
+    ctx.beginPath();
+    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawPaneLabel(ctx, `Stoch OB:${obLevel} OS:${osLevel}`, pane);
 }
 
 // ── Stochastic RSI ────────────────────────────────────
 
 export function drawStochRSI(
   ctx: CanvasRenderingContext2D,
-  points: StochasticPoint[],
+  data: StochSubPane,
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
   pane: SubPaneLayout,
 ): void {
+  const { points, obLevel, osLevel } = data;
   if (points.length < 2 || pane.height === 0) return;
   drawPaneBg(ctx, layout, pane);
-  drawPaneLabel(ctx, "StochRSI(14,14,3,3)", pane);
 
-  drawGuide100(ctx, layout, pane, 80, THEME.level30_70);
-  drawGuide100(ctx, layout, pane, 20, THEME.level70_30);
+  const pw = layout.canvasWidth - layout.priceAxisWidth;
+  const yOB = pane.top + pane.height * (1 - obLevel / 100);
+  const yOS = pane.top + pane.height * (1 - osLevel / 100);
+
+  ctx.fillStyle = "rgba(239,83,80,0.10)";
+  ctx.fillRect(0, pane.top, pw, yOB - pane.top);
+  ctx.fillStyle = "rgba(38,166,154,0.10)";
+  ctx.fillRect(0, yOS, pw, pane.top + pane.height - yOS);
+
+  drawGuide100(ctx, layout, pane, obLevel, THEME.level30_70);
+  drawGuide100(ctx, layout, pane, osLevel, THEME.level70_30);
+  drawGuide100(ctx, layout, pane, 50, THEME.zeroLine);
 
   drawFixedRangeLine(
     ctx, points.map(p => ({ t: p.t, v: p.k })),
@@ -216,102 +263,216 @@ export function drawStochRSI(
     ctx, points.map(p => ({ t: p.t, v: p.d })),
     bars, layout, viewport, pane, 0, 100, THEME.stochD, 1,
   );
+
+  // Strong cross signals: K/D cross inside OB or OS zone
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1], curr = points[i];
+    const crossed = (prev.k - prev.d) * (curr.k - curr.d) < 0;
+    if (!crossed) continue;
+    const inOB = curr.k > obLevel, inOS = curr.k < osLevel;
+    if (!inOB && !inOS) continue;
+    const idx = bars.findIndex(b => b.t === curr.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = valueToY(curr.k, 0, 100, pane);
+    // Bear cross in OB = sell signal; bull cross in OS = buy signal
+    const signal = (inOB && curr.k < prev.k) || (inOS && curr.k > prev.k);
+    ctx.strokeStyle = signal ? (inOS ? "#26a69a" : "#ef5350") : THEME.axisText;
+    ctx.lineWidth = signal ? 2 : 1;
+    ctx.fillStyle = signal ? (inOS ? "#26a69a" : "#ef5350") : THEME.axisText;
+    ctx.beginPath();
+    ctx.arc(x, y, signal ? 4 : 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawPaneLabel(ctx, `StochRSI OB:${obLevel} OS:${osLevel}`, pane);
 }
 
 // ── Williams %R ───────────────────────────────────────
 
 export function drawWilliamsR(
   ctx: CanvasRenderingContext2D,
-  points: IndicatorPoint[],
+  data: WilliamsRSubPane,
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
   pane: SubPaneLayout,
 ): void {
+  const { points, obLevel, osLevel } = data;
   if (points.length < 2 || pane.height === 0) return;
   drawPaneBg(ctx, layout, pane);
-  drawPaneLabel(ctx, "Williams %R(14)", pane);
 
-  // Guide lines at -20 (overbought) and -80 (oversold)
-  // Range is -100 to 0; map -20 => 80% from bottom, -80 => 20% from bottom
-  const y20 = valueToY(-20, -100, 0, pane);
-  const y80 = valueToY(-80, -100, 0, pane);
-  drawGuideY(ctx, layout, y20, THEME.level30_70);
-  drawGuideY(ctx, layout, y80, THEME.level70_30);
+  const pw = layout.canvasWidth - layout.priceAxisWidth;
+  // Range is [-100, 0]; obLevel e.g. -20, osLevel e.g. -80
+  const yOB = valueToY(obLevel, -100, 0, pane);
+  const yOS = valueToY(osLevel, -100, 0, pane);
 
-  drawFixedRangeLine(
-    ctx, points.map(p => ({ t: p.t, v: p.value })),
-    bars, layout, viewport, pane, -100, 0, "#FF6D00", 1.5,
-  );
+  // OB zone fill (top → OB line)
+  ctx.fillStyle = "rgba(239,83,80,0.10)";
+  ctx.fillRect(0, pane.top, pw, yOB - pane.top);
+  // OS zone fill (OS → bottom)
+  ctx.fillStyle = "rgba(38,166,154,0.10)";
+  ctx.fillRect(0, yOS, pw, pane.top + pane.height - yOS);
+
+  drawGuideY(ctx, layout, yOB, THEME.level30_70);
+  drawGuideY(ctx, layout, yOS, THEME.level70_30);
+  drawGuideY(ctx, layout, valueToY(-50, -100, 0, pane), THEME.zeroLine);
+
+  // Color line by zone
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
+  const vis: { idx: number; v: number }[] = [];
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    vis.push({ idx, v: pt.value });
+  }
+  for (let i = 0; i < vis.length - 1; i++) {
+    const a = vis[i], b = vis[i + 1];
+    const avg = (a.v + b.v) / 2;
+    ctx.strokeStyle = avg > obLevel ? "#ef5350" : avg < osLevel ? "#26a69a" : "#FF6D00";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(indexToX(a.idx, startIndex, endIndex, chartLeft, chartWidth), valueToY(a.v, -100, 0, pane));
+    ctx.lineTo(indexToX(b.idx, startIndex, endIndex, chartLeft, chartWidth), valueToY(b.v, -100, 0, pane));
+    ctx.stroke();
+  }
+
+  drawPaneLabel(ctx, `W%R(${data.points.length ? "" : "14"}) OB:${obLevel} OS:${osLevel}`, pane);
 }
 
 // ── CCI ───────────────────────────────────────────────
 
 export function drawCCI(
   ctx: CanvasRenderingContext2D,
-  points: IndicatorPoint[],
+  data: CCISubPane,
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
   pane: SubPaneLayout,
 ): void {
+  const { points, obLevel, osLevel } = data;
   if (points.length < 2 || pane.height === 0) return;
   drawPaneBg(ctx, layout, pane);
-  drawPaneLabel(ctx, "CCI(20)", pane);
 
-  // Auto-scale
+  const pw = layout.canvasWidth - layout.priceAxisWidth;
+  // Auto-scale with OB/OS lines guaranteed visible
   const timestamps = points.map(p => p.t);
   const vals = points.map(p => p.value);
-  const { min: rangeMin, max: rangeMax } = autoScaleRange(
-    [vals], timestamps, bars, viewport, 0.1,
-  );
+  const { min: rMin, max: rMax } = autoScaleRange([vals], timestamps, bars, viewport, 0.1);
+  const rangeMin = Math.min(rMin, osLevel * 1.1);
+  const rangeMax = Math.max(rMax, obLevel * 1.1);
 
-  // Guide lines at +100, -100, and 0
-  const y100 = valueToY(100, rangeMin, rangeMax, pane);
-  const yNeg100 = valueToY(-100, rangeMin, rangeMax, pane);
+  const yOB   = valueToY(obLevel,  rangeMin, rangeMax, pane);
+  const yOS   = valueToY(osLevel,  rangeMin, rangeMax, pane);
   const yZero = valueToY(0, rangeMin, rangeMax, pane);
-  drawGuideY(ctx, layout, y100, THEME.level30_70);
-  drawGuideY(ctx, layout, yNeg100, THEME.level70_30);
+
+  // OB / OS zone fills
+  ctx.fillStyle = "rgba(239,83,80,0.10)";
+  ctx.fillRect(0, pane.top, pw, yOB - pane.top);
+  ctx.fillStyle = "rgba(38,166,154,0.10)";
+  ctx.fillRect(0, yOS, pw, pane.top + pane.height - yOS);
+
+  drawGuideY(ctx, layout, yOB,   THEME.level30_70);
+  drawGuideY(ctx, layout, yOS,   THEME.level70_30);
   drawGuideY(ctx, layout, yZero, THEME.zeroLine);
 
-  drawFixedRangeLine(
-    ctx, points.map(p => ({ t: p.t, v: p.value })),
-    bars, layout, viewport, pane, rangeMin, rangeMax, "#2196F3", 1.5,
-  );
+  // Color CCI line by zone
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
+  const vis: { idx: number; v: number }[] = [];
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    vis.push({ idx, v: pt.value });
+  }
+  for (let i = 0; i < vis.length - 1; i++) {
+    const a = vis[i], b = vis[i + 1];
+    const avg = (a.v + b.v) / 2;
+    ctx.strokeStyle = avg > obLevel ? "#ef5350" : avg < osLevel ? "#26a69a" : "#2196F3";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(indexToX(a.idx, startIndex, endIndex, chartLeft, chartWidth), valueToY(a.v, rangeMin, rangeMax, pane));
+    ctx.lineTo(indexToX(b.idx, startIndex, endIndex, chartLeft, chartWidth), valueToY(b.v, rangeMin, rangeMax, pane));
+    ctx.stroke();
+  }
+
+  drawPaneLabel(ctx, `CCI OB:${obLevel} OS:${osLevel}`, pane);
 }
 
 // ── ADX ───────────────────────────────────────────────
 
 export function drawADX(
   ctx: CanvasRenderingContext2D,
-  points: ADXPoint[],
+  data: ADXSubPane,
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
   pane: SubPaneLayout,
 ): void {
+  const { points, threshold, showPlusDI, showMinusDI, showADX } = data;
   if (points.length < 2 || pane.height === 0) return;
   drawPaneBg(ctx, layout, pane);
-  drawPaneLabel(ctx, "ADX(14)", pane);
 
-  // Guide at 25
-  drawGuide100(ctx, layout, pane, 25, THEME.zeroLine);
+  const pw = layout.canvasWidth - layout.priceAxisWidth;
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
 
-  // +DI (green)
-  drawFixedRangeLine(
-    ctx, points.map(p => ({ t: p.t, v: p.plusDI })),
-    bars, layout, viewport, pane, 0, 100, THEME.bullBody, 1,
-  );
-  // -DI (red)
-  drawFixedRangeLine(
-    ctx, points.map(p => ({ t: p.t, v: p.minusDI })),
-    bars, layout, viewport, pane, 0, 100, THEME.bearBody, 1,
-  );
-  // ADX (gray, bold)
-  drawFixedRangeLine(
-    ctx, points.map(p => ({ t: p.t, v: p.adx })),
-    bars, layout, viewport, pane, 0, 100, THEME.axisText, 2,
-  );
+  // Threshold guide line
+  drawGuide100(ctx, layout, pane, threshold, THEME.zeroLine);
+
+  // DI dominance fill — draw filled area between +DI and -DI, colored by dominance
+  const vis: { idx: number; pt: ADXPoint }[] = [];
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    vis.push({ idx, pt });
+  }
+
+  if (vis.length >= 2 && (showPlusDI || showMinusDI)) {
+    for (let i = 0; i < vis.length - 1; i++) {
+      const a = vis[i], b = vis[i + 1];
+      const x1 = indexToX(a.idx, startIndex, endIndex, chartLeft, chartWidth);
+      const x2 = indexToX(b.idx, startIndex, endIndex, chartLeft, chartWidth);
+      const plusDom = (a.pt.plusDI + b.pt.plusDI) / 2 > (a.pt.minusDI + b.pt.minusDI) / 2;
+      ctx.fillStyle = plusDom ? "rgba(38,166,154,0.12)" : "rgba(239,83,80,0.12)";
+      const topA = valueToY(Math.max(a.pt.plusDI, a.pt.minusDI), 0, 100, pane);
+      const botA = valueToY(Math.min(a.pt.plusDI, a.pt.minusDI), 0, 100, pane);
+      const topB = valueToY(Math.max(b.pt.plusDI, b.pt.minusDI), 0, 100, pane);
+      const botB = valueToY(Math.min(b.pt.plusDI, b.pt.minusDI), 0, 100, pane);
+      ctx.beginPath();
+      ctx.moveTo(x1, topA);
+      ctx.lineTo(x2, topB);
+      ctx.lineTo(x2, botB);
+      ctx.lineTo(x1, botA);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // DI cross markers
+  for (let i = 1; i < vis.length; i++) {
+    const prev = vis[i - 1].pt, curr = vis[i].pt;
+    const crossed = (prev.plusDI - prev.minusDI) * (curr.plusDI - curr.minusDI) < 0;
+    if (!crossed) continue;
+    const x = indexToX(vis[i].idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = valueToY((curr.plusDI + curr.minusDI) / 2, 0, 100, pane);
+    ctx.fillStyle = curr.plusDI > curr.minusDI ? "#26a69a" : "#ef5350";
+    ctx.beginPath();
+    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (showPlusDI) drawFixedRangeLine(ctx, points.map(p => ({ t: p.t, v: p.plusDI })), bars, layout, viewport, pane, 0, 100, THEME.bullBody, 1);
+  if (showMinusDI) drawFixedRangeLine(ctx, points.map(p => ({ t: p.t, v: p.minusDI })), bars, layout, viewport, pane, 0, 100, THEME.bearBody, 1);
+  if (showADX) drawFixedRangeLine(ctx, points.map(p => ({ t: p.t, v: p.adx })), bars, layout, viewport, pane, 0, 100, THEME.axisText, 2);
+
+  // Current ADX value label
+  const lastPt = vis.length > 0 ? vis[vis.length - 1].pt : null;
+  const adxLabel = lastPt ? ` ${lastPt.adx.toFixed(1)}` : "";
+  drawPaneLabel(ctx, `ADX(${threshold})${adxLabel}`, pane);
 }
 
 // ── MFI ───────────────────────────────────────────────
@@ -1580,4 +1741,72 @@ export function drawADRPane(
     ctx, points.map(p => ({ t: p.t, v: p.value })),
     bars, layout, viewport, pane, rangeMin, rangeMax, "#FFD54F", 1.5,
   );
+}
+
+// ── ATR — Average True Range ──────────────────────────
+
+export function drawATR(
+  ctx: CanvasRenderingContext2D,
+  data: ATRSubPane,
+  bars: { t: number }[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  pane: SubPaneLayout,
+): void {
+  const { points, ma, percentMode, period } = data;
+  if (points.length < 2 || pane.height === 0) return;
+  drawPaneBg(ctx, layout, pane);
+
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
+
+  // Auto-scale: include both ATR and MA values
+  const timestamps = points.map(p => p.t);
+  const vals = points.map(p => p.value);
+  const maVals = ma.map(p => p.value);
+  const { min: rangeMin, max: rangeMax } = autoScaleRange(
+    maVals.length > 0 ? [vals, maVals] : [vals],
+    timestamps, bars, viewport, 0.1,
+  );
+
+  // Fill area under ATR curve with gradient (high = more intense)
+  const visATR: { idx: number; v: number }[] = [];
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    visATR.push({ idx, v: pt.value });
+  }
+
+  if (visATR.length >= 2) {
+    const yBase = pane.top + pane.height;
+    ctx.fillStyle = "rgba(38,198,218,0.10)";
+    ctx.beginPath();
+    ctx.moveTo(indexToX(visATR[0].idx, startIndex, endIndex, chartLeft, chartWidth), yBase);
+    for (const { idx, v } of visATR) {
+      ctx.lineTo(indexToX(idx, startIndex, endIndex, chartLeft, chartWidth), valueToY(v, rangeMin, rangeMax, pane));
+    }
+    ctx.lineTo(indexToX(visATR[visATR.length - 1].idx, startIndex, endIndex, chartLeft, chartWidth), yBase);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // ATR line
+  drawFixedRangeLine(
+    ctx, points.map(p => ({ t: p.t, v: p.value })),
+    bars, layout, viewport, pane, rangeMin, rangeMax, "#26C6DA", 1.5,
+  );
+
+  // MA overlay (SMA of ATR)
+  if (ma.length >= 2) {
+    drawFixedRangeLine(
+      ctx, ma.map(p => ({ t: p.t, v: p.value })),
+      bars, layout, viewport, pane, rangeMin, rangeMax, "#FFA726", 1,
+    );
+  }
+
+  // Last value label
+  const lastPt = visATR.length > 0 ? visATR[visATR.length - 1] : null;
+  const valStr = lastPt ? (percentMode ? `${lastPt.v.toFixed(2)}%` : lastPt.v.toFixed(4)) : "";
+  const suffix = percentMode ? " %" : "";
+  drawPaneLabel(ctx, `ATR(${period})${suffix} ${valStr}`, pane);
 }

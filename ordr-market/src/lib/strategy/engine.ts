@@ -6,9 +6,10 @@
 import type { Bar, BacktestConfig, BacktestResult, Trade, EquityPoint, PlotSeries } from './types';
 import { EMPTY_METRICS } from './types';
 import { calculateMetrics } from './metrics';
-import { buildAPI, CrossoverTracker, SeriesCache } from './runtime';
+import { buildAPI, CrossoverTracker, SeriesCache, buildOHLCVArrays } from './runtime';
 import type { RuntimeState, PendingOrder } from './runtime';
 import { transpile } from './transpile';
+import { sanitizeCode } from './sanitize';
 
 // ── ID generator ──────────────────────────────────────────────────────────────
 let tradeCounter = 0;
@@ -23,14 +24,13 @@ function buildStrategyFn(jsCode: string): (api: unknown) => void {
     if (typeof onBar === 'function') { __callOnBar = onBar; }
     else if (typeof on_bar === 'function') { __callOnBar = on_bar; }
   `;
-  const container: { __callOnBar?: (api: unknown) => void } = {};
   try {
     // eslint-disable-next-line no-new-func
-    const factory = new Function('__callOnBar', `
-      let __callOnBar = __callOnBar_in;
+    const factory = new Function(`
+      let __callOnBar;
       ${wrapped}
       return __callOnBar;
-    `.replace('__callOnBar_in', 'undefined'));
+    `);
     const fn = factory();
     if (typeof fn === 'function') return fn;
     throw new Error('Strategy must define a function named "onBar" (JS/Pine) or "on_bar" (Python).');
@@ -141,12 +141,24 @@ export function runBacktest(
 ): BacktestResult {
   const t0 = performance.now();
 
+  // 0. Sanitize raw code before any processing
+  const sanity = sanitizeCode(code);
+  if (!sanity.ok) {
+    return makeErrorResult(sanity.error!, config);
+  }
+
   // 1. Transpile non-JS code
   let jsCode: string;
   try {
     jsCode = transpile(code, language);
   } catch (e) {
     return makeErrorResult(String(e), config);
+  }
+
+  // 1b. Sanitize transpiled output (catches patterns introduced by transpiler)
+  const postSanity = sanitizeCode(jsCode);
+  if (!postSanity.ok) {
+    return makeErrorResult(`Transpiled code failed validation: ${postSanity.error}`, config);
   }
 
   // 2. Compile strategy function
@@ -165,6 +177,7 @@ export function runBacktest(
   const plotsMap = new Map<string, PlotSeries>();
   const crossTracker = new CrossoverTracker();
   const seriesCache  = new SeriesCache();
+  const ohlcv        = buildOHLCVArrays(bars);
 
   // 4. Bar loop
   for (let i = 0; i < bars.length; i++) {
@@ -174,7 +187,7 @@ export function runBacktest(
 
     crossTracker.resetBar();
 
-    const api = buildAPI(bars, i, state, crossTracker, seriesCache, pendingOrders, pendingPlots, userParams);
+    const api = buildAPI(bars, i, state, crossTracker, seriesCache, pendingOrders, pendingPlots, userParams, ohlcv);
 
     try {
       stratFn(api);

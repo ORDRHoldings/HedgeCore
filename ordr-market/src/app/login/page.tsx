@@ -28,15 +28,15 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         if (tab === 'login') {
-          const res = login(email, password);
+          const res = await login(email, password);
           if (res.ok) router.replace('/strategy');
           else setError(res.error);
         } else {
           if (password !== confirm) { setError('Passwords do not match.'); setLoading(false); return; }
-          const res = register(email, username, password);
+          const res = await register(email, username, password);
           if (res.ok) router.replace('/strategy');
           else setError(res.error);
         }
@@ -46,10 +46,10 @@ export default function LoginPage() {
     }, 400);
   }
 
-  function demoLogin(type: 'free' | 'pro') {
+  async function demoLogin(type: 'free' | 'pro') {
     const email = type === 'pro' ? 'pro@ordr.market' : 'demo@ordr.market';
     const pass  = type === 'pro' ? 'pro123' : 'demo123';
-    const res = login(email, pass);
+    const res = await login(email, pass);
     if (res.ok) router.replace('/strategy');
   }
 
