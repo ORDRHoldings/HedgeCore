@@ -635,13 +635,14 @@ class TestConnectionEdgeCases:
         assert resp.status_code == 503
 
     @pytest.mark.asyncio
-    async def test_auth_required(self):
-        """Requests without auth should return 401."""
+    async def test_no_auth_required(self):
+        """Market data live endpoints are public — no auth header needed."""
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test",
         ) as client:
             resp = await client.get("/api/v1/market-data/live/fx-rates")
-        assert resp.status_code in (401, 403)
+        # Public endpoint: must NOT return 401/403
+        assert resp.status_code not in (401, 403)
 
 
 # ---------------------------------------------------------------------------

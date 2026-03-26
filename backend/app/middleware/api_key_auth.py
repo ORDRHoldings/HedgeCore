@@ -85,6 +85,9 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             "/api/v1/voice/",
             # Public endpoints — unauthenticated, rate-limited by the route itself.
             "/api/v1/public/",
+            # Live market data — FX rates, equity quotes, macro. Publicly available
+            # data served server-to-server from Next.js API routes; no auth needed.
+            "/api/v1/market-data/live/",
         )
 
         self._keys: dict[str, APIKeyRecord] = {}
