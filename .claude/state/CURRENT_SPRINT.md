@@ -11,17 +11,32 @@ rotate production secrets, and close the remaining HIGH risks.
 | # | Item | Status | Priority |
 |---|------|--------|----------|
 | 1 | Secret rotation — Render + Vercel env vars | open | high |
-| 2 | IBKR: enable when TWS running — verify CIP forward points live | open | high |
-| 3 | Sandbox end-to-end: autofill → calculate with live spot | open | high |
-| 4 | Wire Twelve Data to backend market routes (complement yfinance) | open | medium |
-| 5 | Dashboard FX rates widget: verify live data renders | open | medium |
-| 6 | frontend-v2: reconcile deleted files or remove from git tracking | open | medium |
-| 7 | Close risk #2 (market data feed) once IBKR confirmed live | open | low |
+| 2 | IBKR: enable when TWS running — verify CIP forward points live | blocked | high |
+| 3 | Sandbox end-to-end: autofill → calculate with live spot | DONE | high |
+| 4 | Wire Twelve Data to backend market routes (complement yfinance) | DONE | medium |
+| 5 | Dashboard FX rates widget: verify live data renders | DONE | medium |
+| 6 | frontend-v2: reconcile deleted files or remove from git tracking | DONE | medium |
+| 7 | Close risk #2 (market data feed) once IBKR confirmed live | blocked | low |
 
-## Completed: 0/7
+## Completed: 4/7
 ## Sprint Status: IN PROGRESS
 
-## Provider Status (2026-03-22)
+## Provider Status (2026-03-25)
+| Provider | Status | Key |
+|---|---|---|
+| yfinance | ✅ live | none needed |
+| Twelve Data | ✅ live — verified prod 2026-03-25 (EURUSD 1.1564, USDJPY 159.35, USDMXN 17.78) | ea3629bd... |
+| Alpha Vantage | ✅ live | 00GCMPHP... |
+| Finnhub | ✅ live | d6h68mpr... |
+| exchangerate-api.com | ✅ live | none needed |
+| IBKR | ⏳ blocked | requires TWS on port 4001 |
+
+## Key Fix 2026-03-25
+- `fix(middleware)`: /api/v1/market-data/live/* added to public_prefixes in APIKeyAuthMiddleware
+  → TwelveData provider chain now active in production (was falling back to exchangerate-api.com due to 401)
+- Production DB stamped: alembic_version = 2026_03_24_baseline
+
+## Provider Status (2026-03-22 — historical)
 | Provider | Status | Key |
 |---|---|---|
 | yfinance | ✅ live | none needed |

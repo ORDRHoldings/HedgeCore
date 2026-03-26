@@ -99,6 +99,23 @@ services:
       - key: SYNEX_CORE_URL
         value: https://synex-core.onrender.com
 
+  # ── Keep-alive cron (RISK-INF-01 mitigation) ────────────────────────────────
+  # Pings the production backend every 14 minutes to prevent free-tier cold starts.
+  # Free-tier services sleep after ~15 min inactivity; this keeps hedgecore warm.
+  - type: cron
+    name: hedgecore-keepalive
+    runtime: python
+    schedule: "*/14 * * * *"
+    buildCommand: pip install requests
+    startCommand: >
+      python -c "
+      import requests, sys;
+      r = requests.get('https://hedgecore.onrender.com/api/health', timeout=10);
+      print(r.status_code, r.text[:80]);
+      sys.exit(0 if r.ok else 1)
+      "
+    plan: free
+
 databases:
   # ── Production Database ──────────────────────────────────────────────────────
   - name: hedgecore-db
