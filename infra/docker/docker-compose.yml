@@ -1,0 +1,96 @@
+# docker-compose.yml — ORDR Terminal local development stack
+#
+# IMPORTANT: Run docker compose from this directory (infra/docker/) or use:
+#   docker compose -f infra/docker/docker-compose.yml up -d
+# The relative paths (../../backend, ../../frontend) are relative to THIS file.
+#
+# Usage:
+#   docker compose up -d              # Start all services
+#   docker compose up -d postgres     # Start only the database
+#   docker compose logs -f backend    # Follow backend logs
+#   docker compose down               # Stop everything
+#   docker compose down -v            # Stop and delete volumes (wipes DB)
+#
+# First-time setup:
+#   1. docker compose up -d postgres
+#   2. docker compose run --rm backend alembic upgrade head
+#   3. docker compose run --rm backend python seed_company.py
+#   4. docker compose up -d
+#
+# Access:
+#   Frontend: http://localhost:3000
+#   Backend:  http://localhost:8000
+#   API docs: http://localhost:8000/docs
+
+version: "3.9"
+
+services:
+  # ── PostgreSQL ────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hedgecalc
+      POSTGRES_PASSWORD: hedgecalc
+      POSTGRES_DB: hedgecalc
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hedgecalc -d hedgecalc"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Backend (FastAPI) ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://hedgecalc:hedgecalc@postgres:5432/hedgecalc"
+      JWT_SECRET: "dev-secret-key-at-least-32-characters-long-local-only"
+      ENV: "development"
+      CORS_ALLOW_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000"]'
+      ALLOW_INDICATIVE_FALLBACK: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source for hot-reload in development
+      - ../../backend/app:/app/app:ro
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  # ── Frontend (Next.js) ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8000/api"
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 20s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+volumes:
+  postgres_data:
+    name: ordr_postgres_data
