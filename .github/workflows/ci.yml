@@ -156,6 +156,15 @@ jobs:
       - name: Build backend image
         run: docker build -t ordr-backend:ci ./backend
 
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ordr-backend:ci
+          format: table
+          exit-code: 0          # warn only — don't block CI until baseline is established
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
   # ── Security scan ─────────────────────────────────────────────────────────────
   security:
     name: Secret scan (gitleaks)
