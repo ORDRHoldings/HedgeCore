@@ -40,7 +40,7 @@ jobs:
         run: >
           python -m pytest tests/ -x -q --tb=short
           --cov=app --cov-report=term-missing
-          --cov-fail-under=40
+          --cov-fail-under=60   # raised from 40% (2026-03-27); target 75%
         env:
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           JWT_SECRET: "ci-test-secret-32-chars-minimum-ok"
