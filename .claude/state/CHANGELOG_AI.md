@@ -1,5 +1,21 @@
 # Changelog (AI-maintained)
 
+## 2026-03-27 — Operations hardening: 16 gaps closed (commits 1a09c88–eba3fe9)
+
+### Summary
+Closed 16 identified operations gaps across CI/CD, backup automation, disaster recovery, monitoring, developer documentation, database maintenance, and local infrastructure. Coverage gate raised from 40% to 60% (actual 75%). All 17 plan tasks executed via subagent-driven development with spec review.
+
+### Changes
+- **CI/CD**: gitleaks secret scan job, Dependabot (pip/npm/actions), Trivy container CVE scan, coverage gate 40%→60%
+- **Backup**: `scripts/backup/pg_backup.sh` + `restore_verify.sh` with size validation and table checks
+- **Docs**: `backup-restore.md` (RTO=4h/RPO=24h), `disaster-recovery-plan.md` (5 playbooks), `sla-slo.md`, `monitoring-setup.md` (UptimeRobot+Sentry), `onboarding.md`, `incident-postmortem-template.md`, `data-retention-policy.md`, `db-maintenance.md`
+- **Infra**: `infra/docker/docker-compose.yml` rewritten (postgres+backend+frontend dev stack), `frontend/Dockerfile` replaced (multi-stage Alpine), `output:standalone` added to `next.config.js`
+
+### Deferred
+- S-01 secret rotation (operator action), C-04 mypy hard gate, I-01 Render blueprint sync
+
+---
+
 ## 2026-03-25 — Infrastructure hardening + live market data fix (commits d1af599–b8db71f)
 
 ### Summary
