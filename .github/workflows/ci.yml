@@ -155,3 +155,18 @@ jobs:
 
       - name: Build backend image
         run: docker build -t ordr-backend:ci ./backend
+
+  # ── Security scan ─────────────────────────────────────────────────────────────
+  security:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history required for gitleaks
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2   # tracks latest v2.x — not SHA-pinned (consistent with rest of ci.yml)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
