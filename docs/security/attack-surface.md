@@ -15,8 +15,8 @@
 
 | Endpoint Group | Auth Required | Rate Limited | Notes |
 |----------------|---------------|--------------|-------|
-| `POST /v1/auth/login` | No | 60/min | Credential submission |
-| `POST /v1/auth/refresh` | Refresh token | 60/min | Token refresh |
+| `POST /auth/login` | No | 60/min | Credential submission |
+| `POST /auth/refresh` | Refresh token | 60/min | Token refresh |
 | `GET /api/health` | No | 60/min | Public health check |
 | `GET /v1/positions` | JWT or API Key | 60/min | Tenant-scoped |
 | `POST /v1/calculate` | JWT or API Key | 60/min | Engine entry point |
@@ -43,7 +43,7 @@
 ## 2. Authentication Flows
 
 ### 2.1 Password Auth
-1. `POST /v1/auth/login` with `{username, password}`
+1. `POST /auth/login` with `{username, password}`
 2. Backend: bcrypt verify -> issue JWT access (30min) + refresh (7d)
 3. Access token in Authorization header for subsequent requests
 4. CSRF token set as cookie on login, verified on mutations via `X-CSRF-Token` header
@@ -102,7 +102,7 @@
 | 4-eyes bypass | Single user approving own proposal | SoD check in service layer | Mitigated |
 | Secrets exposure | Leaked secrets in git history | Git scrub in progress (Sprint 1) | In Progress |
 | Global IP allowlist | No middleware-level IP filtering | Per-endpoint only | Sprint 1 Chunk 5 |
-| Bootstrap dev API key | `HC_DEV_KEY_001` hardcoded hash in `app/middleware/api_key_auth.py` — grants auth bypass if not overridden in production | Must be overridden via `BOOTSTRAP_API_KEY` env var before production use | Low |
+| Bootstrap dev API key | `HC_DEV_KEY_001` hardcoded hash in `app/middleware/api_key_auth.py` — grants auth bypass if not overridden in production | Hardcoded in `api_key_auth.py` with no env-var override — grants `engine:recommend` scope only. Ensure production deployment does not expose this key; remediation ticket required | Low |
 | Unauthenticated market data | `GET /api/v1/market-data/live/*` requires no auth — FX rate data is publicly readable without a token | Route added to `public_prefixes` in APIKeyAuthMiddleware (fix 2026-03-25) — accepted risk; data is indicative prices only, not proprietary |
 
 ---
