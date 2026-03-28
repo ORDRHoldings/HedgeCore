@@ -91,6 +91,8 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             # Stripe webhook — called directly by Stripe servers, no API key or JWT.
             # Signature verification happens inside the route handler.
             "/api/v1/billing/",
+            # Self-service signup — unauthenticated tenant provisioning.
+            "/api/v1/signup",
         )
 
         self._keys: dict[str, APIKeyRecord] = {}

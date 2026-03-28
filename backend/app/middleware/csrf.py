@@ -34,6 +34,7 @@ _CSRF_EXEMPT_PREFIXES = (
     "/auth/",           # Bare auth prefix
     "/api/v1/seed/",    # Seed endpoints use X-API-Key auth, not browser sessions
     "/api/v1/billing/", # Stripe webhook — called by Stripe servers, no browser session
+    "/api/v1/signup",   # Self-service signup — no cookie/session exists yet
     "/docs",
     "/openapi.json",
     "/redoc",

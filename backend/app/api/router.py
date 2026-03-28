@@ -281,3 +281,7 @@ router.include_router(v1_hedgewiki_router)
 # Stripe billing webhook (owns /v1/billing) — public, no JWT required
 from app.api.routes.v1_billing import router as v1_billing_router
 router.include_router(v1_billing_router)
+
+# Self-service signup (owns /v1/signup) — public, no JWT required
+from app.api.routes.v1_signup import router as v1_signup_router
+router.include_router(v1_signup_router)
