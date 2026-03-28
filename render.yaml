@@ -145,6 +145,44 @@ services:
       "
     plan: free
 
+  # ── Daily backup cron (02:00 UTC) ────────────────────────────────────────────
+  - type: cron
+    name: hedgecore-backup-daily
+    runtime: docker
+    dockerfilePath: scripts/backup/Dockerfile.backup
+    schedule: "0 2 * * *"
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        fromGroup: hedgecore-secrets
+      - key: B2_ACCOUNT_ID
+        fromGroup: hedgecore-secrets
+      - key: B2_APP_KEY
+        fromGroup: hedgecore-secrets
+      - key: B2_BUCKET
+        fromGroup: hedgecore-secrets
+      - key: SENTRY_DSN
+        fromGroup: hedgecore-secrets
+
+  # ── Monthly restore verification (01:00 UTC on 1st of month) ────────────────
+  - type: cron
+    name: hedgecore-restore-verify-monthly
+    runtime: docker
+    dockerfilePath: scripts/backup/Dockerfile.backup
+    schedule: "0 1 1 * *"
+    plan: starter
+    envVars:
+      - key: VERIFY_DB_URL
+        fromGroup: hedgecore-secrets
+      - key: B2_ACCOUNT_ID
+        fromGroup: hedgecore-secrets
+      - key: B2_APP_KEY
+        fromGroup: hedgecore-secrets
+      - key: B2_BUCKET
+        fromGroup: hedgecore-secrets
+      - key: SENTRY_DSN
+        fromGroup: hedgecore-secrets
+
 databases:
   # ── Production Database ──────────────────────────────────────────────────────
   - name: hedgecore-db

@@ -1,0 +1,22 @@
+FROM ubuntu:22.04
+
+# Install PostgreSQL client (pg_dump, psql) and curl for rclone install
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client-14 \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install rclone
+RUN curl -fsSL https://rclone.org/install.sh | bash
+
+WORKDIR /app
+
+# Copy backup scripts
+COPY scripts/backup/ ./backup/
+COPY scripts/render/ ./render/
+
+RUN chmod +x backup/*.sh render/*.sh
+
+# Default CMD: daily backup. Override via Render cron startCommand.
+CMD ["bash", "render/cron_backup.sh"]
