@@ -675,6 +675,106 @@ async def read_me(request: Request, db: AsyncSession = Depends(get_session)) -> 
 
 # -------------------------------------------------------------------
 
+# ── SSO ─────────────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel as _BaseModel
+
+
+class SSOCallbackRequest(_BaseModel):
+    code: str
+
+
+@router.post("/sso/callback", response_model=None)
+async def sso_callback(
+    request: Request,
+    body: SSOCallbackRequest,
+    db: AsyncSession = Depends(get_session),
+):
+    """
+    WorkOS SSO callback — exchange code for ORDR JWT.
+
+    Flow:
+      1. Exchange WorkOS code -> verified user profile
+      2. Resolve/create ORDR User
+      3. Issue standard ORDR access+refresh tokens
+      4. Emit LOGIN audit event
+      5. Return TokenPair (same schema as password login)
+    """
+    from app.services.sso_service import WorkOSNotConfiguredError, resolve_or_create_sso_user
+
+    try:
+        user = await resolve_or_create_sso_user(db=db, code=body.code)
+    except WorkOSNotConfiguredError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="SSO is not configured on this instance.",
+        ) from exc
+    except Exception as exc:
+        logger.warning("SSO callback error: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="SSO authentication failed.",
+        ) from exc
+
+    # Get user roles for session duration calculation
+    try:
+        user_roles = await rbac_service.get_roles_by_user(db, user.id)
+        role_names = [r.name for r in user_roles] if user_roles else []
+    except Exception:
+        role_names = []
+
+    session_minutes = get_session_duration_for_roles(role_names)
+    access_token = create_access_token(
+        sub=str(user.id),
+        email=user.email,
+        expires_minutes=session_minutes,
+    )
+    refresh_token_val, jti, exp_at = create_refresh_token(sub=str(user.id), email=user.email)
+
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    await rt_crud.create(db, jti=jti, user_id=user.id, expires_at=exp_at, ip=ip, user_agent=ua)
+
+    # Emit audit event
+    try:
+        await emit_audit(
+            session=db,
+            user=user,
+            event_type="SYSTEM",
+            description=f"SSO login: {user.email}",
+            entity_type="user",
+            entity_id=str(user.id),
+            payload={"method": "sso", "roles": role_names, "ip": ip},
+        )
+    except Exception:
+        pass  # non-fatal
+
+    await db.commit()
+
+    token_pair = TokenPair(access_token=access_token, refresh_token=refresh_token_val, token_type="bearer")
+    csrf = generate_csrf_token()
+    response = JSONResponse(content=token_pair.model_dump())
+    response.set_cookie(
+        key="csrf_token",
+        value=csrf,
+        httponly=False,
+        secure=_RT_COOKIE_SECURE,
+        samesite=_RT_COOKIE_SAMESITE,
+        path="/",
+        max_age=7 * 24 * 60 * 60,
+    )
+    response.set_cookie(
+        key="rt",
+        value=refresh_token_val,
+        httponly=True,
+        secure=_RT_COOKIE_SECURE,
+        samesite=_RT_COOKIE_SAMESITE,
+        path=_RT_COOKIE_PATH,
+        max_age=7 * 24 * 60 * 60,
+    )
+    return response
+
+
 @router.post("/logout", status_code=status.HTTP_200_OK)
 
 async def logout(request: Request, db: AsyncSession = Depends(get_session)) -> dict:
