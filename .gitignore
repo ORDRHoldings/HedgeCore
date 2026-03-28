@@ -55,3 +55,4 @@ docker-compose.override.yml
 backend/tests/test_e2e_render.py
 tsconfig.tsbuildinfo
 backend/LOG/
+.worktrees/
