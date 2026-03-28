@@ -88,6 +88,9 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
             # Live market data — FX rates, equity quotes, macro. Publicly available
             # data served server-to-server from Next.js API routes; no auth needed.
             "/api/v1/market-data/live/",
+            # Stripe webhook — called directly by Stripe servers, no API key or JWT.
+            # Signature verification happens inside the route handler.
+            "/api/v1/billing/",
         )
 
         self._keys: dict[str, APIKeyRecord] = {}

@@ -341,6 +341,19 @@ class Settings(BaseSettings):
         return []
 
     # ------------------------------------------------------------------
+    # Stripe Billing
+    # ------------------------------------------------------------------
+    STRIPE_SECRET_KEY_TEST: str = ""
+    STRIPE_SECRET_KEY_LIVE: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_LIVE_MODE: bool = False
+
+    @property
+    def stripe_secret_key(self) -> str:
+        """Return the live key when STRIPE_LIVE_MODE=true, else the test key."""
+        return self.STRIPE_SECRET_KEY_LIVE if self.STRIPE_LIVE_MODE else self.STRIPE_SECRET_KEY_TEST
+
+    # ------------------------------------------------------------------
     # WorkOS SSO
     # ------------------------------------------------------------------
     WORKOS_API_KEY: str = ""
@@ -597,4 +610,9 @@ class Settings(BaseSettings):
 settings = Settings()
 
 settings.apply_environment_overrides()
+
+
+def get_settings() -> Settings:
+    """Return the global Settings instance. Patchable in tests."""
+    return settings
 
