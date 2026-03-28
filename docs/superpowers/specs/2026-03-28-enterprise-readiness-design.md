@@ -62,9 +62,11 @@ ORDR Terminal is a v1-frozen institutional FX hedge calculation and governance p
 - Creates evidence artifact for enterprise security questionnaires
 
 ### 1.5 IP Allowlisting
-- Add configurable `ALLOWED_IPS` env var to rate-limit middleware
+- Add a new `IPAllowlistMiddleware` inserted **first** in the middleware chain (before Audit), so blocked IPs do not pollute the audit log
+- Inserting a new middleware layer changes the frozen order; this requires an ADR in `docs/architecture/adr/`
+- Configurable via `ALLOWED_IPS` env var (comma-separated CIDRs)
 - Default: empty (open — no behaviour change)
-- When set: requests from unlisted IPs receive HTTP 403
+- When set: requests from unlisted IPs receive HTTP 403 before any other middleware runs
 - Enables per-client network lockdown without code changes
 
 **Done criteria:** No known secrets in git history, all env vars rotated, mypy green on engine_v1/, OWASP scan report committed to ADR.
@@ -91,7 +93,11 @@ ORDR Terminal is a v1-frozen institutional FX hedge calculation and governance p
 - Provision Render Redis instance
 - Wire `REDIS_URL` env var; remove silent fallback in middleware
 - Rate limiting, session cache, and market data cache become durable
-- Log clearly on startup if Redis is unreachable (fail-open with warning, not silent)
+- **Failure behaviour is concern-specific:**
+  - **Rate limiting:** fail-closed — if Redis is unreachable, fall back to a conservative in-process token bucket (not drop enforcement entirely). Log a warning and emit a Sentry alert. Silently dropping rate limiting would expose the system to unbounded API abuse.
+  - **Market data cache:** fail-open — if Redis is unreachable, bypass cache and hit the provider directly. Log a warning.
+  - **Session cache:** fail-open — JWT validation does not require Redis; tokens remain valid via signature check.
+- Log Redis connection status clearly on startup
 
 ### 2.4 Sentry Error Tracking
 - Add `sentry-sdk[fastapi]` to `backend/requirements.txt`
@@ -134,8 +140,9 @@ ORDR Terminal is a v1-frozen institutional FX hedge calculation and governance p
 - Test mode only until go-live; live keys gated behind `STRIPE_LIVE_MODE=true`
 
 ### 3.3 Plan Enforcement (Backend)
-- Move feature gating from frontend UI to authoritative backend middleware
-- `PlanEnforcementMiddleware`: checks `company.plan_tier` against feature matrix
+- Move feature gating from frontend UI to authoritative backend check
+- Implementation: FastAPI dependency (`require_plan_tier`) injected at route level — **not** a new middleware layer. This avoids modifying the frozen middleware order (`Audit -> Rate Limit -> Auth`) and does not require an ADR.
+- `require_plan_tier(min_tier)` dependency: reads `current_user.company.plan_tier`, raises `HTTP 402 Payment Required` if below required tier
 - Plan limits enforced: position count, user count, API rate limit multiplier, export formats
 - Returns `HTTP 402 Payment Required` when limit exceeded
 
@@ -144,6 +151,7 @@ ORDR Terminal is a v1-frozen institutional FX hedge calculation and governance p
 - SSO configuration optional post-signup (can be added later in Admin Hub)
 - Removes need for manual superuser provisioning for new clients
 - Email verification gate before workspace activation
+- **Hash chain initialisation:** tenant provisioning must emit a GENESIS audit event (`GENESIS_HASH = 64 zeros`) for the new tenant immediately after company creation, before any other audit event is written. This ensures audit chain integrity from the first real event. Done criteria for Sprint 3 must include verifying hash chain is valid for a freshly provisioned tenant.
 
 ### 3.5 API Docs Portal
 - FastAPI OpenAPI spec already exists at `/openapi.json`
@@ -151,7 +159,7 @@ ORDR Terminal is a v1-frozen institutional FX hedge calculation and governance p
 - Add API key creation UI to Admin Hub (already partially present)
 - Include authentication guide, rate limit headers, error code reference
 
-**Done criteria:** SSO login works with a test Okta tenant, Stripe test-mode subscription creates/cancels/renews correctly, plan limits enforced at backend for all three tiers, signup flow creates full tenant end-to-end, Scalar docs deployed.
+**Done criteria:** SSO login works with a test Okta tenant, Stripe test-mode subscription creates/cancels/renews correctly, plan limits enforced at backend for all three tiers, signup flow creates full tenant end-to-end with valid genesis hash chain, Scalar docs deployed.
 
 ---
 
@@ -163,7 +171,8 @@ ORDR Terminal is a v1-frozen institutional FX hedge calculation and governance p
 - Map existing controls to SOC2 Trust Service Criteria (Security, Availability, Confidentiality)
 - Controls already implemented: WORM audit log, hash chain, RBAC, bcrypt, CSRF, rate limiting, gitleaks, Dependabot, Trivy, DR plan, backup, SLOs
 - Gaps to close: access review process, change management log, vendor risk register
-- Automate nightly evidence export: user count, policy change count, failed auth count → append-only `compliance_evidence` table
+- Automate nightly evidence export: user count, policy change count, failed auth count → `compliance_evidence` table
+  - This table is **WORM-governed** (append-only, no UPDATE/DELETE): evidence records must be immutable to pass SOC2 audit. No hash chain required (evidence rows reference the existing audit_events hash chain rather than forming their own).
 - Commit controls matrix to `docs/compliance/soc2-controls-matrix.md`
 
 ### 4.2 GDPR Enforcement
@@ -176,7 +185,8 @@ ORDR Terminal is a v1-frozen institutional FX hedge calculation and governance p
 ### 4.3 Tenant Isolation Audit
 - Run full existing tenant isolation test suite; fix any gaps
 - Add PostgreSQL row-level security (RLS) policies on `positions` and `calculation_runs`
-- RLS policy: `tenant_id = current_setting('app.current_tenant_id')` set at session start
+- RLS policy: `tenant_id = current_setting('app.current_tenant_id')`
+- **RLS injection mechanism:** inject the tenant ID via an SQLAlchemy `AsyncSession` event listener (`@event.listens_for(engine.sync_engine, "connect")`). At the start of each request, execute `SET LOCAL app.current_tenant_id = :tenant_id` within the transaction using the existing `get_session` dependency. This ensures the setting is transaction-scoped (not connection-scoped), which is safe with async connection pooling. Implementation must be tested with a pool of ≥ 3 connections to verify no cross-tenant leakage between pooled connections.
 - Add cross-tenant boundary tests to CI (read/write attempts across tenant boundaries must return 403/404)
 - Tests must pass 100% before sprint closes
 
@@ -222,6 +232,7 @@ ORDR Terminal is a v1-frozen institutional FX hedge calculation and governance p
 - Signed with `HMAC-SHA256` using per-tenant webhook secret
 - Delivery: async background task, retry with exponential backoff (5 attempts, 1m/5m/15m/1h/4h)
 - Delivery log stored (last 100 per endpoint) — viewable in Admin Hub
+- **Retention classification:** delivery logs are **operational only** (not compliance artifacts). Rolling 100-entry window is acceptable. If a client requires contractual delivery proof, they should use the existing WORM audit_events chain (a `webhook.delivered` audit event is emitted on each successful delivery), not the delivery log table.
 
 ### 5.5 Horizontal Scaling Prep
 - Document stateless deployment contract: no in-process state, all session/cache in Redis, sticky sessions not required
@@ -236,11 +247,13 @@ ORDR Terminal is a v1-frozen institutional FX hedge calculation and governance p
 ## Sequencing & Dependencies
 
 ```
-Sprint 1 (Security)     → must complete before Sprint 3 (SSO has no secrets risk)
-Sprint 2 (Infra)        → must complete before Sprint 5 (Redis required for caching)
-Sprint 3 (SSO+Billing)  → can run after Sprint 1; parallel with Sprint 4
-Sprint 4 (Compliance)   → can run after Sprint 2 (RLS requires stable DB)
-Sprint 5 (Scale)        → runs last (requires Redis + load-stable infra)
+Sprint 1 (Security)     → must complete before Sprint 3 (no secrets risk before SSO/billing wired)
+Sprint 2 (Infra)        → must complete before Sprint 5 (Redis required for caching and rate limiting)
+Sprint 3 (SSO+Billing)  → can start after Sprint 1; must complete before Sprint 4 finalises vendor registry
+                          (WorkOS and Stripe must exist as vendors before DPA status can be documented)
+Sprint 4 (Compliance)   → can start after Sprint 2 (RLS requires stable DB); vendor registry section
+                          requires Sprint 3 complete
+Sprint 5 (Scale)        → runs last (requires Redis + load-stable infra from Sprint 2)
 ```
 
 ## Effort Estimates
