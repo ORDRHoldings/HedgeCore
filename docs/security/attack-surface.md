@@ -23,15 +23,15 @@
 | `POST /v1/proposals` | JWT | 60/min | Execution flow |
 | `PATCH /v1/proposals/{id}/approve` | JWT + 4-eyes | 60/min | Governance action |
 | `POST /v1/proposals/{id}/execute` | JWT + 4-eyes + IP | 60/min | Execution trigger |
-| `GET /v1/audit-events` | JWT | 60/min | WORM audit read |
-| `POST /v1/users` | JWT + admin | 60/min | User provisioning |
-| `GET /v1/exports/*` | JWT | 60/min | Regulatory reports |
+| `GET /v1/audit` | JWT | 60/min | WORM audit read |
+| `POST /v1/admin/users` | JWT + admin | 60/min | User provisioning |
+| `GET /v1/export/*` | JWT | 60/min | Regulatory reports |
 | `GET /openapi.json` | No | 60/min | API schema |
 | `GET /api/v1/market-data/live/*` | No (public prefix) | 60/min | Live FX rates |
 
 ### 1.2 WebSocket
-- `WS /api/v1/ws/market-data` — authenticated, requires JWT
-- `WS /api/v1/voice/realtime` — gated by `OPENAI_API_KEY` env var, 503 if unset
+- `WS /api/ws/market` — authenticated, requires JWT
+- `WS /api/v1/voice/realtime` — gated by `ANTHROPIC_API_KEY` env var (uses Claude API), 503 if unset
 
 ### 1.3 Frontend (HTTPS, Vercel)
 - Base URL: `https://ordr-terminal.vercel.app`
@@ -102,6 +102,7 @@
 | 4-eyes bypass | Single user approving own proposal | SoD check in service layer | Mitigated |
 | Secrets exposure | Leaked secrets in git history | Git scrub in progress (Sprint 1) | In Progress |
 | Global IP allowlist | No middleware-level IP filtering | Per-endpoint only | Sprint 1 Chunk 5 |
+| Bootstrap dev API key | `HC_DEV_KEY_001` hardcoded hash in `app/middleware/api_key_auth.py` — grants auth bypass if not overridden in production | Must be overridden via `BOOTSTRAP_API_KEY` env var before production use | Low |
 | Unauthenticated market data | `GET /api/v1/market-data/live/*` requires no auth — FX rate data is publicly readable without a token | Route added to `public_prefixes` in APIKeyAuthMiddleware (fix 2026-03-25) — accepted risk; data is indicative prices only, not proprietary |
 
 ---
