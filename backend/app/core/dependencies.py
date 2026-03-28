@@ -20,6 +20,7 @@ an authenticated user, e.g.:
 """
 
 import logging
+from typing import AsyncGenerator
 from uuid import UUID
 
 import jwt
@@ -179,3 +180,17 @@ async def require_superuser(
     if not getattr(current_user, "is_superuser", False):
         raise HTTPException(status_code=403, detail="Admin privileges required")
     return current_user
+
+
+async def get_session_with_rls(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> AsyncGenerator[AsyncSession, None]:
+    """
+    AsyncSession with PostgreSQL RLS tenant context injected via SET LOCAL.
+    Drop-in replacement for get_session on routes accessing positions or calculation_runs.
+    """
+    from app.core.rls import inject_tenant_rls
+    tenant_id = str(current_user.company_id) if current_user.company_id else None
+    await inject_tenant_rls(db, tenant_id)
+    yield db

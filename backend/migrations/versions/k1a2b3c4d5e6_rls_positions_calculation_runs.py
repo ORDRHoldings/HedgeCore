@@ -1,0 +1,87 @@
+"""Add PostgreSQL RLS policies on positions and calculation_runs
+
+Revision ID: k1a2b3c4d5e6
+Revises: j1a2b3c4d5e6
+Create Date: 2026-03-28
+
+RLS policy: tenant_id = current_setting('app.current_tenant_id')::uuid
+Defence-in-depth on top of application-level company_id filtering.
+"""
+from alembic import op
+
+revision = "k1a2b3c4d5e6"
+down_revision = "j1a2b3c4d5e6"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    # positions
+    op.execute("ALTER TABLE positions ENABLE ROW LEVEL SECURITY;")
+    op.execute("ALTER TABLE positions FORCE ROW LEVEL SECURITY;")
+    op.execute("""
+        CREATE POLICY positions_tenant_isolation_select
+        ON positions FOR SELECT
+        USING (
+            company_id::text = COALESCE(
+                NULLIF(current_setting('app.current_tenant_id', true), ''),
+                '00000000-0000-0000-0000-000000000000'
+            )
+        );
+    """)
+    op.execute("""
+        CREATE POLICY positions_tenant_isolation_insert
+        ON positions FOR INSERT
+        WITH CHECK (
+            company_id::text = COALESCE(
+                NULLIF(current_setting('app.current_tenant_id', true), ''),
+                '00000000-0000-0000-0000-000000000000'
+            )
+        );
+    """)
+    op.execute("""
+        CREATE POLICY positions_tenant_isolation_update
+        ON positions FOR UPDATE
+        USING (
+            company_id::text = COALESCE(
+                NULLIF(current_setting('app.current_tenant_id', true), ''),
+                '00000000-0000-0000-0000-000000000000'
+            )
+        );
+    """)
+
+    # calculation_runs
+    op.execute("ALTER TABLE calculation_runs ENABLE ROW LEVEL SECURITY;")
+    op.execute("ALTER TABLE calculation_runs FORCE ROW LEVEL SECURITY;")
+    op.execute("""
+        CREATE POLICY calc_runs_tenant_isolation_select
+        ON calculation_runs FOR SELECT
+        USING (
+            company_id::text = COALESCE(
+                NULLIF(current_setting('app.current_tenant_id', true), ''),
+                '00000000-0000-0000-0000-000000000000'
+            )
+            OR company_id IS NULL
+        );
+    """)
+    op.execute("""
+        CREATE POLICY calc_runs_tenant_isolation_insert
+        ON calculation_runs FOR INSERT
+        WITH CHECK (
+            company_id::text = COALESCE(
+                NULLIF(current_setting('app.current_tenant_id', true), ''),
+                '00000000-0000-0000-0000-000000000000'
+            )
+            OR company_id IS NULL
+        );
+    """)
+
+
+def downgrade() -> None:
+    op.execute("DROP POLICY IF EXISTS positions_tenant_isolation_select ON positions;")
+    op.execute("DROP POLICY IF EXISTS positions_tenant_isolation_insert ON positions;")
+    op.execute("DROP POLICY IF EXISTS positions_tenant_isolation_update ON positions;")
+    op.execute("ALTER TABLE positions DISABLE ROW LEVEL SECURITY;")
+    op.execute("DROP POLICY IF EXISTS calc_runs_tenant_isolation_select ON calculation_runs;")
+    op.execute("DROP POLICY IF EXISTS calc_runs_tenant_isolation_insert ON calculation_runs;")
+    op.execute("ALTER TABLE calculation_runs DISABLE ROW LEVEL SECURITY;")
