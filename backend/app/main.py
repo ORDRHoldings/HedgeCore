@@ -1706,6 +1706,7 @@ async def lifespan(app: FastAPI):
         app.state.hedgewiki = None
 
     # ── APScheduler — audit table cleanup at 03:30 UTC ────────────────────
+    from app.tasks.compliance_evidence_export import run_compliance_evidence_export
     _audit_scheduler = AsyncIOScheduler(timezone="UTC")
     _audit_scheduler.add_job(
         cleanup_audit_tables,
@@ -1713,9 +1714,16 @@ async def lifespan(app: FastAPI):
         id="audit_cleanup",
         replace_existing=True,
     )
+    _audit_scheduler.add_job(
+        run_compliance_evidence_export,
+        CronTrigger(hour=2, minute=0),
+        id="compliance_evidence_export",
+        replace_existing=True,
+    )
     _audit_scheduler.start()
     app.state.scheduler = _audit_scheduler
     logger.info("Scheduler started — audit_cleanup at 03:30 UTC daily")
+    logger.info("Scheduler registered — compliance_evidence_export at 02:00 UTC daily")
 
     try:
 
