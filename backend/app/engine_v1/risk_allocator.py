@@ -25,7 +25,7 @@ from typing import Any
 
 try:
 
-    from scipy.optimize import linprog  # type: ignore[import-untyped]
+    from scipy.optimize import linprog
 
     HAS_SCIPY = True
 
@@ -63,7 +63,7 @@ class HedgeCandidate:
 
 
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
 
         return {
 
@@ -117,7 +117,7 @@ class AllocatedHedge:
 
 
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
 
         return {
 
@@ -173,7 +173,7 @@ class AllocatorResult:
 
 
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
 
         return {
 
@@ -205,11 +205,11 @@ class AllocatorResult:
 
 def _build_candidates(
 
-    hedge_actions: list[dict],
+    hedge_actions: list[dict[str, Any]],
 
-    margin_positions: list[dict],
+    margin_positions: list[dict[str, Any]],
 
-    liquidity_estimates: list[dict],
+    liquidity_estimates: list[dict[str, Any]],
 
     policy: dict[str, Any],
 
@@ -331,11 +331,11 @@ def _build_candidates(
 
 def allocate_hedges(
 
-    hedge_actions: list[dict],
+    hedge_actions: list[dict[str, Any]],
 
-    margin_positions: list[dict],
+    margin_positions: list[dict[str, Any]],
 
-    liquidity_estimates: list[dict],
+    liquidity_estimates: list[dict[str, Any]],
 
     market: dict[str, Any],
 
@@ -854,8 +854,8 @@ def _greedy_allocate(
 # ──────────────────────────────────────────────────────────────────────────────
 
 def compute_mctr_delta_var(
-    positions: list,
-    covariance_matrix: dict,
+    positions: list[Any],
+    covariance_matrix: dict[Any, Any],
     confidence: float = 0.95,
 ) -> dict[str, float]:
     """Marginal Contribution to Risk using delta-VaR methodology.
@@ -878,7 +878,7 @@ def compute_mctr_delta_var(
         return {}
 
     try:
-        from scipy.stats import norm  # type: ignore[import]
+        from scipy.stats import norm
         z_alpha = norm.ppf(confidence)
     except ImportError:
         # scipy not available — use normal approximation table

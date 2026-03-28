@@ -25,7 +25,7 @@ class CurrencyExposure:
     gross_notional: float = 0.0
     net_notional: float = 0.0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "pair": self.pair,
             "delta_fx": self.delta_fx,
@@ -47,7 +47,7 @@ class ExposureTensor:
     total_basis: float = 0.0
     currency_count: int = 0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "exposures": [e.to_dict() for e in self.exposures],
             "total_delta_fx": self.total_delta_fx,
@@ -108,7 +108,7 @@ def _months_to_tenor(months: int) -> str:
 # ---------------------------------------------------------------------------
 
 def compute_exposure_tensor(
-    trades: list[dict],
+    trades: list[dict[str, Any]],
     market: dict[str, Any],
 ) -> ExposureTensor:
     """Decompose multi-currency exposures into delta/carry/basis/duration.
@@ -131,7 +131,7 @@ def compute_exposure_tensor(
     basis_spreads: dict[str, float] = market.get("basis_spreads", {})
 
     # Group trades by currency pair
-    pair_buckets: dict[str, list[dict]] = {}
+    pair_buckets: dict[str, list[dict[str, Any]]] = {}
     for trade in trades:
         asset_ccy = trade.get("asset_currency", trade.get("currency", "USD"))
         funding_ccy = trade.get("funding_currency", "USD")

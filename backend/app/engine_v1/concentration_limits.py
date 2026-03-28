@@ -29,7 +29,7 @@ class ConcentrationCheck:
     status: str  # "OK", "WARNING", "BREACH"
     excess_pct: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "instrument": self.instrument,
             "notional_usd": self.notional_usd,
@@ -51,7 +51,7 @@ class ConcentrationResult:
     max_concentration_pct: float = 0.0
     breach_instruments: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "checks": [c.to_dict() for c in self.checks],
             "has_warnings": self.has_warnings,
@@ -66,7 +66,7 @@ class ConcentrationResult:
 
 
 def check_concentration_limits(
-    hedge_actions: list[dict],
+    hedge_actions: list[dict[str, Any]],
     policy: dict[str, Any],
 ) -> ConcentrationResult:
     """Check hedge concentration limits.

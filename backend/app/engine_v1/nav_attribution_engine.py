@@ -33,7 +33,7 @@ class PositionAttribution:
     funding_contribution: float
     total_pnl: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "position_id": self.position_id,
             "currency": self.currency,
@@ -60,7 +60,7 @@ class NavAttributionResult:
     total_pnl: float = 0.0
     base_currency: str = "USD"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "positions": [p.to_dict() for p in self.positions],
             "total_nav_base": self.total_nav_base,
@@ -74,7 +74,7 @@ class NavAttributionResult:
 
 
 def compute_nav_attribution(
-    positions: list[dict],
+    positions: list[dict[str, Any]],
     market: dict[str, Any],
     fx_delta: float | None = None,
     base_currency: str = "USD",

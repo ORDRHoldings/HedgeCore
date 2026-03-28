@@ -26,7 +26,7 @@ class RiskContribution:
     contribution_pct: float          # % of total portfolio variance
     variance_contribution: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "factor": self.factor,
             "weight": self.weight,
@@ -47,7 +47,7 @@ class FactorCovarianceResult:
     portfolio_volatility: float = 0.0
     diversification_ratio: float = 0.0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "pre_hedge_variance": self.pre_hedge_variance,
             "post_hedge_variance": self.post_hedge_variance,
@@ -246,7 +246,7 @@ def _build_fallback_covariance(factors: list[str]) -> dict[str, dict[str, float]
 def load_covariance_from_provider(
     factors: list[str],
     provider: str = "static",
-    market: dict | None = None,
+    market: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, float]] | None:
     """Hook for live covariance feed integration (FIX-03).
 

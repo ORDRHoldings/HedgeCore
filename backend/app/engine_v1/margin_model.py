@@ -24,7 +24,7 @@ class PositionMargin:
     stress_margin: float
     funding_cost: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "bucket": self.bucket,
             "instrument": self.instrument,
@@ -49,7 +49,7 @@ class MarginSummary:
     margin_utilization_pct: float = 0.0
     budget_exceeded: bool = False
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "positions": [p.to_dict() for p in self.positions],
             "total_initial_margin": self.total_initial_margin,
@@ -75,11 +75,11 @@ _DEFAULT_STRESS_MULTIPLIER = 1.5
 
 
 def compute_margin(
-    hedge_actions: list[dict],
+    hedge_actions: list[dict[str, Any]],
     market: dict[str, Any],
     policy: dict[str, Any],
     scenario_max_shock: float = 0.10,
-    value_dates: dict | None = None,
+    value_dates: dict[str, Any] | None = None,
 ) -> MarginSummary:
     """Calculate margin requirements and funding costs for hedge positions.
 

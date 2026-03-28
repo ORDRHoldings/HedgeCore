@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -93,7 +95,7 @@ class TraceEvent(BaseModel):
     step: str
     timestamp: datetime
     detail: str
-    data: dict = {}
+    data: dict[str, Any] = {}
 
 
 class TraceLite(BaseModel):
@@ -102,10 +104,10 @@ class TraceLite(BaseModel):
 
 
 class CalculateRequest(BaseModel):
-    trades: list = Field(..., max_length=10_000)
-    hedges: list = Field(default_factory=list, max_length=10_000)
-    market: dict
-    policy: dict
+    trades: list[Any] = Field(..., max_length=10_000)
+    hedges: list[Any] = Field(default_factory=list, max_length=10_000)
+    market: dict[str, Any]
+    policy: dict[str, Any]
     # Optional: pass a previously-persisted market snapshot ID instead of
     # embedding raw market data. When provided, the backend loads the snapshot
     # from the WORM store and uses it as the authoritative market input.

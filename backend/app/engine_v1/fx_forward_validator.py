@@ -30,7 +30,7 @@ class ForwardArbitrageCheck:
     deviation_pct: float
     status: str  # "OK", "WARNING", "VIOLATION"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "bucket": self.bucket,
             "actual_forward": self.actual_forward,
@@ -52,7 +52,7 @@ class ForwardValidationResult:
     max_deviation_pct: float = 0.0
     violation_buckets: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "checks": [c.to_dict() for c in self.checks],
             "all_consistent": self.all_consistent,

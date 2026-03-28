@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from typing import Any
+
 # Default precision map
 DEFAULT_PRECISION: dict[str, int] = {
     "ratio": 6,
@@ -123,10 +125,10 @@ def round_dict(
 
 
 def round_list(
-    data: list,
+    data: list[Any],
     parent_key: str = "",
     precision_map: dict[str, int] | None = None,
-) -> list:
+) -> list[Any]:
     """Recursively round all float values in a list.
 
     Parameters
@@ -144,7 +146,7 @@ def round_list(
         List with all floats rounded.
     """
     prec = precision_map or DEFAULT_PRECISION
-    result: list = []
+    result: list[Any] = []
 
     for item in data:
         if isinstance(item, float):

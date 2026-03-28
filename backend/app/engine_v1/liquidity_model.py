@@ -30,7 +30,7 @@ class SlippageEstimate:
     slippage_usd: float
     liquidity_score: float     # 0.0 (illiquid) to 1.0 (liquid)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "bucket": self.bucket,
             "instrument": self.instrument,
@@ -54,7 +54,7 @@ class LiquidityResult:
     min_liquidity_score: float = 1.0
     liquidity_warning: bool = False
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "estimates": [e.to_dict() for e in self.estimates],
             "total_slippage_usd": self.total_slippage_usd,
@@ -86,7 +86,7 @@ def _compute_liquidity_score(participation_rate: float) -> float:
 
 
 def estimate_slippage(
-    hedge_actions: list[dict],
+    hedge_actions: list[dict[str, Any]],
     market: dict[str, Any],
     policy: dict[str, Any],
     impact_factor: float = DEFAULT_IMPACT_FACTOR,

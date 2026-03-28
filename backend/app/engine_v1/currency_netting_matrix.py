@@ -13,6 +13,7 @@ Pure computational -- reduces capital usage where possible.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -27,7 +28,7 @@ class NettingPair:
     netted_notional: float
     savings_usd: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "original_pair_1": self.original_pair_1,
             "original_pair_2": self.original_pair_2,
@@ -48,7 +49,7 @@ class CurrencyExposureNet:
     net_exposure: float
     offset_amount: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "currency": self.currency,
             "gross_exposure": self.gross_exposure,
@@ -69,7 +70,7 @@ class TriangulationCheck:
     deviation_pct: float
     status: str  # "OK", "WARNING", "SUSPECT"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "pair_1": self.pair_1,
             "pair_2": self.pair_2,
@@ -95,7 +96,7 @@ class NettingResult:
     triangulation_checks: list[TriangulationCheck] = field(default_factory=list)  # FIX-10
     triangulation_warnings: int = 0  # FIX-10
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "currency_exposures": [c.to_dict() for c in self.currency_exposures],
             "netting_pairs": [n.to_dict() for n in self.netting_pairs],

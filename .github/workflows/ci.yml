@@ -29,9 +29,12 @@ jobs:
       - name: Ruff lint
         run: python -m ruff check app/
 
-      - name: Mypy type check
+      - name: Mypy type check (full codebase — advisory)
         run: python -m mypy app/ --config-file mypy.ini
-        continue-on-error: true   # mypy baseline — harden progressively
+        continue-on-error: true
+
+      - name: Mypy strict gate (engine_v1 only — HARD GATE)
+        run: python -m mypy app/engine_v1/ --config-file mypy.ini --strict --no-error-summary --explicit-package-bases
 
       - name: Install coverage deps
         run: pip install pytest-cov

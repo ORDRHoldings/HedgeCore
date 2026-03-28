@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -7,7 +10,7 @@ class MarketSnapshot(BaseModel):
     as_of: datetime
     spot_rate: float = Field(..., gt=0)
     forward_points_by_month: dict[str, float]
-    provider_metadata: dict = Field(default_factory=dict)
+    provider_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class PairMarketData(BaseModel):

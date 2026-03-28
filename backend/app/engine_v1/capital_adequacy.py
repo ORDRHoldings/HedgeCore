@@ -30,7 +30,7 @@ class CapitalAdequacyResult:
     breach_flag: bool
     headroom_usd: float  # available_capital - (stress_loss ? min_ratio)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "portfolio_equity": self.portfolio_equity,
             "margin_required": self.margin_required,

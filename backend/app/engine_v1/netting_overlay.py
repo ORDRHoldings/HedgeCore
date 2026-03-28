@@ -57,7 +57,7 @@ def compute_net_exposures(
 
     # Aggregate by (pair, flow_type if not cross-netting)
     gross_notional = 0.0
-    pair_buckets: dict[str, dict[str, float]] = {}
+    pair_buckets: dict[str, dict[str, Any]] = {}
 
     for exp in exposures:
         pair = str(exp.get("pair", "")).upper()

@@ -34,7 +34,7 @@ class PositionCost:
     total_cost: float
     total_cost_bps: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "bucket": self.bucket,
             "instrument": self.instrument,
@@ -62,7 +62,7 @@ class TransactionCostResult:
     total_transaction_cost: float = 0.0
     total_cost_bps: float = 0.0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "positions": [p.to_dict() for p in self.positions],
             "total_slippage": self.total_slippage,
@@ -76,8 +76,8 @@ class TransactionCostResult:
 
 
 def compute_transaction_costs(
-    hedge_actions: list[dict],
-    slippage_estimates: list[dict],
+    hedge_actions: list[dict[str, Any]],
+    slippage_estimates: list[dict[str, Any]],
     market: dict[str, Any],
     policy: dict[str, Any],
     execution_window_hours: float = 24.0,

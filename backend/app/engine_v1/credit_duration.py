@@ -31,7 +31,7 @@ class CreditDurationResult:
     lqd_notional_equivalent: float    # Investment-grade credit equivalent
     credit_dv01: float                # DV01 in credit spread space
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "equity_delta": self.equity_delta,
             "credit_equity_correlation": self.credit_equity_correlation,

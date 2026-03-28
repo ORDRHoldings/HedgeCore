@@ -12,6 +12,7 @@ Pure computation — no I/O, no state.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -34,7 +35,7 @@ class EffectivenessResult:
     method: str
     """'dollar_offset' | 'regression' | 'regression_insufficient_data'"""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "dollar_offset_ratio": self.dollar_offset_ratio,
             "is_effective": self.is_effective,

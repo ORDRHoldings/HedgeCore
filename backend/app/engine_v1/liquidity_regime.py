@@ -31,7 +31,7 @@ class RegimeClassification:
     score: float  # 0-100 (higher = more stressed)
     factors: dict[str, str]  # factor -> contribution description
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "regime": self.regime,
             "slippage_multiplier": self.slippage_multiplier,

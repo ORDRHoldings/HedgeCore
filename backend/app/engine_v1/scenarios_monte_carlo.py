@@ -24,7 +24,7 @@ class VaRResult:
     hedged_cvar: float
     unhedged_cvar: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "confidence": self.confidence,
             "hedged_var": self.hedged_var,
@@ -51,7 +51,7 @@ class MonteCarloResult:
     hedge_benefit_mean: float = 0.0
     hedge_benefit_pct: float = 0.0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "simulation_count": self.simulation_count,
             "seed": self.seed,
@@ -107,7 +107,7 @@ def _get_pair_region(pair: str) -> str:
 def _build_covariance(
     factors: list[str],
     cov_override: dict[str, dict[str, float]] | None = None,
-) -> np.ndarray:
+) -> "np.ndarray[Any, np.dtype[Any]]":
     """Build covariance matrix from override or region-aware fallback."""
     n = len(factors)
 

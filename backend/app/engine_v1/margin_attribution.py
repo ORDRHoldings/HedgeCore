@@ -13,6 +13,7 @@ Pure computational -- all inputs injectable.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -26,7 +27,7 @@ class MarginBreakdown:
     concentration_addon: float = 0.0
     total: float = 0.0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "initial": self.initial,
             "maintenance": self.maintenance,
@@ -38,8 +39,8 @@ class MarginBreakdown:
 
 
 def compute_margin_attribution(
-    margin_positions: list[dict],
-    liquidity_scores: list[dict],
+    margin_positions: list[dict[str, Any]],
+    liquidity_scores: list[dict[str, Any]],
     concentration_data: dict[str, float],
     scenario_stress_multiplier: float = 1.5,
     concentration_threshold: float = 0.25,

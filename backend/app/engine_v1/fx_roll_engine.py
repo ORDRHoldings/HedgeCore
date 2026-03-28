@@ -33,7 +33,7 @@ class RollEntry:
     instrument: str = "FWD"                    # FIX-08: track instrument at each roll
     instrument_transition: str | None = None   # FIX-08: "FWD→NDF" if transitioned
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "roll_date": self.roll_date,
             "from_bucket": self.from_bucket,
@@ -59,7 +59,7 @@ class RollLadderResult:
     total_roll_cost_usd: float = 0.0
     roll_count: int = 0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "rolls": [r.to_dict() for r in self.rolls],
             "total_carry_cost_usd": self.total_carry_cost_usd,
@@ -104,7 +104,7 @@ def _bucket_to_months(bucket: str, as_of: str | None = None) -> int:
 
 
 def generate_roll_ladder(
-    hedge_positions: list[dict],
+    hedge_positions: list[dict[str, Any]],
     market: dict[str, Any],
     policy: dict[str, Any],
     roll_horizon_months: int = 3,

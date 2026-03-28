@@ -5,6 +5,8 @@ Same sigma shocks. Same pure-function design.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from app.engine_v1.pair_registry import get_pair_meta
 from app.schemas_v1.results import (
     GenericBucketResult,
@@ -33,7 +35,7 @@ def compute_scenarios_multi(
     """
     meta = get_pair_meta(pair)
     per_bucket: list[ScenarioBucketResult] = []
-    totals_map: dict[float, dict] = {
+    totals_map: dict[float, dict[str, Any]] = {
         s: {"unhedged": 0.0, "hedged": 0.0, "benefit": 0.0, "shocked_spot": 0.0}
         for s in SIGMAS
     }

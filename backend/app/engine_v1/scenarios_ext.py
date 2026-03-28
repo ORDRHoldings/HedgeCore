@@ -25,7 +25,7 @@ class ScenarioShock:
     adv_shock: float = 0.0       # e.g., -0.40 = -40% ADV
     family: str = "institutional"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "fx_shock": self.fx_shock,
@@ -47,9 +47,9 @@ class ScenarioImpact:
     hedge_effectiveness: float  # (pre - post) / pre
     margin_impact_usd: float
     liquidity_impact_pct: float
-    details: dict = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "scenario_name": self.scenario_name,
             "pre_hedge_loss_usd": self.pre_hedge_loss_usd,
@@ -71,7 +71,7 @@ class ExtendedScenarioResult:
     scenario_count: int = 0
     compound_scenarios_included: bool = False
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "scenarios": [s.to_dict() for s in self.scenarios],
             "worst_case_scenario": self.worst_case_scenario,
@@ -157,7 +157,7 @@ def apply_extended_scenarios(
     policy: dict[str, Any],
     margin_total: float = 0.0,
     duration_fraction: float | None = None,
-    position_durations: list[dict] | None = None,  # FIX-02: per-position duration data
+    position_durations: list[dict[str, Any]] | None = None,  # FIX-02: per-position duration data
 ) -> ExtendedScenarioResult:
     """Run extended scenario analysis.
 
@@ -254,9 +254,9 @@ def apply_extended_scenarios(
     )
 
 def compute_position_durations(
-    hedge_actions: list[dict],
+    hedge_actions: list[dict[str, Any]],
     as_of_date: str | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Compute duration_years for each position from value_date.
 
     FIX-02: Replaces flat 0.25 year assumption with actual tenor-derived duration.

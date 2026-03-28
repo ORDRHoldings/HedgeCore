@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 
 class QuoteConvention(str, Enum):
@@ -89,7 +90,7 @@ class PairMetadata:
             return usd_amount / rate
 
 
-_PAIR_DATA: list[dict] = [
+_PAIR_DATA: list[dict[str, Any]] = [
     # G10 INDIRECT (XXX/USD)
     {"pair": "EURUSD", "base_ccy": "EUR", "quote_ccy": "USD", "local_ccy": "EUR",
      "quote_convention": "INDIRECT", "forward_point_format": "ADDITIVE", "settlement_type": "DELIVERABLE",

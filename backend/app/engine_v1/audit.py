@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from app.engine_v1.hasher import sha256_of_dict, sha256_of_list
 from app.schemas_v1.results import RunEnvelope, TraceEvent, TraceLite
@@ -10,12 +11,12 @@ from app.schemas_v1.results import RunEnvelope, TraceEvent, TraceLite
 
 def build_run_envelope(
     run_id: str,
-    trades_raw: list[dict],
-    hedges_raw: list[dict],
-    market_raw: dict,
-    policy_raw: dict,
-    outputs_raw: dict,
-    snapshot_meta: dict | None = None,
+    trades_raw: list[dict[str, Any]],
+    hedges_raw: list[dict[str, Any]],
+    market_raw: dict[str, Any],
+    policy_raw: dict[str, Any],
+    outputs_raw: dict[str, Any],
+    snapshot_meta: dict[str, Any] | None = None,
     pair: str = "USDMXN",  # NEW: determines engine version
 ) -> RunEnvelope:
     """Build a RunEnvelope with SHA-256 hashes for all inputs and outputs.

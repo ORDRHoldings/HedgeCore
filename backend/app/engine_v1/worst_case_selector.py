@@ -27,7 +27,7 @@ class ScenarioLoss:
     post_hedge_loss: float
     improvement: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "scenario_name": self.scenario_name,
             "pre_hedge_loss": self.pre_hedge_loss,
@@ -48,7 +48,7 @@ class WorstCaseResult:
     all_scenarios: list[ScenarioLoss] = field(default_factory=list)
     scenario_count: int = 0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "worst_case_scenario": self.worst_case_scenario,
             "worst_case_loss": self.worst_case_loss,

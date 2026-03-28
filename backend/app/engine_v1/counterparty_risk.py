@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -22,7 +23,7 @@ class CounterpartyExposure:
     exposure_above_threshold: float  # max(0, net - threshold)
     concentration_pct: float      # % of total portfolio
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "counterparty_id": self.counterparty_id,
             "counterparty_name": self.counterparty_name,
@@ -45,7 +46,7 @@ class CounterpartyRiskResult:
     largest_cp_pct: float = 0.0   # Herfindahl-like concentration
     risk_level: str = "LOW"       # LOW | MEDIUM | HIGH | CRITICAL
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "exposures": [e.to_dict() for e in self.exposures],
             "total_gross_usd": self.total_gross_usd,
@@ -57,7 +58,7 @@ class CounterpartyRiskResult:
 
 
 def compute_counterparty_exposure(
-    positions: list[dict],  # list of {counterparty_id, counterparty_name, notional_usd, mtm_usd, isda_threshold_usd}
+    positions: list[dict[str, Any]],  # list of {counterparty_id, counterparty_name, notional_usd, mtm_usd, isda_threshold_usd}
     volatility_annual: float = 0.10,  # 10% annual vol default for PFE
     time_horizon_years: float = 1.0,
     confidence: float = 0.975,
@@ -74,7 +75,7 @@ def compute_counterparty_exposure(
     z_alpha = 1.959964  # norm.ppf(0.975)
 
     # Group by counterparty
-    cp_map: dict[str, dict] = {}
+    cp_map: dict[str, dict[str, Any]] = {}
     for pos in positions:
         cp_id = pos.get("counterparty_id", "UNKNOWN")
         if cp_id not in cp_map:

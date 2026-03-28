@@ -12,6 +12,10 @@ Returns WaterfallResult with per-rule status and integrity score (0-100).
 
 
 
+from __future__ import annotations
+
+from typing import Any, Literal
+
 from app.schemas_v1.errors import Severity, ValidationErrorDetail
 from app.schemas_v1.pipeline import WaterfallResult, WaterfallRule, WaterfallRuleStatus
 from app.schemas_v1.results import HedgePlan, TraceEvent, ValidationReport
@@ -320,7 +324,7 @@ def build_waterfall(
 
     extra_r6_violations: list[str] | None = None,
 
-    weight_overrides: dict | None = None,
+    weight_overrides: dict[str, Any] | None = None,
 
 ) -> WaterfallResult:
 
@@ -472,6 +476,7 @@ def build_waterfall(
 
 
 
+    overall: Literal["PASS", "FAIL", "WARN"]
     if has_fail:
 
         overall = "FAIL"

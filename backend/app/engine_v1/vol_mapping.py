@@ -26,7 +26,7 @@ class VegaMappingResult:
     term_adjusted_vega: float
     notional_equivalent_usd: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "net_vega": self.net_vega,
             "vix_contract_vega": self.vix_contract_vega,

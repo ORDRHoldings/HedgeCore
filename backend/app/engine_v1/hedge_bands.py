@@ -24,7 +24,7 @@ class BandViolation:
     violation_type: str      # "UNDER_HEDGED" or "OVER_HEDGED"
     severity: str            # "WARNING" or "CRITICAL"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "bucket": self.bucket,
             "confidence": self.confidence,
@@ -45,7 +45,7 @@ class HedgeBandResult:
     buckets_compliant: int = 0
     all_compliant: bool = True
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "violations": [v.to_dict() for v in self.violations],
             "buckets_checked": self.buckets_checked,
@@ -55,7 +55,7 @@ class HedgeBandResult:
 
 
 def check_hedge_bands(
-    bucket_results: list[dict],
+    bucket_results: list[dict[str, Any]],
     policy: dict[str, Any],
 ) -> HedgeBandResult:
     """Enforce hedge ratio bands per bucket.
