@@ -16,9 +16,8 @@
 #   See docs/ops/render-cli.md and scripts/render/ for scripted workflows.
 
 services:
-  # ⚠️  INFRA RISK: Both services run on free tier (plan: free).
-  # Free tier cold-starts after ~15 min inactivity → schema readiness check
-  # may fail on first request → 503. Upgrade path: plan: starter ($7/mo).
+  # Both services upgraded to starter tier — eliminates cold starts and enables
+  # private networking between web services and databases.
 
   # ── Production Backend (master branch) ──────────────────────────────────────
   - type: web
@@ -28,7 +27,7 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     branch: master
-    plan: free
+    plan: starter
     healthCheckPath: /api/health
     # Only rebuild on backend changes — skip frontend/docs-only pushes
     buildFilter:
@@ -46,6 +45,8 @@ services:
         value: "3.12"
       - key: JWT_SECRET
         fromGroup: hedgecore-secrets
+      # PRIVATE NETWORKING: use the internal database URL from the Render dashboard
+      # (format: postgresql://user:pass@dpg-XXXX-a/db) — removes DB from public internet
       - key: DATABASE_URL
         fromGroup: hedgecore-secrets
       - key: ASYNC_DATABASE_URL
@@ -62,6 +63,10 @@ services:
         value: "false"
       - key: SYNEX_CORE_URL
         value: https://synex-core.onrender.com
+      - key: REDIS_URL
+        fromGroup: hedgecore-secrets
+      - key: SENTRY_DSN
+        fromGroup: hedgecore-secrets
 
   # ── Preview Backend (dev branch) ────────────────────────────────────────────
   - type: web
@@ -71,7 +76,7 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     branch: dev
-    plan: free
+    plan: starter
     healthCheckPath: /api/health
     buildFilter:
       paths:
@@ -87,6 +92,8 @@ services:
         value: "3.12"
       - key: JWT_SECRET
         fromGroup: hedgecore-preview-secrets
+      # PRIVATE NETWORKING: use the internal database URL from the Render dashboard
+      # (format: postgresql://user:pass@dpg-XXXX-a/db) — removes DB from public internet
       - key: DATABASE_URL
         fromGroup: hedgecore-preview-secrets
       - key: ASYNC_DATABASE_URL
@@ -98,6 +105,10 @@ services:
         value: "true"
       - key: SYNEX_CORE_URL
         value: https://synex-core.onrender.com
+      - key: REDIS_URL
+        fromGroup: hedgecore-preview-secrets
+      - key: SENTRY_DSN
+        fromGroup: hedgecore-preview-secrets
 
   # ── Keep-alive cron (RISK-INF-01 mitigation) ────────────────────────────────
   # Pings the production backend every 14 minutes to prevent free-tier cold starts.
@@ -121,10 +132,10 @@ databases:
   - name: hedgecore-db
     databaseName: hedgecalc
     user: hedgecalc
-    plan: free
+    plan: starter
 
   # ── Preview Database (separate — safe to wipe/reseed) ───────────────────────
   - name: hedgecore-preview-db
     databaseName: hedgecalc_preview
     user: hedgecalc_preview
-    plan: free
+    plan: starter
