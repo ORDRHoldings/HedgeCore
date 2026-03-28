@@ -1,5 +1,34 @@
 # Changelog (AI-maintained)
 
+## 2026-03-28 — Sprint 3: SSO + Billing
+
+### Added
+- **WorkOS SSO**: `POST /auth/sso/callback` — exchanges WorkOS code for ORDR JWT; `sso_provider` + `sso_domain` on Company model; SSO users get stub password `!sso-no-password!`
+- **Stripe billing**: `POST /v1/billing/webhook` — handles `invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`; STRIPE_LIVE_MODE gate; `stripe.api_key` set at startup
+- **Plan enforcement**: `require_plan_tier()` FastAPI dependency (starter=0, professional=1, enterprise=2); raises HTTP 402 if company tier is below required minimum
+- **Self-service signup**: `POST /v1/signup` — atomically creates Company + admin User + GENESIS audit event in one transaction; 409 on duplicate email
+- **GENESIS hash chain**: `provision_tenant()` passes `prev_event_hash="0"*64` to first audit event; verified by integration tests in `test_genesis_hash_chain.py`
+- **Frontend signup wizard**: `/signup` — 3-step wizard (company name -> credentials -> success); calls `POST /api/v1/signup`
+- **Scalar API docs**: `GET /docs` — Scalar OpenAPI reference UI pointing at `/openapi.json`
+- **DB migration**: `h1a2b3c4d5e6` — adds `sso_provider`, `sso_domain`, `stripe_customer_id`, `stripe_subscription_id`, `plan_tier` to `companies` table
+
+### Dependencies added
+- `workos>=4.0.0`
+- `stripe>=8.0.0`
+- `sentry-sdk[fastapi]>=2.0.0` (Sprint 2, carried through)
+
+### Test evidence
+- Backend: pytest run — 4746 passed, 0 failed, 156 skipped
+- Frontend: TypeScript clean (no new errors)
+
+### Human actions still required
+- Add `WORKOS_API_KEY`, `WORKOS_CLIENT_ID` to Render env vars
+- Add `STRIPE_SECRET_KEY_TEST`, `STRIPE_WEBHOOK_SECRET` to Render env vars
+- Add `SENTRY_DSN` to Render + Vercel env vars (Sprint 2)
+- Run Blueprint Sync on Render after render.yaml changes
+
+---
+
 ## 2026-03-28 — Sprint 2: Infrastructure Upgrade
 
 ### Completed (automated)

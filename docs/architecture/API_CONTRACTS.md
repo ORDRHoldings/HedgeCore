@@ -7,6 +7,17 @@
 | `/auth/login` | POST | None | Get JWT tokens |
 | `/auth/refresh` | POST | Refresh token | Refresh access token |
 | `/auth/me` | GET | JWT | Current user info |
+| `/auth/sso/callback` | POST | None | WorkOS SSO callback — exchanges WorkOS `code` for ORDR JWT; creates or retrieves user by SSO profile |
+
+## Self-Service Signup
+| Endpoint | Method | Auth | Purpose |
+|----------|--------|------|---------|
+| `/v1/signup` | POST | None | Atomic tenant provisioning — creates Company + admin User + GENESIS audit event; 409 on duplicate email |
+
+## Billing
+| Endpoint | Method | Auth | Purpose |
+|----------|--------|------|---------|
+| `/v1/billing/webhook` | POST | Stripe-signature | Stripe webhook receiver — handles `invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`; validates `Stripe-Signature` header before processing |
 
 ## Dashboard
 | Endpoint | Method | Auth | Purpose |
