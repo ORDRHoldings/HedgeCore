@@ -49,6 +49,12 @@ configure_logging()
 from app.core.sentry_config import init_sentry
 init_sentry()
 
+import stripe as _stripe
+from app.core.config import get_settings as _get_settings
+_stripe_settings = _get_settings()
+if _stripe_settings.stripe_secret_key:
+    _stripe.api_key = _stripe_settings.stripe_secret_key
+
 logger = logging.getLogger(__name__)
 
 logger.info("? HedgeCalc API booting")

@@ -49,7 +49,6 @@ async def stripe_webhook(
     payload = await request.body()
 
     try:
-        stripe.api_key = settings.stripe_secret_key
         event = stripe.Webhook.construct_event(
             payload, stripe_signature, settings.STRIPE_WEBHOOK_SECRET
         )
