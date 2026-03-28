@@ -220,11 +220,9 @@ class TestRateLimitRedisBackend:
     def test_redis_backend_used_when_url_provided(self):
         """When redis_url is set and Redis pings, _redis_bucket is initialized.
 
-        redis is imported inline inside RateLimitMiddleware.__init__ so we
-        inject a mock via sys.modules rather than patching the module attribute.
+        redis is imported at module level as _redis so we patch the module
+        attribute directly rather than injecting via sys.modules.
         """
-        import sys
-
         mock_redis_client = MagicMock()
         mock_redis_client.ping.return_value = True
         mock_script = MagicMock()
@@ -234,7 +232,7 @@ class TestRateLimitRedisBackend:
         mock_redis_mod = MagicMock()
         mock_redis_mod.from_url.return_value = mock_redis_client
 
-        with patch.dict(sys.modules, {"redis": mock_redis_mod}):
+        with patch("app.middleware.rate_limit._redis", mock_redis_mod):
             app_starlette = Starlette(routes=[Route("/test", _ok_handler)])
             mw = RateLimitMiddleware(
                 app_starlette,
@@ -246,12 +244,10 @@ class TestRateLimitRedisBackend:
 
     def test_redis_failure_falls_back_to_in_memory(self):
         """When Redis connection fails, middleware falls back to in-memory bucket."""
-        import sys
-
         mock_redis_mod = MagicMock()
         mock_redis_mod.from_url.side_effect = Exception("Connection refused")
 
-        with patch.dict(sys.modules, {"redis": mock_redis_mod}):
+        with patch("app.middleware.rate_limit._redis", mock_redis_mod):
             app_starlette = Starlette(routes=[Route("/test", _ok_handler)])
             mw = RateLimitMiddleware(
                 app_starlette,
@@ -263,8 +259,8 @@ class TestRateLimitRedisBackend:
             # In-memory buckets dict is available
             assert hasattr(mw, "_buckets")
 
-    def test_redis_consume_fail_open(self):
-        """When Redis Lua script fails mid-request, consume() returns (True, capacity)."""
+    def test_redis_consume_fail_closed(self):
+        """When Redis Lua script fails mid-request, consume() returns (False, 0) — fail-closed per Spec 2.3."""
         from app.middleware.rate_limit import _RedisTokenBucket
         mock_redis_client = MagicMock()
         mock_script = MagicMock()
@@ -273,8 +269,8 @@ class TestRateLimitRedisBackend:
 
         bucket = _RedisTokenBucket(mock_redis_client, capacity=60, refill_rate=1.0)
         allowed, remaining = bucket.consume("test-key")
-        assert allowed is True  # fail-open
-        assert remaining == 60  # returns capacity
+        assert allowed is False  # fail-closed
+        assert remaining == 0   # no tokens granted
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -273,8 +273,9 @@ class Settings(BaseSettings):
 
     RATE_LIMIT_ENABLED: bool = True
 
-    # Optional Redis URL for multi-node rate limiting (e.g. redis://localhost:6379/0)
-
+    # Required in production for distributed rate limiting and market data cache.
+    # Provisioned via Render Redis — value injected via fromService in render.yaml.
+    # Failure behaviour: rate limiting is fail-CLOSED (deny), cache is fail-open (bypass).
     REDIS_URL: str | None = None
 
     # ------------------------------------------------------------------

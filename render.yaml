@@ -64,7 +64,10 @@ services:
       - key: SYNEX_CORE_URL
         value: https://synex-core.onrender.com
       - key: REDIS_URL
-        fromGroup: hedgecore-secrets
+        fromService:
+          type: redis
+          name: hedgecore-redis
+          property: connectionString
       - key: SENTRY_DSN
         fromGroup: hedgecore-secrets
 
@@ -106,9 +109,24 @@ services:
       - key: SYNEX_CORE_URL
         value: https://synex-core.onrender.com
       - key: REDIS_URL
-        fromGroup: hedgecore-preview-secrets
+        fromService:
+          type: redis
+          name: hedgecore-preview-redis
+          property: connectionString
       - key: SENTRY_DSN
         fromGroup: hedgecore-preview-secrets
+
+  # ── Redis (rate limiting + market data cache) ────────────────────────────────
+  # Render Redis on Starter plan — 25MB RAM, persistent, private network only
+  - type: redis
+    name: hedgecore-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+
+  - type: redis
+    name: hedgecore-preview-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
 
   # ── Keep-alive cron (RISK-INF-01 mitigation) ────────────────────────────────
   # Pings the production backend every 14 minutes to prevent free-tier cold starts.

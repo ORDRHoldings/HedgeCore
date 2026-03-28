@@ -628,8 +628,8 @@ class TestRateLimiterLifecycle:
         b.consume(0.0)  # zero-cost consume triggers refill
         assert b.tokens > 0.0
 
-    def test_redis_bucket_fail_open(self):
-        """Redis bucket allows request when Redis is down (fail-open)."""
+    def test_redis_bucket_fail_closed(self):
+        """Redis bucket denies request when Redis is down (fail-closed per Spec 2.3)."""
         from app.middleware.rate_limit import _RedisTokenBucket
         mock_redis = MagicMock()
         mock_script = MagicMock(side_effect=Exception("Redis unavailable"))
@@ -638,8 +638,8 @@ class TestRateLimiterLifecycle:
         bucket = _RedisTokenBucket(mock_redis, capacity=60, refill_rate=1.0)
         allowed, remaining = bucket.consume("test-key")
 
-        assert allowed is True
-        assert remaining == 60
+        assert allowed is False
+        assert remaining == 0
 
     def test_redis_bucket_allows_when_tokens_available(self):
         """Redis bucket allows when Lua script returns allowed=1."""

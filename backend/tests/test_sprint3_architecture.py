@@ -205,7 +205,7 @@ class TestRedisRateLimiterLua:
         assert "HMSET" in lua  # write back atomically
         assert "EXPIRE" in lua  # key TTL for cleanup
 
-    def test_redis_bucket_fail_open_on_exception(self):
+    def test_redis_bucket_fail_closed_on_exception(self):
         from app.middleware.rate_limit import _RedisTokenBucket
         mock_redis = MagicMock()
         mock_script = MagicMock(side_effect=Exception("Redis down"))
@@ -214,8 +214,8 @@ class TestRedisRateLimiterLua:
         bucket = _RedisTokenBucket(mock_redis, capacity=60, refill_rate=1.0)
         allowed, remaining = bucket.consume("test-key")
 
-        assert allowed is True   # fail-open
-        assert remaining == 60   # full capacity returned on error
+        assert allowed is False  # fail-closed per Spec 2.3
+        assert remaining == 0    # no tokens granted on error
 
     def test_redis_bucket_allowed_request(self):
         from app.middleware.rate_limit import _RedisTokenBucket

@@ -9,6 +9,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+try:
+    import redis as _redis  # type: ignore[import]
+except ImportError:  # pragma: no cover
+    _redis = None  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 
@@ -95,9 +100,12 @@ class _RedisTokenBucket:
             self._script = None
 
     def consume(self, key: str, amount: float = 1.0):
-        """Returns (allowed: bool, remaining: int). Fail-open on Redis errors."""
+        """Returns (allowed: bool, remaining: int). Fail-closed on Redis errors."""
         if self._script is None:
-            return True, int(self._capacity)
+            logger.warning(
+                "RateLimitMiddleware: Redis Lua script not registered (fail-CLOSED) — denying request"
+            )
+            return False, 0
         try:
             now = time.time()
             result = self._script(
@@ -108,8 +116,12 @@ class _RedisTokenBucket:
             remaining = int(result[1])
             return allowed, remaining
         except Exception as exc:
-            logger.warning("Redis rate-limit error (fail-open): %s", exc)
-            return True, int(self._capacity)
+            logger.warning(
+                "RateLimitMiddleware: Redis error (fail-CLOSED) — "
+                "denying request to preserve rate limit integrity. Error: %s",
+                exc,
+            )
+            return False, 0
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -158,7 +170,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._redis_bucket: _RedisTokenBucket | None = None
         if redis_url:
             try:
-                import redis as _redis
                 client = _redis.from_url(redis_url, socket_connect_timeout=2, socket_timeout=2)
                 client.ping()
                 self._redis_bucket = _RedisTokenBucket(client, self.capacity, self.refill_rate)
