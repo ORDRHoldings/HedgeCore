@@ -102,6 +102,7 @@
 | 4-eyes bypass | Single user approving own proposal | SoD check in service layer | Mitigated |
 | Secrets exposure | Leaked secrets in git history | Git scrub in progress (Sprint 1) | In Progress |
 | Global IP allowlist | No middleware-level IP filtering | Per-endpoint only | Sprint 1 Chunk 5 |
+| Unauthenticated market data | `GET /api/v1/market-data/live/*` requires no auth — FX rate data is publicly readable without a token | Route added to `public_prefixes` in APIKeyAuthMiddleware (fix 2026-03-25) — accepted risk; data is indicative prices only, not proprietary |
 
 ---
 
