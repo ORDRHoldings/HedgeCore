@@ -46,6 +46,9 @@ from app.tasks.audit_cleanup import cleanup_audit_tables
 
 configure_logging()
 
+from app.core.sentry_config import init_sentry
+init_sentry()
+
 logger = logging.getLogger(__name__)
 
 logger.info("? HedgeCalc API booting")

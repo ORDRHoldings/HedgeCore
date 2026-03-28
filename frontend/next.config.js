@@ -3,6 +3,7 @@
 const withBundleAnalyzer = require("@next/bundle-analyzer")({
   enabled: process.env.ANALYZE === "true",
 });
+const { withSentryConfig } = require("@sentry/nextjs");
 
 const nextConfig = {
   output: "standalone",   // required for Docker multi-stage build
@@ -56,4 +57,8 @@ const nextConfig = {
   },
 };
 
-module.exports = withBundleAnalyzer(nextConfig);
+module.exports = withSentryConfig(withBundleAnalyzer(nextConfig), {
+  silent: !process.env.SENTRY_AUTH_TOKEN,
+  disableSourceMapUpload: !process.env.SENTRY_AUTH_TOKEN,
+  disableLogger: true,
+});
