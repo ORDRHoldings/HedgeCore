@@ -82,3 +82,45 @@ async def test_webhook_unhandled_event_returns_200():
                 headers={"Stripe-Signature": "t=1,v1=abc"},
             )
     assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_webhook_payment_failed_calls_apply():
+    event = {
+        "type": "invoice.payment_failed",
+        "data": {"object": {"customer": "cus_789"}},
+    }
+    with patch("app.api.routes.v1_billing.get_settings", return_value=_make_settings()), \
+         patch("stripe.Webhook.construct_event", return_value=event), \
+         patch("app.api.routes.v1_billing.apply_payment_failed") as mock_failed:
+        async def _noop(*a, **kw): return None
+        mock_failed.side_effect = _noop
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post(
+                "/api/v1/billing/webhook",
+                content=b'{}',
+                headers={"Stripe-Signature": "t=1,v1=abc"},
+            )
+    assert resp.status_code == 200
+    mock_failed.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_webhook_subscription_deleted_calls_apply():
+    event = {
+        "type": "customer.subscription.deleted",
+        "data": {"object": {"customer": "cus_789"}},
+    }
+    with patch("app.api.routes.v1_billing.get_settings", return_value=_make_settings()), \
+         patch("stripe.Webhook.construct_event", return_value=event), \
+         patch("app.api.routes.v1_billing.apply_subscription_cancelled") as mock_cancel:
+        async def _noop(*a, **kw): return None
+        mock_cancel.side_effect = _noop
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post(
+                "/api/v1/billing/webhook",
+                content=b'{}',
+                headers={"Stripe-Signature": "t=1,v1=abc"},
+            )
+    assert resp.status_code == 200
+    mock_cancel.assert_called_once()

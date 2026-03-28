@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import stripe
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
@@ -23,7 +24,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/billing", tags=["billing"])
 
 
-@router.post("/webhook", status_code=200)
+class WebhookAck(BaseModel):
+    received: bool = True
+
+
+@router.post("/webhook", status_code=200, response_model=WebhookAck)
 async def stripe_webhook(
     request: Request,
     stripe_signature: str = Header(None, alias="Stripe-Signature"),
@@ -61,8 +66,16 @@ async def stripe_webhook(
     if event_type == "invoice.paid":
         customer_id = data.get("customer")
         subscription_id = data.get("subscription")
-        # plan_tier comes from subscription metadata or defaults to starter
-        plan_tier = data.get("metadata", {}).get("plan_tier", "starter")
+        # plan_tier is in subscription_details.metadata for real Stripe invoice.paid events;
+        # top-level metadata does not exist on invoice objects in the Stripe API.
+        # We check subscription_details.metadata first, then fall back to top-level metadata
+        # (present in some test webhook shapes), then default to "starter".
+        sub_details = data.get("subscription_details") or {}
+        plan_tier = (
+            sub_details.get("metadata", {}).get("plan_tier")
+            or data.get("metadata", {}).get("plan_tier")
+            or "starter"
+        )
         if customer_id:
             await apply_subscription_active(db, customer_id, subscription_id or "", plan_tier)
 
@@ -79,4 +92,4 @@ async def stripe_webhook(
     else:
         logger.debug("Unhandled Stripe event type: %s", event_type)
 
-    return {"received": True}
+    return WebhookAck()
