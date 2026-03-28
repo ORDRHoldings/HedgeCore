@@ -1,5 +1,28 @@
 # Changelog (AI-maintained)
 
+## 2026-03-28 — Sprint 4: Compliance Pipeline
+
+### Added
+- **SOC2 Evidence Table**: `compliance_evidence` WORM table (DB-level NO UPDATE/DELETE triggers); nightly export job at 02:00 UTC collecting `user_count`, `policy_change_count`, `failed_auth_count` per tenant
+- **SOC2 Controls Matrix**: `docs/compliance/soc2-controls-matrix.md` — CC6/CC7/CC8/CC9/A1/C1 mapped to existing controls
+- **GDPR Anonymisation Job**: nightly at 01:00 UTC; SHA-256 hashes email + full_name for accounts older than `GDPR_RETENTION_DAYS` (default 730 days); row retained for WORM FK integrity
+- **GDPR Data Rights**: `GET /v1/user/data-export` (Art. 15), `DELETE /v1/user/account` (Art. 17 erasure via anonymisation)
+- **GDPR DPA Document**: `docs/compliance/gdpr-dpa-status.md` — sub-processor DPA status, data flows, retention schedule
+- **PostgreSQL RLS**: `backend/app/core/rls.py` — `inject_tenant_rls()` uses `SET LOCAL` (transaction-scoped, safe with async connection pool); Alembic migration `k1a2b3c4d5e6` adds RLS policies on `positions` and `calculation_runs`
+- **`get_session_with_rls` dependency**: composite FastAPI Depends() that injects tenant context before yielding session
+- **Vendor Security Registry**: `docs/compliance/vendor-registry.md` — 10 vendors with data classification, DPA status, fallback plans
+- **DB migrations**: `j1a2b3c4d5e6` (compliance_evidence), `k1a2b3c4d5e6` (RLS policies)
+
+### Test evidence
+- Backend: 4767 passed, 0 failed, 158 skipped
+
+### Human actions required
+- Sign WorkOS DPA before enabling SSO for enterprise clients
+- Verify Sentry PII scrubbing config matches gdpr-dpa-status.md requirements
+- Add `GDPR_RETENTION_DAYS` env var to Render if non-default retention needed
+
+---
+
 ## 2026-03-28 — Sprint 3: SSO + Billing
 
 ### Added
