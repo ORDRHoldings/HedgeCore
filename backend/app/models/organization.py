@@ -74,6 +74,33 @@ class Company(Base):
         doc="Soft-delete flag. Inactive companies cannot log in.",
     )
 
+    # SSO fields
+    sso_provider: Mapped[str | None] = mapped_column(
+        String(64), nullable=True,
+        doc="WorkOS SSO provider type (e.g. 'okta', 'azure', 'google', 'saml', 'oidc').",
+    )
+
+    sso_domain: Mapped[str | None] = mapped_column(
+        String(255), nullable=True,
+        doc="Email domain used for SSO auto-routing (e.g. 'acme.com').",
+    )
+
+    # Billing fields
+    stripe_customer_id: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, unique=True,
+        doc="Stripe Customer ID (cus_...).",
+    )
+
+    stripe_subscription_id: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, unique=True,
+        doc="Active Stripe Subscription ID (sub_...).",
+    )
+
+    plan_tier: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="starter",
+        doc="Subscription plan tier: starter | professional | enterprise.",
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -87,6 +114,11 @@ class Company(Base):
         cascade="all, delete-orphan",
         order_by="Branch.name",
     )
+
+    def __init__(self, **kwargs: object) -> None:
+        # Apply Python-side default for plan_tier before mapper __init__.
+        kwargs.setdefault("plan_tier", "starter")
+        super().__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<Company {self.slug} name={self.name!r}>"
