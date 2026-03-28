@@ -9,5 +9,13 @@ if (dsn) {
     environment: process.env.NEXT_PUBLIC_ENV ?? "dev",
     tracesSampleRate: 0.05,
     sendDefaultPii: false,
+    beforeSend(event) {
+      if (event.user) {
+        delete event.user.email;
+        delete event.user.username;
+        delete (event.user as Record<string, unknown>).name;
+      }
+      return event;
+    },
   });
 }
