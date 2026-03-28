@@ -1,5 +1,36 @@
 # Changelog (AI-maintained)
 
+## 2026-03-28 — Sprint 2: Infrastructure Upgrade
+
+### Completed (automated)
+- render.yaml: upgraded hedgecore + hedgecore-preview to plan: starter (eliminates cold starts)
+- render.yaml: upgraded hedgecore-db + hedgecore-preview-db to plan: starter (private networking eligible)
+- render.yaml: added Redis service blocks (hedgecore-redis, hedgecore-preview-redis, Starter plan, allkeys-lru)
+- render.yaml: REDIS_URL wired via fromService (not secrets group) for both services
+- render.yaml: added daily backup cron (02:00 UTC) + monthly restore-verify cron (01:00 UTC on 1st)
+- rate_limit.py: _RedisTokenBucket.consume changed from fail-OPEN to fail-CLOSED (spec 2.3)
+- rate_limit.py: import redis moved to module level for testability
+- app/core/sentry_config.py: created PII-scrubbing Sentry init module (scrub_pii_before_send + init_sentry)
+- app/main.py: wired init_sentry() at startup (no-op when SENTRY_DSN unset)
+- requirements.txt: added sentry-sdk[fastapi]>=2.0.0
+- frontend: added @sentry/nextjs, sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts
+- frontend/next.config.js: wrapped with withSentryConfig (source maps gated on SENTRY_AUTH_TOKEN)
+- scripts/backup/: added b2_upload.sh, backup_and_upload.sh, Dockerfile.backup
+- scripts/render/: added cron_backup.sh, cron_restore_verify.sh
+- docs/ops/uptime-monitoring.md: created uptime monitoring runbook
+- tests: added test_rate_limit_failclosed.py (4 tests) + test_sentry_pii_scrub.py (4 tests)
+- ci.yml: added SENTRY_DSN="" to pytest env for no-op path coverage
+
+### Manual Steps Required (operator)
+- Render dashboard: switch DATABASE_URL in hedgecore-secrets to internal hostname
+- Render dashboard: add B2_ACCOUNT_ID, B2_APP_KEY, B2_BUCKET, VERIFY_DB_URL to hedgecore-secrets
+- Render dashboard: run Blueprint Sync to provision Redis services + activate cron jobs
+- BetterUptime: register production + preview monitors (see docs/ops/uptime-monitoring.md)
+- Vercel: add NEXT_PUBLIC_SENTRY_DSN + SENTRY_DSN to frontend environment variables
+- Sentry: create "ORDR Terminal Backend" + "ORDR Terminal Frontend" projects, get DSNs
+
+---
+
 ## 2026-03-27 — Operations hardening: 16 gaps closed (commits 1a09c88–eba3fe9)
 
 ### Summary

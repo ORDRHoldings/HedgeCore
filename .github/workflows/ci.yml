@@ -48,6 +48,7 @@ jobs:
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           JWT_SECRET: "ci-test-secret-32-chars-minimum-ok"
           ENV: "test"
+          SENTRY_DSN: ""
 
   # ── Frontend ─────────────────────────────────────────────────────────────────
   frontend:
