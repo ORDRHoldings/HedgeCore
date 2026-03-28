@@ -51,7 +51,7 @@ services:
       - key: ASYNC_DATABASE_URL
         fromGroup: hedgecore-secrets
       - key: CORS_ALLOW_ORIGINS
-        value: '["https://hedgecore.vercel.app","https://ordr-terminal.vercel.app","https://ordr-terminal-v2.vercel.app"]'
+        value: '["https://hedgecore.vercel.app","https://ordr-terminal.vercel.app","https://ordr-terminal-v2.vercel.app","https://ordr-market.vercel.app","https://ordr-market-git-master-synexiun.vercel.app","https://ordr-market-synexiun.vercel.app","https://ordr-market-synexiun-projects.vercel.app"]'
       - key: ANTHROPIC_API_KEY
         fromGroup: hedgecore-secrets
       - key: VOICE_CLAUDE_MODEL

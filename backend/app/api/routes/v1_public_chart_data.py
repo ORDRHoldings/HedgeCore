@@ -9,7 +9,7 @@ import logging
 import time
 from collections import defaultdict
 
-from fastapi import APIRouter, HTTPException, Path, Query, Request
+from fastapi import APIRouter, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from app.services.market_data import get_orchestrator
@@ -118,11 +118,15 @@ def _cache_set(key: str, resp: PublicChartDataResponse) -> None:
 @router.get("/{symbol}", response_model=PublicChartDataResponse)
 async def get_public_chart_data(
     request: Request,
+    response: Response,
     symbol: str = Path(..., min_length=2, max_length=20),
     interval: str = Query("1day", description="Bar interval"),
     limit: int = Query(200, ge=1, le=500, description="Number of bars"),
 ) -> PublicChartDataResponse:
     """Return OHLCV bars without authentication. Rate-limited."""
+    # Truly public endpoint — allow any browser origin (no credentials involved)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
 
     # Rate limit by IP
     client_ip = request.client.host if request.client else "unknown"
