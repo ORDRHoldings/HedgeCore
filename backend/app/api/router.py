@@ -285,3 +285,7 @@ router.include_router(v1_billing_router)
 # Self-service signup (owns /v1/signup) — public, no JWT required
 from app.api.routes.v1_signup import router as v1_signup_router
 router.include_router(v1_signup_router)
+
+# GDPR data rights — right of access + right to erasure (owns /v1/user)
+from app.api.routes.v1_user_gdpr import router as gdpr_router
+router.include_router(gdpr_router)

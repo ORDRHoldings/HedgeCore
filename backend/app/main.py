@@ -1720,10 +1720,18 @@ async def lifespan(app: FastAPI):
         id="compliance_evidence_export",
         replace_existing=True,
     )
+    from app.tasks.gdpr_anonymise import run_gdpr_anonymise_job
+    _audit_scheduler.add_job(
+        run_gdpr_anonymise_job,
+        CronTrigger(hour=1, minute=0),
+        id="gdpr_anonymise",
+        replace_existing=True,
+    )
     _audit_scheduler.start()
     app.state.scheduler = _audit_scheduler
     logger.info("Scheduler started — audit_cleanup at 03:30 UTC daily")
     logger.info("Scheduler registered — compliance_evidence_export at 02:00 UTC daily")
+    logger.info("Scheduler registered — gdpr_anonymise at 01:00 UTC daily")
 
     try:
 
