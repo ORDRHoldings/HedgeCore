@@ -60,7 +60,7 @@ class _RedisTokenBucket:
     """
     Redis-backed token bucket for multi-node deployments.
     Uses a Lua script for atomic check-and-consume.
-    Falls back to allowing the request on Redis errors (fail-open for availability).
+    Fail-CLOSED on Redis errors: returns (False, 0) to deny the request and preserve rate-limit integrity.
     """
 
     _LUA_CONSUME = """
