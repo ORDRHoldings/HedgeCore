@@ -46,13 +46,20 @@ def scrub_pii_before_send(event: dict, hint: dict) -> dict:  # type: ignore[type
         for field in _PII_FIELDS:
             user.pop(field, None)
 
-    # Scrub request body / form data
+    # Scrub request body / form data and sensitive headers
     request = event.get("request")
     if isinstance(request, dict):
         data = request.get("data")
         if isinstance(data, dict):
             for field in _PII_FIELDS:
                 data.pop(field, None)
+        # Strip credential headers — Authorization (JWT) and API key must not reach Sentry
+        headers = request.get("headers")
+        if isinstance(headers, dict):
+            headers.pop("Authorization", None)
+            headers.pop("authorization", None)
+            headers.pop("X-API-Key", None)
+            headers.pop("x-api-key", None)
 
     # Scrub extra context
     extra = event.get("extra")
