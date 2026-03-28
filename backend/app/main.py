@@ -34,6 +34,7 @@ from app.core.schema_loader import rebuild_all_schemas
 from app.middleware.api_key_auth import APIKeyAuthMiddleware
 from app.middleware.audit_headers import AuditHeadersMiddleware
 from app.middleware.csrf import CSRFMiddleware  # SEC-06: now enabled
+from app.middleware.ip_allowlist_middleware import IPAllowlistMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.tasks.audit_cleanup import cleanup_audit_tables
 
@@ -1845,9 +1846,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 # Middleware (CANONICAL ORDER -- Starlette LIFO: last added = outermost)
 
-# Inner -> Outer: GZip -> AuditHeaders -> RateLimit -> APIKeyAuth -> CORS
+# Inner -> Outer: GZip -> Governance -> Audit -> RateLimit -> APIKeyAuth -> CSRF -> IPAllowlist -> CORS
 
 # CORS must be outermost to handle OPTIONS preflight before auth blocks it.
+# IPAllowlist is second-outermost: blocks non-allowlisted IPs before Audit. See ADR-0007.
 
 # -------------------------------------------------------------------
 
@@ -1873,6 +1875,8 @@ app.add_middleware(APIKeyAuthMiddleware)
 
 app.add_middleware(CSRFMiddleware)  # SEC-06: double-submit cookie CSRF protection
 
+# IPAllowlist: registered after CSRF so it executes BEFORE CSRF (LIFO). See ADR-0007.
+app.add_middleware(IPAllowlistMiddleware, allowed_ips=settings.ALLOWED_IPS)
 
 # CORS outermost -- added last so it runs first (intercepts OPTIONS preflight)
 

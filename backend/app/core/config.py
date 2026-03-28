@@ -323,7 +323,21 @@ class Settings(BaseSettings):
 
         return []
 
+    # Global IP Allowlist (middleware-level). Empty = open mode. See ADR-0007.
+    # Example: ALLOWED_IPS=10.0.0.0/8,203.0.113.0/24
+    ALLOWED_IPS: list[str] = []
 
+    @validator("ALLOWED_IPS", pre=True, always=True)
+    @classmethod
+    def parse_allowed_ips(cls, v: object) -> list[str]:
+        if isinstance(v, list):
+            return [str(e).strip() for e in v if str(e).strip()]
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return []
+            return [e.strip() for e in v.split(",") if e.strip()]
+        return []
 
     # ------------------------------------------------------------------
     # AI / Voice Layer
