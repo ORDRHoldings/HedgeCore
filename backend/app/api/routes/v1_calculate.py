@@ -72,7 +72,7 @@ _distributed_rate_limiter = _RateLimiter(
     window_seconds=int(_CALC_RATE_WINDOW),
 )
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -313,6 +313,8 @@ async def _persist_run(
 async def calculate(
 
     request: CalculateRequest,
+
+    background_tasks: BackgroundTasks,
 
     session: AsyncSession     = Depends(get_async_session),
 
@@ -798,7 +800,24 @@ async def calculate(
 
         del _run_store[oldest]
 
-
+    # Webhook dispatch: calculation.completed
+    try:
+        from sqlalchemy import select as _wh_calc_select
+        from app.models.webhook import WebhookEndpoint as _WH_Endpoint
+        from app.services.webhook_service import dispatch_webhook_event as _wh_dispatch
+        _wh_calc_result = await session.execute(
+            _wh_calc_select(_WH_Endpoint)
+            .where(_WH_Endpoint.company_id == current_user.company_id)
+            .where(_WH_Endpoint.is_active.is_(True))
+        )
+        for _wh_ep in _wh_calc_result.scalars().all():
+            if _wh_ep.subscribes_to("calculation.completed"):
+                background_tasks.add_task(
+                    _wh_dispatch, session, _wh_ep, "calculation.completed",
+                    {"run_id": run_id, "position_count": len(trades)},
+                )
+    except Exception:
+        _log.warning("Failed to dispatch calculation.completed webhook for run %s", run_id, exc_info=True)
 
     return response
 
@@ -987,7 +1006,14 @@ async def calculate_extended(
     Identical auth, RBAC, and rate-limit guards as POST /v1/calculate.
     All extended modules are non-fatal -- failures are captured as None.
     """
-    base_result = await calculate(request_data, session, current_user, None)
+    from fastapi.background import BackgroundTasks as _BgTasks
+    base_result = await calculate(
+        request=request_data,
+        background_tasks=_BgTasks(),
+        session=session,
+        current_user=current_user,
+        _schema=None,
+    )
 
     # Extract plan buckets from the base result for extended modules
     hedge_plan = base_result.hedge_plan

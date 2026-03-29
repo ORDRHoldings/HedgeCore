@@ -44,7 +44,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -678,17 +678,19 @@ async def get_proposal(
 
 async def approve_proposal(
 
-    proposal_id:  UUID,
+    proposal_id:      UUID,
 
-    data:         ApproveProposalRequest,
+    data:             ApproveProposalRequest,
 
-    request:      Request,
+    request:          Request,
 
-    session:      AsyncSession = Depends(get_async_session),
+    background_tasks: BackgroundTasks,
 
-    current_user: User         = Depends(get_current_user),
+    session:          AsyncSession = Depends(get_async_session),
 
-    mfa_verified: bool         = Depends(get_mfa_verified),
+    current_user:     User         = Depends(get_current_user),
+
+    mfa_verified:     bool         = Depends(get_mfa_verified),
 
 ):
 
@@ -773,21 +775,42 @@ async def approve_proposal(
 
     )
 
+    # Webhook dispatch: proposal.approved
+    try:
+        from sqlalchemy import select as _wh_ap_select
+        from app.models.webhook import WebhookEndpoint as _WH_ApEndpoint
+        from app.services.webhook_service import dispatch_webhook_event as _wh_ap_dispatch
+        _wh_ap_result = await session.execute(
+            _wh_ap_select(_WH_ApEndpoint)
+            .where(_WH_ApEndpoint.company_id == current_user.company_id)
+            .where(_WH_ApEndpoint.is_active.is_(True))
+        )
+        for _wh_ap_ep in _wh_ap_result.scalars().all():
+            if _wh_ap_ep.subscribes_to("proposal.approved"):
+                background_tasks.add_task(
+                    _wh_ap_dispatch, session, _wh_ap_ep, "proposal.approved",
+                    {"proposal_id": str(proposal.id), "position_id": str(proposal.position_id) if hasattr(proposal, "position_id") else None},
+                )
+    except Exception:
+        pass
+
     return ProposalResponse.from_orm_safe(proposal)
 
 @router.patch("/{proposal_id}/reject", response_model=ProposalResponse)
 
 async def reject_proposal(
 
-    proposal_id:  UUID,
+    proposal_id:      UUID,
 
-    data:         RejectProposalRequest,
+    data:             RejectProposalRequest,
 
-    request:      Request,
+    request:          Request,
 
-    session:      AsyncSession = Depends(get_async_session),
+    background_tasks: BackgroundTasks,
 
-    current_user: User         = Depends(get_current_user),
+    session:          AsyncSession = Depends(get_async_session),
+
+    current_user:     User         = Depends(get_current_user),
 
 ):
 
@@ -848,6 +871,25 @@ async def reject_proposal(
         request = request,
 
     )
+
+    # Webhook dispatch: proposal.rejected
+    try:
+        from sqlalchemy import select as _wh_rj_select
+        from app.models.webhook import WebhookEndpoint as _WH_RjEndpoint
+        from app.services.webhook_service import dispatch_webhook_event as _wh_rj_dispatch
+        _wh_rj_result = await session.execute(
+            _wh_rj_select(_WH_RjEndpoint)
+            .where(_WH_RjEndpoint.company_id == current_user.company_id)
+            .where(_WH_RjEndpoint.is_active.is_(True))
+        )
+        for _wh_rj_ep in _wh_rj_result.scalars().all():
+            if _wh_rj_ep.subscribes_to("proposal.rejected"):
+                background_tasks.add_task(
+                    _wh_rj_dispatch, session, _wh_rj_ep, "proposal.rejected",
+                    {"proposal_id": str(proposal.id), "position_id": str(proposal.position_id) if hasattr(proposal, "position_id") else None},
+                )
+    except Exception:
+        pass
 
     return ProposalResponse.from_orm_safe(proposal)
 

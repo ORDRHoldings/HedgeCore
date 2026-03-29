@@ -289,3 +289,7 @@ router.include_router(v1_signup_router)
 # GDPR data rights — right of access + right to erasure (owns /v1/user)
 from app.api.routes.v1_user_gdpr import router as gdpr_router
 router.include_router(gdpr_router)
+
+# Webhooks — per-tenant outbound event delivery (owns /v1/webhooks)
+from app.api.routes.v1_webhooks import router as v1_webhooks_router
+router.include_router(v1_webhooks_router)

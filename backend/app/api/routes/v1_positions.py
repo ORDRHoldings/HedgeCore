@@ -41,7 +41,7 @@ import io
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
 from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -279,10 +279,11 @@ async def list_positions(
 
 @router.post("", response_model=PositionResponse, status_code=201)
 async def create_position(
-    data:         PositionCreate,
-    request:      Request,
-    session:      AsyncSession = Depends(get_async_session),
-    current_user: User         = Depends(get_current_user),
+    data:             PositionCreate,
+    request:          Request,
+    background_tasks: BackgroundTasks,
+    session:          AsyncSession = Depends(get_async_session),
+    current_user:     User         = Depends(get_current_user),
 ):
     await _check_permission(session, current_user, "trades.create")
     try:
@@ -307,6 +308,24 @@ async def create_position(
         },
         request = request,
     )
+    # Webhook dispatch: position.created
+    try:
+        from sqlalchemy import select as _wh_select
+        from app.models.webhook import WebhookEndpoint as _WebhookEndpoint
+        from app.services.webhook_service import dispatch_webhook_event as _dispatch_webhook
+        _wh_result = await session.execute(
+            _wh_select(_WebhookEndpoint)
+            .where(_WebhookEndpoint.company_id == current_user.company_id)
+            .where(_WebhookEndpoint.is_active.is_(True))
+        )
+        for _wh in _wh_result.scalars().all():
+            if _wh.subscribes_to("position.created"):
+                background_tasks.add_task(
+                    _dispatch_webhook, session, _wh, "position.created",
+                    {"position_id": str(pos.id), "record_id": pos.record_id},
+                )
+    except Exception:
+        logger.warning("Failed to dispatch position.created webhook for position %s", pos.id, exc_info=True)
     return pos
 @router.put("/{position_id}", response_model=PositionResponse)
 async def update_position(
