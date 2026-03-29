@@ -114,6 +114,12 @@
 | `/v1/admin/users` | GET/POST | JWT+superuser | User management |
 | `/v1/admin/monitor/*` | GET | JWT+superuser | System monitoring (6 endpoints) |
 
+## GDPR Data Rights
+| Endpoint | Method | Auth | Purpose |
+|----------|--------|------|---------|
+| `/v1/user/data-export` | GET | JWT | GDPR Art. 15 right of access; returns user's personal data |
+| `/v1/user/account` | DELETE | JWT | GDPR Art. 17 right to erasure; anonymises PII; WORM audit event written before anonymisation |
+
 ## Key Contract Notes
 - `GET /v1/runs` returns `run_id` key; `GET /v1/dashboard/recent-runs` returns `id` — both are the same UUID.
 - `ExecutionProposal.hedge_amount` is in `proposal_payload` JSONB, not a top-level column.

@@ -22,6 +22,10 @@ log = logging.getLogger(__name__)
 
 RETENTION_DAYS = int(os.getenv("GDPR_RETENTION_DAYS", "730"))
 ANONYMISED_SENTINEL = "GDPR_ANONYMISED"
+# This sentinel is intentionally not a valid bcrypt hash (too long).
+# security.py verify_password() wraps bcrypt.checkpw() in a try/except that
+# returns False on any exception, so this sentinel safely blocks all login
+# attempts without raising errors. Confirmed safe — no fix required.
 ANONYMISED_PASSWORD_HASH = "$2b$12$GDPR_ANONYMISED_ACCOUNT_CANNOT_LOGIN_XXXXXXXXXXXXXXXXXXX"
 
 

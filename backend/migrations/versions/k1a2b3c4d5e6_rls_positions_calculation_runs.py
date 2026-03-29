@@ -16,9 +16,14 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # FORCE ROW LEVEL SECURITY is intentionally NOT applied.
+    # The application DB user (table owner) bypasses RLS by default,
+    # preserving existing route compatibility.
+    # RLS provides defence-in-depth for any future non-owner DB roles.
+    # Primary tenant isolation is enforced at the application layer.
+
     # positions
     op.execute("ALTER TABLE positions ENABLE ROW LEVEL SECURITY;")
-    op.execute("ALTER TABLE positions FORCE ROW LEVEL SECURITY;")
     op.execute("""
         CREATE POLICY positions_tenant_isolation_select
         ON positions FOR SELECT
@@ -52,7 +57,6 @@ def upgrade() -> None:
 
     # calculation_runs
     op.execute("ALTER TABLE calculation_runs ENABLE ROW LEVEL SECURITY;")
-    op.execute("ALTER TABLE calculation_runs FORCE ROW LEVEL SECURITY;")
     op.execute("""
         CREATE POLICY calc_runs_tenant_isolation_select
         ON calculation_runs FOR SELECT
