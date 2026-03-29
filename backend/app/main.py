@@ -1689,6 +1689,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Market data init skipped: {e}")
 
+    # ── Redis market data cache ───────────────────────────────────────────
+    try:
+        from app.core.redis_client import init_redis
+        init_redis(settings.REDIS_URL if hasattr(settings, "REDIS_URL") else None)
+        logger.info("Redis market data cache initialized")
+    except Exception as e:
+        logger.warning(f"Redis cache init skipped: {e}")
+
     # ── HedgeWiki integration client ──────────────────────────────────
     if settings.HEDGEWIKI_ENABLED:
         try:

@@ -28,10 +28,18 @@ async def system_health():
     except Exception:
         pass
 
+    cache_stats = {}
+    try:
+        from app.core.redis_client import get_cache_stats
+        cache_stats = get_cache_stats()
+    except Exception:
+        pass
+
     return {
         "status": "ok",
         "component": "api",
         "governance": governance,
+        "market_data_cache": cache_stats,
     }
 
 
