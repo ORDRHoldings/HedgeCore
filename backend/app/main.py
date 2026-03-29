@@ -1735,6 +1735,13 @@ async def lifespan(app: FastAPI):
         id="gdpr_anonymise",
         replace_existing=True,
     )
+    from app.tasks.webhook_cleanup import cleanup_webhook_delivery_logs
+    _audit_scheduler.add_job(
+        cleanup_webhook_delivery_logs,
+        CronTrigger(hour=3, minute=30),
+        id="webhook_cleanup",
+        replace_existing=True,
+    )
     _audit_scheduler.start()
     app.state.scheduler = _audit_scheduler
     logger.info("Scheduler started — audit_cleanup at 03:30 UTC daily")
