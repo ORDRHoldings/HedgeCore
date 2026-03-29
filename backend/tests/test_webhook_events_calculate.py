@@ -208,6 +208,9 @@ async def test_calculation_completed_webhook_dispatched():
     wh_result.scalar.return_value = None
     db.execute = AsyncMock(return_value=wh_result)
 
+    async def fake_fire_webhook(company_id, endpoint_id, event_type, data):
+        dispatched_events.append(event_type)
+
     with (
         _with_overrides(user, db),
         patch("app.api.routes.v1_calculate._distributed_rate_limiter.is_allowed", return_value=True),
@@ -220,7 +223,7 @@ async def test_calculation_completed_webhook_dispatched():
         patch("app.api.routes.v1_calculate.build_trace_lite") as mock_trace,
         patch("app.api.routes.v1_calculate._persist_run", new=AsyncMock()),
         patch("app.api.routes.v1_calculate._snapshot_create_or_get", new=AsyncMock(side_effect=Exception("skip"))),
-        patch("app.services.webhook_service.dispatch_webhook_event", side_effect=fake_dispatch),
+        patch("app.api.routes.v1_calculate._fire_webhook", side_effect=fake_fire_webhook),
     ):
         _setup_engine_mocks(mock_validate, mock_kernel, mock_scenarios, mock_envelope, mock_trace)
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

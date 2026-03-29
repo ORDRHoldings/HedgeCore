@@ -13,6 +13,7 @@ Responsibilities:
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
@@ -153,7 +154,7 @@ async def dispatch_webhook_event(
     Inserts a WebhookDeliveryLog row after each attempt.
     On first successful delivery, emits a WORM audit event and prunes the log.
     """
-    from app.models.webhook import MAX_ATTEMPTS, DELIVERY_LOG_WINDOW, WebhookDeliveryLog
+    from app.models.webhook import MAX_ATTEMPTS, DELIVERY_LOG_WINDOW, RETRY_DELAYS_MINUTES, WebhookDeliveryLog
 
     tenant_id = str(endpoint.company_id) if endpoint.company_id else "unknown"
     payload = build_event_payload(event_type, tenant_id, data)
@@ -191,14 +192,22 @@ async def dispatch_webhook_event(
             )
             return
 
-        _log.warning(
-            "webhook attempt %d/%d failed endpoint_id=%s event=%s err=%s",
-            attempt_num,
-            MAX_ATTEMPTS,
-            endpoint.id,
-            event_type,
-            result["error_message"],
-        )
+        if attempt_num < MAX_ATTEMPTS:
+            delay_minutes = RETRY_DELAYS_MINUTES[attempt_num - 1]
+            _log.warning(
+                "Webhook delivery attempt %d/%d failed for endpoint %s — retrying in %d min",
+                attempt_num, MAX_ATTEMPTS, endpoint.id, delay_minutes,
+            )
+            await asyncio.sleep(delay_minutes * 60)
+        else:
+            _log.warning(
+                "webhook attempt %d/%d failed endpoint_id=%s event=%s err=%s",
+                attempt_num,
+                MAX_ATTEMPTS,
+                endpoint.id,
+                event_type,
+                result["error_message"],
+            )
 
     # All attempts exhausted — commit failure logs
     await db.commit()
@@ -221,7 +230,18 @@ async def _emit_webhook_delivered_audit(
     payload: dict[str, Any],
 ) -> None:
     """Write an immutable audit_events row for a successful webhook delivery."""
-    from app.models.audit_event import build_audit_event, GENESIS_HASH
+    from sqlalchemy import select as _sel
+    from app.models.audit_event import AuditEvent, build_audit_event, GENESIS_HASH
+
+    # Fetch the latest event hash for this tenant's chain
+    latest = await db.execute(
+        _sel(AuditEvent.event_hash)
+        .where(AuditEvent.company_id == endpoint.company_id)
+        .order_by(AuditEvent.created_at.desc())
+        .limit(1)
+    )
+    row = latest.scalar_one_or_none()
+    prev_hash = row if row else GENESIS_HASH
 
     event = build_audit_event(
         event_type="SYSTEM",
@@ -232,7 +252,7 @@ async def _emit_webhook_delivered_audit(
             "url": endpoint.url,
             "delivery_id": payload.get("delivery_id"),
         },
-        prev_event_hash=GENESIS_HASH,
+        prev_event_hash=prev_hash,
         company_id=endpoint.company_id,
         entity_type="webhook_endpoint",
         entity_id=str(endpoint.id),

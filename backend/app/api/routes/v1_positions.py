@@ -39,6 +39,7 @@ Illegal lifecycle transitions return 409 Conflict with a structured error body.
 import csv
 import io
 import logging
+import uuid as _uuid_mod
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
@@ -67,6 +68,20 @@ from app.services import position_service, rbac_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/positions", tags=["v1-positions"])
+
+
+async def _fire_webhook(company_id: _uuid_mod.UUID, endpoint_id: _uuid_mod.UUID, event_type: str, data: dict) -> None:
+    """Open a fresh DB session for webhook delivery (background task)."""
+    from app.core.db import async_session_maker
+    from app.models.webhook import WebhookEndpoint as _WE
+    from app.services.webhook_service import dispatch_webhook_event as _dispatch
+    from sqlalchemy import select as _sel
+    async with async_session_maker() as session:
+        result = await session.execute(_sel(_WE).where(_WE.id == endpoint_id))
+        ep = result.scalar_one_or_none()
+        if ep:
+            await _dispatch(session, ep, event_type, data)
+
 
 # ---------------------------------------------------------------------------
 
@@ -312,7 +327,6 @@ async def create_position(
     try:
         from sqlalchemy import select as _wh_select
         from app.models.webhook import WebhookEndpoint as _WebhookEndpoint
-        from app.services.webhook_service import dispatch_webhook_event as _dispatch_webhook
         _wh_result = await session.execute(
             _wh_select(_WebhookEndpoint)
             .where(_WebhookEndpoint.company_id == current_user.company_id)
@@ -321,7 +335,7 @@ async def create_position(
         for _wh in _wh_result.scalars().all():
             if _wh.subscribes_to("position.created"):
                 background_tasks.add_task(
-                    _dispatch_webhook, session, _wh, "position.created",
+                    _fire_webhook, current_user.company_id, _wh.id, "position.created",
                     {"position_id": str(pos.id), "record_id": pos.record_id},
                 )
     except Exception:

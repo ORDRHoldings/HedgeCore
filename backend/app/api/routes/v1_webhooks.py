@@ -19,6 +19,7 @@ from app.core.db import get_session
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.models.webhook import MAX_WEBHOOKS_PER_TENANT, SUPPORTED_EVENTS, WebhookEndpoint
+from app.services import rbac_service
 from app.services.webhook_service import generate_webhook_secret
 
 router = APIRouter(prefix="/v1/webhooks", tags=["v1-webhooks"])
@@ -58,6 +59,17 @@ class WebhookRegisterResponse(WebhookResponse):
     secret: str
 
 
+async def _check_permission(db: AsyncSession, user: User, codename: str) -> None:
+    if user.is_superuser:
+        return
+    perms = await rbac_service.get_permissions_by_user(db, user.id)
+    if codename not in perms:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Missing permission: {codename}",
+        )
+
+
 def _endpoint_to_dict(ep: WebhookEndpoint) -> dict[str, Any]:
     return {
         "id": str(ep.id),
@@ -69,13 +81,14 @@ def _endpoint_to_dict(ep: WebhookEndpoint) -> dict[str, Any]:
     }
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=WebhookRegisterResponse)
 async def register_webhook(
     request: Request,
     body: WebhookRegisterRequest,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    await _check_permission(db, current_user, "api_keys.manage")
     count_result = await db.execute(
         select(func.count(WebhookEndpoint.id))
         .where(WebhookEndpoint.company_id == current_user.company_id)
@@ -106,12 +119,13 @@ async def register_webhook(
     return {**_endpoint_to_dict(endpoint), "secret": secret}
 
 
-@router.get("")
+@router.get("", response_model=list[WebhookResponse])
 async def list_webhooks(
     request: Request,
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    await _check_permission(db, current_user, "api_keys.manage")
     result = await db.execute(
         select(WebhookEndpoint)
         .where(WebhookEndpoint.company_id == current_user.company_id)
@@ -129,6 +143,7 @@ async def delete_webhook(
     db: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    await _check_permission(db, current_user, "api_keys.manage")
     result = await db.execute(
         select(WebhookEndpoint)
         .where(WebhookEndpoint.id == webhook_id)

@@ -64,6 +64,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/proposals", tags=["v1-proposals"])
 
+
+async def _fire_webhook(company_id, endpoint_id, event_type: str, data: dict) -> None:
+    """Open a fresh DB session for webhook delivery (background task)."""
+    from app.core.db import async_session_maker
+    from app.models.webhook import WebhookEndpoint as _WE
+    from app.services.webhook_service import dispatch_webhook_event as _dispatch
+    from sqlalchemy import select as _sel
+    async with async_session_maker() as session:
+        result = await session.execute(_sel(_WE).where(_WE.id == endpoint_id))
+        ep = result.scalar_one_or_none()
+        if ep:
+            await _dispatch(session, ep, event_type, data)
+
+
 # ---------------------------------------------------------------------------
 
 # Pydantic schemas (inline -- proposal-specific, no reuse needed yet)
@@ -779,7 +793,6 @@ async def approve_proposal(
     try:
         from sqlalchemy import select as _wh_ap_select
         from app.models.webhook import WebhookEndpoint as _WH_ApEndpoint
-        from app.services.webhook_service import dispatch_webhook_event as _wh_ap_dispatch
         _wh_ap_result = await session.execute(
             _wh_ap_select(_WH_ApEndpoint)
             .where(_WH_ApEndpoint.company_id == current_user.company_id)
@@ -788,7 +801,7 @@ async def approve_proposal(
         for _wh_ap_ep in _wh_ap_result.scalars().all():
             if _wh_ap_ep.subscribes_to("proposal.approved"):
                 background_tasks.add_task(
-                    _wh_ap_dispatch, session, _wh_ap_ep, "proposal.approved",
+                    _fire_webhook, current_user.company_id, _wh_ap_ep.id, "proposal.approved",
                     {"proposal_id": str(proposal.id), "position_id": str(proposal.position_id) if hasattr(proposal, "position_id") else None},
                 )
     except Exception:
@@ -876,7 +889,6 @@ async def reject_proposal(
     try:
         from sqlalchemy import select as _wh_rj_select
         from app.models.webhook import WebhookEndpoint as _WH_RjEndpoint
-        from app.services.webhook_service import dispatch_webhook_event as _wh_rj_dispatch
         _wh_rj_result = await session.execute(
             _wh_rj_select(_WH_RjEndpoint)
             .where(_WH_RjEndpoint.company_id == current_user.company_id)
@@ -885,7 +897,7 @@ async def reject_proposal(
         for _wh_rj_ep in _wh_rj_result.scalars().all():
             if _wh_rj_ep.subscribes_to("proposal.rejected"):
                 background_tasks.add_task(
-                    _wh_rj_dispatch, session, _wh_rj_ep, "proposal.rejected",
+                    _fire_webhook, current_user.company_id, _wh_rj_ep.id, "proposal.rejected",
                     {"proposal_id": str(proposal.id), "position_id": str(proposal.position_id) if hasattr(proposal, "position_id") else None},
                 )
     except Exception:

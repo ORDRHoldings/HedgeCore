@@ -108,6 +108,18 @@ from app.services.market_snapshot_service import (
 router = APIRouter(prefix="/v1", tags=["v1-calculate"])
 
 
+async def _fire_webhook(company_id, endpoint_id, event_type: str, data: dict) -> None:
+    """Open a fresh DB session for webhook delivery (background task)."""
+    from app.core.db import async_session_maker
+    from app.models.webhook import WebhookEndpoint as _WE
+    from app.services.webhook_service import dispatch_webhook_event as _dispatch
+    from sqlalchemy import select as _sel
+    async with async_session_maker() as session:
+        result = await session.execute(_sel(_WE).where(_WE.id == endpoint_id))
+        ep = result.scalar_one_or_none()
+        if ep:
+            await _dispatch(session, ep, event_type, data)
+
 
 # In-memory cache (bounded to 50 items) -- supplements DB persistence for fast access
 
@@ -804,7 +816,6 @@ async def calculate(
     try:
         from sqlalchemy import select as _wh_calc_select
         from app.models.webhook import WebhookEndpoint as _WH_Endpoint
-        from app.services.webhook_service import dispatch_webhook_event as _wh_dispatch
         _wh_calc_result = await session.execute(
             _wh_calc_select(_WH_Endpoint)
             .where(_WH_Endpoint.company_id == current_user.company_id)
@@ -813,7 +824,7 @@ async def calculate(
         for _wh_ep in _wh_calc_result.scalars().all():
             if _wh_ep.subscribes_to("calculation.completed"):
                 background_tasks.add_task(
-                    _wh_dispatch, session, _wh_ep, "calculation.completed",
+                    _fire_webhook, current_user.company_id, _wh_ep.id, "calculation.completed",
                     {"run_id": run_id, "position_count": len(trades)},
                 )
     except Exception:
