@@ -62,15 +62,47 @@ DATABASE_URL = resolve_database_url()
 Base = declarative_base()
 
 # ---------------------------------------------------------------------
+# Engine factory (pool-aware)
+# ---------------------------------------------------------------------
+
+def create_engine_from_url(database_url: str, **pool_kwargs) -> AsyncEngine:
+    """Create async engine with appropriate pool strategy for the given URL.
+
+    SQLite requires NullPool (no connection pooling — async SQLite does not
+    support shared connections across coroutines). PostgreSQL uses QueuePool
+    with production-safe defaults that are overridable via pool_kwargs.
+    """
+    if "sqlite" in database_url:
+        return create_async_engine(database_url, poolclass=NullPool)
+    return create_async_engine(
+        database_url,
+        pool_size=pool_kwargs.get("pool_size", 20),
+        max_overflow=pool_kwargs.get("max_overflow", 10),
+        pool_timeout=pool_kwargs.get("pool_timeout", 30),
+        pool_pre_ping=pool_kwargs.get("pool_pre_ping", True),
+    )
+
+
+def _build_engine() -> AsyncEngine:
+    """Build the module-level engine, pulling pool config from Settings."""
+    try:
+        from app.core.config import settings  # local import to avoid circular deps
+        return create_engine_from_url(
+            DATABASE_URL,
+            pool_size=settings.DB_POOL_SIZE,
+            max_overflow=settings.DB_MAX_OVERFLOW,
+            pool_timeout=settings.DB_POOL_TIMEOUT,
+            pool_pre_ping=settings.DB_POOL_PRE_PING,
+        )
+    except Exception:
+        # Fallback: use defaults if settings are unavailable at import time
+        return create_engine_from_url(DATABASE_URL)
+
+
+# ---------------------------------------------------------------------
 # Async Engine
 # ---------------------------------------------------------------------
-async_engine: AsyncEngine = create_async_engine(
-    DATABASE_URL,
-    echo=False,
-    future=True,
-    poolclass=NullPool,
-    pool_pre_ping=True,
-)
+async_engine: AsyncEngine = _build_engine()
 
 # ---------------------------------------------------------------------
 # Session Factory
