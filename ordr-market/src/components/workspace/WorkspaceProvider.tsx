@@ -153,6 +153,8 @@ const initialState: WorkspaceState = {
   showNewsOverlay: false,
   alertHistory: [],
   riskLevels: null,
+  webhookUrl: '',
+  webhookEnabled: false,
   secondaryCharts: [
     { id: 'c1', symbol: 'AAPL',   timeframe: '1D' },
     { id: 'c2', symbol: 'EURUSD', timeframe: '4h' },
@@ -408,6 +410,10 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       return { ...state, alertHistory: [] };
     case 'SET_RISK_LEVELS':
       return { ...state, riskLevels: action.levels };
+    case 'SET_WEBHOOK_URL':
+      return { ...state, webhookUrl: action.url };
+    case 'TOGGLE_WEBHOOK_ENABLED':
+      return { ...state, webhookEnabled: !state.webhookEnabled };
     case 'REPLAY_START':
       return {
         ...state,
@@ -497,7 +503,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         paperPositions, tradeHistory, enabledSessions,
         chartLayout, secondaryCharts, priceScaleMode, showPrevLevels, showOpenLevels, showPivots, showCandlePatterns, showAutoFib, showSessionRanges,
         crosshairSyncEnabled, showKillZones, showEQHL, compareSymbols, showNewsOverlay,
-        alertHistory,
+        alertHistory, webhookUrl, webhookEnabled,
       } = state;
       localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify({
         mode, leftTab, rightTab, bottomTab, bottomHeight,
@@ -507,7 +513,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         paperPositions, tradeHistory, enabledSessions,
         chartLayout, secondaryCharts, priceScaleMode, showPrevLevels, showOpenLevels, showPivots, showCandlePatterns, showAutoFib, showSessionRanges,
         crosshairSyncEnabled, showKillZones, showEQHL, compareSymbols, showNewsOverlay,
-        alertHistory,
+        alertHistory, webhookUrl, webhookEnabled,
       }));
     } catch { /* ignore */ }
   }, [
@@ -518,7 +524,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     state.paperPositions, state.tradeHistory, state.enabledSessions,
     state.chartLayout, state.secondaryCharts, state.priceScaleMode, state.showPrevLevels, state.showOpenLevels, state.showPivots, state.showCandlePatterns,
     state.crosshairSyncEnabled, state.showKillZones, state.showEQHL, state.compareSymbols, state.showNewsOverlay,
-    state.alertHistory,
+    state.alertHistory, state.webhookUrl, state.webhookEnabled,
   ]);
 
   // Keyboard shortcuts

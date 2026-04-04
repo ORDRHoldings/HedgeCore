@@ -78,6 +78,16 @@ function fireBrowserNotification(title: string, body: string) {
   try { new Notification(title, { body, icon: '/favicon.ico', tag: 'ordr-alert' }); } catch { /* */ }
 }
 
+// ── Webhook fire helper (fire-and-forget, never throws) ──────────────────────
+function fireWebhook(url: string, payload: Record<string, unknown>) {
+  if (!url) return;
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source: 'ORDR Market', ...payload }),
+  }).catch(() => { /* silently ignore webhook errors */ });
+}
+
 // ── Alert beep via Web Audio API ─────────────────────────────────────────────
 function playAlertBeep(freq = 880, duration = 0.4) {
   try {
@@ -146,6 +156,9 @@ export function ChartCore() {
         dispatch({ type: 'ADD_TOAST', toast: { message: msg, type: 'alert' } });
         playAlertBeep();
         fireBrowserNotification(`ORDR Alert — ${alert.symbol}`, `${alert.condition.replace('price_', '')} ${alert.value}`);
+        if (state.webhookEnabled && state.webhookUrl) {
+          fireWebhook(state.webhookUrl, { type: 'price_alert', symbol: alert.symbol, condition: alert.condition, value: alert.value, triggerPrice: price, triggeredAt: new Date().toISOString() });
+        }
       }
     }
   }, [symbolInfo.price]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -217,6 +230,10 @@ export function ChartCore() {
         dispatch({ type: 'ADD_TOAST', toast: { message: indMsg, type: 'alert' } });
         playAlertBeep(660, 0.5);
         fireBrowserNotification(`ORDR Alert — ${alert.symbol}`, condition.replace(/_/g, ' '));
+        if (state.webhookEnabled && state.webhookUrl) {
+          const lastBar = fetchedBars[fetchedBars.length - 1];
+          fireWebhook(state.webhookUrl, { type: 'indicator_alert', symbol: alert.symbol, condition, value: alert.value, triggerPrice: lastBar?.c ?? alert.value, triggeredAt: new Date().toISOString() });
+        }
       }
     }
   }, [fetchedBars.length]); // eslint-disable-line react-hooks/exhaustive-deps

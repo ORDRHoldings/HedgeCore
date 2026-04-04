@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Bell, Plus, Trash2, ToggleLeft, ToggleRight, AlertTriangle, RotateCcw, Activity, BellOff, BellRing, History, X } from 'lucide-react';
+import { Bell, Plus, Trash2, ToggleLeft, ToggleRight, AlertTriangle, RotateCcw, Activity, BellOff, BellRing, History, X, Webhook, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { T } from '../tokens';
 import { useWorkspace } from '../WorkspaceProvider';
 import { formatPrice } from '../workspace-data';
@@ -40,6 +40,9 @@ function relativeTime(iso: string): string {
 export function AlertsPanel() {
   const { state, dispatch, symbolInfo } = useWorkspace();
   const [panelTab, setPanelTab] = useState<'active' | 'history'>('active');
+  const [webhookOpen, setWebhookOpen] = useState(false);
+  const [webhookDraft, setWebhookDraft] = useState(state.webhookUrl);
+  const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'ok' | 'err'>('idle');
   const [activeTab, setActiveTab] = useState<AlertTab>('price');
   const [showCreate, setShowCreate] = useState(false);
   const [alertPrice, setAlertPrice] = useState('');
@@ -75,6 +78,27 @@ export function AlertsPanel() {
     });
     setAlertPrice('');
     setShowCreate(false);
+  };
+
+  const testWebhook = async () => {
+    const url = webhookDraft.trim();
+    if (!url) return;
+    setTestStatus('sending');
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: 'ORDR Market', type: 'test', message: 'Webhook test from ORDR Market Alerts', ts: new Date().toISOString() }),
+      });
+      setTestStatus('ok');
+    } catch {
+      setTestStatus('err');
+    }
+    setTimeout(() => setTestStatus('idle'), 3000);
+  };
+
+  const saveWebhook = () => {
+    dispatch({ type: 'SET_WEBHOOK_URL', url: webhookDraft.trim() });
   };
 
   const createIndicatorAlert = () => {
@@ -369,6 +393,85 @@ export function AlertsPanel() {
           </div>
         </div>
       )}
+
+      {/* Webhook settings footer */}
+      <div style={{ borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
+        <button
+          onClick={() => setWebhookOpen(o => !o)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 10px', background: 'transparent', border: 'none',
+            cursor: 'pointer', outline: 'none',
+          }}
+        >
+          <Webhook size={10} color={state.webhookEnabled && state.webhookUrl ? T.accent : T.text3} />
+          <span style={{ fontSize: 9, fontWeight: 600, color: state.webhookEnabled && state.webhookUrl ? T.accent : T.text3, fontFamily: T.font, flex: 1, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Webhook {state.webhookEnabled && state.webhookUrl ? '(ON)' : '(OFF)'}
+          </span>
+          {webhookOpen ? <ChevronUp size={10} color={T.text3} /> : <ChevronDown size={10} color={T.text3} />}
+        </button>
+
+        {webhookOpen && (
+          <div style={{ padding: '6px 10px 10px', background: T.panelBg }}>
+            <div style={{ fontSize: 9, color: T.text3, fontFamily: T.font, marginBottom: 6 }}>
+              POST alert JSON to a Discord/Slack webhook or custom endpoint when alerts fire.
+            </div>
+
+            {/* Enable toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <button
+                onClick={() => dispatch({ type: 'TOGGLE_WEBHOOK_ENABLED' })}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, outline: 'none', display: 'flex' }}
+              >
+                {state.webhookEnabled
+                  ? <ToggleRight size={18} color={T.accent} />
+                  : <ToggleLeft  size={18} color={T.text3} />}
+              </button>
+              <span style={{ fontSize: 9, color: state.webhookEnabled ? T.text1 : T.text3, fontFamily: T.font }}>
+                {state.webhookEnabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+
+            {/* URL input */}
+            <input
+              type="url"
+              value={webhookDraft}
+              onChange={e => setWebhookDraft(e.target.value)}
+              onBlur={saveWebhook}
+              placeholder="https://discord.com/api/webhooks/..."
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '5px 7px', borderRadius: 3, fontSize: 9,
+                border: `1px solid ${T.border}`, background: 'rgba(255,255,255,0.04)',
+                color: T.text1, fontFamily: T.mono, outline: 'none', marginBottom: 6,
+              }}
+            />
+
+            {/* Test button */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={testWebhook}
+                disabled={!webhookDraft.trim() || testStatus === 'sending'}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  padding: '4px 0', borderRadius: 3, fontSize: 9, fontWeight: 600,
+                  border: `1px solid ${T.border}`, background: 'transparent',
+                  color: testStatus === 'ok' ? T.bull : testStatus === 'err' ? T.bear : T.text2,
+                  cursor: !webhookDraft.trim() || testStatus === 'sending' ? 'not-allowed' : 'pointer',
+                  fontFamily: T.font, outline: 'none',
+                }}
+              >
+                <Send size={9} />
+                {testStatus === 'sending' ? 'Sending…' : testStatus === 'ok' ? 'Sent ✓' : testStatus === 'err' ? 'Failed ✗' : 'Test Webhook'}
+              </button>
+            </div>
+
+            <div style={{ fontSize: 8, color: T.text3, fontFamily: T.font, marginTop: 6 }}>
+              Payload: {'{'}source, type, symbol, condition, triggerPrice, triggeredAt{'}'}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

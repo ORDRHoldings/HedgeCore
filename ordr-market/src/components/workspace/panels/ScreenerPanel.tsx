@@ -1265,8 +1265,279 @@ function SignalScan({ symbol }: { symbol: string }) {
   );
 }
 
+// ── Technical Setup Scanner ───────────────────────────────────────────────────
+
+type TechSetupType = 'rsi_os' | 'rsi_ob' | 'golden_x' | 'death_x' | 'hi52w' | 'lo52w';
+
+interface TechResult {
+  symbol:    string;
+  name:      string;
+  category:  ScreenerCategory;
+  price:     number;
+  value:     number;   // RSI value, EMA diff %, or proximity %
+  setupType: TechSetupType;
+}
+
+const TECH_LABELS: Record<TechSetupType, { label: string; dir: 'bull' | 'bear' | 'neutral'; desc: string }> = {
+  rsi_os:   { label: 'RSI Oversold',   dir: 'bull',    desc: 'RSI(14) < threshold (default 35)' },
+  rsi_ob:   { label: 'RSI Overbought', dir: 'bear',    desc: 'RSI(14) > threshold (default 65)' },
+  golden_x: { label: 'Golden Cross',   dir: 'bull',    desc: 'EMA9 crossed above EMA21 (last 3 bars)' },
+  death_x:  { label: 'Death Cross',    dir: 'bear',    desc: 'EMA9 crossed below EMA21 (last 3 bars)' },
+  hi52w:    { label: 'Near 52W High',  dir: 'bull',    desc: 'Price within threshold% of 52-week high' },
+  lo52w:    { label: 'Near 52W Low',   dir: 'neutral', desc: 'Price within threshold% of 52-week low' },
+};
+
+async function fetchTechBars(symbol: string, limit: number): Promise<Bar[]> {
+  try {
+    const res = await fetch(`/api/chart-data/${encodeURIComponent(symbol)}?interval=1day&limit=${limit}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.bars ?? [];
+  } catch { return []; }
+}
+
+function computeSetupValue(bars: Bar[], setupType: TechSetupType, threshold: number): { match: boolean; value: number } {
+  const no = { match: false, value: 0 };
+  if (bars.length < 2) return no;
+  const closes = bars.map(b => b.c);
+  const last = closes[closes.length - 1];
+
+  if (setupType === 'rsi_os' || setupType === 'rsi_ob') {
+    if (bars.length < 16) return no;
+    const rsiPts = computeRSI(bars, 14);
+    const rsiVal = rsiPts[rsiPts.length - 1]?.value;
+    if (rsiVal == null || !isFinite(rsiVal)) return no;
+    if (setupType === 'rsi_os') return { match: rsiVal < threshold, value: rsiVal };
+    return { match: rsiVal > threshold, value: rsiVal };
+  }
+
+  if (setupType === 'golden_x' || setupType === 'death_x') {
+    if (bars.length < 25) return no;
+    const ema9  = emaFromValues(closes, 9);
+    const ema21 = emaFromValues(closes, 21);
+    const n = Math.min(ema9.length, ema21.length);
+    if (n < 4) return no;
+    // Check for fresh crossover in last 3 bars
+    const diff = (i: number) => (ema9[ema9.length - 1 - i] ?? 0) - (ema21[ema21.length - 1 - i] ?? 0);
+    const d0 = diff(0), d1 = diff(1), d2 = diff(2), d3 = diff(3);
+    const pct = Math.abs(d0 / (last || 1)) * 100;
+    if (setupType === 'golden_x') {
+      const crossed = (d0 > 0 && (d1 <= 0 || d2 <= 0 || d3 <= 0));
+      return { match: crossed, value: pct };
+    } else {
+      const crossed = (d0 < 0 && (d1 >= 0 || d2 >= 0 || d3 >= 0));
+      return { match: crossed, value: pct };
+    }
+  }
+
+  if (setupType === 'hi52w' || setupType === 'lo52w') {
+    const highs = bars.map(b => b.h);
+    const lows  = bars.map(b => b.l);
+    const hi52 = Math.max(...highs);
+    const lo52 = Math.min(...lows);
+    if (setupType === 'hi52w') {
+      const pct = hi52 > 0 ? ((hi52 - last) / hi52) * 100 : 100;
+      return { match: pct <= threshold, value: pct };
+    } else {
+      const pct = lo52 > 0 ? ((last - lo52) / lo52) * 100 : 100;
+      return { match: pct <= threshold, value: pct };
+    }
+  }
+
+  return no;
+}
+
+function TechSetupScan() {
+  const { dispatch } = useWorkspace();
+  const [setupType,  setSetupType]  = useState<TechSetupType>('rsi_os');
+  const [threshold,  setThreshold]  = useState(35);
+  const [catFilter,  setCatFilter]  = useState<CatFilter>('All');
+  const [running,    setRunning]    = useState(false);
+  const [progress,   setProgress]   = useState(0);
+  const [currentSym, setCurrentSym] = useState('');
+  const [results,    setResults]    = useState<TechResult[] | null>(null);
+  const abortRef = React.useRef(false);
+
+  const universe = React.useMemo(() =>
+    catFilter === 'All' ? SCREENER_UNIVERSE : SCREENER_UNIVERSE.filter(s => s.category === catFilter),
+    [catFilter],
+  );
+
+  const barLimit = (setupType === 'hi52w' || setupType === 'lo52w') ? 260 : 50;
+
+  // Default threshold by setup type
+  function defaultThreshold(st: TechSetupType): number {
+    if (st === 'rsi_os')  return 35;
+    if (st === 'rsi_ob')  return 65;
+    if (st === 'golden_x' || st === 'death_x') return 0.1;
+    return 2; // 52W proximity %
+  }
+
+  const runScan = useCallback(async () => {
+    abortRef.current = false;
+    setRunning(true);
+    setResults(null);
+    setProgress(0);
+    const found: TechResult[] = [];
+
+    for (let i = 0; i < universe.length; i++) {
+      if (abortRef.current) break;
+      const sym = universe[i];
+      setCurrentSym(sym.symbol);
+      setProgress(Math.round((i / universe.length) * 100));
+
+      const bars = await fetchTechBars(sym.symbol, barLimit);
+      const { match, value } = computeSetupValue(bars, setupType, threshold);
+
+      if (match && bars.length > 0) {
+        found.push({ symbol: sym.symbol, name: sym.name, category: sym.category, price: bars[bars.length - 1].c, value, setupType });
+      }
+
+      if (i % 5 === 4) await new Promise(r => setTimeout(r, 10));
+    }
+
+    found.sort((a, b) => {
+      if (setupType === 'rsi_os')  return a.value - b.value;   // lowest RSI first
+      if (setupType === 'rsi_ob')  return b.value - a.value;   // highest RSI first
+      if (setupType === 'hi52w')   return a.value - b.value;   // nearest to high first
+      if (setupType === 'lo52w')   return a.value - b.value;   // nearest to low first
+      return b.value - a.value;                                 // largest cross % first
+    });
+
+    setProgress(100);
+    setResults(found);
+    setRunning(false);
+  }, [universe, setupType, threshold, barLimit]);
+
+  const meta = TECH_LABELS[setupType];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+
+      {/* Setup type selector */}
+      <div style={{ padding: '6px 8px', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, color: T.text3, letterSpacing: '0.06em', fontFamily: T.font, marginBottom: 5 }}>SETUP TYPE</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
+          {(Object.keys(TECH_LABELS) as TechSetupType[]).map(st => {
+            const { label, dir } = TECH_LABELS[st];
+            const active = setupType === st;
+            const color = dir === 'bull' ? T.bull : dir === 'bear' ? T.bear : T.accent;
+            return (
+              <button key={st}
+                onClick={() => { setSetupType(st); setThreshold(defaultThreshold(st)); setResults(null); }}
+                style={{
+                  padding: '4px 6px', borderRadius: 3, fontSize: 9, fontWeight: 600,
+                  fontFamily: T.font, cursor: 'pointer', outline: 'none',
+                  border: `1px solid ${active ? color : T.border}`,
+                  background: active ? (dir === 'bull' ? 'rgba(38,198,118,0.12)' : dir === 'bear' ? 'rgba(239,83,80,0.12)' : T.accentBg) : 'transparent',
+                  color: active ? color : T.text3,
+                  textAlign: 'left',
+                }}
+              >{label}</button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Threshold + Category */}
+      <div style={{ padding: '6px 8px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 9, color: T.text3, fontFamily: T.font, whiteSpace: 'nowrap' }}>
+            {setupType.startsWith('rsi') ? 'RSI thresh' : setupType.includes('52w') ? '% proximity' : '% diff min'}:
+          </span>
+          <input
+            type="number"
+            value={threshold}
+            onChange={e => setThreshold(parseFloat(e.target.value) || 0)}
+            step={setupType.startsWith('rsi') ? 1 : 0.1}
+            style={{
+              width: 52, height: 22, padding: '0 6px', borderRadius: 3,
+              border: `1px solid ${T.border}`, background: T.surfaceAlt,
+              color: T.text1, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace",
+              outline: 'none',
+            }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          {(['All', 'FX', 'Stocks', 'ETF', 'Indices', 'Crypto', 'Commodities'] as CatFilter[]).slice(0, 4).map(cat => (
+            <button key={cat} onClick={() => setCatFilter(cat)} style={{
+              padding: '2px 5px', borderRadius: 3, fontSize: 8, fontWeight: 600,
+              border: `1px solid ${catFilter === cat ? T.accent : T.border}`,
+              background: catFilter === cat ? T.accentBg : 'transparent',
+              color: catFilter === cat ? T.accent : T.text3,
+              cursor: 'pointer', outline: 'none', fontFamily: T.font,
+            }}>{cat}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Run button */}
+      <div style={{ padding: '5px 8px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', gap: 5, alignItems: 'center' }}>
+        <button
+          onClick={running ? () => { abortRef.current = true; } : runScan}
+          style={{
+            flex: 1, padding: '5px 0', borderRadius: 3, fontSize: 10, fontWeight: 600,
+            fontFamily: T.font, cursor: 'pointer', outline: 'none', border: 'none',
+            background: running ? T.border : (meta.dir === 'bull' ? T.bull : meta.dir === 'bear' ? T.bear : T.accent),
+            color: running ? T.text3 : '#fff',
+          }}
+        >
+          {running ? `⏹ Stop (${progress}%)` : `▶ Scan ${universe.length} syms`}
+        </button>
+        {running && currentSym && (
+          <span style={{ fontSize: 8, color: T.text3, fontFamily: "'IBM Plex Mono', monospace" }}>{currentSym}</span>
+        )}
+      </div>
+
+      {/* Results */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {results === null ? (
+          <div style={{ padding: 16, textAlign: 'center', color: T.text3, fontSize: 10, fontFamily: T.font }}>
+            {meta.desc}
+          </div>
+        ) : results.length === 0 ? (
+          <div style={{ padding: 16, textAlign: 'center', color: T.text3, fontSize: 10, fontFamily: T.font }}>
+            No matches found
+          </div>
+        ) : (
+          <>
+            <div style={{ padding: '4px 8px', fontSize: 9, color: T.text3, fontFamily: T.font, borderBottom: `1px solid ${T.border}` }}>
+              {results.length} result{results.length !== 1 ? 's' : ''}
+            </div>
+            {results.map(r => {
+              const { dir } = TECH_LABELS[r.setupType];
+              const color = dir === 'bull' ? T.bull : dir === 'bear' ? T.bear : T.accent;
+              const valLabel = r.setupType.startsWith('rsi') ? `RSI ${r.value.toFixed(1)}`
+                : r.setupType.includes('x') ? `${r.value.toFixed(3)}% diff`
+                : `${r.value.toFixed(2)}% away`;
+              return (
+                <div key={r.symbol} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '5px 8px', borderBottom: `1px solid ${T.border}`,
+                  cursor: 'pointer',
+                }}
+                  onClick={() => dispatch({ type: 'SET_SYMBOL', symbol: r.symbol })}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: T.text1, fontFamily: "'IBM Plex Mono', monospace" }}>{r.symbol}</div>
+                    <div style={{ fontSize: 8, color: T.text3, fontFamily: T.font }}>{r.name}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color, fontFamily: "'IBM Plex Mono', monospace" }}>{valLabel}</div>
+                    <div style={{ fontSize: 8, color: T.text3, fontFamily: "'IBM Plex Mono', monospace" }}>{r.price > 100 ? r.price.toFixed(2) : r.price.toFixed(4)}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main export ───────────────────────────────────────────────────────────────
-type ScreenerTab = 'matrix' | 'scan' | 'filter' | 'gap';
+type ScreenerTab = 'matrix' | 'scan' | 'filter' | 'gap' | 'setup';
 
 export function ScreenerPanel() {
   const { state } = useWorkspace();
@@ -1281,7 +1552,8 @@ export function ScreenerPanel() {
           { id: 'matrix' as ScreenerTab, label: 'MTF'     },
           { id: 'scan'   as ScreenerTab, label: 'Signals' },
           { id: 'filter' as ScreenerTab, label: 'Filter'  },
-          { id: 'gap'    as ScreenerTab, label: 'Gap Scan' },
+          { id: 'gap'    as ScreenerTab, label: 'Gap'     },
+          { id: 'setup'  as ScreenerTab, label: 'Setup'   },
         ]).map(t => {
           const active = tab === t.id;
           return (
@@ -1311,7 +1583,9 @@ export function ScreenerPanel() {
           ? <SignalScan symbol={symbol} />
           : tab === 'filter'
           ? <FilterScan />
-          : <GapScan />
+          : tab === 'gap'
+          ? <GapScan />
+          : <TechSetupScan />
         }
       </div>
     </div>

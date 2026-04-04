@@ -5,7 +5,7 @@
 
 // ── Panel Tabs ───────────────────────────────────────────────────────────────
 export type LeftTab = 'watchlist' | 'draw' | 'indicators' | 'screener' | 'layouts';
-export type RightTab = 'properties' | 'layers' | 'ai' | 'orderflow' | 'alerts' | 'news' | 'trade' | 'watchlist' | 'risk' | 'heatmap' | 'notes' | 'corr';
+export type RightTab = 'properties' | 'layers' | 'ai' | 'orderflow' | 'alerts' | 'news' | 'trade' | 'watchlist' | 'risk' | 'heatmap' | 'notes' | 'corr' | 'stats';
 export type BottomTab = 'mtf' | 'scanner' | 'replay' | 'strategy' | 'orders' | 'confluence';
 export type ChartLayout = '1' | '2h' | '2v' | '4';
 
@@ -203,6 +203,9 @@ export interface WorkspaceState {
   alertHistory: AlertHistoryEntry[];
   // Risk calculator levels shown on chart
   riskLevels: { entry: number; sl: number | null; tp: number | null; side: 'long' | 'short' } | null;
+  // Webhook URL for alert notifications (empty string = disabled)
+  webhookUrl: string;
+  webhookEnabled: boolean;
 }
 
 // ── Workspace Actions ────────────────────────────────────────────────────────
@@ -286,6 +289,8 @@ export type WorkspaceAction =
   | { type: 'LOG_ALERT_TRIGGER'; entry: Omit<AlertHistoryEntry, 'id'> }
   | { type: 'CLEAR_ALERT_HISTORY' }
   | { type: 'SET_RISK_LEVELS'; levels: WorkspaceState['riskLevels'] }
+  | { type: 'SET_WEBHOOK_URL'; url: string }
+  | { type: 'TOGGLE_WEBHOOK_ENABLED' }
   | { type: 'ADD_TOAST'; toast: Omit<WorkspaceToast, 'id' | 'createdAt'> }
   | { type: 'REMOVE_TOAST'; id: string }
   // Trade journal
