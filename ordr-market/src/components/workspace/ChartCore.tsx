@@ -11,6 +11,7 @@
 import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { useWorkspace } from './WorkspaceProvider';
 import ChartEngine from '../chart/ChartEngine';
+import { BASE_TIMEFRAMES } from './workspace-data';
 import type { Bar } from '../chart/indicators/types';
 import { usePublicChartData } from '@/hooks/usePublicChartData';
 import { useMarketWebSocket } from '@/hooks/useMarketWebSocket';
@@ -412,6 +413,12 @@ export function ChartCore() {
         onAddAlert={handleAddAlert}
         onOpenPanel={handleOpenPanel}
         syncCrosshair={state.crosshairSyncEnabled && state.chartLayout !== '1'}
+        onSwipeTimeframe={(dir) => {
+          const tfs = [...BASE_TIMEFRAMES, ...state.customTimeframes];
+          const idx = tfs.indexOf(state.timeframe);
+          const next = dir === 'left' ? tfs[idx + 1] : tfs[idx - 1];
+          if (next) dispatch({ type: 'SET_TIMEFRAME', timeframe: next });
+        }}
       />
     </div>
   );

@@ -197,6 +197,8 @@ interface Props {
   externalTradeLevels?: import('./renderers/priceLine').TradeLevel[];
   /** Enable crosshair position sync across multi-chart panes via CustomEvent bus */
   syncCrosshair?: boolean;
+  /** Called when a horizontal swipe gesture is detected on the chart (mobile) */
+  onSwipeTimeframe?: (direction: 'left' | 'right') => void;
 }
 
 const DEFAULT_CONFIG: ChartIndicatorConfig = {
@@ -348,7 +350,7 @@ function ChartEngineInner({
   onConfigChange, onSubPanesChange, onDrawingModeChange, onChartTypeChange, onObjectSelect, onObjectData,
   externalSessions, externalScreenshotTrigger, externalCopyImageTrigger, externalBacktestMarkers, externalDrawingUpdate, externalAlertLevels,
   externalPriceScaleMode, externalShowPrevLevels, externalShowOpenLevels, externalShowPivots, externalShowCandlePatterns, externalShowAutoFib, externalShowSessionRanges, onPriceScaleModeChange,
-  onAddAlert, onOpenPanel, externalTradeLevels, syncCrosshair,
+  onAddAlert, onOpenPanel, externalTradeLevels, syncCrosshair, onSwipeTimeframe,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -445,6 +447,9 @@ function ChartEngineInner({
 
   const lockDrawingsRef = useRef(externalLockDrawings ?? false);
   useEffect(() => { lockDrawingsRef.current = externalLockDrawings ?? false; }, [externalLockDrawings]);
+
+  const onSwipeTimeframeRef = useRef(onSwipeTimeframe);
+  useEffect(() => { onSwipeTimeframeRef.current = onSwipeTimeframe; }, [onSwipeTimeframe]);
 
   // Delete all drawings when trigger counter increments
   useEffect(() => {
@@ -771,6 +776,7 @@ function ChartEngineInner({
     let pinchDist0 = 0;   // initial pinch distance
     let touchDrawingStarted = false;
     let touchDragStarted = false;
+    let swipeStartX = 0, swipeStartY = 0, swipeStartTime = 0, wasPinch = false;
 
     function dist(a: Touch, b: Touch) {
       const dx = a.clientX - b.clientX;
@@ -802,7 +808,7 @@ function ChartEngineInner({
 
         // Check if touching near a drawing handle for drag (2.5x hit radius for finger precision)
         const vp0 = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
-        const hitHandle = hitTestDrawings(x, y, drawingsRef.current, layout, vp0, effectivePriceScale, 2.5);
+        const hitHandle = hitTestDrawings(x, y, drawingsRef.current, layout, vp0, effectivePriceScale, 3.5);
         if (hitHandle) {
           touchDragStarted = true;
           touchDrawingStarted = false;
@@ -834,12 +840,17 @@ function ChartEngineInner({
 
         lastTouchX = x;
         lastTouchY = y;
+        swipeStartX = t.clientX;
+        swipeStartY = t.clientY;
+        swipeStartTime = Date.now();
+        wasPinch = false;
         zoomRef.current = handleDragStart(zoomRef.current, x, y);
       } else if (e.touches.length === 2) {
         // End any drag first
         axisDragRef.current = endAxisDrag(axisDragRef.current);
         zoomRef.current = handleDragEnd(zoomRef.current);
         pinchDist0 = dist(e.touches[0], e.touches[1]);
+        wasPinch = true;
       }
     };
 
@@ -923,6 +934,18 @@ function ChartEngineInner({
         axisDragRef.current = endAxisDrag(axisDragRef.current);
         zoomRef.current = handleDragEnd(zoomRef.current);
         pinchDist0 = 0;
+        // Swipe gesture → timeframe change (quick horizontal flick, not a draw/drag/pinch)
+        if (!touchDrawingStarted && !touchDragStarted && !wasPinch && onSwipeTimeframeRef.current) {
+          const released = e.changedTouches[0];
+          if (released) {
+            const dx = released.clientX - swipeStartX;
+            const dy = released.clientY - swipeStartY;
+            const elapsed = Date.now() - swipeStartTime;
+            if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5 && elapsed < 400) {
+              onSwipeTimeframeRef.current(dx > 0 ? 'right' : 'left');
+            }
+          }
+        }
       } else if (e.touches.length === 1) {
         // One finger lifted from pinch — restart as single drag
         axisDragRef.current = endAxisDrag(axisDragRef.current);
