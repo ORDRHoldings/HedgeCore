@@ -11,7 +11,15 @@
 - Items: 5 DONE / 5 total
 - All enterprise readiness sprints (Sprint 1-5) now complete
 
-## Recent Work (2026-03-29) — Sprint 5: Scale & Performance COMPLETE
+## Recent Work (2026-04-04) — Production Auth + Dashboard Fixes
+- ROOT CAUSE: Schema drift — ORM model columns missing from production DB. `users.ui_preferences` and 5 `companies` columns (sso_provider, sso_domain, stripe_customer_id, stripe_subscription_id, plan_tier) absent. SQLAlchemy SELECT * → ProgrammingError → swallowed as 401 → dashboard black screen for all users.
+- FIXES: ALTER TABLE added to `_ensure_tables()` for all missing columns; `ui_preferences` marked `deferred()` in ORM; `/auth/me` exception handler now returns 500 for non-auth errors; Alembic migrations 0012 + 0013.
+- DASHBOARD: Fixed `toFixed()` crash on null `bid/mid/ask` in FX rate cards; made `fmtUsd()` null-safe; guarded `hedgeCoverage` and `hedge_ratio`.
+- BROWSER CONFIRMED: Login → /dashboard renders. "Good morning, Demo" greeting visible. KPI strip, TradingView chart, nav all functional. Zero JS errors.
+- Validation: 4801 passed, 0 failed, 158 skipped (unchanged)
+- Commits: 006b593 → ba269ba → 10ce559 → 3e0e7ab → 14e7ab8 → d1063b6 → 4a6f8ae
+
+## Previous Work (2026-03-29) — Sprint 5: Scale & Performance COMPLETE
 - k6 load test script: `docs/performance/k6-load-test.js` (100 VU scenario); baseline doc pending full staging run
 - Redis market data cache: `backend/app/core/redis_client.py` — fail-open singleton, 60s TTL, hit/miss counters on /system/health
 - Connection pool tuning: DB_POOL_SIZE=20, DB_MAX_OVERFLOW=10, DB_POOL_TIMEOUT=30, DB_POOL_PRE_PING=True in Settings; `create_engine_from_url()` in db.py

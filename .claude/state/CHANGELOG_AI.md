@@ -1,5 +1,27 @@
 # Changelog (AI-maintained)
 
+## 2026-04-04 — Production Auth + Dashboard Fixes
+
+### Fixed
+- **`/auth/me` → 401 / dashboard black screen**: Schema drift — ORM model columns existed in code but not in the production PostgreSQL DB. `users.ui_preferences` and 5 `companies` columns (`sso_provider`, `sso_domain`, `stripe_customer_id`, `stripe_subscription_id`, `plan_tier`) were absent. SQLAlchemy `SELECT *` failed with `UndefinedColumnError` → broad `except Exception` swallowed it as 401 → `fetchMe()` returned null → `user=null` → dashboard `return null` (black screen).
+- **`_ensure_tables()` gap**: Added `ALTER TABLE` statements for all 6 missing columns. Column additions are now applied on every Render restart (idempotent `ADD COLUMN IF NOT EXISTS`). Alembic migrations 0012 + 0013 created as canonical schema records.
+- **`User.ui_preferences` deferred**: Marked as `deferred()` in ORM so it is excluded from the default `SELECT` even before the column is added to the DB.
+- **`/auth/me` exception handler**: Changed broad `except Exception → 401` to return HTTP 500 with exception type, so DB errors are distinguishable from JWT auth failures.
+- **Dashboard `toFixed` crashes**: `rate.bid/mid/ask` can be null when market data is unavailable. Guarded all 6 `.toFixed()` call sites with `?? 0`. Made `fmtUsd()` accept `null|undefined`, returning `"—"` instead of crashing. Guarded `hedgeCoverage` and `hedge_ratio` null cases.
+
+### Browser confirmed
+- Login → `/dashboard` navigates correctly
+- `/auth/me` returns HTTP 200 with user, roles (63 permissions), company context
+- "Good morning, Demo" greeting visible; sidebar, KPI strip, TradingView chart all render
+- Zero JS errors, no error boundary triggered
+- Page sweep: dashboard, hedge-desk, audit-lab, sandbox, reports all OK
+
+### Test evidence
+- Backend: 4801 passed, 0 failed, 158 skipped (unchanged)
+- Commits: 006b593 → ba269ba → 10ce559 → 14e7ab8 → d1063b6 → 4a6f8ae
+
+---
+
 ## 2026-03-29 — Sprint 5: Scale & Performance
 
 ### Added
