@@ -19,8 +19,7 @@ import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 import dynamic from "next/dynamic";
 
-import { PageShell } from "@/components/layout/PageShell";
-import { Play } from "lucide-react";
+import { Download, FileCode2 } from "lucide-react";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -87,6 +86,7 @@ interface RunDetail {
   dataset_name: string;
   currency_pair: string | null;
   hedge_type: string;
+  designation_date: string | null;
   period_count: number;
   methodology_version: string;
   standard: string;
@@ -161,6 +161,36 @@ export default function HedgeEffectivenessRunPage() {
   const [run, setRun] = useState<RunDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<"results" | "periods" | "trace" | "compliance">("results");
+  const [downloading, setDownloading] = useState<"ifrs9" | "asc815" | null>(null);
+
+  const handleXmlDownload = async (fmt: "ifrs9" | "asc815") => {
+    if (!token || !runId) return;
+    setDownloading(fmt);
+    try {
+      const endpoint = fmt === "ifrs9"
+        ? `/v1/hedge-effectiveness/runs/${runId}/ifrs9-xml`
+        : `/v1/hedge-effectiveness/runs/${runId}/asc815-xml`;
+      const filename = fmt === "ifrs9"
+        ? `ifrs9-evidence-${runId.slice(0, 8)}.xml`
+        : `asc815-evidence-${runId.slice(0, 8)}.xml`;
+      const res = await dashboardFetch(endpoint, token);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+    } catch {
+      // silent
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!token || !runId) return;
@@ -283,7 +313,7 @@ export default function HedgeEffectivenessRunPage() {
                   </span>
                 )}
               </div>
-              <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, marginTop: 3, display: "flex", gap: 16 }}>
+              <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, marginTop: 3, display: "flex", gap: 16, flexWrap: "wrap" }}>
                 <span>{run.standard}</span>
                 <span style={{ color: S.rim }}>\u2502</span>
                 <span>{run.hedge_type.replace(/_/g, " ").toUpperCase()}</span>
@@ -291,16 +321,45 @@ export default function HedgeEffectivenessRunPage() {
                 <span>{run.period_count} periods</span>
                 <span style={{ color: S.rim }}>\u2502</span>
                 <span>v{run.methodology_version}</span>
+                {run.designation_date && (
+                  <>
+                    <span style={{ color: S.rim }}>\u2502</span>
+                    <span>Designated: {run.designation_date}</span>
+                  </>
+                )}
               </div>
             </div>
 
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, letterSpacing: "0.08em" }}>RUN HASH</div>
-              <div style={{
-                fontFamily: S.mono, fontSize: 12, color: S.text2, marginTop: 2,
-                padding: "2px 8px", background: S.sub, borderRadius: 2,
-              }}>
-                {run.run_hash?.slice(0, 20)}...
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8 }}>
+                {(["ifrs9", "asc815"] as const).map((fmt) => (
+                  <button
+                    key={fmt}
+                    onClick={() => handleXmlDownload(fmt)}
+                    disabled={downloading === fmt}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 5,
+                      fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
+                      color: downloading === fmt ? S.text3 : HEX.cyan,
+                      background: "rgba(28,98,242,0.06)", border: "1px solid rgba(28,98,242,0.2)",
+                      borderRadius: 4, padding: "5px 12px", cursor: downloading === fmt ? "not-allowed" : "pointer",
+                    }}
+                    onMouseEnter={(e) => { if (!downloading) e.currentTarget.style.background = "rgba(28,98,242,0.12)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(28,98,242,0.06)"; }}
+                  >
+                    <FileCode2 size={12} />
+                    {downloading === fmt ? "..." : fmt === "ifrs9" ? "IFRS 9 XML" : "ASC 815 XML"}
+                  </button>
+                ))}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, letterSpacing: "0.08em" }}>RUN HASH</div>
+                <div style={{
+                  fontFamily: S.mono, fontSize: 12, color: S.text2, marginTop: 2,
+                  padding: "2px 8px", background: S.sub, borderRadius: 2,
+                }}>
+                  {run.run_hash?.slice(0, 20)}...
+                </div>
               </div>
             </div>
           </div>
@@ -1207,6 +1266,78 @@ function ComplianceSection({ compliance, run }: { compliance: string[]; run: Run
         )}
       </div>
 
+      {/* Methodology disclosure */}
+      <div style={{
+        padding: 24, borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`,
+      }}>
+        <div style={{
+          fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
+          letterSpacing: "0.14em", marginBottom: 14,
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={HEX.cyan} strokeWidth="2" strokeLinecap="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+          </svg>
+          METHODOLOGY &amp; STANDARDS
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {[
+            {
+              label: "ACCOUNTING STANDARD",
+              value: run.standard === "ASC_815" ? "ASC 815 (US GAAP)" : run.standard === "IFRS_9" ? "IFRS 9 (IASB)" : run.standard === "IAS_39" ? "IAS 39 (Legacy IASB)" : run.standard,
+              note: run.standard === "ASC_815" ? "ASC 815-20-35-1" : run.standard === "IFRS_9" ? "IFRS 9.B6.4.1–B6.4.6" : "IAS 39.AG105–AG113",
+            },
+            {
+              label: "METHODOLOGY VERSION",
+              value: `v${run.methodology_version}`,
+              note: "Deterministic retrospective quantitative test",
+            },
+            {
+              label: "DOLLAR-OFFSET TEST",
+              value: run.dollar_offset_effective == null ? "Not run" : run.dollar_offset_effective ? "PASS" : "FAIL",
+              note: "Effective band: 0.80 ≤ ratio ≤ 1.25",
+              color: run.dollar_offset_effective == null ? undefined : run.dollar_offset_effective ? HEX.green : HEX.red,
+            },
+            {
+              label: "REGRESSION TEST",
+              value: run.regression_method === "regression_insufficient_data" ? "Insufficient data (< 30 pts)" : run.regression_effective == null ? "Not run" : run.regression_effective ? "PASS" : "FAIL",
+              note: "R² ≥ 0.80, slope β ∈ [−1.25, −0.80]",
+              color: run.regression_effective == null ? undefined : run.regression_effective ? HEX.green : HEX.red,
+            },
+            {
+              label: "HEDGE TYPE",
+              value: (run.hedge_type || "cash_flow").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+              note: "Classification per IAS 39.71 / ASC 815-20-25",
+            },
+            {
+              label: "DESIGNATION DATE",
+              value: run.designation_date || "Not recorded",
+              note: "Date hedge relationship was formally designated",
+            },
+          ].map((item) => (
+            <div key={item.label} style={{
+              padding: "10px 14px", background: S.sub, borderRadius: 4,
+            }}>
+              <div style={{
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3,
+                letterSpacing: "0.12em", marginBottom: 3,
+              }}>
+                {item.label}
+              </div>
+              <div style={{
+                fontFamily: S.mono, fontSize: 13, fontWeight: 700,
+                color: (item as { color?: string }).color || S.text1, marginBottom: 2,
+              }}>
+                {item.value}
+              </div>
+              <div style={{ fontFamily: S.ui, fontSize: 11, color: S.text3 }}>
+                {item.note}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Cryptographic evidence */}
       <div style={{
         padding: 24, borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`,
@@ -1311,8 +1442,6 @@ function TraceSection({
         {traces.map((t, i) => {
           const color = stepColor(t.step);
           return (
-            <PageShell icon={Play} title="Effectiveness Detail" breadcrumb={["Hedge Effectiveness", "Run Detail"]} noPadding>
-
             <div key={i} style={{
               display: "flex", gap: 16, marginBottom: 12, position: "relative",
             }}>
@@ -1366,8 +1495,6 @@ function TraceSection({
                 )}
               </div>
             </div>
-          
-            </PageShell>
           );
         })}
       </div>

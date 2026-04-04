@@ -15,8 +15,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
 
-import { PageShell } from "@/components/layout/PageShell";
-import { Play } from "lucide-react";
 
 // ── Design tokens ──────────────────────────────────────────────────────────
 const S = {
@@ -622,6 +620,74 @@ function OverviewTab({
         </div>
       ))}
 
+      {/* At-risk hedges monitor */}
+      {runs.length > 0 && (() => {
+        const atRisk = runs.filter((r) => {
+          const ratio = r.dollar_offset_ratio;
+          if (ratio == null) return false;
+          // Approaching boundary: within 5% of the 0.80 or 1.25 limits
+          return (ratio > 0.80 && ratio < 0.85) || (ratio > 1.20 && ratio < 1.25);
+        });
+        if (atRisk.length === 0) return null;
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "16px 20px", borderRadius: 6,
+            background: `color-mix(in srgb, ${HEX.amber} 5%, transparent)`,
+            border: `1px solid ${HEX.amber}40`,
+            borderLeft: `3px solid ${HEX.amber}`,
+          }}>
+            <div style={{
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: HEX.amber,
+              letterSpacing: "0.14em", marginBottom: 10,
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              AT-RISK HEDGES — {atRisk.length} approaching effectiveness boundary
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {atRisk.map((r) => (
+                <div
+                  key={r.run_id}
+                  onClick={() => onNavigateRun(r.run_id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12, padding: "8px 12px",
+                    borderRadius: 4, background: S.panel, border: `1px solid ${S.rim}`,
+                    cursor: "pointer", transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = HEX.amber}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = HEX.border}
+                >
+                  <span style={{ fontFamily: S.ui, fontSize: 12, fontWeight: 600, color: S.text1, flex: 1 }}>
+                    {r.dataset_name}
+                    {r.currency_pair && <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan, marginLeft: 6 }}>{r.currency_pair}</span>}
+                  </span>
+                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>{r.standard}</span>
+                  <span style={{
+                    fontFamily: S.mono, fontSize: 13, fontWeight: 800,
+                    color: r.dollar_offset_ratio! < 0.85 ? HEX.amber : HEX.amber,
+                  }}>
+                    D.O. {r.dollar_offset_ratio!.toFixed(4)}
+                  </span>
+                  <span style={{
+                    fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
+                    padding: "2px 8px", borderRadius: 2,
+                    background: `color-mix(in srgb, ${HEX.amber} 10%, transparent)`,
+                    color: HEX.amber,
+                  }}>
+                    {r.dollar_offset_ratio! < 0.85 ? "NEAR LOWER BOUND" : "NEAR UPPER BOUND"}
+                  </span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={HEX.text3} strokeWidth="2">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Last run card */}
       {lastRun && (
         <div
@@ -1102,8 +1168,6 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   }
 
   return (
-    <PageShell icon={Play} title="Hedge Effectiveness" breadcrumb={["Dashboard", "Hedge Effectiveness"]} noPadding>
-
     <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 1100 }}>
       {/* Header */}
       <div style={{
@@ -1183,7 +1247,5 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
         </div>
       ))}
     </div>
-  
-    </PageShell>
   );
 }
