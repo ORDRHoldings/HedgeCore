@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FX Market Autofill — IBKR backend (spot) + Finnhub CME futures (forwards)
+// FX Market Autofill — backend market data (spot) + Finnhub CME futures (forwards)
 // POST /api/market-autofill
 // Body: { currencies: string[], trade_value_dates?: string[] }
 // Returns: MarketSnapshot-compatible market object
 //
-// Spot rates:  IBKR backend (primary) -> exchangerate-api.com (fallback)
+// Spot rates:  backend /v1/market-data/live/fx-rates (IBKR → TwelveData internally)
+//              -> exchangerate-api.com (last fallback if backend unreachable)
 // Forward pts: Finnhub /quote?symbol={CME_SYMBOL} per contract (1!, 2!, 3!)
 //              CME quarterly cycle: March / June / September / December
 //              Prices are USD per 1 FCY -> invert to get FCY/USD forward rate
@@ -41,14 +42,14 @@ const CME_SYMBOLS: Record<string, string[]> = {
 };
 
 
-// ── Fetch spot rate from IBKR backend for a single currency pair ──────────
-async function fetchIbkrSpotRate(currency: string): Promise<number | null> {
+// ── Fetch spot rate from backend (IBKR → TwelveData) ─────────────────────
+async function fetchBackendSpotRate(currency: string): Promise<{ mid: number; source: string } | null> {
   try {
     const pair = `USD${currency}`;
     const res = await fetch(
       `${API_BASE}/api/v1/market-data/live/fx-rates?pairs=${encodeURIComponent(pair)}`,
       {
-        signal: AbortSignal.timeout(5_000),
+        signal: AbortSignal.timeout(8_000),
         headers: { 'Content-Type': 'application/json' },
       },
     );
@@ -60,24 +61,21 @@ async function fetchIbkrSpotRate(currency: string): Promise<number | null> {
     };
 
     if (!json.rates || !Array.isArray(json.rates) || json.rates.length === 0) return null;
+    const backendSource = json.source ?? 'live';
 
     // Find the matching rate — handle both USDMXN and MXNUSD conventions
     const INVERTED = new Set(['EUR', 'GBP', 'AUD', 'NZD']);
     for (const rate of json.rates) {
       if (rate.mid && rate.mid > 0) {
         if (INVERTED.has(currency)) {
-          // For EURUSD: IBKR mid might be the market convention (1.08 = USD per EUR)
-          // We need CCY/USD (0.9263 = EUR per USD). But it depends on what symbol
-          // the backend returns. If symbol is "EURUSD", mid is USD/EUR -> invert.
-          // If symbol is "USDEUR", mid is EUR/USD -> use directly.
+          // For EURUSD: mid is USD per EUR -> invert to get EUR per USD
           if (rate.symbol?.startsWith('USD')) {
-            return parseFloat(rate.mid.toFixed(6));
+            return { mid: parseFloat(rate.mid.toFixed(6)), source: backendSource };
           }
-          // Symbol is like EURUSD -> mid is USD per EUR -> invert to get EUR per USD
-          return parseFloat((1 / rate.mid).toFixed(6));
+          return { mid: parseFloat((1 / rate.mid).toFixed(6)), source: backendSource };
         }
         // For non-inverted (USDMXN): mid is MXN per USD -> use directly
-        return parseFloat(rate.mid.toFixed(6));
+        return { mid: parseFloat(rate.mid.toFixed(6)), source: backendSource };
       }
     }
     return null;
@@ -259,16 +257,16 @@ export async function POST(req: NextRequest) {
 
     const primaryCurrency = currencies[0] ?? 'MXN';
 
-    // ── Step 1: Spot rate — IBKR (primary) -> exchangerate-api.com (fallback)
+    // ── Step 1: Spot rate — backend (IBKR→TwelveData) -> exchangerate-api.com (fallback)
     let spot: number | null = null;
     let spotSource = 'indicative_fallback';
 
     if (primaryCurrency !== 'USD') {
-      // Try IBKR backend first
-      const ibkrSpot = await fetchIbkrSpotRate(primaryCurrency);
-      if (ibkrSpot !== null && ibkrSpot > 0) {
-        spot = ibkrSpot;
-        spotSource = 'ibkr';
+      // Try backend (routes IBKR → TwelveData internally)
+      const backendSpot = await fetchBackendSpotRate(primaryCurrency);
+      if (backendSpot !== null && backendSpot.mid > 0) {
+        spot = backendSpot.mid;
+        spotSource = backendSpot.source; // e.g. "twelvedata" or "ibkr"
       }
 
       // Fallback to exchangerate-api.com
@@ -276,7 +274,7 @@ export async function POST(req: NextRequest) {
         const rates = await fetchLiveForexRates();
         if (rates && rates[primaryCurrency] && rates[primaryCurrency] > 0) {
           spot = parseFloat(rates[primaryCurrency].toFixed(6));
-          spotSource = 'live';
+          spotSource = 'exchangerate-api';
         }
       }
     }
@@ -311,18 +309,17 @@ export async function POST(req: NextRequest) {
 
     const dataClass = 'LIVE';
 
-    let note: string;
-    if (spotSource === 'ibkr') {
-      if (forwardSource === 'cme_futures') {
-        note = `Live spot from IBKR. Forward rates from CME futures (${(CME_SYMBOLS[primaryCurrency] ?? []).join(', ')}).`;
-      } else {
-        note = `Live spot from IBKR. No CME forward data available — set FINNHUB_API_KEY for forward curves.`;
-      }
-    } else if (forwardSource === 'cme_futures') {
-      note = `Live spot from exchangerate-api.com. Forward rates from CME futures (${(CME_SYMBOLS[primaryCurrency] ?? []).join(', ')}).`;
-    } else {
-      note = `Live spot from exchangerate-api.com. No CME forward data available — set FINNHUB_API_KEY for forward curves.`;
-    }
+    const spotSourceLabel: Record<string, string> = {
+      ibkr: 'IBKR Gateway',
+      twelvedata: 'Twelve Data',
+      'exchangerate-api': 'exchangerate-api.com',
+      live: 'live feed',
+    };
+    const spotLabel = spotSourceLabel[spotSource] ?? spotSource;
+    const fwdNote = forwardSource === 'cme_futures'
+      ? `Forward rates from CME futures (${(CME_SYMBOLS[primaryCurrency] ?? []).join(', ')}).`
+      : `No CME forward data available — set FINNHUB_API_KEY for forward curves.`;
+    const note = `Live spot from ${spotLabel}. ${fwdNote}`;
 
     const market = {
       as_of: asOf,
