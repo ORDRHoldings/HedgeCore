@@ -661,9 +661,16 @@ async def read_me(request: Request, db: AsyncSession = Depends(get_session)) -> 
 
     except Exception as exc:
 
-        logger.error("Unhandled /me error: %s", exc)
+        exc_type = type(exc).__name__
+        logger.error("Unhandled /me error [%s]: %s", exc_type, exc)
 
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or malformed token")
+        # Return 500 for non-auth errors (DB errors, etc.) so they are
+        # distinguishable from JWT failures (which raise HTTPException 401
+        # before reaching this handler).
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal error: {exc_type}",
+        )
 
 
 
