@@ -60,10 +60,14 @@ def _get_budget_cost(path: str, method: str) -> int:
     return 1  # default
 
 
+_kernel_unavailable: bool | None = None  # None = untried, True = unavailable, False = available
+
+
 class GovernanceMiddleware(BaseHTTPMiddleware):
     """Enforces kill switch + budget on every non-exempt request."""
 
     async def dispatch(self, request: Request, call_next):
+        global _kernel_unavailable
         path = request.url.path
         method = request.method
 
@@ -71,12 +75,18 @@ class GovernanceMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(p) for p in EXEMPT_PREFIXES):
             return await call_next(request)
 
+        if _kernel_unavailable is True:
+            return await call_next(request)
+
         try:
             from ..core.kernel import governance_check, audit_governance_event
             from ..core.policy_rules import get_match_sig
+            _kernel_unavailable = False
         except Exception as _ke:
-            # synex_kernel not installed or kernel unavailable — pass-through
-            logger.warning("Governance kernel unavailable (%s), passing request through", _ke)
+            # synex_kernel not installed — log once, then pass-through silently
+            if _kernel_unavailable is None:
+                logger.warning("Governance kernel unavailable (%s), passing all requests through", _ke)
+            _kernel_unavailable = True
             return await call_next(request)
 
         # Governance gate: kill switch + policy + budget

@@ -6,7 +6,11 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 const { withSentryConfig } = require("@sentry/nextjs");
 
 const nextConfig = {
-  output: "standalone",   // required for Docker multi-stage build
+  // "standalone" is required for Docker/Render multi-stage build.
+  // Disabled on Windows local builds (NEXT_STANDALONE=false) due to a known
+  // Next.js race condition on Windows where routes-manifest.json is not yet
+  // written when the standalone copy step runs.
+  output: process.env.NEXT_STANDALONE === "false" ? undefined : "standalone",
   eslint: {
     ignoreDuringBuilds: false,
   },

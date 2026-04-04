@@ -6,11 +6,14 @@ Enhancements:
 - Enforces single-session policy (revokes all prior tokens on create)
 - Retains full UUID compatibility and structured logging
 - Safe transactional handling and rollback on failure
+- Deadlock-safe: revoke+insert in one transaction with retry on DeadlockDetectedError
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import random
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -20,6 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.refresh_token import RefreshToken
 
 logger = logging.getLogger(__name__)
+
+_MAX_DEADLOCK_RETRIES = 3
 
 
 # -------------------------------------------------------------------
@@ -36,35 +41,52 @@ async def create(
 ) -> RefreshToken:
     """
     Persist a new refresh token record (UUID-safe) and enforce single-session policy.
-    """
-    try:
-        # ? Single-session enforcement: revoke all previous tokens first
-        await revoke_all_for_user(db, user_id=user_id)
 
-        rt = RefreshToken(
-            jti=jti,
-            user_id=user_id,
-            expires_at=expires_at,
-            revoked=False,
-            created_ip=ip,
-            created_user_agent=user_agent,
-        )
-        db.add(rt)
-        await db.commit()
-        await db.refresh(rt)
-        logger.info(
-            "RefreshToken:create user_id=%s jti=%s exp=%s ip=%s ua=%s",
-            str(user_id),
-            jti,
-            expires_at.isoformat(),
-            ip,
-            (user_agent or "")[:120],
-        )
-        return rt
-    except Exception as exc:
-        await db.rollback()
-        logger.exception("RefreshToken:create failed for user_id=%s reason=%s", str(user_id), exc)
-        raise
+    Revoke-all and insert run in a single transaction to avoid partial-commit races.
+    Retries on DeadlockDetectedError (PostgreSQL aborts one side cleanly — retry is safe).
+    """
+    for attempt in range(1, _MAX_DEADLOCK_RETRIES + 1):
+        try:
+            # Revoke all prior tokens and insert new one in one atomic transaction.
+            await db.execute(
+                update(RefreshToken)
+                .where(RefreshToken.user_id == user_id)
+                .values(revoked=True)
+                .execution_options(synchronize_session="fetch")
+            )
+            rt = RefreshToken(
+                jti=jti,
+                user_id=user_id,
+                expires_at=expires_at,
+                revoked=False,
+                created_ip=ip,
+                created_user_agent=user_agent,
+            )
+            db.add(rt)
+            await db.commit()
+            await db.refresh(rt)
+            logger.info(
+                "RefreshToken:create user_id=%s jti=%s exp=%s ip=%s ua=%s",
+                str(user_id),
+                jti,
+                expires_at.isoformat(),
+                ip,
+                (user_agent or "")[:120],
+            )
+            return rt
+        except Exception as exc:
+            await db.rollback()
+            exc_name = type(exc).__name__
+            if "DeadlockDetected" in exc_name and attempt < _MAX_DEADLOCK_RETRIES:
+                delay = 0.05 * attempt + random.uniform(0, 0.05)
+                logger.warning(
+                    "RefreshToken:create deadlock user_id=%s attempt=%d/%d retry_in=%.3fs",
+                    str(user_id), attempt, _MAX_DEADLOCK_RETRIES, delay,
+                )
+                await asyncio.sleep(delay)
+                continue
+            logger.exception("RefreshToken:create failed for user_id=%s reason=%s", str(user_id), exc)
+            raise
 
 
 # -------------------------------------------------------------------
@@ -143,9 +165,11 @@ async def is_valid_for_refresh(db: AsyncSession, *, jti: str) -> bool:
 # -------------------------------------------------------------------
 # ? Revoke all for user
 # -------------------------------------------------------------------
-async def revoke_all_for_user(db: AsyncSession, *, user_id: UUID) -> int:
+async def revoke_all_for_user(db: AsyncSession, *, user_id: UUID, commit: bool = True) -> int:
     """
     Revoke all active refresh tokens for the specified UUID user.
+
+    Pass commit=False when called inside a larger transaction that commits separately.
     """
     q = (
         update(RefreshToken)
@@ -154,7 +178,8 @@ async def revoke_all_for_user(db: AsyncSession, *, user_id: UUID) -> int:
         .execution_options(synchronize_session="fetch")
     )
     res = await db.execute(q)
-    await db.commit()
+    if commit:
+        await db.commit()
     affected = res.rowcount or 0
     logger.info("RefreshToken:revoke_all_for_user user_id=%s revoked=%s", str(user_id), affected)
     return affected
