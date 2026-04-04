@@ -45,7 +45,7 @@ pytest-cov==7.0.0
 python-dotenv==1.1.1
 python-jose==3.5.0
 pyotp==2.9.0
-python-multipart==0.0.20
+python-multipart==0.0.22
 rsa==4.9.1
 six==1.17.0
 slowapi==0.1.9
