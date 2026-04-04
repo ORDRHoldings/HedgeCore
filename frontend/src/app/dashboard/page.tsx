@@ -39,7 +39,8 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
-function fmtUsd(n: number): string {
+function fmtUsd(n: number | null | undefined): string {
+  if (n == null) return "—";
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
   if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
@@ -585,7 +586,7 @@ export default function DashboardPage() {
         loading={loading}
         items={[
           { label: "Total Exposure", value: data ? fmtUsd(data.totalExposure) : "—" },
-          { label: "Hedge Coverage", value: data ? `${data.hedgeCoverage}%` : "—" },
+          { label: "Hedge Coverage", value: data ? `${data.hedgeCoverage ?? "—"}%` : "—" },
           { label: "Open Positions", value: data?.openPositions ?? "—" },
           { label: "Pending Approvals", value: data?.pendingApprovals ?? 0 },
           { label: "Hedged", value: data?.hedgedCount ?? 0 },
@@ -733,7 +734,7 @@ export default function DashboardPage() {
                     {fmtUsd(run.notional)}
                   </span>
                   <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.secondary }}>
-                    {run.hedge_ratio}%
+                    {run.hedge_ratio ?? "—"}%
                   </span>
                   <span style={{
                     fontFamily: T.fontMono, fontSize: 9, fontWeight: 700,
