@@ -106,6 +106,9 @@ export async function safeFetch<T = unknown>(
           detail = body.detail;
         } else if (Array.isArray(body?.detail)) {
           detail = body.detail.map((d: { msg?: string }) => d.msg ?? "").join("; ");
+        } else if (typeof body?.message === "string") {
+          // Some endpoints return `message` instead of `detail`
+          detail = body.message;
         }
       } catch {
         // body not JSON
@@ -126,4 +129,29 @@ export async function safeFetch<T = unknown>(
       status: null,
     };
   }
+}
+
+/**
+ * safeFetch with automatic 401 → token refresh → retry.
+ *
+ * Pass the `refreshFn` from useAuth() to enable silent token refresh:
+ *   const { refreshTokens } = useAuth();
+ *   const result = await safeFetchWithRefresh("/v1/...", token, {}, refreshTokens);
+ *
+ * On 401 the refresh is attempted once; if successful the request is retried
+ * with the new token. On subsequent 401 the error is returned to the caller.
+ */
+export async function safeFetchWithRefresh<T = unknown>(
+  path: string,
+  token: string,
+  options?: RequestInit,
+  refreshFn?: () => Promise<string | null>,
+): Promise<SafeResult<T>> {
+  const result = await safeFetch<T>(path, token, options);
+  if (result.ok || result.status !== 401 || !refreshFn) return result;
+
+  const newToken = await refreshFn();
+  if (!newToken) return result;
+
+  return safeFetch<T>(path, newToken, options);
 }

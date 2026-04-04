@@ -57,6 +57,8 @@ interface AuthContextType {
   logout: () => void;
   hasPermission: (codename: string) => boolean;
   hasAnyPermission: (...codenames: string[]) => boolean;
+  /** Attempt a silent token refresh. Returns new access token or null. */
+  refreshTokens: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -68,6 +70,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   hasPermission: () => false,
   hasAnyPermission: () => false,
+  refreshTokens: async () => null,
 });
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -84,10 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchMe = useCallback(async (accessToken: string): Promise<UserContext | null> => {
     try {
       const res = await fetch(`${API_BASE}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "X-API-Key": (typeof window !== "undefined" && localStorage.getItem("hc_api_key")) || "HC_DEV_KEY_001",
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!res.ok) return null;
       const data = await res.json();
@@ -284,6 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         hasPermission,
         hasAnyPermission,
+        refreshTokens,
       }}
     >
       {children}

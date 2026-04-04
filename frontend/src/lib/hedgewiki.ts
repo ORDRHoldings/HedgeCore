@@ -12,17 +12,17 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ||
 const WIKI_BASE = `${API_BASE}/v1/hedgewiki`;
 
 // Simple in-memory cache for knowledge content
-const _cache = new Map<string, { data: any; expires: number }>();
+const _cache = new Map<string, { data: unknown; expires: number }>();
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 function getCached<T>(key: string): T | null {
   const entry = _cache.get(key);
-  if (entry && Date.now() < entry.expires) return entry.data;
+  if (entry && Date.now() < entry.expires) return entry.data as T;
   _cache.delete(key);
   return null;
 }
 
-function setCache(key: string, data: any): void {
+function setCache(key: string, data: unknown): void {
   _cache.set(key, { data, expires: Date.now() + CACHE_TTL });
 }
 
@@ -36,7 +36,7 @@ export interface KnowledgeContext {
   definition?: string;
   economicIntuition?: string;
   mathematicalFramework?: string;
-  riskMapping?: any;
+  riskMapping?: Record<string, string | number | boolean | null>;
   failureModes?: string[];
   governanceAccounting?: string;
   citations?: string[];
@@ -58,7 +58,7 @@ export interface WikiPolicyPreset {
   nodeType: string;
   riskPosture?: string;
   hedgeRatios?: { confirmed: number; forecast: number };
-  content?: any;
+  content?: Record<string, unknown>;
 }
 
 // ── API Functions ────────────────────────────────────────────────────

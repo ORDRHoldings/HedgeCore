@@ -298,7 +298,7 @@ export default function DatabaseConnectionPage() {
     setMappings(smartMappings);
   };
 
-  const updateMapping = (index: number, field: keyof FieldMapping, value: any) => {
+  const updateMapping = (index: number, field: keyof FieldMapping, value: FieldMapping[keyof FieldMapping]) => {
     const newMappings = [...mappings];
     newMappings[index] = { ...newMappings[index], [field]: value };
     setMappings(newMappings);
@@ -395,7 +395,7 @@ export default function DatabaseConnectionPage() {
     setShowAddRule(false);
   };
 
-  const updateValidationRule = (index: number, field: keyof ValidationRule, value: any) => {
+  const updateValidationRule = (index: number, field: keyof ValidationRule, value: ValidationRule[keyof ValidationRule]) => {
     const newRules = [...validationRules];
     newRules[index] = { ...newRules[index], [field]: value };
     setValidationRules(newRules);
@@ -1123,7 +1123,7 @@ function ConnectionTab(props: ConnectionTabProps) {
 interface MappingTabProps {
   discoveredColumns: DbColumn[];
   mappings: FieldMapping[];
-  updateMapping: (index: number, field: keyof FieldMapping, value: any) => void;
+  updateMapping: (index: number, field: keyof FieldMapping, value: FieldMapping[keyof FieldMapping]) => void;
   addMapping: () => void;
   removeMapping: (index: number) => void;
   selectedMapping: number | null;
@@ -1775,7 +1775,7 @@ interface ValidationTabProps {
   previewLoading: boolean;
   qualityMetrics: DataQualityMetrics | null;
   validationRules: ValidationRule[];
-  updateValidationRule: (index: number, field: keyof ValidationRule, value: any) => void;
+  updateValidationRule: (index: number, field: keyof ValidationRule, value: ValidationRule[keyof ValidationRule]) => void;
   removeValidationRule: (index: number) => void;
   showAddRule: boolean;
   setShowAddRule: (v: boolean) => void;
