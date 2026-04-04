@@ -46,7 +46,7 @@ def compute_signature(secret: str, payload_json: str) -> str:
     Compute HMAC-SHA256 signature for the given payload.
     Returns: 'sha256=<64-char hex>'
     """
-    mac = hmac.new(secret.encode(), payload_json.encode(), hashlib.sha256)
+    mac = hmac.HMAC(secret.encode(), payload_json.encode(), hashlib.sha256)
     return f"sha256={mac.hexdigest()}"
 
 

@@ -179,22 +179,22 @@ class TestRateLimitMiddlewareInMemory:
             assert resp.headers["X-RateLimit-Remaining"] == "0"
 
     def test_different_keys_isolated(self):
-        """Different rate-limit keys must have independent token buckets.
+        """Different API keys must have independent token buckets.
 
-        The middleware keys by X-API-Key > X-Request-ID > client.host.
-        Using X-Request-ID gives per-request unique keys, so each 'session'
-        has its own full bucket.
+        The middleware keys by X-API-Key > client.host.
+        Note: X-Request-Id is NOT a valid rate-limit key — using it would
+        allow clients to bypass limits by rotating the header.
         """
         capacity = 2
         client = TestClient(_make_app(requests_per_minute=capacity))
         # Drain key A
         for _ in range(capacity):
-            client.get("/test", headers={"X-Request-ID": "client-A"})
+            client.get("/test", headers={"X-API-Key": "HK_live_keyA.secret"})
         # key A is now limited
-        resp_a = client.get("/test", headers={"X-Request-ID": "client-A"})
+        resp_a = client.get("/test", headers={"X-API-Key": "HK_live_keyA.secret"})
         assert resp_a.status_code == 429
         # key B has its own full bucket — should succeed
-        resp_b = client.get("/test", headers={"X-Request-ID": "client-B"})
+        resp_b = client.get("/test", headers={"X-API-Key": "HK_live_keyB.secret"})
         assert resp_b.status_code == 200
 
     def test_api_key_header_takes_precedence(self):

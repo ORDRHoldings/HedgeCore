@@ -97,13 +97,17 @@ class APIKeyAuthMiddleware(BaseHTTPMiddleware):
 
         self._keys: dict[str, APIKeyRecord] = {}
 
-        # DEV bootstrap key (works immediately in prod too)
-        bootstrap_key = "HC_DEV_KEY_001"
-        key_hash = _stable_hash(bootstrap_key)
-        self._keys[key_hash] = APIKeyRecord(
-            key_hash=key_hash,
-            scopes=["engine:recommend"],
-        )
+        # DEV bootstrap key — only registered in non-production environments.
+        # In production (ENV=production) this key is intentionally absent so
+        # that the only valid API keys are those stored in the database.
+        import os
+        if os.getenv("ENV", "development").lower() != "production":
+            bootstrap_key = "HC_DEV_KEY_001"
+            key_hash = _stable_hash(bootstrap_key)
+            self._keys[key_hash] = APIKeyRecord(
+                key_hash=key_hash,
+                scopes=["engine:recommend"],
+            )
 
     def _is_public(self, path: str) -> bool:
         if path in self.public_paths:

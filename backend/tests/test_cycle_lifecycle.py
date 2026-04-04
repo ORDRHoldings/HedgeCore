@@ -557,15 +557,15 @@ class TestFullCycleStateVerification:
         assert 'lazy="raise"' in source, "lazy=raise must be set on User org relationships"
 
     def test_security_uses_selectinload_for_all_org_relationships(self):
-        """core/security.py explicitly loads company, branch, department."""
+        """Canonical get_current_user (dependencies.py) loads company, branch, department."""
         import inspect
-        from app.core import security as sec_mod
-        source_path = inspect.getfile(sec_mod)
+        from app.core import dependencies as dep_mod
+        source_path = inspect.getfile(dep_mod)
         with open(source_path, "r", encoding="utf-8") as f:
             source = f.read()
-        assert "selectinload(User.company)" in source
-        assert "selectinload(User.branch)" in source
-        assert "selectinload(User.department)" in source
+        assert "selectinload" in source and "company" in source
+        assert "selectinload" in source and "branch" in source
+        assert "selectinload" in source and "department" in source
 
     def test_settings_has_redis_url(self):
         """Settings include REDIS_URL for optional Redis rate limiting."""

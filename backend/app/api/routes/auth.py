@@ -498,6 +498,18 @@ async def refresh_tokens(request: Request, body: TokenRefreshRequest, db: AsyncS
 
 
 
+        # Verify user still exists and is active before issuing new tokens.
+        # Without this check, a deactivated user could continue refreshing
+        # tokens for the full 7-day lifetime of their refresh token.
+        _user_row = await db.execute(
+            select(User).where(User.id == user_id)
+        )
+        _refresh_user = _user_row.scalars().first()
+        if not _refresh_user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        if not _refresh_user.is_active:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account deactivated")
+
         await rt_crud.revoke_by_jti(db, jti=jti)
 
         access_token = create_access_token(sub=str(user_id))
@@ -536,9 +548,9 @@ async def refresh_tokens(request: Request, body: TokenRefreshRequest, db: AsyncS
 
     except Exception as exc:
 
-        logger.error("Unhandled refresh error: %s", exc)
+        logger.error("Unhandled refresh error [%s]: %s", type(exc).__name__, exc)
 
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or malformed token")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 
@@ -840,7 +852,7 @@ async def logout(request: Request, db: AsyncSession = Depends(get_session)) -> d
 
     except Exception as exc:
 
-        logger.error("Logout error: %s", exc)
+        logger.error("Logout error [%s]: %s", type(exc).__name__, exc)
 
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing token")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 

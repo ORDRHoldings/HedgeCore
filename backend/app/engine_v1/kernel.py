@@ -79,7 +79,7 @@ def compute_hedge_plan(
         action_usd = abs(action_mxn) / forward_rate if forward_rate != 0 else 0.0
 
         # Step 10: friction_usd
-        friction_usd = (abs(action_mxn) / spot) * (spread_bps / 10000.0)
+        friction_usd = (abs(action_mxn) / spot if spot != 0 else 0.0) * (spread_bps / 10000.0)
 
         # Step 11: suppressed (min trade filter)
         usd_equiv = abs(action_mxn) / spot if spot != 0 else 0.0

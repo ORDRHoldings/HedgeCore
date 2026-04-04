@@ -696,110 +696,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-
-    """
-
-    Extract and validate the current user from a JWT access token.
-
-    Handles UUID-safe sub decoding and DB lookup.
-
-    """
-
-    from app.core.db import get_session
-    from app.models.user import User
-
-
-
-    async for session in get_session():
-
-        if not token:
-
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authentication token")
-
-
-
-        try:
-
-            payload = decode_token(token, expected_type="access")
-
-        except HTTPException:
-
-            raise  # already structured 401
-
-        except Exception as e:
-
-            logger.warning("Unexpected token validation error: %s", e)
-
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-
-
-        sub = payload.get("sub")
-
-        if not sub:
-
-            logger.warning("JWT missing 'sub' claim.")
-
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
-
-
-
-        try:
-
-            user_id = UUID(sub)
-
-        except ValueError:
-
-            logger.warning("Invalid UUID in sub: %s", sub)
-
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject")
-
-
-
-        stmt = (
-
-            select(User)
-
-            .where(User.id == user_id)
-
-            .options(
-
-                selectinload(User.company),
-
-                selectinload(User.branch),
-
-                selectinload(User.department),
-
-            )
-
-        )
-
-        result = await session.execute(stmt)
-
-        user = result.scalars().first()
-
-
-
-        if not user:
-
-            logger.warning("User not found for ID=%s", user_id)
-
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-
-
-
-        if not user.is_active:
-
-            logger.warning("Inactive user access attempt: %s", user.email)
-
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive account")
-
-
-
-        logger.debug("Authenticated user: id=%s, email=%s", user.id, user.email)
-
-        return user
+# Re-export the canonical get_current_user from dependencies.
+# The previous implementation here used `async for session in get_session()` which
+# does not trigger the generator's cleanup block and skips token_version revocation.
+# All callers should prefer importing from app.core.dependencies directly.
+from app.core.dependencies import get_current_user as get_current_user  # noqa: F401, E402
 
 
 

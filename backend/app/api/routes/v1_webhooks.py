@@ -8,7 +8,6 @@ DELETE /v1/webhooks/{id}    -- soft-delete (sets is_active=False)
 from __future__ import annotations
 
 import uuid
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, field_validator
@@ -70,15 +69,15 @@ async def _check_permission(db: AsyncSession, user: User, codename: str) -> None
         )
 
 
-def _endpoint_to_dict(ep: WebhookEndpoint) -> dict[str, Any]:
-    return {
-        "id": str(ep.id),
-        "url": ep.url,
-        "description": ep.description,
-        "events": sorted(ep.get_events()),
-        "is_active": ep.is_active,
-        "created_at": ep.created_at.isoformat() if ep.created_at else None,
-    }
+def _endpoint_to_response(ep: WebhookEndpoint) -> WebhookResponse:
+    return WebhookResponse(
+        id=str(ep.id),
+        url=ep.url,
+        description=ep.description,
+        events=sorted(ep.get_events()),
+        is_active=ep.is_active,
+        created_at=ep.created_at.isoformat() if ep.created_at else None,
+    )
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=WebhookRegisterResponse)
@@ -116,7 +115,8 @@ async def register_webhook(
     await db.commit()
     await db.refresh(endpoint)
 
-    return {**_endpoint_to_dict(endpoint), "secret": secret}
+    base = _endpoint_to_response(endpoint)
+    return WebhookRegisterResponse(**base.model_dump(), secret=secret)
 
 
 @router.get("", response_model=list[WebhookResponse])
@@ -133,7 +133,7 @@ async def list_webhooks(
         .order_by(WebhookEndpoint.created_at.asc())
     )
     endpoints = result.scalars().all()
-    return [_endpoint_to_dict(ep) for ep in endpoints]
+    return [_endpoint_to_response(ep) for ep in endpoints]
 
 
 @router.delete("/{webhook_id}", status_code=status.HTTP_204_NO_CONTENT)

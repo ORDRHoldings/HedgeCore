@@ -52,7 +52,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.db import get_async_session
 from app.core.ip_allowlist import enforce_execution_ip_allowlist
-from app.core.security import get_current_user, get_mfa_verified
+from app.core.dependencies import get_current_user
+from app.core.security import get_mfa_verified
 from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 from app.models.execution_proposal import ExecutionProposal
 from app.models.user import User
@@ -837,6 +838,8 @@ async def reject_proposal(
 
     """
 
+    enforce_execution_ip_allowlist(request, settings)
+
     await _check_permission(session, current_user, "trades.execute")
 
     try:
@@ -1482,7 +1485,7 @@ async def batch_propose_and_approve(
     )
     company = company_result.scalar_one_or_none()
     settings = company.settings or {} if company else {}
-    governance_mode = settings.get("governance_mode", "solo")
+    governance_mode = settings.get("governance_mode", "team")
 
     if governance_mode != "solo":
         raise HTTPException(

@@ -157,7 +157,9 @@ class TestRateLimitMiddleware:
         req.client = None
         assert mw._resolve_key(req) == "api:HK_live_test123"
 
-    def test_resolve_key_request_id(self):
+    def test_resolve_key_request_id_does_not_bypass_rate_limit(self):
+        # X-Request-Id must NOT be used as a rate-limit key — doing so allows
+        # any client to rotate the header and get a fresh bucket each request.
         from app.middleware.rate_limit import RateLimitMiddleware
         mw = RateLimitMiddleware.__new__(RateLimitMiddleware)
         mw.header_api_key = "X-API-Key"
@@ -166,7 +168,8 @@ class TestRateLimitMiddleware:
         req.headers = MagicMock()
         req.headers.get = MagicMock(side_effect=lambda k, d=None: {"X-Request-Id": "req-abc"}.get(k, d))
         req.client = None
-        assert mw._resolve_key(req) == "rid:req-abc"
+        # Should fall through to "anonymous" — not keyed on X-Request-Id
+        assert mw._resolve_key(req) == "anonymous"
 
     def test_resolve_key_ip_fallback(self):
         from app.middleware.rate_limit import RateLimitMiddleware

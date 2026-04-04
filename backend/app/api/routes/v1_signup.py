@@ -40,8 +40,8 @@ async def signup(
     - Returns company_id and user_id.
     - Email verification is deferred to a future sprint.
     """
-    if len(payload.admin_password) < 8:
-        raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
+    if len(payload.admin_password) < 12:
+        raise HTTPException(status_code=422, detail="Password must be at least 12 characters")
 
     try:
         company, user = await provision_tenant(

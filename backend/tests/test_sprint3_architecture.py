@@ -138,15 +138,18 @@ class TestSelectinloadInAuthQueries:
     """Verify get_current_user and _get_user_or_401 explicitly load org relationships."""
 
     def test_security_py_imports_selectinload(self):
-        from app.core import security as sec_mod
-        source_path = inspect.getfile(sec_mod)
+        # get_current_user is now canonical in dependencies.py; security.py re-exports it.
+        # Verify the canonical implementation has selectinload.
+        from app.core import dependencies as dep_mod
+        source_path = inspect.getfile(dep_mod)
         with open(source_path, "r", encoding="utf-8") as f:
             source = f.read()
-        assert "selectinload" in source, "selectinload not imported in core/security.py"
+        assert "selectinload" in source, "selectinload not imported in core/dependencies.py"
 
     def test_security_py_get_current_user_uses_selectinload(self):
-        from app.core import security as sec_mod
-        source_path = inspect.getfile(sec_mod)
+        # get_current_user is now canonical in dependencies.py; security.py re-exports it.
+        from app.core import dependencies as dep_mod
+        source_path = inspect.getfile(dep_mod)
         with open(source_path, "r", encoding="utf-8") as f:
             source = f.read()
         # get_current_user must use selectinload for company, branch, department
@@ -155,14 +158,19 @@ class TestSelectinloadInAuthQueries:
         assert "selectinload(User.department)" in source
 
     def test_security_py_optional_also_uses_selectinload(self):
-        """get_current_user_optional must also load relationships explicitly."""
-        from app.core import security as sec_mod
-        source_path = inspect.getfile(sec_mod)
-        with open(source_path, "r", encoding="utf-8") as f:
-            source = f.read()
-        # Should appear twice (once for each function)
-        count = source.count("selectinload(")
-        assert count >= 6, f"Expected at least 6 selectinload calls, found {count}"
+        """get_current_user_optional must also load relationships explicitly.
+
+        get_current_user is canonical in dependencies.py (re-exported by security.py).
+        get_current_user_optional lives in security.py and must also use selectinload.
+        Combined across both files we expect at least 6 selectinload calls.
+        """
+        from app.core import security as sec_mod, dependencies as dep_mod
+        total = 0
+        for mod in (sec_mod, dep_mod):
+            source_path = inspect.getfile(mod)
+            with open(source_path, "r", encoding="utf-8") as f:
+                total += f.read().count("selectinload(")
+        assert total >= 6, f"Expected at least 6 selectinload calls across security+dependencies, found {total}"
 
     def test_auth_py_imports_selectinload(self):
         from app.api.routes import auth as auth_mod

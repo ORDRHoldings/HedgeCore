@@ -1149,7 +1149,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
         # 🔒 P0: DB-level SoD trigger — prevent self-approval at DB layer 🔒
         """
         CREATE OR REPLACE FUNCTION prevent_self_approval()
-        RETURNS TRIGGER AS 11751
+        RETURNS TRIGGER AS $$
         BEGIN
             IF NEW.approver_id = (
                 SELECT submitted_by FROM staging_artifacts WHERE id = NEW.staging_artifact_id
@@ -1158,10 +1158,10 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
             END IF;
             RETURN NEW;
         END;
-        11751 LANGUAGE plpgsql
+        $$ LANGUAGE plpgsql
         """,
         """
-        DO 11751 BEGIN
+        DO $$ BEGIN
             IF NOT EXISTS (
                 SELECT 1 FROM pg_trigger WHERE tgname = 'trg_approvals_no_self_approval'
             ) THEN
@@ -1169,7 +1169,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
                 BEFORE INSERT ON approvals
                 FOR EACH ROW EXECUTE FUNCTION prevent_self_approval();
             END IF;
-        END 11751
+        END $$
         """,
 
         # ══════════════════════════════════════════════════════════════════════
@@ -1517,6 +1517,90 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uix_user_watchlists_user_name UNIQUE (user_id, name))""",
         "CREATE INDEX IF NOT EXISTS ix_user_watchlists_user ON user_watchlists(user_id)",
+
+        # ── Webhooks (Sprint 5) ────────────────────────────────────────────────
+        """CREATE TABLE IF NOT EXISTS webhook_endpoints (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    url VARCHAR(2048) NOT NULL,
+    secret VARCHAR(128) NOT NULL,
+    description VARCHAR(255),
+    events VARCHAR(512) NOT NULL DEFAULT '',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_webhook_endpoints_company ON webhook_endpoints(company_id)",
+
+        """CREATE TABLE IF NOT EXISTS webhook_delivery_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    endpoint_id UUID NOT NULL REFERENCES webhook_endpoints(id) ON DELETE CASCADE,
+    event_type VARCHAR(64) NOT NULL,
+    payload_json JSONB,
+    attempt INTEGER NOT NULL DEFAULT 1,
+    status VARCHAR(20) NOT NULL,
+    response_status INTEGER,
+    response_body TEXT,
+    error_message TEXT,
+    delivered_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_webhook_delivery_logs_endpoint ON webhook_delivery_logs(endpoint_id)",
+
+        # ── Position import batches ────────────────────────────────────────────
+        """CREATE TABLE IF NOT EXISTS import_batches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL,
+    created_by UUID NOT NULL,
+    filename VARCHAR(512) NOT NULL,
+    file_hash VARCHAR(64) NOT NULL,
+    file_size_bytes INTEGER NOT NULL DEFAULT 0,
+    row_count INTEGER NOT NULL DEFAULT 0,
+    valid_count INTEGER NOT NULL DEFAULT 0,
+    error_count INTEGER NOT NULL DEFAULT 0,
+    duplicate_count INTEGER NOT NULL DEFAULT 0,
+    created_count INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'UPLOADED',
+    column_mapping JSONB,
+    validation_errors JSONB,
+    created_position_ids JSONB,
+    raw_preview JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    validated_at TIMESTAMPTZ,
+    committed_at TIMESTAMPTZ)""",
+        "CREATE INDEX IF NOT EXISTS ix_import_batches_company ON import_batches(company_id)",
+
+        # ── Compliance evidence (Sprint 4 — SOC2 WORM table) ─────────────────
+        """CREATE TABLE IF NOT EXISTS compliance_evidence (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID,
+    evidence_date DATE NOT NULL,
+    evidence_type VARCHAR(64) NOT NULL,
+    payload JSONB NOT NULL DEFAULT '{}',
+    latest_audit_event_hash VARCHAR(64),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())""",
+        "CREATE INDEX IF NOT EXISTS ix_compliance_evidence_company_date ON compliance_evidence(company_id, evidence_date)",
+
+        # ── API keys ──────────────────────────────────────────────────────────
+        # Note: api_key_status enum must exist before the table can be created.
+        # If the enum already exists (from Alembic), the CREATE TYPE is skipped.
+        """DO $$ BEGIN
+    CREATE TYPE api_key_status AS ENUM ('active', 'revoked', 'expired');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
+        """CREATE TABLE IF NOT EXISTS api_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key_id VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(255),
+    secret_hash TEXT NOT NULL,
+    scopes TEXT[],
+    status api_key_status NOT NULL DEFAULT 'active',
+    owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    last_used_at TIMESTAMPTZ,
+    revoked_at TIMESTAMPTZ,
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE)""",
+        "CREATE INDEX IF NOT EXISTS ix_api_keys_status ON api_keys(status)",
+        "CREATE INDEX IF NOT EXISTS ix_api_keys_owner ON api_keys(owner_user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_api_keys_expires_at ON api_keys(expires_at)",
+        "CREATE INDEX IF NOT EXISTS ix_api_keys_key_id ON api_keys(key_id)",
 
     ]
 

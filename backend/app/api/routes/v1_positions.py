@@ -47,7 +47,7 @@ from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
-from app.core.security import get_current_user
+from app.core.dependencies import get_current_user
 from app.models.audit_event import GENESIS_HASH, AuditEvent, build_audit_event
 from app.models.user import User
 from app.schemas_v1.positions import (

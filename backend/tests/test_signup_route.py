@@ -47,7 +47,7 @@ async def test_signup_returns_201_on_success():
                 resp = await client.post("/api/v1/signup", json={
                     "company_name": "Acme",
                     "admin_email": "admin@acme.com",
-                    "admin_password": "secret123",
+                    "admin_password": "SecretPass1234!",
                 })
         finally:
             app.dependency_overrides.pop(get_session, None)
@@ -68,7 +68,7 @@ async def test_signup_short_password_returns_422():
         resp = await client.post("/api/v1/signup", json={
             "company_name": "Acme",
             "admin_email": "admin@acme.com",
-            "admin_password": "short",
+            "admin_password": "short1234",  # 9 chars — below 12-char minimum
         })
     assert resp.status_code == 422
 
@@ -96,7 +96,7 @@ async def test_signup_duplicate_email_returns_409():
                 resp = await client.post("/api/v1/signup", json={
                     "company_name": "Acme",
                     "admin_email": "admin@acme.com",
-                    "admin_password": "secret123",
+                    "admin_password": "SecretPass1234!",
                 })
         finally:
             app.dependency_overrides.pop(get_session, None)

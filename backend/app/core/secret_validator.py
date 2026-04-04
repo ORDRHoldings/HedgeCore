@@ -37,6 +37,7 @@ def validate_production_secrets() -> None:
     required = {
         "JWT_SECRET": os.getenv("JWT_SECRET", ""),
         "DATABASE_URL": os.getenv("DATABASE_URL", ""),
+        "API_KEY_PEPPER": os.getenv("API_KEY_PEPPER", "super-secret-pepper-change-me"),
     }
 
     # Optional — only validate if set

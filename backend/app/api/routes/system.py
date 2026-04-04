@@ -102,7 +102,12 @@ async def schema_health_endpoint(
 @router.get("/db-tables", include_in_schema=False)
 async def db_tables(x_api_key: str = Header(..., alias="X-API-Key")):
     """List all tables and their columns for diagnostics."""
-    if x_api_key != "HC_DEV_KEY_001":
+    import os
+    from app.core.config import settings as _settings
+    allowed = [k for k in [getattr(_settings, "HC_MASTER_KEY", None), (
+        "HC_DEV_KEY_001" if os.getenv("ENV", "development").lower() != "production" else None
+    )] if k]
+    if x_api_key not in allowed:
         raise HTTPException(403, "Invalid key")
     async with async_engine.connect() as conn:
         result = await conn.execute(text(
@@ -114,10 +119,10 @@ async def db_tables(x_api_key: str = Header(..., alias="X-API-Key")):
         cols = {}
         for t in tables:
             cr = await conn.execute(text(
-                f"SELECT column_name, data_type FROM information_schema.columns "
-                f"WHERE table_schema = 'public' AND table_name = '{t}' "
-                f"ORDER BY ordinal_position"
-            ))
+                "SELECT column_name, data_type FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = :tname "
+                "ORDER BY ordinal_position"
+            ).bindparams(tname=t))
             cols[t] = [{"col": r[0], "type": r[1]} for r in cr.fetchall()]
 
     return {"tables": tables, "columns": cols}

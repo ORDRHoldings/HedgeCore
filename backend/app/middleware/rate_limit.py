@@ -198,13 +198,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._buckets: dict[str, TokenBucket] = {}
 
     def _resolve_key(self, request: Request) -> str:
+        # Key on API key first (identified client), then fall back to IP.
+        # X-Request-Id is a tracing header and MUST NOT be used as a rate-limit
+        # key — any client could rotate it to bypass per-IP limits.
         api_key = request.headers.get(self.header_api_key)
         if api_key:
             return f"api:{api_key}"
-
-        req_id = request.headers.get(self.header_request_id)
-        if req_id:
-            return f"rid:{req_id}"
 
         client = request.client
         if client and client.host:
