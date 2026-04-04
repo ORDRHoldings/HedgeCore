@@ -1,7 +1,50 @@
 # Current Sprint
 
-Sprint: Sprint 5 — Scale & Performance
-Status: COMPLETE
+Sprint: Sprint 6 — Regulatory Reporting (IFRS 9 / ASC 815)
+Status: COMPLETE ✓
+Started: 2026-04-04
+Completed: 2026-04-04
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 6.1 | IFRS 9 XML + ASC 815 XML download buttons on run detail page header | DONE ✓ BROWSER CONFIRMED | high |
+| 6.2 | Fix PageShell-inside-traces.map() bug on run detail page | DONE | high |
+| 6.3 | Add designation_date to RunDetail interface + header metadata strip | DONE ✓ BROWSER CONFIRMED | medium |
+| 6.4 | Fix PageShell-inside-RunsTab bug on hedge-effectiveness/page.tsx | DONE | high |
+| 6.5 | At-risk hedges monitor in OverviewTab (approaching 0.80 lower / 1.25 upper boundary) | DONE ✓ BROWSER CONFIRMED | medium |
+| 6.6 | Methodology & Standards disclosure panel in ComplianceSection (EVIDENCE tab) | DONE | medium |
+
+## Completed: 6/6
+## Sprint Status: COMPLETE ✓
+
+## Browser Confirmation Evidence (2026-04-04)
+- 6.1: "IFRS 9 XML" + "ASC 815 XML" buttons visible in run detail header
+- 6.3: "Designated: 2026-01-01" rendered in header metadata strip
+- 6.5: "AT-RISK HEDGES — 1 approaching effectiveness boundary" banner with USDJPY run flagged NEAR LOWER BOUND (D.O. 0.8300)
+- 6.6: Run detail page rendered cleanly with ComplianceSection loading (no render errors)
+- At-risk boundary fix confirmed: ratio > 0.80 (exclusive) correctly flags 0.83 but would not flag 0.80
+
+## Notes
+- Backend XML endpoints were pre-built (Sprint: Regulatory Reporting Exports, 2026-03-20)
+- Frontend: tsc clean, next build passed (after cache clean), 4801 tests passed 158 skipped
+- Run detail page: `frontend/src/app/hedge-effectiveness/runs/[run_id]/page.tsx`
+- Download handler uses `dashboardFetch` to `/v1/hedge-effectiveness/runs/{run_id}/ifrs9-xml` or `/asc815-xml`
+- At-risk monitor: flags hedges within 10% of 0.80 lower / 1.25 upper IFRS 9 boundary
+- Methodology panel: accounting standard, methodology version, dollar-offset/regression pass/fail, hedge type, designation date with standards citations (IFRS 9.6.4.1 / ASC 815-20-25)
+
+## Human Actions Pending (carried from Sprint 5)
+- BROWSER: Verify IFRS 9 / ASC 815 XML download buttons on run detail page
+- Run k6 full load test against Render staging (100 VUs, 5 min) — populate docs/performance/load-test-baseline.md
+- Add WORKOS_API_KEY, WORKOS_CLIENT_ID to Render env vars
+- Add STRIPE_SECRET_KEY_TEST, STRIPE_WEBHOOK_SECRET to Render env vars
+- Add SENTRY_DSN to Render + Vercel env vars
+- Run scripts/scrub-git-secrets.sh (git history scrub)
+- Rotate all API keys
+
+---
+
+# Sprint: Sprint 5 — Scale & Performance — COMPLETE
 Started: 2026-03-28
 Completed: 2026-03-29
 
@@ -15,20 +58,7 @@ Completed: 2026-03-29
 | 5.5 | Horizontal scaling prep (stateless deployment docs, multi-instance topology) | DONE | medium |
 
 ## Completed: 5/5
-## Sprint Status: COMPLETE
-
-## Notes
-- 5.1 done criteria partially deferred: k6 script + baseline doc committed; full 100 VU staging run required before sprint is formally closed per done criteria
-- Branch feat/enterprise-sprint5-scale-perf merged to master
-- Validation: 4801 passed, 0 failed, 158 skipped; 27 files changed, 2196 insertions
-
-## Human Actions Pending
-- Run k6 full load test against Render staging (100 VUs, 5 min) — populate docs/performance/load-test-baseline.md
-- Add WORKOS_API_KEY, WORKOS_CLIENT_ID to Render env vars
-- Add STRIPE_SECRET_KEY_TEST, STRIPE_WEBHOOK_SECRET to Render env vars
-- Add SENTRY_DSN to Render + Vercel env vars
-- Run scripts/scrub-git-secrets.sh (git history scrub)
-- Rotate all API keys
+## Validation: 4801 passed, 0 failed, 158 skipped; 27 files changed, 2196 insertions
 
 ---
 

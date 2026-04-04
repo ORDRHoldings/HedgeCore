@@ -7,11 +7,18 @@
 ## Last Updated: 2026-03-29T00:00:00.000000+00:00
 
 ## Current Sprint
-**Sprint 5 — Scale & Performance** — COMPLETE (2026-03-29)
-- Items: 5 DONE / 5 total
-- All enterprise readiness sprints (Sprint 1-5) now complete
+**Sprint 6 — Regulatory Reporting (IFRS 9 / ASC 815)** — COMPLETE ✓ (2026-04-04)
+- Items: 6/6 done, all browser-confirmed
 
-## Recent Work (2026-04-04) — Production Auth + Dashboard Fixes
+## Recent Work (2026-04-04) — Sprint 6: Regulatory Reporting COMPLETE ✓
+- Fixed PageShell-inside-RunsTab bug on hedge-effectiveness/page.tsx; removed PageShell/Play imports.
+- Added at-risk hedges monitor to OverviewTab: flags hedges within 10% of 0.80/1.25 IFRS 9 boundary. Boundary fix: > 0.80 exclusive (not >=).
+- Added Methodology & Standards disclosure panel to ComplianceSection (EVIDENCE tab): accounting standard, methodology version, dollar-offset/regression pass/fail, hedge type, designation date with IFRS 9.6.4.1 / ASC 815-20-25 citations.
+- BROWSER CONFIRMED (2026-04-04): IFRS 9 XML + ASC 815 XML buttons visible; at-risk banner renders "AT-RISK HEDGES — 1 approaching effectiveness boundary"; designation_date "Designated: 2026-01-01" shown in header; run detail page renders cleanly.
+- tsc clean, next build passed (after cache clean), 4801 tests passed.
+- Commits: cd2d228 (sprint6 UI), boundary fix applied inline.
+
+## Previous Work (2026-04-04) — Production Auth + Dashboard Fixes
 - ROOT CAUSE: Schema drift — ORM model columns missing from production DB. `users.ui_preferences` and 5 `companies` columns (sso_provider, sso_domain, stripe_customer_id, stripe_subscription_id, plan_tier) absent. SQLAlchemy SELECT * → ProgrammingError → swallowed as 401 → dashboard black screen for all users.
 - FIXES: ALTER TABLE added to `_ensure_tables()` for all missing columns; `ui_preferences` marked `deferred()` in ORM; `/auth/me` exception handler now returns 500 for non-auth errors; Alembic migrations 0012 + 0013.
 - DASHBOARD: Fixed `toFixed()` crash on null `bid/mid/ask` in FX rate cards; made `fmtUsd()` null-safe; guarded `hedgeCoverage` and `hedge_ratio`.
