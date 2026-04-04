@@ -45,7 +45,8 @@ EXEMPT_PREFIXES = (
     "/api/docs",
     "/api/redoc",
     "/api/openapi",
-    "/api/v1/auth",
+    "/api/auth",         # All auth routes (login, me, logout, refresh) — must never be budget-gated
+    "/api/v1/auth",      # Legacy prefix alias
     "/api/v1/public",
     "/favicon",
 )
