@@ -56,3 +56,19 @@ backend/tests/test_e2e_render.py
 tsconfig.tsbuildinfo
 backend/LOG/
 .worktrees/
+
+# E2E screenshots and test artifacts
+frontend/e2e-*.png
+frontend/e2e-*.json
+frontend/e2e-screenshots/
+frontend/test-results/
+frontend/render_*.png
+frontend/render_*.mjs
+
+# k6 binary
+k6.exe
+
+# ordr-market build/test artifacts
+ordr-market/node_modules/
+ordr-market/.next/
+ordr-market/test-results/
