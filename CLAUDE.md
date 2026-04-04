@@ -61,8 +61,12 @@ This repo uses a structured Claude Code operating framework:
 No task is complete until:
 - Work is implemented
 - Tests are run (or explicitly marked `[NOT VERIFIED]`)
+- **Browser-confirmed**: feature is verified working in a real browser (not just passing tests)
+- **User-approved**: user explicitly confirms the result is acceptable
 - State is written back to memory
 - Next step is recorded
+
+**DONE = browser tested + user approved.** A sprint item or task is NOT marked done based on tests alone. Mark it `[PENDING BROWSER CONFIRMATION]` until the user confirms it works end-to-end in the browser and gives explicit approval.
 
 ## Quick Reference
 
