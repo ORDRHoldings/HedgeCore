@@ -1,6 +1,6 @@
 'use client';
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { Loader, ScanLine, ArrowRight } from 'lucide-react';
+import { Loader, ScanLine, ArrowRight, Download } from 'lucide-react';
 import { Bell, X } from 'lucide-react';
 import { T } from '../tokens';
 import { useWorkspace } from '../WorkspaceProvider';
@@ -27,6 +27,20 @@ import { computeMACD } from '@/components/chart/indicators/macd';
 import { computeBollinger } from '@/components/chart/indicators/bollinger';
 import { computeStochastic } from '@/components/chart/indicators/stochastic';
 import type { Bar } from '@/components/chart/indicators/types';
+
+// ── CSV Download helper ───────────────────────────────────────────────────────
+
+function downloadCSV(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {
+  const escape = (v: string | number | null | undefined) => {
+    const s = v === null || v === undefined ? '' : String(v);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers, ...rows].map(row => row.map(escape).join(',')).join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 // ── Filter types ──────────────────────────────────────────────────────────────
 interface FilterCriteria {
@@ -431,8 +445,20 @@ function FilterScan() {
 
         {results !== null && results.length > 0 && (
           <>
-            <div style={{ fontSize: 9, fontWeight: 700, color: T.text3, letterSpacing: '0.06em', fontFamily: T.font, padding: '4px 2px 6px' }}>
-              {results.length} MATCH{results.length !== 1 ? 'ES' : ''} — {tf}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 2px 6px' }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: T.text3, letterSpacing: '0.06em', fontFamily: T.font }}>
+                {results.length} MATCH{results.length !== 1 ? 'ES' : ''} — {tf}
+              </span>
+              <button
+                onClick={() => downloadCSV(`filter-scan-${tf}-${Date.now()}.csv`,
+                  ['Symbol','RSI','MACD','EMA%','BB%','Stoch','Struct','Vol Ratio'],
+                  results.map(r => [r.symbol, r.rsi?.toFixed(1), r.macdDir, r.emaPct?.toFixed(2), r.bbPos?.toFixed(2), r.stochK?.toFixed(1), r.structDir, r.volRatio?.toFixed(2)])
+                )}
+                title="Download CSV"
+                style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 3, border: `1px solid ${T.border}`, background: 'transparent', color: T.text3, fontSize: 9, cursor: 'pointer', fontFamily: T.font, outline: 'none' }}
+              >
+                <Download size={9} /> CSV
+              </button>
             </div>
             {results.map(r => {
               const rsiColor = r.rsi === null ? T.text3 : r.rsi < 35 ? T.bull : r.rsi > 65 ? T.bear : T.text2;
@@ -1059,8 +1085,20 @@ function GapScan() {
         )}
         {results !== null && results.length > 0 && (
           <>
-            <div style={{ fontSize: 9, fontWeight: 700, color: T.text3, letterSpacing: '0.06em', fontFamily: T.font, padding: '4px 2px 6px' }}>
-              {results.length} RESULT{results.length !== 1 ? 'S' : ''} — {SCAN_LABELS[scanType].toUpperCase()}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 2px 6px' }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: T.text3, letterSpacing: '0.06em', fontFamily: T.font }}>
+                {results.length} RESULT{results.length !== 1 ? 'S' : ''} — {SCAN_LABELS[scanType].toUpperCase()}
+              </span>
+              <button
+                onClick={() => downloadCSV(`gap-scan-${scanType}-${Date.now()}.csv`,
+                  ['Symbol','Category','Name','Value'],
+                  results.map(r => [r.symbol, r.category, r.name, r.value.toFixed(4)])
+                )}
+                title="Download CSV"
+                style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 3, border: `1px solid ${T.border}`, background: 'transparent', color: T.text3, fontSize: 9, cursor: 'pointer', fontFamily: T.font, outline: 'none' }}
+              >
+                <Download size={9} /> CSV
+              </button>
             </div>
             {results.map(r => {
               const isGapUp   = scanType === 'gap_up';
@@ -1501,8 +1539,20 @@ function TechSetupScan() {
           </div>
         ) : (
           <>
-            <div style={{ padding: '4px 8px', fontSize: 9, color: T.text3, fontFamily: T.font, borderBottom: `1px solid ${T.border}` }}>
-              {results.length} result{results.length !== 1 ? 's' : ''}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', borderBottom: `1px solid ${T.border}` }}>
+              <span style={{ fontSize: 9, color: T.text3, fontFamily: T.font }}>
+                {results.length} result{results.length !== 1 ? 's' : ''}
+              </span>
+              <button
+                onClick={() => downloadCSV(`setup-scan-${results[0]?.setupType ?? 'scan'}-${Date.now()}.csv`,
+                  ['Symbol','Name','Category','Setup','Value','Price'],
+                  results.map(r => [r.symbol, r.name, r.category, r.setupType, r.value.toFixed(4), r.price.toFixed(4)])
+                )}
+                title="Download CSV"
+                style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 3, border: `1px solid ${T.border}`, background: 'transparent', color: T.text3, fontSize: 9, cursor: 'pointer', fontFamily: T.font, outline: 'none' }}
+              >
+                <Download size={9} /> CSV
+              </button>
             </div>
             {results.map(r => {
               const { dir } = TECH_LABELS[r.setupType];
