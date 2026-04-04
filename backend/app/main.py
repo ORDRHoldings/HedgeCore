@@ -590,6 +590,8 @@ async def _ensure_tables():
 
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS job_title VARCHAR(128)",
 
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_preferences JSONB",
+
         "ALTER TABLE roles ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE",
 
         "ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER NOT NULL DEFAULT 10",
