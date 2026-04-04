@@ -33,7 +33,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 
 from app.core.db import Base
 
@@ -242,10 +242,10 @@ class User(Base):
 
 
 
-    ui_preferences: Mapped[dict | None] = mapped_column(
+    ui_preferences: Mapped[dict | None] = deferred(mapped_column(
         JSONB, nullable=True, default=dict,
         doc="User UI preference overrides (show_quickstart, etc.).",
-    )
+    ))
 
 
 
