@@ -592,6 +592,17 @@ async def _ensure_tables():
 
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_preferences JSONB",
 
+        # ?? companies — SSO + billing columns added post-initial-schema ??
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS sso_provider VARCHAR(64)",
+
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS sso_domain VARCHAR(255)",
+
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(128) UNIQUE",
+
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(128) UNIQUE",
+
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS plan_tier VARCHAR(32) NOT NULL DEFAULT 'starter'",
+
         "ALTER TABLE roles ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE",
 
         "ALTER TABLE roles ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER NOT NULL DEFAULT 10",

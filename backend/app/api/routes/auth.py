@@ -662,7 +662,6 @@ async def read_me(request: Request, db: AsyncSession = Depends(get_session)) -> 
     except Exception as exc:
 
         exc_type = type(exc).__name__
-        exc_msg = str(exc)[:200]
         logger.error("Unhandled /me error [%s]: %s", exc_type, exc)
 
         # Return 500 for non-auth errors (DB errors, etc.) so they are
@@ -670,7 +669,7 @@ async def read_me(request: Request, db: AsyncSession = Depends(get_session)) -> 
         # before reaching this handler).
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal error: {exc_type}: {exc_msg}",
+            detail="Internal server error",
         )
 
 
