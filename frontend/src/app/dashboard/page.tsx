@@ -232,17 +232,17 @@ function FxRateCard({ pair, mid, bid, ask, change }: {
       <div style={{
         fontFamily: T.fontMono, fontSize: 22, fontWeight: 700, color: T.primary,
       }}>
-        {mid.toFixed(mid >= 100 ? 2 : 4)}
+        {(mid ?? 0).toFixed((mid ?? 0) >= 100 ? 2 : 4)}
       </div>
       <div style={{ fontFamily: T.fontMono, fontSize: 11, fontWeight: 700, color: changeColor }}>
-        {arrow} {change > 0 ? "+" : ""}{change.toFixed(2)}%
+        {arrow} {change > 0 ? "+" : ""}{(change ?? 0).toFixed(2)}%
       </div>
       <div style={{
         display: "flex", gap: 12, fontFamily: T.fontMono,
         fontSize: 10, color: T.tertiary, marginTop: 2,
       }}>
-        <span>B {bid.toFixed(bid >= 100 ? 2 : 4)}</span>
-        <span>A {ask.toFixed(ask >= 100 ? 2 : 4)}</span>
+        <span>B {(bid ?? 0).toFixed((bid ?? 0) >= 100 ? 2 : 4)}</span>
+        <span>A {(ask ?? 0).toFixed((ask ?? 0) >= 100 ? 2 : 4)}</span>
       </div>
     </div>
   );
@@ -626,15 +626,15 @@ export default function DashboardPage() {
                       {pairDisplay}
                     </div>
                     <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.tertiary, marginTop: 1 }}>
-                      B {rate.bid.toFixed(rate.bid >= 100 ? 2 : 4)} / A {rate.ask.toFixed(rate.ask >= 100 ? 2 : 4)}
+                      B {(rate.bid ?? 0).toFixed((rate.bid ?? 0) >= 100 ? 2 : 4)} / A {(rate.ask ?? 0).toFixed((rate.ask ?? 0) >= 100 ? 2 : 4)}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" as const }}>
                     <div style={{ fontFamily: T.fontMono, fontSize: 16, fontWeight: 700, color: T.primary }}>
-                      {rate.mid.toFixed(rate.mid >= 100 ? 2 : 4)}
+                      {(rate.mid ?? 0).toFixed((rate.mid ?? 0) >= 100 ? 2 : 4)}
                     </div>
                     <div style={{ fontFamily: T.fontMono, fontSize: 9, fontWeight: 700, color: changeColor }}>
-                      {arrow} {change > 0 ? "+" : ""}{change.toFixed(2)}%
+                      {arrow} {change > 0 ? "+" : ""}{(change ?? 0).toFixed(2)}%
                     </div>
                   </div>
                 </div>
