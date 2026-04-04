@@ -16,6 +16,7 @@ export interface Product {
 export const PRODUCTS: Product[] = [
   { name: "ORDR Treasury", slug: "treasury", desc: "FX hedge calculation, policy governance, and execution pipeline", icon: "LayoutGrid" },
   { name: "ORDR Market", slug: "market", desc: "Professional charting and real-time market intelligence", icon: "TrendingUp" },
+  { name: "ORDR Connect", slug: "connect", desc: "Autonomous customer operations OS replacing passive CRM", icon: "Network" },
   { name: "ORDR Portfolio", slug: "portfolio", desc: "Portfolio risk decomposition and exposure analysis", icon: "PieChart" },
   { name: "ORDR Labs", slug: "labs", desc: "Scenario studio, backtesting, and Monte Carlo simulation", icon: "FlaskConical" },
   { name: "ORDR Polisophic", slug: "polisophic", desc: "Geopolitical risk intelligence and corridor scoring", icon: "Globe" },

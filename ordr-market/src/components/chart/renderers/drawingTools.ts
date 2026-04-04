@@ -86,6 +86,28 @@ function drawLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: nu
 const HIT_THRESH = 8;
 const HANDLE_R = 6;
 
+function atrFromBars(bars: Bar[], period = 14): number {
+  if (bars.length < 2) return 0;
+  const n = Math.min(period, bars.length - 1);
+  let sum = 0;
+  for (let i = bars.length - n; i < bars.length; i++) {
+    const tr = Math.max(bars[i].h - bars[i].l, Math.abs(bars[i].h - bars[i - 1].c), Math.abs(bars[i].l - bars[i - 1].c));
+    sum += tr;
+  }
+  return sum / n;
+}
+
+function humanDuration(diffSec: number): string {
+  if (diffSec < 60) return `${Math.round(diffSec)}s`;
+  if (diffSec < 3600) return `${Math.round(diffSec / 60)}m`;
+  if (diffSec < 86400) {
+    const h = Math.floor(diffSec / 3600), m = Math.round((diffSec % 3600) / 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  const d = Math.floor(diffSec / 86400), h = Math.round((diffSec % 86400) / 3600);
+  return h > 0 ? `${d}d ${h}h` : `${d}d`;
+}
+
 // ══════════════════════════════════════════════════════
 //  Coordinate helpers (local shorthand)
 // ══════════════════════════════════════════════════════
@@ -97,9 +119,10 @@ interface Coords {
   priceMin: number; priceMax: number;
   rightEdge: number;
   scale: PriceScale;
+  hitScale: number;
 }
 
-function getCoords(layout: ChartLayout, viewport: Viewport, scale: PriceScale): Coords {
+function getCoords(layout: ChartLayout, viewport: Viewport, scale: PriceScale, hitScale = 1.0): Coords {
   return {
     mainTop: layout.mainTop, mainHeight: layout.mainHeight,
     chartLeft: layout.chartLeft, chartWidth: layout.chartWidth,
@@ -107,6 +130,7 @@ function getCoords(layout: ChartLayout, viewport: Viewport, scale: PriceScale): 
     priceMin: viewport.priceMin, priceMax: viewport.priceMax,
     rightEdge: layout.canvasWidth - layout.priceAxisWidth,
     scale,
+    hitScale,
   };
 }
 
@@ -137,11 +161,12 @@ function drawHandles(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, isSel
 }
 
 function handleHitTest(mx: number, my: number, d: Drawing, c: Coords): HitTestResult | null {
+  const hr = HANDLE_R * c.hitScale;
   for (let i = 0; i < d.points.length; i++) {
     const px = ix(d.points[i].index, c);
     const pyy = py(d.points[i].price, c);
     const dist = Math.hypot(mx - px, my - pyy);
-    if (dist <= HANDLE_R) {
+    if (dist <= hr) {
       return { drawingId: d.id, distance: dist, part: `p${i}` };
     }
   }
@@ -195,6 +220,18 @@ function drawRay(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, isSelecte
   ctx.lineTo(farX, farY);
   ctx.stroke();
   ctx.setLineDash([]);
+  // Arrowhead at far terminus
+  {
+    const ang = Math.atan2(farY - y1, farX - x1);
+    const hs = 7;
+    ctx.fillStyle = d.color;
+    ctx.beginPath();
+    ctx.moveTo(farX, farY);
+    ctx.lineTo(farX - hs * Math.cos(ang - 0.38), farY - hs * Math.sin(ang - 0.38));
+    ctx.lineTo(farX - hs * Math.cos(ang + 0.38), farY - hs * Math.sin(ang + 0.38));
+    ctx.closePath();
+    ctx.fill();
+  }
   // INNOVATION: Persistence ray — target price reach indicator
   if (d.targetPrice !== undefined) {
     const ty = py(d.targetPrice, c);
@@ -211,6 +248,19 @@ function drawRay(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, isSelecte
     ctx.stroke();
     ctx.setLineDash([]);
     drawLabel(ctx, `TARGET ${pips >= 0 ? "+" : ""}${pips.toFixed(1)}p`, c.rightEdge - 10, ty - 10, "#FFD700", "rgba(30,25,0,0.9)");
+    // Bar countdown to target
+    {
+      const bSlope = (d.points[1].index - d.points[0].index) !== 0
+        ? (d.points[1].price - d.points[0].price) / (d.points[1].index - d.points[0].index)
+        : 0;
+      if (bSlope !== 0) {
+        const crossBar = Math.round(d.points[0].index + (d.targetPrice! - d.points[0].price) / bSlope);
+        const barsFromNow = crossBar - Math.round(c.endIndex);
+        if (barsFromNow > 0 && barsFromNow < 500) {
+          drawLabel(ctx, `~${barsFromNow} bars`, c.rightEdge - 10, ty + 12, "#FFD700", "rgba(30,25,0,0.9)", 8);
+        }
+      }
+    }
     ctx.restore();
   }
   drawHandles(ctx, d, c, isSelected, isHovered);
@@ -249,7 +299,7 @@ function drawExtendedLine(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, 
   ctx.restore();
 }
 
-function drawHorizontalRay(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, isSelected: boolean, isHovered: boolean): void {
+function drawHorizontalRay(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, isSelected: boolean, isHovered: boolean, bars?: Bar[]): void {
   if (d.points.length < 1) return;
   const x1 = ix(d.points[0].index, c), y1 = py(d.points[0].price, c);
   ctx.save();
@@ -269,6 +319,26 @@ function drawHorizontalRay(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords,
     ctx.fillRect(x1, y1 - bandH / 2, c.rightEdge - x1, bandH);
     ctx.globalAlpha = d.opacity;
     drawLabel(ctx, "CONFLUENCE ZONE", (x1 + c.rightEdge) / 2, y1 - bandH - 8, "#26A69A", "rgba(0,30,25,0.9)");
+    ctx.restore();
+  }
+  // S/R classification + touch strength
+  if (bars && bars.length >= 2) {
+    const price = d.points[0].price;
+    const atr = atrFromBars(bars);
+    const band = atr * 0.25;
+    let touches = 0;
+    for (const bar of bars) {
+      if (Math.abs(bar.h - price) <= band || Math.abs(bar.l - price) <= band) touches++;
+    }
+    const visibleMid = (c.priceMin + c.priceMax) / 2;
+    const isSup = price < visibleMid;
+    const stype = isSup ? "SUPPORT" : "RESISTANCE";
+    const scolor = isSup ? "#26A69A" : "#EF5350";
+    const strength = touches <= 1 ? "WEAK" : touches <= 4 ? "MODERATE" : "STRONG";
+    const badge = `${stype} \u00B7 ${touches} \u00B7 ${strength}`;
+    ctx.save();
+    ctx.globalAlpha = d.opacity;
+    drawLabel(ctx, badge, (x1 + c.rightEdge) / 2, y1 - 12, scolor, isSup ? "rgba(0,20,15,0.9)" : "rgba(25,0,0,0.9)");
     ctx.restore();
   }
   drawHandles(ctx, d, c, isSelected, isHovered);
@@ -333,11 +403,27 @@ function drawCrossLine(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, isS
     drawLabel(ctx, label, x1 + 16, y1 - 16, labelColor, "rgba(10,10,20,0.9)", 10);
     ctx.restore();
   }
+  // Coordinate info at intersection
+  {
+    ctx.save();
+    const priceStr = d.points[0].price.toFixed(5);
+    ctx.font = "9px 'IBM Plex Mono', monospace";
+    const ptw = ctx.measureText(priceStr).width;
+    ctx.globalAlpha = d.opacity * 0.12;
+    ctx.fillStyle = d.color;
+    ctx.fillRect(x1 + 4, y1 - 9, ptw + 10, 18);
+    ctx.globalAlpha = d.opacity;
+    ctx.fillStyle = d.color;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(priceStr, x1 + 9, y1);
+    ctx.restore();
+  }
   drawHandles(ctx, d, c, isSelected, isHovered);
   ctx.restore();
 }
 
-function drawInfoLine(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, pair: string, isSelected: boolean, isHovered: boolean): void {
+function drawInfoLine(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, pair: string, isSelected: boolean, isHovered: boolean, bars?: Bar[]): void {
   if (d.points.length < 2) return;
   const x1 = ix(d.points[0].index, c), y1 = py(d.points[0].price, c);
   const x2 = ix(d.points[1].index, c), y2 = py(d.points[1].price, c);
@@ -359,11 +445,25 @@ function drawInfoLine(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, pair
   const angle = Math.atan2(-(y2 - y1), x2 - x1) * (180 / Math.PI);
 
   const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
+  const extraInfoLines: string[] = [];
+  if (bars && bars.length >= 2) {
+    const ii0 = Math.min(bars.length - 1, Math.max(0, Math.min(d.points[0].index, d.points[1].index)));
+    const ii1 = Math.min(bars.length - 1, Math.max(0, Math.max(d.points[0].index, d.points[1].index)));
+    const t0 = bars[ii0]?.t, t1 = bars[ii1]?.t;
+    if (t0 !== undefined && t1 !== undefined) extraInfoLines.push(humanDuration(Math.abs(t1 - t0)));
+    const atrVal = atrFromBars(bars);
+    const pipSzAtr = (d.points[0].price > 10) ? 0.01 : 0.0001;
+    extraInfoLines.push(`ATR ${(atrVal / pipSzAtr).toFixed(1)}p`);
+    let hi_ = -Infinity, lo_ = Infinity;
+    for (let bi_ = ii0; bi_ <= ii1; bi_++) { hi_ = Math.max(hi_, bars[bi_].h); lo_ = Math.min(lo_, bars[bi_].l); }
+    if (hi_ > lo_) extraInfoLines.push(`H\u2013L ${((hi_ - lo_) / pipSzAtr).toFixed(1)}p`);
+  }
   const lines = [
     `${pips >= 0 ? "+" : ""}${pips.toFixed(1)} pips`,
     `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`,
     `${barCount} bars`,
     `${angle.toFixed(1)}\u00B0`,
+    ...extraInfoLines,
   ];
   ctx.font = "9px 'IBM Plex Mono', monospace";
   const maxW = Math.max(...lines.map(l => ctx.measureText(l).width));
@@ -431,7 +531,11 @@ function drawTrendAngle(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, is
   ctx.stroke();
 
   const degAngle = Math.atan2(-(y2 - y1), x2 - x1) * (180 / Math.PI);
+  const radAngle = degAngle * (Math.PI / 180);
+  const slopeRR = (x2 !== x1) ? (-(y2 - y1) / (x2 - x1)) : Infinity;
+  const slopeStr = Math.abs(slopeRR) === Infinity ? "\u221E" : `${slopeRR >= 0 ? "+" : ""}${slopeRR.toFixed(2)}`;
   drawLabel(ctx, `${degAngle.toFixed(1)}\u00B0`, x1 + arcR + 20, y1, d.color);
+  drawLabel(ctx, `${radAngle.toFixed(3)}r \u00B7 ${slopeStr}`, x1 + arcR + 20, y1 + 16, d.color, undefined, 8);
 
   // INNOVATION: Gann angle overlay
   {
@@ -466,7 +570,7 @@ function drawTrendAngle(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, is
 //  CHANNEL TOOLS
 // ══════════════════════════════════════════════════════
 
-function drawParallelChannel(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, isSelected: boolean, isHovered: boolean): void {
+function drawParallelChannel(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, isSelected: boolean, isHovered: boolean, bars?: Bar[]): void {
   if (d.points.length < 3) return;
   const x1 = ix(d.points[0].index, c), y1 = py(d.points[0].price, c);
   const x2 = ix(d.points[1].index, c), y2 = py(d.points[1].price, c);
@@ -548,6 +652,73 @@ function drawParallelChannel(ctx: CanvasRenderingContext2D, d: Drawing, c: Coord
     }
     ctx.restore();
   }
+
+  // Slope classification badge
+  {
+    const pSlope = d.points.length >= 2
+      ? (d.points[1].price - d.points[0].price) / (d.points[1].index - d.points[0].index || 1)
+      : 0;
+    const SLOPE_THRESH = 0.00005;
+    const slopeLabel = Math.abs(pSlope) < SLOPE_THRESH ? "HORIZONTAL"
+      : pSlope > 0 ? "UPTREND" : "DOWNTREND";
+    const slopeColor = slopeLabel === "HORIZONTAL" ? "#787B86"
+      : slopeLabel === "UPTREND" ? "#26A69A" : "#EF5350";
+    const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
+    ctx.save();
+    ctx.globalAlpha = d.opacity;
+    drawLabel(ctx, slopeLabel, midX, midY - 18, slopeColor, "rgba(10,10,20,0.9)");
+    ctx.restore();
+  }
+
+  // Wall touch counts + channel width (needs bars)
+  if (bars && bars.length >= 2) {
+    const TOUCH_PX = 6;
+    let wall1Touches = 0, wall2Touches = 0, breakouts = 0;
+    const atr = atrFromBars(bars);
+    for (let bi = 0; bi < bars.length; bi++) {
+      const bx = ix(bi, c);
+      if (bx < c.chartLeft || bx > c.rightEdge) continue;
+      const bMidY = (py(bars[bi].h, c) + py(bars[bi].l, c)) / 2;
+      const bCloseY = py(bars[bi].c, c);
+      // Interpolate wall positions at this bar x
+      const t = x2 !== x1 ? (bx - x1) / (x2 - x1) : 0;
+      const w1Y = y1 + (y2 - y1) * t;
+      const w2Y = oy1 + (oy2 - oy1) * t;
+      const top_  = Math.min(w1Y, w2Y);
+      const bot_  = Math.max(w1Y, w2Y);
+      if (Math.abs(bMidY - w1Y) < TOUCH_PX) wall1Touches++;
+      if (Math.abs(bMidY - w2Y) < TOUCH_PX) wall2Touches++;
+      // Breakout: close outside channel
+      if (bCloseY < top_ - 2 || bCloseY > bot_ + 2) {
+        breakouts++;
+        ctx.save();
+        ctx.globalAlpha = d.opacity * 0.8;
+        ctx.fillStyle = bCloseY < top_ - 2 ? THEME.bullBody : THEME.bearBody;
+        ctx.beginPath();
+        ctx.arc(bx, bCloseY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+    // Wall label badges
+    const w1MidX = (x1 + x2) / 2, w1MidY = (y1 + y2) / 2;
+    const w2MidX = (ox1 + ox2) / 2, w2MidY = (oy1 + oy2) / 2;
+    ctx.save();
+    ctx.globalAlpha = d.opacity * 0.85;
+    if (wall1Touches > 0) drawLabel(ctx, `${wall1Touches} BOUNCES`, w1MidX + 30, w1MidY - 8, d.color, "rgba(10,10,20,0.9)", 8);
+    if (wall2Touches > 0) drawLabel(ctx, `${wall2Touches} BOUNCES`, w2MidX + 30, w2MidY + 8, d.color, "rgba(10,10,20,0.9)", 8);
+    // Channel width
+    if (atr > 0) {
+      const pipSz = d.points[0]?.price > 10 ? 0.01 : 0.0001;
+      const widthPrice = Math.abs(d.points[2]?.price - d.points[0]?.price || 0);
+      const widthPips = widthPrice / pipSz;
+      const widthATR = atr > 0 ? (widthPrice / atr).toFixed(1) : "—";
+      const midX_ = (x1 + ox1) / 2, midY_ = (y1 + oy1) / 2;
+      drawLabel(ctx, `${widthPips.toFixed(1)}p · ${widthATR}×ATR`, midX_, midY_, "#D1D4DC", "rgba(10,10,20,0.9)", 8);
+    }
+    ctx.restore();
+  }
+
   drawHandles(ctx, d, c, isSelected, isHovered);
   ctx.restore();
 }
@@ -622,6 +793,35 @@ function drawRegressionTrend(ctx: CanvasRenderingContext2D, d: Drawing, c: Coord
   ctx.lineTo(ex, eloy);
   ctx.stroke();
   ctx.setLineDash([]);
+
+  // ±2σ outer bands (dotted)
+  if (stdDev > 0) {
+    const sup2y = py(regStart + 2 * stdDev, c), eupy2 = py(regEnd + 2 * stdDev, c);
+    const slo2y = py(regStart - 2 * stdDev, c), elo2y = py(regEnd - 2 * stdDev, c);
+    ctx.globalAlpha = d.opacity * 0.3;
+    ctx.setLineDash([2, 4]);
+    ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.moveTo(sx, sup2y); ctx.lineTo(ex, eupy2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx, slo2y); ctx.lineTo(ex, elo2y); ctx.stroke();
+    ctx.setLineDash([]);
+    // 2σ fill (very faint)
+    ctx.globalAlpha = d.opacity * 0.025;
+    ctx.fillStyle = d.color;
+    ctx.beginPath();
+    ctx.moveTo(sx, sup2y); ctx.lineTo(ex, eupy2);
+    ctx.lineTo(ex, elo2y); ctx.lineTo(sx, slo2y);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = d.opacity;
+    // 2σ labels
+    ctx.font = "7px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = d.color;
+    ctx.globalAlpha = d.opacity * 0.5;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.fillText("+2\u03C3", ex + 4, eupy2);
+    ctx.fillText("-2\u03C3", ex + 4, elo2y);
+    ctx.globalAlpha = d.opacity;
+  }
 
   // R-squared label (replaced by INNOVATION block)
   // INNOVATION: Live R² badge with strength and mean reversion zone
@@ -1157,6 +1357,22 @@ function drawGannBox(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, pair:
     ctx.lineTo(x, bot);
     ctx.stroke();
   }
+
+  // Level price labels on right edge
+  ctx.setLineDash([]);
+  ctx.font = "7px 'IBM Plex Mono', monospace";
+  ctx.fillStyle = d.color;
+  ctx.textAlign = "right";
+  ctx.globalAlpha = d.opacity * 0.7;
+  for (const lev of levels) {
+    if (lev === 0 || lev === 1) continue;
+    const ly = top + h * lev;
+    const lPrice = d.points[0].price > d.points[1].price
+      ? Math.max(d.points[0].price, d.points[1].price) - (Math.abs(d.points[0].price - d.points[1].price) * lev)
+      : Math.min(d.points[0].price, d.points[1].price) + (Math.abs(d.points[0].price - d.points[1].price) * lev);
+    ctx.fillText(formatPrice(lPrice, pair), right - 2, ly - 2);
+  }
+  ctx.globalAlpha = d.opacity;
 
   // 1x1 Diagonal
   ctx.setLineDash([]);
@@ -2033,6 +2249,9 @@ function drawLongPosition(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords, 
     `Profit: +${profitPips.toFixed(1)} pips (${pct.toFixed(2)}%)`,
     `Loss: -${lossPips.toFixed(1)} pips`,
     `R:R = 1:${rr.toFixed(2)}`,
+    ...(d.accountSize && d.riskPercent
+      ? [`Size: ${((d.accountSize * d.riskPercent / 100) / Math.max(lossPips * pipSize, 0.00001) / 10000).toFixed(2)} lots`]
+      : []),
   ];
 
   ctx.font = "9px 'IBM Plex Mono', monospace";
@@ -2136,6 +2355,9 @@ function drawShortPosition(ctx: CanvasRenderingContext2D, d: Drawing, c: Coords,
     `Profit: +${profitPips.toFixed(1)} pips (${pct.toFixed(2)}%)`,
     `Loss: -${lossPips.toFixed(1)} pips`,
     `R:R = 1:${rr.toFixed(2)}`,
+    ...(d.accountSize && d.riskPercent
+      ? [`Size: ${((d.accountSize * d.riskPercent / 100) / Math.max(lossPips * pipSize, 0.00001) / 10000).toFixed(2)} lots`]
+      : []),
   ];
 
   ctx.font = "9px 'IBM Plex Mono', monospace";
@@ -2704,13 +2926,13 @@ export function drawGenericDrawing(
     // Lines
     case "ray": drawRay(ctx, d, c, isSelected, isHovered); break;
     case "extended_line": drawExtendedLine(ctx, d, c, isSelected, isHovered); break;
-    case "horizontal_ray": drawHorizontalRay(ctx, d, c, isSelected, isHovered); break;
+    case "horizontal_ray": drawHorizontalRay(ctx, d, c, isSelected, isHovered, bars); break;
     case "vertical_line": drawVerticalLine(ctx, d, c, isSelected, isHovered); break;
     case "cross_line": drawCrossLine(ctx, d, c, isSelected, isHovered); break;
-    case "info_line": drawInfoLine(ctx, d, c, pair, isSelected, isHovered); break;
+    case "info_line": drawInfoLine(ctx, d, c, pair, isSelected, isHovered, bars); break;
     case "trend_angle": drawTrendAngle(ctx, d, c, isSelected, isHovered); break;
     // Channels
-    case "parallel_channel": drawParallelChannel(ctx, d, c, isSelected, isHovered); break;
+    case "parallel_channel": drawParallelChannel(ctx, d, c, isSelected, isHovered, bars); break;
     case "regression_trend": drawRegressionTrend(ctx, d, c, isSelected, isHovered, bars); break;
     case "flat_top_bottom": drawFlatTopBottom(ctx, d, c, isSelected, isHovered); break;
     case "disjoint_channel": drawDisjointChannel(ctx, d, c, isSelected, isHovered); break;
@@ -2771,6 +2993,7 @@ function hitTestLine2pt(mx: number, my: number, d: Drawing, c: Coords, extended:
   if (d.points.length < 2) return null;
   const hh = handleHitTest(mx, my, d, c);
   if (hh) return hh;
+  const ht = HIT_THRESH * c.hitScale;
   const x1 = ix(d.points[0].index, c), y1 = py(d.points[0].price, c);
   const x2 = ix(d.points[1].index, c), y2 = py(d.points[1].price, c);
   let dist: number;
@@ -2784,7 +3007,7 @@ function hitTestLine2pt(mx: number, my: number, d: Drawing, c: Coords, extended:
   } else {
     dist = ptToSegDist(mx, my, x1, y1, x2, y2);
   }
-  if (dist <= HIT_THRESH) return { drawingId: d.id, distance: dist, part: "body" };
+  if (dist <= ht) return { drawingId: d.id, distance: dist, part: "body" };
   return null;
 }
 
@@ -2792,13 +3015,14 @@ function hitTestHLine(mx: number, my: number, d: Drawing, c: Coords, fullWidth: 
   if (d.points.length < 1) return null;
   const hh = handleHitTest(mx, my, d, c);
   if (hh) return hh;
+  const ht = HIT_THRESH * c.hitScale;
   const y = py(d.points[0].price, c);
   const dist = Math.abs(my - y);
   if (!fullWidth) {
     const x1 = ix(d.points[0].index, c);
-    if (mx < x1 - HIT_THRESH) return null;
+    if (mx < x1 - ht) return null;
   }
-  if (dist <= HIT_THRESH) return { drawingId: d.id, distance: dist, part: "body" };
+  if (dist <= ht) return { drawingId: d.id, distance: dist, part: "body" };
   return null;
 }
 
@@ -2806,9 +3030,10 @@ function hitTestVLine(mx: number, my: number, d: Drawing, c: Coords): HitTestRes
   if (d.points.length < 1) return null;
   const hh = handleHitTest(mx, my, d, c);
   if (hh) return hh;
+  const ht = HIT_THRESH * c.hitScale;
   const x = ix(d.points[0].index, c);
   const dist = Math.abs(mx - x);
-  if (dist <= HIT_THRESH) return { drawingId: d.id, distance: dist, part: "body" };
+  if (dist <= ht) return { drawingId: d.id, distance: dist, part: "body" };
   return null;
 }
 
@@ -2816,22 +3041,24 @@ function hitTestCrossLine(mx: number, my: number, d: Drawing, c: Coords): HitTes
   if (d.points.length < 1) return null;
   const hh = handleHitTest(mx, my, d, c);
   if (hh) return hh;
+  const ht = HIT_THRESH * c.hitScale;
   const x = ix(d.points[0].index, c), y = py(d.points[0].price, c);
   const dist = Math.min(Math.abs(mx - x), Math.abs(my - y));
-  if (dist <= HIT_THRESH) return { drawingId: d.id, distance: dist, part: "body" };
+  if (dist <= ht) return { drawingId: d.id, distance: dist, part: "body" };
   return null;
 }
 
 function hitTestMultiSegment(mx: number, my: number, d: Drawing, c: Coords): HitTestResult | null {
   const hh = handleHitTest(mx, my, d, c);
   if (hh) return hh;
+  const ht = HIT_THRESH * c.hitScale;
   let minDist = Infinity;
   const pts = d.points.map(p => ({ x: ix(p.index, c), y: py(p.price, c) }));
   for (let i = 0; i < pts.length - 1; i++) {
     const dist = ptToSegDist(mx, my, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
     if (dist < minDist) minDist = dist;
   }
-  if (minDist <= HIT_THRESH) return { drawingId: d.id, distance: minDist, part: "body" };
+  if (minDist <= ht) return { drawingId: d.id, distance: minDist, part: "body" };
   return null;
 }
 
@@ -2839,12 +3066,13 @@ function hitTestCircle(mx: number, my: number, d: Drawing, c: Coords): HitTestRe
   if (d.points.length < 2) return null;
   const hh = handleHitTest(mx, my, d, c);
   if (hh) return hh;
+  const ht = HIT_THRESH * c.hitScale;
   const cx_ = ix(d.points[0].index, c), cy_ = py(d.points[0].price, c);
   const ex = ix(d.points[1].index, c), ey = py(d.points[1].price, c);
   const radius = Math.hypot(ex - cx_, ey - cy_);
   const distFromCenter = Math.hypot(mx - cx_, my - cy_);
   const dist = Math.abs(distFromCenter - radius);
-  if (dist <= HIT_THRESH || (d.fillEnabled && distFromCenter <= radius)) {
+  if (dist <= ht || (d.fillEnabled && distFromCenter <= radius)) {
     return { drawingId: d.id, distance: Math.min(dist, 1), part: "body" };
   }
   return null;
@@ -2854,13 +3082,14 @@ function hitTestEllipse(mx: number, my: number, d: Drawing, c: Coords): HitTestR
   if (d.points.length < 2) return null;
   const hh = handleHitTest(mx, my, d, c);
   if (hh) return hh;
+  const ht = HIT_THRESH * c.hitScale;
   const cx_ = ix(d.points[0].index, c), cy_ = py(d.points[0].price, c);
   const ex = ix(d.points[1].index, c), ey = py(d.points[1].price, c);
   const rx = Math.abs(ex - cx_) || 1, ry = Math.abs(ey - cy_) || 1;
   const nx = (mx - cx_) / rx, ny = (my - cy_) / ry;
   const normDist = Math.sqrt(nx * nx + ny * ny);
   const edgeDist = Math.abs(normDist - 1) * Math.min(rx, ry);
-  if (edgeDist <= HIT_THRESH || (d.fillEnabled && normDist <= 1)) {
+  if (edgeDist <= ht || (d.fillEnabled && normDist <= 1)) {
     return { drawingId: d.id, distance: Math.min(edgeDist, 1), part: "body" };
   }
   return null;
@@ -2870,13 +3099,14 @@ function hitTestRect2pt(mx: number, my: number, d: Drawing, c: Coords): HitTestR
   if (d.points.length < 2) return null;
   const hh = handleHitTest(mx, my, d, c);
   if (hh) return hh;
+  const ht = HIT_THRESH * c.hitScale;
   const x1 = ix(d.points[0].index, c), y1 = py(d.points[0].price, c);
   const x2 = ix(d.points[1].index, c), y2 = py(d.points[1].price, c);
   const left = Math.min(x1, x2), right = Math.max(x1, x2);
   const top = Math.min(y1, y2), bot = Math.max(y1, y2);
-  if (mx >= left - HIT_THRESH && mx <= right + HIT_THRESH && my >= top - HIT_THRESH && my <= bot + HIT_THRESH) {
+  if (mx >= left - ht && mx <= right + ht && my >= top - ht && my <= bot + ht) {
     const minEdge = Math.min(Math.abs(mx - left), Math.abs(mx - right), Math.abs(my - top), Math.abs(my - bot));
-    if (minEdge <= HIT_THRESH) return { drawingId: d.id, distance: minEdge, part: "body" };
+    if (minEdge <= ht) return { drawingId: d.id, distance: minEdge, part: "body" };
     if (mx >= left && mx <= right && my >= top && my <= bot) {
       return { drawingId: d.id, distance: 0.5, part: "body" };
     }
@@ -2888,15 +3118,15 @@ function hitTestTextBox(mx: number, my: number, d: Drawing, c: Coords, w: number
   if (d.points.length < 1) return null;
   const hh = handleHitTest(mx, my, d, c);
   if (hh) return hh;
+  const pad = 6 * c.hitScale;
   const x = ix(d.points[0].index, c), y = py(d.points[0].price, c);
-  const pad = 6;
   if (mx >= x - pad && mx <= x + w + pad && my >= y - h / 2 - pad && my <= y + h / 2 + pad) {
     return { drawingId: d.id, distance: 0.5, part: "body" };
   }
   return null;
 }
 
-function hitTestBrush(mx: number, my: number, d: Drawing, _c: Coords): HitTestResult | null {
+function hitTestBrush(mx: number, my: number, d: Drawing, c: Coords): HitTestResult | null {
   const points = d.brushPoints;
   if (!points || points.length < 2) return null;
   let minDist = Infinity;
@@ -2904,7 +3134,7 @@ function hitTestBrush(mx: number, my: number, d: Drawing, _c: Coords): HitTestRe
     const dist = ptToSegDist(mx, my, points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
     if (dist < minDist) minDist = dist;
   }
-  const threshold = HIT_THRESH + (d.brushSize || 2);
+  const threshold = HIT_THRESH * c.hitScale + (d.brushSize || 2);
   if (minDist <= threshold) return { drawingId: d.id, distance: minDist, part: "body" };
   return null;
 }
@@ -2913,6 +3143,7 @@ function hitTestChannel3pt(mx: number, my: number, d: Drawing, c: Coords): HitTe
   if (d.points.length < 3) return null;
   const hh = handleHitTest(mx, my, d, c);
   if (hh) return hh;
+  const ht = HIT_THRESH * c.hitScale;
   const x1 = ix(d.points[0].index, c), y1 = py(d.points[0].price, c);
   const x2 = ix(d.points[1].index, c), y2 = py(d.points[1].price, c);
   const x3 = ix(d.points[2].index, c), y3 = py(d.points[2].price, c);
@@ -2926,7 +3157,7 @@ function hitTestChannel3pt(mx: number, my: number, d: Drawing, c: Coords): HitTe
   const d1 = ptToSegDist(mx, my, x1, y1, x2, y2);
   const d2 = ptToSegDist(mx, my, ox1, oy1, ox2, oy2);
   const minDist = Math.min(d1, d2);
-  if (minDist <= HIT_THRESH) return { drawingId: d.id, distance: minDist, part: "body" };
+  if (minDist <= ht) return { drawingId: d.id, distance: minDist, part: "body" };
   return null;
 }
 
@@ -2934,7 +3165,7 @@ function hitTestMarker(mx: number, my: number, d: Drawing, c: Coords): HitTestRe
   if (d.points.length < 1) return null;
   const x = ix(d.points[0].index, c), y = py(d.points[0].price, c);
   const dist = Math.hypot(mx - x, my - y);
-  if (dist <= 14) return { drawingId: d.id, distance: dist, part: "body" };
+  if (dist <= 14 * c.hitScale) return { drawingId: d.id, distance: dist, part: "body" };
   return null;
 }
 
@@ -2944,8 +3175,9 @@ export function hitTestGenericDrawing(
   layout: ChartLayout,
   viewport: Viewport,
   scale: PriceScale,
+  hitScale = 1.0,
 ): HitTestResult | null {
-  const c = getCoords(layout, viewport, scale);
+  const c = getCoords(layout, viewport, scale, hitScale);
   switch (d.type) {
     // Lines
     case "ray": return hitTestLine2pt(mx, my, d, c, "ray");

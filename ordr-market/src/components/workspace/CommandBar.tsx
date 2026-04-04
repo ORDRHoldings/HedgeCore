@@ -3,18 +3,19 @@
  * ORDR Market — Command Bar
  * Premium 36px top bar with three zones: left (brand/search), center (price/timeframes), right (tools/account).
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Search, ChevronDown, CandlestickChart, BarChart2, LineChart, AreaChart,
   TrendingUp, Bell, Settings, User, Star, X, Plus, Check,
   PlaySquare, Bot, Layers, SlidersHorizontal,
   Activity, Eye, Focus, LayoutDashboard, Zap,
+  Camera, Sun, Save, LayoutGrid, Link2, Link2Off, Copy, Share2,
 } from 'lucide-react';
 import { T } from './tokens';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { useWorkspace } from './WorkspaceProvider';
 import { SYMBOL_DATA, BASE_TIMEFRAMES, INDICATOR_LIBRARY, INDICATOR_CATEGORIES, formatPrice } from './workspace-data';
-import type { ChartType, WorkspaceMode } from './workspace-types';
+import type { ChartType, WorkspaceMode, ChartLayout } from './workspace-types';
 import ChartSymbolSearch from '../chart/ChartSymbolSearch';
 
 // ── Shared styles ────────────────────────────────────────────────────────────
@@ -236,6 +237,40 @@ function ChartTypeSelector() {
   );
 }
 
+// ── Indicator Library → chartConfig/chartSubPanes key mapping ─────────────────
+// INDICATOR_LIBRARY ids must map to the boolean keys ChartEngine actually reads.
+const IND_CFG: Record<string, { kind: 'overlay' | 'subpane'; key: string }> = {
+  ema20:    { kind: 'overlay',  key: 'ema20' },
+  sma50:    { kind: 'overlay',  key: 'sma50' },
+  ema200:   { kind: 'overlay',  key: 'sma200' },
+  vwap:     { kind: 'overlay',  key: 'vwap' },
+  ichimoku: { kind: 'overlay',  key: 'ichimoku' },
+  sar:      { kind: 'overlay',  key: 'parabolicSAR' },
+  hma:      { kind: 'overlay',  key: 'hma9' },
+  bb:       { kind: 'overlay',  key: 'bollinger' },
+  kc:       { kind: 'overlay',  key: 'keltner' },
+  dc:       { kind: 'overlay',  key: 'donchian' },
+  vpro:     { kind: 'overlay',  key: 'volumeProfile' },
+  pivots:   { kind: 'overlay',  key: 'pivotPoints' },
+  autofib:  { kind: 'overlay',  key: 'autoFib' },
+  zigzag:   { kind: 'overlay',  key: 'zigzag' },
+  orderblk: { kind: 'overlay',  key: 'orderBlocks' },
+  liqzones: { kind: 'overlay',  key: 'liqZones' },
+  rsi:      { kind: 'subpane',  key: 'rsi' },
+  macd:     { kind: 'subpane',  key: 'macd' },
+  sto:      { kind: 'subpane',  key: 'stochastic' },
+  adx:      { kind: 'subpane',  key: 'adx' },
+  cci:      { kind: 'subpane',  key: 'cci' },
+  mom:      { kind: 'subpane',  key: 'momentum' },
+  willr:    { kind: 'subpane',  key: 'williamsR' },
+  histvol:  { kind: 'subpane',  key: 'histVol' },
+  obv:      { kind: 'subpane',  key: 'obv' },
+  cmf:      { kind: 'subpane',  key: 'cmf' },
+  mfi:      { kind: 'subpane',  key: 'mfi' },
+  cvd:      { kind: 'subpane',  key: 'cvd' },
+  // atr has no standalone sub-pane in ChartEngine — omit
+};
+
 // ── Indicators Menu ──────────────────────────────────────────────────────────
 function IndicatorsButton() {
   const { state, dispatch } = useWorkspace();
@@ -251,7 +286,25 @@ function IndicatorsButton() {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const activeIds = new Set(state.indicators.map(i => i.id));
+  function isActive(indId: string): boolean {
+    const mapping = IND_CFG[indId];
+    if (!mapping) return false;
+    if (mapping.kind === 'overlay') return !!state.chartConfig[mapping.key];
+    return state.chartSubPanes.includes(mapping.key);
+  }
+
+  function toggleIndicator(indId: string) {
+    const mapping = IND_CFG[indId];
+    if (!mapping) return;
+    if (mapping.kind === 'overlay') {
+      dispatch({ type: 'TOGGLE_CHART_INDICATOR', key: mapping.key });
+    } else {
+      dispatch({ type: 'TOGGLE_CHART_SUBPANE', key: mapping.key });
+    }
+  }
+
+  const activeCount = INDICATOR_LIBRARY.filter(ind => isActive(ind.id)).length;
+
   const filtered = INDICATOR_LIBRARY.filter(ind => {
     if (category !== 'all' && ind.category !== category) return false;
     if (search && !ind.name.toLowerCase().includes(search.toLowerCase()) && !ind.shortName.toLowerCase().includes(search.toLowerCase())) return false;
@@ -263,13 +316,13 @@ function IndicatorsButton() {
       <CmdBtn active={open} onClick={() => { setOpen(!open); setSearch(''); setCategory('all'); }}>
         <TrendingUp size={13} />
         <span>Indicators</span>
-        {state.indicators.length > 0 && (
+        {activeCount > 0 && (
           <span style={{
             fontSize: 9, fontWeight: 700, color: '#fff',
             background: T.accent, borderRadius: 6, padding: '0 4px', height: 14,
             display: 'inline-flex', alignItems: 'center',
           }}>
-            {state.indicators.length}
+            {activeCount}
           </span>
         )}
       </CmdBtn>
@@ -320,31 +373,27 @@ function IndicatorsButton() {
           {/* List */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '2px 0' }}>
             {filtered.map(ind => {
-              const added = activeIds.has(ind.id);
+              const added = isActive(ind.id);
+              const mapped = !!IND_CFG[ind.id];
               return (
                 <div
                   key={ind.id}
-                  onClick={() => {
-                    if (!added) {
-                      dispatch({ type: 'ADD_INDICATOR', indicator: { id: ind.id, name: ind.shortName, params: ind.defaultParams, color: ind.color, pane: ind.pane } });
-                    } else {
-                      dispatch({ type: 'REMOVE_INDICATOR', id: ind.id });
-                    }
-                  }}
+                  onClick={() => toggleIndicator(ind.id)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '5px 10px', cursor: 'pointer',
+                    padding: '5px 10px', cursor: mapped ? 'pointer' : 'default',
                     background: added ? T.panelActive : 'transparent',
+                    opacity: mapped ? 1 : 0.4,
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = added ? T.panelActive : T.panelHover; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = added ? T.panelActive : 'transparent'; }}
+                  onMouseEnter={e => { if (mapped) (e.currentTarget as HTMLElement).style.background = added ? T.panelActive : T.panelHover; }}
+                  onMouseLeave={e => { if (mapped) (e.currentTarget as HTMLElement).style.background = added ? T.panelActive : 'transparent'; }}
                 >
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: ind.color, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 11, fontWeight: 500, color: T.text1, fontFamily: T.font }}>{ind.name}</div>
                     <div style={{ fontSize: 9, color: T.text3, fontFamily: T.font }}>{ind.shortName}{ind.defaultParams ? ` (${ind.defaultParams})` : ''}</div>
                   </div>
-                  <span style={{ fontSize: 9, color: T.text3, fontFamily: T.font, textTransform: 'uppercase' }}>{ind.pane === 'overlay' ? 'OVR' : 'SEP'}</span>
+                  <span style={{ fontSize: 9, color: T.text3, fontFamily: T.font, textTransform: 'uppercase' as const }}>{ind.pane === 'overlay' ? 'OVR' : 'SEP'}</span>
                   {added && <Check size={11} color={T.accent} />}
                 </div>
               );
@@ -359,13 +408,587 @@ function IndicatorsButton() {
   );
 }
 
+// ── Chart Layout Switcher ────────────────────────────────────────────────────
+const LAYOUT_OPTIONS: { id: ChartLayout; title: string; icon: React.ReactNode }[] = [
+  {
+    id: '1',
+    title: 'Single chart',
+    icon: (
+      <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+        <rect x={1} y={1} width={12} height={12} rx={1} stroke="currentColor" strokeWidth={1.5} fill="none" />
+      </svg>
+    ),
+  },
+  {
+    id: '2h',
+    title: 'Two charts — horizontal split',
+    icon: (
+      <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+        <rect x={1} y={1} width={5.5} height={12} rx={1} stroke="currentColor" strokeWidth={1.5} fill="none" />
+        <rect x={7.5} y={1} width={5.5} height={12} rx={1} stroke="currentColor" strokeWidth={1.5} fill="none" />
+      </svg>
+    ),
+  },
+  {
+    id: '2v',
+    title: 'Two charts — vertical split',
+    icon: (
+      <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+        <rect x={1} y={1} width={12} height={5.5} rx={1} stroke="currentColor" strokeWidth={1.5} fill="none" />
+        <rect x={1} y={7.5} width={12} height={5.5} rx={1} stroke="currentColor" strokeWidth={1.5} fill="none" />
+      </svg>
+    ),
+  },
+  {
+    id: '4',
+    title: 'Four charts — 2×2 grid',
+    icon: (
+      <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
+        <rect x={1} y={1} width={5.5} height={5.5} rx={1} stroke="currentColor" strokeWidth={1.5} fill="none" />
+        <rect x={7.5} y={1} width={5.5} height={5.5} rx={1} stroke="currentColor" strokeWidth={1.5} fill="none" />
+        <rect x={1} y={7.5} width={5.5} height={5.5} rx={1} stroke="currentColor" strokeWidth={1.5} fill="none" />
+        <rect x={7.5} y={7.5} width={5.5} height={5.5} rx={1} stroke="currentColor" strokeWidth={1.5} fill="none" />
+      </svg>
+    ),
+  },
+];
+
+function LayoutSwitcher() {
+  const { state, dispatch } = useWorkspace();
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      {LAYOUT_OPTIONS.map(opt => {
+        const active = state.chartLayout === opt.id;
+        return (
+          <button
+            key={opt.id}
+            title={opt.title}
+            onClick={() => dispatch({ type: 'SET_CHART_LAYOUT', layout: opt.id })}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 24, height: 24, borderRadius: 3,
+              border: `1px solid ${active ? T.accent : T.border}`,
+              background: active ? T.accentBg : 'transparent',
+              color: active ? T.accent : T.text3,
+              cursor: 'pointer', outline: 'none',
+              transition: 'all 0.1s',
+            }}
+            onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+            onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+          >
+            {opt.icon}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CrosshairSyncToggle() {
+  const { state, dispatch } = useWorkspace();
+  const on = state.crosshairSyncEnabled;
+  return (
+    <button
+      title={on ? 'Crosshair sync ON — click to disable' : 'Crosshair sync OFF — click to enable'}
+      onClick={() => dispatch({ type: 'TOGGLE_CROSSHAIR_SYNC' })}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 24, height: 24, borderRadius: 3,
+        border: `1px solid ${on ? T.accent : T.border}`,
+        background: on ? T.accentBg : 'transparent',
+        color: on ? T.accent : T.text3,
+        cursor: 'pointer', outline: 'none', transition: 'all 0.1s',
+      }}
+      onMouseEnter={e => { if (!on) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+      onMouseLeave={e => { if (!on) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+    >
+      {on ? <Link2 size={11} /> : <Link2Off size={11} />}
+    </button>
+  );
+}
+
+function ScaleModeSelector() {
+  const { state, dispatch } = useWorkspace();
+  const modes: { id: 'linear' | 'log' | 'percent'; label: string; title: string }[] = [
+    { id: 'linear', label: 'Lin', title: 'Linear price scale' },
+    { id: 'log',    label: 'Log', title: 'Logarithmic price scale' },
+    { id: 'percent', label: '%',  title: 'Percentage price scale' },
+  ];
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      {modes.map(m => {
+        const active = state.priceScaleMode === m.id;
+        return (
+          <button
+            key={m.id}
+            title={m.title}
+            onClick={() => dispatch({ type: 'SET_PRICE_SCALE_MODE', mode: m.id })}
+            style={{
+              height: 20, padding: '0 6px', borderRadius: 3,
+              border: `1px solid ${active ? T.accent : T.border}`,
+              background: active ? T.accentBg : 'transparent',
+              color: active ? T.accent : T.text3,
+              fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none',
+              fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+              transition: 'all 0.1s',
+            }}
+            onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+            onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+          >
+            {m.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PrevLevelsToggle() {
+  const { state, dispatch } = useWorkspace();
+  const active = state.showPrevLevels;
+  return (
+    <button
+      title={active ? 'Hide previous day OHLC levels' : 'Show previous day OHLC levels'}
+      onClick={() => dispatch({ type: 'TOGGLE_PREV_LEVELS' })}
+      style={{
+        height: 20, padding: '0 6px', borderRadius: 3,
+        border: `1px solid ${active ? T.accent : T.border}`,
+        background: active ? T.accentBg : 'transparent',
+        color: active ? T.accent : T.text3,
+        fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none',
+        fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+        transition: 'all 0.1s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+    >
+      PDH/L
+    </button>
+  );
+}
+
+function OpenLevelsToggle() {
+  const { state, dispatch } = useWorkspace();
+  const active = state.showOpenLevels;
+  return (
+    <button
+      title={active ? 'Hide ICT open levels (DOL/WOL/Asia)' : 'Show ICT open levels (DOL/WOL/Asia)'}
+      onClick={() => dispatch({ type: 'TOGGLE_OPEN_LEVELS' })}
+      style={{
+        height: 20, padding: '0 6px', borderRadius: 3,
+        border: `1px solid ${active ? T.accent : T.border}`,
+        background: active ? T.accentBg : 'transparent',
+        color: active ? T.accent : T.text3,
+        fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none',
+        fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+        transition: 'all 0.1s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+    >
+      DOL/WOL
+    </button>
+  );
+}
+
+function PivotsToggle() {
+  const { state, dispatch } = useWorkspace();
+  const active = state.showPivots;
+  return (
+    <button
+      title={active ? 'Hide swing pivot high/low' : 'Show swing pivot high/low'}
+      onClick={() => dispatch({ type: 'TOGGLE_PIVOTS' })}
+      style={{
+        height: 20, padding: '0 6px', borderRadius: 3,
+        border: `1px solid ${active ? T.accent : T.border}`,
+        background: active ? T.accentBg : 'transparent',
+        color: active ? T.accent : T.text3,
+        fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none',
+        fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+        transition: 'all 0.1s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+    >
+      PIVOTS
+    </button>
+  );
+}
+
+function CandlePatternsToggle() {
+  const { state, dispatch } = useWorkspace();
+  const active = state.showCandlePatterns;
+  return (
+    <button
+      title={active ? 'Hide candle pattern labels' : 'Show candle pattern labels (Doji, Hammer, Engulfing…)'}
+      onClick={() => dispatch({ type: 'TOGGLE_CANDLE_PATTERNS' })}
+      style={{
+        height: 20, padding: '0 6px', borderRadius: 3,
+        border: `1px solid ${active ? T.accent : T.border}`,
+        background: active ? T.accentBg : 'transparent',
+        color: active ? T.accent : T.text3,
+        fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none',
+        fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+        transition: 'all 0.1s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+    >
+      CNDL
+    </button>
+  );
+}
+
+function SessionRangesToggle() {
+  const { state, dispatch } = useWorkspace();
+  const active = state.showSessionRanges;
+  return (
+    <button
+      title={active ? 'Hide session range boxes' : 'Show session range boxes (Asia / London / NY)'}
+      onClick={() => dispatch({ type: 'TOGGLE_SESSION_RANGES' })}
+      style={{
+        height: 20, padding: '0 6px', borderRadius: 3,
+        border: `1px solid ${active ? T.accent : T.border}`,
+        background: active ? T.accentBg : 'transparent',
+        color: active ? T.accent : T.text3,
+        fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none',
+        fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+        transition: 'all 0.1s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+    >
+      SESS
+    </button>
+  );
+}
+
+function AutoFibToggle() {
+  const { state, dispatch } = useWorkspace();
+  const active = state.showAutoFib;
+  return (
+    <button
+      title={active ? 'Hide auto Fibonacci retracement' : 'Show auto Fibonacci retracement (dominant viewport swing)'}
+      onClick={() => dispatch({ type: 'TOGGLE_AUTO_FIB' })}
+      style={{
+        height: 20, padding: '0 6px', borderRadius: 3,
+        border: `1px solid ${active ? T.accent : T.border}`,
+        background: active ? T.accentBg : 'transparent',
+        color: active ? T.accent : T.text3,
+        fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none',
+        fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+        transition: 'all 0.1s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+    >
+      FIBO
+    </button>
+  );
+}
+
+// ── Quick Layout Switcher ─────────────────────────────────────────────────────
+const LAYOUTS_STORAGE_KEY    = 'ordr_named_layouts';
+const ACTIVE_LAYOUT_STOR_KEY = 'ordr_active_layout_id';
+
+function loadCmdLayouts() {
+  try { return JSON.parse(localStorage.getItem(LAYOUTS_STORAGE_KEY) ?? '[]') as { id: string; name: string; savedAt: number; updatedAt?: number; snapshot: { symbol: string; timeframe: string } }[]; }
+  catch { return []; }
+}
+
+function QuickLayoutSwitcher() {
+  const { state, dispatch } = useWorkspace();
+  const [open, setOpen] = useState(false);
+  const [layouts, setLayouts] = useState<ReturnType<typeof loadCmdLayouts>>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveInput, setSaveInput] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setLayouts(loadCmdLayouts());
+    setActiveId(localStorage.getItem(ACTIVE_LAYOUT_STOR_KEY));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOut(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
+    document.addEventListener('mousedown', onClickOut);
+    return () => document.removeEventListener('mousedown', onClickOut);
+  }, [open]);
+
+  const activeLayout = layouts.find(l => l.id === activeId);
+
+  const doQuickSave = useCallback(() => {
+    if (!saveInput.trim()) return;
+    const snap = {
+      mode: state.mode, leftTab: state.leftTab, rightTab: state.rightTab, bottomTab: state.bottomTab,
+      symbol: state.symbol, timeframe: state.timeframe, chartType: state.chartType,
+      chartLayout: state.chartLayout, secondaryCharts: state.secondaryCharts,
+      indicators: state.indicators, chartSubPanes: state.chartSubPanes, chartConfig: state.chartConfig,
+      showSR: state.showSR, showFVG: state.showFVG,
+      priceScaleMode: state.priceScaleMode, showPrevLevels: state.showPrevLevels, enabledSessions: state.enabledSessions,
+    };
+    const layout = { id: Math.random().toString(36).slice(2), name: saveInput.trim(), savedAt: Date.now(), snapshot: snap };
+    const next = [layout, ...loadCmdLayouts()].slice(0, 50);
+    localStorage.setItem(LAYOUTS_STORAGE_KEY, JSON.stringify(next));
+    localStorage.setItem(ACTIVE_LAYOUT_STOR_KEY, layout.id);
+    setLayouts(next); setActiveId(layout.id); setSaving(false); setSaveInput(''); setOpen(false);
+  }, [state, saveInput]);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        title="Layout switcher"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 4, height: 24,
+          padding: '0 7px', borderRadius: 3, border: `1px solid ${open ? T.accent : T.border}`,
+          background: open ? T.accentBg : 'transparent',
+          color: open ? T.accent : T.text2, cursor: 'pointer', outline: 'none',
+          fontSize: 10, fontFamily: T.font, fontWeight: 500,
+        }}
+        onMouseEnter={e => { if (!open) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text1; } }}
+        onMouseLeave={e => { if (!open) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; } }}
+      >
+        <LayoutGrid size={11} />
+        <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {activeLayout ? activeLayout.name : 'Layouts'}
+        </span>
+        {layouts.length > 0 && (
+          <span style={{ fontSize: 8, color: T.text3, background: T.borderLight, borderRadius: 2, padding: '0 3px', minWidth: 14, textAlign: 'center' }}>
+            {layouts.length}
+          </span>
+        )}
+        <ChevronDown size={9} />
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, marginTop: 3,
+          width: 220, background: T.surface, border: `1px solid ${T.border}`,
+          borderRadius: 6, zIndex: 500, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          overflow: 'hidden',
+        }}>
+          {/* Quick save row */}
+          {saving ? (
+            <div style={{ display: 'flex', gap: 4, padding: '8px' }}>
+              <input
+                autoFocus value={saveInput}
+                onChange={e => setSaveInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') doQuickSave(); if (e.key === 'Escape') setSaving(false); }}
+                placeholder="Layout name…"
+                style={{ flex: 1, height: 24, padding: '0 7px', borderRadius: 3, border: `1px solid ${T.accent}`, background: T.surfaceAlt, color: T.text1, fontSize: 10, fontFamily: T.font, outline: 'none' }}
+              />
+              <button onClick={doQuickSave} style={{ height: 24, padding: '0 8px', borderRadius: 3, border: 'none', background: T.accent, color: '#fff', fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>Save</button>
+              <button onClick={() => setSaving(false)} style={{ width: 24, height: 24, borderRadius: 3, border: `1px solid ${T.border}`, background: 'none', color: T.text2, cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={9} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setSaving(true); setSaveInput(''); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, width: '100%', padding: '8px 12px', border: 'none', background: 'transparent', color: T.text2, cursor: 'pointer', fontSize: 10, fontFamily: T.font, fontWeight: 500 }}
+              onMouseEnter={e => { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text1; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text2; }}
+            >
+              <Save size={11} /> Save current layout…
+            </button>
+          )}
+
+          {layouts.length > 0 && <div style={{ height: 1, background: T.border }} />}
+
+          {/* Layout list */}
+          <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+            {layouts.slice(0, 15).map((l, i) => {
+              const isActive = l.id === activeId;
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => {
+                    try {
+                      const full = (loadCmdLayouts() as { id: string; snapshot: Record<string, unknown> }[]).find(x => x.id === l.id);
+                      if (full) {
+                        dispatch({ type: 'RESTORE_LAYOUT', layout: full.snapshot as Parameters<typeof dispatch>[0] extends { type: 'RESTORE_LAYOUT'; layout: infer L } ? L : never });
+                        setActiveId(l.id);
+                        localStorage.setItem(ACTIVE_LAYOUT_STOR_KEY, l.id);
+                      }
+                    } catch { /* ignore */ }
+                    setOpen(false);
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                    padding: '7px 12px', border: 'none', cursor: 'pointer',
+                    background: isActive ? T.selectedBg : 'transparent',
+                    color: isActive ? T.accent : T.text1, textAlign: 'left',
+                    fontSize: 10, fontFamily: T.font, fontWeight: isActive ? 600 : 400,
+                  }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = T.hover; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = isActive ? T.selectedBg : 'transparent'; }}
+                >
+                  {i < 5 && (
+                    <span style={{ fontSize: 7, fontFamily: T.mono, color: isActive ? T.accent : T.text3, background: T.borderLight, borderRadius: 2, padding: '1px 3px', flexShrink: 0 }}>
+                      ⌃{i + 1}
+                    </span>
+                  )}
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.name}</span>
+                  <span style={{ fontSize: 8, color: T.text3, flexShrink: 0 }}>{l.snapshot.symbol} · {l.snapshot.timeframe}</span>
+                  {isActive && <Check size={9} color={T.accent} />}
+                </button>
+              );
+            })}
+            {layouts.length > 15 && (
+              <div style={{ padding: '6px 12px', fontSize: 9, color: T.text3, fontFamily: T.font }}>
+                +{layouts.length - 15} more — open Layouts panel
+              </div>
+            )}
+          </div>
+
+          {/* Open layouts panel */}
+          <div style={{ height: 1, background: T.border }} />
+          <button
+            onClick={() => { dispatch({ type: 'SET_LEFT_TAB', tab: 'layouts' }); setOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, width: '100%', padding: '7px 12px', border: 'none', background: 'transparent', color: T.text3, cursor: 'pointer', fontSize: 9, fontFamily: T.font }}
+            onMouseEnter={e => { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; }}
+          >
+            <LayoutGrid size={9} /> Manage layouts…
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Command Bar ─────────────────────────────────────────────────────────
+// ── Keyboard Shortcuts Modal ─────────────────────────────────────────────────
+const SHORTCUT_GROUPS = [
+  {
+    label: 'POINTER & DRAWING',
+    rows: [
+      ['V',       'Cursor / Pointer'],
+      ['⇧V',      'Crosshair'],
+      ['Esc',     'Cancel active drawing'],
+      ['Alt+T',   'Trend Line'],
+      ['H',       'Horizontal Line'],
+      ['F',       'Fibonacci Retracement'],
+      ['R',       'Rectangle'],
+      ['M',       'Price & Date Range'],
+      ['N',       'Text Note'],
+    ],
+  },
+  {
+    label: 'TIMEFRAMES',
+    rows: [
+      ['1',  '1 Minute'],
+      ['5',  '5 Minutes'],
+      ['15', '15 Minutes'],
+      ['30', '30 Minutes'],
+      ['60', '1 Hour'],
+      ['D',  'Daily'],
+      ['W',  'Weekly'],
+    ],
+  },
+  {
+    label: 'CHART & NAVIGATION',
+    rows: [
+      ['Type any letter/number', 'Open symbol search'],
+      ['?',                      'Show / hide shortcuts'],
+      ['Ctrl+S',                 'Save current layout'],
+      ['Ctrl+B',                 'Toggle watchlist panel'],
+      ['Ctrl+J',                 'Toggle MTF strip'],
+      ['F11',                    'Focus mode toggle'],
+      ['Alt+⇧X',                 'Reset chart view'],
+    ],
+  },
+];
+
+function KeyboardShortcutsModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6,
+          width: 460, maxHeight: '70vh', overflowY: 'auto',
+          boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', padding: '12px 16px',
+          borderBottom: `1px solid ${T.border}`,
+        }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: T.text1, fontFamily: T.font }}>
+            Keyboard Shortcuts
+          </span>
+          <span style={{ fontSize: 9, color: T.text3, fontFamily: T.mono, marginRight: 12 }}>Press ? to toggle</span>
+          <button onClick={onClose} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: T.text3, display: 'flex', padding: 2 }}>
+            <X size={14} />
+          </button>
+        </div>
+        {/* Groups */}
+        <div style={{ padding: '8px 16px 16px' }}>
+          {SHORTCUT_GROUPS.map(grp => (
+            <div key={grp.label} style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: T.text3, letterSpacing: '0.07em', marginBottom: 6, fontFamily: T.font }}>
+                {grp.label}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {grp.rows.map(([key, desc]) => (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '3px 0' }}>
+                    <span style={{
+                      minWidth: 120, fontSize: 10, fontFamily: T.mono, fontWeight: 600,
+                      color: T.accent, background: T.accentBg, padding: '2px 6px', borderRadius: 3,
+                      flexShrink: 0,
+                    }}>
+                      {key}
+                    </span>
+                    <span style={{ fontSize: 11, color: T.text2, fontFamily: T.font }}>{desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CommandBar() {
   const { state, dispatch, symbolInfo } = useWorkspace();
   const bull = symbolInfo.change >= 0;
   const priceColor = bull ? T.bull : T.bear;
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // '?' key toggles shortcuts modal
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== '?') return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      e.preventDefault();
+      setShowShortcuts(prev => !prev);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   return (
+    <>
     <div style={{
       display: 'flex', alignItems: 'center', height: T.cmdBarH,
       background: T.surface, borderBottom: `1px solid ${T.border}`,
@@ -443,6 +1066,38 @@ export function CommandBar() {
         <span>FVG</span>
       </CmdBtn>
 
+      {/* Session quick-toggles */}
+      {[
+        { key: 'london',  label: 'LON' },
+        { key: 'newyork', label: 'NY' },
+        { key: 'tokyo',   label: 'TKY' },
+      ].map(({ key, label }) => (
+        <CmdBtn
+          key={key}
+          active={state.enabledSessions.includes(key)}
+          onClick={() => dispatch({ type: 'TOGGLE_SESSION', session: key })}
+          title={`${label} session highlight`}
+        >
+          <Sun size={11} />
+          <span>{label}</span>
+        </CmdBtn>
+      ))}
+
+      <Separator />
+      <LayoutSwitcher />
+      {state.chartLayout !== '1' && <CrosshairSyncToggle />}
+      <Separator />
+      <ScaleModeSelector />
+      <Separator />
+      <PrevLevelsToggle />
+      <OpenLevelsToggle />
+      <PivotsToggle />
+      <CandlePatternsToggle />
+      <SessionRangesToggle />
+      <AutoFibToggle />
+      <Separator />
+      <QuickLayoutSwitcher />
+
       <div style={{ flex: 1, minWidth: 8 }} />
 
       {/* ── RIGHT ZONE ── */}
@@ -478,7 +1133,33 @@ export function CommandBar() {
       </CmdBtn>
 
       <Separator />
-      <CmdBtn title="Settings"><Settings size={13} /></CmdBtn>
+      <CmdBtn onClick={() => dispatch({ type: 'CAPTURE_SCREENSHOT' })} title="Download chart as PNG">
+        <Camera size={13} />
+      </CmdBtn>
+      <CmdBtn onClick={() => dispatch({ type: 'COPY_CHART_IMAGE' })} title="Copy chart image to clipboard">
+        <Copy size={13} />
+      </CmdBtn>
+      <CmdBtn
+        title="Copy shareable link (symbol + timeframe + indicators)"
+        onClick={() => {
+          const visibleInds = state.indicators.filter(i => i.visible).map(i => i.id).join(',');
+          const url = new URL(window.location.href);
+          url.search = '';
+          url.searchParams.set('s', state.symbol);
+          url.searchParams.set('tf', state.timeframe);
+          if (visibleInds) url.searchParams.set('ind', visibleInds);
+          navigator.clipboard.writeText(url.toString()).then(() => {
+            dispatch({ type: 'ADD_TOAST', toast: { message: 'Share link copied to clipboard', type: 'info' } });
+          }).catch(() => {
+            dispatch({ type: 'ADD_TOAST', toast: { message: url.toString(), type: 'info' } });
+          });
+        }}
+      >
+        <Share2 size={13} />
+      </CmdBtn>
+      <CmdBtn onClick={() => setShowShortcuts(true)} active={showShortcuts} title="Keyboard Shortcuts (?)">
+        <Settings size={13} />
+      </CmdBtn>
       <ThemeSwitcher />
 
       <button
@@ -494,5 +1175,7 @@ export function CommandBar() {
         Trade
       </button>
     </div>
+    {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
+    </>
   );
 }

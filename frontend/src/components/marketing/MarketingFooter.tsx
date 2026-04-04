@@ -5,6 +5,7 @@ import Link from "next/link";
 const PRODUCTS = [
   { name: "ORDR Treasury", href: "/products/treasury" },
   { name: "ORDR Market", href: "https://ordr-market.vercel.app/", external: true },
+  { name: "ORDR Connect", href: "https://ordr-connect.vercel.app/", external: true },
   { name: "ORDR Portfolio", href: "/products/portfolio" },
   { name: "ORDR Labs", href: "/products/labs" },
   { name: "ORDR Polisophic", href: "/products/polisophic" },

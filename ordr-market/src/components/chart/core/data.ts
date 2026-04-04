@@ -31,8 +31,7 @@ export interface ChartLayout {
   chartWidth: number;
 }
 
-export function computeLayout(w: number, h: number, subPaneCount: number): ChartLayout {
-  const priceAxisWidth = 80;
+export function computeLayout(w: number, h: number, subPaneCount: number, priceAxisWidth = 80): ChartLayout {
   const timeAxisHeight = 28;
   const chartLeft = 10;
   const chartRightPad = 8; // breathing room before price axis
@@ -132,8 +131,10 @@ export function xToIndex(x: number, startIndex: number, endIndex: number, chartL
 }
 
 export function formatPrice(price: number, pair: string): string {
-  if (pair.includes("JPY")) return price.toFixed(3);
-  return price.toFixed(5);
+  if (pair.includes("JPY"))  return price.toFixed(2);  // 149.41
+  if (price >= 10)           return price.toFixed(2);  // stocks, indices, gold, BTC, USDJPY
+  if (price >= 1)            return price.toFixed(4);  // forex majors: 1.0824
+  return price.toFixed(5);                             // sub-1 pairs
 }
 
 export function formatTimestamp(ts: number, interval: string): string {

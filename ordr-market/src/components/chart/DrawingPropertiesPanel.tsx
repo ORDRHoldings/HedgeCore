@@ -454,7 +454,7 @@ export default function DrawingPropertiesPanel({
               label={drawing.stats?.showPercent ? "ON" : "OFF"} color={drawing.color} />
           </Row>
           <Row label="Pips">
-            <Tog active={drawing.stats?.showPips ?? true} onClick={() => updateStats({ showPips: !drawing.stats?.showPips })}
+            <Tog active={drawing.stats?.showPips ?? true} onClick={() => updateStats({ showPips: !(drawing.stats?.showPips ?? true) })}
               label={drawing.stats?.showPips !== false ? "ON" : "OFF"} color={drawing.color} />
           </Row>
           <Row label="Bars">

@@ -17,6 +17,8 @@ export interface ChartContextMenuProps {
   isOpen: boolean;
   onClose: () => void;
   onAction: (action: string) => void;
+  /** Crosshair price at the point where the menu was opened */
+  price?: number;
 }
 
 type MenuItemType = "action" | "separator" | "header" | "submenu";
@@ -44,6 +46,7 @@ const FONT_UI = "'IBM Plex Sans', sans-serif";
 const MENU_WIDTH = 220;
 const SUBMENU_WIDTH = 180;
 
+// Base menu items — price-dependent items are prepended at render time
 const MENU_ITEMS: MenuItem[] = [
   { type: "header", label: "Chart" },
   { type: "action", label: "Reset Chart", action: "reset", shortcut: "Ctrl+R" },
@@ -107,6 +110,7 @@ export default function ChartContextMenu({
   isOpen,
   onClose,
   onAction,
+  price,
 }: ChartContextMenuProps) {
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
   const [selectedRadios, setSelectedRadios] = useState<Record<string, string>>({
@@ -208,6 +212,36 @@ export default function ChartContextMenu({
           overflow: "hidden",
         }}
       >
+        {/* ── Quick Actions (price-aware) ─────────────────────────────── */}
+        {price != null && price > 0 && (() => {
+          const fmt = price < 10 ? price.toFixed(5) : price < 1000 ? price.toFixed(2) : price.toFixed(0);
+          const quickItems: MenuItem[] = [
+            { type: 'header', label: 'Quick Actions' },
+            { type: 'action', label: `Set Alert Above  ${fmt}`, action: 'alert:above' },
+            { type: 'action', label: `Set Alert Below  ${fmt}`, action: 'alert:below' },
+            { type: 'action', label: 'Analyze with AI',          action: 'ai'          },
+            { type: 'action', label: `Copy Price  ${fmt}`,       action: 'copy:price'  },
+            { type: 'separator' },
+          ];
+          return quickItems.map((item, qi) => {
+            if (item.type === 'separator') return <div key={`qa-sep-${qi}`} style={{ height: 1, background: '#2A2E39', margin: '4px 8px' }} />;
+            if (item.type === 'header') return (
+              <div key={`qa-hdr-${qi}`} style={{ padding: '6px 12px 2px', fontFamily: FONT_MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: '#2962FF', textTransform: 'uppercase' }}>
+                {item.label}
+              </div>
+            );
+            return (
+              <div key={`qa-${qi}`}
+                onClick={() => { onAction(item.action!); onClose(); }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 12px', cursor: 'pointer', fontFamily: FONT_UI, fontSize: 12, color: '#D1D4DC' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#2A2E39'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+              >
+                {item.label}
+              </div>
+            );
+          });
+        })()}
         {MENU_ITEMS.map((item, i) => {
           if (item.type === "separator") {
             return (

@@ -5,12 +5,13 @@ import Link from "next/link";
 import { Menu, X, ChevronDown } from "lucide-react";
 import {
   Shield, BarChart2, Layers, Zap, Globe, BookOpen, Activity, TrendingUp,
-  Building, ShieldAlert, Briefcase, Landmark, FileText,
+  Building, ShieldAlert, Briefcase, Landmark, FileText, Network,
 } from "lucide-react";
 
 const PRODUCTS = [
   { id: "treasury", name: "ORDR Treasury", desc: "FX hedge calculation, policy governance", icon: Shield, external: null },
   { id: "market", name: "ORDR Market", desc: "Agentic charting and algo trading", icon: BarChart2, external: "https://ordr-market.vercel.app/" },
+  { id: "connect", name: "ORDR Connect", desc: "Autonomous customer operations OS", icon: Network, external: "https://ordr-connect.vercel.app/" },
   { id: "portfolio", name: "ORDR Portfolio", desc: "Portfolio risk decomposition", icon: Layers, external: null },
   { id: "labs", name: "ORDR Labs", desc: "Scenario studio and backtesting", icon: Zap, external: null },
   { id: "polisophic", name: "ORDR Polisophic", desc: "Geopolitical risk intelligence", icon: Globe, external: null },

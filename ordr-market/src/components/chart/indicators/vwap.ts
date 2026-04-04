@@ -80,6 +80,24 @@ export function computeVWAPBands(bars: Bar[], mult: number = 1): BandPoint[] {
   return result;
 }
 
+/**
+ * Anchored VWAP — cumulative VWAP from a user-selected bar index onward.
+ * No daily reset; anchor is fixed at the given bar.
+ */
+export function computeAnchoredVWAP(bars: Bar[], anchorIndex: number): IndicatorPoint[] {
+  const result: IndicatorPoint[] = [];
+  const start = Math.max(0, Math.min(anchorIndex, bars.length - 1));
+  let cumTPV = 0;
+  let cumVol = 0;
+  for (let i = start; i < bars.length; i++) {
+    const tp = (bars[i].h + bars[i].l + bars[i].c) / 3;
+    cumTPV += tp * bars[i].v;
+    cumVol += bars[i].v;
+    result.push({ t: bars[i].t, value: cumVol === 0 ? tp : cumTPV / cumVol });
+  }
+  return result;
+}
+
 /** Extract YYYY-MM-DD string from unix timestamp (seconds or ms) */
 function getDateKey(t: number): string {
   // Handle both seconds and milliseconds timestamps

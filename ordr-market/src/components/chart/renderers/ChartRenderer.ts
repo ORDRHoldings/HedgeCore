@@ -12,7 +12,8 @@ import type {
   ZigzagPoint, AutoFibData, MARibbonData,
   BullBearPoint, KlingerPoint, PPOPoint, RVIPoint, SMIPoint, TSIPoint,
   VortexPoint, AroonPoint,
-  SRLevel, FVGZone, TrendLine,
+  SRLevel, FVGZone, TrendLine, MarketStructureData, ChartPatternData, VolatilityConeData, DivergenceLine,
+  OrderBlock, LiquidityZone,
   RSISubPane, StochSubPane, WilliamsRSubPane, CCISubPane, ADXSubPane, ATRSubPane,
 } from "../indicators/types";
 import type { ChartLayout, SubPaneLayout } from "../core/data";
@@ -35,13 +36,19 @@ import {
   drawSuperTrend, drawChandelierExit, drawChandeKrollStop,
   drawAlligator, drawZigzag, drawAutoFib, drawMARibbon,
 } from "./indicators";
-import { drawSRLevels, drawFVGZones, drawTrendlines } from "./overlays";
+import { drawSRLevels, drawFVGZones, drawTrendlines, drawMarketStructure, drawChartPatterns, drawVolatilityCone, drawDivergenceOverlay, drawOrderBlocks, drawLiquidityZones } from "./overlays";
 import {
   drawDrawings, drawRubberBand, drawDrawingPriceLabels,
-  shiftSnapPoint,
+  shiftSnapPoint, getPointsRequired,
 } from "./drawings";
 import { drawVolumeProfile } from "./volumeProfile";
-import { drawCurrentPriceLine, drawOHLCLegend, drawIndicatorLegend } from "./priceLine";
+import { drawCurrentPriceLine, drawOHLCLegend, drawIndicatorLegend, drawAlertLevels, drawTradeLevels, computeOpenLevels, drawOpenLevels, drawIndicatorAxisLabels } from "./priceLine";
+import type { AlertLevel, TradeLevel, IndicatorAxisLabel } from "./priceLine";
+import type { BacktestMarker } from "../../workspace/workspace-types";
+import { computeSwingPivots, drawSwingPivots } from "./pivots";
+import { computeCandlePatterns, drawCandlePatterns } from "./candlePatterns";
+import { drawViewportFib } from "./autoFib";
+import { computeSessionRanges, drawSessionRanges } from "./sessionRanges";
 import {
   drawLineChart, drawAreaChart, drawBarChart,
   drawHollowCandles, drawHeikinAshi, drawBaseline,
@@ -83,7 +90,9 @@ export interface IndicatorBundle {
     showBreakout?: boolean;
   }[];
   vwap: IndicatorPoint[];
-  vwapBands: BandPoint[];
+  vwapBands: BandPoint[];   // ±1σ
+  vwapBands2: BandPoint[];  // ±2σ
+  vwapBands3: BandPoint[];  // ±3σ
   ichimoku: IchimokuPoint[];
   parabolicSAR: IndicatorPoint[];
   pivotPoints: PivotPointData | null;
@@ -92,6 +101,13 @@ export interface IndicatorBundle {
   sr: SRLevel[];
   fvg: FVGZone[];
   trend: TrendLine[];
+  orderBlocks?: OrderBlock[];
+  liqZones?: LiquidityZone[];
+  marketStructure?: MarketStructureData | null;
+  patterns?: ChartPatternData | null;
+  volCone?: VolatilityConeData | null;
+  rsiDivergences: DivergenceLine[];
+  macdDivergences: DivergenceLine[];
   supertrend: SuperTrendPoint[];
   chandelierExit: ChandelierPoint[];
   chandeKrollStop: ChandeKrollPoint[];
@@ -134,6 +150,20 @@ export interface RenderProps {
   crosshairMode: CrosshairMode;
   selectedDrawingId: string | null;
   hoveredDrawingId: string | null;
+  selectedDrawingIds?: string[];
+  alertLevels?: AlertLevel[];
+  tradeLevels?: TradeLevel[];
+  showPrevLevels?: boolean;
+  showOpenLevels?: boolean;
+  showPivots?: boolean;
+  showIndicatorAxisLabels?: boolean;
+  showCandlePatterns?: boolean;
+  showAutoFib?: boolean;
+  showSessionRanges?: boolean;
+  /** Ghost crosshair timestamp from a synced pane (unix seconds) */
+  externalCrosshairTs?: number | null;
+  /** Backtest trade entry/exit markers */
+  backtestMarkers?: BacktestMarker[];
 }
 
 // ── Helper ───────────────────────────────────────────────────────────────────
@@ -151,7 +181,7 @@ export function renderChart(refs: RenderRefs, props: RenderProps): void {
     shiftHeld, hideDrawings, dragOverride, magneticSnapResult } = refs;
   const { bars, layout, indicators, drawings, pair, interval,
     subPanes, dimensions, chartType, enabledSessions,
-    priceScale, crosshairMode, selectedDrawingId, hoveredDrawingId } = props;
+    priceScale, crosshairMode, selectedDrawingId, hoveredDrawingId, selectedDrawingIds } = props;
 
   if (!canvas || bars.length === 0) return;
   const ctx = canvas.getContext("2d");
@@ -205,7 +235,14 @@ export function renderChart(refs: RenderRefs, props: RenderProps): void {
   // Layer 1: Behind candles
   if (indicators.sr.length > 0) drawSRLevels(ctx, indicators.sr, layout, viewport, priceScale);
   if (indicators.fvg.length > 0) drawFVGZones(ctx, indicators.fvg, layout, viewport, priceScale);
+  if (indicators.orderBlocks?.length) drawOrderBlocks(ctx, indicators.orderBlocks, layout, viewport, priceScale);
+  if (indicators.liqZones?.length) drawLiquidityZones(ctx, indicators.liqZones, layout, viewport, priceScale);
   if (indicators.trend.length > 0) drawTrendlines(ctx, indicators.trend, bars, layout, viewport, priceScale);
+  if (indicators.marketStructure) drawMarketStructure(ctx, indicators.marketStructure, layout, viewport, priceScale);
+  if (indicators.patterns) drawChartPatterns(ctx, indicators.patterns, layout, viewport, priceScale);
+  if (indicators.volCone) drawVolatilityCone(ctx, indicators.volCone, layout, viewport, priceScale);
+  if (indicators.rsiDivergences.length > 0) drawDivergenceOverlay(ctx, indicators.rsiDivergences, "RSI", layout, viewport, priceScale);
+  if (indicators.macdDivergences.length > 0) drawDivergenceOverlay(ctx, indicators.macdDivergences, "MACD", layout, viewport, priceScale);
   for (const band of indicators.bands) {
     if (band.type === "bollinger") {
       drawBollinger(ctx, band.points, bars, layout, viewport, band.fill, band.line, priceScale, band.showSqueeze ?? true);
@@ -234,7 +271,9 @@ export function renderChart(refs: RenderRefs, props: RenderProps): void {
       line.priceColored ? { priceColored: true, bullColor: "#26A69A", bearColor: "#EF5350" } : undefined);
   }
   if (indicators.vwap.length > 0) drawVWAP(ctx, indicators.vwap, bars, layout, viewport, priceScale,
-    indicators.vwapBands.length > 0 ? indicators.vwapBands : undefined);
+    indicators.vwapBands.length > 0 ? indicators.vwapBands : undefined,
+    indicators.vwapBands2.length > 0 ? indicators.vwapBands2 : undefined,
+    indicators.vwapBands3.length > 0 ? indicators.vwapBands3 : undefined);
   if (indicators.parabolicSAR.length > 0) drawParabolicSAR(ctx, indicators.parabolicSAR, bars, layout, viewport, priceScale);
   if (indicators.pivotPoints) drawPivotPoints(ctx, indicators.pivotPoints, layout, viewport, priceScale);
   if (indicators.supertrend.length > 0) drawSuperTrend(ctx, indicators.supertrend, bars, layout, viewport, priceScale, indicators.supertrendCfg);
@@ -245,8 +284,134 @@ export function renderChart(refs: RenderRefs, props: RenderProps): void {
   if (indicators.autoFib) drawAutoFib(ctx, indicators.autoFib, layout, viewport, priceScale);
   if (indicators.maRibbon.length > 0) drawMARibbon(ctx, indicators.maRibbon, bars, layout, viewport, priceScale, indicators.maRibbonShowFill);
 
-  // Layer 4: Current price line
+  // Layer 4: Alert price levels + trade levels + current price line
+  if (props.alertLevels?.length) {
+    drawAlertLevels(ctx, props.alertLevels, layout, viewport, pair, priceScale);
+  }
+  if (props.tradeLevels?.length) {
+    drawTradeLevels(ctx, props.tradeLevels, layout, viewport, priceScale);
+  }
+  if (props.showOpenLevels && bars.length > 1) {
+    const openLevels = computeOpenLevels(bars);
+    drawOpenLevels(ctx, openLevels, layout, viewport, priceScale);
+  }
+  if (props.showPivots && bars.length > 10) {
+    const pivots = computeSwingPivots(bars);
+    drawSwingPivots(ctx, pivots, bars, layout, viewport, priceScale);
+  }
+  if (props.showCandlePatterns && bars.length > 3) {
+    const cpLabels = computeCandlePatterns(bars);
+    drawCandlePatterns(ctx, cpLabels, bars, layout, viewport, priceScale);
+  }
+  if (props.showAutoFib && bars.length > 10) {
+    drawViewportFib(ctx, bars, layout, viewport, priceScale);
+  }
+  if (props.showSessionRanges && bars.length > 1) {
+    const sessionRanges = computeSessionRanges(bars);
+    drawSessionRanges(ctx, sessionRanges, layout, viewport, priceScale);
+  }
+
+  // Layer 4b: Backtest entry/exit markers
+  if (props.backtestMarkers?.length) {
+    drawBacktestMarkers(ctx, props.backtestMarkers, bars, layout, viewport, priceScale);
+  }
+
+  // Layer 4c: Indicator price-axis value labels
+  if (props.showIndicatorAxisLabels !== false) {
+    const axisLabels: IndicatorAxisLabel[] = [];
+    // Overlay MA lines
+    for (const line of indicators.overlayLines) {
+      const last = line.points[line.points.length - 1];
+      if (last && isFinite(last.value)) {
+        axisLabels.push({ price: last.value, color: line.color, shortLabel: line.label });
+      }
+    }
+    // Band indicators (BB, KC, DC) — upper, middle, lower
+    for (const band of indicators.bands) {
+      const last = band.points[band.points.length - 1];
+      if (last) {
+        if (isFinite(last.upper))  axisLabels.push({ price: last.upper,  color: band.line, shortLabel: `${band.label}+` });
+        if (isFinite(last.middle)) axisLabels.push({ price: last.middle, color: band.line, shortLabel: band.label });
+        if (isFinite(last.lower))  axisLabels.push({ price: last.lower,  color: band.line, shortLabel: `${band.label}-` });
+      }
+    }
+    // VWAP
+    if (indicators.vwap.length) {
+      const last = indicators.vwap[indicators.vwap.length - 1];
+      if (last && isFinite(last.value)) {
+        axisLabels.push({ price: last.value, color: '#E040FB', shortLabel: 'VWAP' });
+      }
+    }
+    // SuperTrend
+    if (indicators.supertrend.length) {
+      const last = indicators.supertrend[indicators.supertrend.length - 1];
+      if (last && isFinite(last.value)) {
+        axisLabels.push({ price: last.value, color: last.direction === 'up' ? '#26C6DA' : '#EF5350', shortLabel: 'ST' });
+      }
+    }
+    // Chandelier Exit
+    if (indicators.chandelierExit.length) {
+      const last = indicators.chandelierExit[indicators.chandelierExit.length - 1];
+      if (last) {
+        if (isFinite(last.longStop))  axisLabels.push({ price: last.longStop,  color: '#26C6DA', shortLabel: 'CE↑' });
+        if (isFinite(last.shortStop)) axisLabels.push({ price: last.shortStop, color: '#EF5350', shortLabel: 'CE↓' });
+      }
+    }
+    if (axisLabels.length) {
+      drawIndicatorAxisLabels(ctx, axisLabels, layout, viewport, priceScale);
+    }
+  }
+
   drawCurrentPriceLine(ctx, bars, layout, viewport, pair, priceScale);
+
+  // Layer 4b: Previous session OHLC levels
+  if (props.showPrevLevels && bars.length > 1) {
+    // Identify the previous calendar day from the last bar's timestamp
+    const lastBarMs = bars[bars.length - 1].t * 1000;
+    const lastDate = new Date(lastBarMs);
+    const todayMidnight = Date.UTC(lastDate.getUTCFullYear(), lastDate.getUTCMonth(), lastDate.getUTCDate());
+    const prevDayMidnight = todayMidnight - 86400000;
+
+    // Collect bars belonging to the previous calendar day
+    const prevDayBars = bars.filter(b => {
+      const ms = b.t * 1000;
+      return ms >= prevDayMidnight && ms < todayMidnight;
+    });
+
+    // Fall back to last N bars if timestamp-based detection finds nothing (e.g. weekly data)
+    const sourceBars = prevDayBars.length > 0 ? prevDayBars : bars.slice(-Math.max(1, Math.floor(bars.length * 0.15)));
+
+    const pdh = Math.max(...sourceBars.map(b => b.h));
+    const pdl = Math.min(...sourceBars.map(b => b.l));
+    const pdc = sourceBars[sourceBars.length - 1].c;
+
+    const levels: { price: number; label: string; color: string }[] = [
+      { price: pdh, label: "PDH", color: "#26A69A" },
+      { price: pdl, label: "PDL", color: "#EF5350" },
+      { price: pdc, label: "PDC", color: "#90CAF9" },
+    ];
+
+    const T = THEME;
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1;
+    for (const lv of levels) {
+      const y = priceToY(lv.price, viewport.priceMin, viewport.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+      if (y < layout.mainTop || y > layout.mainTop + layout.mainHeight) continue;
+      ctx.strokeStyle = lv.color;
+      ctx.beginPath();
+      ctx.moveTo(layout.chartLeft, y);
+      ctx.lineTo(layout.chartLeft + layout.chartWidth, y);
+      ctx.stroke();
+      // Label
+      ctx.font = "10px 'IBM Plex Mono', monospace";
+      ctx.fillStyle = lv.color;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "bottom";
+      ctx.fillText(lv.label, layout.chartLeft + 4, y - 2);
+    }
+    ctx.restore();
+  }
 
   // Layer 5: Volume
   drawVolume(ctx, bars, layout, viewport);
@@ -260,7 +425,7 @@ export function renderChart(refs: RenderRefs, props: RenderProps): void {
     const d = indicators.subPaneData;
     switch (type) {
       case "rsi": drawRSI(ctx, d.rsi as RSISubPane, bars, withPane(layout, pane), viewport); break;
-      case "macd": drawMACD(ctx, d.macd as MACDPoint[], bars, withPane(layout, pane), viewport); break;
+      case "macd": drawMACD(ctx, d.macd as MACDPoint[], bars, withPane(layout, pane), viewport, indicators.macdDivergences); break;
       case "stochastic": drawStochastic(ctx, d.stochastic as StochSubPane, bars, layout, viewport, pane); break;
       case "stochRSI": drawStochRSI(ctx, d.stochRSI as StochSubPane, bars, layout, viewport, pane); break;
       case "williamsR": drawWilliamsR(ctx, d.williamsR as WilliamsRSubPane, bars, layout, viewport, pane); break;
@@ -318,30 +483,33 @@ export function renderChart(refs: RenderRefs, props: RenderProps): void {
       const ov = dragOverride;
       renderDrawings = drawings.map(d => d.id === ov.id ? { ...d, points: ov.points } : d);
     }
-    drawDrawings(ctx, renderDrawings, layout, viewport, pair, priceScale, selectedDrawingId, hoveredDrawingId, bars);
+    drawDrawings(ctx, renderDrawings, layout, viewport, pair, priceScale, selectedDrawingId, hoveredDrawingId, bars, selectedDrawingIds);
 
     // Layer 7b: Rubber-band preview (drawing in progress)
     if (drawingMode && drawingPoints.length > 0 && ch.visible) {
-      const neededPoints = drawingMode === "horizontal" ? 1 : 2;
-      if (drawingPoints.length < neededPoints) {
+      const neededPoints = getPointsRequired(drawingMode);
+      // Show rubber band while points are still being collected
+      const stillCollecting = neededPoints < 0 || drawingPoints.length < neededPoints;
+      if (stillCollecting) {
+        // Anchor from the LAST placed point (not always the first)
+        const anchorPt = drawingPoints[drawingPoints.length - 1];
         let rbx = ch.x, rby = ch.y;
         if (shiftHeld && drawingMode !== "horizontal") {
-          const p0 = drawingPoints[0];
-          const p0x = indexToX(p0.index, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth);
-          const p0y = priceToY(p0.price, viewport.priceMin, viewport.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+          const ax = indexToX(anchorPt.index, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth);
+          const ay = priceToY(anchorPt.price, viewport.priceMin, viewport.priceMax, layout.mainTop, layout.mainHeight, priceScale);
           if (drawingMode === "rectangle") {
-            const dx = ch.x - p0x;
-            const dy = ch.y - p0y;
+            const dx = ch.x - ax;
+            const dy = ch.y - ay;
             const side = Math.max(Math.abs(dx), Math.abs(dy));
-            rbx = p0x + side * Math.sign(dx || 1);
-            rby = p0y + side * Math.sign(dy || 1);
+            rbx = ax + side * Math.sign(dx || 1);
+            rby = ay + side * Math.sign(dy || 1);
           } else {
-            const snapped = shiftSnapPoint(p0x, p0y, ch.x, ch.y);
+            const snapped = shiftSnapPoint(ax, ay, ch.x, ch.y);
             rbx = snapped.x;
             rby = snapped.y;
           }
         }
-        drawRubberBand(ctx, drawingPoints[0], rbx, rby, layout, viewport, priceScale, drawingMode, undefined, magneticSnapResult);
+        drawRubberBand(ctx, anchorPt, rbx, rby, layout, viewport, priceScale, drawingMode, undefined, magneticSnapResult);
       }
     }
   }
@@ -358,9 +526,88 @@ export function renderChart(refs: RenderRefs, props: RenderProps): void {
   // Layer 9: Crosshair
   drawCrosshair(ctx, ch, layout, viewport, bars, pair, crosshairMode, priceScale, refPrice);
 
+  // Layer 9b: Ghost crosshair from synced pane (only when local crosshair is hidden)
+  if (props.externalCrosshairTs != null && !ch.visible) {
+    const extIdx = bars.findIndex(b => b.t === props.externalCrosshairTs);
+    if (extIdx >= 0 && extIdx >= viewport.startIndex && extIdx <= viewport.endIndex) {
+      const slotW = layout.chartWidth / Math.max(1, viewport.endIndex - viewport.startIndex + 1);
+      const gx = layout.chartLeft + (extIdx - viewport.startIndex + 0.5) * slotW;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(120,123,134,0.35)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(gx, layout.mainTop);
+      ctx.lineTo(gx, layout.mainTop + layout.mainHeight);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
   // Layer 10: OHLC Legend
   drawOHLCLegend(ctx, bars, layout, viewport, pair, ch.visible ? ch.snapIndex : -1);
 
   // Layer 11: Indicator chips
   drawIndicatorLegend(ctx, indicators.overlayLines, indicators.bands, layout);
+}
+
+// ── Backtest markers ──────────────────────────────────────────────────────────
+function drawBacktestMarkers(
+  ctx: CanvasRenderingContext2D,
+  markers: BacktestMarker[],
+  bars: Bar[],
+  layout: ChartLayout,
+  viewport: ReturnType<typeof computeViewport>,
+  priceScale: 'linear' | 'log' | 'percent',
+) {
+  const BULL = '#26A69A';
+  const BEAR = '#EF5350';
+  const SZ = 6; // arrow half-size in px
+
+  for (const m of markers) {
+    // Entry marker
+    const entryBarIdx = bars.findIndex(b => b.t >= m.entryT / 1000);
+    const exitBarIdx  = bars.findIndex(b => b.t >= m.exitT  / 1000);
+
+    const drawArrow = (barIdx: number, price: number, up: boolean, color: string) => {
+      if (barIdx < 0 || barIdx < viewport.startIndex || barIdx > viewport.endIndex) return;
+      const x = indexToX(barIdx, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth);
+      const y = priceToY(price, viewport.priceMin, viewport.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      if (up) {
+        // Upward triangle (entry long / exit short)
+        ctx.moveTo(x, y - SZ * 1.5);
+        ctx.lineTo(x - SZ, y + SZ * 0.5);
+        ctx.lineTo(x + SZ, y + SZ * 0.5);
+      } else {
+        // Downward triangle (entry short / exit long)
+        ctx.moveTo(x, y + SZ * 1.5);
+        ctx.lineTo(x - SZ, y - SZ * 0.5);
+        ctx.lineTo(x + SZ, y - SZ * 0.5);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    };
+
+    const entryBar = bars[entryBarIdx];
+    const exitBar  = exitBarIdx >= 0 ? bars[exitBarIdx] : null;
+
+    if (entryBar) {
+      // Entry: long = green up arrow below bar low; short = red down arrow above bar high
+      const entryColor = m.side === 'long' ? BULL : BEAR;
+      const entryPrice = m.side === 'long' ? entryBar.l * 0.9992 : entryBar.h * 1.0008;
+      drawArrow(entryBarIdx, entryPrice, m.side === 'long', entryColor);
+    }
+    if (exitBar) {
+      // Exit: win = bull color, loss = bear color
+      const exitColor = m.win ? BULL : BEAR;
+      const exitPrice = m.side === 'long' ? exitBar.h * 1.0008 : exitBar.l * 0.9992;
+      drawArrow(exitBarIdx, exitPrice, m.side === 'short', exitColor);
+    }
+  }
 }

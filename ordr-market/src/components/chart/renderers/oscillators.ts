@@ -166,6 +166,45 @@ function autoScaleRange(
   return { min: lo - range * padding, max: hi + range * padding };
 }
 
+/**
+ * Compute EMA from a numeric array. Returns same-length array;
+ * first `period-1` values mirror the seed value.
+ */
+function emaFromValues(values: number[], period: number): number[] {
+  if (values.length === 0 || period <= 0) return [];
+  const k = 2 / (period + 1);
+  const result: number[] = new Array(values.length);
+  result[0] = values[0];
+  for (let i = 1; i < values.length; i++) {
+    result[i] = values[i] * k + result[i - 1] * (1 - k);
+  }
+  return result;
+}
+
+/**
+ * Draw a value label badge in the pane (top-right of the pane header).
+ */
+function drawPaneValueLabel(
+  ctx: CanvasRenderingContext2D,
+  layout: ChartLayout,
+  pane: SubPaneLayout,
+  text: string,
+  color: string,
+): void {
+  ctx.save();
+  ctx.font = "bold 9px 'IBM Plex Mono', monospace";
+  const tw = ctx.measureText(text).width;
+  const px = layout.canvasWidth - layout.priceAxisWidth - tw - 14;
+  const py = pane.top + 4;
+  ctx.fillStyle = "rgba(10,10,20,0.8)";
+  ctx.fillRect(px - 4, py, tw + 8, 12);
+  ctx.fillStyle = color;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillText(text, px, py + 1);
+  ctx.restore();
+}
+
 // ── Stochastic ────────────────────────────────────────
 
 export function drawStochastic(
@@ -194,6 +233,35 @@ export function drawStochastic(
   drawGuide100(ctx, layout, pane, osLevel, THEME.level70_30);
   drawGuide100(ctx, layout, pane, 50, THEME.zeroLine);
 
+  // ── Collect visible K/D coordinates for fill ──────────────────────────────
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
+  const visKD: { x: number; yk: number; yd: number; k: number; d: number }[] = [];
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    visKD.push({
+      x:  indexToX(idx, startIndex, endIndex, chartLeft, chartWidth),
+      yk: valueToY(pt.k, 0, 100, pane),
+      yd: valueToY(pt.d, 0, 100, pane),
+      k: pt.k, d: pt.d,
+    });
+  }
+
+  // ── Fill between K and D (green when K ≥ D, red when K < D) ──────────────
+  for (let i = 1; i < visKD.length; i++) {
+    const pv = visKD[i - 1], cu = visKD[i];
+    const avgDiff = ((pv.k - pv.d) + (cu.k - cu.d)) / 2;
+    ctx.fillStyle = avgDiff >= 0 ? "rgba(38,166,154,0.18)" : "rgba(239,83,80,0.18)";
+    ctx.beginPath();
+    ctx.moveTo(pv.x, pv.yk);
+    ctx.lineTo(cu.x, cu.yk);
+    ctx.lineTo(cu.x, cu.yd);
+    ctx.lineTo(pv.x, pv.yd);
+    ctx.closePath();
+    ctx.fill();
+  }
+
   // K line
   drawFixedRangeLine(
     ctx, points.map(p => ({ t: p.t, v: p.k })),
@@ -205,27 +273,36 @@ export function drawStochastic(
     bars, layout, viewport, pane, 0, 100, THEME.stochD, 1,
   );
 
-  // K/D crossover circles in OB or OS zone
-  const { startIndex, endIndex } = viewport;
-  const { chartLeft, chartWidth } = layout;
+  // ── K/D crossover triangle arrows ─────────────────────────────────────────
   for (let i = 1; i < points.length; i++) {
     const prev = points[i - 1], curr = points[i];
     const crossed = (prev.k - prev.d) * (curr.k - curr.d) < 0;
     if (!crossed) continue;
     const inZone = curr.k > obLevel || curr.k < osLevel;
-    if (!inZone) continue;
     const idx = bars.findIndex(b => b.t === curr.t);
     if (idx < startIndex - 1 || idx > endIndex + 1) continue;
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
     const y = valueToY(curr.k, 0, 100, pane);
-    const bullCross = curr.k > prev.k;
-    ctx.fillStyle = bullCross ? "#26a69a" : "#ef5350";
+    const bull = curr.k > prev.k;
+    ctx.fillStyle = bull ? "#26a69a" : "#ef5350";
+    ctx.globalAlpha = inZone ? 1.0 : 0.45;
     ctx.beginPath();
-    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+    if (bull) {
+      ctx.moveTo(x, y - 8); ctx.lineTo(x - 3, y - 2); ctx.lineTo(x + 3, y - 2);
+    } else {
+      ctx.moveTo(x, y + 8); ctx.lineTo(x - 3, y + 2); ctx.lineTo(x + 3, y + 2);
+    }
+    ctx.closePath();
     ctx.fill();
+    ctx.globalAlpha = 1;
   }
 
-  drawPaneLabel(ctx, `Stoch OB:${obLevel} OS:${osLevel}`, pane);
+  // Label
+  const lastKD = visKD[visKD.length - 1];
+  const kdLabel = lastKD
+    ? `Stoch  %K ${lastKD.k.toFixed(1)}  %D ${lastKD.d.toFixed(1)}`
+    : `Stoch OB:${obLevel} OS:${osLevel}`;
+  drawPaneLabel(ctx, kdLabel, pane);
 }
 
 // ── Stochastic RSI ────────────────────────────────────
@@ -489,14 +566,48 @@ export function drawMFI(
   drawPaneBg(ctx, layout, pane);
   drawPaneLabel(ctx, "MFI(14)", pane);
 
-  // Guide lines at 80 (overbought) and 20 (oversold)
+  const pw = layout.canvasWidth - layout.priceAxisWidth;
+
+  // OB/OS fill zones
+  const yOB = pane.top + pane.height * (1 - 80 / 100);
+  const yOS = pane.top + pane.height * (1 - 20 / 100);
+  ctx.fillStyle = "rgba(239,83,80,0.08)";
+  ctx.fillRect(0, pane.top, pw, yOB - pane.top);
+  ctx.fillStyle = "rgba(38,166,154,0.08)";
+  ctx.fillRect(0, yOS, pw, pane.top + pane.height - yOS);
+
+  // Guide lines at 80, 50, 20
   drawGuide100(ctx, layout, pane, 80, THEME.level30_70);
+  drawGuide100(ctx, layout, pane, 50, THEME.zeroLine);
   drawGuide100(ctx, layout, pane, 20, THEME.level70_30);
 
-  drawFixedRangeLine(
-    ctx, points.map(p => ({ t: p.t, v: p.value })),
-    bars, layout, viewport, pane, 0, 100, "#E040FB", 1.5,
-  );
+  // Color-segmented MFI line
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
+  ctx.lineWidth = 1.5;
+  for (let i = 1; i < points.length; i++) {
+    const p0 = points[i - 1], p1 = points[i];
+    const i0 = bars.findIndex(b => b.t === p0.t);
+    const i1 = bars.findIndex(b => b.t === p1.t);
+    if (i0 < startIndex - 1 || i0 > endIndex + 1) continue;
+    const x0 = indexToX(i0, startIndex, endIndex, chartLeft, chartWidth);
+    const x1 = indexToX(i1, startIndex, endIndex, chartLeft, chartWidth);
+    const y0 = valueToY(p0.value, 0, 100, pane);
+    const y1 = valueToY(p1.value, 0, 100, pane);
+    const midVal = (p0.value + p1.value) / 2;
+    ctx.strokeStyle = midVal >= 80 ? "#EF5350" : midVal <= 20 ? "#26A69A" : "#CE93D8";
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+  }
+
+  // Current value label
+  const last = points[points.length - 1];
+  if (last) {
+    const color = last.value >= 80 ? "#EF5350" : last.value <= 20 ? "#26A69A" : "#CE93D8";
+    drawPaneValueLabel(ctx, layout, pane, `MFI ${last.value.toFixed(1)}`, color);
+  }
 }
 
 // ── CMF ───────────────────────────────────────────────
@@ -527,7 +638,7 @@ export function drawCMF(
   const yZero = valueToY(0, rangeMin, rangeMax, pane);
   drawGuideY(ctx, layout, yZero, THEME.zeroLine);
 
-  // Histogram fill below/above zero
+  // Histogram fill below/above zero — stronger alpha
   const range = endIndex - startIndex || 1;
   const barW = Math.max(1, (chartWidth / range) * 0.5);
   for (const pt of points) {
@@ -535,7 +646,7 @@ export function drawCMF(
     if (idx < startIndex - 1 || idx > endIndex + 1) continue;
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
     const yVal = valueToY(pt.value, rangeMin, rangeMax, pane);
-    ctx.fillStyle = pt.value >= 0 ? THEME.macdHistPos : THEME.macdHistNeg;
+    ctx.fillStyle = pt.value >= 0 ? "rgba(38,166,154,0.45)" : "rgba(239,83,80,0.45)";
     if (pt.value >= 0) {
       ctx.fillRect(x - barW / 2, yVal, barW, yZero - yVal);
     } else {
@@ -548,6 +659,44 @@ export function drawCMF(
     ctx, points.map(p => ({ t: p.t, v: p.value })),
     bars, layout, viewport, pane, rangeMin, rangeMax, "#00BCD4", 1.5,
   );
+
+  // Signal EMA(9) line on CMF
+  const sigVals = emaFromValues(vals, 9);
+  drawFixedRangeLine(
+    ctx, points.map((p, i) => ({ t: p.t, v: sigVals[i] })),
+    bars, layout, viewport, pane, rangeMin, rangeMax, "#FF9800", 1,
+  );
+
+  // Zero-cross signal triangles
+  const triSize = 4;
+  ctx.save();
+  for (let i = 1; i < points.length; i++) {
+    const p0 = points[i - 1], p1 = points[i];
+    const idx = bars.findIndex(b => b.t === p1.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    if ((p0.value < 0 && p1.value >= 0) || (p0.value > 0 && p1.value <= 0)) {
+      const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+      const bull = p1.value >= 0;
+      ctx.fillStyle = bull ? "#26A69A" : "#EF5350";
+      const ty = bull ? yZero + 6 : yZero - 6;
+      ctx.beginPath();
+      if (bull) {
+        ctx.moveTo(x, ty - triSize); ctx.lineTo(x - triSize, ty + triSize); ctx.lineTo(x + triSize, ty + triSize);
+      } else {
+        ctx.moveTo(x, ty + triSize); ctx.lineTo(x - triSize, ty - triSize); ctx.lineTo(x + triSize, ty - triSize);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // Current value label
+  const last = points[points.length - 1];
+  if (last) {
+    const color = last.value >= 0 ? "#26A69A" : "#EF5350";
+    drawPaneValueLabel(ctx, layout, pane, `CMF ${last.value.toFixed(3)}`, color);
+  }
 }
 
 // ── OBV ───────────────────────────────────────────────
@@ -564,21 +713,57 @@ export function drawOBV(
   drawPaneBg(ctx, layout, pane);
   drawPaneLabel(ctx, "OBV", pane);
 
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
+
   // Auto-scale
   const timestamps = points.map(p => p.t);
   const vals = points.map(p => p.value);
+  const sigVals = emaFromValues(vals, 20);
   const { min: rangeMin, max: rangeMax } = autoScaleRange(
-    [vals], timestamps, bars, viewport, 0.1,
+    [vals, sigVals], timestamps, bars, viewport, 0.1,
   );
 
   // Zero line
   const yZero = valueToY(0, rangeMin, rangeMax, pane);
   drawGuideY(ctx, layout, yZero, THEME.zeroLine);
 
+  // Direction-colored OBV line segments
+  ctx.lineWidth = 1.5;
+  for (let i = 1; i < points.length; i++) {
+    const p0 = points[i - 1], p1 = points[i];
+    const i0 = bars.findIndex(b => b.t === p0.t);
+    const i1 = bars.findIndex(b => b.t === p1.t);
+    if (i0 < startIndex - 1 || i0 > endIndex + 1) continue;
+    const x0 = indexToX(i0, startIndex, endIndex, chartLeft, chartWidth);
+    const x1 = indexToX(i1, startIndex, endIndex, chartLeft, chartWidth);
+    const y0 = valueToY(p0.value, rangeMin, rangeMax, pane);
+    const y1 = valueToY(p1.value, rangeMin, rangeMax, pane);
+    ctx.strokeStyle = p1.value >= p0.value ? "#26A69A" : "#EF5350";
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+  }
+
+  // Signal EMA(20) line
   drawFixedRangeLine(
-    ctx, points.map(p => ({ t: p.t, v: p.value })),
-    bars, layout, viewport, pane, rangeMin, rangeMax, "#FF9800", 1.5,
+    ctx, points.map((p, i) => ({ t: p.t, v: sigVals[i] })),
+    bars, layout, viewport, pane, rangeMin, rangeMax, "#FFD700", 1,
   );
+
+  // Current value label
+  const last = points[points.length - 1];
+  const prev = points.length >= 2 ? points[points.length - 2] : null;
+  if (last) {
+    const bull = prev ? last.value >= prev.value : true;
+    const formatted = Math.abs(last.value) >= 1e6
+      ? `OBV ${(last.value / 1e6).toFixed(2)}M`
+      : Math.abs(last.value) >= 1e3
+      ? `OBV ${(last.value / 1e3).toFixed(1)}K`
+      : `OBV ${last.value.toFixed(0)}`;
+    drawPaneValueLabel(ctx, layout, pane, formatted, bull ? "#26A69A" : "#EF5350");
+  }
 }
 
 // ── AO — Awesome Oscillator ───────────────────────────
@@ -1457,7 +1642,8 @@ export function drawADL(
 
   const timestamps = points.map(p => p.t);
   const vals = points.map(p => p.value);
-  const { min: rangeMin, max: rangeMax } = autoScaleRange([vals], timestamps, bars, viewport, 0.1);
+  const sigVals = emaFromValues(vals, 10);
+  const { min: rangeMin, max: rangeMax } = autoScaleRange([vals, sigVals], timestamps, bars, viewport, 0.1);
   const yZero = valueToY(0, rangeMin, rangeMax, pane);
   drawGuideY(ctx, layout, yZero, THEME.zeroLine);
 
@@ -1465,6 +1651,18 @@ export function drawADL(
     ctx, points.map(p => ({ t: p.t, v: p.value })),
     bars, layout, viewport, pane, rangeMin, rangeMax, "#FF9800", 1.5,
   );
+  // Signal EMA(10)
+  drawFixedRangeLine(
+    ctx, points.map((p, i) => ({ t: p.t, v: sigVals[i] })),
+    bars, layout, viewport, pane, rangeMin, rangeMax, "#2196F3", 1,
+  );
+  // Current value
+  const last = points[points.length - 1];
+  const prev = points.length >= 2 ? points[points.length - 2] : null;
+  if (last) {
+    const bull = prev ? last.value >= prev.value : true;
+    drawPaneValueLabel(ctx, layout, pane, `ADL ${last.value >= 0 ? "+" : ""}${last.value.toFixed(0)}`, bull ? "#FF9800" : "#EF5350");
+  }
 }
 
 // ── CVD — Cumulative Volume Delta ─────────────────────
@@ -1481,16 +1679,43 @@ export function drawCVD(
   drawPaneBg(ctx, layout, pane);
   drawPaneLabel(ctx, "CVD", pane);
 
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
   const timestamps = points.map(p => p.t);
   const vals = points.map(p => p.value);
   const { min: rangeMin, max: rangeMax } = autoScaleRange([vals], timestamps, bars, viewport, 0.1);
   const yZero = valueToY(0, rangeMin, rangeMax, pane);
   drawGuideY(ctx, layout, yZero, THEME.zeroLine);
 
+  // Delta bars (bar-by-bar change in CVD)
+  const barRange = endIndex - startIndex || 1;
+  const barW = Math.max(1, (chartWidth / barRange) * 0.4);
+  for (let i = 1; i < points.length; i++) {
+    const delta = points[i].value - points[i - 1].value;
+    const idx = bars.findIndex(b => b.t === points[i].t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const yVal = valueToY(points[i].value, rangeMin, rangeMax, pane);
+    ctx.fillStyle = delta >= 0 ? "rgba(38,198,218,0.5)" : "rgba(239,83,80,0.5)";
+    if (delta >= 0) {
+      ctx.fillRect(x - barW / 2, yVal, barW, yZero - yVal);
+    } else {
+      ctx.fillRect(x - barW / 2, yZero, barW, yVal - yZero);
+    }
+  }
+
+  // Cumulative line on top
   drawFixedRangeLine(
     ctx, points.map(p => ({ t: p.t, v: p.value })),
     bars, layout, viewport, pane, rangeMin, rangeMax, "#26C6DA", 1.5,
   );
+
+  // Current value
+  const last = points[points.length - 1];
+  if (last) {
+    const bull = last.value >= 0;
+    drawPaneValueLabel(ctx, layout, pane, `CVD ${bull ? "+" : ""}${last.value.toFixed(0)}`, bull ? "#26C6DA" : "#EF5350");
+  }
 }
 
 // ── CVI — Chaikin Volatility Index ────────────────────
@@ -1573,12 +1798,27 @@ export function drawPVT(
 
   const timestamps = points.map(p => p.t);
   const vals = points.map(p => p.value);
-  const { min: rangeMin, max: rangeMax } = autoScaleRange([vals], timestamps, bars, viewport, 0.1);
+  const sigVals = emaFromValues(vals, 9);
+  const { min: rangeMin, max: rangeMax } = autoScaleRange([vals, sigVals], timestamps, bars, viewport, 0.1);
 
+  // PVT line
   drawFixedRangeLine(
     ctx, points.map(p => ({ t: p.t, v: p.value })),
     bars, layout, viewport, pane, rangeMin, rangeMax, "#E91E63", 1.5,
   );
+  // Signal EMA(9)
+  drawFixedRangeLine(
+    ctx, points.map((p, i) => ({ t: p.t, v: sigVals[i] })),
+    bars, layout, viewport, pane, rangeMin, rangeMax, "#FF9800", 1,
+  );
+
+  // Current value
+  const last = points[points.length - 1];
+  if (last) {
+    const prev = points.length >= 2 ? points[points.length - 2] : null;
+    const bull = prev ? last.value >= prev.value : true;
+    drawPaneValueLabel(ctx, layout, pane, `PVT ${last.value.toFixed(0)}`, bull ? "#E91E63" : "#EF5350");
+  }
 }
 
 // ── Volume Oscillator ─────────────────────────────────
@@ -1616,6 +1856,37 @@ export function drawVolumeOscillator(
     } else {
       ctx.fillRect(x - barW / 2, yZero, barW, yVal - yZero);
     }
+  }
+
+  // Zero-cross signal triangles
+  const triSize = 4;
+  ctx.save();
+  for (let i = 1; i < points.length; i++) {
+    const p0 = points[i - 1], p1 = points[i];
+    const idx = bars.findIndex(b => b.t === p1.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    if ((p0.value < 0 && p1.value >= 0) || (p0.value > 0 && p1.value <= 0)) {
+      const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+      const bull = p1.value >= 0;
+      ctx.fillStyle = bull ? "#26A69A" : "#EF5350";
+      const ty = bull ? yZero + 7 : yZero - 7;
+      ctx.beginPath();
+      if (bull) {
+        ctx.moveTo(x, ty - triSize); ctx.lineTo(x - triSize, ty + triSize); ctx.lineTo(x + triSize, ty + triSize);
+      } else {
+        ctx.moveTo(x, ty + triSize); ctx.lineTo(x - triSize, ty - triSize); ctx.lineTo(x + triSize, ty - triSize);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // Current value label
+  const last = points[points.length - 1];
+  if (last) {
+    const color = last.value >= 0 ? THEME.macdHistPos : THEME.macdHistNeg;
+    drawPaneValueLabel(ctx, layout, pane, `VOsc ${last.value.toFixed(2)}%`, color);
   }
 }
 
@@ -1656,16 +1927,96 @@ export function drawBBWidth(
 ): void {
   if (points.length < 2 || pane.height === 0) return;
   drawPaneBg(ctx, layout, pane);
-  drawPaneLabel(ctx, "BB Width", pane);
 
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
+  const pw = layout.canvasWidth - layout.priceAxisWidth;
+
+  // Auto-scale from visible values
   const timestamps = points.map(p => p.t);
   const vals = points.map(p => p.value);
   const { min: rangeMin, max: rangeMax } = autoScaleRange([vals], timestamps, bars, viewport, 0.1);
 
-  drawFixedRangeLine(
-    ctx, points.map(p => ({ t: p.t, v: p.value })),
-    bars, layout, viewport, pane, rangeMin, rangeMax, "#FF9800", 1.5,
-  );
+  // Compute squeeze threshold = 25th percentile of visible values
+  const visVals: number[] = [];
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx >= startIndex && idx <= endIndex) visVals.push(pt.value);
+  }
+  visVals.sort((a, b) => a - b);
+  const squeeze25 = visVals.length > 4 ? visVals[Math.floor(visVals.length * 0.25)] : rangeMin;
+  const squeeze10 = visVals.length > 4 ? visVals[Math.floor(visVals.length * 0.10)] : rangeMin;
+
+  // Squeeze zone fill (bottom 25% of range = yellow-amber tint)
+  const ySqueezeThresh = valueToY(squeeze25, rangeMin, rangeMax, pane);
+  ctx.fillStyle = "rgba(255,193,7,0.08)";
+  ctx.fillRect(0, ySqueezeThresh, pw, pane.top + pane.height - ySqueezeThresh);
+
+  // Threshold line (squeeze boundary)
+  ctx.strokeStyle = "rgba(255,193,7,0.55)";
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(0, ySqueezeThresh); ctx.lineTo(pw, ySqueezeThresh);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw BBWidth as colored histogram bars (expanding=teal, contracting=red, squeezed=amber)
+  const visPoints: { idx: number; v: number }[] = [];
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    visPoints.push({ idx, v: pt.value });
+  }
+
+  const range = endIndex - startIndex || 1;
+  const bw = Math.max(1, (chartWidth / range) * 0.6);
+  const yBase = pane.top + pane.height;
+
+  for (let i = 0; i < visPoints.length; i++) {
+    const { idx, v } = visPoints[i];
+    const prevV = i > 0 ? visPoints[i - 1].v : v;
+    const squeezed = v <= squeeze10;
+    let color: string;
+    if (squeezed) color = "rgba(255,193,7,0.75)";
+    else if (v > prevV) color = "rgba(38,198,218,0.75)";
+    else color = "rgba(239,83,80,0.75)";
+
+    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = valueToY(v, rangeMin, rangeMax, pane);
+    ctx.fillStyle = color;
+    ctx.fillRect(x - bw / 2, y, bw, yBase - y);
+  }
+
+  // Squeeze transition markers (squeeze entry/exit)
+  for (let i = 1; i < visPoints.length; i++) {
+    const prev = visPoints[i - 1], curr = visPoints[i];
+    const wasSqueezing = prev.v <= squeeze25;
+    const isSqueezed   = curr.v <= squeeze25;
+    if (!wasSqueezing && isSqueezed) {
+      // Entering squeeze: amber dot on threshold
+      const x = indexToX(curr.idx, startIndex, endIndex, chartLeft, chartWidth);
+      ctx.fillStyle = "#FFC107";
+      ctx.beginPath();
+      ctx.arc(x, ySqueezeThresh, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (wasSqueezing && !isSqueezed) {
+      // Exiting squeeze (potential breakout): teal arrow
+      const x = indexToX(curr.idx, startIndex, endIndex, chartLeft, chartWidth);
+      ctx.fillStyle = "#26C6DA";
+      ctx.beginPath();
+      ctx.moveTo(x, ySqueezeThresh - 10);
+      ctx.lineTo(x - 4, ySqueezeThresh - 4);
+      ctx.lineTo(x + 4, ySqueezeThresh - 4);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // Label with current value
+  const lastVP = visPoints[visPoints.length - 1];
+  const isSq = lastVP && lastVP.v <= squeeze25;
+  drawPaneLabel(ctx, `BB Width ${lastVP ? lastVP.v.toFixed(4) : ""}${isSq ? " [SQ]" : ""}`, pane);
 }
 
 // ── Historical Volatility ─────────────────────────────
@@ -1680,16 +2031,97 @@ export function drawHistVol(
 ): void {
   if (points.length < 2 || pane.height === 0) return;
   drawPaneBg(ctx, layout, pane);
-  drawPaneLabel(ctx, "Hist Vol", pane);
+
+  const { startIndex, endIndex } = viewport;
+  const { chartLeft, chartWidth } = layout;
+  const pw = layout.canvasWidth - layout.priceAxisWidth;
 
   const timestamps = points.map(p => p.t);
   const vals = points.map(p => p.value);
   const { min: rangeMin, max: rangeMax } = autoScaleRange([vals], timestamps, bars, viewport, 0.1);
 
-  drawFixedRangeLine(
-    ctx, points.map(p => ({ t: p.t, v: p.value })),
-    bars, layout, viewport, pane, rangeMin, rangeMax, "#7B1FA2", 1.5,
-  );
+  // Compute percentiles from visible data
+  const visVals: number[] = [];
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx >= startIndex && idx <= endIndex) visVals.push(pt.value);
+  }
+  const sorted = [...visVals].sort((a, b) => a - b);
+  const pct = (q: number) => sorted.length > 4 ? sorted[Math.floor(sorted.length * q)] : 0;
+  const p25 = pct(0.25), p75 = pct(0.75), p90 = pct(0.90);
+
+  // Percentile reference bands (zones)
+  if (p75 > 0) {
+    const y25 = valueToY(p25, rangeMin, rangeMax, pane);
+    const y75 = valueToY(p75, rangeMin, rangeMax, pane);
+    const y90 = valueToY(p90, rangeMin, rangeMax, pane);
+    const yBot = pane.top + pane.height;
+
+    // Low vol zone fill (below 25th percentile) — green tint
+    ctx.fillStyle = "rgba(38,166,154,0.07)";
+    ctx.fillRect(0, y25, pw, yBot - y25);
+    // High vol zone fill (above 75th percentile) — red tint
+    ctx.fillStyle = "rgba(239,83,80,0.07)";
+    ctx.fillRect(0, pane.top, pw, y75 - pane.top);
+    // Extreme vol zone (above 90th) — stronger red
+    if (p90 > p75) {
+      ctx.fillStyle = "rgba(239,83,80,0.10)";
+      ctx.fillRect(0, pane.top, pw, y90 - pane.top);
+    }
+
+    // Percentile dashed lines
+    const drawPctLine = (y: number, label: string, color: string) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 0.6;
+      ctx.setLineDash([3, 5]);
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(pw, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = "8px 'IBM Plex Mono', monospace";
+      ctx.fillStyle = color;
+      ctx.textAlign = "right";
+      ctx.fillText(label, pw - 3, y - 2);
+    };
+    drawPctLine(y25, "25p", "rgba(38,166,154,0.6)");
+    drawPctLine(y75, "75p", "rgba(239,83,80,0.5)");
+    if (p90 > p75) drawPctLine(y90, "90p", "rgba(239,83,80,0.7)");
+  }
+
+  // Collect visible points for color-coded line
+  const visHV: { idx: number; v: number }[] = [];
+  for (const pt of points) {
+    const idx = bars.findIndex(b => b.t === pt.t);
+    if (idx < startIndex - 1 || idx > endIndex + 1) continue;
+    visHV.push({ idx, v: pt.value });
+  }
+
+  // Draw HV line with regime color
+  for (let i = 0; i < visHV.length - 1; i++) {
+    const a = visHV[i], b = visHV[i + 1];
+    const avg = (a.v + b.v) / 2;
+    const color = avg > p75 ? "#EF5350" : avg < p25 ? "#26A69A" : "#AB47BC";
+    const x1 = indexToX(a.idx, startIndex, endIndex, chartLeft, chartWidth);
+    const x2 = indexToX(b.idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y1 = valueToY(a.v, rangeMin, rangeMax, pane);
+    const y2 = valueToY(b.v, rangeMin, rangeMax, pane);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  // Label with current value + percentile rank
+  const lastHV = visHV[visHV.length - 1];
+  if (lastHV) {
+    const rank = sorted.length > 0
+      ? Math.round((sorted.filter(v => v <= lastHV.v).length / sorted.length) * 100)
+      : 0;
+    const regime = lastHV.v > p75 ? " HIGH" : lastHV.v < p25 ? " LOW" : "";
+    drawPaneLabel(ctx, `HV ${(lastHV.v * 100).toFixed(1)}%  Rank:${rank}%${regime}`, pane);
+  } else {
+    drawPaneLabel(ctx, "Hist Vol", pane);
+  }
 }
 
 // ── Correlation Coefficient ───────────────────────────

@@ -25,10 +25,10 @@ export interface SessionConfig {
 // ── Default sessions ─────────────────────────────────────
 
 export const SESSIONS: SessionConfig[] = [
-  { name: "Sydney",   color: "rgba(156,39,176,0.04)",  startHourUTC: 22, endHourUTC: 7  },
-  { name: "Tokyo",    color: "rgba(255,152,0,0.04)",   startHourUTC: 0,  endHourUTC: 9  },
-  { name: "London",   color: "rgba(33,150,243,0.06)",  startHourUTC: 8,  endHourUTC: 17 },
-  { name: "New York", color: "rgba(76,175,80,0.05)",   startHourUTC: 13, endHourUTC: 22 },
+  { name: "Sydney",   color: "rgba(156,39,176,0.18)",  startHourUTC: 22, endHourUTC: 7  },
+  { name: "Tokyo",    color: "rgba(255,152,0,0.22)",   startHourUTC: 0,  endHourUTC: 9  },
+  { name: "London",   color: "rgba(33,150,243,0.22)",  startHourUTC: 8,  endHourUTC: 17 },
+  { name: "New York", color: "rgba(76,175,80,0.18)",   startHourUTC: 13, endHourUTC: 22 },
 ];
 
 // ── Helpers ──────────────────────────────────────────────
@@ -138,11 +138,11 @@ export function drawSessions(
       const bandWidth = x2 - x1;
       // Only draw label if band is wide enough to fit text
       if (bandWidth > 40) {
-        ctx.font = "9px 'IBM Plex Mono', monospace";
-        ctx.fillStyle = session.color.replace(/[\d.]+\)$/, "0.35)");
+        ctx.font = "bold 8px 'IBM Plex Mono', monospace";
+        ctx.fillStyle = session.color.replace(/[\d.]+\)$/, "0.55)");
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillText(session.name.toUpperCase(), labelX, mainTop + 3);
+        ctx.fillText(session.name.toUpperCase(), labelX, mainTop + 4);
         // Reset baseline
         ctx.textBaseline = "alphabetic";
       }

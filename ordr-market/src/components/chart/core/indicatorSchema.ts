@@ -111,8 +111,7 @@ export const INDICATOR_SCHEMA: IndicatorSchema[] = [
     id: "vwap", name: "Volume Weighted Average Price", shortName: "VWAP",
     category: "overlay",
     params: [
-      { key: "showBands", label: "SD Bands", type: "number", default: 0, min: 0, max: 1, step: 1 },
-      { key: "bandMult", label: "Band Mult", type: "number", default: 1, min: 0.5, max: 4, step: 0.5 },
+      { key: "showBands", label: "SD Bands (0–3)", type: "number", default: 0, min: 0, max: 3, step: 1 },
     ],
     color: "#E91E63",
   },

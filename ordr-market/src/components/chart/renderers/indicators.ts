@@ -12,6 +12,7 @@ import type {
   AutoFibData,
   MARibbonData,
   RSISubPane,
+  DivergenceLine,
 } from "../indicators/types";
 import type { ChartLayout, Viewport } from "../core/data";
 import type { PriceScale } from "../core/data";
@@ -168,6 +169,48 @@ export function drawBands(
   ctx.stroke();
 }
 
+// ── Shared oscillator divergence helper ────────────────
+
+/**
+ * Draw divergence line pairs on an oscillator sub-pane.
+ * `yFn` converts an oscillator value to a Y pixel coordinate.
+ */
+function drawOscDivergence(
+  ctx: CanvasRenderingContext2D,
+  lines: DivergenceLine[],
+  startIndex: number,
+  endIndex: number,
+  chartLeft: number,
+  chartWidth: number,
+  yFn: (v: number) => number,
+): void {
+  for (const div of lines) {
+    if (div.idx2 < startIndex - 2 || div.idx1 > endIndex + 2) continue;
+    const x1 = indexToX(div.idx1, startIndex, endIndex, chartLeft, chartWidth);
+    const x2 = indexToX(div.idx2, startIndex, endIndex, chartLeft, chartWidth);
+    const y1 = yFn(div.osc1);
+    const y2 = yFn(div.osc2);
+    const bull = div.direction === "bullish";
+    const color = bull ? "#26A69A" : "#EF5350";
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash(div.kind === "hidden" ? [5, 3] : []);
+    ctx.globalAlpha = div.kind === "regular" ? 0.90 : 0.60;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+    // Endpoint dots
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.85;
+    for (const [x, y] of [[x1, y1], [x2, y2]] as [number, number][]) {
+      ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
 // ── RSI sub-pane ───────────────────────────────────────
 
 export function drawRSI(
@@ -224,16 +267,40 @@ export function drawRSI(
   ctx.fillText(String(osLevel), pw - 3, yOS + 9);
   ctx.fillText("50", pw - 3, yMid - 2);
 
+  // Build signal map for O(1) lookup
+  const sigMap = new Map<number, number>();
+  for (const pt of signal) sigMap.set(pt.t, pt.value);
+
   // Collect visible points
-  const vis: { idx: number; pt: IndicatorPoint }[] = [];
+  const vis: { idx: number; pt: IndicatorPoint; sig: number | undefined }[] = [];
   for (const pt of points) {
     const idx = bars.findIndex(b => b.t === pt.t);
     if (idx < startIndex - 1 || idx > endIndex + 1) continue;
-    vis.push({ idx, pt });
+    vis.push({ idx, pt, sig: sigMap.get(pt.t) });
   }
   if (vis.length < 2) return;
 
-  // RSI line — color by zone (segment-by-segment)
+  // ── Fill between RSI line and 50 midline ────────────────────────────────
+  ctx.save();
+  for (let i = 0; i < vis.length - 1; i++) {
+    const a = vis[i], b = vis[i + 1];
+    const x1 = indexToX(a.idx, startIndex, endIndex, chartLeft, chartWidth);
+    const x2 = indexToX(b.idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y1r = yVal(a.pt.value);
+    const y2r = yVal(b.pt.value);
+    const avg = (a.pt.value + b.pt.value) / 2;
+    ctx.fillStyle = avg >= 50 ? "rgba(38,166,154,0.12)" : "rgba(239,83,80,0.12)";
+    ctx.beginPath();
+    ctx.moveTo(x1, y1r);
+    ctx.lineTo(x2, y2r);
+    ctx.lineTo(x2, yMid);
+    ctx.lineTo(x1, yMid);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // ── RSI line — color by zone (segment-by-segment) ────────────────────────
   for (let i = 0; i < vis.length - 1; i++) {
     const a = vis[i], b = vis[i + 1];
     const x1 = indexToX(a.idx, startIndex, endIndex, chartLeft, chartWidth);
@@ -249,7 +316,7 @@ export function drawRSI(
     ctx.stroke();
   }
 
-  // Signal EMA line (dashed orange)
+  // ── Signal EMA line (dashed orange) ─────────────────────────────────────
   if (signal.length >= 2) {
     ctx.strokeStyle = "#FFA726";
     ctx.lineWidth = 1;
@@ -265,15 +332,54 @@ export function drawRSI(
     }
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Signal cross triangle arrows
+    for (let i = 1; i < vis.length; i++) {
+      const pv = vis[i - 1], cu = vis[i];
+      if (pv.sig === undefined || cu.sig === undefined) continue;
+      const crossed = (pv.pt.value - pv.sig) * (cu.pt.value - cu.sig) < 0;
+      if (!crossed) continue;
+      const x = indexToX(cu.idx, startIndex, endIndex, chartLeft, chartWidth);
+      const y = yVal(cu.pt.value);
+      const bullCross = cu.pt.value > cu.sig;
+      ctx.fillStyle = bullCross ? "#26a69a" : "#ef5350";
+      ctx.beginPath();
+      if (bullCross) {
+        ctx.moveTo(x, y - 9); ctx.lineTo(x - 4, y - 3); ctx.lineTo(x + 4, y - 3);
+      } else {
+        ctx.moveTo(x, y + 9); ctx.lineTo(x - 4, y + 3); ctx.lineTo(x + 4, y + 3);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
-  // Label with current value
-  const last = vis[vis.length - 1].pt;
-  const valStr = last.value.toFixed(2);
+  // ── Multi-value header ───────────────────────────────────────────────────
+  const lastV = vis[vis.length - 1];
+  const lastSig = lastV.sig;
   ctx.font = "10px 'IBM Plex Mono', monospace";
-  ctx.fillStyle = THEME.axisText;
   ctx.textAlign = "left";
-  ctx.fillText(`RSI(${period}) ${valStr}`, 6, subPaneTop + 12);
+  const headerParts = [
+    { text: `RSI(${period}) `, color: THEME.axisText },
+    { text: lastV.pt.value.toFixed(2), color: lastV.pt.value > obLevel ? "#ef5350" : lastV.pt.value < osLevel ? "#26a69a" : THEME.rsiColor },
+    ...(lastSig !== undefined ? [
+      { text: "  SIG ", color: THEME.axisText },
+      { text: lastSig.toFixed(2), color: "#FFA726" },
+    ] : []),
+  ];
+  let hx = 6;
+  for (const { text, color } of headerParts) {
+    ctx.fillStyle = color;
+    ctx.fillText(text, hx, subPaneTop + 12);
+    hx += ctx.measureText(text).width;
+  }
+
+  // ── Divergence lines (oscillator pane side) ───────────────────────────────
+  const divLines = data.divergences;
+  if (divLines && divLines.length > 0) {
+    drawOscDivergence(ctx, divLines, startIndex, endIndex, chartLeft, chartWidth,
+      (v) => subPaneTop + subPaneHeight * (1 - v / 100));
+  }
 }
 
 // ── MACD sub-pane ──────────────────────────────────────
@@ -284,6 +390,7 @@ export function drawMACD(
   bars: { t: number }[],
   layout: ChartLayout,
   viewport: Viewport,
+  divergences?: DivergenceLine[],
 ): void {
   const { subPaneTop, subPaneHeight, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex } = viewport;
@@ -324,18 +431,27 @@ export function drawMACD(
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Gradient histogram — color by momentum direction:
-  //   pos & growing  → bright green  (#26a69a)
-  //   pos & shrinking → dim green    (#1a5c56)
-  //   neg & shrinking → bright red   (#ef5350)
-  //   neg & growing  → dim red       (#7a2b2a)
+  // Subtle guide lines at ±33% of range
+  for (const frac of [0.33, -0.33]) {
+    const yG = midY - maxAbs * frac * sc;
+    if (yG < subPaneTop || yG > subPaneTop + subPaneHeight) continue;
+    ctx.strokeStyle = "rgba(150,152,161,0.10)";
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 5]);
+    ctx.beginPath();
+    ctx.moveTo(0, yG); ctx.lineTo(pw, yG);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Histogram — 4-shade momentum direction coloring (TradingView standard)
   for (let i = 0; i < visible.length; i++) {
     const { idx, pt } = visible[i];
     const prevHist = i > 0 ? visible[i - 1].pt.histogram : pt.histogram;
     const growing = Math.abs(pt.histogram) >= Math.abs(prevHist);
     let color: string;
-    if (pt.histogram >= 0) color = growing ? "#26a69a" : "#1a5c56";
-    else                   color = growing ? "#ef5350" : "#7a2b2a";
+    if (pt.histogram >= 0) color = growing ? "#26a69a" : "#1a6b64";
+    else                   color = growing ? "#ef5350" : "#7a2828";
 
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
     const h = pt.histogram * sc;
@@ -344,16 +460,20 @@ export function drawMACD(
     else        ctx.fillRect(x - barWidth / 2, midY,     barWidth, -h);
   }
 
-  // MACD line
-  ctx.strokeStyle = THEME.macdLine;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  visible.forEach(({ idx, pt }, i) => {
-    const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
-    const y = midY - pt.macd * sc;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
+  // MACD line — colored by position relative to zero (teal above, red below)
+  for (let i = 0; i < visible.length - 1; i++) {
+    const a = visible[i], b = visible[i + 1];
+    const x1 = indexToX(a.idx, startIndex, endIndex, chartLeft, chartWidth);
+    const x2 = indexToX(b.idx, startIndex, endIndex, chartLeft, chartWidth);
+    const y1 = midY - a.pt.macd * sc;
+    const y2 = midY - b.pt.macd * sc;
+    const avg = (a.pt.macd + b.pt.macd) / 2;
+    ctx.strokeStyle = avg >= 0 ? "#26c6da" : "#ef9a9a";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
 
   // Signal line
   ctx.strokeStyle = THEME.macdSignal;
@@ -366,7 +486,7 @@ export function drawMACD(
   });
   ctx.stroke();
 
-  // Signal-cross markers (small circle where MACD crosses signal)
+  // Signal-cross triangle arrows
   for (let i = 1; i < visible.length; i++) {
     const prev = visible[i - 1].pt;
     const curr = visible[i].pt;
@@ -375,19 +495,44 @@ export function drawMACD(
     const { idx } = visible[i];
     const x = indexToX(idx, startIndex, endIndex, chartLeft, chartWidth);
     const y = midY - curr.signal * sc;
-    const bullCross = curr.macd > curr.signal;
-    ctx.fillStyle = bullCross ? "#26a69a" : "#ef5350";
+    const bull = curr.macd > curr.signal;
+    ctx.fillStyle = bull ? "#26a69a" : "#ef5350";
     ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    if (bull) {
+      ctx.moveTo(x, y - 10); ctx.lineTo(x - 4, y - 4); ctx.lineTo(x + 4, y - 4);
+    } else {
+      ctx.moveTo(x, y + 10); ctx.lineTo(x - 4, y + 4); ctx.lineTo(x + 4, y + 4);
+    }
+    ctx.closePath();
     ctx.fill();
   }
 
-  // Label with current MACD value
+  // ── Multi-value header ─────────────────────────────────────────────────────
   const last = visible[visible.length - 1].pt;
   ctx.font = "10px 'IBM Plex Mono', monospace";
-  ctx.fillStyle = THEME.axisText;
   ctx.textAlign = "left";
-  ctx.fillText(`MACD(12,26,9) ${last.macd.toFixed(4)}`, 6, subPaneTop + 12);
+  const mParts = [
+    { text: "MACD ", color: THEME.axisText },
+    { text: `${last.macd.toFixed(5)} `, color: last.macd >= 0 ? "#26c6da" : "#ef9a9a" },
+    { text: "SIG ", color: THEME.axisText },
+    { text: `${last.signal.toFixed(5)} `, color: "#FFA726" },
+    { text: "HIST ", color: THEME.axisText },
+    { text: last.histogram.toFixed(5), color: last.histogram >= 0 ? "#26a69a" : "#ef5350" },
+  ];
+  let mx = 6;
+  for (const { text, color } of mParts) {
+    ctx.fillStyle = color;
+    ctx.fillText(text, mx, subPaneTop + 12);
+    mx += ctx.measureText(text).width;
+  }
+
+  // ── Divergence lines (oscillator pane side) ─────────────────────────────
+  if (divergences && divergences.length > 0 && maxAbs > 0) {
+    const macdSc = sc;
+    const macdMidY = subPaneTop + subPaneHeight / 2;
+    drawOscDivergence(ctx, divergences, startIndex, endIndex, chartLeft, chartWidth,
+      (v) => macdMidY - v * macdSc);
+  }
 }
 
 // ── VWAP overlay ──────────────────────────────────────
@@ -399,11 +544,19 @@ export function drawVWAP(
   layout: ChartLayout,
   viewport: Viewport,
   scale: PriceScale = "linear",
-  bands?: BandPoint[],
+  bands?: BandPoint[],   // ±1σ
+  bands2?: BandPoint[],  // ±2σ
+  bands3?: BandPoint[],  // ±3σ
 ): void {
-  // Draw SD bands first (behind the VWAP line)
+  // Draw outermost bands first (behind inner bands and VWAP line)
+  if (bands3 && bands3.length >= 2) {
+    drawBands(ctx, bands3, bars, layout, viewport, "rgba(33,150,243,0.04)", "rgba(33,150,243,0.20)", scale);
+  }
+  if (bands2 && bands2.length >= 2) {
+    drawBands(ctx, bands2, bars, layout, viewport, "rgba(255,152,0,0.05)", "rgba(255,152,0,0.28)", scale);
+  }
   if (bands && bands.length >= 2) {
-    drawBands(ctx, bands, bars, layout, viewport, "rgba(233,30,99,0.07)", "rgba(233,30,99,0.35)", scale);
+    drawBands(ctx, bands, bars, layout, viewport, "rgba(233,30,99,0.07)", "rgba(233,30,99,0.40)", scale);
   }
   drawIndicatorLine(ctx, points, bars, layout, viewport, THEME.vwapColor, 2, scale);
 }
@@ -451,13 +604,12 @@ export function drawIchimoku(
   }
   if (vis.length < 2) return;
 
-  // Cloud fill between senkouA and senkouB
-  // Draw as segments, coloring bullish/bearish per segment
+  // Cloud fill between senkouA and senkouB — two-pass for depth
   for (let i = 0; i < vis.length - 1; i++) {
     const curr = vis[i];
     const next = vis[i + 1];
     const bullish = curr.senkouA >= curr.senkouB;
-    ctx.fillStyle = bullish ? "rgba(38,166,154,0.06)" : "rgba(239,83,80,0.06)";
+    ctx.fillStyle = bullish ? "rgba(38,166,154,0.12)" : "rgba(239,83,80,0.12)";
     ctx.beginPath();
     ctx.moveTo(curr.x, curr.senkouAY);
     ctx.lineTo(next.x, next.senkouAY);
@@ -466,43 +618,70 @@ export function drawIchimoku(
     ctx.closePath();
     ctx.fill();
   }
+  // Second pass: half-opacity glow depth effect
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  for (let i = 0; i < vis.length - 1; i++) {
+    const curr = vis[i];
+    const next = vis[i + 1];
+    const bullish = curr.senkouA >= curr.senkouB;
+    ctx.fillStyle = bullish ? "rgba(38,166,154,0.12)" : "rgba(239,83,80,0.12)";
+    ctx.beginPath();
+    ctx.moveTo(curr.x, curr.senkouAY);
+    ctx.lineTo(next.x, next.senkouAY);
+    ctx.lineTo(next.x, next.senkouBY);
+    ctx.lineTo(curr.x, curr.senkouBY);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
 
-  // Tenkan-sen (conversion line)
-  ctx.strokeStyle = "#2962FF";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.tenkanY); else ctx.lineTo(p.x, p.tenkanY); });
-  ctx.stroke();
-
-  // Kijun-sen (base line)
-  ctx.strokeStyle = "#EF5350";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.kijunY); else ctx.lineTo(p.x, p.kijunY); });
-  ctx.stroke();
-
-  // Chikou span (lagging)
-  ctx.strokeStyle = "#787B86";
-  ctx.lineWidth = 1;
-  ctx.setLineDash([2, 2]);
-  ctx.beginPath();
-  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.chikouY); else ctx.lineTo(p.x, p.chikouY); });
-  ctx.stroke();
+  // Senkou A (leading span A) — cloud outline
+  ctx.strokeStyle = "rgba(38,166,154,0.75)";
+  ctx.lineWidth = 1.5;
   ctx.setLineDash([]);
-
-  // Senkou A (leading span A)
-  ctx.strokeStyle = "rgba(38,166,154,0.5)";
-  ctx.lineWidth = 1;
   ctx.beginPath();
   vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.senkouAY); else ctx.lineTo(p.x, p.senkouAY); });
   ctx.stroke();
 
-  // Senkou B (leading span B)
-  ctx.strokeStyle = "rgba(239,83,80,0.5)";
-  ctx.lineWidth = 1;
+  // Senkou B (leading span B) — cloud outline
+  ctx.strokeStyle = "rgba(239,83,80,0.75)";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.senkouBY); else ctx.lineTo(p.x, p.senkouBY); });
   ctx.stroke();
+
+  // Tenkan-sen (conversion line) with glow
+  ctx.save();
+  ctx.shadowColor = "#3D8EFF";
+  ctx.shadowBlur = 4;
+  ctx.strokeStyle = "#3D8EFF";
+  ctx.lineWidth = 1.8;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.tenkanY); else ctx.lineTo(p.x, p.tenkanY); });
+  ctx.stroke();
+  ctx.restore();
+
+  // Kijun-sen (base line) with glow
+  ctx.save();
+  ctx.shadowColor = "#FF6B6B";
+  ctx.shadowBlur = 4;
+  ctx.strokeStyle = "#FF6B6B";
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.kijunY); else ctx.lineTo(p.x, p.kijunY); });
+  ctx.stroke();
+  ctx.restore();
+
+  // Chikou span (lagging)
+  ctx.strokeStyle = "rgba(180,185,200,0.7)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  vis.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.chikouY); else ctx.lineTo(p.x, p.chikouY); });
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 // ── HMA overlay ───────────────────────────────────────

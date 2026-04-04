@@ -46,7 +46,10 @@ import {
   computeUltimateOscillator, computeVortex, computeAroon,
   computeADL, computeCVD, computeCVI, computeNetVolume, computePVT, computeVolumeOscillator,
 } from "./indicators";
-import { detectSupportResistance, detectFVG, detectTrendlines } from "./detection";
+import { detectSupportResistance, detectFVG, detectTrendlines, detectMarketStructure, detectPatterns, detectDivergence } from "./detection";
+import { detectOrderBlocks } from "./detection/order-blocks";
+import { detectLiquidityZones } from "./detection/liquidity-zones";
+import type { MarketStructureData, ChartPatternData, VolatilityConeData, DivergenceLine } from "./indicators/types";
 import { computeLayout, computeViewport, formatPrice, xToIndex, yToPrice, indexToX, priceToY } from "./core/data";
 import type { ChartLayout, SubPaneLayout } from "./core/data";
 import { drawPriceAxis, drawTimeAxis } from "./core/axis";
@@ -67,13 +70,13 @@ import {
   drawSuperTrend, drawChandelierExit, drawChandeKrollStop,
   drawAlligator, drawZigzag, drawAutoFib, drawMARibbon,
 } from "./renderers/indicators";
-import { drawSRLevels, drawFVGZones, drawTrendlines } from "./renderers/overlays";
+import { drawSRLevels, drawFVGZones, drawTrendlines, drawMarketStructure, drawChartPatterns } from "./renderers/overlays";
 import {
   drawDrawings, loadDrawings, saveDrawings, createDrawing,
   hitTestDrawings, drawRubberBand, drawDrawingPriceLabels,
   magneticSnap, shiftSnapPoint, createParallelLine, getPointsRequired,
 } from "./renderers/drawings";
-import type { MagneticSnapResult } from "./renderers/drawings";
+import type { MagneticSnapResult, HitTestResult } from "./renderers/drawings";
 import DrawingPropertiesPanel from "./DrawingPropertiesPanel";
 import type { Drawing, DrawingType } from "./renderers/drawings";
 import {
@@ -150,6 +153,50 @@ interface Props {
   onConfigChange?: (config: ChartIndicatorConfig) => void;
   /** Callback when subpanes change internally (for sync) */
   onSubPanesChange?: (panes: string[]) => void;
+  /** Callback when drawing mode changes internally (start / clear) */
+  onDrawingModeChange?: (mode: DrawingType | null) => void;
+  /** Callback when chart type changes internally (context menu) */
+  onChartTypeChange?: (type: ChartType) => void;
+  /** Callback when a drawing is selected (id) or deselected (null) */
+  onObjectSelect?: (id: string | null) => void;
+  /** Callback delivering selected drawing properties for the sidebar panel */
+  onObjectData?: (data: { type: string; color: string; lineWidth: number; lineStyle: string; label: string; opacity: number; locked: boolean } | null) => void;
+  /** External session keys to highlight (e.g. ["london","newyork"]) */
+  externalSessions?: string[];
+  /** Increment to trigger a canvas screenshot download */
+  externalScreenshotTrigger?: number;
+  /** Increment to trigger copying the canvas as PNG to the clipboard */
+  externalCopyImageTrigger?: number;
+  /** Backtest trade entry/exit markers to render on chart */
+  externalBacktestMarkers?: import('../workspace/workspace-types').BacktestMarker[];
+  /** Apply a style patch to a drawing by id (from sidebar properties panel) */
+  externalDrawingUpdate?: { id: string; color?: string; lineWidth?: number; lineStyle?: string; opacity?: number } | null;
+  /** Active alert price levels to render as dashed horizontal lines */
+  externalAlertLevels?: { value: number; active: boolean; triggered: boolean }[];
+  /** Override price scale mode (linear / log / percent) */
+  externalPriceScaleMode?: "linear" | "log" | "percent";
+  /** Show previous session OHLC horizontal level lines */
+  externalShowPrevLevels?: boolean;
+  /** Show ICT open levels (DOL / WOL / Asia Range) */
+  externalShowOpenLevels?: boolean;
+  /** Show swing pivot high/low dots */
+  externalShowPivots?: boolean;
+  /** Show candle pattern labels (Doji, Hammer, Engulfing, etc.) */
+  externalShowCandlePatterns?: boolean;
+  /** Show auto Fibonacci retracement levels for dominant viewport swing */
+  externalShowAutoFib?: boolean;
+  /** Show session range boxes (Asia/London/NY H/L rectangles) */
+  externalShowSessionRanges?: boolean;
+  /** Callback when price scale changes internally (context menu or status bar) */
+  onPriceScaleModeChange?: (mode: "linear" | "log" | "percent") => void;
+  /** Callback to add a price alert from the chart context menu */
+  onAddAlert?: (price: number, direction: 'above' | 'below') => void;
+  /** Callback to open a workspace panel from the chart context menu */
+  onOpenPanel?: (panel: 'ai' | 'alerts') => void;
+  /** Open paper positions for the current symbol — rendered as entry/SL/TP lines */
+  externalTradeLevels?: import('./renderers/priceLine').TradeLevel[];
+  /** Enable crosshair position sync across multi-chart panes via CustomEvent bus */
+  syncCrosshair?: boolean;
 }
 
 const DEFAULT_CONFIG: ChartIndicatorConfig = {
@@ -158,7 +205,8 @@ const DEFAULT_CONFIG: ChartIndicatorConfig = {
   hma9: false, tema20: false, vwap: false,
   bollinger: false, keltner: false, ichimoku: false, donchian: false,
   volumeProfile: false,
-  sr: true, fvg: true, trendlines: true,
+  sr: true, fvg: false, trendlines: true, marketStructure: false, patterns: false,
+  orderBlocks: false, liqZones: false,
   pivotPoints: false, parabolicSAR: false,
   // New overlays
   wma: false, smma: false, alma: false, dema: false, lsma: false,
@@ -183,14 +231,19 @@ const DEFAULT_CONFIG: ChartIndicatorConfig = {
 type IndicatorBundle = IndicatorBundleType;
 
 const EMPTY_BUNDLE: IndicatorBundle = {
-  overlayLines: [], bands: [], vwap: [], vwapBands: [], ichimoku: [],
+  overlayLines: [], bands: [], vwap: [], vwapBands: [], vwapBands2: [], vwapBands3: [], ichimoku: [],
   parabolicSAR: [], pivotPoints: null, volumeProfile: null,
-  subPaneData: {}, sr: [], fvg: [], trend: [],
+  subPaneData: {}, sr: [], fvg: [], orderBlocks: [], liqZones: [], trend: [],
   supertrend: [], chandelierExit: [], chandeKrollStop: [],
   alligator: [], zigzag: [], autoFib: null, maRibbon: [],
   maRibbonShowFill: true,
   supertrendCfg: { showArrows: true, showFill: false, showLabel: true },
   chandelierShowArrows: true,
+  marketStructure: null,
+  patterns: null,
+  volCone: null,
+  rsiDivergences: [],
+  macdDivergences: [],
 };
 
 /* ─── Indicator chip color/label maps ─── */
@@ -211,6 +264,8 @@ const OVERLAY_META: Record<string, { label: string; color: string }> = {
   sr: { label: "S/R", color: "#26A69A" },
   fvg: { label: "FVG", color: "#26A69A" },
   trendlines: { label: "Trendlines", color: "#EF5350" },
+  marketStructure: { label: "Market Structure", color: "#26A69A" },
+  patterns: { label: "Patterns", color: "#9598A1" },
   pivotPoints: { label: "Pivot Pts", color: "#9598A1" },
   parabolicSAR: { label: "SAR", color: "#26A69A" },
   wma: { label: "WMA(20)", color: "#FF9800" },
@@ -290,7 +345,10 @@ function ChartEngineInner({
   embedded, externalConfig, externalSubPanes, externalChartType,
   externalDrawingMode, externalMagnetEnabled, externalHideDrawings,
   externalLockDrawings, externalDeleteAllDrawings,
-  onConfigChange, onSubPanesChange,
+  onConfigChange, onSubPanesChange, onDrawingModeChange, onChartTypeChange, onObjectSelect, onObjectData,
+  externalSessions, externalScreenshotTrigger, externalCopyImageTrigger, externalBacktestMarkers, externalDrawingUpdate, externalAlertLevels,
+  externalPriceScaleMode, externalShowPrevLevels, externalShowOpenLevels, externalShowPivots, externalShowCandlePatterns, externalShowAutoFib, externalShowSessionRanges, onPriceScaleModeChange,
+  onAddAlert, onOpenPanel, externalTradeLevels, syncCrosshair,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -301,6 +359,9 @@ function ChartEngineInner({
     createInitialZoomState(bars.length, Math.min(200, bars.length)),
   );
   const crosshairRef = useRef<CrosshairState>({ x: 0, y: 0, visible: false, snapIndex: 0 });
+  const instanceIdRef = useRef(`chart-${Math.random().toString(36).slice(2, 9)}`);
+  const externalCrosshairTsRef = useRef<number | null>(null);
+  const renderRef = useRef<() => void>(() => {});
   const axisDragRef = useRef<AxisDragState>(createAxisDragState());
   const priceZoomRef = useRef(1.0);       // Price axis zoom factor (1.0 = auto-fit)
   const dragStartPriceZoom = useRef(1.0); // Snapshot at drag start
@@ -320,7 +381,7 @@ function ChartEngineInner({
   const [priceScale, setPriceScale] = useState<"linear" | "log" | "percent">("linear");
   const [showSymbolSearch, setShowSymbolSearch] = useState(false);
   const [showIndicatorDialog, setShowIndicatorDialog] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; open: boolean }>({ x: 0, y: 0, open: false });
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; open: boolean; price: number }>({ x: 0, y: 0, open: false, price: 0 });
   const [crosshairMode, setCrosshairMode] = useState<CrosshairMode>("crosshair");
   const [enabledSessions, setEnabledSessions] = useState<string[]>([]);
 
@@ -336,6 +397,15 @@ function ChartEngineInner({
   const [hoveredDrawingId, setHoveredDrawingId] = useState<string | null>(null);
   const [drawingPropsPanel, setDrawingPropsPanel] = useState<{ drawingId: string; x: number; y: number } | null>(null);
 
+  // D7: Multi-select, copy/paste, alerts
+  const [selectedDrawingIds, setSelectedDrawingIds] = useState<string[]>([]);
+  const selectedDrawingIdsRef = useRef<string[]>([]);
+  const clipboardRef = useRef<Drawing[]>([]);
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [alertToasts, setAlertToasts] = useState<{ id: string; msg: string }[]>([]);
+
+  useEffect(() => { selectedDrawingIdsRef.current = selectedDrawingIds; }, [selectedDrawingIds]);
+
   // Drawing tool refs (avoid stale closures in pointer handlers)
   const drawingModeRef = useRef<DrawingType | null>(drawingMode);
   const drawingPointsRef = useRef<{ index: number; price: number }[]>(drawingPoints);
@@ -349,6 +419,8 @@ function ChartEngineInner({
   const effectiveSubPanes = externalSubPanes ?? activeSubPanes;
   const effectiveChartType = externalChartType ?? chartType;
   const effectiveDrawingMode = externalDrawingMode !== undefined ? externalDrawingMode : drawingMode;
+  const effectivePriceScale = externalPriceScaleMode ?? priceScale;
+  const effectiveShowPrevLevels = externalShowPrevLevels ?? false;
 
   // Sync external config changes to internal state
   useEffect(() => {
@@ -401,6 +473,9 @@ function ChartEngineInner({
     origPoints: { index: number; price: number }[];
   } | null>(null);
   const dragOverrideRef = useRef<{ id: string; points: { index: number; price: number }[] } | null>(null);
+  // Touch hit override: stores the result of a touch-scaled hit test so handleMouseDown
+  // can use it instead of re-running with small desktop thresholds.
+  const touchHitOverrideRef = useRef<HitTestResult | null>(null);
   const [isDrawingDragging, setIsDrawingDragging] = useState(false);
 
   // Magnetic snap indicator for rubber band
@@ -421,12 +496,22 @@ function ChartEngineInner({
     return vp;
   }, [bars]);
 
+  // Stable price ref — updated when bars change, used to size price axis without
+  // adding bars to the layout memo (avoids layout recompute on every live tick)
+  const latestClosePriceRef = useRef(100);
+  useEffect(() => {
+    if (bars.length > 0) latestClosePriceRef.current = bars[bars.length - 1].c;
+  }, [bars]);
+
   // Layout (left toolbar adds 40px)
   const LEFT_TOOLBAR_WIDTH = 40;
-  const layout = useMemo(
-    () => computeLayout(dimensions.w, dimensions.h, effectiveSubPanes.length),
-    [dimensions.w, dimensions.h, effectiveSubPanes.length],
-  );
+  const layout = useMemo(() => {
+    // Dynamic price axis width: measure widest label for this pair/price magnitude
+    // IBM Plex Mono 11px ≈ 7px per char; 13px total padding
+    const sampleLabel = formatPrice(latestClosePriceRef.current, pair);
+    const axisW = Math.max(50, sampleLabel.length * 7 + 13);
+    return computeLayout(dimensions.w, dimensions.h, effectiveSubPanes.length, axisW);
+  }, [dimensions.w, dimensions.h, effectiveSubPanes.length, pair]);
 
   // Helper: get param value with fallback to schema default
   const p = useCallback((id: string, key: string, fallback: number): number => {
@@ -479,9 +564,10 @@ function ChartEngineInner({
     }
 
     const vwap = effectiveConfig.vwap ? computeVWAP(bars) : [];
-    const vwapBands = effectiveConfig.vwap && p("vwap", "showBands", 0) !== 0
-      ? computeVWAPBands(bars, p("vwap", "bandMult", 1))
-      : [];
+    const vwapNumBands = effectiveConfig.vwap ? p("vwap", "showBands", 0) : 0;
+    const vwapBands  = vwapNumBands >= 1 ? computeVWAPBands(bars, 1) : [];
+    const vwapBands2 = vwapNumBands >= 2 ? computeVWAPBands(bars, 2) : [];
+    const vwapBands3 = vwapNumBands >= 3 ? computeVWAPBands(bars, 3) : [];
     const ichimoku = effectiveConfig.ichimoku ? computeIchimoku(bars, p("ichimoku", "tenkan", 9), p("ichimoku", "kijun", 26), p("ichimoku", "senkouB", 52)) : [];
     const parabolicSAR = effectiveConfig.parabolicSAR ? computeParabolicSAR(bars, p("parabolicSAR", "afStart", 0.02), p("parabolicSAR", "afMax", 0.2)) : [];
     const pivotPointsArr = effectiveConfig.pivotPoints ? computePivotPoints(bars) : [];
@@ -512,10 +598,16 @@ function ChartEngineInner({
             ? emaFromValues(rsiPts.map(pt => pt.value), rsiSigPer)
                 .map((v, i) => ({ t: rsiPts[i + rsiSigPer - 1].t, value: v }))
             : [];
-          subPaneData.rsi = { points: rsiPts, signal: rsiSig, obLevel: p("rsi", "obLevel", 70), osLevel: p("rsi", "osLevel", 30), period: rsiPeriod } as RSISubPane;
+          const rsiDivLines = detectDivergence(bars, rsiPts, 5);
+          subPaneData.rsi = { points: rsiPts, signal: rsiSig, obLevel: p("rsi", "obLevel", 70), osLevel: p("rsi", "osLevel", 30), period: rsiPeriod, divergences: rsiDivLines } as RSISubPane;
           break;
         }
-        case "macd": subPaneData.macd = computeMACD(bars, p("macd", "fast", 12), p("macd", "slow", 26), p("macd", "signal", 9)); break;
+        case "macd": {
+          const macdPts = computeMACD(bars, p("macd", "fast", 12), p("macd", "slow", 26), p("macd", "signal", 9));
+          subPaneData.macd = macdPts;
+          subPaneData._macdDivergences = detectDivergence(bars, macdPts.map((pt: { t: number; macd: number }) => ({ t: pt.t, value: pt.macd })), 5);
+          break;
+        }
         case "stochastic": subPaneData.stochastic = { points: computeStochastic(bars, p("stochastic", "kPeriod", 14), p("stochastic", "dPeriod", 3)), obLevel: p("stochastic", "obLevel", 80), osLevel: p("stochastic", "osLevel", 20) } as StochSubPane; break;
         case "stochRSI": subPaneData.stochRSI = { points: computeStochRSI(bars, p("stochRSI", "rsiPeriod", 14), p("stochRSI", "stochPeriod", 14), p("stochRSI", "kSmooth", 3), p("stochRSI", "dSmooth", 3)), obLevel: p("stochRSI", "obLevel", 80), osLevel: p("stochRSI", "osLevel", 20) } as StochSubPane; break;
         case "williamsR": subPaneData.williamsR = { points: computeWilliamsR(bars, p("williamsR", "period", 14)), obLevel: p("williamsR", "obLevel", -20), osLevel: p("williamsR", "osLevel", -80) } as WilliamsRSubPane; break;
@@ -592,10 +684,37 @@ function ChartEngineInner({
 
     const sr = effectiveConfig.sr ? detectSupportResistance(bars) : [];
     const fvg = effectiveConfig.fvg ? detectFVG(bars) : [];
+    const orderBlocks = effectiveConfig.orderBlocks ? detectOrderBlocks(bars) : [];
+    const liqZones = effectiveConfig.liqZones ? detectLiquidityZones(bars) : [];
     const trend = effectiveConfig.trendlines ? detectTrendlines(bars) : [];
+    const marketStructure: MarketStructureData | null = effectiveConfig.marketStructure ? detectMarketStructure(bars) : null;
+    const patterns: ChartPatternData | null = effectiveConfig.patterns ? detectPatterns(bars) : null;
 
-    return { overlayLines, bands: bandsList, vwap, vwapBands, ichimoku, parabolicSAR, pivotPoints, volumeProfile, subPaneData, sr, fvg, trend, supertrend, supertrendCfg, chandelierExit, chandelierShowArrows, chandeKrollStop, alligator, zigzag, autoFib, maRibbon, maRibbonShowFill };
-  }, [bars, effectiveConfig, effectiveSubPanes, indicatorParams, p]);
+    // Extract divergences computed inside the sub-pane switch
+    const rsiDivergences: DivergenceLine[] = (subPaneData.rsi as { divergences?: DivergenceLine[] } | undefined)?.divergences ?? [];
+    const macdDivergences: DivergenceLine[] = (subPaneData._macdDivergences as DivergenceLine[] | undefined) ?? [];
+    delete subPaneData._macdDivergences; // clean up temp key
+
+    // Volatility Cone: auto-derived when histVol sub-pane is active
+    let volCone: VolatilityConeData | null = null;
+    if (effectiveSubPanes.includes("histVol") && bars.length > 20) {
+      const hvPoints = subPaneData.histVol as { t: number; value: number }[] | undefined;
+      if (hvPoints && hvPoints.length > 0) {
+        const lastHV = hvPoints[hvPoints.length - 1].value;
+        const bpyMap: Record<string, number> = { "1D": 252, "1W": 52, "1M": 12 };
+        const barsPerYear = bpyMap[interval] ?? 252;
+        volCone = {
+          anchorIdx: bars.length - 1,
+          anchorPrice: bars[bars.length - 1].c,
+          annualHV: lastHV,
+          barsPerYear,
+          forwardBars: Math.min(20, Math.floor(bars.length * 0.08)),
+        };
+      }
+    }
+
+    return { overlayLines, bands: bandsList, vwap, vwapBands, vwapBands2, vwapBands3, ichimoku, parabolicSAR, pivotPoints, volumeProfile, subPaneData, sr, fvg, orderBlocks, liqZones, trend, supertrend, supertrendCfg, chandelierExit, chandelierShowArrows, chandeKrollStop, alligator, zigzag, autoFib, maRibbon, maRibbonShowFill, marketStructure, patterns, volCone, rsiDivergences, macdDivergences };
+  }, [bars, interval, effectiveConfig, effectiveSubPanes, indicatorParams, p]);
 
   // Load drawings
   useEffect(() => {
@@ -642,6 +761,191 @@ function ChartEngineInner({
     return () => canvas.removeEventListener("wheel", onWheel);
   }, [layout, bars.length]);
 
+  /* ─── Touch events (mobile pan + pinch-to-zoom) ─── */
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+    let pinchDist0 = 0;   // initial pinch distance
+    let touchDrawingStarted = false;
+    let touchDragStarted = false;
+
+    function dist(a: Touch, b: Touch) {
+      const dx = a.clientX - b.clientX;
+      const dy = a.clientY - b.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        // Drawing mode: place point 1 immediately (mousedown + mouseup enters preview mode)
+        if (drawingModeRef.current) {
+          touchDrawingStarted = true;
+          touchDragStarted = false;
+          canvas.dispatchEvent(new MouseEvent('mousedown', {
+            clientX: t.clientX, clientY: t.clientY,
+            bubbles: true, cancelable: true, button: 0,
+          }));
+          canvas.dispatchEvent(new MouseEvent('mouseup', {
+            clientX: t.clientX, clientY: t.clientY,
+            bubbles: true, cancelable: true, button: 0,
+          }));
+          return;
+        }
+        const x = t.clientX - rect.left;
+        const y = t.clientY - rect.top;
+
+        // Check if touching near a drawing handle for drag (2.5x hit radius for finger precision)
+        const vp0 = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
+        const hitHandle = hitTestDrawings(x, y, drawingsRef.current, layout, vp0, effectivePriceScale, 2.5);
+        if (hitHandle) {
+          touchDragStarted = true;
+          touchDrawingStarted = false;
+          touchHitOverrideRef.current = hitHandle;
+          canvas.dispatchEvent(new MouseEvent('mousedown', {
+            clientX: t.clientX, clientY: t.clientY,
+            bubbles: true, cancelable: true, button: 0,
+          }));
+          return;
+        }
+
+        // Axis drag-to-scale (same zones as desktop mousedown)
+        const zone = detectMouseZone(
+          x, y, layout.chartLeft, layout.chartWidth,
+          layout.mainTop, layout.mainHeight,
+          layout.priceAxisWidth, layout.timeAxisHeight,
+          layout.canvasWidth, layout.canvasHeight,
+        );
+        if (zone === 'priceAxis' || zone === 'timeAxis') {
+          const vp = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
+          dragStartPriceZoom.current = priceZoomRef.current;
+          axisDragRef.current = startAxisDrag(
+            axisDragRef.current, zone, x, y,
+            vp.priceMax - vp.priceMin,
+            zoomRef.current.endIndex - zoomRef.current.startIndex,
+          );
+          return;
+        }
+
+        lastTouchX = x;
+        lastTouchY = y;
+        zoomRef.current = handleDragStart(zoomRef.current, x, y);
+      } else if (e.touches.length === 2) {
+        // End any drag first
+        axisDragRef.current = endAxisDrag(axisDragRef.current);
+        zoomRef.current = handleDragEnd(zoomRef.current);
+        pinchDist0 = dist(e.touches[0], e.touches[1]);
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        // Handle drag in progress — forward move events
+        if (touchDragStarted) {
+          canvas.dispatchEvent(new MouseEvent('mousemove', {
+            clientX: t.clientX, clientY: t.clientY,
+            bubbles: true, cancelable: true,
+          }));
+          return;
+        }
+        // Drawing mode: route move to drawing preview via synthetic mouse event
+        if (drawingModeRef.current) {
+          canvas.dispatchEvent(new MouseEvent('mousemove', {
+            clientX: t.clientX, clientY: t.clientY,
+            bubbles: true, cancelable: true,
+          }));
+          return;
+        }
+        const x = t.clientX - rect.left;
+        const y = t.clientY - rect.top;
+
+        // Axis drag in progress
+        if (axisDragRef.current.isDragging) {
+          const scales = moveAxisDrag(axisDragRef.current, x, y, layout.mainHeight, layout.chartWidth);
+          if (axisDragRef.current.zone === 'timeAxis') {
+            zoomRef.current = applyTimeScale(zoomRef.current, scales.timeScale, bars.length);
+            axisDragRef.current = { ...axisDragRef.current, startX: x, startBarRange: zoomRef.current.endIndex - zoomRef.current.startIndex };
+          } else if (axisDragRef.current.zone === 'priceAxis') {
+            priceZoomRef.current = Math.max(0.1, Math.min(10, dragStartPriceZoom.current * scales.priceScale));
+          }
+          return;
+        }
+
+        const vp = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
+        zoomRef.current = handleDragMove(zoomRef.current, x, layout.chartWidth, bars.length, y, layout.mainHeight, vp.priceMax - vp.priceMin);
+        const snap = snapToBar(x, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth, bars.length);
+        crosshairRef.current = { x, y, visible: true, snapIndex: snap };
+        lastTouchX = x;
+        lastTouchY = y;
+      } else if (e.touches.length === 2 && pinchDist0 > 0) {
+        const d = dist(e.touches[0], e.touches[1]);
+        const scale = d / pinchDist0;
+        // Convert pinch scale to a synthetic wheel delta: scale>1 = zoom in (negative delta)
+        const midX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+        const delta = (1 - scale) * 300; // tuned sensitivity
+        zoomRef.current = zoomWheel(zoomRef.current, delta, midX, layout.chartLeft, layout.chartWidth, bars.length);
+        pinchDist0 = d; // incremental
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 0) {
+        // Complete drawing (place point 2) or release handle drag
+        if (touchDrawingStarted && drawingModeRef.current) {
+          const released = e.changedTouches[0];
+          if (released) {
+            canvas.dispatchEvent(new MouseEvent('mousedown', {
+              clientX: released.clientX, clientY: released.clientY,
+              bubbles: true, cancelable: true, button: 0,
+            }));
+          }
+          touchDrawingStarted = false;
+        }
+        if (touchDragStarted) {
+          const released = e.changedTouches[0];
+          if (released) {
+            canvas.dispatchEvent(new MouseEvent('mouseup', {
+              clientX: released.clientX, clientY: released.clientY,
+              bubbles: true, cancelable: true, button: 0,
+            }));
+          }
+          touchDragStarted = false;
+        }
+        axisDragRef.current = endAxisDrag(axisDragRef.current);
+        zoomRef.current = handleDragEnd(zoomRef.current);
+        pinchDist0 = 0;
+      } else if (e.touches.length === 1) {
+        // One finger lifted from pinch — restart as single drag
+        axisDragRef.current = endAxisDrag(axisDragRef.current);
+        pinchDist0 = 0;
+        const rect2 = canvas.getBoundingClientRect();
+        const t = e.touches[0];
+        lastTouchX = t.clientX - rect2.left;
+        lastTouchY = t.clientY - rect2.top;
+        zoomRef.current = handleDragStart(zoomRef.current, lastTouchX, lastTouchY);
+      }
+    };
+
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove",  onTouchMove,  { passive: false });
+    canvas.addEventListener("touchend",   onTouchEnd,   { passive: false });
+    return () => {
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove",  onTouchMove);
+      canvas.removeEventListener("touchend",   onTouchEnd);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout, bars]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -675,8 +979,20 @@ function ChartEngineInner({
           zoomRef.current = applyTimeScale(zoomRef.current, 1.18, bars.length);
           break;
         case "cancel":
-          setDrawingMode(null);
-          setDrawingPoints([]);
+          // Cancel drawing in progress or deselect
+          if (effectiveDrawingMode) {
+            setDrawingMode(null);
+            drawingModeRef.current = null;
+            setDrawingPoints([]);
+            drawingPointsRef.current = [];
+            setActiveTool("crosshair");
+            onDrawingModeChange?.(null);
+          } else if (selectedDrawingIds.length > 0) {
+            setSelectedDrawingIds([]);
+          } else if (selectedDrawingId) {
+            setSelectedDrawingId(null);
+            setDrawingPropsPanel(null);
+          }
           setContextMenu(p => ({ ...p, open: false }));
           break;
         case "resetChart":
@@ -703,35 +1019,33 @@ function ChartEngineInner({
         case "drawTrendline":
           setDrawingMode("trendline");
           setActiveTool("trendline");
+          onDrawingModeChange?.("trendline");
           break;
         case "drawHorizontal":
           setDrawingMode("horizontal");
           setActiveTool("horizontal");
+          onDrawingModeChange?.("horizontal");
           break;
         case "drawFibonacci":
           setDrawingMode("fibonacci");
           setActiveTool("fibonacci");
+          onDrawingModeChange?.("fibonacci");
           break;
         case "drawRectangle":
           setDrawingMode("rectangle");
           setActiveTool("rectangle");
+          onDrawingModeChange?.("rectangle");
           break;
-        case "cancel":
-          // Cancel drawing in progress or deselect
-          if (effectiveDrawingMode) {
-            setDrawingMode(null);
-            drawingModeRef.current = null;
-            setDrawingPoints([]);
-            drawingPointsRef.current = [];
-            setActiveTool("crosshair");
-          } else if (selectedDrawingId) {
+        case "deleteDrawing": {
+          // Delete all multi-selected, or single selected, or last drawing
+          const multiIds = selectedDrawingIdsRef.current;
+          if (multiIds.length > 0) {
+            const updated = drawings.filter(d => !multiIds.includes(d.id));
+            pushDrawingState(updated);
+            setSelectedDrawingIds([]);
             setSelectedDrawingId(null);
             setDrawingPropsPanel(null);
-          }
-          break;
-        case "deleteDrawing":
-          // Delete selected drawing, or last drawing
-          if (selectedDrawingId) {
+          } else if (selectedDrawingId) {
             const updated = drawings.filter(d => d.id !== selectedDrawingId);
             pushDrawingState(updated);
             setSelectedDrawingId(null);
@@ -741,11 +1055,42 @@ function ChartEngineInner({
             pushDrawingState(updated);
           }
           break;
+        }
+        case "copyDrawings": {
+          const multiIds = selectedDrawingIdsRef.current;
+          if (multiIds.length > 0) {
+            clipboardRef.current = drawings.filter(d => multiIds.includes(d.id));
+          } else if (selectedDrawingId) {
+            const d = drawings.find(dr => dr.id === selectedDrawingId);
+            clipboardRef.current = d ? [d] : [];
+          }
+          break;
+        }
+        case "pasteDrawings": {
+          if (clipboardRef.current.length === 0) break;
+          const pasted = clipboardRef.current.map(d => ({
+            ...d,
+            id: `${d.id}_paste_${Date.now()}`,
+            points: d.points.map(p => ({ index: p.index + 10, price: p.price })),
+          }));
+          pushDrawingState([...drawings, ...pasted]);
+          setSelectedDrawingIds(pasted.map(d => d.id));
+          setSelectedDrawingId(null);
+          break;
+        }
+        case "selectAllDrawings":
+          setSelectedDrawingIds(drawings.map(d => d.id));
+          setSelectedDrawingId(null);
+          break;
+        case "exportDrawings":
+          handleExportDrawings();
+          break;
       }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [bars.length, pair, drawings, showSymbolSearch, showIndicatorDialog, selectedDrawingId, effectiveDrawingMode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bars.length, pair, drawings, showSymbolSearch, showIndicatorDialog, selectedDrawingId, selectedDrawingIds, effectiveDrawingMode, onDrawingModeChange]);
 
   /* ─── Drawing undo/redo ─── */
   const pushDrawingState = useCallback((newDrawings: Drawing[]) => {
@@ -779,6 +1124,71 @@ function ChartEngineInner({
     });
   }, [pair]);
 
+  /* ─── D7: Export / Import drawings ─── */
+  const handleExportDrawings = useCallback(() => {
+    const json = JSON.stringify(drawingsRef.current, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `drawings_${pair}_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [pair]);
+
+  const handleImportDrawings = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const imported = JSON.parse(ev.target?.result as string) as Drawing[];
+        if (!Array.isArray(imported)) return;
+        // Merge (append) — give each imported drawing a fresh ID to avoid collisions
+        const remapped = imported.map(d => ({ ...d, id: `${d.id}_imp_${Date.now()}` }));
+        pushDrawingState([...drawingsRef.current, ...remapped]);
+      } catch {
+        // Invalid JSON — silently ignore
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be re-imported
+    e.target.value = "";
+  }, [pushDrawingState]);
+
+  /* ─── D7: Price-alert monitoring ─── */
+  useEffect(() => {
+    if (!bars.length) return;
+    const currentPrice = bars[bars.length - 1].c;
+    const prevPrice = bars.length >= 2 ? bars[bars.length - 2].c : currentPrice;
+    const triggered: Drawing[] = [];
+    for (const d of drawings) {
+      if (!d.alertEnabled || d.alertTriggered) continue;
+      // For horizontal / horizontal_ray: check price crossing
+      if ((d.type === "horizontal" || d.type === "horizontal_ray") && d.points.length >= 1) {
+        const lvl = d.points[0].price;
+        const crossed = (prevPrice < lvl && currentPrice >= lvl) || (prevPrice > lvl && currentPrice <= lvl);
+        if (crossed) triggered.push(d);
+      }
+    }
+    if (triggered.length === 0) return;
+    const newToasts = triggered.map(d => ({
+      id: `alert_${d.id}_${Date.now()}`,
+      msg: `ALERT: ${d.type === "horizontal" ? "Level" : d.type} crossed at ${d.points[0]?.price.toFixed(5)}`,
+    }));
+    // Mark drawings as triggered
+    const updated = drawings.map(d =>
+      triggered.some(t => t.id === d.id) ? { ...d, alertTriggered: true } : d
+    );
+    pushDrawingState(updated);
+    setAlertToasts(prev => [...prev, ...newToasts]);
+    // Auto-dismiss after 5 s
+    setTimeout(() => {
+      setAlertToasts(prev => prev.filter(t => !newToasts.some(n => n.id === t.id)));
+    }, 5000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bars]);
+
   /* ─── Render (delegated to ChartRenderer) ─── */
   const render = useCallback(() => {
     renderChart(
@@ -797,11 +1207,84 @@ function ChartEngineInner({
       {
         bars, layout, indicators, drawings, pair, interval,
         subPanes: effectiveSubPanes, dimensions,
-        chartType: effectiveChartType, enabledSessions,
-        priceScale, crosshairMode, selectedDrawingId, hoveredDrawingId,
+        chartType: effectiveChartType, enabledSessions: externalSessions ?? enabledSessions,
+        priceScale: effectivePriceScale, crosshairMode, selectedDrawingId, hoveredDrawingId, selectedDrawingIds,
+        alertLevels: externalAlertLevels,
+        tradeLevels: externalTradeLevels,
+        backtestMarkers: externalBacktestMarkers,
+        showPrevLevels: effectiveShowPrevLevels,
+        showOpenLevels: externalShowOpenLevels ?? false,
+        showPivots: externalShowPivots ?? false,
+        showCandlePatterns: externalShowCandlePatterns ?? false,
+        showAutoFib: externalShowAutoFib ?? false,
+        showSessionRanges: externalShowSessionRanges ?? false,
+        externalCrosshairTs: externalCrosshairTsRef.current,
       },
     );
-  }, [bars, layout, indicators, drawings, pair, interval, effectiveSubPanes, dimensions, effectiveChartType, enabledSessions, priceScale, crosshairMode, selectedDrawingId, hoveredDrawingId]);
+  }, [bars, layout, indicators, drawings, pair, interval, effectiveSubPanes, dimensions, effectiveChartType, externalSessions, enabledSessions, effectivePriceScale, crosshairMode, selectedDrawingId, hoveredDrawingId, selectedDrawingIds, externalAlertLevels, externalTradeLevels, externalBacktestMarkers, effectiveShowPrevLevels, externalShowOpenLevels, externalShowPivots, externalShowCandlePatterns, externalShowAutoFib, externalShowSessionRanges]);
+
+  /* ─── Keep renderRef current ─── */
+  useEffect(() => { renderRef.current = render; }, [render]);
+
+  /* ─── Crosshair sync event bus ─── */
+  useEffect(() => {
+    if (!syncCrosshair) {
+      externalCrosshairTsRef.current = null;
+      return;
+    }
+    const handler = (e: Event) => {
+      const { ts, instanceId } = (e as CustomEvent<{ ts: number | null; instanceId: string }>).detail;
+      if (instanceId === instanceIdRef.current) return;
+      externalCrosshairTsRef.current = ts ?? null;
+      renderRef.current();
+    };
+    window.addEventListener('ordr:crosshair-sync', handler);
+    return () => window.removeEventListener('ordr:crosshair-sync', handler);
+  }, [syncCrosshair]);
+
+  /* ─── Screenshot capture ─── */
+  useEffect(() => {
+    if (!externalScreenshotTrigger || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    try {
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ordr_${pair}_${interval}_${new Date().toISOString().slice(0, 10)}.png`;
+      a.click();
+    } catch { /* CORS or tainted canvas — silently ignore */ }
+  }, [externalScreenshotTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ─── Copy chart image to clipboard ─── */
+  useEffect(() => {
+    if (!externalCopyImageTrigger || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    try {
+      canvas.toBlob(blob => {
+        if (!blob) return;
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).catch(() => {
+          // Fallback: if clipboard.write not supported, just download
+          const url = canvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `ordr_${pair}_${interval}_${new Date().toISOString().slice(0, 10)}.png`;
+          a.click();
+        });
+      }, 'image/png');
+    } catch { /* silently ignore */ }
+  }, [externalCopyImageTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ─── External drawing style update ─── */
+  useEffect(() => {
+    if (!externalDrawingUpdate) return;
+    const { id, lineStyle, ...rest } = externalDrawingUpdate;
+    const updated = drawingsRef.current.map(d =>
+      d.id === id
+        ? { ...d, ...rest, ...(lineStyle !== undefined ? { lineStyle: lineStyle as Drawing['lineStyle'] } : {}) }
+        : d
+    );
+    pushDrawingState(updated);
+  }, [externalDrawingUpdate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ─── Animation loop ─── */
   useEffect(() => {
@@ -832,6 +1315,8 @@ function ChartEngineInner({
       const scales = moveAxisDrag(axisDragRef.current, x, y, layout.mainHeight, layout.chartWidth);
       if (axisDragRef.current.zone === "timeAxis") {
         zoomRef.current = applyTimeScale(zoomRef.current, scales.timeScale, bars.length);
+        // Reset start position so next frame delta is incremental (avoids compound scaling)
+        axisDragRef.current = { ...axisDragRef.current, startX: x, startBarRange: zoomRef.current.endIndex - zoomRef.current.startIndex };
       } else if (axisDragRef.current.zone === "priceAxis") {
         // Apply price axis zoom: scale relative to drag start value
         priceZoomRef.current = Math.max(0.1, Math.min(10, dragStartPriceZoom.current * scales.priceScale));
@@ -849,6 +1334,13 @@ function ChartEngineInner({
     const viewport = computeViewport(bars, zoomRef.current.startIndex, zoomRef.current.endIndex);
     const snap = snapToBar(x, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth, bars.length);
     crosshairRef.current = { x, y, visible: true, snapIndex: snap };
+
+    // Emit crosshair sync event
+    if (syncCrosshair && snap >= 0 && snap < bars.length) {
+      window.dispatchEvent(new CustomEvent('ordr:crosshair-sync', {
+        detail: { ts: bars[snap].t, instanceId: instanceIdRef.current },
+      }));
+    }
 
     // Drawing drag-to-move: update override ref for 60fps rendering
     if (drawingDragRef.current) {
@@ -914,12 +1406,12 @@ function ChartEngineInner({
           if (shiftHeldRef.current && drag.origPoints.length === 2) {
             const anchor = drag.origPoints[1 - clampedPi];
             const ax = indexToX(anchor.index, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth);
-            const ay = priceToY(anchor.price, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+            const ay = priceToY(anchor.price, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, effectivePriceScale);
             const cx = indexToX(newIdx, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth);
-            const cy = priceToY(newPrice, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+            const cy = priceToY(newPrice, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, effectivePriceScale);
             const snapped = shiftSnapPoint(ax, ay, cx, cy);
             newIdx = Math.round(xToIndex(snapped.x, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth));
-            newPrice = yToPrice(snapped.y, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+            newPrice = yToPrice(snapped.y, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, effectivePriceScale);
           }
           return { index: newIdx, price: newPrice };
         });
@@ -931,17 +1423,17 @@ function ChartEngineInner({
     // Update magnetic snap result during drawing mode (respects magnet toggle)
     if (drawingModeRef.current && bars.length > 0 && magnetEnabledRef.current) {
       const vp = getActiveViewport();
-      magneticSnapResultRef.current = magneticSnap(x, y, bars, layout, vp, priceScale);
+      magneticSnapResultRef.current = magneticSnap(x, y, bars, layout, vp, effectivePriceScale);
     } else {
       magneticSnapResultRef.current = null;
     }
 
     // Hit test drawings for hover — only when not in drawing mode and not panning
     if (!drawingModeRef.current && !zoomRef.current.isDragging) {
-      const hit = hitTestDrawings(x, y, drawingsRef.current, layout, viewport, priceScale);
+      const hit = hitTestDrawings(x, y, drawingsRef.current, layout, viewport, effectivePriceScale);
       setHoveredDrawingId(hit ? hit.drawingId : null);
     }
-  }, [layout, bars, contextMenu.open, priceScale, getActiveViewport]);
+  }, [layout, bars, contextMenu.open, effectivePriceScale, getActiveViewport]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     // FIX 2: Dismiss context menu on click and don't propagate
@@ -982,24 +1474,24 @@ function ChartEngineInner({
       // Magnetic snap to nearest OHLC (pixel coords) — respects magnet toggle
       let idx: number, price: number;
       if (magnetEnabledRef.current) {
-        const snap = magneticSnap(x, y, bars, layout, vp, priceScale);
+        const snap = magneticSnap(x, y, bars, layout, vp, effectivePriceScale);
         idx = snap.index;
         price = snap.price;
       } else {
         idx = Math.round(xToIndex(x, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth));
-        price = yToPrice(y, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+        price = yToPrice(y, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, effectivePriceScale);
       }
       const currentPoints = drawingPointsRef.current;
       // Shift-snap for second point (angle constraint) — operates in pixel space
       if (currentPoints.length === 1 && shiftHeldRef.current && currentDrawingMode !== "horizontal") {
         const anchor = currentPoints[0];
         const ax = indexToX(anchor.index, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth);
-        const ay = priceToY(anchor.price, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+        const ay = priceToY(anchor.price, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, effectivePriceScale);
         const cx = indexToX(idx, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth);
-        const cy = priceToY(price, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+        const cy = priceToY(price, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, effectivePriceScale);
         const snapped = shiftSnapPoint(ax, ay, cx, cy);
         idx = Math.round(xToIndex(snapped.x, vp.startIndex, vp.endIndex, layout.chartLeft, layout.chartWidth));
-        price = yToPrice(snapped.y, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, priceScale);
+        price = yToPrice(snapped.y, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, effectivePriceScale);
       }
       const pt = { index: idx, price };
       const newPoints = [...currentPoints, pt];
@@ -1018,6 +1510,7 @@ function ChartEngineInner({
         setDrawingMode(null);
         drawingModeRef.current = null;
         setActiveTool("crosshair");
+        onDrawingModeChange?.(null);
         // Select the newly created drawing
         setSelectedDrawingId(drawing.id);
       }
@@ -1027,9 +1520,30 @@ function ChartEngineInner({
     // Click on chart without drawing mode: hit-test for selection + drag-to-move
     {
       const vp = getActiveViewport();
-      const hit = hitTestDrawings(x, y, drawingsRef.current, layout, vp, priceScale);
+      // Use touch pre-computed hit (with 2.5x radius) if available, then clear it
+      const hit = touchHitOverrideRef.current ?? hitTestDrawings(x, y, drawingsRef.current, layout, vp, effectivePriceScale);
+      touchHitOverrideRef.current = null;
       if (hit) {
+        // D7: Shift+click → toggle multi-select
+        if (e.shiftKey) {
+          setSelectedDrawingIds(prev => {
+            const next = prev.includes(hit.drawingId)
+              ? prev.filter(id => id !== hit.drawingId)
+              : [...prev, hit.drawingId];
+            return next;
+          });
+          setSelectedDrawingId(null);
+          setDrawingPropsPanel(null);
+          return;
+        }
+        // Clear multi-select when starting a normal single selection
+        if (selectedDrawingIdsRef.current.length > 0) setSelectedDrawingIds([]);
         setSelectedDrawingId(hit.drawingId);
+        onObjectSelect?.(hit.drawingId);
+        const hitDrawing = drawingsRef.current.find(d => d.id === hit.drawingId);
+        if (hitDrawing) {
+          onObjectData?.({ type: hitDrawing.type, color: hitDrawing.color, lineWidth: hitDrawing.lineWidth, lineStyle: hitDrawing.lineStyle, label: hitDrawing.label, opacity: hitDrawing.opacity, locked: hitDrawing.locked });
+        }
         if (drawingPropsPanel && drawingPropsPanel.drawingId !== hit.drawingId) {
           setDrawingPropsPanel(null);
         }
@@ -1047,7 +1561,10 @@ function ChartEngineInner({
         }
         return;
       } else {
+        if (selectedDrawingIdsRef.current.length > 0) setSelectedDrawingIds([]);
         setSelectedDrawingId(null);
+        onObjectSelect?.(null);
+        onObjectData?.(null);
         setDrawingPropsPanel(null);
       }
     }
@@ -1055,7 +1572,7 @@ function ChartEngineInner({
     // Chart pan — pass Y for vertical panning
     zoomRef.current = handleDragStart(zoomRef.current, x, y);
     setIsDragging(true);
-  }, [contextMenu.open, layout, drawings, bars, dimensions, activeTool, pushDrawingState, priceScale, drawingPropsPanel, getActiveViewport]);
+  }, [contextMenu.open, layout, drawings, bars, dimensions, activeTool, pushDrawingState, effectivePriceScale, drawingPropsPanel, getActiveViewport]);
 
   const handleMouseUp = useCallback(() => {
     // Commit drawing drag
@@ -1108,6 +1625,7 @@ function ChartEngineInner({
         setDrawingMode(null);
         drawingModeRef.current = null;
         setActiveTool("crosshair");
+        onDrawingModeChange?.(null);
         setSelectedDrawingId(drawing.id);
       }
       return;
@@ -1141,10 +1659,21 @@ function ChartEngineInner({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // Right-click during active drawing → cancel drawing in progress, no context menu
+    if (drawingModeRef.current) {
+      setDrawingMode(null);
+      drawingModeRef.current = null;
+      setDrawingPoints([]);
+      drawingPointsRef.current = [];
+      setActiveTool("crosshair");
+      onDrawingModeChange?.(null);
+      return;
+    }
+
     // Check if right-clicking on a drawing → open properties panel
     const zoom = zoomRef.current;
     const viewport = computeViewport(bars, zoom.startIndex, zoom.endIndex);
-    const hit = hitTestDrawings(x, y, drawingsRef.current, layout, viewport, priceScale);
+    const hit = hitTestDrawings(x, y, drawingsRef.current, layout, viewport, effectivePriceScale);
     if (hit) {
       setSelectedDrawingId(hit.drawingId);
       setDrawingPropsPanel({ drawingId: hit.drawingId, x: e.clientX, y: e.clientY });
@@ -1152,14 +1681,21 @@ function ChartEngineInner({
       return;
     }
 
-    // Generic context menu
+    // Generic context menu — capture price at click position
+    const vp = computeViewport(bars, zoom.startIndex, zoom.endIndex);
+    const clickedPrice = yToPrice(y, vp.priceMin, vp.priceMax, layout.mainTop, layout.mainHeight, effectivePriceScale);
     setDrawingPropsPanel(null);
-    setContextMenu({ x: e.clientX, y: e.clientY, open: true });
-  }, [bars, layout, priceScale]);
+    setContextMenu({ x: e.clientX, y: e.clientY, open: true, price: clickedPrice });
+  }, [bars, layout, effectivePriceScale, onDrawingModeChange]);
 
   const handleMouseLeave = useCallback(() => {
     crosshairRef.current = { ...crosshairRef.current, visible: false };
     magneticSnapResultRef.current = null;
+    if (syncCrosshair) {
+      window.dispatchEvent(new CustomEvent('ordr:crosshair-sync', {
+        detail: { ts: null, instanceId: instanceIdRef.current },
+      }));
+    }
     // Cancel drawing drag without committing
     if (drawingDragRef.current) {
       drawingDragRef.current = null;
@@ -1265,41 +1801,63 @@ function ChartEngineInner({
       case "trendline":
         setDrawingMode("trendline");
         setActiveTool("trendline");
+        onDrawingModeChange?.("trendline");
         break;
       case "horizontal":
         setDrawingMode("horizontal");
         setActiveTool("horizontal");
+        onDrawingModeChange?.("horizontal");
         break;
       case "fibonacci":
         setDrawingMode("fibonacci");
         setActiveTool("fibonacci");
+        onDrawingModeChange?.("fibonacci");
         break;
       case "rectangle":
         setDrawingMode("rectangle");
         setActiveTool("rectangle");
+        onDrawingModeChange?.("rectangle");
         break;
       case "deleteAllDrawings":
         clearDrawings();
         break;
-      // Chart types (colon format from ChartContextMenu)
-      case "chartType:candles": setChartType("candles"); break;
-      case "chartType:hollow": setChartType("hollow"); break;
-      case "chartType:bars": setChartType("bars"); break;
-      case "chartType:line": setChartType("line"); break;
-      case "chartType:area": setChartType("area"); break;
-      case "chartType:heikinashi": setChartType("heikinAshi"); break;
-      case "chartType:baseline": setChartType("baseline"); break;
+      case "exportDrawings":
+        handleExportDrawings();
+        break;
+      case "importDrawings":
+        importFileRef.current?.click();
+        break;
+      // Chart types (colon format from ChartContextMenu) — also sync to workspace in embedded mode
+      case "chartType:candles": setChartType("candles"); onChartTypeChange?.("candles"); break;
+      case "chartType:hollow": setChartType("hollow"); onChartTypeChange?.("hollow"); break;
+      case "chartType:bars": setChartType("bars"); onChartTypeChange?.("bars"); break;
+      case "chartType:line": setChartType("line"); onChartTypeChange?.("line"); break;
+      case "chartType:area": setChartType("area"); onChartTypeChange?.("area"); break;
+      case "chartType:heikinashi": setChartType("heikinAshi"); onChartTypeChange?.("heikinAshi"); break;
+      case "chartType:baseline": setChartType("baseline"); onChartTypeChange?.("baseline"); break;
       // Price scale
-      case "priceScale:linear": setPriceScale("linear"); break;
-      case "priceScale:log": setPriceScale("log"); break;
-      case "priceScale:percentage": setPriceScale("percent"); break;
+      case "priceScale:linear": setPriceScale("linear"); onPriceScaleModeChange?.("linear"); break;
+      case "priceScale:log": setPriceScale("log"); onPriceScaleModeChange?.("log"); break;
+      case "priceScale:percentage": setPriceScale("percent"); onPriceScaleModeChange?.("percent"); break;
       // Crosshair mode
       case "crosshairMode:crosshair": setCrosshairMode("crosshair"); break;
       case "crosshairMode:dot": setCrosshairMode("dot"); break;
       case "crosshairMode:none": setCrosshairMode("none"); break;
+      // Quick actions
+      case "alert:above": onAddAlert?.(contextMenu.price, 'above'); onOpenPanel?.('alerts'); break;
+      case "alert:below": onAddAlert?.(contextMenu.price, 'below'); onOpenPanel?.('alerts'); break;
+      case "ai": onOpenPanel?.('ai'); break;
+      case "copy:price":
+        if (contextMenu.price > 0) {
+          const fmt = contextMenu.price < 10 ? contextMenu.price.toFixed(5)
+            : contextMenu.price < 1000 ? contextMenu.price.toFixed(2)
+            : contextMenu.price.toFixed(0);
+          navigator.clipboard.writeText(fmt).catch(() => {});
+        }
+        break;
       default: break;
     }
-  }, [bars.length, pair, clearDrawings]);
+  }, [bars.length, pair, clearDrawings, handleExportDrawings, onDrawingModeChange, onChartTypeChange, onPriceScaleModeChange, onAddAlert, onOpenPanel, contextMenu.price]);
 
   /* ─── Symbol search ─── */
   const handleSymbolSelect = useCallback((symbol: string) => {
@@ -1313,7 +1871,8 @@ function ChartEngineInner({
       "sma20", "sma50", "sma200", "ema20", "ema50",
       "hma9", "tema20", "vwap",
       "bollinger", "keltner", "ichimoku", "donchian",
-      "volumeProfile", "sr", "fvg", "trendlines",
+      "volumeProfile", "sr", "fvg", "trendlines", "marketStructure", "patterns",
+      "orderBlocks", "liqZones",
       "pivotPoints", "parabolicSAR",
     ];
     return OVERLAY_KEYS
@@ -1395,7 +1954,7 @@ function ChartEngineInner({
       background: THEME.canvasBg,
       borderRadius: embedded ? 0 : 8,
       border: embedded ? "none" : `1px solid ${THEME.subPaneBorder}`,
-      overflow: "hidden",
+      overflow: "hidden", position: "relative",
     }}>
       {/* Header — hidden in embedded mode (workspace CommandBar handles this) */}
       {!embedded && (
@@ -1509,7 +2068,7 @@ function ChartEngineInner({
           ref={containerRef}
           style={{
             flex: 1, position: "relative",
-            cursor: isDrawingDragging ? "move" : effectiveDrawingMode ? "crosshair" : isDragging ? "grabbing" : hoveredDrawingId ? "pointer" : "crosshair",
+            cursor: isDrawingDragging ? "grabbing" : effectiveDrawingMode ? "crosshair" : isDragging ? "grabbing" : hoveredDrawingId ? "grab" : "crosshair",
             overflow: "hidden",
             touchAction: "none",
             userSelect: "none",
@@ -1549,6 +2108,7 @@ function ChartEngineInner({
               isOpen={contextMenu.open}
               onClose={() => setContextMenu(p => ({ ...p, open: false }))}
               onAction={handleContextAction}
+              price={contextMenu.price}
             />
           )}
 
@@ -1603,8 +2163,8 @@ function ChartEngineInner({
         <ChartStatusBar
           interval={interval}
           lastBarTimestamp={lastBar ? lastBar.t : 0}
-          priceScale={priceScale}
-          onPriceScaleChange={setPriceScale}
+          priceScale={effectivePriceScale}
+          onPriceScaleChange={(m) => { setPriceScale(m); onPriceScaleModeChange?.(m); }}
           onScreenshot={() => { if (canvasRef.current) exportScreenshot(canvasRef.current, pair); }}
           onFullscreen={() => { if (outerRef.current) toggleFullscreen(outerRef.current); }}
         />
@@ -1627,6 +2187,49 @@ function ChartEngineInner({
         onToggleOverlay={handleToggle}
         onToggleSubPane={handleToggleSubPane}
       />
+
+      {/* D7: Hidden file input for import */}
+      <input
+        ref={importFileRef}
+        type="file"
+        accept=".json"
+        style={{ display: "none" }}
+        onChange={handleImportDrawings}
+      />
+
+      {/* D7: Multi-select badge */}
+      {selectedDrawingIds.length > 1 && (
+        <div style={{
+          position: "absolute", bottom: 40, left: "50%", transform: "translateX(-50%)",
+          background: "rgba(41,98,255,0.9)", color: "#fff",
+          fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600,
+          padding: "4px 12px", borderRadius: 20, pointerEvents: "none", zIndex: 100,
+          letterSpacing: "0.04em",
+        }}>
+          {selectedDrawingIds.length} drawings selected · Ctrl+C copy · Delete remove · Escape clear
+        </div>
+      )}
+
+      {/* D7: Alert toasts */}
+      {alertToasts.length > 0 && (
+        <div style={{
+          position: "absolute", top: 12, right: 12, zIndex: 200,
+          display: "flex", flexDirection: "column", gap: 6, pointerEvents: "none",
+        }}>
+          {alertToasts.map(t => (
+            <div key={t.id} style={{
+              background: "rgba(239,83,80,0.95)", color: "#fff",
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600,
+              padding: "6px 14px", borderRadius: 6,
+              borderLeft: "3px solid #FF9800",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+              letterSpacing: "0.04em",
+            }}>
+              ⚡ {t.msg}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

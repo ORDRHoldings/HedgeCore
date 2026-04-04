@@ -15,6 +15,7 @@ import type { PriceScale } from "../core/data";
 import { priceToY, indexToX, yToPrice, xToIndex, formatPrice } from "../core/data";
 import { THEME } from "../core/theme";
 import { drawGenericDrawing, hitTestGenericDrawing } from "./drawingTools";
+import { computeAnchoredVWAP } from "../indicators/vwap";
 
 // ══════════════════════════════════════════════════════
 //  Types
@@ -31,7 +32,8 @@ export type DrawingType =
   | "elliott_impulse" | "elliott_correction" | "elliott_triangle"
   | "circle" | "ellipse" | "triangle_shape" | "arrow_drawing" | "brush" | "polyline" | "arc"
   | "long_position" | "short_position" | "date_range" | "price_range" | "date_price_range" | "forecast"
-  | "text_note" | "anchored_text" | "callout" | "price_label" | "arrow_marker_up" | "arrow_marker_down" | "flag_mark";
+  | "text_note" | "anchored_text" | "callout" | "price_label" | "arrow_marker_up" | "arrow_marker_down" | "flag_mark"
+  | "anchored_vwap";
 export type LineStyle = "solid" | "dashed" | "dotted";
 
 export interface DrawingStats {
@@ -219,13 +221,14 @@ const DRAWING_COLORS: Record<DrawingType, string> = {
   arrow_marker_up: "#26A69A",
   arrow_marker_down: "#EF5350",
   flag_mark: "#FF9800",
+  anchored_vwap: "#00E5FF",
 };
 
 const FIB_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
 const HIT_THRESHOLD = 8;
 const HANDLE_RADIUS = 6;
 const SNAP_INCREMENT_DEG = 15;
-const MAGNETIC_THRESHOLD_PX = 12;
+const MAGNETIC_THRESHOLD_PX = 20;
 
 export const DEFAULT_STATS: DrawingStats = {
   showPrice: false,
@@ -269,7 +272,7 @@ export function createDrawing(
     labelItalic: false,
     labelColor: "",
     labelAlign: "right",
-    showAngle: true,
+    showAngle: false,
     showMidPoint: false,
     showPriceLabels: false,
     stats: { ...DEFAULT_STATS },
@@ -345,6 +348,7 @@ export function getPointsRequired(type: DrawingType): number {
     case "horizontal": case "vertical_line": case "cross_line": case "horizontal_ray":
     case "text_note": case "anchored_text": case "price_label":
     case "arrow_marker_up": case "arrow_marker_down": case "flag_mark":
+    case "anchored_vwap":
       return 1;
     case "trendline": case "ray": case "extended_line": case "info_line": case "trend_angle":
     case "fibonacci": case "rectangle": case "circle": case "ellipse":
@@ -575,6 +579,17 @@ function formatDateRange(ts1: number, ts2: number): string {
   return `${days}d ${hours}h`;
 }
 
+function computeLocalATR(bars: Bar[], period = 14): number {
+  if (bars.length < 2) return 0;
+  const n = Math.min(period, bars.length - 1);
+  let sum = 0;
+  for (let i = bars.length - n; i < bars.length; i++) {
+    const tr = Math.max(bars[i].h - bars[i].l, Math.abs(bars[i].h - bars[i - 1].c), Math.abs(bars[i].l - bars[i - 1].c));
+    sum += tr;
+  }
+  return sum / n;
+}
+
 // ══════════════════════════════════════════════════════
 //  Parallel line creation
 // ══════════════════════════════════════════════════════
@@ -651,7 +666,10 @@ export function hitTestDrawings(
   layout: ChartLayout,
   viewport: Viewport,
   scale: PriceScale = "linear",
+  hitScale = 1.0,
 ): HitTestResult | null {
+  const ht = HIT_THRESHOLD * hitScale;
+  const hr = HANDLE_RADIUS * hitScale;
   const { mainTop, mainHeight, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
   let best: HitTestResult | null = null;
@@ -664,12 +682,12 @@ export function hitTestDrawings(
       const x2 = indexToX(d.points[1].index, startIndex, endIndex, chartLeft, chartWidth);
       const y2 = priceToY(d.points[1].price, priceMin, priceMax, mainTop, mainHeight, scale);
 
-      if (Math.hypot(mx - x1, my - y1) <= HANDLE_RADIUS) {
+      if (Math.hypot(mx - x1, my - y1) <= hr) {
         const dist = Math.hypot(mx - x1, my - y1);
         if (!best || dist < best.distance) best = { drawingId: d.id, distance: dist, part: "p0" };
         continue;
       }
-      if (Math.hypot(mx - x2, my - y2) <= HANDLE_RADIUS) {
+      if (Math.hypot(mx - x2, my - y2) <= hr) {
         const dist = Math.hypot(mx - x2, my - y2);
         if (!best || dist < best.distance) best = { drawingId: d.id, distance: dist, part: "p1" };
         continue;
@@ -678,15 +696,24 @@ export function hitTestDrawings(
       const dist = (d.extendLeft || d.extendRight)
         ? pointToLineDist(mx, my, x1, y1, x2, y2)
         : pointToSegmentDist(mx, my, x1, y1, x2, y2);
-      if (dist <= HIT_THRESHOLD && (!best || dist < best.distance)) {
+      if (dist <= ht && (!best || dist < best.distance)) {
         best = { drawingId: d.id, distance: dist, part: "body" };
       }
     } else if (d.type === "horizontal") {
       if (d.points.length < 1) continue;
       const y = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight, scale);
       const dist = Math.abs(my - y);
-      if (dist <= HIT_THRESHOLD && (!best || dist < best.distance)) {
+      if (dist <= ht && (!best || dist < best.distance)) {
         best = { drawingId: d.id, distance: dist, part: "body" };
+      }
+    } else if (d.type === "anchored_vwap") {
+      if (d.points.length < 1) continue;
+      // Hit the anchor handle
+      const ax = indexToX(d.points[0].index, startIndex, endIndex, chartLeft, chartWidth);
+      const ay = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight, scale);
+      const dist = Math.hypot(mx - ax, my - ay);
+      if (dist <= hr * 1.5 && (!best || dist < best.distance)) {
+        best = { drawingId: d.id, distance: dist, part: "p0" };
       }
     } else if (d.type === "rectangle") {
       if (d.points.length < 2) continue;
@@ -706,7 +733,7 @@ export function hitTestDrawings(
       ];
       for (const c of corners) {
         const cd = Math.hypot(mx - c.x, my - c.y);
-        if (cd <= HANDLE_RADIUS && (!best || cd < best.distance)) {
+        if (cd <= hr && (!best || cd < best.distance)) {
           best = { drawingId: d.id, distance: cd, part: c.part };
         }
       }
@@ -721,19 +748,19 @@ export function hitTestDrawings(
         ];
         for (const e of edges) {
           const ed = Math.hypot(mx - e.x, my - e.y);
-          if (ed <= HANDLE_RADIUS && (!best || ed < best.distance)) {
+          if (ed <= hr && (!best || ed < best.distance)) {
             best = { drawingId: d.id, distance: ed, part: e.part };
           }
         }
         // Edge line hit (border)
         if (!best || best.drawingId !== d.id) {
-          if (mx >= rLeft - HIT_THRESHOLD && mx <= rRight + HIT_THRESHOLD &&
-              my >= rTop - HIT_THRESHOLD && my <= rBot + HIT_THRESHOLD) {
+          if (mx >= rLeft - ht && mx <= rRight + ht &&
+              my >= rTop - ht && my <= rBot + ht) {
             const minEdge = Math.min(
               Math.abs(mx - rLeft), Math.abs(mx - rRight),
               Math.abs(my - rTop), Math.abs(my - rBot),
             );
-            if (minEdge <= HIT_THRESHOLD && (!best || minEdge < best.distance)) {
+            if (minEdge <= ht && (!best || minEdge < best.distance)) {
               best = { drawingId: d.id, distance: minEdge, part: "body" };
             }
           }
@@ -754,12 +781,21 @@ export function hitTestDrawings(
       const y1 = priceToY(d.points[0].price, priceMin, priceMax, mainTop, mainHeight, scale);
       const x2 = indexToX(d.points[1].index, startIndex, endIndex, chartLeft, chartWidth);
       const y2 = priceToY(d.points[1].price, priceMin, priceMax, mainTop, mainHeight, scale);
-      const dist = pointToSegmentDist(mx, my, x1, y1, x2, y2);
-      if (dist <= HIT_THRESHOLD && (!best || dist < best.distance)) {
-        best = { drawingId: d.id, distance: dist, part: "body" };
+      // Check endpoint handles first (higher priority than body)
+      const d0 = Math.hypot(mx - x1, my - y1);
+      const d1 = Math.hypot(mx - x2, my - y2);
+      if (d0 <= hr && (!best || d0 < best.distance)) {
+        best = { drawingId: d.id, distance: d0, part: "p0" };
+      } else if (d1 <= hr && (!best || d1 < best.distance)) {
+        best = { drawingId: d.id, distance: d1, part: "p1" };
+      } else {
+        const dist = pointToSegmentDist(mx, my, x1, y1, x2, y2);
+        if (dist <= ht && (!best || dist < best.distance)) {
+          best = { drawingId: d.id, distance: dist, part: "body" };
+        }
       }
     } else {
-      const genericHit = hitTestGenericDrawing(mx, my, d, layout, viewport, scale);
+      const genericHit = hitTestGenericDrawing(mx, my, d, layout, viewport, scale, hitScale);
       if (genericHit && (!best || genericHit.distance < best.distance)) {
         best = genericHit;
       }
@@ -858,15 +894,17 @@ export function drawDrawings(
   selectedId?: string | null,
   hoveredId?: string | null,
   bars?: Bar[],
+  selectedIds?: string[],
 ): void {
   for (const d of drawings) {
-    const isSelected = d.id === selectedId;
+    const isSelected = d.id === selectedId || (selectedIds != null && selectedIds.includes(d.id));
     const isHovered = d.id === hoveredId;
     switch (d.type) {
       case "trendline": drawTrendlineDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars); break;
-      case "horizontal": drawHorizontalDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered); break;
-      case "fibonacci": drawFibonacciDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered); break;
+      case "horizontal": drawHorizontalDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars); break;
+      case "fibonacci": drawFibonacciDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars); break;
       case "rectangle": drawRectangleDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars); break;
+      case "anchored_vwap": drawAnchoredVWAPDrawing(ctx, d, layout, viewport, scale, isSelected, isHovered, bars); break;
       default: {
         drawGenericDrawing(ctx, d, layout, viewport, pair, scale, isSelected, isHovered, bars);
         // Stats box for all generic tools (mirrors trendline behavior)
@@ -979,6 +1017,38 @@ function drawTrendlineDrawing(
     }
   }
 
+  // ── ATR Envelope (visible when selected) ──
+  if (isSelected && bars && bars.length >= 2) {
+    const atr = computeLocalATR(bars);
+    if (atr > 0 && priceMax > priceMin) {
+      const atrPx = (atr / (priceMax - priceMin)) * mainHeight;
+      ctx.save();
+      ctx.globalAlpha = d.opacity * 0.35;
+      ctx.strokeStyle = d.color;
+      ctx.lineWidth = 0.8;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(drawStartX, drawStartY - atrPx);
+      ctx.lineTo(drawEndX, drawEndY - atrPx);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(drawStartX, drawStartY + atrPx);
+      ctx.lineTo(drawEndX, drawEndY + atrPx);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = d.opacity * 0.06;
+      ctx.fillStyle = d.color;
+      ctx.beginPath();
+      ctx.moveTo(drawStartX, drawStartY - atrPx);
+      ctx.lineTo(drawEndX, drawEndY - atrPx);
+      ctx.lineTo(drawEndX, drawEndY + atrPx);
+      ctx.lineTo(drawStartX, drawStartY + atrPx);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   // ── Angle badge ──
   if (d.showAngle) {
     const angle = computeAngle(x1, y1, x2, y2);
@@ -1002,6 +1072,65 @@ function drawTrendlineDrawing(
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(angleText, midX, midY - 10);
+  }
+
+  // ── Touch counter ──
+  if (bars && bars.length >= 2) {
+    const atr = computeLocalATR(bars);
+    if (atr > 0) {
+      const pSlope = (d.points[1].price - d.points[0].price) / (d.points[1].index - d.points[0].index || 1);
+      const iMin = Math.max(0, Math.min(d.points[0].index, d.points[1].index));
+      const iMax = Math.min(bars.length - 1, Math.max(d.points[0].index, d.points[1].index));
+      let touches = 0;
+      for (let bi = iMin; bi <= iMax; bi++) {
+        const linePrice = d.points[0].price + pSlope * (bi - d.points[0].index);
+        if (Math.abs(bars[bi].h - linePrice) < atr * 0.25 || Math.abs(bars[bi].l - linePrice) < atr * 0.25) touches++;
+      }
+      if (touches > 0) {
+        const strength = touches <= 2 ? "WEAK" : touches <= 5 ? "MODERATE" : "STRONG";
+        const scolor = touches <= 2 ? "#787B86" : touches <= 5 ? "#FF9800" : "#26A69A";
+        const bx = (x1 + x2) / 2;
+        const by = Math.min(y1, y2) - 20;
+        if (by > mainTop + 4) {
+          ctx.save();
+          ctx.font = "bold 8px 'IBM Plex Mono', monospace";
+          const text = `\u29C9 ${touches} \u00B7 ${strength}`;
+          const tw = ctx.measureText(text).width;
+          const pad = 4;
+          ctx.globalAlpha = d.opacity;
+          ctx.fillStyle = "rgba(19,23,34,0.88)";
+          ctx.beginPath();
+          ctx.roundRect(bx - tw / 2 - pad, by - 6, tw + pad * 2, 13, 3);
+          ctx.fill();
+          ctx.strokeStyle = scolor;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+          ctx.fillStyle = scolor;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, bx, by);
+          ctx.restore();
+        }
+      }
+    }
+  }
+
+  // ── Alert zone ──
+  if (bars && bars.length >= 2) {
+    const atr = computeLocalATR(bars);
+    if (atr > 0 && priceMax > priceMin) {
+      const pSlope = (d.points[1].price - d.points[0].price) / (d.points[1].index - d.points[0].index || 1);
+      const lineAtNow = d.points[0].price + pSlope * (bars.length - 1 - d.points[0].index);
+      if (Math.abs(bars[bars.length - 1].c - lineAtNow) < atr) {
+        const alertY = priceToY(lineAtNow, priceMin, priceMax, mainTop, mainHeight, scale);
+        const atrPx = (atr / (priceMax - priceMin)) * mainHeight * 0.5;
+        ctx.save();
+        ctx.globalAlpha = 0.07;
+        ctx.fillStyle = "#FF9800";
+        ctx.fillRect(Math.min(drawStartX, drawEndX), alertY - atrPx, Math.abs(drawEndX - drawStartX), atrPx * 2);
+        ctx.restore();
+      }
+    }
   }
 
   // ── Statistics box ──
@@ -1226,6 +1355,13 @@ export function drawRubberBand(
     ctx.moveTo(layout.chartLeft, cursorY);
     ctx.lineTo(layout.canvasWidth - layout.priceAxisWidth, cursorY);
     ctx.stroke();
+  } else {
+    // Generic fallback: dashed line from anchor to cursor (covers ray, channel,
+    // pitchfork, arc, circle, ellipse, long_position, etc.)
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(cursorX, cursorY);
+    ctx.stroke();
   }
 
   // First point handle
@@ -1324,6 +1460,7 @@ function drawHorizontalDrawing(
   scale: PriceScale,
   isSelected: boolean,
   isHovered: boolean,
+  bars?: Bar[],
 ): void {
   if (d.points.length < 1) return;
   const { mainTop, mainHeight, priceAxisWidth, canvasWidth } = layout;
@@ -1351,12 +1488,137 @@ function drawHorizontalDrawing(
   const priceText = d.label || formatPrice(d.points[0].price, pair);
   ctx.fillText(priceText, canvasWidth - priceAxisWidth - 4, y - 3);
 
+  // ── Level strength badge ──
+  if (bars && bars.length >= 2) {
+    const price = d.points[0].price;
+    const atr = computeLocalATR(bars);
+    const band = atr * 0.25;
+    let touches = 0;
+    for (const bar of bars) {
+      if (Math.abs(bar.h - price) <= band || Math.abs(bar.l - price) <= band) touches++;
+    }
+    if (touches > 0) {
+      const strength = touches <= 2 ? "WEAK" : touches <= 5 ? "MODERATE" : "STRONG";
+      const scolor = touches <= 2 ? "#787B86" : touches <= 5 ? "#FF9800" : "#26A69A";
+      ctx.save();
+      ctx.globalAlpha = d.opacity;
+      ctx.font = "bold 8px 'IBM Plex Mono', monospace";
+      const text = `\u29C9 ${touches} \u00B7 ${strength}`;
+      const tw = ctx.measureText(text).width;
+      const bx = (canvasWidth - priceAxisWidth) * 0.45;
+      const pad = 4;
+      ctx.fillStyle = "rgba(19,23,34,0.88)";
+      ctx.beginPath();
+      ctx.roundRect(bx - tw / 2 - pad, y - 13, tw + pad * 2, 12, 3);
+      ctx.fill();
+      ctx.strokeStyle = scolor;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+      ctx.fillStyle = scolor;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, bx, y - 7);
+      ctx.restore();
+    }
+    // ── Bounce zone ──
+    if ((isSelected || d.stats.alwaysShow) && priceMax > priceMin) {
+      const atrPx = (atr / (priceMax - priceMin)) * mainHeight;
+      const bandPx = atrPx * 0.25;
+      ctx.save();
+      ctx.globalAlpha = 0.06;
+      ctx.fillStyle = d.color;
+      ctx.fillRect(0, y - bandPx, canvasWidth - priceAxisWidth, bandPx * 2);
+      ctx.restore();
+    }
+  }
+
   if (isSelected || isHovered) {
     const handleR = isSelected ? 4 : 3;
     ctx.beginPath();
     ctx.arc(canvasWidth - priceAxisWidth - 10, y, handleR, 0, Math.PI * 2);
     ctx.fillStyle = THEME.canvasBg;
     ctx.fill();
+    ctx.strokeStyle = d.color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+// ── Anchored VWAP drawing ─────────────────────────────
+
+function drawAnchoredVWAPDrawing(
+  ctx: CanvasRenderingContext2D,
+  d: Drawing,
+  layout: ChartLayout,
+  viewport: Viewport,
+  scale: PriceScale,
+  isSelected: boolean,
+  isHovered: boolean,
+  bars?: Bar[],
+): void {
+  if (d.points.length < 1 || !bars || bars.length === 0) return;
+  const { mainTop, mainHeight, chartLeft, chartWidth, priceAxisWidth, canvasWidth } = layout;
+  const { startIndex, endIndex, priceMin, priceMax } = viewport;
+
+  const anchorIndex = d.points[0].index;
+  const vwapPts = computeAnchoredVWAP(bars, anchorIndex);
+  if (vwapPts.length < 2) return;
+
+  ctx.save();
+  ctx.globalAlpha = d.opacity;
+  ctx.strokeStyle = d.color;
+  ctx.lineWidth = isSelected ? d.lineWidth + 0.5 : d.lineWidth;
+  ctx.setLineDash(getLineDash(d.lineStyle || "solid"));
+  ctx.beginPath();
+
+  let started = false;
+  for (let i = 0; i < vwapPts.length; i++) {
+    const barIdx = anchorIndex + i;
+    if (barIdx < startIndex - 1 || barIdx > endIndex + 1) {
+      started = false;
+      continue;
+    }
+    const x = indexToX(barIdx, startIndex, endIndex, chartLeft, chartWidth);
+    const y = priceToY(vwapPts[i].value, priceMin, priceMax, mainTop, mainHeight, scale);
+    if (!started) { ctx.moveTo(x, y); started = true; }
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Anchor handle: diamond marker
+  const ax = indexToX(anchorIndex, startIndex, endIndex, chartLeft, chartWidth);
+  const ay = priceToY(vwapPts[0].value, priceMin, priceMax, mainTop, mainHeight, scale);
+  const r = isSelected ? 5 : 4;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay - r);
+  ctx.lineTo(ax + r, ay);
+  ctx.lineTo(ax, ay + r);
+  ctx.lineTo(ax - r, ay);
+  ctx.closePath();
+  ctx.fillStyle = d.color;
+  ctx.fill();
+
+  // Label at right edge showing last VWAP value
+  if (vwapPts.length > 0) {
+    const lastPt = vwapPts[vwapPts.length - 1];
+    const lastBarIdx = anchorIndex + vwapPts.length - 1;
+    if (lastBarIdx <= endIndex + 1) {
+      const lx = Math.min(indexToX(lastBarIdx, startIndex, endIndex, chartLeft, chartWidth), canvasWidth - priceAxisWidth - 2);
+      const ly = priceToY(lastPt.value, priceMin, priceMax, mainTop, mainHeight, scale);
+      ctx.font = "bold 9px 'IBM Plex Mono', monospace";
+      ctx.fillStyle = d.color;
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillText(d.label || "AVWAP", lx - 4, ly - 7);
+    }
+  }
+
+  if (isSelected || isHovered) {
+    ctx.beginPath();
+    ctx.arc(ax, ay, isSelected ? 7 : 6, 0, Math.PI * 2);
     ctx.strokeStyle = d.color;
     ctx.lineWidth = 1.5;
     ctx.stroke();
@@ -1375,38 +1637,208 @@ function drawFibonacciDrawing(
   pair: string,
   scale: PriceScale,
   isSelected: boolean,
-  _isHovered: boolean,
+  isHovered: boolean,
+  bars?: Bar[],
 ): void {
   if (d.points.length < 2) return;
   const { mainTop, mainHeight, priceAxisWidth, canvasWidth, chartLeft, chartWidth } = layout;
   const { startIndex, endIndex, priceMin, priceMax } = viewport;
 
-  const p1 = d.points[0].price;
-  const p2 = d.points[1].price;
-  const x1 = indexToX(d.points[0].index, startIndex, endIndex, chartLeft, chartWidth);
-  const x2 = indexToX(d.points[1].index, startIndex, endIndex, chartLeft, chartWidth);
+  const priceStart = d.points[0].price;
+  const priceEnd   = d.points[1].price;
+  const xStart = indexToX(d.points[0].index, startIndex, endIndex, chartLeft, chartWidth);
+  const xEnd   = indexToX(d.points[1].index, startIndex, endIndex, chartLeft, chartWidth);
+  const xLeft  = Math.min(xStart, xEnd);
   const rightEdge = canvasWidth - priceAxisWidth;
+
+  // Level set: custom or default, plus optional extensions
+  const baseLevels = (d.fibLevels && d.fibLevels.length > 0) ? d.fibLevels : FIB_LEVELS.slice();
+  const EXT_LEVELS = [1.272, 1.414, 1.618, 2.0, 2.618];
+  const allLevels = d.fibShowExtensions
+    ? [...new Set([...baseLevels, ...EXT_LEVELS])].sort((a, b) => a - b)
+    : baseLevels.slice().sort((a, b) => a - b);
+
+  // Level color by significance
+  const fibColor = (level: number): string => {
+    if (Math.abs(level) < 0.001 || Math.abs(level - 1) < 0.001) return "#9598A1";
+    if (Math.abs(level - 0.236) < 0.001) return "#787B86";
+    if (Math.abs(level - 0.382) < 0.001) return "#FF9800";
+    if (Math.abs(level - 0.5)   < 0.001) return "#2196F3";
+    if (Math.abs(level - 0.618) < 0.001) return "#FFD700";
+    if (Math.abs(level - 0.786) < 0.001) return "#FF6D00";
+    if (Math.abs(level - 1.272) < 0.001) return "#26A69A";
+    if (Math.abs(level - 1.414) < 0.001) return "#AB47BC";
+    if (Math.abs(level - 1.618) < 0.001) return "#FFD700";
+    if (Math.abs(level - 2.0)   < 0.001) return "#EF5350";
+    if (Math.abs(level - 2.618) < 0.001) return "#EF5350";
+    return d.color;
+  };
+
+  const isGoldenLevel = (level: number) =>
+    Math.abs(level - 0.618) < 0.001 || Math.abs(level - 1.618) < 0.001;
+  const isKeyLevel = (level: number) =>
+    Math.abs(level) < 0.001 || Math.abs(level - 1) < 0.001;
+
+  // Current price proximity
+  const pipSize = getPipSize(pair);
+  let nearestLevel: number | null = null;
+  let nearestDist = Infinity;
+  if (bars && bars.length > 0) {
+    const cp = bars[bars.length - 1].c;
+    for (const lv of allLevels) {
+      const lp = priceEnd + (priceStart - priceEnd) * lv;
+      const dist = Math.abs(cp - lp) / pipSize;
+      if (dist < nearestDist) { nearestDist = dist; nearestLevel = lv; }
+    }
+  }
 
   ctx.save();
   ctx.globalAlpha = d.opacity;
 
-  for (const level of FIB_LEVELS) {
-    const price = p2 + (p1 - p2) * level;
-    const y = priceToY(price, priceMin, priceMax, mainTop, mainHeight, scale);
+  // ── 1. Fill bands between adjacent price levels ──
+  const sortedByPrice = allLevels.slice().sort((a, b) => {
+    const pa = priceEnd + (priceStart - priceEnd) * a;
+    const pb = priceEnd + (priceStart - priceEnd) * b;
+    return pb - pa;
+  });
+  for (let i = 0; i < sortedByPrice.length - 1; i++) {
+    const la = sortedByPrice[i], lb = sortedByPrice[i + 1];
+    const pa = priceEnd + (priceStart - priceEnd) * la;
+    const pb = priceEnd + (priceStart - priceEnd) * lb;
+    const ya = priceToY(pa, priceMin, priceMax, mainTop, mainHeight, scale);
+    const yb = priceToY(pb, priceMin, priceMax, mainTop, mainHeight, scale);
+    const yTop = Math.min(ya, yb), yBot = Math.max(ya, yb);
+    if (yTop > mainTop + mainHeight || yBot < mainTop) continue;
+    const isNearZone = nearestLevel !== null && (la === nearestLevel || lb === nearestLevel);
+    ctx.globalAlpha = isNearZone ? d.opacity * 0.09 : (i % 2 === 0 ? d.opacity * 0.04 : d.opacity * 0.02);
+    ctx.fillStyle = isNearZone ? "#FFFFFF" : (i % 2 === 0 ? d.color : "#787B86");
+    ctx.fillRect(
+      xLeft,
+      Math.max(mainTop, yTop),
+      rightEdge - xLeft,
+      Math.min(mainTop + mainHeight, yBot) - Math.max(mainTop, yTop),
+    );
+  }
+  ctx.globalAlpha = d.opacity;
 
-    ctx.strokeStyle = d.color;
-    ctx.lineWidth = isSelected && (level === 0 || level === 1) ? d.lineWidth + 0.5 : 0.5;
-    ctx.setLineDash(level === 0 || level === 1 ? getLineDash(d.lineStyle || "solid") : [4, 4]);
+  // ── 2. Level lines + labels ──
+  for (const level of allLevels) {
+    const price = priceEnd + (priceStart - priceEnd) * level;
+    const y = priceToY(price, priceMin, priceMax, mainTop, mainHeight, scale);
+    if (y < mainTop - 2 || y > mainTop + mainHeight + 2) continue;
+
+    const isKey    = isKeyLevel(level);
+    const isGolden = isGoldenLevel(level);
+    const isNearest = level === nearestLevel;
+    const isExt    = level > 1.001;
+    const lcolor   = fibColor(level);
+
+    ctx.strokeStyle = isNearest ? "#FFFFFF" : lcolor;
+    ctx.lineWidth   = isKey ? (isSelected ? d.lineWidth + 0.5 : d.lineWidth)
+                    : isGolden ? 1.2
+                    : isNearest ? 1.0
+                    : 0.7;
+    ctx.setLineDash(isExt ? [6, 3] : isKey ? getLineDash(d.lineStyle || "solid") : (isGolden ? [] : [4, 3]));
+    ctx.globalAlpha = isNearest ? d.opacity : d.opacity * (isKey || isGolden ? 0.9 : 0.6);
     ctx.beginPath();
-    ctx.moveTo(Math.min(x1, x2), y);
+    ctx.moveTo(xLeft, y);
     ctx.lineTo(rightEdge, y);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.globalAlpha = d.opacity;
 
-    ctx.font = "9px 'IBM Plex Mono', monospace";
-    ctx.fillStyle = d.color;
+    // Right label: "61.8% — 1.09234"
+    const pctStr   = `${(level * 100).toFixed(1)}%`;
+    const priceStr = formatPrice(price, pair);
+    const fullText = `${pctStr} \u2014 ${priceStr}`;
+    const fs = isKey || isGolden ? 9 : 8;
+    ctx.font = `${isKey || isGolden ? "bold " : ""}${fs}px 'IBM Plex Mono', monospace`;
+    const tw = ctx.measureText(fullText).width;
+    ctx.globalAlpha = d.opacity * 0.72;
+    ctx.fillStyle = "rgba(19,23,34,0.72)";
+    ctx.fillRect(rightEdge - tw - 10, y - 12, tw + 8, 11);
+    ctx.globalAlpha = d.opacity;
+    ctx.fillStyle = isNearest ? "#FFFFFF" : lcolor;
     ctx.textAlign = "right";
-    ctx.fillText(`${(level * 100).toFixed(1)}% \u2014 ${formatPrice(price, pair)}`, rightEdge - 4, y - 3);
+    ctx.textBaseline = "bottom";
+    ctx.fillText(fullText, rightEdge - 5, y - 2);
+
+    // Left label: pct only
+    ctx.font = `${fs}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = lcolor;
+    ctx.globalAlpha = d.opacity * 0.65;
+    ctx.textAlign = "left";
+    ctx.fillText(pctStr, xLeft + 4, y - 2);
+    ctx.globalAlpha = d.opacity;
+
+    // Nearest-level proximity badge
+    if (isNearest && bars && bars.length > 0 && nearestDist < 300) {
+      const cp = bars[bars.length - 1].c;
+      const dir = cp > price ? "\u2191" : "\u2193";
+      const badge = `${dir} ${nearestDist.toFixed(1)}p`;
+      const bw = ctx.measureText(badge).width + 12;
+      ctx.save();
+      ctx.font = "bold 8px 'IBM Plex Mono', monospace";
+      ctx.globalAlpha = d.opacity;
+      ctx.fillStyle = "rgba(19,23,34,0.92)";
+      ctx.beginPath();
+      ctx.roundRect(xLeft + 50, y - 9, bw, 12, 3);
+      ctx.fill();
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+      ctx.fillStyle = "#FFFFFF";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(badge, xLeft + 56, y - 3);
+      ctx.restore();
+    }
+  }
+
+  // ── 3. Anchor connector line ──
+  const yStart_ = priceToY(priceStart, priceMin, priceMax, mainTop, mainHeight, scale);
+  const yEnd_   = priceToY(priceEnd,   priceMin, priceMax, mainTop, mainHeight, scale);
+  ctx.globalAlpha = d.opacity * 0.55;
+  ctx.strokeStyle = d.color;
+  ctx.lineWidth = d.lineWidth;
+  ctx.setLineDash(getLineDash(d.lineStyle || "solid"));
+  ctx.beginPath();
+  ctx.moveTo(xStart, yStart_);
+  ctx.lineTo(xEnd, yEnd_);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Anchor vertical marker dashes
+  ctx.globalAlpha = d.opacity * 0.25;
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([3, 4]);
+  for (const x of [xStart, xEnd]) {
+    ctx.beginPath();
+    ctx.moveTo(x, mainTop);
+    ctx.lineTo(x, mainTop + mainHeight);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.globalAlpha = d.opacity;
+
+  // ── 4. Selection / hover handles ──
+  if (isSelected || isHovered) {
+    for (const pt of d.points) {
+      const hx = indexToX(pt.index, startIndex, endIndex, chartLeft, chartWidth);
+      const hy = priceToY(pt.price, priceMin, priceMax, mainTop, mainHeight, scale);
+      const r = isSelected ? 5 : 3.5;
+      ctx.beginPath();
+      ctx.arc(hx, hy, r, 0, Math.PI * 2);
+      ctx.fillStyle = THEME.canvasBg;
+      ctx.fill();
+      ctx.strokeStyle = d.color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(hx, hy, 2, 0, Math.PI * 2);
+      ctx.fillStyle = d.color;
+      ctx.fill();
+    }
   }
 
   ctx.restore();
@@ -1708,7 +2140,7 @@ export function loadDrawings(pair: string): Drawing[] {
       labelItalic: false,
       labelColor: "",
       labelAlign: "right",
-      showAngle: true,
+      showAngle: false,
       showMidPoint: false,
       showPriceLabels: false,
       locked: false,

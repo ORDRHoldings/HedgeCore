@@ -236,46 +236,30 @@ export function IndicatorsPanel() {
             ACTIVE ({activeIndicators.length})
           </div>
           {activeIndicators.map(ind => (
-            <div key={ind.key} style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '3px 4px', borderRadius: 3, marginBottom: 1,
-            }}>
-              <span style={{
-                width: 5, height: 5, borderRadius: '50%',
-                background: ind.color, flexShrink: 0,
-              }} />
-              <span style={{
-                fontSize: 10, fontWeight: 500, color: T.text1,
-                fontFamily: T.font, flex: 1,
-              }}>
+            <div
+              key={ind.key}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '3px 4px', borderRadius: 3, marginBottom: 1,
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = T.panelHover; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: ind.color, flexShrink: 0 }} />
+              <span style={{ fontSize: 10, fontWeight: 500, color: T.text1, fontFamily: T.font, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {ind.label}
               </span>
-              <span style={{
-                fontSize: 8, color: T.text3, fontFamily: T.font,
-                textTransform: 'uppercase', opacity: 0.7,
-              }}>
+              <span style={{ fontSize: 8, color: T.text3, fontFamily: T.font, textTransform: 'uppercase' as const, opacity: 0.7, flexShrink: 0 }}>
                 {ind.type === 'overlay' ? 'OVR' : 'SUB'}
               </span>
-              {/* Visibility toggle (overlay only — uses chartConfig boolean) */}
-              {ind.type === 'overlay' && (
-                <button
-                  onClick={() => toggle(ind)}
-                  style={{
-                    display: 'flex', alignItems: 'center', border: 'none',
-                    background: 'none', cursor: 'pointer', padding: 0, outline: 'none',
-                    color: T.text2,
-                  }}
-                >
-                  <Eye size={10} />
-                </button>
-              )}
-              {/* Remove */}
+              {/* Remove — X removes the indicator */}
               <button
-                onClick={() => toggle(ind)}
+                onClick={e => { e.stopPropagation(); toggle(ind); }}
+                title="Remove"
                 style={{
                   display: 'flex', alignItems: 'center', border: 'none',
-                  background: 'none', cursor: 'pointer', padding: 0, outline: 'none',
-                  color: T.text3,
+                  background: 'none', cursor: 'pointer', padding: 2, outline: 'none',
+                  color: T.text3, borderRadius: 2, flexShrink: 0,
                 }}
                 onMouseEnter={e => { e.currentTarget.style.color = T.bear; }}
                 onMouseLeave={e => { e.currentTarget.style.color = T.text3; }}

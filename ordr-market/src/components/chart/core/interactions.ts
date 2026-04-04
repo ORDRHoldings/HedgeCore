@@ -41,6 +41,10 @@ export const SHORTCUTS: ShortcutDef[] = [
   { key: "y", ctrl: true, action: "redo", label: "Redo" },
   { key: "z", ctrl: true, shift: true, action: "redo", label: "Redo" },
   { key: "s", ctrl: true, shift: true, action: "screenshot", label: "Screenshot" },
+  { key: "c", ctrl: true, action: "copyDrawings", label: "Copy Drawing(s)" },
+  { key: "v", ctrl: true, action: "pasteDrawings", label: "Paste Drawing(s)" },
+  { key: "a", ctrl: true, action: "selectAllDrawings", label: "Select All Drawings" },
+  { key: "e", ctrl: true, action: "exportDrawings", label: "Export Drawings" },
 
   // Drawing tools
   { key: "t", alt: true, action: "drawTrendline", label: "Trend Line" },

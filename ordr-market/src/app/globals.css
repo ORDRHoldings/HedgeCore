@@ -3,41 +3,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
-/* ── Theme engine defaults (Institutional Obsidian) ──────────────────────────── */
+/* ── Theme engine defaults (Void Black — TradingView-inspired) ────────────────── */
 :root {
-  /* Surface */
-  --bg-deep:         #121212;
-  --bg-panel:        #1E1E1E;
-  --bg-sub:          #2A2A2A;
-  --bg-sidebar:      #0E0E0E;
-  --sidebar-hover:   #181818;
-  --sidebar-border:  #2A2A2A;
-  --sidebar-divider: #1C1C1C;
+  /* Surface — true blacks with subtle elevation */
+  --bg-deep:         #060608;
+  --bg-panel:        #0d0d0f;
+  --bg-sub:          #141418;
+  --bg-sidebar:      #080809;
+  --sidebar-hover:   #111115;
+  --sidebar-border:  #1a1a1f;
+  --sidebar-divider: #111114;
 
-  /* Border */
-  --border-rim:  #444444;
-  --border-soft: #333333;
+  /* Border — ultra-subtle separation */
+  --border-rim:  #1f1f26;
+  --border-soft: #191920;
 
-  /* Text */
-  --text-primary:   #E0E0E0;
-  --text-secondary: #B0B0B0;
-  --text-tertiary:  #787878;
-  --text-disabled:  #444444;
+  /* Text — crisp legibility on black */
+  --text-primary:   #d1d4dc;
+  --text-secondary: #868993;
+  --text-tertiary:  #50535e;
+  --text-disabled:  #2a2a35;
 
-  /* Accent */
-  --accent-blue:     #64A8F0;
-  --accent-blue-dim: rgba(100, 168, 240, 0.10);
-  --accent-cyan:     #64A8F0;
-  --accent-indigo:   #7C7CF0;
-  --accent-amber:    #E5A84B;
-  --accent-red:      #E57373;
-  --accent-green:    #4CAF50;
+  /* Accent — brighter blue for contrast on true black */
+  --accent-blue:     #4c9eff;
+  --accent-blue-dim: rgba(76, 158, 255, 0.12);
+  --accent-cyan:     #00c9ff;
+  --accent-indigo:   #8b8fff;
+  --accent-amber:    #f0b429;
+  --accent-red:      #ff4f4f;
+  --accent-green:    #26de81;
 
   /* Status */
-  --status-pass:    #4CAF50;
-  --status-fail:    #E57373;
-  --status-warn:    #E5A84B;
-  --status-pending: #9E9E9E;
+  --status-pass:    #26de81;
+  --status-fail:    #ff4f4f;
+  --status-warn:    #f0b429;
+  --status-pending: #50535e;
 
   /* Typography */
   --font-ui:   'IBM Plex Sans', 'Inter', sans-serif;

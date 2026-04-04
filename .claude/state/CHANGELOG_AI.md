@@ -1,5 +1,29 @@
 # Changelog (AI-maintained)
 
+## 2026-03-29 — Sprint 5: Scale & Performance
+
+### Added
+- **k6 load test**: `docs/performance/k6-load-test.js` — 100 VU scenario; `docs/performance/load-test-baseline.md` committed with pending note; full staging run required to close done criteria
+- **Redis market data cache**: `backend/app/core/redis_client.py` — fail-open singleton (graceful if Redis unavailable), 60s TTL, cache hit/miss counters exposed on `GET /system/health`
+- **Connection pool tuning**: `DB_POOL_SIZE=20`, `DB_MAX_OVERFLOW=10`, `DB_POOL_TIMEOUT=30`, `DB_POOL_PRE_PING=True` added to Settings; `create_engine_from_url()` helper in `backend/app/core/db.py`
+- **Webhook support**: `POST/GET/DELETE /v1/webhooks`; `WebhookEndpoint` + `WebhookDeliveryLog` models; HMAC-SHA256 payload signing; 5-attempt exponential backoff (1m/5m/15m/60m/give-up); WORM audit event written on each delivery attempt; session-isolated `_fire_webhook` background task; 4 wired events: position.created, calculation.completed, proposal.approved, proposal.rejected
+- **Horizontal scaling contract**: `docs/architecture/horizontal-scaling-contract.md`; `SYSTEM_BOUNDARIES.md` updated with multi-instance topology diagram; Redis rate limit wiring confirmed stateless
+
+### Test evidence
+- Backend: 4801 passed, 0 failed, 158 skipped
+- 12 new test files; 27 files changed, 2196 insertions
+- Branch feat/enterprise-sprint5-scale-perf merged to master
+
+### Human actions required
+- Run k6 full load test against Render staging (100 VUs, 5 min) — populate docs/performance/load-test-baseline.md
+- Add WORKOS_API_KEY, WORKOS_CLIENT_ID to Render env vars
+- Add STRIPE_SECRET_KEY_TEST, STRIPE_WEBHOOK_SECRET to Render env vars
+- Add SENTRY_DSN to Render + Vercel env vars
+- Run scripts/scrub-git-secrets.sh (git history scrub)
+- Rotate all API keys
+
+---
+
 ## 2026-03-28 — Sprint 4: Compliance Pipeline
 
 ### Added

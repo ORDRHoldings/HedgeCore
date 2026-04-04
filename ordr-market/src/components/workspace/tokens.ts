@@ -11,7 +11,7 @@ export const T = {
   bg:          'var(--bg-deep, #F0F3FA)',
   surface:     'var(--bg-panel, #FFFFFF)',
   surfaceAlt:  'var(--bg-sub, #F7F8FC)',
-  chartBg:     '#131722',   // chart canvas — always dark (TradingView standard)
+  chartBg:     '#0d0e12',   // chart canvas — always dark (TradingView standard)
 
   // ── Borders (theme-aware) ───────────────────────────────────────────────
   border:      'var(--border-rim, #E0E3EB)',
@@ -55,15 +55,15 @@ export const T = {
   r5: '8px',
 
   // ── Shadows ─────────────────────────────────────────────────────────────
-  shadowFloat: '0 4px 20px rgba(0,0,0,0.11), 0 1px 6px rgba(0,0,0,0.06)',
-  shadowSm:    '0 1px 4px rgba(0,0,0,0.08)',
-  shadowPanel: '0 2px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)',
+  shadowFloat: '0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35)',
+  shadowSm:    '0 2px 8px rgba(0,0,0,0.40)',
+  shadowPanel: '0 4px 24px rgba(0,0,0,0.50), 0 0 0 1px rgba(255,255,255,0.04)',
 
   // ── Chart-specific (always dark canvas) ───────────────────────────────
-  chartGrid:      '#1C2030',
-  chartAxis:      '#363A45',
-  chartAxisText:  '#787B86',
-  chartCrosshair: '#787B86',
+  chartGrid:      '#141820',
+  chartAxis:      '#1e2130',
+  chartAxisText:  '#50535e',
+  chartCrosshair: '#50535e',
 
   // ── EMA color family ──────────────────────────────────────────────────
   ema1: '#2962FF',    // Fast (20)

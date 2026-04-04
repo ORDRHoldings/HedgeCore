@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   ArrowRight, Shield, BarChart2, Layers, Zap, Globe, BookOpen,
   Activity, TrendingUp, NotebookPen, Coins, Lock, Database,
-  CheckCircle, GitBranch,
+  CheckCircle, GitBranch, Network,
 } from "lucide-react";
 import MarketingLayout from "@/components/marketing/MarketingLayout";
 
@@ -47,6 +47,18 @@ const PRODUCTS: Product[] = [
     icon: BarChart2,
     href: "/products/market",
     external: "https://ordr-market.vercel.app/",
+  },
+  {
+    id: "connect",
+    name: "ORDR Connect",
+    category: "CUSTOMER OPERATIONS",
+    tagline: "Autonomous customer operations OS",
+    desc: "Event-sourced, multi-agent platform replacing passive CRM. AI agents execute customer operations across SMS, email, voice, and chat — with cryptographic audit trails. SOC 2 Type II, ISO 27001, HIPAA compliant.",
+    status: "beta",
+    statusLabel: "BETA · SHIPPING NOW",
+    icon: Network,
+    href: "/products/connect",
+    external: "https://ordr-connect.vercel.app/",
   },
   {
     id: "portfolio",
@@ -194,6 +206,13 @@ const ROADMAP = [
     bg: "#F0FDF4",
   },
   {
+    quarter: "NOW (BETA)",
+    label: "Beta Shipping",
+    items: ["ORDR Connect — autonomous customer operations OS, beta available at ordr-connect.vercel.app"],
+    color: "#92400E",
+    bg: "#FFFBEB",
+  },
+  {
     quarter: "END OF MARCH 2026",
     label: "Beta Launch",
     items: ["ORDR Polisophic — public beta with 190+ country coverage"],
@@ -253,12 +272,12 @@ export default function HomePage() {
               className="text-[56px] md:text-[76px] leading-[1.0] font-extrabold mb-6 tracking-[-0.04em] text-[#111111]"
               style={{ fontFamily: "'Manrope', sans-serif" }}
             >
-              Ten companies.<br />
+              Eleven products.<br />
               <span className="text-[#1E3A5F]">One infrastructure.</span>
             </h1>
 
             <p className="text-xl md:text-[22px] text-[#4B5563] font-medium mb-6 leading-relaxed max-w-3xl">
-              ORDR Terminal is the holding company and operating platform for ten institutional financial technology products — from FX treasury governance to gold-backed digital assets.
+              ORDR Terminal is the holding company and operating platform for eleven institutional financial technology products — from FX treasury governance to autonomous customer operations.
             </p>
             <p className="text-[16px] text-[#6B7280] mb-10 leading-relaxed max-w-3xl border-l-2 border-[#E5E7EB] pl-4">
               Every product shares the same deterministic computation engine, 4-eyes governance framework, SHA-256 WORM audit chain, and single identity layer. One infrastructure. Compounding value across every product.
@@ -282,7 +301,7 @@ export default function HomePage() {
             {/* Quick stats */}
             <div className="flex flex-wrap gap-x-8 gap-y-3">
               {[
-                { v: "10", l: "Products" },
+                { v: "11", l: "Products" },
                 { v: "6", l: "Live Now" },
                 { v: "3", l: "Launching Q2 2026" },
                 { v: "1", l: "Pilot (GOLDX)" },
