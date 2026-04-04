@@ -30,7 +30,7 @@ const calculateErrors = new Rate("calculate_error_rate");
 const calculateRequests = new Counter("calculate_total_requests");
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8000";
-const TEST_USER_EMAIL = __ENV.TEST_USER_EMAIL || "admin@ordr.io";
+const TEST_USER_EMAIL = __ENV.TEST_USER_EMAIL || "demo";
 const TEST_USER_PASSWORD = __ENV.TEST_USER_PASSWORD || "demo";
 
 export const options = {
@@ -52,13 +52,12 @@ export const options = {
 };
 
 function login() {
-  const payload = JSON.stringify({
-    email: TEST_USER_EMAIL,
+  // OAuth2PasswordRequestForm — form-encoded, field is "username" (maps to email)
+  const payload = {
+    username: TEST_USER_EMAIL,
     password: TEST_USER_PASSWORD,
-  });
-  const res = http.post(`${BASE_URL}/api/v1/auth/login`, payload, {
-    headers: { "Content-Type": "application/json" },
-  });
+  };
+  const res = http.post(`${BASE_URL}/api/auth/login`, payload);
   check(res, {
     "login 200": (r) => r.status === 200,
     "login has token": (r) => {
@@ -70,36 +69,68 @@ function login() {
   return JSON.parse(res.body).access_token;
 }
 
-function calcPayload(companyId) {
+function calcPayload() {
+  // Forward point keys must be YYYY-MM (ISO calendar month) per V-013.
+  // value_date ~3 months ahead of the fixed test date 2026-04-03.
   return JSON.stringify({
-    positions: [
+    trades: [
       {
         record_id: `LOAD-${__VU}-${__ITER}`,
-        currency_pair: "EURUSD",
-        notional: 1000000,
-        direction: "sell",
-        horizon_months: 3,
-        company_id: companyId,
+        entity: "Synex Capital Partners",
+        type: "AR",
+        currency: "EUR",
+        amount: 1000000,
+        value_date: "2026-07-03",
+        status: "CONFIRMED",
+        description: "k6 load test trade",
       },
     ],
+    hedges: [],
+    market: {
+      as_of: "2026-04-03T00:00:00Z",
+      spot_rate: 1.08,
+      forward_points_by_month: {
+        "2026-05": -0.001,
+        "2026-06": -0.002,
+        "2026-07": -0.003,
+      },
+      pairs: {
+        EURUSD: {
+          spot: 1.085,
+          forward_points_by_month: {
+            "2026-05": -0.001,
+            "2026-06": -0.002,
+            "2026-07": -0.003,
+          },
+          bid_ask_spread_bps: 2.0,
+        },
+      },
+    },
     policy: {
-      min_hedge_ratio: 0.7,
-      max_hedge_ratio: 1.0,
-      instrument: "forward",
-      margin_budget: 0,
-      risk_weights: { R1: 1.0 },
+      hedge_ratios: { confirmed: 0.8, forecast: 0.5 },
+      cost_assumptions: { spread_bps: 5.0 },
+      execution_product: "FWD",
+      min_trade_size_usd: 10000,
+      allow_indicative_proxy: true,
     },
   });
 }
 
 export function setup() {
-  const health = http.get(`${BASE_URL}/system/health`);
+  const health = http.get(`${BASE_URL}/api/health`);
   check(health, { "health ok": (r) => r.status === 200 });
-  return {};
+
+  // Authenticate once in setup() and share the token to all VUs.
+  // Re-login per iteration is unrealistic (JWT is 30min) and collapses
+  // the rate limiter when all VUs share the same IP + user identity.
+  const token = login();
+  if (!token) {
+    console.error("Setup login failed — aborting load test");
+  }
+  return { token };
 }
 
-export default function () {
-  const token = login();
+export default function ({ token }) {
   if (!token) {
     calculateErrors.add(1);
     sleep(1);
@@ -119,7 +150,7 @@ export default function () {
   const calcStart = Date.now();
   const calcRes = http.post(
     `${BASE_URL}/api/v1/calculate`,
-    calcPayload(""),
+    calcPayload(),
     authHeaders
   );
   const calcMs = Date.now() - calcStart;
@@ -128,8 +159,8 @@ export default function () {
   calculateRequests.add(1);
   const calcOk = check(calcRes, {
     "calculate 200": (r) => r.status === 200,
-    "calculate has results": (r) => {
-      try { return !!JSON.parse(r.body).results; }
+    "calculate has hedge_plan": (r) => {
+      try { return !!JSON.parse(r.body).hedge_plan; }
       catch { return false; }
     },
   });
