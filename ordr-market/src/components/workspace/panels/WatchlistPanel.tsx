@@ -14,7 +14,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search, Star, Plus, TrendingUp, TrendingDown, Loader, X, ArrowUpDown,
-  MoreHorizontal, Edit2, Trash2, Check,
+  MoreHorizontal, Edit2, Trash2, Check, Bell,
 } from 'lucide-react';
 import { T } from '../tokens';
 import { useWorkspace } from '../WorkspaceProvider';
@@ -70,6 +70,7 @@ interface LiveRowProps {
 }
 
 function LiveRow({ symbol, name, active, isFav, onSelect, onToggleFav, onRemove, onLiveData }: LiveRowProps) {
+  const { dispatch } = useWorkspace();
   const { bars, loading } = usePublicChartData(symbol, '1day', 2);
 
   const price     = bars.length > 0 ? bars[bars.length - 1].c : null;
@@ -101,18 +102,40 @@ function LiveRow({ symbol, name, active, isFav, onSelect, onToggleFav, onRemove,
 
   useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
 
+  // Alert quick-set
+  const [hovered, setHovered] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const alertRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!alertOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (alertRef.current && !alertRef.current.contains(e.target as Node)) setAlertOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [alertOpen]);
+
+  const addAlert = (condition: 'price_above' | 'price_below', e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (price === null) return;
+    dispatch({ type: 'ADD_ALERT', alert: { type: 'price', symbol, condition, value: price, active: true, triggered: false } });
+    setAlertOpen(false);
+  };
+
   return (
     <div
       onClick={onSelect}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); if (!alertOpen) setAlertOpen(false); }}
       style={{
+        position: 'relative',
         display: 'flex', alignItems: 'center', gap: 6,
         padding: '5px 8px', cursor: 'pointer', borderRadius: 3,
-        background: active ? T.selectedBg : flashColor ? `${flashColor}18` : 'transparent',
+        background: active ? T.selectedBg : flashColor ? `${flashColor}18` : hovered ? T.panelHover : 'transparent',
         marginBottom: 1,
         transition: flashColor ? 'none' : 'background 0.4s ease',
       }}
-      onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = T.panelHover; }}
-      onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = active ? T.selectedBg : 'transparent'; }}
     >
       {/* Star / Remove */}
       {onRemove ? (
@@ -159,6 +182,63 @@ function LiveRow({ symbol, name, active, isFav, onSelect, onToggleFav, onRemove,
           </>
         )}
       </div>
+
+      {/* Hover-reveal alert bell */}
+      {(hovered || alertOpen) && price !== null && (
+        <button
+          onClick={e => { e.stopPropagation(); setAlertOpen(o => !o); }}
+          title="Set price alert"
+          style={{
+            position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 18, height: 18, borderRadius: 3, border: 'none',
+            background: alertOpen ? T.accentBg : T.surfaceAlt,
+            color: alertOpen ? T.accent : T.text2,
+            cursor: 'pointer', outline: 'none', padding: 0, flexShrink: 0,
+          }}
+        >
+          <Bell size={10} />
+        </button>
+      )}
+
+      {/* Alert quick-set popover */}
+      {alertOpen && price !== null && (
+        <div
+          ref={alertRef}
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute', right: 0, top: '100%', zIndex: 200,
+            background: T.panelBg, border: `1px solid ${T.border}`,
+            borderRadius: 4, padding: 6, minWidth: 140, boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          }}
+        >
+          <div style={{ fontSize: 9, color: T.text3, fontFamily: T.font, marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Alert @ {formatPrice(price, symbol)}
+          </div>
+          <button
+            onClick={e => addAlert('price_above', e)}
+            style={{
+              display: 'block', width: '100%', padding: '4px 6px', borderRadius: 3,
+              border: `1px solid ${T.bull}40`, background: T.bullBg,
+              color: T.bull, fontSize: 10, fontWeight: 600, fontFamily: T.font,
+              cursor: 'pointer', outline: 'none', textAlign: 'left', marginBottom: 3,
+            }}
+          >
+            ↑ Cross Above
+          </button>
+          <button
+            onClick={e => addAlert('price_below', e)}
+            style={{
+              display: 'block', width: '100%', padding: '4px 6px', borderRadius: 3,
+              border: `1px solid ${T.bear}40`, background: T.bearBg,
+              color: T.bear, fontSize: 10, fontWeight: 600, fontFamily: T.font,
+              cursor: 'pointer', outline: 'none', textAlign: 'left',
+            }}
+          >
+            ↓ Cross Below
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -168,6 +248,39 @@ const iconBtnStyle: React.CSSProperties = {
   width: 14, height: 14, border: 'none', background: 'transparent',
   cursor: 'pointer', outline: 'none', padding: 0, flexShrink: 0,
 };
+
+// ── Row height matches LiveRow: 5+5px padding + ~25px content + 1px margin ─────
+const ROW_HEIGHT = 37;
+
+/**
+ * IntersectionLiveRow — defers mounting LiveRow (and its usePublicChartData call)
+ * until the row enters the viewport. Shows a fixed-height placeholder while off-screen.
+ * Root margin of 120px pre-loads rows just outside the visible area.
+ */
+function IntersectionLiveRow(props: LiveRowProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setMounted(true); },
+      { rootMargin: '120px 0px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref}>
+      {mounted
+        ? <LiveRow {...props} />
+        : <div style={{ height: ROW_HEIGHT, marginBottom: 1 }} />
+      }
+    </div>
+  );
+}
 
 // ── Sorted list section ────────────────────────────────────────────────────────
 interface SortedListProps {
@@ -218,7 +331,7 @@ function SortedList({ label, labelColor, items, sortKey, sortAsc, activeSymbol, 
         </div>
       )}
       {sorted.map(item => (
-        <LiveRow
+        <IntersectionLiveRow
           key={item.symbol}
           symbol={item.symbol}
           name={item.name}

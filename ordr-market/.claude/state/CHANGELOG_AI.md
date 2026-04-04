@@ -1,6 +1,114 @@
 # AI Changelog
 
+## 2026-04-04 — Sprint 70: Heatmap Panel Revamp
+**Commit**: S70 (pending)
+- `HeatmapPanel.tsx`: `fetchTileData()` fetches 8 bars — 7 for `Sparkline` SVG path + 1 for % change; TD proxy primary, hedgecore fallback
+- Category tabs All/ETF/Tech/Metals/Crypto; sort default = gainers; 2-col grid with larger tiles
+- `Sparkline` component: inline `<svg>` with `<path>` M/L from normalized closes; color matches tile intensity band
+- TypeScript: 0 errors | Tests: 126/126 ✅ | Browser E2E: header ✅ 5 cat tabs ✅ Tech=7 tiles ✅
+
+## 2026-04-04 — Sprint 69: FX Correlation Matrix Panel
+**Commit**: S69 (pending)
+- `workspace-types.ts`: `'corr'` added to RightTab union
+- `CorrelationPanel.tsx` (new): Pearson correlation matrix for EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, NZD/USD, USD/CAD, EUR/JPY, GBP/JPY, EUR/GBP; parallel TD proxy + hedgecore fetch; 20/50/100d period selector; deep-green/grey/red color cells; graceful "—" on no data
+- `RightStack.tsx`: GitBranch icon, corr tab + CorrelationPanel case
+- TypeScript: 0 errors | Tests: 126/126 ✅ | Browser E2E: panel open ✅ period buttons ✅ 100-cell grid ✅
+
+## 2026-04-04 — Sprint 68: Risk Levels on Chart Canvas
+**Commit**: S68 (pending)
+- `workspace-types.ts`: `riskLevels: { entry, sl, tp, side } | null` state field + `SET_RISK_LEVELS` action
+- `WorkspaceProvider.tsx`: `riskLevels: null` initial state; reducer case; NOT persisted (ephemeral — cleared on panel close)
+- `RiskCalcPanel.tsx`: useEffect syncs entry/SL/TP/side → dispatch `SET_RISK_LEVELS`; cleanup clears on unmount
+- `ChartRenderer.ts` Layer 8d: colored fill zones (risk/reward), dashed STOP/TARGET/ENTRY price lines, price-axis labels
+- `ChartEngine.tsx`: `externalRiskLevels` prop; `ChartCore.tsx`: passes from workspace state
+- TypeScript: 0 errors | Tests: 126/126 ✅ | Browser E2E: SL/TP inputs set ✅ riskLevels ephemeral ✅
+
+## 2026-04-04 — Sprint 67: Alert History Log
+**Commit**: S67 (pending)
+- `workspace-types.ts`: `AlertHistoryEntry` interface + `alertHistory` state field + `LOG_ALERT_TRIGGER`/`CLEAR_ALERT_HISTORY` actions
+- `WorkspaceProvider.tsx`: history reducer (prepend + 100-entry cap), localStorage persistence
+- `ChartCore.tsx`: both price and indicator alert paths dispatch `LOG_ALERT_TRIGGER` with full context
+- `AlertsPanel.tsx`: ACTIVE/HISTORY tab switcher; History tab with triggered entry list + relative time + Clear button
+- TypeScript: 0 errors | Tests: 126/126 ✅ | Browser E2E: ACTIVE(1)/HISTORY(0) tabs ✅ empty state ✅
+
+## 2026-04-04 — Sprint 66: News Events on Chart Timeline
+**Commit**: S66 (pending)
+- `workspace-types.ts` + `WorkspaceProvider.tsx`: `showNewsOverlay` state + `TOGGLE_NEWS_OVERLAY` action, localStorage persisted
+- `ChartCore.tsx`: useEffect fetches `/api/news?symbol=...&mode=symbol&limit=50` on toggle; converts isoTime→unix seconds; passes `externalNewsEvents` to ChartEngine
+- `ChartRenderer.ts` Layer 8c: colored triangle flags (red/amber/grey by importance) at bar positions
+- `ChartEngine.tsx`: hover detection + React tooltip overlay with headline/importance/source/sentiment
+- `CommandBar.tsx`: `NewsOverlayToggle` — "NEWS" toolbar button
+- TypeScript: 0 errors | Tests: 126/126 ✅ | Browser E2E: NEWS button ✅ fetch triggered ✅
+
+## 2026-04-04 — Sprint 65: Watchlist Price Alert Quick-Set
+**Commit**: `d996359`
+- `WatchlistPanel` (`LiveRow`): hover-reveal Bell button (absolute right:6, 18×18); visible on `hovered || alertOpen` when `price !== null`
+- Click-outside popover with "ALERT @ {price}" label; ↑ Cross Above + ↓ Cross Below dispatch `ADD_ALERT` with live price; `stopPropagation` prevents row navigation
+- TypeScript: 0 errors | Tests: 126/126 ✅ | Browser E2E: bell ✅ popover ✅ alert created ✅
+
+
 > Auto-maintained
+
+## 2026-04-04 — Sprint 64: Indicator Param Persistence + Browser Notifications
+**Commit**: `2fa06a7`
+- `ChartEngine`: indicatorParams lazy-initialized from `ordr_indicator_params` localStorage; saved inside setIndicatorParams updater on every change
+- `ChartCore`: `fireBrowserNotification()` — fires OS `new Notification()` on alert trigger (price + indicator); respects Notification.permission
+- `AlertsPanel`: BellRing/BellOff permission icon; requestPermission on click; color-coded state (granted/denied/default)
+- TypeScript: 0 errors | Tests: 126/126 ✅
+
+## 2026-04-04 — Sprint 63: Enhanced MTF Strip — Trend Signals
+**Commit**: `7110e70`
+- `BottomDock.tsx` (MTFCard): signal row below mini candle chart — EMA(9/21) trend badge (BULL/BEAR/NEUT), RSI(14) with color coding (≥70 red, ≤30 green), MACD histogram direction arrow
+- All computed via useMemo from already-fetched bars (zero extra fetches)
+- MTFStrip timeframes: 15m / 1h / 4h / D / W
+- TypeScript: 0 errors | Tests: 126/126 ✅
+
+## 2026-04-04 — Sprint 62: Multi-Symbol Comparison Overlay
+**Commit**: `8537d94`
+- `hooks/useCompareData.ts` (new): Promise.all parallel fetch for N compare symbols; TD proxy + hedgecore fallback
+- `workspace-types.ts`: `compareSymbols: string[]`; ADD_COMPARE + REMOVE_COMPARE actions (max 4)
+- `WorkspaceProvider.tsx`: initial state, reducer, localStorage persistence
+- `ChartRenderer.ts`: Layer 3c re-based comparison lines; `rebasedPrice = primaryFirst × (compareClose / compareFirst)`; right-side labels; 4-color scheme
+- `ChartEngine.tsx`: `externalCompareData` prop wired to renderProps
+- `ChartCore.tsx`: useCompareData hook + prop pass-through
+- `CommandBar.tsx`: CompareButton — popover, symbol input, color-coded chips with × remove
+- TypeScript: 0 errors | Tests: 126/126 ✅
+
+## 2026-04-04 — Sprint 61: ICT Kill Zones + Equal Highs/Lows
+**Commit**: `924913c`
+- `killZones.ts` (new): London/NY AM/NY PM vertical bands; semi-transparent fills + labels; skips on ≥4h timeframes
+- `eqhl.ts` (new): swing high/low detection (lookback=3), greedy 0.08% tolerance clustering, swept status; EQH=red dashed, EQL=teal dashed, swept=grey
+- `ChartRenderer.ts`: `showKillZones` + `showEQHL` RenderProps; rendering after sessionRanges block
+- `ChartEngine.tsx`: `externalShowKillZones` + `externalShowEQHL` props wired to renderProps
+- `ChartCore.tsx`: passes both props from workspace state
+- `WorkspaceProvider.tsx`: initial false state, TOGGLE_KILL_ZONES + TOGGLE_EQHL reducers, localStorage persistence
+- `workspace-types.ts`: `showKillZones` + `showEQHL` fields; two new action union variants
+- `CommandBar.tsx`: KillZonesToggle ("KZ") + EQHLToggle ("EQL/H") toolbar buttons
+- TypeScript: 0 errors | Tests: 126/126 ✅
+
+## 2026-04-04 — Sprint 60: Advanced Chart Types
+**Commit**: `bccc424`
+- `chartTypes.ts`: `drawRenko` — ATR-14 brick size, time-independent price bricks, bull (green fill) / bear (red fill), viewport mapped via density ratio; `drawLineBreak` — 3-line break, hollow bull / filled bear boxes; `ChartType` extended with `'renko' | 'linebreak'`
+- `workspace-types.ts`: `ChartType` extended with `'renko' | 'linebreak'`
+- `ChartRenderer.ts`: import + switch cases for renko / linebreak
+- `ChartContextMenu.tsx`: Renko + Line Break items in Chart Type submenu
+- `ChartEngine.tsx`: `chartType:renko` + `chartType:linebreak` handler cases
+- TypeScript: 0 errors | Tests: 126/126 ✅
+
+## 2026-04-04 — Sprint 59: Performance Pass
+**Commit**: `37b9908`
+- `WatchlistPanel`: `IntersectionLiveRow` — defers `LiveRow` mount until viewport entry (IntersectionObserver, 120px rootMargin, 37px placeholder)
+- `HeatmapPanel`: `Promise.all()` parallel fetch replaces serial loop; single `setTiles` state update
+- `ChartEngine`: 150ms debounced `setDimensions` in ResizeObserver — prevents canvas thrash on resize drag
+- TypeScript: 0 errors | Tests: 126/126 ✅
+
+## 2026-04-04 — Sprint 58: Mobile UX Round 2
+**Commit**: `7be77b1`
+- `ChartEngine`: swipe gesture → `onSwipeTimeframe('left'|'right')` (>70px, <400ms, no draw/drag/pinch); hit radius 2.5x→3.5x
+- `ChartCore`: `onSwipeTimeframe` → `SET_TIMEFRAME` cycling `BASE_TIMEFRAMES + customTimeframes`
+- `MobileWorkspace`: `onSwipeTimeframe` → cycle `MOBILE_TFS` local state
+- `IndicatorSettingsPanel`: mobile (<768px) = fixed bottom sheet; desktop = floating popover; shared `panelBody` JSX
+- TypeScript: 0 errors | Tests: 126/126 ✅
 
 ## 2026-04-04 — Sprint 57: Paper Trading Portfolio
 **Commit**: `8226fc9`

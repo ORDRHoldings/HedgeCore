@@ -822,6 +822,11 @@ export default function MobileWorkspace() {
           onDrawingModeChange={handleDrawingModeChange}
           onChartTypeChange={handleChartTypeChange}
           onPairChange={setSymbol}
+          onSwipeTimeframe={(dir) => {
+            const idx = MOBILE_TFS.indexOf(timeframe);
+            const next = dir === 'left' ? MOBILE_TFS[idx + 1] : MOBILE_TFS[idx - 1];
+            if (next) setTimeframe(next);
+          }}
         />
       </div>
 

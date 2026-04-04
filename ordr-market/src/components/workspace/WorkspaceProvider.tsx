@@ -147,6 +147,12 @@ const initialState: WorkspaceState = {
   showAutoFib: false,
   showSessionRanges: false,
   crosshairSyncEnabled: true,
+  showKillZones: false,
+  showEQHL: false,
+  compareSymbols: [],
+  showNewsOverlay: false,
+  alertHistory: [],
+  riskLevels: null,
   secondaryCharts: [
     { id: 'c1', symbol: 'AAPL',   timeframe: '1D' },
     { id: 'c2', symbol: 'EURUSD', timeframe: '4h' },
@@ -381,6 +387,27 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       return { ...state, showSessionRanges: !state.showSessionRanges };
     case 'TOGGLE_CROSSHAIR_SYNC':
       return { ...state, crosshairSyncEnabled: !state.crosshairSyncEnabled };
+    case 'TOGGLE_KILL_ZONES':
+      return { ...state, showKillZones: !state.showKillZones };
+    case 'TOGGLE_EQHL':
+      return { ...state, showEQHL: !state.showEQHL };
+    case 'ADD_COMPARE': {
+      if (state.compareSymbols.includes(action.symbol) || state.compareSymbols.length >= 4) return state;
+      return { ...state, compareSymbols: [...state.compareSymbols, action.symbol] };
+    }
+    case 'REMOVE_COMPARE':
+      return { ...state, compareSymbols: state.compareSymbols.filter(s => s !== action.symbol) };
+    case 'TOGGLE_NEWS_OVERLAY':
+      return { ...state, showNewsOverlay: !state.showNewsOverlay };
+    case 'LOG_ALERT_TRIGGER': {
+      const newEntry = { ...action.entry, id: Math.random().toString(36).slice(2) };
+      const trimmed = [newEntry, ...state.alertHistory].slice(0, 100);
+      return { ...state, alertHistory: trimmed };
+    }
+    case 'CLEAR_ALERT_HISTORY':
+      return { ...state, alertHistory: [] };
+    case 'SET_RISK_LEVELS':
+      return { ...state, riskLevels: action.levels };
     case 'REPLAY_START':
       return {
         ...state,
@@ -469,7 +496,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         showSR, showFVG, magnetEnabled, alerts,
         paperPositions, tradeHistory, enabledSessions,
         chartLayout, secondaryCharts, priceScaleMode, showPrevLevels, showOpenLevels, showPivots, showCandlePatterns, showAutoFib, showSessionRanges,
-        crosshairSyncEnabled,
+        crosshairSyncEnabled, showKillZones, showEQHL, compareSymbols, showNewsOverlay,
+        alertHistory,
       } = state;
       localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify({
         mode, leftTab, rightTab, bottomTab, bottomHeight,
@@ -478,7 +506,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         showSR, showFVG, magnetEnabled, alerts,
         paperPositions, tradeHistory, enabledSessions,
         chartLayout, secondaryCharts, priceScaleMode, showPrevLevels, showOpenLevels, showPivots, showCandlePatterns, showAutoFib, showSessionRanges,
-        crosshairSyncEnabled,
+        crosshairSyncEnabled, showKillZones, showEQHL, compareSymbols, showNewsOverlay,
+        alertHistory,
       }));
     } catch { /* ignore */ }
   }, [
@@ -488,7 +517,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     state.showSR, state.showFVG, state.magnetEnabled, state.alerts,
     state.paperPositions, state.tradeHistory, state.enabledSessions,
     state.chartLayout, state.secondaryCharts, state.priceScaleMode, state.showPrevLevels, state.showOpenLevels, state.showPivots, state.showCandlePatterns,
-    state.crosshairSyncEnabled,
+    state.crosshairSyncEnabled, state.showKillZones, state.showEQHL, state.compareSymbols, state.showNewsOverlay,
+    state.alertHistory,
   ]);
 
   // Keyboard shortcuts

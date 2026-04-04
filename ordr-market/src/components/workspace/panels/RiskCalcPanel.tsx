@@ -40,7 +40,7 @@ function pnlPerLot(slDist: number, symbol: string, price: number): number {
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
 export function RiskCalcPanel() {
-  const { state, symbolInfo } = useWorkspace();
+  const { state, symbolInfo, dispatch } = useWorkspace();
 
   const [accountStr, setAccountStr] = useState<string>(() => {
     if (typeof window === 'undefined') return '10000';
@@ -58,6 +58,21 @@ export function RiskCalcPanel() {
       setEntryStr(formatPrice(symbolInfo.price, state.symbol));
     }
   }, [symbolInfo.price, state.symbol]);
+
+  // Sync risk levels to chart canvas
+  useEffect(() => {
+    const e = parseFloat(entryStr) || 0;
+    const s = parseFloat(slStr) || 0;
+    const t = parseFloat(tpStr) || 0;
+    if (e > 0) {
+      dispatch({ type: 'SET_RISK_LEVELS', levels: { entry: e, sl: s > 0 ? s : null, tp: t > 0 ? t : null, side } });
+    } else {
+      dispatch({ type: 'SET_RISK_LEVELS', levels: null });
+    }
+  }, [entryStr, slStr, tpStr, side]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear risk levels when panel unmounts
+  useEffect(() => () => { dispatch({ type: 'SET_RISK_LEVELS', levels: null }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist account size
   function handleAccountChange(v: string) {

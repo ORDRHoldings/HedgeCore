@@ -113,20 +113,7 @@ export default function IndicatorSettingsPanel({
 
   if (!visible || !schema) return null;
 
-  // Position: below and slightly right of the chip
-  const panelStyle: React.CSSProperties = {
-    position: "fixed",
-    zIndex: 10000,
-    top: anchorRect ? anchorRect.top + anchorRect.height + 4 : 100,
-    left: anchorRect ? anchorRect.left : 100,
-    minWidth: 220,
-    maxWidth: 280,
-    background: PANEL_BG,
-    border: `1px solid ${BORDER}`,
-    borderRadius: 8,
-    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-    overflow: "hidden",
-  };
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   const hasParams = schema.params.length > 0;
   const isDefault = hasParams && schema.params.every((p) => {
@@ -134,116 +121,78 @@ export default function IndicatorSettingsPanel({
     return current === undefined || current === p.default;
   });
 
-  return (
-    <div ref={panelRef} style={panelStyle} data-testid="indicator-settings-panel">
+  // Shared panel body (used in both mobile and desktop layouts)
+  const panelBody = (
+    <>
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "10px 12px 8px 12px",
-          borderBottom: `1px solid ${BORDER}`,
-        }}
-      >
-        <span
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            background: schema.color,
-            flexShrink: 0,
-          }}
-        />
-        <span
-          style={{
-            fontFamily: FONT_MONO,
-            fontSize: 12,
-            fontWeight: 700,
-            color: TEXT_WHITE,
-            flex: 1,
-          }}
-        >
-          {schema.name}
-        </span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px 8px 12px", borderBottom: `1px solid ${BORDER}` }}>
+        <span style={{ width: 10, height: 10, borderRadius: "50%", background: schema.color, flexShrink: 0 }} />
+        <span style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, color: TEXT_WHITE, flex: 1 }}>{schema.name}</span>
       </div>
-
       {/* Params */}
       {hasParams && (
         <div style={{ padding: "8px 12px" }}>
           {schema.params.map((p) => (
-            <ParamRow
-              key={p.key}
-              param={p}
-              value={params[p.key] ?? (p.default as number)}
-              onChange={(v) => handleParamChange(p.key, v)}
-            />
+            <ParamRow key={p.key} param={p} value={params[p.key] ?? (p.default as number)} onChange={(v) => handleParamChange(p.key, v)} />
           ))}
         </div>
       )}
-
-      {/* No params message */}
       {!hasParams && (
-        <div
-          style={{
-            padding: "12px",
-            fontFamily: FONT_UI,
-            fontSize: 12,
-            color: MUTED,
-            textAlign: "center",
-          }}
-        >
+        <div style={{ padding: "12px", fontFamily: FONT_UI, fontSize: 12, color: MUTED, textAlign: "center" }}>
           No configurable parameters
         </div>
       )}
-
       {/* Action bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          padding: "6px 12px 10px 12px",
-          borderTop: `1px solid ${BORDER}`,
-        }}
-      >
-        {/* Visibility toggle */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 12px 10px 12px", borderTop: `1px solid ${BORDER}` }}>
         {onVisibilityToggle && (
-          <ActionButton
-            icon={isHidden ? <EyeOff size={13} /> : <Eye size={13} />}
-            tooltip={isHidden ? "Show" : "Hide"}
-            onClick={() => onVisibilityToggle(indicatorId)}
-            color={MUTED}
-            hoverColor={ACCENT}
-            testId="indicator-settings-visibility"
-          />
+          <ActionButton icon={isHidden ? <EyeOff size={13} /> : <Eye size={13} />} tooltip={isHidden ? "Show" : "Hide"}
+            onClick={() => onVisibilityToggle(indicatorId)} color={MUTED} hoverColor={ACCENT} testId="indicator-settings-visibility" />
         )}
-
-        {/* Reset */}
         {hasParams && (
-          <ActionButton
-            icon={<RotateCcw size={13} />}
-            tooltip="Reset defaults"
-            onClick={handleReset}
-            color={isDefault ? "#363A45" : MUTED}
-            hoverColor={ACCENT}
-            disabled={isDefault}
-            testId="indicator-settings-reset"
-          />
+          <ActionButton icon={<RotateCcw size={13} />} tooltip="Reset defaults" onClick={handleReset}
+            color={isDefault ? "#363A45" : MUTED} hoverColor={ACCENT} disabled={isDefault} testId="indicator-settings-reset" />
         )}
-
         <span style={{ flex: 1 }} />
-
-        {/* Remove */}
-        <ActionButton
-          icon={<Trash2 size={13} />}
-          tooltip="Remove indicator"
-          onClick={handleRemove}
-          color={MUTED}
-          hoverColor={DANGER}
-          testId="indicator-settings-remove"
-        />
+        <ActionButton icon={<Trash2 size={13} />} tooltip="Remove indicator" onClick={handleRemove}
+          color={MUTED} hoverColor={DANGER} testId="indicator-settings-remove" />
       </div>
+    </>
+  );
+
+  // Mobile: bottom sheet with backdrop
+  if (isMobile) {
+    return (
+      <>
+        <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)' }} />
+        <div ref={panelRef} data-testid="indicator-settings-panel" style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 10000,
+          background: PANEL_BG, borderRadius: '16px 16px 0 0',
+          border: `1px solid ${BORDER}`, boxShadow: '0 -8px 32px rgba(0,0,0,0.5)',
+          maxHeight: '75vh', overflowY: 'auto',
+          paddingBottom: 'calc(16px + env(safe-area-inset-bottom))',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 4 }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: BORDER }} />
+          </div>
+          {panelBody}
+        </div>
+      </>
+    );
+  }
+
+  // Desktop: floating popover below the chip
+  const panelStyle: React.CSSProperties = {
+    position: "fixed", zIndex: 10000,
+    top: anchorRect ? anchorRect.top + anchorRect.height + 4 : 100,
+    left: anchorRect ? anchorRect.left : 100,
+    minWidth: 220, maxWidth: 280,
+    background: PANEL_BG, border: `1px solid ${BORDER}`,
+    borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,0.5)", overflow: "hidden",
+  };
+
+  return (
+    <div ref={panelRef} style={panelStyle} data-testid="indicator-settings-panel">
+      {panelBody}
     </div>
   );
 }

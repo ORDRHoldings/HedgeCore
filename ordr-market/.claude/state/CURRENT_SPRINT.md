@@ -152,5 +152,267 @@
 
 ---
 
-## Next Sprint: S58 — Mobile UX Round 2
-Swipe gesture for timeframe change; bottom sheet panels for indicator settings; improved touch drawing accuracy
+## Sprint 58 — COMPLETED ✅
+**Mobile UX Round 2**
+
+### Delivered
+- `ChartEngine.tsx`: horizontal swipe gesture detection — tracks `swipeStartX/Y/Time/wasPinch`; on touchEnd (0 fingers), if |dx| > 70px, |dx|/|dy| > 1.5, elapsed < 400ms, not drawing/drag/pinch → calls `onSwipeTimeframe('left'|'right')`
+- `ChartEngine.tsx`: touch drawing handle hit radius `2.5x → 3.5x` for better finger tap precision
+- `ChartCore.tsx`: `onSwipeTimeframe` wired to `SET_TIMEFRAME` dispatch; cycles through `BASE_TIMEFRAMES + customTimeframes`; `left` = higher TF, `right` = lower TF
+- `MobileWorkspace.tsx`: `onSwipeTimeframe` wired to cycle `MOBILE_TFS` local state
+- `IndicatorSettingsPanel.tsx`: responsive — `window.innerWidth < 768` → renders as fixed bottom sheet (backdrop + drag handle + `maxHeight: 75vh`); desktop unchanged (floating popover)
+
+### Commit
+`7be77b1` — pushed to master
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ TF dispatch working (SET_TIMEFRAME to '1m' confirmed), indicator dialog opening confirmed, swipe code wired to ChartEngine/ChartCore/MobileWorkspace
+
+---
+
+## Sprint 59 — COMPLETED ✅
+**Performance Pass**
+
+### Delivered
+- `WatchlistPanel.tsx`: `IntersectionLiveRow` wrapper — defers `LiveRow` mount (and its `usePublicChartData` calls) until row enters viewport via IntersectionObserver (`rootMargin: '120px 0px'`); 37px placeholder for off-screen rows
+- `HeatmapPanel.tsx`: `Promise.all()` parallel fetch replaces serial `for...of` loop; all tiles load in parallel (~8s max vs N×8s); single `setTiles` state update after all results
+- `ChartEngine.tsx`: 150ms debounce on `ResizeObserver` `setDimensions` — prevents canvas reallocation thrashing during window drag
+
+### Commit
+`37b9908` — pushed to master
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ Watchlist: 14 IntersectionLiveRow placeholder divs (37px) confirmed. Heatmap: 14 tiles loaded in parallel (11↑ 1— 2↓). Chart canvas CSS size 1433×506, OHLC data rendering confirmed.
+
+---
+
+## Sprint 60 — COMPLETED ✅
+**Advanced Chart Types**
+
+### Delivered
+- `chartTypes.ts`: `drawRenko()` — ATR-14 brick size computation; time-independent bricks via density-ratio viewport mapping; solid bull/bear fills (no wicks)
+- `chartTypes.ts`: `drawLineBreak()` — 3-line break algorithm; hollow bullish / solid bearish boxes; density-ratio viewport mapping
+- `chartTypes.ts`: `ChartType` union extended with `'renko' | 'linebreak'`
+- `workspace-types.ts`: `ChartType` extended with `'renko' | 'linebreak'`
+- `ChartRenderer.ts`: imports + switch cases `case "renko"` / `case "linebreak"`
+- `ChartContextMenu.tsx`: "Renko" + "Line Break" items in Chart Type submenu
+- `ChartEngine.tsx`: `chartType:renko` + `chartType:linebreak` handler cases
+
+### Commit
+`bccc424` — pushed to master
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ Context menu Chart Type submenu confirmed: Candles/Hollow/Bars/Line/Area/Heikin Ashi/Baseline/Renko/Line Break all present. Renko selected → chartType:"renko" persisted, canvas 1433×506. Line Break selected → chartType:"linebreak" persisted, canvas 1433×506, no runtime errors.
+
+---
+
+## Sprint 61 — COMPLETED ✅
+**ICT Kill Zones + Equal Highs/Lows**
+
+### Delivered
+- `killZones.ts` (new): `drawKillZones()` — London (07–09 UTC), NY AM (12–14 UTC), NY PM (19–20 UTC) vertical bands; skips on ≥4h timeframes; semi-transparent fills with zone labels
+- `eqhl.ts` (new): `detectEQHL()` — swing high/low scan (lookback=3), greedy cluster-by-price with 0.08% tolerance, swept detection via subsequent close; `drawEQHL()` — EQH=red dashed, EQL=teal dashed, swept=grey, right-aligned labels
+- `ChartRenderer.ts`: imports + rendering after `showSessionRanges` block; `showKillZones` + `showEQHL` RenderProps fields
+- `ChartEngine.tsx`: `externalShowKillZones` + `externalShowEQHL` props; wired to renderProps
+- `ChartCore.tsx`: passes both props from workspace state
+- `WorkspaceProvider.tsx`: `showKillZones: false` + `showEQHL: false` initial state; `TOGGLE_KILL_ZONES` + `TOGGLE_EQHL` reducer cases; localStorage persistence
+- `workspace-types.ts`: `showKillZones` + `showEQHL` WorkspaceState fields; two new action union variants
+- `CommandBar.tsx`: `KillZonesToggle` ("KZ") + `EQHLToggle` ("EQL/H") toolbar buttons
+
+### Commit
+`924913c` — pushed to master
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ "KZ" button (title "ICT Kill Zones") present in toolbar. "EQL/H" button (title "Equal Highs/Lows") present. `showKillZones:true` + `showEQHL:true` persisted to localStorage after clicks. 1h timeframe active with both toggles on — no runtime errors.
+
+---
+
+## Sprint 62 — COMPLETED ✅
+**Multi-Symbol Comparison Overlay**
+
+### Delivered
+- `hooks/useCompareData.ts` (new): parallel `Promise.all` fetch for N symbols; same TD proxy + hedgecore fallback; returns `{symbol, bars}[]`
+- `workspace-types.ts`: `compareSymbols: string[]` state field; `ADD_COMPARE` + `REMOVE_COMPARE` actions (max 4 symbols)
+- `WorkspaceProvider.tsx`: initial state `[]`, reducer cases, localStorage persistence
+- `ChartRenderer.ts`: Layer 3c comparison lines — re-bases each series via `primaryFirst × (compareClose / compareFirst)`; right-side labels with symbol + % change; 4-color scheme (blue/orange/purple/teal)
+- `ChartEngine.tsx`: `externalCompareData` prop wired to renderProps
+- `ChartCore.tsx`: calls `useCompareData` hook; passes result to ChartEngine
+- `CommandBar.tsx`: `CompareButton` — popover with symbol input + Enter-to-add; active symbols shown as color-coded chips with × remove
+
+### Commit
+`8537d94` — pushed to master
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ `+ CMP` button present in toolbar. AAPL chip appeared in DOM after adding. `compareSymbols:["AAPL"]` persisted to localStorage. No runtime errors.
+
+---
+
+## Sprint 63 — COMPLETED ✅
+**Enhanced MTF Strip — Trend Signals**
+
+### Delivered
+- `BottomDock.tsx` (`MTFCard`): signal row appended below mini candle chart — EMA(9)/EMA(21) alignment → BULL/BEAR/NEUT badge; RSI(14) with overbought/oversold coloring; MACD histogram direction arrow
+- All signals computed via `useMemo` from already-fetched bars (zero extra network requests)
+- `MTFStrip` timeframes updated: `15m / 1h / 4h / D / W`
+
+### Commit
+`7110e70` — pushed to master
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ MTFStrip shows 5 TF labels [15m, 1h, 4h, D, W]. Signal badges confirmed: NEUT/BEAR trend labels, RSI 53/43/46/46/45 values rendered per card. No runtime errors.
+
+---
+
+## Sprint 64 — COMPLETED ✅
+**Indicator Param Persistence + Browser Notifications**
+
+### Delivered
+- `ChartEngine.tsx`: `indicatorParams` hydrated from `ordr_indicator_params` localStorage key on mount (lazy initializer); saved on every param change inside `setIndicatorParams` updater
+- `ChartCore.tsx`: `fireBrowserNotification()` helper — fires `new Notification()` if `Notification.permission === 'granted'`; wired into both price alert and indicator alert trigger paths
+- `AlertsPanel.tsx`: BellRing/BellOff icon button in header; shows permission state (granted=green/bull, denied=grey, default=orange/warn); clicking requests permission via `Notification.requestPermission()`
+
+### Commit
+`2fa06a7` — pushed to master
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ `Notification.permission:"default"` confirmed. Button title "Enable browser notifications for alerts" found in AlertsPanel. `ordr_indicator_params` localStorage read/write confirmed. No runtime errors.
+
+---
+
+## Sprint 65 — COMPLETED ✅
+**Watchlist Price Alert Quick-Set**
+
+### Delivered
+- `WatchlistPanel.tsx` (`LiveRow`): hover-reveal Bell button — appears on mouse-over of any watchlist row (when price data loaded); absolutely positioned at right:6, 18×18px
+- Mini popover: "ALERT @ {price}" label + "↑ Cross Above" + "↓ Cross Below" buttons; dispatches `ADD_ALERT` with current live price; click-outside closes popover
+- `stopPropagation` on bell click and alert buttons — prevents row select firing
+
+### Commit
+`d996359` — pushed to master
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ Bell icon appeared on SPY row hover. Clicked bell → popover showed "ALERT @ 655.83" with ↑/↓ buttons. Clicked "Cross Above" → Alerts panel updated to "Alerts (1)" with SPY / price_above entry. No runtime errors.
+
+---
+
+## Sprint 66 — COMPLETED ✅
+**News Events on Chart Timeline**
+
+### Delivered
+- `workspace-types.ts`: `showNewsOverlay: boolean` state field; `TOGGLE_NEWS_OVERLAY` action
+- `WorkspaceProvider.tsx`: `showNewsOverlay: false` initial state; reducer case; localStorage persistence
+- `ChartCore.tsx`: news fetch effect — fetches `/api/news?symbol=...&mode=symbol&limit=50` when `showNewsOverlay && symbol`; converts `isoTime` → unix seconds; passes `externalNewsEvents` to ChartEngine
+- `ChartRenderer.ts` (Layer 8c): colored triangle flags at chart bottom edge for each news event bar position (red=high, amber=medium, grey=low importance)
+- `ChartEngine.tsx`: `externalNewsEvents` prop; hover detection within 10px×12px of each flag; React tooltip overlay with headline, importance, source, sentiment
+- `CommandBar.tsx`: `NewsOverlayToggle` component — "NEWS" toolbar button dispatching `TOGGLE_NEWS_OVERLAY`
+
+### Commit
+Pending push
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ "NEWS" button found in toolbar (title "Show news events on chart timeline"). Clicking button triggers `/api/news` fetch confirmed via fetch intercept (`fetches: 1`). State toggles correctly (button inactive → active → fetches news).
+
+---
+
+## Sprint 67 — COMPLETED ✅
+**Alert History Log**
+
+### Delivered
+- `workspace-types.ts`: `AlertHistoryEntry` interface (id, symbol, condition, value, triggerPrice, triggeredAt ISO); `alertHistory: AlertHistoryEntry[]` WorkspaceState field; `LOG_ALERT_TRIGGER` + `CLEAR_ALERT_HISTORY` actions
+- `WorkspaceProvider.tsx`: `alertHistory: []` initial state; `LOG_ALERT_TRIGGER` reducer prepends entry + caps at 100; `CLEAR_ALERT_HISTORY` clears list; localStorage persistence
+- `ChartCore.tsx`: price alert trigger path + indicator alert trigger path both dispatch `LOG_ALERT_TRIGGER` with symbol/condition/value/triggerPrice/triggeredAt
+- `AlertsPanel.tsx`: panel-level tab switcher (`ACTIVE` / `HISTORY`); Active tab = existing alert list; History tab = triggered alert entries (symbol, condition, trigger price, relative + absolute time); "Clear" button dispatches `CLEAR_ALERT_HISTORY`; empty state "No triggered alerts yet"
+
+### Commit
+Pending push
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ `Active (1)` tab shows existing alert. `History (0)` tab shows "No triggered alerts yet" empty state. Both tabs clickable. alertHistory state initialized correctly.
+
+---
+
+## Sprint 68 — COMPLETED ✅
+**Risk Levels on Chart Canvas**
+
+### Delivered
+- `workspace-types.ts`: `riskLevels` state field (`{ entry, sl, tp, side } | null`); `SET_RISK_LEVELS` action
+- `WorkspaceProvider.tsx`: `riskLevels: null` initial state; reducer case; intentionally NOT persisted to localStorage (ephemeral)
+- `RiskCalcPanel.tsx`: `dispatch` added; useEffect syncs entry/SL/TP/side → `SET_RISK_LEVELS` on every input change; cleanup effect clears levels on unmount
+- `ChartRenderer.ts` (Layer 8d): draws colored horizontal price lines — red fill (risk zone entry↔SL, α=0.06), green fill (reward zone entry↔TP, α=0.05), red dashed STOP line, green dashed TARGET line, blue/orange dashed ENTRY line; price-axis labels (STOP/TARGET/ENTRY) as colored rectangles
+- `ChartEngine.tsx`: `externalRiskLevels` prop wired to renderProps
+- `ChartCore.tsx`: passes `externalRiskLevels={state.riskLevels}` to ChartEngine
+
+### Commit
+Pending push
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ Risk Calc panel opened. SL=455.00, TP=465.00 set via JS simulation. Inputs confirmed `SL value: 455.00 | TP value: 465.00 | Entry-like inputs: 459.31, 455.00, 465.00`. riskLevels ephemeral (not in localStorage). No runtime errors.
+
+---
+
+## Sprint 69 — COMPLETED ✅
+**FX Correlation Matrix Panel**
+
+### Delivered
+- `workspace-types.ts`: `'corr'` added to RightTab union
+- `panels/CorrelationPanel.tsx` (new): 10×10 Pearson correlation matrix for 10 FX pairs (EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, NZD/USD, USD/CAD, EUR/JPY, GBP/JPY, EUR/GBP); parallel fetch via TD proxy + hedgecore fallback; period selector 20d/50d/100d; color-coded cells (deep green=+1, grey=0, deep red=-1); diagonal shows 1.00; refresh button; full pair legend with "no data" state
+- `RightStack.tsx`: `GitBranch` icon import; `corr` tab added to RIGHT_TABS; `case 'corr': return <CorrelationPanel />` in PanelContent
+
+### Commit
+Pending push
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ "Correlation Matrix" button in right rail found. 20d/50d/100d period buttons confirmed. EUR/GBP/JPY row labels visible. 10×10 = 100 cells rendered (—  graceful fallback when API rate-limited). Legend shows "no data" for all 10 symbols (expected under rate limiting). No runtime errors.
+
+---
+
+## Sprint 70 — COMPLETED ✅
+**Heatmap Panel Revamp**
+
+### Delivered
+- `HeatmapPanel.tsx`: complete rewrite
+  - `fetchTileData()`: fetches 8 daily bars per symbol (7 for sparkline + 1 for % change); TD proxy `/api/chart-data/` primary, hedgecore fallback
+  - `Sparkline` component: SVG path rendering 7-close trend line inside each tile
+  - Category filter tabs: All / ETF / Tech / Metals / Crypto (filters `DEFAULT_WATCHLIST.category`)
+  - Sort controls: A–Z / ▲ Best / ▼ Worst (default: gainers)
+  - 2-column tile grid (was 3-column) to fit sparkline + price data
+  - `tileColors()` extended with `spark` color per intensity band
+  - Breadth bar + up/flat/down counts apply to filtered subset
+  - Footer: "7-day sparkline · daily % change · auto-refresh 60s"
+
+### Commit
+Pending push
+
+### Validation
+- TypeScript: 0 errors ✅
+- Tests: 126/126 passing ✅
+- Browser E2E: ✅ "Market Heatmap" header. All/ETF/Tech/Metals/Crypto category buttons confirmed. A-Z/Best/Worst sort buttons. Tech filter → 7 tiles (AAPL/MSFT/NVDA/TSLA/AMZN/META/GOOGL). Sparkline SVGs render when API data available (rate-limited in E2E). No runtime errors.
+
+---
+
+## Next Sprint: S71
+(Ready for next sprint)

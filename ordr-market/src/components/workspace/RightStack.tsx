@@ -7,7 +7,7 @@
 import React from 'react';
 import {
   Settings, Layers, Bot, BarChart3, Bell, Newspaper, ShoppingCart, Star, X,
-  Calculator, LayoutGrid, FileText,
+  Calculator, LayoutGrid, FileText, GitBranch,
 } from 'lucide-react';
 import { T } from './tokens';
 import { useWorkspace } from './WorkspaceProvider';
@@ -23,6 +23,7 @@ import { WatchlistPanel } from './panels/WatchlistPanel';
 import { RiskCalcPanel } from './panels/RiskCalcPanel';
 import { HeatmapPanel } from './panels/HeatmapPanel';
 import { ChartNotesPanel } from './panels/ChartNotesPanel';
+import { CorrelationPanel } from './panels/CorrelationPanel';
 
 const RAIL_W = 32;
 
@@ -38,6 +39,7 @@ const RIGHT_TABS: { id: RightTab; icon: React.ReactNode; label: string }[] = [
   { id: 'risk',       icon: <Calculator size={14} />,   label: 'Risk Calc' },
   { id: 'heatmap',    icon: <LayoutGrid size={14} />,   label: 'Heatmap' },
   { id: 'notes',      icon: <FileText size={14} />,     label: 'Chart Notes' },
+  { id: 'corr',       icon: <GitBranch size={14} />,   label: 'Correlation Matrix' },
 ];
 
 function PanelContent({ tab }: { tab: RightTab }) {
@@ -53,6 +55,7 @@ function PanelContent({ tab }: { tab: RightTab }) {
     case 'risk':       return <RiskCalcPanel />;
     case 'heatmap':    return <HeatmapPanel />;
     case 'notes':      return <ChartNotesPanel />;
+    case 'corr':       return <CorrelationPanel />;
   }
 }
 

@@ -1,6 +1,6 @@
 'use client';
-import React, { useState } from 'react';
-import { Bell, Plus, Trash2, ToggleLeft, ToggleRight, AlertTriangle, RotateCcw, Activity } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bell, Plus, Trash2, ToggleLeft, ToggleRight, AlertTriangle, RotateCcw, Activity, BellOff, BellRing, History, X } from 'lucide-react';
 import { T } from '../tokens';
 import { useWorkspace } from '../WorkspaceProvider';
 import { formatPrice } from '../workspace-data';
@@ -26,8 +26,20 @@ function conditionLabel(condition: string, value: number): string {
   return condition;
 }
 
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
 export function AlertsPanel() {
   const { state, dispatch, symbolInfo } = useWorkspace();
+  const [panelTab, setPanelTab] = useState<'active' | 'history'>('active');
   const [activeTab, setActiveTab] = useState<AlertTab>('price');
   const [showCreate, setShowCreate] = useState(false);
   const [alertPrice, setAlertPrice] = useState('');
@@ -36,6 +48,17 @@ export function AlertsPanel() {
   // Indicator alert form state
   const [indCondition, setIndCondition] = useState(INDICATOR_CONDITIONS[0].condition);
   const [indValue, setIndValue] = useState('70');
+
+  // Browser notification permission state
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission>('default');
+  useEffect(() => {
+    if (typeof Notification !== 'undefined') setNotifPerm(Notification.permission);
+  }, []);
+  const requestNotifPermission = async () => {
+    if (typeof Notification === 'undefined') return;
+    const result = await Notification.requestPermission();
+    setNotifPerm(result);
+  };
 
   const selectedIndCond = INDICATOR_CONDITIONS.find(c => c.condition === indCondition) ?? INDICATOR_CONDITIONS[0];
 
@@ -79,6 +102,19 @@ export function AlertsPanel() {
         <span style={{ fontSize: 11, fontWeight: 600, color: T.text1, fontFamily: T.font, flex: 1 }}>
           Alerts ({state.alerts.length})
         </span>
+        {/* Browser notification permission toggle */}
+        <button
+          onClick={notifPerm !== 'granted' ? requestNotifPermission : undefined}
+          title={notifPerm === 'granted' ? 'Browser notifications enabled' : notifPerm === 'denied' ? 'Notifications blocked — enable in site settings' : 'Enable browser notifications for alerts'}
+          style={{
+            display: 'flex', alignItems: 'center', border: 'none', background: 'none',
+            cursor: notifPerm === 'denied' ? 'not-allowed' : 'pointer', padding: '2px 4px',
+            borderRadius: 3, outline: 'none',
+            color: notifPerm === 'granted' ? T.bull : notifPerm === 'denied' ? T.text3 : T.warn,
+          }}
+        >
+          {notifPerm === 'granted' ? <BellRing size={11} /> : <BellOff size={11} />}
+        </button>
         <button
           onClick={() => setShowCreate(!showCreate)}
           style={{
@@ -90,6 +126,22 @@ export function AlertsPanel() {
         >
           <Plus size={10} /> New
         </button>
+      </div>
+
+      {/* Panel tab switcher: ACTIVE | HISTORY */}
+      <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+        {(['active', 'history'] as const).map(tab => (
+          <button key={tab} onClick={() => setPanelTab(tab)} style={{
+            flex: 1, padding: '5px 0', border: 'none', outline: 'none',
+            background: panelTab === tab ? T.accentBg : 'transparent',
+            color: panelTab === tab ? T.accent : T.text3,
+            fontSize: 9, fontWeight: 600, cursor: 'pointer', fontFamily: T.font,
+            letterSpacing: '0.05em', textTransform: 'uppercase',
+            borderBottom: panelTab === tab ? `2px solid ${T.accent}` : '2px solid transparent',
+          }}>
+            {tab === 'active' ? `Active (${state.alerts.length})` : `History (${state.alertHistory.length})`}
+          </button>
+        ))}
       </div>
 
       {/* Create form */}
@@ -198,75 +250,125 @@ export function AlertsPanel() {
         </div>
       )}
 
-      {/* Alert list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
-        {state.alerts.length === 0 ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', height: '100%', padding: 20,
-          }}>
-            <Bell size={24} color={T.text3} style={{ opacity: 0.3, marginBottom: 8 }} />
-            <span style={{ fontSize: 11, color: T.text3, fontFamily: T.font }}>No active alerts</span>
-          </div>
-        ) : (
-          state.alerts.map(alert => (
-            <div
-              key={alert.id}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '6px 10px', margin: '0 4px', borderRadius: 3,
-                marginBottom: 1, opacity: alert.active ? 1 : 0.5,
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = T.panelHover; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-            >
-              {alert.triggered ? (
-                <AlertTriangle size={12} color={T.warn} />
-              ) : (
-                <Bell size={12} color={alert.active ? T.accent : T.text3} />
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 500, color: alert.triggered ? T.warn : T.text1, fontFamily: T.font }}>{alert.symbol}</span>
-                  {alert.type === 'indicator' && <Activity size={9} color={T.accent} />}
-                </div>
-                <div style={{ fontSize: 9, color: T.text3, fontFamily: T.font }}>
-                  {alert.type === 'indicator' ? conditionLabel(alert.condition, alert.value) : alert.condition}
-                </div>
-                {alert.triggered && (
-                  <div style={{ fontSize: 9, color: T.warn, fontFamily: T.font, fontWeight: 600, marginTop: 1 }}>TRIGGERED</div>
-                )}
-              </div>
-              {alert.triggered ? (
-                <button
-                  onClick={() => dispatch({ type: 'RESET_ALERT', id: alert.id })}
-                  title="Reset alert"
-                  style={{ display: 'flex', alignItems: 'center', border: 'none', background: 'none', cursor: 'pointer', padding: 2, outline: 'none', color: T.warn, borderRadius: 3 }}
-                  onMouseEnter={e => { e.currentTarget.style.background = T.warnBg; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <RotateCcw size={11} />
-                </button>
-              ) : (
-                <button
-                  onClick={() => dispatch({ type: 'TOGGLE_ALERT', id: alert.id })}
-                  style={{ display: 'flex', alignItems: 'center', border: 'none', background: 'none', cursor: 'pointer', padding: 0, outline: 'none', color: alert.active ? T.accent : T.text3 }}
-                >
-                  {alert.active ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
-                </button>
-              )}
-              <button
-                onClick={() => dispatch({ type: 'REMOVE_ALERT', id: alert.id })}
-                style={{ display: 'flex', alignItems: 'center', border: 'none', background: 'none', cursor: 'pointer', padding: 0, outline: 'none', color: T.text3 }}
-                onMouseEnter={e => { e.currentTarget.style.color = T.bear; }}
-                onMouseLeave={e => { e.currentTarget.style.color = T.text3; }}
+      {/* Active alerts list */}
+      {panelTab === 'active' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+          {state.alerts.length === 0 ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', height: '100%', padding: 20,
+            }}>
+              <Bell size={24} color={T.text3} style={{ opacity: 0.3, marginBottom: 8 }} />
+              <span style={{ fontSize: 11, color: T.text3, fontFamily: T.font }}>No active alerts</span>
+            </div>
+          ) : (
+            state.alerts.map(alert => (
+              <div
+                key={alert.id}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '6px 10px', margin: '0 4px', borderRadius: 3,
+                  marginBottom: 1, opacity: alert.active ? 1 : 0.5,
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = T.panelHover; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
               >
-                <Trash2 size={11} />
+                {alert.triggered ? (
+                  <AlertTriangle size={12} color={T.warn} />
+                ) : (
+                  <Bell size={12} color={alert.active ? T.accent : T.text3} />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 500, color: alert.triggered ? T.warn : T.text1, fontFamily: T.font }}>{alert.symbol}</span>
+                    {alert.type === 'indicator' && <Activity size={9} color={T.accent} />}
+                  </div>
+                  <div style={{ fontSize: 9, color: T.text3, fontFamily: T.font }}>
+                    {alert.type === 'indicator' ? conditionLabel(alert.condition, alert.value) : alert.condition}
+                  </div>
+                  {alert.triggered && (
+                    <div style={{ fontSize: 9, color: T.warn, fontFamily: T.font, fontWeight: 600, marginTop: 1 }}>TRIGGERED</div>
+                  )}
+                </div>
+                {alert.triggered ? (
+                  <button
+                    onClick={() => dispatch({ type: 'RESET_ALERT', id: alert.id })}
+                    title="Reset alert"
+                    style={{ display: 'flex', alignItems: 'center', border: 'none', background: 'none', cursor: 'pointer', padding: 2, outline: 'none', color: T.warn, borderRadius: 3 }}
+                    onMouseEnter={e => { e.currentTarget.style.background = T.warnBg; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <RotateCcw size={11} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => dispatch({ type: 'TOGGLE_ALERT', id: alert.id })}
+                    style={{ display: 'flex', alignItems: 'center', border: 'none', background: 'none', cursor: 'pointer', padding: 0, outline: 'none', color: alert.active ? T.accent : T.text3 }}
+                  >
+                    {alert.active ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+                  </button>
+                )}
+                <button
+                  onClick={() => dispatch({ type: 'REMOVE_ALERT', id: alert.id })}
+                  style={{ display: 'flex', alignItems: 'center', border: 'none', background: 'none', cursor: 'pointer', padding: 0, outline: 'none', color: T.text3 }}
+                  onMouseEnter={e => { e.currentTarget.style.color = T.bear; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = T.text3; }}
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* History tab */}
+      {panelTab === 'history' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {state.alertHistory.length > 0 && (
+            <div style={{ padding: '4px 10px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => dispatch({ type: 'CLEAR_ALERT_HISTORY' })}
+                title="Clear alert history"
+                style={{ display: 'flex', alignItems: 'center', gap: 3, border: 'none', background: 'none', cursor: 'pointer', padding: '2px 6px', outline: 'none', color: T.text3, fontSize: 9, fontFamily: T.font, borderRadius: 3 }}
+                onMouseEnter={e => { e.currentTarget.style.color = T.bear; e.currentTarget.style.background = T.warnBg; }}
+                onMouseLeave={e => { e.currentTarget.style.color = T.text3; e.currentTarget.style.background = 'transparent'; }}
+              >
+                <X size={9} /> Clear
               </button>
             </div>
-          ))
-        )}
-      </div>
+          )}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+            {state.alertHistory.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 20 }}>
+                <History size={24} color={T.text3} style={{ opacity: 0.3, marginBottom: 8 }} />
+                <span style={{ fontSize: 11, color: T.text3, fontFamily: T.font }}>No triggered alerts yet</span>
+              </div>
+            ) : (
+              state.alertHistory.map(entry => (
+                <div
+                  key={entry.id}
+                  style={{ padding: '6px 10px', margin: '0 4px', borderRadius: 3, marginBottom: 1 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = T.panelHover; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                    <AlertTriangle size={10} color={T.warn} />
+                    <span style={{ fontSize: 10, fontWeight: 600, color: T.text1, fontFamily: T.font }}>{entry.symbol}</span>
+                    <span style={{ fontSize: 9, color: T.text3, fontFamily: T.font, marginLeft: 'auto' }}>{relativeTime(entry.triggeredAt)}</span>
+                  </div>
+                  <div style={{ fontSize: 9, color: T.text3, fontFamily: T.font }}>
+                    {entry.condition.replace(/_/g, ' ')} @ {entry.value}
+                  </div>
+                  <div style={{ fontSize: 9, color: T.warn, fontFamily: T.font, marginTop: 1 }}>
+                    Triggered at {entry.triggerPrice.toFixed(4)}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

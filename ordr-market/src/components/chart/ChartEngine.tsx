@@ -187,6 +187,12 @@ interface Props {
   externalShowAutoFib?: boolean;
   /** Show session range boxes (Asia/London/NY H/L rectangles) */
   externalShowSessionRanges?: boolean;
+  /** Show ICT Kill Zone bands (London / NY AM / NY PM) */
+  externalShowKillZones?: boolean;
+  /** Show Equal Highs / Equal Lows liquidity levels */
+  externalShowEQHL?: boolean;
+  /** Multi-symbol comparison series (re-based overlay lines) */
+  externalCompareData?: { symbol: string; bars: import('./indicators/types').Bar[] }[];
   /** Callback when price scale changes internally (context menu or status bar) */
   onPriceScaleModeChange?: (mode: "linear" | "log" | "percent") => void;
   /** Callback to add a price alert from the chart context menu */
@@ -199,6 +205,10 @@ interface Props {
   syncCrosshair?: boolean;
   /** Called when a horizontal swipe gesture is detected on the chart (mobile) */
   onSwipeTimeframe?: (direction: 'left' | 'right') => void;
+  /** News event markers to render on the chart timeline */
+  externalNewsEvents?: { ts: number; title: string; importance: 'high' | 'medium' | 'low'; sentiment: string; source: string }[];
+  /** Risk calculator levels (entry/SL/TP) to overlay on chart */
+  externalRiskLevels?: { entry: number; sl: number | null; tp: number | null; side: 'long' | 'short' } | null;
 }
 
 const DEFAULT_CONFIG: ChartIndicatorConfig = {
@@ -349,8 +359,8 @@ function ChartEngineInner({
   externalLockDrawings, externalDeleteAllDrawings,
   onConfigChange, onSubPanesChange, onDrawingModeChange, onChartTypeChange, onObjectSelect, onObjectData,
   externalSessions, externalScreenshotTrigger, externalCopyImageTrigger, externalBacktestMarkers, externalDrawingUpdate, externalAlertLevels,
-  externalPriceScaleMode, externalShowPrevLevels, externalShowOpenLevels, externalShowPivots, externalShowCandlePatterns, externalShowAutoFib, externalShowSessionRanges, onPriceScaleModeChange,
-  onAddAlert, onOpenPanel, externalTradeLevels, syncCrosshair, onSwipeTimeframe,
+  externalPriceScaleMode, externalShowPrevLevels, externalShowOpenLevels, externalShowPivots, externalShowCandlePatterns, externalShowAutoFib, externalShowSessionRanges, externalShowKillZones, externalShowEQHL, externalCompareData, onPriceScaleModeChange,
+  onAddAlert, onOpenPanel, externalTradeLevels, syncCrosshair, onSwipeTimeframe, externalNewsEvents, externalRiskLevels,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -387,8 +397,10 @@ function ChartEngineInner({
   const [crosshairMode, setCrosshairMode] = useState<CrosshairMode>("crosshair");
   const [enabledSessions, setEnabledSessions] = useState<string[]>([]);
 
-  // Indicator parameter overrides: { indicatorId: { paramKey: value } }
-  const [indicatorParams, setIndicatorParams] = useState<Record<string, Record<string, number>>>({});
+  // Indicator parameter overrides: { indicatorId: { paramKey: value } } — persisted to localStorage
+  const [indicatorParams, setIndicatorParams] = useState<Record<string, Record<string, number>>>(() => {
+    try { return JSON.parse(localStorage.getItem('ordr_indicator_params') ?? '{}'); } catch { return {}; }
+  });
 
   // Undo/redo stack
   const [undoStack, setUndoStack] = useState<Drawing[][]>([]);
@@ -398,6 +410,7 @@ function ChartEngineInner({
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
   const [hoveredDrawingId, setHoveredDrawingId] = useState<string | null>(null);
   const [drawingPropsPanel, setDrawingPropsPanel] = useState<{ drawingId: string; x: number; y: number } | null>(null);
+  const [hoveredNewsEvent, setHoveredNewsEvent] = useState<{ ev: NonNullable<typeof externalNewsEvents>[0]; x: number; y: number } | null>(null);
 
   // D7: Multi-select, copy/paste, alerts
   const [selectedDrawingIds, setSelectedDrawingIds] = useState<string[]>([]);
@@ -737,18 +750,27 @@ function ChartEngineInner({
     }
   }, [bars]);
 
-  // Resize observer
+  // Resize observer — debounced 150ms to avoid thrashing during window drag
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
     const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) setDimensions({ w: Math.floor(width), h: Math.floor(height) });
+      const last = entries[entries.length - 1];
+      const { width, height } = last.contentRect;
+      if (width > 0 && height > 0) {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          setDimensions({ w: Math.floor(width), h: Math.floor(height) });
+          resizeTimer = null;
+        }, 150);
       }
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      ro.disconnect();
+    };
   }, []);
 
   // Native wheel listener with { passive: false }
@@ -1241,10 +1263,15 @@ function ChartEngineInner({
         showCandlePatterns: externalShowCandlePatterns ?? false,
         showAutoFib: externalShowAutoFib ?? false,
         showSessionRanges: externalShowSessionRanges ?? false,
+        showKillZones: externalShowKillZones ?? false,
+        showEQHL: externalShowEQHL ?? false,
+        compareData: externalCompareData,
+        newsEvents: externalNewsEvents,
+        riskLevels: externalRiskLevels,
         externalCrosshairTs: externalCrosshairTsRef.current,
       },
     );
-  }, [bars, layout, indicators, drawings, pair, interval, effectiveSubPanes, dimensions, effectiveChartType, externalSessions, enabledSessions, effectivePriceScale, crosshairMode, selectedDrawingId, hoveredDrawingId, selectedDrawingIds, externalAlertLevels, externalTradeLevels, externalBacktestMarkers, effectiveShowPrevLevels, externalShowOpenLevels, externalShowPivots, externalShowCandlePatterns, externalShowAutoFib, externalShowSessionRanges]);
+  }, [bars, layout, indicators, drawings, pair, interval, effectiveSubPanes, dimensions, effectiveChartType, externalSessions, enabledSessions, effectivePriceScale, crosshairMode, selectedDrawingId, hoveredDrawingId, selectedDrawingIds, externalAlertLevels, externalTradeLevels, externalBacktestMarkers, effectiveShowPrevLevels, externalShowOpenLevels, externalShowPivots, externalShowCandlePatterns, externalShowAutoFib, externalShowSessionRanges, externalShowKillZones, externalShowEQHL, externalCompareData]);
 
   /* ─── Keep renderRef current ─── */
   useEffect(() => { renderRef.current = render; }, [render]);
@@ -1456,7 +1483,35 @@ function ChartEngineInner({
       const hit = hitTestDrawings(x, y, drawingsRef.current, layout, viewport, effectivePriceScale);
       setHoveredDrawingId(hit ? hit.drawingId : null);
     }
-  }, [layout, bars, contextMenu.open, effectivePriceScale, getActiveViewport]);
+
+    // News event flag hover detection (bottom edge of chart, ±10px hit radius)
+    if (externalNewsEvents?.length && bars.length > 0) {
+      const flagY = layout.mainTop + layout.mainHeight - 2;
+      if (Math.abs(y - flagY) <= 12) {
+        let found: (typeof externalNewsEvents)[0] | null = null;
+        let foundX = 0;
+        let minDist = Infinity;
+        for (const ev of externalNewsEvents) {
+          let nearestIdx = -1;
+          let minDiff = Infinity;
+          for (let i = viewport.startIndex; i <= viewport.endIndex; i++) {
+            if (i >= bars.length) break;
+            const diff = Math.abs(bars[i].t - ev.ts);
+            if (diff < minDiff) { minDiff = diff; nearestIdx = i; }
+          }
+          if (nearestIdx < 0) continue;
+          const fx = indexToX(nearestIdx, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth);
+          const dist = Math.abs(x - fx);
+          if (dist <= 10 && dist < minDist) { found = ev; foundX = fx; minDist = dist; }
+        }
+        setHoveredNewsEvent(found ? { ev: found, x: foundX, y: flagY } : null);
+      } else {
+        setHoveredNewsEvent(null);
+      }
+    } else {
+      setHoveredNewsEvent(null);
+    }
+  }, [layout, bars, contextMenu.open, effectivePriceScale, getActiveViewport, externalNewsEvents]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     // FIX 2: Dismiss context menu on click and don't propagate
@@ -1714,6 +1769,7 @@ function ChartEngineInner({
   const handleMouseLeave = useCallback(() => {
     crosshairRef.current = { ...crosshairRef.current, visible: false };
     magneticSnapResultRef.current = null;
+    setHoveredNewsEvent(null);
     if (syncCrosshair) {
       window.dispatchEvent(new CustomEvent('ordr:crosshair-sync', {
         detail: { ts: null, instanceId: instanceIdRef.current },
@@ -1858,6 +1914,8 @@ function ChartEngineInner({
       case "chartType:area": setChartType("area"); onChartTypeChange?.("area"); break;
       case "chartType:heikinashi": setChartType("heikinAshi"); onChartTypeChange?.("heikinAshi"); break;
       case "chartType:baseline": setChartType("baseline"); onChartTypeChange?.("baseline"); break;
+      case "chartType:renko": setChartType("renko"); onChartTypeChange?.("renko"); break;
+      case "chartType:linebreak": setChartType("linebreak"); onChartTypeChange?.("linebreak"); break;
       // Price scale
       case "priceScale:linear": setPriceScale("linear"); onPriceScaleModeChange?.("linear"); break;
       case "priceScale:log": setPriceScale("log"); onPriceScaleModeChange?.("log"); break;
@@ -1949,7 +2007,11 @@ function ChartEngineInner({
   }, [handleToggleSubPane]);
 
   const handleIndicatorParamsChange = useCallback((id: string, params: Record<string, number>) => {
-    setIndicatorParams((prev) => ({ ...prev, [id]: params }));
+    setIndicatorParams((prev) => {
+      const next = { ...prev, [id]: params };
+      try { localStorage.setItem('ordr_indicator_params', JSON.stringify(next)); } catch { /* quota */ }
+      return next;
+    });
   }, []);
 
   /* ─── Last bar info ─── */
@@ -2122,6 +2184,34 @@ function ChartEngineInner({
             indicatorParams={indicatorParams}
             onParamsChange={handleIndicatorParamsChange}
           />
+
+          {/* News event hover tooltip */}
+          {hoveredNewsEvent && (
+            <div style={{
+              position: 'absolute',
+              left: Math.min(hoveredNewsEvent.x + 8, (containerRef.current?.clientWidth ?? 600) - 220),
+              top: hoveredNewsEvent.y - 60,
+              width: 210, padding: '6px 8px', borderRadius: 4, zIndex: 120,
+              background: 'rgba(18,21,28,0.95)', border: '1px solid rgba(255,255,255,0.12)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+              pointerEvents: 'none',
+            }}>
+              <div style={{
+                fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+                fontFamily: "'IBM Plex Mono', monospace",
+                color: hoveredNewsEvent.ev.importance === 'high' ? '#ef4444' : hoveredNewsEvent.ev.importance === 'medium' ? '#f59e0b' : '#6b7280',
+                marginBottom: 3,
+              }}>
+                {hoveredNewsEvent.ev.importance} · {hoveredNewsEvent.ev.source} · {hoveredNewsEvent.ev.sentiment}
+              </div>
+              <div style={{
+                fontSize: 10, color: '#d1d4dc', fontFamily: "'IBM Plex Sans', sans-serif",
+                lineHeight: 1.4, wordBreak: 'break-word',
+              }}>
+                {hoveredNewsEvent.ev.title}
+              </div>
+            </div>
+          )}
 
           {/* Context Menu (positioned inside canvas container) */}
           {contextMenu.open && (

@@ -5,7 +5,7 @@
 
 // ── Panel Tabs ───────────────────────────────────────────────────────────────
 export type LeftTab = 'watchlist' | 'draw' | 'indicators' | 'screener' | 'layouts';
-export type RightTab = 'properties' | 'layers' | 'ai' | 'orderflow' | 'alerts' | 'news' | 'trade' | 'watchlist' | 'risk' | 'heatmap' | 'notes';
+export type RightTab = 'properties' | 'layers' | 'ai' | 'orderflow' | 'alerts' | 'news' | 'trade' | 'watchlist' | 'risk' | 'heatmap' | 'notes' | 'corr';
 export type BottomTab = 'mtf' | 'scanner' | 'replay' | 'strategy' | 'orders' | 'confluence';
 export type ChartLayout = '1' | '2h' | '2v' | '4';
 
@@ -17,7 +17,7 @@ export interface SecondaryChart {
 }
 
 // ── Chart ────────────────────────────────────────────────────────────────────
-export type ChartType = 'candles' | 'hollow' | 'bars' | 'line' | 'area' | 'heikinAshi' | 'baseline';
+export type ChartType = 'candles' | 'hollow' | 'bars' | 'line' | 'area' | 'heikinAshi' | 'baseline' | 'renko' | 'linebreak';
 export type WorkspaceMode = 'focus' | 'workspace' | 'execution';
 
 // ── Indicator Instance ───────────────────────────────────────────────────────
@@ -42,6 +42,16 @@ export interface LayerItem {
   opacity: number;
   locked: boolean;
   order: number;
+}
+
+// ── Alert History ─────────────────────────────────────────────────────────────
+export interface AlertHistoryEntry {
+  id: string;
+  symbol: string;
+  condition: string;
+  value: number;
+  triggerPrice: number;
+  triggeredAt: string; // ISO string
 }
 
 // ── Chart Alert ──────────────────────────────────────────────────────────────
@@ -181,6 +191,18 @@ export interface WorkspaceState {
   showSessionRanges: boolean;
   // Crosshair sync across multi-chart panes
   crosshairSyncEnabled: boolean;
+  // ICT Kill Zone bands (London / NY AM / NY PM)
+  showKillZones: boolean;
+  // Equal Highs / Equal Lows liquidity levels
+  showEQHL: boolean;
+  // Multi-symbol comparison overlay (re-based price lines)
+  compareSymbols: string[];
+  // News events overlay on chart timeline
+  showNewsOverlay: boolean;
+  // Alert trigger history (last 100 entries)
+  alertHistory: AlertHistoryEntry[];
+  // Risk calculator levels shown on chart
+  riskLevels: { entry: number; sl: number | null; tp: number | null; side: 'long' | 'short' } | null;
 }
 
 // ── Workspace Actions ────────────────────────────────────────────────────────
@@ -245,6 +267,11 @@ export type WorkspaceAction =
   | { type: 'TOGGLE_AUTO_FIB' }
   | { type: 'TOGGLE_SESSION_RANGES' }
   | { type: 'TOGGLE_CROSSHAIR_SYNC' }
+  | { type: 'TOGGLE_KILL_ZONES' }
+  | { type: 'TOGGLE_EQHL' }
+  | { type: 'ADD_COMPARE'; symbol: string }
+  | { type: 'REMOVE_COMPARE'; symbol: string }
+  | { type: 'TOGGLE_NEWS_OVERLAY' }
   // Replay
   | { type: 'REPLAY_START' }
   | { type: 'REPLAY_STOP' }
@@ -256,6 +283,9 @@ export type WorkspaceAction =
   | { type: 'SET_REPLAY_TOTAL'; total: number }
   // Alerts & toasts
   | { type: 'TRIGGER_ALERT'; id: string }
+  | { type: 'LOG_ALERT_TRIGGER'; entry: Omit<AlertHistoryEntry, 'id'> }
+  | { type: 'CLEAR_ALERT_HISTORY' }
+  | { type: 'SET_RISK_LEVELS'; levels: WorkspaceState['riskLevels'] }
   | { type: 'ADD_TOAST'; toast: Omit<WorkspaceToast, 'id' | 'createdAt'> }
   | { type: 'REMOVE_TOAST'; id: string }
   // Trade journal

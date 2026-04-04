@@ -79,6 +79,8 @@ const SUBMENUS: Record<string, { items: SubmenuItem[]; defaultAction: string }> 
       { label: "Area", action: "chartType:area", radio: true },
       { label: "Heikin Ashi", action: "chartType:heikinashi", radio: true },
       { label: "Baseline", action: "chartType:baseline", radio: true },
+      { label: "Renko", action: "chartType:renko", radio: true },
+      { label: "Line Break", action: "chartType:linebreak", radio: true },
     ],
     defaultAction: "chartType:candles",
   },

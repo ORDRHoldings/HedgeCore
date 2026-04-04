@@ -693,6 +693,197 @@ function AutoFibToggle() {
   );
 }
 
+function KillZonesToggle() {
+  const { state, dispatch } = useWorkspace();
+  const active = state.showKillZones;
+  return (
+    <button
+      title={active ? 'Hide ICT Kill Zones' : 'Show ICT Kill Zones (London / NY AM / NY PM)'}
+      onClick={() => dispatch({ type: 'TOGGLE_KILL_ZONES' })}
+      style={{
+        height: 20, padding: '0 6px', borderRadius: 3,
+        border: `1px solid ${active ? T.accent : T.border}`,
+        background: active ? T.accentBg : 'transparent',
+        color: active ? T.accent : T.text3,
+        fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none',
+        fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+        transition: 'all 0.1s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+    >
+      KZ
+    </button>
+  );
+}
+
+function EQHLToggle() {
+  const { state, dispatch } = useWorkspace();
+  const active = state.showEQHL;
+  return (
+    <button
+      title={active ? 'Hide Equal Highs / Equal Lows' : 'Show Equal Highs / Equal Lows (liquidity clusters)'}
+      onClick={() => dispatch({ type: 'TOGGLE_EQHL' })}
+      style={{
+        height: 20, padding: '0 6px', borderRadius: 3,
+        border: `1px solid ${active ? T.accent : T.border}`,
+        background: active ? T.accentBg : 'transparent',
+        color: active ? T.accent : T.text3,
+        fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none',
+        fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+        transition: 'all 0.1s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+    >
+      EQL/H
+    </button>
+  );
+}
+
+// ── News Events Overlay Toggle ────────────────────────────────────────────────
+function NewsOverlayToggle() {
+  const { state, dispatch } = useWorkspace();
+  const active = state.showNewsOverlay;
+  return (
+    <button
+      title={active ? 'Hide news events on chart' : 'Show news events on chart timeline'}
+      onClick={() => dispatch({ type: 'TOGGLE_NEWS_OVERLAY' })}
+      style={{
+        height: 20, padding: '0 6px', borderRadius: 3,
+        border: `1px solid ${active ? T.accent : T.border}`,
+        background: active ? T.accentBg : 'transparent',
+        color: active ? T.accent : T.text2,
+        fontSize: 9, fontWeight: 700, cursor: 'pointer',
+        outline: 'none', fontFamily: T.font, letterSpacing: '0.04em',
+      }}
+    >
+      NEWS
+    </button>
+  );
+}
+
+// ── Compare Symbol Overlay ────────────────────────────────────────────────────
+const COMPARE_COLORS = ['#2196F3', '#FF9800', '#AB47BC', '#26C6DA'];
+
+function CompareButton() {
+  const { state, dispatch } = useWorkspace();
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const addSymbol = () => {
+    const sym = input.trim().toUpperCase();
+    if (!sym || sym === state.symbol) return;
+    dispatch({ type: 'ADD_COMPARE', symbol: sym });
+    setInput('');
+  };
+
+  const hasCompare = state.compareSymbols.length > 0;
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      {/* Active compare chips */}
+      {state.compareSymbols.map((sym, i) => (
+        <span key={sym} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 3,
+          height: 20, padding: '0 5px', borderRadius: 3, marginRight: 2,
+          border: `1px solid ${COMPARE_COLORS[i % COMPARE_COLORS.length]}40`,
+          background: `${COMPARE_COLORS[i % COMPARE_COLORS.length]}18`,
+          color: COMPARE_COLORS[i % COMPARE_COLORS.length],
+          fontSize: 9, fontWeight: 600,
+          fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+        }}>
+          {sym}
+          <button
+            onClick={() => dispatch({ type: 'REMOVE_COMPARE', symbol: sym })}
+            style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', color: 'inherit', lineHeight: 1, fontSize: 10, opacity: 0.7 }}
+          >×</button>
+        </span>
+      ))}
+      {/* Toggle button */}
+      <button
+        title="Compare with another symbol"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          height: 20, padding: '0 6px', borderRadius: 3,
+          border: `1px solid ${hasCompare ? T.accent : T.border}`,
+          background: open ? T.accentBg : 'transparent',
+          color: open || hasCompare ? T.accent : T.text3,
+          fontSize: 9, fontWeight: 600, cursor: 'pointer', outline: 'none',
+          fontFamily: "'IBM Plex Mono', monospace", letterSpacing: '0.04em',
+          transition: 'all 0.1s', flexShrink: 0,
+        }}
+        onMouseEnter={e => { if (!open && !hasCompare) { e.currentTarget.style.background = T.hover; e.currentTarget.style.color = T.text2; } }}
+        onMouseLeave={e => { if (!open && !hasCompare) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.text3; } }}
+      >
+        + CMP
+      </button>
+      {/* Dropdown */}
+      {open && (
+        <div style={{
+          position: 'absolute', top: 26, right: 0, zIndex: 200,
+          background: T.panelBg, border: `1px solid ${T.border}`, borderRadius: 4,
+          padding: '8px 8px', minWidth: 180, boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        }}>
+          <div style={{ fontSize: 9, color: T.text3, fontFamily: T.font, marginBottom: 6, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            Compare Symbol (max 4)
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <input
+              autoFocus
+              value={input}
+              onChange={e => setInput(e.target.value.toUpperCase())}
+              onKeyDown={e => { if (e.key === 'Enter') { addSymbol(); } }}
+              placeholder="e.g. AAPL"
+              style={{
+                flex: 1, height: 24, padding: '0 6px', borderRadius: 3,
+                border: `1px solid ${T.border}`, background: T.surfaceAlt,
+                color: T.text1, fontSize: 10, fontFamily: T.mono, outline: 'none',
+              }}
+            />
+            <button
+              onClick={addSymbol}
+              style={{
+                height: 24, padding: '0 8px', borderRadius: 3, border: 'none',
+                background: T.accent, color: '#fff', fontSize: 10, fontWeight: 600,
+                cursor: 'pointer', fontFamily: T.font, outline: 'none',
+              }}
+            >+</button>
+          </div>
+          {state.compareSymbols.length > 0 && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {state.compareSymbols.map((sym, i) => (
+                <div key={sym} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: COMPARE_COLORS[i % COMPARE_COLORS.length], flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 10, color: T.text1, fontFamily: T.mono }}>{sym}</span>
+                  <button
+                    onClick={() => dispatch({ type: 'REMOVE_COMPARE', symbol: sym })}
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', color: T.text3, padding: '1px 3px', borderRadius: 2, fontSize: 11 }}
+                    onMouseEnter={e => { e.currentTarget.style.color = T.bear; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = T.text3; }}
+                  >×</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Quick Layout Switcher ─────────────────────────────────────────────────────
 const LAYOUTS_STORAGE_KEY    = 'ordr_named_layouts';
 const ACTIVE_LAYOUT_STOR_KEY = 'ordr_active_layout_id';
@@ -1095,6 +1286,10 @@ export function CommandBar() {
       <CandlePatternsToggle />
       <SessionRangesToggle />
       <AutoFibToggle />
+      <KillZonesToggle />
+      <EQHLToggle />
+      <NewsOverlayToggle />
+      <CompareButton />
       <Separator />
       <QuickLayoutSwitcher />
 

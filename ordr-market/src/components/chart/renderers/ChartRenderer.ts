@@ -49,9 +49,12 @@ import { computeSwingPivots, drawSwingPivots } from "./pivots";
 import { computeCandlePatterns, drawCandlePatterns } from "./candlePatterns";
 import { drawViewportFib } from "./autoFib";
 import { computeSessionRanges, drawSessionRanges } from "./sessionRanges";
+import { drawKillZones } from "./killZones";
+import { detectEQHL, drawEQHL } from "./eqhl";
 import {
   drawLineChart, drawAreaChart, drawBarChart,
   drawHollowCandles, drawHeikinAshi, drawBaseline,
+  drawRenko, drawLineBreak,
 } from "./chartTypes";
 import { drawSessions } from "./sessions";
 import {
@@ -160,10 +163,18 @@ export interface RenderProps {
   showCandlePatterns?: boolean;
   showAutoFib?: boolean;
   showSessionRanges?: boolean;
+  showKillZones?: boolean;
+  showEQHL?: boolean;
   /** Ghost crosshair timestamp from a synced pane (unix seconds) */
   externalCrosshairTs?: number | null;
   /** Backtest trade entry/exit markers */
   backtestMarkers?: BacktestMarker[];
+  /** Multi-symbol comparison series (re-based to primary price) */
+  compareData?: { symbol: string; bars: Bar[] }[];
+  /** News event markers on the chart timeline */
+  newsEvents?: { ts: number; importance: 'high' | 'medium' | 'low'; sentiment: string }[];
+  /** Risk calculator levels (entry/SL/TP) overlay */
+  riskLevels?: { entry: number; sl: number | null; tp: number | null; side: 'long' | 'short' } | null;
 }
 
 // ── Helper ───────────────────────────────────────────────────────────────────
@@ -263,6 +274,8 @@ export function renderChart(refs: RenderRefs, props: RenderProps): void {
     case "area":       drawAreaChart(ctx, bars, layout, viewport, priceScale); break;
     case "heikinAshi": drawHeikinAshi(ctx, bars, layout, viewport, priceScale); break;
     case "baseline":   drawBaseline(ctx, bars, layout, viewport, priceScale); break;
+    case "renko":      drawRenko(ctx, bars, layout, viewport, priceScale); break;
+    case "linebreak":  drawLineBreak(ctx, bars, layout, viewport, priceScale); break;
   }
 
   // Layer 3: Overlays
@@ -309,6 +322,76 @@ export function renderChart(refs: RenderRefs, props: RenderProps): void {
   if (props.showSessionRanges && bars.length > 1) {
     const sessionRanges = computeSessionRanges(bars);
     drawSessionRanges(ctx, sessionRanges, layout, viewport, priceScale);
+  }
+  if (props.showKillZones && bars.length > 1) {
+    drawKillZones(ctx, bars, layout, viewport);
+  }
+  if (props.showEQHL && bars.length > 10) {
+    const eqhl = detectEQHL(bars);
+    drawEQHL(ctx, eqhl, layout, viewport, priceScale);
+  }
+
+  // Layer 3c: Comparison overlay lines (re-based to primary price scale)
+  if (props.compareData?.length && bars.length > 1) {
+    const COMPARE_COLORS = ['#2196F3', '#FF9800', '#AB47BC', '#26C6DA'];
+    const primaryFirstClose = bars[0].c;
+    const { chartLeft, chartWidth, mainTop, mainHeight, canvasWidth, priceAxisWidth } = layout;
+    const { priceMin, priceMax } = viewport;
+
+    for (let ci = 0; ci < props.compareData.length; ci++) {
+      const { symbol: cSym, bars: cBars } = props.compareData[ci];
+      if (!cBars.length) continue;
+      const color = COMPARE_COLORS[ci % COMPARE_COLORS.length];
+      const cFirstClose = cBars[0].c;
+      if (!cFirstClose) continue;
+
+      // Build timestamp→close map for O(1) lookup
+      const cMap = new Map<number, number>();
+      for (const b of cBars) cMap.set(b.t, b.c);
+
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+
+      let started = false;
+      const slotW = chartWidth / Math.max(1, viewport.endIndex - viewport.startIndex + 1);
+
+      for (let i = viewport.startIndex; i <= Math.min(viewport.endIndex, bars.length - 1); i++) {
+        const primaryBar = bars[i];
+        const cClose = cMap.get(primaryBar.t);
+        if (cClose == null) continue;
+
+        const rebasedPrice = primaryFirstClose * (cClose / cFirstClose);
+        if (rebasedPrice < priceMin || rebasedPrice > priceMax) { started = false; continue; }
+
+        const x = chartLeft + (i - viewport.startIndex + 0.5) * slotW;
+        const y = priceToY(rebasedPrice, priceMin, priceMax, mainTop, mainHeight, priceScale);
+
+        if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
+      }
+      ctx.stroke();
+
+      // Right-side label: symbol + % change from first visible bar
+      const lastPrimaryBar = bars[Math.min(viewport.endIndex, bars.length - 1)];
+      const lastCClose = cMap.get(lastPrimaryBar.t) ?? cBars[cBars.length - 1].c;
+      const rebasedLast = primaryFirstClose * (lastCClose / cFirstClose);
+      const pctChange = ((lastCClose - cFirstClose) / cFirstClose) * 100;
+      const pctStr = (pctChange >= 0 ? '+' : '') + pctChange.toFixed(2) + '%';
+
+      if (rebasedLast >= priceMin && rebasedLast <= priceMax) {
+        const labelY = priceToY(rebasedLast, priceMin, priceMax, mainTop, mainHeight, priceScale);
+        ctx.font = "bold 9px 'IBM Plex Mono', monospace";
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.9;
+        ctx.textAlign = 'right';
+        ctx.fillText(`${cSym} ${pctStr}`, canvasWidth - priceAxisWidth - 4, labelY - 3);
+      }
+
+      ctx.restore();
+    }
   }
 
   // Layer 4b: Backtest entry/exit markers
@@ -521,6 +604,87 @@ export function renderChart(refs: RenderRefs, props: RenderProps): void {
   // Layer 8b: Drawing price axis labels
   if (!hideDrawings) {
     drawDrawingPriceLabels(ctx, drawings, layout, viewport, priceScale, selectedDrawingId);
+  }
+
+  // Layer 8c: News event flags (triangles on chart bottom edge)
+  if (props.newsEvents?.length && bars.length > 0) {
+    const NEWS_COLORS: Record<string, string> = {
+      high: '#ef4444', medium: '#f59e0b', low: '#6b7280',
+    };
+    const flagY = layout.mainTop + layout.mainHeight - 2;
+    const FW = 5; // half-width of flag triangle
+    const FH = 8; // height of flag triangle
+    ctx.save();
+    for (const ev of props.newsEvents) {
+      // Find nearest bar index for this timestamp (unix seconds)
+      let nearestIdx = -1;
+      let minDiff = Infinity;
+      for (let i = viewport.startIndex; i <= viewport.endIndex; i++) {
+        if (i >= bars.length) break;
+        const diff = Math.abs(bars[i].t - ev.ts);
+        if (diff < minDiff) { minDiff = diff; nearestIdx = i; }
+      }
+      if (nearestIdx < 0) continue;
+      const x = indexToX(nearestIdx, viewport.startIndex, viewport.endIndex, layout.chartLeft, layout.chartWidth);
+      const color = NEWS_COLORS[ev.importance] ?? NEWS_COLORS.low;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.moveTo(x, flagY);
+      ctx.lineTo(x - FW, flagY + FH);
+      ctx.lineTo(x + FW, flagY + FH);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // Layer 8d: Risk calculator levels (entry / SL / TP)
+  if (props.riskLevels && props.riskLevels.entry > 0) {
+    const { entry, sl, tp, side } = props.riskLevels;
+    const { chartLeft, chartWidth, mainTop, mainHeight, canvasWidth, priceAxisWidth } = layout;
+    const lineRight = canvasWidth - priceAxisWidth;
+    ctx.save();
+    const drawRiskLine = (price: number, color: string, label: string, fillAlpha?: number, fillPrice?: number) => {
+      const y = priceToY(price, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, priceScale);
+      if (y < mainTop || y > mainTop + mainHeight) return;
+      if (fillAlpha !== undefined && fillPrice !== undefined) {
+        const y2 = priceToY(fillPrice, viewport.priceMin, viewport.priceMax, mainTop, mainHeight, priceScale);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = fillAlpha;
+        ctx.fillRect(chartLeft, Math.min(y, y2), chartWidth, Math.abs(y2 - y));
+        ctx.globalAlpha = 1;
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 4]);
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(chartLeft, y);
+      ctx.lineTo(lineRight, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      // Label on price axis
+      const lblW = 58; const lblH = 14;
+      ctx.fillStyle = color;
+      ctx.fillRect(lineRight, y - lblH / 2, lblW, lblH);
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold 9px 'IBM Plex Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(label, lineRight + lblW / 2, y + 4);
+      ctx.textAlign = 'left';
+    };
+    // Fill between entry and SL (risk zone)
+    if (sl !== null) drawRiskLine(entry, 'rgba(239,68,68,0.12)', '', 0.06, sl);
+    // Fill between entry and TP (reward zone)
+    if (tp !== null) drawRiskLine(entry, 'rgba(34,197,94,0.10)', '', 0.05, tp);
+    // Draw lines
+    if (sl !== null) drawRiskLine(sl, '#ef4444', 'STOP');
+    if (tp !== null) drawRiskLine(tp, '#22c55e', 'TARGET');
+    drawRiskLine(entry, side === 'long' ? '#2196F3' : '#FF9800', 'ENTRY');
+    ctx.restore();
   }
 
   // Layer 9: Crosshair

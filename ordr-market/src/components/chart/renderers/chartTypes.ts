@@ -24,7 +24,9 @@ export type ChartType =
   | "line"
   | "area"
   | "heikinAshi"
-  | "baseline";
+  | "baseline"
+  | "renko"
+  | "linebreak";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -480,6 +482,201 @@ export function drawBaseline(
   ctx.lineTo(layout.chartLeft + layout.chartWidth, baseY);
   ctx.stroke();
   ctx.setLineDash([]);
+
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------------ */
+/* 7. Renko                                                            */
+/* ------------------------------------------------------------------ */
+
+interface RenkoBrick {
+  open: number;
+  close: number;
+  isBull: boolean;
+}
+
+/**
+ * ATR(14) brick size: average true range of the first 14 bars.
+ */
+function computeRenkoBrickSize(bars: Bar[]): number {
+  const n = Math.min(14, bars.length - 1);
+  if (n < 1) return (bars[0]?.h - bars[0]?.l) || 1;
+  let sum = 0;
+  for (let i = 1; i <= n; i++) {
+    const b = bars[i];
+    const pc = bars[i - 1].c;
+    sum += Math.max(b.h - b.l, Math.abs(b.h - pc), Math.abs(b.l - pc));
+  }
+  return sum / n;
+}
+
+function computeRenko(bars: Bar[]): RenkoBrick[] {
+  if (bars.length === 0) return [];
+  const brickSize = computeRenkoBrickSize(bars);
+  const bricks: RenkoBrick[] = [];
+  let ref = bars[0].c;
+  for (const bar of bars) {
+    while (bar.c >= ref + brickSize) {
+      bricks.push({ open: ref, close: ref + brickSize, isBull: true });
+      ref += brickSize;
+    }
+    while (bar.c <= ref - brickSize) {
+      bricks.push({ open: ref, close: ref - brickSize, isBull: false });
+      ref -= brickSize;
+    }
+  }
+  return bricks;
+}
+
+/**
+ * Renko chart: time-independent price bricks of uniform height (ATR-14).
+ * - Bullish brick: solid THEME.bullBody rectangle, no wicks.
+ * - Bearish brick: solid THEME.bearBody rectangle, no wicks.
+ * - Viewport maps to brick indices proportionally by density ratio.
+ */
+export function drawRenko(
+  ctx: CanvasRenderingContext2D,
+  bars: Bar[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  scale: PriceScale = "linear",
+): void {
+  if (bars.length === 0) return;
+  const bricks = computeRenko(bars);
+  if (bricks.length === 0) return;
+
+  // Map viewport bar indices → brick indices via density ratio
+  const ratio = bricks.length / bars.length;
+  const si = Math.max(0, Math.floor(viewport.startIndex * ratio));
+  const ei = Math.min(bricks.length - 1, Math.ceil(viewport.endIndex * ratio));
+  if (si > ei) return;
+
+  // Recompute price range from visible bricks
+  let lo = Infinity, hi = -Infinity;
+  for (let i = si; i <= ei; i++) {
+    const lo2 = Math.min(bricks[i].open, bricks[i].close);
+    const hi2 = Math.max(bricks[i].open, bricks[i].close);
+    if (lo2 < lo) lo = lo2;
+    if (hi2 > hi) hi = hi2;
+  }
+  const priceRange = hi - lo || 0.0001;
+  const pad = priceRange * 0.05;
+  const pMin = lo - pad;
+  const pMax = hi + pad;
+
+  const count = ei - si + 1;
+  const brickW = Math.max(1, (layout.chartWidth / count) * 0.85);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(layout.chartLeft, layout.mainTop, layout.chartWidth, layout.mainHeight);
+  ctx.clip();
+
+  for (let i = si; i <= ei; i++) {
+    const brick = bricks[i];
+    const x = layout.chartLeft + ((i - si + 0.5) / count) * layout.chartWidth;
+    const y1 = priceToY(Math.max(brick.open, brick.close), pMin, pMax, layout.mainTop, layout.mainHeight, scale);
+    const y2 = priceToY(Math.min(brick.open, brick.close), pMin, pMax, layout.mainTop, layout.mainHeight, scale);
+    const h = Math.max(1, y2 - y1);
+
+    ctx.fillStyle = brick.isBull ? THEME.bullBody : THEME.bearBody;
+    ctx.fillRect(x - brickW / 2, y1, brickW, h);
+  }
+
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------------ */
+/* 8. Line Break (3-line break)                                        */
+/* ------------------------------------------------------------------ */
+
+interface LBLine {
+  open: number;
+  close: number;
+  isBull: boolean;
+}
+
+function computeLineBreak(bars: Bar[], n = 3): LBLine[] {
+  if (bars.length === 0) return [];
+  const lines: LBLine[] = [];
+  const first = bars[0];
+  lines.push({ open: first.o, close: first.c, isBull: first.c >= first.o });
+
+  for (let i = 1; i < bars.length; i++) {
+    const price = bars[i].c;
+    const recent = lines.slice(-n);
+    const topPrice = Math.max(...recent.map(l => Math.max(l.open, l.close)));
+    const bottomPrice = Math.min(...recent.map(l => Math.min(l.open, l.close)));
+    const last = lines[lines.length - 1];
+
+    if (price > topPrice) {
+      lines.push({ open: Math.max(last.open, last.close), close: price, isBull: true });
+    } else if (price < bottomPrice) {
+      lines.push({ open: Math.min(last.open, last.close), close: price, isBull: false });
+    }
+  }
+  return lines;
+}
+
+/**
+ * 3-Line Break chart: new line only when price breaks the prior 3 lines' range.
+ * - Bullish line: hollow rectangle (stroke only) in THEME.bullBody.
+ * - Bearish line: solid filled rectangle in THEME.bearBody.
+ * - Viewport maps to line indices proportionally.
+ */
+export function drawLineBreak(
+  ctx: CanvasRenderingContext2D,
+  bars: Bar[],
+  layout: ChartLayout,
+  viewport: Viewport,
+  scale: PriceScale = "linear",
+): void {
+  if (bars.length === 0) return;
+  const lines = computeLineBreak(bars);
+  if (lines.length === 0) return;
+
+  const ratio = lines.length / bars.length;
+  const si = Math.max(0, Math.floor(viewport.startIndex * ratio));
+  const ei = Math.min(lines.length - 1, Math.ceil(viewport.endIndex * ratio));
+  if (si > ei) return;
+
+  let lo = Infinity, hi = -Infinity;
+  for (let i = si; i <= ei; i++) {
+    const lo2 = Math.min(lines[i].open, lines[i].close);
+    const hi2 = Math.max(lines[i].open, lines[i].close);
+    if (lo2 < lo) lo = lo2;
+    if (hi2 > hi) hi = hi2;
+  }
+  const priceRange = hi - lo || 0.0001;
+  const pad = priceRange * 0.05;
+  const pMin = lo - pad;
+  const pMax = hi + pad;
+
+  const count = ei - si + 1;
+  const lineW = Math.max(1, (layout.chartWidth / count) * 0.85);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(layout.chartLeft, layout.mainTop, layout.chartWidth, layout.mainHeight);
+  ctx.clip();
+
+  for (let i = si; i <= ei; i++) {
+    const line = lines[i];
+    const x = layout.chartLeft + ((i - si + 0.5) / count) * layout.chartWidth;
+    const y1 = priceToY(Math.max(line.open, line.close), pMin, pMax, layout.mainTop, layout.mainHeight, scale);
+    const y2 = priceToY(Math.min(line.open, line.close), pMin, pMax, layout.mainTop, layout.mainHeight, scale);
+    const h = Math.max(1, y2 - y1);
+
+    if (line.isBull) {
+      ctx.strokeStyle = THEME.bullBody;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x - lineW / 2, y1, lineW, h);
+    } else {
+      ctx.fillStyle = THEME.bearBody;
+      ctx.fillRect(x - lineW / 2, y1, lineW, h);
+    }
+  }
 
   ctx.restore();
 }

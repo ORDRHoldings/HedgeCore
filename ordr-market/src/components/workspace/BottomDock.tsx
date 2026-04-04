@@ -83,14 +83,46 @@ function MTFCard({ symbol, tf, active, onSelect }: MTFCardProps) {
     ? ((price - firstBar.c) / firstBar.c) * 100 : null;
   const bull = (pctChange ?? 0) >= 0;
 
+  // ── Trend signals (computed from fetched bars) ──────────────────────────────
+  const signals = useMemo(() => {
+    if (bars.length < 22) return null;
+    const closes = bars.map(b => b.c);
+    const ema9  = emaFromValues(closes, 9);
+    const ema21 = emaFromValues(closes, 21);
+    const lastEma9  = ema9[ema9.length - 1];
+    const lastEma21 = ema21[ema21.length - 1];
+    const emaTrend: 'bull' | 'bear' | 'neutral' =
+      lastEma9 > lastEma21 * 1.0001 ? 'bull' :
+      lastEma9 < lastEma21 * 0.9999 ? 'bear' : 'neutral';
+
+    const rsiPoints = computeRSI(bars, 14);
+    const rsiVal = rsiPoints.length ? rsiPoints[rsiPoints.length - 1].value : null;
+
+    const macdPoints = computeMACD(bars);
+    const lastMacd = macdPoints[macdPoints.length - 1];
+    const macdDir: 'bull' | 'bear' | null = lastMacd
+      ? (lastMacd.histogram > 0 ? 'bull' : 'bear')
+      : null;
+
+    return { emaTrend, rsiVal, macdDir };
+  }, [bars]);
+
+  const trendColor = signals?.emaTrend === 'bull' ? T.bull : signals?.emaTrend === 'bear' ? T.bear : T.text3;
+  const trendLabel = signals?.emaTrend === 'bull' ? 'BULL' : signals?.emaTrend === 'bear' ? 'BEAR' : 'NEUT';
+  const rsiColor = signals?.rsiVal == null ? T.text3
+    : signals.rsiVal >= 70 ? T.bear
+    : signals.rsiVal <= 30 ? T.bull
+    : T.text2;
+
   return (
     <div onClick={onSelect} style={{
-      flex: 1, minWidth: 100, display: 'flex', flexDirection: 'column',
+      flex: 1, minWidth: 110, display: 'flex', flexDirection: 'column',
       background: active ? T.selectedBg : T.surfaceAlt,
       border: `1px solid ${active ? T.accent : T.border}`,
       borderRadius: T.r3, overflow: 'hidden', cursor: 'pointer',
       transition: 'border-color 0.12s',
     }}>
+      {/* Header row: TF + price + % */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '3px 6px', borderBottom: `1px solid ${T.border}`, flexShrink: 0,
@@ -109,6 +141,7 @@ function MTFCard({ symbol, tf, active, onSelect }: MTFCardProps) {
           )}
         </div>
       </div>
+      {/* Mini chart */}
       <div style={{ flex: 1, background: T.chartBg, minHeight: 0, overflow: 'hidden' }}>
         {loading && !bars.length
           ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -116,13 +149,40 @@ function MTFCard({ symbol, tf, active, onSelect }: MTFCardProps) {
             </div>
           : <MiniCandleChart bars={bars} />}
       </div>
+      {/* Signal row: EMA trend | RSI | MACD */}
+      {signals && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '3px 6px', borderTop: `1px solid ${T.border}`, flexShrink: 0,
+          background: 'rgba(0,0,0,0.18)',
+        }}>
+          {/* EMA trend badge */}
+          <span style={{
+            fontSize: 8, fontWeight: 700, fontFamily: T.mono, letterSpacing: '0.04em',
+            color: trendColor, padding: '1px 4px', borderRadius: 2,
+            background: signals.emaTrend === 'bull' ? 'rgba(38,166,154,0.15)'
+              : signals.emaTrend === 'bear' ? 'rgba(239,83,80,0.15)'
+              : 'rgba(120,123,134,0.12)',
+          }}>{trendLabel}</span>
+          {/* RSI value */}
+          <span style={{ fontSize: 8, fontFamily: T.mono, color: rsiColor, fontWeight: 600 }}>
+            {signals.rsiVal != null ? `RSI ${signals.rsiVal.toFixed(0)}` : '—'}
+          </span>
+          {/* MACD direction */}
+          {signals.macdDir && (
+            signals.macdDir === 'bull'
+              ? <TrendingUp size={9} color={T.bull} />
+              : <TrendingDown size={9} color={T.bear} />
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 function MTFStrip() {
   const { state, dispatch } = useWorkspace();
-  const timeframes = ['5m', '15m', '1h', '4h', 'D'];
+  const timeframes = ['15m', '1h', '4h', 'D', 'W'];
   return (
     <div style={{ display: 'flex', gap: 4, padding: 8, height: '100%', overflow: 'hidden' }}>
       {timeframes.map(tf => (

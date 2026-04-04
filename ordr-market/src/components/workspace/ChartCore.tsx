@@ -15,6 +15,7 @@ import { BASE_TIMEFRAMES } from './workspace-data';
 import type { Bar } from '../chart/indicators/types';
 import { usePublicChartData } from '@/hooks/usePublicChartData';
 import { useMarketWebSocket } from '@/hooks/useMarketWebSocket';
+import { useCompareData } from '@/hooks/useCompareData';
 import { computeRSI } from '../chart/indicators/rsi';
 import { computeEMA } from '../chart/indicators/ema';
 import { computeMACD } from '../chart/indicators/macd';
@@ -71,6 +72,12 @@ function ChartOverlay({ text, isError }: { text: string; isError?: boolean }) {
   );
 }
 
+// ── Browser notification helper ──────────────────────────────────────────────
+function fireBrowserNotification(title: string, body: string) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  try { new Notification(title, { body, icon: '/favicon.ico', tag: 'ordr-alert' }); } catch { /* */ }
+}
+
 // ── Alert beep via Web Audio API ─────────────────────────────────────────────
 function playAlertBeep(freq = 880, duration = 0.4) {
   try {
@@ -105,6 +112,9 @@ export function ChartCore() {
   // Live tick from WebSocket (updates last bar in real-time)
   const { tick, connected: wsConnected } = useMarketWebSocket(state.symbol);
 
+  // Comparison overlay data
+  const compareData = useCompareData(state.compareSymbols, toApiInterval(state.timeframe));
+
   // Sync fetched bar count to replay state so the scrubber knows total range
   useEffect(() => {
     if (fetchedBars.length > 0) {
@@ -131,14 +141,11 @@ export function ChartCore() {
 
       if (hitAbove || hitBelow) {
         dispatch({ type: 'TRIGGER_ALERT', id: alert.id });
-        dispatch({
-          type: 'ADD_TOAST',
-          toast: {
-            message: `Alert fired: ${alert.symbol} — ${alert.condition}`,
-            type: 'alert',
-          },
-        });
+        dispatch({ type: 'LOG_ALERT_TRIGGER', entry: { symbol: alert.symbol, condition: alert.condition, value: alert.value, triggerPrice: price, triggeredAt: new Date().toISOString() } });
+        const msg = `Alert fired: ${alert.symbol} — ${alert.condition}`;
+        dispatch({ type: 'ADD_TOAST', toast: { message: msg, type: 'alert' } });
         playAlertBeep();
+        fireBrowserNotification(`ORDR Alert — ${alert.symbol}`, `${alert.condition.replace('price_', '')} ${alert.value}`);
       }
     }
   }, [symbolInfo.price]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -204,14 +211,12 @@ export function ChartCore() {
 
       if (fired) {
         dispatch({ type: 'TRIGGER_ALERT', id: alert.id });
-        dispatch({
-          type: 'ADD_TOAST',
-          toast: {
-            message: `Indicator alert: ${alert.symbol} — ${condition.replace(/_/g, ' ')}`,
-            type: 'alert',
-          },
-        });
+        const lastBar = fetchedBars[fetchedBars.length - 1];
+        dispatch({ type: 'LOG_ALERT_TRIGGER', entry: { symbol: alert.symbol, condition, value: alert.value, triggerPrice: lastBar?.c ?? alert.value, triggeredAt: new Date().toISOString() } });
+        const indMsg = `Indicator alert: ${alert.symbol} — ${condition.replace(/_/g, ' ')}`;
+        dispatch({ type: 'ADD_TOAST', toast: { message: indMsg, type: 'alert' } });
         playAlertBeep(660, 0.5);
+        fireBrowserNotification(`ORDR Alert — ${alert.symbol}`, condition.replace(/_/g, ' '));
       }
     }
   }, [fetchedBars.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -299,6 +304,28 @@ export function ChartCore() {
     const id = window.setInterval(compute, 1_000);
     return () => window.clearInterval(id);
   }, [fetchedBars, state.timeframe]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── News events overlay ───────────────────────────────────────────────────
+  const [newsEvents, setNewsEvents] = useState<{ ts: number; title: string; importance: 'high' | 'medium' | 'low'; sentiment: string; source: string }[]>([]);
+  useEffect(() => {
+    if (!state.showNewsOverlay) { setNewsEvents([]); return; }
+    let cancelled = false;
+    fetch(`/api/news?symbol=${encodeURIComponent(state.symbol)}&mode=symbol&limit=50`)
+      .then(r => r.json())
+      .then((data: { news?: { isoTime: string; title: string; importance: string; sentiment: string; source: string }[] }) => {
+        if (cancelled) return;
+        const items = (data.news ?? []).map(n => ({
+          ts: Math.floor(new Date(n.isoTime).getTime() / 1000),
+          title: n.title,
+          importance: (n.importance as 'high' | 'medium' | 'low'),
+          sentiment: n.sentiment,
+          source: n.source,
+        }));
+        setNewsEvents(items);
+      })
+      .catch(() => { if (!cancelled) setNewsEvents([]); });
+    return () => { cancelled = true; };
+  }, [state.showNewsOverlay, state.symbol]);
 
   const fvgOn = !!(state.chartConfig as Record<string, boolean>).fvg;
   const tlOn  = !!(state.chartConfig as Record<string, boolean>).trendlines;
@@ -409,6 +436,11 @@ export function ChartCore() {
         externalShowCandlePatterns={state.showCandlePatterns}
         externalShowAutoFib={state.showAutoFib}
         externalShowSessionRanges={state.showSessionRanges}
+        externalShowKillZones={state.showKillZones}
+        externalShowEQHL={state.showEQHL}
+        externalCompareData={compareData}
+        externalNewsEvents={newsEvents}
+        externalRiskLevels={state.riskLevels}
         onPriceScaleModeChange={handlePriceScaleModeChange}
         onAddAlert={handleAddAlert}
         onOpenPanel={handleOpenPanel}
