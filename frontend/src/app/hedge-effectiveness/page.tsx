@@ -561,6 +561,61 @@ function OverviewTab({
         </div>
       )}
 
+      {/* Risk alerts */}
+      {(() => {
+        const alerts: { level: "critical" | "warn" | "info"; text: string }[] = [];
+
+        // Consecutive ineffective streak ≥ 3
+        const sortedRuns = [...runs].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+        let streak = 0;
+        for (const r of sortedRuns) {
+          if (!r.overall_effective) streak++;
+          else break;
+        }
+        if (streak >= 5) alerts.push({ level: "critical", text: `${streak} consecutive INEFFECTIVE assessments — immediate review required.` });
+        else if (streak >= 3) alerts.push({ level: "warn", text: `${streak} consecutive ineffective assessments. Consider re-evaluating hedge strategy.` });
+
+        // Pass rate < 60%
+        if (runs.length >= 5) {
+          const rate = Math.round((effectiveRuns / totalRuns) * 100);
+          if (rate < 60) alerts.push({ level: "warn", text: `Overall pass rate is ${rate}% — below the 60% advisory threshold.` });
+        }
+
+        // Stale datasets (last run > 90 days ago)
+        const nowMs = Date.now();
+        const stale = datasets.filter((ds) => {
+          const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
+          if (dsRuns.length === 0) return false;
+          const last = dsRuns.reduce((m, r) => (r.created_at ?? "") > m ? (r.created_at ?? "") : m, "");
+          if (!last) return false;
+          return nowMs - new Date(last).getTime() > 90 * 24 * 60 * 60 * 1000;
+        });
+        if (stale.length > 0) alerts.push({ level: "info", text: `${stale.length} dataset${stale.length > 1 ? "s" : ""} not re-assessed in over 90 days: ${stale.slice(0, 2).map((d) => d.name).join(", ")}${stale.length > 2 ? ` +${stale.length - 2} more` : ""}.` });
+
+        if (alerts.length === 0) return null;
+        const colors = { critical: HEX.red, warn: HEX.amber, info: HEX.cyan } as const;
+        return (
+          <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 6 }}>
+            {alerts.map((a, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "flex-start", gap: 10,
+                padding: "10px 16px", borderRadius: 4,
+                background: `${colors[a.level]}0A`,
+                border: `1px solid ${colors[a.level]}30`,
+                borderLeft: `3px solid ${colors[a.level]}`,
+              }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={colors[a.level]} strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
+                  {a.level === "info"
+                    ? <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>
+                    : <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>}
+                </svg>
+                <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text1, lineHeight: 1.5 }}>{a.text}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Quick start card */}
       <div style={{
         gridColumn: "1 / -1", padding: 28, borderRadius: 6,

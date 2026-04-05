@@ -542,6 +542,30 @@ export default function HedgeEffectivenessRunPage() {
                     {downloading === fmt ? "..." : fmt === "ifrs9" ? "IFRS 9 XML" : "ASC 815 XML"}
                   </button>
                 ))}
+                <button
+                  onClick={() => {
+                    const json = JSON.stringify(run, null, 2);
+                    const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `assessment-${runId.slice(0, 8)}-${run.standard}.json`;
+                    document.body.appendChild(a); a.click(); a.remove();
+                    URL.revokeObjectURL(url);
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em",
+                    color: S.text2,
+                    background: S.sub, border: `1px solid ${S.rim}`,
+                    borderRadius: 4, padding: "5px 12px", cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = HEX.cyan; e.currentTarget.style.color = HEX.cyan; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = HEX.border; e.currentTarget.style.color = HEX.text2; }}
+                >
+                  <Download size={12} />
+                  JSON
+                </button>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, letterSpacing: "0.08em" }}>RUN HASH</div>
@@ -1356,15 +1380,26 @@ function RegressionScatter({ periods, slope }: { periods: PeriodData[]; slope: n
           [xMax, meanY + slope * (xMax - meanX)],
         ],
         symbol: "none",
-        lineStyle: {
-          color: HEX.red,
-          width: 1.5,
-          type: "dashed" as const,
-          opacity: 0.7,
-        },
-        silent: true,
-        z: 1,
+        lineStyle: { color: HEX.red, width: 1.5, type: "dashed" as const, opacity: 0.7 },
+        silent: true, z: 1,
       }] : []),
+      // Perfect hedge line (slope = -1): instrument = -hedged
+      {
+        type: "line" as const,
+        data: [[xMin, -xMin], [xMax, -xMax]],
+        symbol: "none",
+        lineStyle: { color: HEX.green, width: 1, type: "dotted" as const, opacity: 0.5 },
+        silent: true, z: 0,
+        markPoint: {
+          data: [{ coord: [xMax, -xMax], symbol: "none" as const }],
+          label: {
+            show: true, position: "top" as const,
+            formatter: "Perfect (β=−1)",
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontSize: 9, color: HEX.green, opacity: 0.7,
+          },
+        },
+      },
     ],
   };
 
