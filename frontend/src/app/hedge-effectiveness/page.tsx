@@ -478,6 +478,7 @@ function HedgeEffectivenessInner() {
             runs={runs}
             standard={formStandard}
             onRunAssessment={runAssessment}
+            onNavigateRun={(id) => router.push(`/hedge-effectiveness/runs/${id}`)}
             submitting={submitting}
           />
         ) : tab === "upload" ? (
@@ -805,6 +806,106 @@ function OverviewTab({
           </div>
         </div>
       )}
+
+      {/* Portfolio health gauge + recent activity */}
+      {runs.length > 0 && (() => {
+        const passRate = Math.round((runs.filter((r) => r.overall_effective).length / runs.length) * 100);
+        const gaugeColor = passRate >= 80 ? HEX.green : passRate >= 60 ? HEX.amber : HEX.red;
+        const gaugeOption = {
+          backgroundColor: "transparent",
+          series: [{
+            type: "gauge",
+            startAngle: 200, endAngle: -20,
+            min: 0, max: 100,
+            radius: "90%",
+            pointer: { show: false },
+            progress: {
+              show: true, width: 12,
+              itemStyle: { color: gaugeColor },
+            },
+            axisLine: { lineStyle: { width: 12, color: [[1, HEX.border]] } },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            axisLabel: { show: false },
+            detail: {
+              valueAnimation: true,
+              formatter: "{value}%",
+              color: gaugeColor,
+              fontSize: 22, fontWeight: 800,
+              fontFamily: "'IBM Plex Mono', monospace",
+              offsetCenter: [0, "20%"],
+            },
+            title: {
+              show: true,
+              offsetCenter: [0, "55%"],
+              color: HEX.text3,
+              fontSize: 10,
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontWeight: 700,
+            },
+            data: [{ value: passRate, name: "PASS RATE" }],
+          }],
+        };
+
+        const recent = [...runs]
+          .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+          .slice(0, 6);
+
+        return (
+          <>
+            {/* Gauge card */}
+            <div style={{ padding: "20px 16px", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
+              <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 4 }}>
+                PORTFOLIO HEALTH
+              </div>
+              <ReactECharts option={gaugeOption} style={{ height: 180 }} opts={{ renderer: "canvas" }} />
+              <div style={{ textAlign: "center", fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                {runs.filter((r) => r.overall_effective).length} of {runs.length} effective
+              </div>
+            </div>
+
+            {/* Recent activity feed */}
+            <div style={{ padding: "20px", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}`, display: "flex", flexDirection: "column" }}>
+              <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 12 }}>
+                RECENT ASSESSMENTS
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+                {recent.map((r) => (
+                  <div
+                    key={r.run_id}
+                    onClick={() => onNavigateRun(r.run_id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "7px 10px", borderRadius: 3, cursor: "pointer",
+                      background: S.sub, border: `1px solid transparent`,
+                      transition: "all 0.12s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = HEX.cyan + "30"; e.currentTarget.style.background = HEX.bgSub; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.background = "var(--bg-sub)"; }}
+                  >
+                    <span style={{
+                      width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                      background: r.overall_effective ? HEX.green : HEX.red,
+                    }} />
+                    <span style={{ fontFamily: S.ui, fontSize: 12, fontWeight: 600, color: S.text1, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {r.dataset_name}
+                    </span>
+                    {r.currency_pair && (
+                      <span style={{ fontFamily: S.mono, fontSize: 11, color: HEX.cyan, flexShrink: 0 }}>{r.currency_pair}</span>
+                    )}
+                    <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, flexShrink: 0 }}>
+                      {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+                    </span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={HEX.text3} strokeWidth="2" style={{ flexShrink: 0 }}>
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -814,13 +915,15 @@ function OverviewTab({
 // ═════════════════════════════════════════════════════════════════════════════
 
 function DatasetsTab({
-  datasets, runs, standard, onRunAssessment, submitting,
+  datasets, runs, standard, onRunAssessment, onNavigateRun, submitting,
 }: {
   datasets: Dataset[]; runs: Run[]; standard: string;
   onRunAssessment: (id: string) => void;
+  onNavigateRun: (id: string) => void;
   submitting: boolean;
 }) {
   const [dsSearch, setDsSearch] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Per-dataset stats derived from runs
   const dsStats = datasets.reduce<Record<string, { count: number; effective: number; lastVerdict: boolean | null }>>((acc, ds) => {
@@ -905,73 +1008,137 @@ function DatasetsTab({
       ) : filteredDs.map((ds) => {
         const stats = dsStats[ds.id];
         return (
-        <div key={ds.id} style={{
-          display: "grid", gridTemplateColumns: "2fr 80px 100px 80px 100px 140px",
-          gap: 8, padding: "14px 20px", alignItems: "center",
-          background: S.panel, borderRadius: 4, border: `1px solid ${S.rim}`,
-          transition: "border-color 0.15s",
-        }}
-          onMouseEnter={(e) => e.currentTarget.style.borderColor = HEX.cyan + "30"}
-          onMouseLeave={(e) => e.currentTarget.style.borderColor = HEX.border}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <div style={{ fontFamily: S.ui, fontSize: 13, fontWeight: 600, color: S.text1 }}>
-              {ds.name}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {ds.currency_pair && (
-                <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{ds.currency_pair}</span>
-              )}
-              {stats.count > 0 && (
-                <>
-                  {ds.currency_pair && <span style={{ color: S.rim }}>·</span>}
-                  <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
-                    {stats.count} {stats.count === 1 ? "RUN" : "RUNS"}
-                  </span>
-                  <span style={{
-                    fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
-                    padding: "1px 5px", borderRadius: 2,
-                    background: stats.lastVerdict ? HEX.greenBg : HEX.redBg,
-                    color: stats.lastVerdict ? HEX.green : HEX.red,
-                    border: `1px solid ${stats.lastVerdict ? HEX.greenBorder : HEX.redBorder}`,
-                  }}>
-                    {stats.lastVerdict ? "EFFECTIVE" : "INEFFECTIVE"}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-          <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.text2 }}>
-            {ds.period_count}
-          </span>
-          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
-            {ds.hedge_type.replace(/_/g, " ").toUpperCase()}
-          </span>
-          <span style={{
-            fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em",
-            padding: "2px 6px", borderRadius: 2, background: S.sub, color: S.text3,
-          }}>
-            {ds.source.toUpperCase()}
-          </span>
-          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
-            {ds.created_at ? new Date(ds.created_at).toLocaleDateString() : "\u2014"}
-          </span>
-          <button
-            onClick={() => onRunAssessment(ds.id)}
-            disabled={submitting}
-            style={{
-              fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
-              padding: "7px 16px", borderRadius: 3, cursor: submitting ? "not-allowed" : "pointer",
-              background: HEX.cyan, color: "#fff", border: "none",
-              opacity: submitting ? 0.5 : 1,
-              boxShadow: "0 1px 4px rgba(28,98,242,0.15)",
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => { if (!submitting) e.currentTarget.style.boxShadow = "0 2px 10px rgba(28,98,242,0.25)"; }}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = "0 1px 4px rgba(28,98,242,0.15)"}
+        <div key={ds.id} style={{ borderRadius: 4, border: `1px solid ${expandedId === ds.id ? HEX.cyan + "40" : S.rim}`, overflow: "hidden", transition: "border-color 0.15s" }}>
+          {/* Main row */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "2fr 80px 100px 80px 100px 140px",
+            gap: 8, padding: "14px 20px", alignItems: "center",
+            background: S.panel, cursor: "pointer",
+          }}
+            onClick={() => setExpandedId(expandedId === ds.id ? null : ds.id)}
+            onMouseEnter={(e) => (e.currentTarget.style.background = HEX.bgSub)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-panel)")}
           >
-            {submitting ? "RUNNING..." : "RUN ASSESSMENT"}
-          </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <svg
+                  width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={HEX.text3} strokeWidth="2"
+                  style={{ transform: expandedId === ds.id ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", flexShrink: 0 }}
+                >
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+                <div style={{ fontFamily: S.ui, fontSize: 13, fontWeight: 600, color: S.text1 }}>
+                  {ds.name}
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 16 }}>
+                {ds.currency_pair && (
+                  <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{ds.currency_pair}</span>
+                )}
+                {stats.count > 0 && (
+                  <>
+                    {ds.currency_pair && <span style={{ color: S.rim }}>·</span>}
+                    <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                      {stats.count} {stats.count === 1 ? "RUN" : "RUNS"}
+                    </span>
+                    <span style={{
+                      fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                      padding: "1px 5px", borderRadius: 2,
+                      background: stats.lastVerdict ? HEX.greenBg : HEX.redBg,
+                      color: stats.lastVerdict ? HEX.green : HEX.red,
+                      border: `1px solid ${stats.lastVerdict ? HEX.greenBorder : HEX.redBorder}`,
+                    }}>
+                      {stats.lastVerdict ? "EFFECTIVE" : "INEFFECTIVE"}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 600, color: S.text2 }}>
+              {ds.period_count}
+            </span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
+              {ds.hedge_type.replace(/_/g, " ").toUpperCase()}
+            </span>
+            <span style={{
+              fontFamily: S.mono, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em",
+              padding: "2px 6px", borderRadius: 2, background: S.sub, color: S.text3,
+            }}>
+              {ds.source.toUpperCase()}
+            </span>
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
+              {ds.created_at ? new Date(ds.created_at).toLocaleDateString() : "\u2014"}
+            </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); onRunAssessment(ds.id); }}
+              disabled={submitting}
+              style={{
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em",
+                padding: "7px 16px", borderRadius: 3, cursor: submitting ? "not-allowed" : "pointer",
+                background: HEX.cyan, color: "#fff", border: "none",
+                opacity: submitting ? 0.5 : 1,
+                boxShadow: "0 1px 4px rgba(28,98,242,0.15)",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { if (!submitting) e.currentTarget.style.boxShadow = "0 2px 10px rgba(28,98,242,0.25)"; }}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = "0 1px 4px rgba(28,98,242,0.15)"}
+            >
+              {submitting ? "RUNNING..." : "RUN ASSESSMENT"}
+            </button>
+          </div>
+
+          {/* Accordion expand — last 3 runs */}
+          {expandedId === ds.id && (() => {
+            const dsRuns = [...runs]
+              .filter((r) => r.dataset_id === ds.id)
+              .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+              .slice(0, 3);
+            return (
+              <div style={{
+                borderTop: `1px solid ${S.rim}`,
+                background: S.sub, padding: "12px 20px",
+                display: "flex", flexDirection: "column", gap: 6,
+              }}>
+                <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 4 }}>
+                  ASSESSMENT HISTORY
+                </div>
+                {dsRuns.length === 0 ? (
+                  <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>No runs yet for this dataset.</span>
+                ) : dsRuns.map((r) => (
+                  <div key={r.run_id} style={{
+                    display: "grid", gridTemplateColumns: "auto 1fr auto auto auto",
+                    gap: 10, alignItems: "center",
+                    padding: "7px 12px", borderRadius: 3,
+                    background: S.panel, border: `1px solid ${S.rim}`,
+                    cursor: "pointer", transition: "border-color 0.12s",
+                  }}
+                    onClick={(e) => { e.stopPropagation(); onNavigateRun(r.run_id); }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = HEX.cyan + "40"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = HEX.border}
+                  >
+                    <span style={{
+                      width: 7, height: 7, borderRadius: "50%",
+                      background: r.overall_effective ? HEX.green : HEX.red,
+                      flexShrink: 0,
+                    }} />
+                    <span style={{
+                      fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+                      color: r.overall_effective ? HEX.green : HEX.red,
+                    }}>
+                      {r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"}
+                    </span>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>{r.standard}</span>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                      D.O. {r.dollar_offset_ratio?.toFixed(4) ?? "N/A"}
+                    </span>
+                    <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                      {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
         );
       })}

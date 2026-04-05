@@ -1,7 +1,30 @@
 # Current Sprint
 
-Sprint: Sprint 8 — Dataset Intelligence & Run Navigation
+Sprint: Sprint 9 — Overview Depth & Dataset Drill-down
 Status: COMPLETE ✓
+Started: 2026-04-04
+Completed: 2026-04-04
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 9.1 | Portfolio health gauge in Overview (ECharts semicircular gauge, pass rate %) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+| 9.2 | Recent assessments feed in Overview (last 6 runs, clickable timeline) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+| 9.3 | DatasetsTab accordion expand (click row → show last 3 runs with verdict + D.O.) | DONE [PENDING BROWSER CONFIRMATION] | high |
+
+## Completed: 3/3
+## Sprint Status: COMPLETE [PENDING BROWSER CONFIRMATION]
+
+## Notes
+- All work in: `frontend/src/app/hedge-effectiveness/page.tsx`
+- 9.1: ECharts gauge, startAngle 200/endAngle -20, color zones (green/amber/red by pass rate)
+- 9.2: Last 6 runs sorted desc by created_at, colored dot, dataset name, currency, date, clickable
+- 9.3: DatasetsTab: `expandedId` state, chevron toggle, sub-section shows last 3 runs per dataset_id; `onNavigateRun` prop added; RUN ASSESSMENT button stopPropagation to avoid accordion toggle
+- tsc clean, next build clean
+
+---
+
+# Sprint: Sprint 8 — Dataset Intelligence & Run Navigation — COMPLETE ✓
 Started: 2026-04-04
 Completed: 2026-04-04
 
