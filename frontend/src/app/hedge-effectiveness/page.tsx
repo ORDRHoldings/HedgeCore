@@ -1637,6 +1637,66 @@ function OverviewTab({
           </div>
         );
       })()}
+
+      {/* ── 24.3 Activity Calendar Heatmap ── */}
+      {(() => {
+        if (runs.length === 0) return null;
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const startDay = new Date(today); startDay.setDate(today.getDate() - 89);
+        // Count runs per day
+        const countByDay = new Map<string, number>();
+        for (const r of runs) {
+          if (!r.created_at) continue;
+          const day = r.created_at.slice(0, 10);
+          const d = new Date(day);
+          if (d >= startDay && d <= today) countByDay.set(day, (countByDay.get(day) ?? 0) + 1);
+        }
+        const maxCount = Math.max(1, ...countByDay.values());
+        // Build 90-day array
+        const days: { date: string; count: number }[] = [];
+        for (let i = 0; i < 90; i++) {
+          const d = new Date(startDay); d.setDate(startDay.getDate() + i);
+          const key = d.toISOString().slice(0, 10);
+          days.push({ date: key, count: countByDay.get(key) ?? 0 });
+        }
+        const totalActivity = [...countByDay.values()].reduce((s, v) => s + v, 0);
+        return (
+          <div style={{ background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4, padding: 16, marginTop: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: S.text3, textTransform: "uppercase" }}>Assessment Activity</span>
+              <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>— last 90 days</span>
+              <div style={{ flex: 1 }} />
+              <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>{totalActivity} runs</span>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              {days.map(({ date, count }) => {
+                const intensity = count === 0 ? 0 : Math.max(0.15, count / maxCount);
+                const bg = count === 0 ? S.sub : `rgba(28,98,242,${intensity.toFixed(2)})`;
+                const d = new Date(date);
+                return (
+                  <div
+                    key={date}
+                    title={`${date}: ${count} run${count !== 1 ? "s" : ""}`}
+                    style={{
+                      width: 12, height: 12, borderRadius: 2, flexShrink: 0,
+                      background: bg,
+                      border: `1px solid ${count > 0 ? "rgba(28,98,242,0.2)" : S.rim}`,
+                      cursor: count > 0 ? "pointer" : "default",
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>Less</span>
+              {[0, 0.15, 0.4, 0.7, 1].map((v) => (
+                <div key={v} style={{ width: 10, height: 10, borderRadius: 2, background: v === 0 ? S.sub : `rgba(28,98,242,${v})`, border: `1px solid ${v > 0 ? "rgba(28,98,242,0.2)" : S.rim}` }} />
+              ))}
+              <span style={{ fontFamily: S.mono, fontSize: 10, color: S.text3 }}>More</span>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -2328,6 +2388,12 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
   const [groupByDataset, setGroupByDataset] = useState(false);
+  // ── Column visibility ──
+  const [colVis, setColVis] = useState({ standard: true, do_ratio: true, r2: true, verdict: true, date: true });
+  const [showColMenu, setShowColMenu] = useState(false);
+  const toggleCol = (k: keyof typeof colVis) => setColVis((v) => ({ ...v, [k]: !v[k] }));
+  // ── Hover popover ──
+  const [hoverId, setHoverId] = useState<string | null>(null);
 
   // ── Filter presets ──
   const PRESETS_KEY = "hec_filter_presets";
@@ -2603,6 +2669,47 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           )}
         </div>
         <div style={{ flex: 1 }} />
+        {/* Column visibility menu */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => setShowColMenu((v) => !v)}
+            style={{
+              fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+              padding: "5px 10px", borderRadius: 3, cursor: "pointer",
+              background: showColMenu ? S.sub : "transparent",
+              color: showColMenu ? S.text1 : S.text3,
+              border: `1px solid ${showColMenu ? S.rim : "transparent"}`,
+              display: "flex", alignItems: "center", gap: 4,
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="1"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>
+            </svg>
+            COLS
+          </button>
+          {showColMenu && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 100,
+              background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)", padding: "8px 0", minWidth: 140,
+            }}>
+              {([ ["standard", "Standard"], ["do_ratio", "D.O. Ratio"], ["r2", "R²"], ["verdict", "Verdict"], ["date", "Date"] ] as [keyof typeof colVis, string][]).map(([k, label]) => (
+                <button key={k} onClick={() => toggleCol(k)} style={{
+                  display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "6px 14px",
+                  fontFamily: S.mono, fontSize: 11, color: S.text1, background: "transparent", border: "none", cursor: "pointer", textAlign: "left",
+                }}>
+                  <span style={{
+                    width: 14, height: 14, borderRadius: 2, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                    background: colVis[k] ? HEX.cyan : "transparent", border: `1px solid ${colVis[k] ? HEX.cyan : S.rim}`,
+                  }}>
+                    {colVis[k] && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
+                  </span>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button
           onClick={() => setDensity((d) => d === "normal" ? "compact" : "normal")}
           title={density === "normal" ? "Switch to compact view" : "Switch to normal view"}
@@ -2701,44 +2808,40 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
       </div>
 
       {/* Column headers */}
-      <div style={{
-        display: "grid", gridTemplateColumns: "28px 2fr 90px 100px 80px 100px 120px 90px",
-        gap: 8, padding: "0 20px",
-      }}>
-        <div />
-        {([
-          { label: "DATASET", key: "dataset" as SortKey },
-          { label: "STANDARD", key: null },
-          { label: "D.O. RATIO", key: "do_ratio" as SortKey },
-          { label: "R\u00B2", key: "r2" as SortKey },
-          { label: "VERDICT", key: "verdict" as SortKey },
-          { label: "HASH", key: null },
-          { label: "DATE", key: "date" as SortKey },
-        ]).map(({ label, key }) => key ? (
-          <button
-            key={label}
-            onClick={() => handleSort(key)}
-            style={{
-              fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em",
-              color: sortKey === key ? HEX.cyan : S.text3,
-              background: "transparent", border: "none", cursor: "pointer",
-              padding: 0, display: "flex", alignItems: "center", gap: 3, textAlign: "left",
-            }}
-          >
-            {label}
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-              style={{ opacity: sortKey === key ? 1 : 0.3, transition: "opacity 0.15s" }}>
-              {sortKey === key && sortDir === "asc"
-                ? <path d="M12 19V5M5 12l7-7 7 7"/>
-                : <path d="M12 5v14M5 12l7 7 7-7"/>}
-            </svg>
-          </button>
-        ) : (
-          <span key={label} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
-            {label}
-          </span>
-        ))}
-      </div>
+      {(() => {
+        const cols = [
+          { label: "DATASET",    key: "dataset" as SortKey,  vis: true,                   w: "2fr"  },
+          { label: "STANDARD",   key: null,                   vis: colVis.standard,        w: "90px" },
+          { label: "D.O. RATIO", key: "do_ratio" as SortKey, vis: colVis.do_ratio,        w: "100px"},
+          { label: "R²",         key: "r2" as SortKey,       vis: colVis.r2,              w: "80px" },
+          { label: "VERDICT",    key: "verdict" as SortKey,  vis: colVis.verdict,         w: "100px"},
+          { label: "HASH",       key: null,                   vis: true,                   w: "120px"},
+          { label: "DATE",       key: "date" as SortKey,     vis: colVis.date,            w: "90px" },
+        ];
+        const visibleCols = cols.filter((c) => c.vis);
+        const gridCols = ["28px", ...visibleCols.map((c) => c.w)].join(" ");
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: 8, padding: "0 20px" }}>
+            <div />
+            {visibleCols.map(({ label, key }) => key ? (
+              <button key={label} onClick={() => handleSort(key)} style={{
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em",
+                color: sortKey === key ? HEX.cyan : S.text3,
+                background: "transparent", border: "none", cursor: "pointer",
+                padding: 0, display: "flex", alignItems: "center", gap: 3, textAlign: "left",
+              }}>
+                {label}
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  style={{ opacity: sortKey === key ? 1 : 0.3, transition: "opacity 0.15s" }}>
+                  {sortKey === key && sortDir === "asc" ? <path d="M12 19V5M5 12l7-7 7 7"/> : <path d="M12 5v14M5 12l7 7 7-7"/>}
+                </svg>
+              </button>
+            ) : (
+              <span key={label} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>{label}</span>
+            ))}
+          </div>
+        );
+      })()}
 
       {filteredRuns.length === 0 ? (
         <div style={{ padding: "32px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
@@ -2823,20 +2926,31 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
             </div>
           );
         });
-      })() : displayRuns.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE).map((r) => (
+      })() : displayRuns.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE).map((r) => {
+        const visCols = [
+          { vis: true,             w: "2fr"   },
+          { vis: colVis.standard,  w: "90px"  },
+          { vis: colVis.do_ratio,  w: "100px" },
+          { vis: colVis.r2,        w: "80px"  },
+          { vis: colVis.verdict,   w: "100px" },
+          { vis: true,             w: "120px" },
+          { vis: colVis.date,      w: "90px"  },
+        ];
+        const gridCols = ["28px", ...visCols.filter((c) => c.vis).map((c) => c.w)].join(" ");
+        return (
         <div
           key={r.run_id}
           onClick={() => onNavigateRun(r.run_id)}
+          onMouseEnter={() => setHoverId(r.run_id)}
+          onMouseLeave={() => setHoverId(null)}
           style={{
-            display: "grid", gridTemplateColumns: "28px 2fr 90px 100px 80px 100px 120px 90px",
+            display: "grid", gridTemplateColumns: gridCols,
             gap: 8, padding: `${density === "compact" ? 6 : 12}px 20px`, borderRadius: 4,
             background: selectedIds.has(r.run_id) ? "rgba(28,98,242,0.04)" : S.panel,
             border: `1px solid ${selectedIds.has(r.run_id) ? HEX.cyan + "40" : S.rim}`,
             cursor: "pointer", transition: "all 0.15s",
             position: "relative",
           }}
-          onMouseEnter={(e) => { if (!selectedIds.has(r.run_id)) { e.currentTarget.style.borderColor = HEX.cyan + "30"; e.currentTarget.style.boxShadow = "0 1px 6px rgba(28,98,242,0.04)"; } }}
-          onMouseLeave={(e) => { if (!selectedIds.has(r.run_id)) { e.currentTarget.style.borderColor = HEX.border; e.currentTarget.style.boxShadow = "none"; } }}
         >
           {/* Left verdict indicator */}
           <div style={{
@@ -2888,42 +3002,76 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
               </svg>
             </button>
           </div>
-          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, display: "flex", alignItems: "center" }}>
-            {r.standard}
-          </span>
-          <span style={{
-            fontFamily: S.mono, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center",
-            color: r.dollar_offset_ratio != null && r.dollar_offset_ratio >= 0.80 && r.dollar_offset_ratio <= 1.25 ? HEX.green : S.text2,
-          }}>
-            {r.dollar_offset_ratio != null ? r.dollar_offset_ratio.toFixed(4) : "\u2014"}
-          </span>
-          <span style={{
-            fontFamily: S.mono, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center",
-            color: r.regression_r_squared != null && r.regression_r_squared >= 0.80 ? HEX.green : S.text2,
-          }}>
-            {r.regression_r_squared != null ? r.regression_r_squared.toFixed(4) : "\u2014"}
-          </span>
-          <span style={{
-            fontFamily: S.mono, fontSize: 12, fontWeight: 800, letterSpacing: "0.1em",
-            display: "flex", alignItems: "center",
-          }}>
-            <span style={{
-              padding: "3px 8px", borderRadius: 3,
-              background: r.overall_effective ? HEX.greenBg : HEX.redBg,
-              color: r.overall_effective ? HEX.green : HEX.red,
-              border: `1px solid ${r.overall_effective ? HEX.greenBorder : HEX.redBorder}`,
-            }}>
-              {r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"}
+          {colVis.standard && (
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, display: "flex", alignItems: "center" }}>
+              {r.standard}
             </span>
-          </span>
+          )}
+          {colVis.do_ratio && (
+            <span style={{
+              fontFamily: S.mono, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center",
+              color: r.dollar_offset_ratio != null && r.dollar_offset_ratio >= 0.80 && r.dollar_offset_ratio <= 1.25 ? HEX.green : S.text2,
+            }}>
+              {r.dollar_offset_ratio != null ? r.dollar_offset_ratio.toFixed(4) : "\u2014"}
+            </span>
+          )}
+          {colVis.r2 && (
+            <span style={{
+              fontFamily: S.mono, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center",
+              color: r.regression_r_squared != null && r.regression_r_squared >= 0.80 ? HEX.green : S.text2,
+            }}>
+              {r.regression_r_squared != null ? r.regression_r_squared.toFixed(4) : "\u2014"}
+            </span>
+          )}
+          {colVis.verdict && (
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 800, letterSpacing: "0.1em", display: "flex", alignItems: "center" }}>
+              <span style={{
+                padding: "3px 8px", borderRadius: 3,
+                background: r.overall_effective ? HEX.greenBg : HEX.redBg,
+                color: r.overall_effective ? HEX.green : HEX.red,
+                border: `1px solid ${r.overall_effective ? HEX.greenBorder : HEX.redBorder}`,
+              }}>
+                {r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"}
+              </span>
+            </span>
+          )}
           <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, display: "flex", alignItems: "center" }}>
             {r.run_hash?.slice(0, 10)}...
           </span>
-          <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, display: "flex", alignItems: "center" }}>
-            {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
-          </span>
+          {colVis.date && (
+            <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3, display: "flex", alignItems: "center" }}>
+              {r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}
+            </span>
+          )}
+
+          {/* ── 24.2 Hover popover ── */}
+          {hoverId === r.run_id && (
+            <div style={{
+              position: "absolute", left: "calc(100% + 8px)", top: 0, zIndex: 50,
+              background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.14)", padding: "12px 14px", minWidth: 200,
+              pointerEvents: "none",
+            }}>
+              <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.12em", marginBottom: 8 }}>QUICK VIEW</div>
+              {([
+                ["Standard",  r.standard.replace("_", " ")],
+                ["D.O. Ratio", r.dollar_offset_ratio != null ? r.dollar_offset_ratio.toFixed(4) : "—"],
+                ["R²",         r.regression_r_squared != null ? r.regression_r_squared.toFixed(4) : "—"],
+                ["Verdict",    r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"],
+                ["Date",       r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"],
+              ] as [string, string][]).map(([k, v]) => (
+                <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 4 }}>
+                  <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>{k}</span>
+                  <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 600,
+                    color: k === "Verdict" ? (r.overall_effective ? HEX.green : HEX.red) : S.text1
+                  }}>{v}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      ))}
+        );
+      })}
 
       {/* Pagination */}
       {totalPages > 1 && (
