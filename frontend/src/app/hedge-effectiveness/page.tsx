@@ -585,6 +585,50 @@ function OverviewTab({
         </div>
       </div>
 
+      {/* Unassessed datasets alert */}
+      {datasets.length > 0 && (() => {
+        const unassessed = datasets.filter((d) => !runs.some((r) => r.dataset_id === d.id));
+        if (unassessed.length === 0) return null;
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "12px 20px", borderRadius: 6,
+            background: "rgba(28,98,242,0.04)", border: `1px solid rgba(28,98,242,0.2)`,
+            display: "flex", alignItems: "center", gap: 14,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={HEX.cyan} strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: HEX.cyan, letterSpacing: "0.1em" }}>
+              {unassessed.length} DATASET{unassessed.length > 1 ? "S" : ""} NOT YET ASSESSED
+            </span>
+            <div style={{ display: "flex", gap: 8, flex: 1, flexWrap: "wrap" }}>
+              {unassessed.slice(0, 4).map((d) => (
+                <span key={d.id} style={{
+                  fontFamily: S.mono, fontSize: 11, color: S.text2,
+                  padding: "2px 8px", borderRadius: 2, background: S.panel, border: `1px solid ${S.rim}`,
+                }}>
+                  {d.name}{d.currency_pair ? ` · ${d.currency_pair}` : ""}
+                </span>
+              ))}
+              {unassessed.length > 4 && (
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>+{unassessed.length - 4} more</span>
+              )}
+            </div>
+            <button
+              onClick={() => onSwitchTab("datasets")}
+              style={{
+                fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+                padding: "5px 14px", borderRadius: 3, cursor: "pointer", flexShrink: 0,
+                background: HEX.cyan, color: "#fff", border: "none",
+                boxShadow: "0 1px 4px rgba(28,98,242,0.2)",
+              }}
+            >
+              ASSESS NOW
+            </button>
+          </div>
+        );
+      })()}
+
       {/* Standards cards */}
       {[
         {
@@ -1079,6 +1123,7 @@ function DatasetsTab({
 }) {
   const [dsSearch, setDsSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [dsSort, setDsSort] = useState<"name" | "runs" | "created" | "lastAssessed">("created");
 
   // Per-dataset stats derived from runs
   const dsStats = datasets.reduce<Record<string, { count: number; effective: number; lastVerdict: boolean | null }>>((acc, ds) => {
@@ -1098,6 +1143,20 @@ function DatasetsTab({
         (ds.currency_pair ?? "").toLowerCase().includes(dsSearch.toLowerCase())
       )
     : datasets;
+
+  const displayDs = [...filteredDs].sort((a, b) => {
+    if (dsSort === "name") return a.name.localeCompare(b.name);
+    if (dsSort === "runs") return (dsStats[b.id]?.count ?? 0) - (dsStats[a.id]?.count ?? 0);
+    if (dsSort === "lastAssessed") {
+      const aRuns = runs.filter((r) => r.dataset_id === a.id);
+      const bRuns = runs.filter((r) => r.dataset_id === b.id);
+      const aLast = aRuns.reduce((m, r) => (r.created_at ?? "") > m ? (r.created_at ?? "") : m, "");
+      const bLast = bRuns.reduce((m, r) => (r.created_at ?? "") > m ? (r.created_at ?? "") : m, "");
+      return bLast.localeCompare(aLast);
+    }
+    // default: "created" — newest first
+    return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+  });
 
   if (datasets.length === 0) {
     return (
@@ -1139,6 +1198,19 @@ function DatasetsTab({
             }}
           />
         </div>
+        <select
+          value={dsSort}
+          onChange={(e) => setDsSort(e.target.value as typeof dsSort)}
+          style={{
+            fontFamily: S.mono, fontSize: 11, color: S.text2, background: S.panel,
+            border: `1px solid ${S.soft}`, borderRadius: 3, padding: "6px 8px", outline: "none",
+          }}
+        >
+          <option value="created">Newest first</option>
+          <option value="name">Name A–Z</option>
+          <option value="runs">Most runs</option>
+          <option value="lastAssessed">Last assessed</option>
+        </select>
         <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
           {filteredDs.length} OF {datasets.length}
         </span>
@@ -1156,11 +1228,11 @@ function DatasetsTab({
         ))}
       </div>
 
-      {filteredDs.length === 0 && dsSearch.trim() ? (
+      {displayDs.length === 0 && dsSearch.trim() ? (
         <div style={{ padding: "24px 20px", fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
           No datasets match &ldquo;{dsSearch}&rdquo;.
         </div>
-      ) : filteredDs.map((ds) => {
+      ) : displayDs.map((ds) => {
         const stats = dsStats[ds.id];
         return (
         <div key={ds.id} style={{ borderRadius: 4, border: `1px solid ${expandedId === ds.id ? HEX.cyan + "40" : S.rim}`, overflow: "hidden", transition: "border-color 0.15s" }}>
@@ -1686,12 +1758,32 @@ function UploadTab({
 
 type SortKey = "dataset" | "do_ratio" | "r2" | "verdict" | "date" | null;
 
+const STARRED_KEY = "hec_starred_runs";
+
 function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: string) => void }) {
   const [search, setSearch] = useState("");
   const [stdFilter, setStdFilter] = useState("ALL");
   const [verdictFilter, setVerdictFilter] = useState<"ALL" | "EFFECTIVE" | "INEFFECTIVE">("ALL");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [showStarredOnly, setShowStarredOnly] = useState(false);
+  const [starredIds, setStarredIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(STARRED_KEY) || "[]")); }
+    catch { return new Set(); }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STARRED_KEY, JSON.stringify([...starredIds]));
+  }, [starredIds]);
+
+  const toggleStar = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setStarredIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => d === "asc" ? "desc" : "asc");
@@ -1701,6 +1793,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   const filteredRuns = runs
     .filter((r) => stdFilter === "ALL" || r.standard === stdFilter)
     .filter((r) => verdictFilter === "ALL" || (verdictFilter === "EFFECTIVE" ? r.overall_effective : !r.overall_effective))
+    .filter((r) => !showStarredOnly || starredIds.has(r.run_id))
     .filter((r) => {
       const q = search.toLowerCase();
       return !q || r.dataset_name.toLowerCase().includes(q) || (r.currency_pair?.toLowerCase().includes(q) ?? false);
@@ -1790,6 +1883,22 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
             {v}
           </button>
         ))}
+        <button
+          onClick={() => setShowStarredOnly((v) => !v)}
+          style={{
+            fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
+            padding: "5px 12px", borderRadius: 3, cursor: "pointer",
+            background: showStarredOnly ? "#D97706" : S.sub,
+            color: showStarredOnly ? "#fff" : S.text3,
+            border: "none", display: "flex", alignItems: "center", gap: 4,
+            transition: "all 0.15s",
+          }}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill={showStarredOnly ? "#fff" : "none"} stroke="currentColor" strokeWidth="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          STARRED{starredIds.size > 0 ? ` (${starredIds.size})` : ""}
+        </button>
         <div style={{ flex: 1 }} />
         <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
           {filteredRuns.length} OF {runs.length} RUNS
@@ -1857,7 +1966,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
         <div style={{ padding: "32px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
           <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>No runs match the current filters.</div>
           <button
-            onClick={() => { setSearch(""); setStdFilter("ALL"); setVerdictFilter("ALL"); }}
+            onClick={() => { setSearch(""); setStdFilter("ALL"); setVerdictFilter("ALL"); setShowStarredOnly(false); }}
             style={{
               fontFamily: S.mono, fontSize: 11, padding: "5px 14px", borderRadius: 3, cursor: "pointer",
               background: "transparent", color: HEX.cyan, border: `1px solid rgba(28,98,242,0.25)`,
@@ -1887,13 +1996,37 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
             background: r.overall_effective ? HEX.green : HEX.red,
           }} />
 
-          <div>
-            <div style={{ fontFamily: S.ui, fontSize: 12, fontWeight: 600, color: S.text1 }}>
-              {r.dataset_name}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: S.ui, fontSize: 12, fontWeight: 600, color: S.text1 }}>
+                {r.dataset_name}
+              </div>
+              {r.currency_pair && (
+                <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{r.currency_pair}</span>
+              )}
             </div>
-            {r.currency_pair && (
-              <span style={{ fontFamily: S.mono, fontSize: 12, color: HEX.cyan }}>{r.currency_pair}</span>
-            )}
+            <button
+              onClick={(e) => toggleStar(r.run_id, e)}
+              title={starredIds.has(r.run_id) ? "Unstar" : "Star this run"}
+              style={{
+                background: "transparent", border: "none", cursor: "pointer",
+                padding: "2px 4px", borderRadius: 3, flexShrink: 0,
+                color: starredIds.has(r.run_id) ? "#D97706" : S.text3,
+                opacity: starredIds.has(r.run_id) ? 1 : 0.4,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "#D97706"; }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = starredIds.has(r.run_id) ? "1" : "0.4";
+                e.currentTarget.style.color = starredIds.has(r.run_id) ? "#D97706" : HEX.text3;
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24"
+                fill={starredIds.has(r.run_id) ? "#D97706" : "none"}
+                stroke={starredIds.has(r.run_id) ? "#D97706" : "currentColor"} strokeWidth="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </button>
           </div>
           <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, display: "flex", alignItems: "center" }}>
             {r.standard}
