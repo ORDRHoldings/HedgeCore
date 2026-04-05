@@ -1,7 +1,30 @@
 # Current Sprint
 
-Sprint: Sprint 9 — Overview Depth & Dataset Drill-down
+Sprint: Sprint 10 — Run Detail Polish
 Status: COMPLETE ✓
+Started: 2026-04-04
+Completed: 2026-04-04
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 10.1 | Period table: out-of-band row highlighting (red tint + IN/OUT badge on CUM RATIO), footer summary | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 10.2 | Keyboard navigation: ← prev run, → next run, Esc → back to runs list | DONE [PENDING BROWSER CONFIRMATION] | medium |
+| 10.3 | Copy summary button in run detail header (dataset, standard, verdict, D.O., R², hash → clipboard) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+
+## Completed: 3/3
+## Sprint Status: COMPLETE [PENDING BROWSER CONFIRMATION]
+
+## Notes
+- All work in: `frontend/src/app/hedge-effectiveness/runs/[run_id]/page.tsx`
+- 10.1: `outOfBand` flag drives `background: red08`, `borderLeft: red40`; IN/OUT pill replaces dot; footer shows "N PERIODS | ✓ X IN BAND | ✗ Y OUT OF BAND"
+- 10.2: `useEffect` on `allRunIds + runId`; skips input/textarea targets; separate from `load` effect
+- 10.3: `navigator.clipboard.writeText` with 2s `copied` flash state; copies 8-field summary
+- tsc clean, next build clean
+
+---
+
+# Sprint: Sprint 9 — Overview Depth & Dataset Drill-down — COMPLETE ✓
 Started: 2026-04-04
 Completed: 2026-04-04
 

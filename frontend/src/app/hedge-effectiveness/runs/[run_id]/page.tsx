@@ -163,6 +163,7 @@ export default function HedgeEffectivenessRunPage() {
   const [activeSection, setActiveSection] = useState<"results" | "periods" | "trace" | "compliance">("results");
   const [downloading, setDownloading] = useState<"ifrs9" | "asc815" | null>(null);
   const [allRunIds, setAllRunIds] = useState<string[]>([]);
+  const [copied, setCopied] = useState(false);
 
   const handleXmlDownload = async (fmt: "ifrs9" | "asc815") => {
     if (!token || !runId) return;
@@ -217,6 +218,21 @@ export default function HedgeEffectivenessRunPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Keyboard navigation
+  useEffect(() => {
+    const currentIdx = allRunIds.indexOf(runId);
+    const prevId = currentIdx > 0 ? allRunIds[currentIdx - 1] : null;
+    const nextId = currentIdx !== -1 && currentIdx < allRunIds.length - 1 ? allRunIds[currentIdx + 1] : null;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowLeft" && prevId) router.push(`/hedge-effectiveness/runs/${prevId}`);
+      if (e.key === "ArrowRight" && nextId) router.push(`/hedge-effectiveness/runs/${nextId}`);
+      if (e.key === "Escape") router.push("/hedge-effectiveness?tab=runs");
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [allRunIds, runId, router]);
+
   if (loading) {
     return (
 
@@ -254,6 +270,23 @@ export default function HedgeEffectivenessRunPage() {
   const currentIdx = allRunIds.indexOf(runId);
   const prevRunId = currentIdx > 0 ? allRunIds[currentIdx - 1] : null;
   const nextRunId = currentIdx !== -1 && currentIdx < allRunIds.length - 1 ? allRunIds[currentIdx + 1] : null;
+
+  const handleCopySummary = () => {
+    const lines = [
+      `ASSESSMENT SUMMARY`,
+      `Dataset:  ${run.dataset_name}${run.currency_pair ? ` (${run.currency_pair})` : ""}`,
+      `Standard: ${run.standard}`,
+      `Verdict:  ${run.overall_effective ? "EFFECTIVE ✓" : "INEFFECTIVE ✗"}`,
+      `D.O. Ratio: ${run.dollar_offset_ratio?.toFixed(4) ?? "N/A"}`,
+      `R²:         ${run.regression_r_squared?.toFixed(4) ?? "N/A"}`,
+      `Hash:       ${run.run_hash}`,
+      `Date:       ${run.created_at ? new Date(run.created_at).toLocaleString() : ""}`,
+    ];
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", background: S.deep }}>
@@ -330,6 +363,31 @@ export default function HedgeEffectivenessRunPage() {
             <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>
               {run.created_at ? new Date(run.created_at).toLocaleString() : ""}
             </span>
+            <button
+              onClick={handleCopySummary}
+              title="Copy summary to clipboard"
+              style={{
+                fontFamily: S.mono, fontSize: 12, fontWeight: 600,
+                color: copied ? HEX.green : S.text3,
+                background: copied ? HEX.greenBg : S.sub,
+                border: `1px solid ${copied ? HEX.greenBorder : S.rim}`,
+                padding: "4px 10px", borderRadius: 3, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 4,
+                transition: "all 0.2s",
+              }}
+            >
+              {copied ? (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                  COPIED
+                </>
+              ) : (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  COPY
+                </>
+              )}
+            </button>
           </div>
 
           {/* Title row with verdict */}
@@ -1226,6 +1284,7 @@ function PeriodsSection({ periods }: { periods: PeriodData[] }) {
       {/* Table rows */}
       {periods.map((p, i) => {
         const inBand = p.cumulative_ratio != null && p.cumulative_ratio >= 0.80 && p.cumulative_ratio <= 1.25;
+        const outOfBand = p.cumulative_ratio != null && !inBand;
         return (
           <div
             key={i}
@@ -1234,11 +1293,12 @@ function PeriodsSection({ periods }: { periods: PeriodData[] }) {
               gridTemplateColumns: "48px 100px 1fr 1fr 1fr 1fr 1fr 1fr",
               gap: 8, padding: "0 20px",
               borderBottom: i < periods.length - 1 ? `1px solid ${S.soft}` : "none",
-              background: i % 2 === 0 ? "transparent" : S.sub + "60",
+              background: outOfBand ? `${HEX.red}08` : i % 2 === 0 ? "transparent" : S.sub + "60",
+              borderLeft: outOfBand ? `3px solid ${HEX.red}40` : "3px solid transparent",
               transition: "background 0.1s",
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(28,98,242,0.03)"}
-            onMouseLeave={(e) => e.currentTarget.style.background = i % 2 === 0 ? "transparent" : S.sub + "60"}
+            onMouseEnter={(e) => e.currentTarget.style.background = outOfBand ? `${HEX.red}12` : "rgba(28,98,242,0.03)"}
+            onMouseLeave={(e) => e.currentTarget.style.background = outOfBand ? `${HEX.red}08` : i % 2 === 0 ? "transparent" : S.sub + "60"}
           >
             <span style={{ ...colStyle, color: S.text3, fontWeight: 600 }}>{p.period_index + 1}</span>
             <span style={colStyle}>{p.period_date || "\u2014"}</span>
@@ -1266,15 +1326,45 @@ function PeriodsSection({ periods }: { periods: PeriodData[] }) {
               {p.cumulative_ratio != null ? p.cumulative_ratio.toFixed(4) : "\u2014"}
               {p.cumulative_ratio != null && (
                 <span style={{
-                  width: 6, height: 6, borderRadius: "50%",
-                  background: inBand ? HEX.green : HEX.red,
-                  flexShrink: 0,
-                }} />
+                  fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                  padding: "1px 4px", borderRadius: 2, flexShrink: 0,
+                  background: inBand ? HEX.greenBg : HEX.redBg,
+                  color: inBand ? HEX.green : HEX.red,
+                  border: `1px solid ${inBand ? HEX.greenBorder : HEX.redBorder}`,
+                }}>
+                  {inBand ? "IN" : "OUT"}
+                </span>
               )}
             </span>
           </div>
         );
       })}
+
+      {/* Footer summary */}
+      {(() => {
+        const withRatio = periods.filter((p) => p.cumulative_ratio != null);
+        const inBandCount = withRatio.filter((p) => p.cumulative_ratio! >= 0.80 && p.cumulative_ratio! <= 1.25).length;
+        const outCount = withRatio.length - inBandCount;
+        return (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 16, padding: "10px 20px",
+            borderTop: `1px solid ${S.rim}`, background: S.sub,
+            fontFamily: S.mono, fontSize: 11,
+          }}>
+            <span style={{ color: S.text3, letterSpacing: "0.08em" }}>
+              {periods.length} PERIODS
+            </span>
+            <span style={{ color: HEX.green }}>
+              ✓ {inBandCount} IN BAND (0.80–1.25)
+            </span>
+            {outCount > 0 && (
+              <span style={{ color: HEX.red }}>
+                ✗ {outCount} OUT OF BAND
+              </span>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
