@@ -1367,7 +1367,12 @@ function UploadTab({
           </div>
 
           {/* Period rows */}
-          {formPeriods.map((p, i) => (
+          {formPeriods.map((p, i) => {
+            const hedgedVal = p.hedged_item_fv_change.trim();
+            const instrVal = p.instrument_fv_change.trim();
+            const hedgedInvalid = hedgedVal !== "" && isNaN(parseFloat(hedgedVal));
+            const instrInvalid = instrVal !== "" && isNaN(parseFloat(instrVal));
+            return (
             <div key={i} style={{
               display: "grid", gridTemplateColumns: "48px 1fr 1fr 1fr 32px", gap: 8,
               marginBottom: 6, alignItems: "center",
@@ -1387,17 +1392,23 @@ function UploadTab({
                 value={p.hedged_item_fv_change}
                 onChange={(e) => updatePeriod(i, "hedged_item_fv_change", e.target.value)}
                 placeholder="e.g. -15000"
-                style={{ ...inputStyle, fontSize: 12, padding: "6px 10px" }}
-                onFocus={(e) => e.currentTarget.style.borderColor = HEX.cyan}
-                onBlur={(e) => e.currentTarget.style.borderColor = HEX.border}
+                style={{
+                  ...inputStyle, fontSize: 12, padding: "6px 10px",
+                  borderColor: hedgedInvalid ? HEX.red : undefined,
+                }}
+                onFocus={(e) => { if (!hedgedInvalid) e.currentTarget.style.borderColor = HEX.cyan; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = hedgedInvalid ? HEX.red : HEX.border; }}
               />
               <input
                 value={p.instrument_fv_change}
                 onChange={(e) => updatePeriod(i, "instrument_fv_change", e.target.value)}
                 placeholder="e.g. 14200"
-                style={{ ...inputStyle, fontSize: 12, padding: "6px 10px" }}
-                onFocus={(e) => e.currentTarget.style.borderColor = HEX.cyan}
-                onBlur={(e) => e.currentTarget.style.borderColor = HEX.border}
+                style={{
+                  ...inputStyle, fontSize: 12, padding: "6px 10px",
+                  borderColor: instrInvalid ? HEX.red : undefined,
+                }}
+                onFocus={(e) => { if (!instrInvalid) e.currentTarget.style.borderColor = HEX.cyan; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = instrInvalid ? HEX.red : HEX.border; }}
               />
               <button
                 onClick={() => removePeriod(i)}
@@ -1415,7 +1426,44 @@ function UploadTab({
                 \u00D7
               </button>
             </div>
-          ))}
+            );
+          })}
+
+          {/* Live D.O. ratio preview */}
+          {(() => {
+            const valid = formPeriods.filter((p) => p.hedged_item_fv_change.trim() !== "" && p.instrument_fv_change.trim() !== "");
+            if (valid.length < 2) return null;
+            const cumHedged = valid.reduce((s, p) => s + parseFloat(p.hedged_item_fv_change || "0"), 0);
+            const cumInstr = valid.reduce((s, p) => s + parseFloat(p.instrument_fv_change || "0"), 0);
+            if (cumHedged === 0) return null;
+            const ratio = Math.abs(cumInstr) / Math.abs(cumHedged);
+            const inBand = ratio >= 0.80 && ratio <= 1.25;
+            return (
+              <div style={{
+                marginTop: 10, padding: "10px 16px", borderRadius: 4,
+                background: inBand ? HEX.greenBg : HEX.redBg,
+                border: `1px solid ${inBand ? HEX.greenBorder : HEX.redBorder}`,
+                display: "flex", alignItems: "center", gap: 14,
+              }}>
+                <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.12em" }}>
+                  LIVE PREVIEW
+                </span>
+                <span style={{ fontFamily: S.mono, fontSize: 13, fontWeight: 800, color: inBand ? HEX.green : HEX.red }}>
+                  D.O. {ratio.toFixed(4)}
+                </span>
+                <span style={{
+                  fontFamily: S.mono, fontSize: 11, fontWeight: 700,
+                  padding: "2px 8px", borderRadius: 2,
+                  background: inBand ? HEX.green : HEX.red, color: "#fff",
+                }}>
+                  {inBand ? "IN BAND (0.80–1.25)" : "OUT OF BAND"}
+                </span>
+                <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>
+                  {valid.length} of {formPeriods.length} periods filled
+                </span>
+              </div>
+            );
+          })()}
 
           {/* Submit */}
           <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
@@ -1447,10 +1495,19 @@ function UploadTab({
 // RUNS TAB
 // ═════════════════════════════════════════════════════════════════════════════
 
+type SortKey = "dataset" | "do_ratio" | "r2" | "verdict" | "date" | null;
+
 function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: string) => void }) {
   const [search, setSearch] = useState("");
   const [stdFilter, setStdFilter] = useState("ALL");
   const [verdictFilter, setVerdictFilter] = useState<"ALL" | "EFFECTIVE" | "INEFFECTIVE">("ALL");
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("desc"); }
+  };
 
   const filteredRuns = runs
     .filter((r) => stdFilter === "ALL" || r.standard === stdFilter)
@@ -1459,6 +1516,17 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
       const q = search.toLowerCase();
       return !q || r.dataset_name.toLowerCase().includes(q) || (r.currency_pair?.toLowerCase().includes(q) ?? false);
     });
+
+  const displayRuns = [...filteredRuns].sort((a, b) => {
+    if (!sortKey) return 0;
+    let cmp = 0;
+    if (sortKey === "dataset") cmp = a.dataset_name.localeCompare(b.dataset_name);
+    else if (sortKey === "do_ratio") cmp = (a.dollar_offset_ratio ?? -Infinity) - (b.dollar_offset_ratio ?? -Infinity);
+    else if (sortKey === "r2") cmp = (a.regression_r_squared ?? -Infinity) - (b.regression_r_squared ?? -Infinity);
+    else if (sortKey === "verdict") cmp = Number(a.overall_effective) - Number(b.overall_effective);
+    else if (sortKey === "date") cmp = (a.created_at ?? "").localeCompare(b.created_at ?? "");
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   const handleExportCsv = () => {
     const header = "run_id,dataset_name,currency_pair,standard,dollar_offset_ratio,regression_r_squared,overall_effective,run_hash,created_at";
@@ -1562,9 +1630,36 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
         display: "grid", gridTemplateColumns: "2fr 90px 100px 80px 100px 120px 90px",
         gap: 8, padding: "0 20px",
       }}>
-        {["DATASET", "STANDARD", "D.O. RATIO", "R\u00B2", "VERDICT", "HASH", "DATE"].map((h) => (
-          <span key={h} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
-            {h}
+        {([
+          { label: "DATASET", key: "dataset" as SortKey },
+          { label: "STANDARD", key: null },
+          { label: "D.O. RATIO", key: "do_ratio" as SortKey },
+          { label: "R\u00B2", key: "r2" as SortKey },
+          { label: "VERDICT", key: "verdict" as SortKey },
+          { label: "HASH", key: null },
+          { label: "DATE", key: "date" as SortKey },
+        ]).map(({ label, key }) => key ? (
+          <button
+            key={label}
+            onClick={() => handleSort(key)}
+            style={{
+              fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em",
+              color: sortKey === key ? HEX.cyan : S.text3,
+              background: "transparent", border: "none", cursor: "pointer",
+              padding: 0, display: "flex", alignItems: "center", gap: 3, textAlign: "left",
+            }}
+          >
+            {label}
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+              style={{ opacity: sortKey === key ? 1 : 0.3, transition: "opacity 0.15s" }}>
+              {sortKey === key && sortDir === "asc"
+                ? <path d="M12 19V5M5 12l7-7 7 7"/>
+                : <path d="M12 5v14M5 12l7 7 7-7"/>}
+            </svg>
+          </button>
+        ) : (
+          <span key={label} style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+            {label}
           </span>
         ))}
       </div>
@@ -1582,7 +1677,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
             Clear Filters
           </button>
         </div>
-      ) : filteredRuns.map((r) => (
+      ) : displayRuns.map((r) => (
         <div
           key={r.run_id}
           onClick={() => onNavigateRun(r.run_id)}

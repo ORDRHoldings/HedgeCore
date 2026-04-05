@@ -1,7 +1,29 @@
 # Current Sprint
 
-Sprint: Sprint 10 — Run Detail Polish
+Sprint: Sprint 11 — Runs Sort & Upload Intelligence
 Status: COMPLETE ✓
+Started: 2026-04-04
+Completed: 2026-04-04
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 11.1 | RunsTab: sortable column headers (DATASET, D.O. RATIO, R², VERDICT, DATE) with chevron | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 11.2 | UploadTab: live D.O. ratio preview panel (appears once ≥2 filled periods, IN/OUT BAND) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 11.3 | UploadTab: inline row validation (non-numeric values get red border on hedged/instrument inputs) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+
+## Completed: 3/3
+## Sprint Status: COMPLETE [PENDING BROWSER CONFIRMATION]
+
+## Notes
+- 11.1: `SortKey` type + `sortKey/sortDir` state; `displayRuns = [...filteredRuns].sort(...)`; column headers are buttons with up/down SVG chevron; null-safe via -Infinity for missing ratios
+- 11.2: IIFE after period rows; sums all filled periods; ratio = abs(instr)/abs(hedged); green/red banner with D.O. value, IN/OUT BAND pill, filled count
+- 11.3: `hedgedInvalid`/`instrInvalid` flags per row; non-empty + NaN = red border; blurs to cyan if valid
+- tsc clean, next build clean
+
+---
+
+# Sprint: Sprint 10 — Run Detail Polish — COMPLETE ✓
 Started: 2026-04-04
 Completed: 2026-04-04
 
