@@ -1188,6 +1188,88 @@ function OverviewTab({
         );
       })()}
 
+      {/* Pass rate over time — monthly stacked bar */}
+      {runs.length >= 3 && (() => {
+        // Group runs by YYYY-MM, sorted chronologically, last 9 months
+        const byMonth: Record<string, { pass: number; fail: number }> = {};
+        runs.forEach((r) => {
+          if (!r.created_at) return;
+          const key = r.created_at.slice(0, 7); // "YYYY-MM"
+          if (!byMonth[key]) byMonth[key] = { pass: 0, fail: 0 };
+          if (r.overall_effective) byMonth[key].pass++;
+          else byMonth[key].fail++;
+        });
+        const months = Object.keys(byMonth).sort().slice(-9);
+        if (months.length < 2) return null;
+        const labels = months.map((m) => {
+          const [y, mo] = m.split("-");
+          return new Date(Number(y), Number(mo) - 1).toLocaleString("default", { month: "short", year: "2-digit" });
+        });
+        const passData = months.map((m) => byMonth[m].pass);
+        const failData = months.map((m) => byMonth[m].fail);
+        const passRateOption = {
+          backgroundColor: "transparent",
+          tooltip: {
+            trigger: "axis" as const,
+            backgroundColor: "#1e293b", borderColor: HEX.border,
+            textStyle: { color: "#fff", fontSize: 11, fontFamily: "'IBM Plex Mono',monospace" },
+            formatter: (params: { seriesName: string; value: number; name: string }[]) => {
+              const mo = params[0]?.name ?? "";
+              const pass = params.find((p) => p.seriesName === "Effective")?.value ?? 0;
+              const fail = params.find((p) => p.seriesName === "Ineffective")?.value ?? 0;
+              const total = pass + fail;
+              const pct = total > 0 ? Math.round((pass / total) * 100) : 0;
+              return `<b>${mo}</b><br/>Effective: <b style="color:${HEX.green}">${pass}</b><br/>Ineffective: <b style="color:${HEX.red}">${fail}</b><br/>Pass rate: <b>${pct}%</b>`;
+            },
+          },
+          grid: { top: 16, right: 16, bottom: 32, left: 36 },
+          xAxis: {
+            type: "category" as const, data: labels,
+            axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono',monospace" },
+            axisLine: { lineStyle: { color: HEX.border } }, axisTick: { show: false },
+          },
+          yAxis: {
+            type: "value" as const, minInterval: 1,
+            axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono',monospace" },
+            splitLine: { lineStyle: { color: HEX.border, type: "dashed" as const } },
+            axisLine: { show: false },
+          },
+          series: [
+            {
+              name: "Effective", type: "bar" as const, stack: "runs", data: passData,
+              itemStyle: { color: HEX.green, borderRadius: [0, 0, 0, 0] },
+              emphasis: { itemStyle: { color: HEX.green } },
+            },
+            {
+              name: "Ineffective", type: "bar" as const, stack: "runs", data: failData,
+              itemStyle: { color: HEX.red, borderRadius: [3, 3, 0, 0] },
+              emphasis: { itemStyle: { color: HEX.red } },
+            },
+          ],
+        };
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "16px 20px 8px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 8 }}>
+              <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+                ASSESSMENTS BY MONTH
+              </span>
+              <div style={{ display: "flex", gap: 12 }}>
+                {[["Effective", HEX.green], ["Ineffective", HEX.red]].map(([label, color]) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
+                    <span style={{ fontFamily: S.ui, fontSize: 11, color: S.text3 }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <ReactECharts option={passRateOption} style={{ height: 160 }} />
+          </div>
+        );
+      })()}
+
       {/* Portfolio statistics */}
       {runs.length >= 2 && (() => {
         const ratios = runs.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
@@ -1991,10 +2073,15 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   const [compareOpen, setCompareOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
 
   useEffect(() => {
     localStorage.setItem(STARRED_KEY, JSON.stringify([...starredIds]));
   }, [starredIds]);
+
+  // Reset page whenever any filter changes
+  useEffect(() => { setPage(1); }, [search, stdFilter, verdictFilter, showStarredOnly, dateFrom, dateTo]);
 
   const toggleStar = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -2039,6 +2126,9 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
       const q = search.toLowerCase();
       return !q || r.dataset_name.toLowerCase().includes(q) || (r.currency_pair?.toLowerCase().includes(q) ?? false);
     });
+
+  const totalPages = Math.max(1, Math.ceil(filteredRuns.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
 
   const displayRuns = [...filteredRuns].sort((a, b) => {
     if (!sortKey) return 0;
@@ -2260,7 +2350,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
             Clear Filters
           </button>
         </div>
-      ) : displayRuns.map((r) => (
+      ) : displayRuns.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE).map((r) => (
         <div
           key={r.run_id}
           onClick={() => onNavigateRun(r.run_id)}
@@ -2361,6 +2451,73 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           </span>
         </div>
       ))}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          padding: "12px 0 4px",
+        }}>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+            style={{
+              fontFamily: S.mono, fontSize: 11, fontWeight: 700,
+              padding: "5px 12px", borderRadius: 3, cursor: safePage <= 1 ? "not-allowed" : "pointer",
+              background: "transparent", color: safePage <= 1 ? S.text3 : S.text2,
+              border: `1px solid ${S.rim}`, opacity: safePage <= 1 ? 0.4 : 1,
+              display: "flex", alignItems: "center", gap: 4,
+            }}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+            PREV
+          </button>
+          <div style={{ display: "flex", gap: 4 }}>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+              .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) => p === "…" ? (
+                <span key={`ellipsis-${i}`} style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, padding: "5px 4px" }}>…</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p as number)}
+                  style={{
+                    fontFamily: S.mono, fontSize: 11, fontWeight: 700,
+                    width: 30, height: 28, borderRadius: 3, cursor: "pointer",
+                    background: p === safePage ? HEX.cyan : "transparent",
+                    color: p === safePage ? "#fff" : S.text2,
+                    border: `1px solid ${p === safePage ? HEX.cyan : S.rim}`,
+                    transition: "all 0.12s",
+                  }}
+                >
+                  {p}
+                </button>
+              ))}
+          </div>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage >= totalPages}
+            style={{
+              fontFamily: S.mono, fontSize: 11, fontWeight: 700,
+              padding: "5px 12px", borderRadius: 3, cursor: safePage >= totalPages ? "not-allowed" : "pointer",
+              background: "transparent", color: safePage >= totalPages ? S.text3 : S.text2,
+              border: `1px solid ${S.rim}`, opacity: safePage >= totalPages ? 0.4 : 1,
+              display: "flex", alignItems: "center", gap: 4,
+            }}
+          >
+            NEXT
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+          <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, marginLeft: 4 }}>
+            PAGE {safePage} OF {totalPages}
+          </span>
+        </div>
+      )}
 
       {/* Compare modal */}
       {compareOpen && (() => {

@@ -1555,21 +1555,39 @@ function ComplianceSection({ compliance, run }: { compliance: string[]; run: Run
         {compliance.length === 0 ? (
           <p style={{ fontFamily: S.ui, fontSize: 12, color: S.text3, margin: 0 }}>No compliance notes generated.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {compliance.map((note, i) => (
-              <div key={i} style={{
-                display: "flex", gap: 10, padding: "10px 14px",
-                background: S.sub, borderRadius: 4,
-                borderLeft: `2px solid ${HEX.cyan}`,
-              }}>
-                <span style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: HEX.cyan, flexShrink: 0 }}>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <p style={{ fontFamily: S.ui, fontSize: 12, color: S.text1, lineHeight: 1.6, margin: 0 }}>
-                  {note}
-                </p>
-              </div>
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {compliance.map((note, i) => {
+              const upper = note.toUpperCase();
+              const isPass = /\bPASS(ED|ING)?\b|WITHIN (EFFECTIVE |THE )?BAND|MEETS.*THRESHOLD|EFFECTIVE/.test(upper);
+              const isFail = /\bFAIL(ED|ING)?\b|OUTSIDE.*BAND|DOES NOT MEET|INEFFECTIVE|INSUFFICIENT/.test(upper);
+              const accent = isPass ? HEX.green : isFail ? HEX.red : HEX.cyan;
+              const bg = isPass ? HEX.greenBg : isFail ? HEX.redBg : "var(--bg-sub)";
+              const border = isPass ? HEX.greenBorder : isFail ? HEX.redBorder : S.rim;
+              return (
+                <div key={i} style={{
+                  display: "flex", gap: 10, padding: "9px 14px",
+                  background: bg, borderRadius: 4,
+                  border: `1px solid ${border}`,
+                }}>
+                  {isPass ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={HEX.green} strokeWidth="2.5" style={{ flexShrink: 0, marginTop: 1 }}>
+                      <path d="M20 6 9 17l-5-5"/>
+                    </svg>
+                  ) : isFail ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={HEX.red} strokeWidth="2.5" style={{ flexShrink: 0, marginTop: 1 }}>
+                      <path d="M18 6 6 18M6 6l12 12"/>
+                    </svg>
+                  ) : (
+                    <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: accent, flexShrink: 0, marginTop: 1, minWidth: 14, textAlign: "center" }}>
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                  )}
+                  <p style={{ fontFamily: S.ui, fontSize: 12, color: "var(--text-primary)", lineHeight: 1.6, margin: 0 }}>
+                    {note}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
