@@ -10,7 +10,7 @@
  *   RUNS      — Assessment history with visual verdict indicators
  */
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { dashboardFetch } from "@/lib/api/dashboardClient";
@@ -1732,6 +1732,22 @@ function DatasetsTab({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dsSort, setDsSort] = useState<"name" | "runs" | "created" | "lastAssessed">("created");
 
+  // ── 25.3 Dataset notes ──
+  const DS_NOTES_KEY = "hec_dataset_notes";
+  const [dsNotes, setDsNotes] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem(DS_NOTES_KEY) || "{}"); }
+    catch { return {}; }
+  });
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [draftNote, setDraftNote] = useState("");
+  const saveNote = (dsId: string) => {
+    const next = { ...dsNotes, [dsId]: draftNote };
+    if (!draftNote.trim()) delete next[dsId];
+    setDsNotes(next);
+    localStorage.setItem(DS_NOTES_KEY, JSON.stringify(next));
+    setEditingNoteId(null);
+  };
+
   // Per-dataset stats derived from runs
   const dsStats = datasets.reduce<Record<string, { count: number; effective: number; lastVerdict: boolean | null }>>((acc, ds) => {
     const dsRuns = runs.filter((r) => r.dataset_id === ds.id);
@@ -1970,6 +1986,54 @@ function DatasetsTab({
                     </span>
                   </div>
                 ))}
+
+                {/* ── 25.3 Dataset sticky note ── */}
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${S.rim}` }}>
+                  {editingNoteId === ds.id ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <textarea
+                        autoFocus
+                        value={draftNote}
+                        onChange={(e) => setDraftNote(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setEditingNoteId(null); } }}
+                        rows={3}
+                        placeholder="Add an analyst note for this dataset…"
+                        style={{
+                          fontFamily: S.ui, fontSize: 12, color: S.text1, background: S.panel,
+                          border: `1px solid ${HEX.cyan}40`, borderRadius: 3, padding: "8px 10px",
+                          resize: "vertical", outline: "none", width: "100%",
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); saveNote(ds.id); }}
+                          style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 3, background: HEX.cyan, color: "#fff", border: "none", cursor: "pointer" }}
+                        >SAVE</button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditingNoteId(null); }}
+                          style={{ fontFamily: S.mono, fontSize: 11, padding: "4px 10px", borderRadius: 3, background: "transparent", color: S.text3, border: `1px solid ${S.rim}`, cursor: "pointer" }}
+                        >Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDraftNote(dsNotes[ds.id] ?? ""); setEditingNoteId(ds.id); }}
+                      style={{
+                        display: "flex", alignItems: "flex-start", gap: 8, width: "100%", background: "transparent",
+                        border: `1px dashed ${dsNotes[ds.id] ? HEX.amber + "60" : S.rim}`,
+                        borderRadius: 3, padding: "7px 10px", cursor: "pointer", textAlign: "left",
+                      }}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={dsNotes[ds.id] ? HEX.amber : S.text3} strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                      <span style={{ fontFamily: S.ui, fontSize: 11, color: dsNotes[ds.id] ? S.text1 : S.text3, fontStyle: dsNotes[ds.id] ? "normal" : "italic" }}>
+                        {dsNotes[ds.id] || "Add analyst note…"}
+                      </span>
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })()}
@@ -2395,6 +2459,37 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   // ── Hover popover ──
   const [hoverId, setHoverId] = useState<string | null>(null);
 
+  // ── 25.1 Keyboard navigation ──
+  const [focusIdx, setFocusIdx] = useState<number>(-1);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // ── 25.2 Quick tags ──
+  const TAGS_KEY = "hec_run_tags";
+  type TagValue = "REVIEW" | "APPROVED" | "FLAGGED" | null;
+  const TAG_COLORS: Record<NonNullable<TagValue>, { bg: string; color: string; border: string }> = {
+    REVIEW:   { bg: "rgba(217,119,6,0.10)",  color: HEX.amber,  border: "rgba(217,119,6,0.30)"  },
+    APPROVED: { bg: HEX.greenBg,              color: HEX.green,  border: HEX.greenBorder          },
+    FLAGGED:  { bg: HEX.redBg,               color: HEX.red,    border: HEX.redBorder            },
+  };
+  const [tags, setTags] = useState<Record<string, TagValue>>(() => {
+    try { return JSON.parse(localStorage.getItem(TAGS_KEY) || "{}"); }
+    catch { return {}; }
+  });
+  const [tagMenuId, setTagMenuId] = useState<string | null>(null);
+  const cycleTag = (runId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTagMenuId((v) => v === runId ? null : runId);
+  };
+  const applyTag = (runId: string, tag: TagValue, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = { ...tags, [runId]: tag };
+    if (tag === null) delete next[runId];
+    setTags(next);
+    localStorage.setItem(TAGS_KEY, JSON.stringify(next));
+    setTagMenuId(null);
+  };
+
+
   // ── Filter presets ──
   const PRESETS_KEY = "hec_filter_presets";
   type Preset = { name: string; search: string; stdFilter: string; verdictFilter: "ALL" | "EFFECTIVE" | "INEFFECTIVE"; doMin: string; doMax: string };
@@ -2493,6 +2588,24 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
     else if (sortKey === "date") cmp = (a.created_at ?? "").localeCompare(b.created_at ?? "");
     return sortDir === "asc" ? cmp : -cmp;
   });
+
+  // ── 25.1 Keyboard navigation handler (after displayRuns is defined) ──
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "SELECT") return;
+      const pageRuns = displayRuns.slice((Math.min(page, totalPages) - 1) * PAGE_SIZE, Math.min(page, totalPages) * PAGE_SIZE);
+      if (e.key === "ArrowDown") { e.preventDefault(); setFocusIdx((i) => Math.min(i + 1, pageRuns.length - 1)); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setFocusIdx((i) => Math.max(i - 1, 0)); }
+      else if (e.key === "Enter" && focusIdx >= 0 && pageRuns[focusIdx]) {
+        e.preventDefault(); onNavigateRun(pageRuns[focusIdx].run_id);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusIdx, displayRuns, page, totalPages, onNavigateRun]);
 
   const handleExportCsv = (onlySelected = false) => {
     const source = onlySelected
@@ -2926,7 +3039,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
             </div>
           );
         });
-      })() : displayRuns.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE).map((r) => {
+      })() : displayRuns.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE).map((r, rowIdx) => {
         const visCols = [
           { vis: true,             w: "2fr"   },
           { vis: colVis.standard,  w: "90px"  },
@@ -2937,18 +3050,21 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           { vis: colVis.date,      w: "90px"  },
         ];
         const gridCols = ["28px", ...visCols.filter((c) => c.vis).map((c) => c.w)].join(" ");
+        const isFocused = focusIdx === rowIdx;
+        const runTag = tags[r.run_id] ?? null;
         return (
         <div
           key={r.run_id}
-          onClick={() => onNavigateRun(r.run_id)}
-          onMouseEnter={() => setHoverId(r.run_id)}
+          onClick={() => { setFocusIdx(rowIdx); onNavigateRun(r.run_id); }}
+          onMouseEnter={() => { setHoverId(r.run_id); setFocusIdx(rowIdx); }}
           onMouseLeave={() => setHoverId(null)}
           style={{
             display: "grid", gridTemplateColumns: gridCols,
             gap: 8, padding: `${density === "compact" ? 6 : 12}px 20px`, borderRadius: 4,
             background: selectedIds.has(r.run_id) ? "rgba(28,98,242,0.04)" : S.panel,
-            border: `1px solid ${selectedIds.has(r.run_id) ? HEX.cyan + "40" : S.rim}`,
-            cursor: "pointer", transition: "all 0.15s",
+            border: `1px solid ${isFocused ? HEX.cyan + "60" : selectedIds.has(r.run_id) ? HEX.cyan + "40" : S.rim}`,
+            boxShadow: isFocused ? `0 0 0 2px ${HEX.cyan}18` : "none",
+            cursor: "pointer", transition: "all 0.12s",
             position: "relative",
           }}
         >
@@ -3001,6 +3117,38 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
               </svg>
             </button>
+            {/* ── 25.2 Tag button ── */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={(e) => cycleTag(r.run_id, e)}
+                title="Tag this run"
+                style={{
+                  background: runTag ? TAG_COLORS[runTag].bg : "transparent",
+                  border: runTag ? `1px solid ${TAG_COLORS[runTag].border}` : "1px solid transparent",
+                  borderRadius: 3, cursor: "pointer", padding: "1px 5px",
+                  fontFamily: S.mono, fontSize: 9, fontWeight: 800, letterSpacing: "0.08em",
+                  color: runTag ? TAG_COLORS[runTag].color : S.text3,
+                  transition: "all 0.15s",
+                }}
+              >
+                {runTag ?? "TAG"}
+              </button>
+              {tagMenuId === r.run_id && (
+                <div style={{
+                  position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 200,
+                  background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)", padding: 4, display: "flex", flexDirection: "column", gap: 2, minWidth: 100,
+                }}>
+                  {(["REVIEW", "APPROVED", "FLAGGED", null] as (TagValue)[]).map((t) => (
+                    <button key={t ?? "clear"} onClick={(e) => applyTag(r.run_id, t, e)} style={{
+                      fontFamily: S.mono, fontSize: 10, fontWeight: 700, padding: "4px 8px", borderRadius: 3, cursor: "pointer", border: "none", textAlign: "left",
+                      background: t ? TAG_COLORS[t].bg : "transparent",
+                      color: t ? TAG_COLORS[t].color : S.text3,
+                    }}>{t ?? "Clear tag"}</button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           {colVis.standard && (
             <span style={{ fontFamily: S.mono, fontSize: 12, color: S.text2, display: "flex", alignItems: "center" }}>
