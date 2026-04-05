@@ -630,6 +630,113 @@ function OverviewTab({
         </div>
       ))}
 
+      {/* Per-standard breakdown */}
+      {runs.length > 0 && (() => {
+        const standards = Array.from(new Set(runs.map((r) => r.standard))).sort();
+        if (standards.length < 2) return null;
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "16px 20px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`,
+          }}>
+            <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 12 }}>
+              BY STANDARD
+            </div>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              {standards.map((std) => {
+                const stdRuns = runs.filter((r) => r.standard === std);
+                const effective = stdRuns.filter((r) => r.overall_effective).length;
+                const pct = Math.round((effective / stdRuns.length) * 100);
+                return (
+                  <div key={std} style={{
+                    flex: "1 1 140px", padding: "12px 16px", borderRadius: 4,
+                    background: S.sub, border: `1px solid ${S.rim}`,
+                  }}>
+                    <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text2, letterSpacing: "0.1em", marginBottom: 6 }}>
+                      {std.replace("_", " ")}
+                    </div>
+                    <div style={{ fontFamily: S.mono, fontSize: 22, fontWeight: 800, color: pct >= 80 ? HEX.green : pct >= 60 ? HEX.amber : HEX.red, lineHeight: 1 }}>
+                      {pct}%
+                    </div>
+                    <div style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, marginTop: 4 }}>
+                      {effective}/{stdRuns.length} effective
+                    </div>
+                    {/* Mini bar */}
+                    <div style={{ marginTop: 8, height: 4, borderRadius: 2, background: S.rim, overflow: "hidden" }}>
+                      <div style={{
+                        height: "100%", width: `${pct}%`, borderRadius: 2,
+                        background: pct >= 80 ? HEX.green : pct >= 60 ? HEX.amber : HEX.red,
+                        transition: "width 0.5s",
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* D.O. ratio distribution histogram */}
+      {runs.length >= 3 && (() => {
+        const BINS = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5];
+        const labels = BINS.slice(0, -1).map((b, i) => `${b.toFixed(1)}–${BINS[i + 1].toFixed(1)}`);
+        const counts = BINS.slice(0, -1).map((lo, i) => {
+          const hi = BINS[i + 1];
+          return runs.filter((r) => r.dollar_offset_ratio != null && r.dollar_offset_ratio >= lo && r.dollar_offset_ratio < hi).length;
+        });
+        // Color bars: green for effective band (0.80–1.25), red otherwise
+        const colors = BINS.slice(0, -1).map((lo, i) => {
+          const hi = BINS[i + 1];
+          return (lo >= 0.80 && hi <= 1.30) ? HEX.green : HEX.red;
+        });
+        const histOption = {
+          backgroundColor: "transparent",
+          grid: { top: 20, right: 16, bottom: 36, left: 36 },
+          xAxis: {
+            type: "category", data: labels,
+            axisLabel: { color: HEX.text3, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace", rotate: 30 },
+            axisLine: { lineStyle: { color: HEX.border } },
+            axisTick: { show: false },
+          },
+          yAxis: {
+            type: "value", minInterval: 1,
+            axisLabel: { color: HEX.text3, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace" },
+            splitLine: { lineStyle: { color: HEX.border, type: "dashed" } },
+          },
+          series: [{
+            type: "bar", data: counts.map((c, i) => ({ value: c, itemStyle: { color: colors[i] } })),
+            barMaxWidth: 40, barCategoryGap: "10%",
+            itemStyle: { borderRadius: [2, 2, 0, 0] },
+            markArea: {
+              silent: true,
+              data: [[
+                { xAxis: "0.8–0.9", itemStyle: { color: "rgba(5,150,105,0.07)" } },
+                { xAxis: "1.2–1.3" },
+              ]],
+            },
+          }],
+          tooltip: {
+            trigger: "axis",
+            backgroundColor: HEX.bgSub, borderColor: HEX.border,
+            textStyle: { color: HEX.text1, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
+            formatter: (params: Array<{ name: string; value: number }>) =>
+              `${params[0].name}<br/>${params[0].value} run${params[0].value !== 1 ? "s" : ""}`,
+          },
+        };
+        return (
+          <div style={{ gridColumn: "1 / -1", padding: "16px 20px", borderRadius: 6, background: S.panel, border: `1px solid ${S.rim}` }}>
+            <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 4 }}>
+              D.O. RATIO DISTRIBUTION
+              <span style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 400, color: S.text3, marginLeft: 12 }}>
+                green band = effectiveness zone (0.80–1.25)
+              </span>
+            </div>
+            <ReactECharts option={histOption} style={{ height: 160 }} opts={{ renderer: "canvas" }} />
+          </div>
+        );
+      })()}
+
       {/* At-risk hedges monitor */}
       {runs.length > 0 && (() => {
         const atRisk = runs.filter((r) => {

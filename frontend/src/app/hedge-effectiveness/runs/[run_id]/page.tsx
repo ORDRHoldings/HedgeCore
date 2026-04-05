@@ -1062,6 +1062,67 @@ function RegressionPanel({ run, periods }: { run: RunDetail; periods: PeriodData
       {periods.length >= 3 && (
         <RegressionScatter periods={periods} slope={run.regression_slope} />
       )}
+
+      {/* Regression narrative */}
+      {(run.regression_r_squared != null || run.regression_slope != null) && (() => {
+        const r2 = run.regression_r_squared;
+        const slope = run.regression_slope;
+
+        const r2Text = r2 == null ? null
+          : r2 >= 0.95 ? { level: "Very strong", detail: `R² of ${r2.toFixed(4)} indicates a near-perfect linear relationship. The instrument closely mirrors fair value changes in the hedged item.` }
+          : r2 >= 0.80 ? { level: "Strong", detail: `R² of ${r2.toFixed(4)} meets the IFRS 9 regression threshold (≥ 0.80). The hedge demonstrates reliable co-movement with the hedged item.` }
+          : r2 >= 0.65 ? { level: "Moderate", detail: `R² of ${r2.toFixed(4)} falls below the 0.80 IFRS 9 threshold. The instrument does not consistently offset fair value changes in the hedged item.` }
+          : { level: "Weak", detail: `R² of ${r2.toFixed(4)} indicates a poor linear fit. The hedge relationship is unlikely to qualify under regression analysis under IFRS 9 or ASC 815.` };
+
+        const slopeText = slope == null ? null
+          : (slope >= -1.25 && slope <= -0.80) ? { pass: true, detail: `Slope β = ${slope.toFixed(4)} is within the required band [−1.25, −0.80], confirming the instrument offsets the hedged item with the expected inverse proportionality.` }
+          : slope > -0.80 ? { pass: false, detail: `Slope β = ${slope.toFixed(4)} is above −0.80, indicating the instrument does not sufficiently offset the hedged item (under-hedging).` }
+          : { pass: false, detail: `Slope β = ${slope.toFixed(4)} is below −1.25, indicating the instrument over-compensates relative to the hedged item (over-hedging).` };
+
+        return (
+          <div style={{
+            marginTop: 16, padding: "14px 16px", borderRadius: 4,
+            background: S.sub, border: `1px solid ${S.rim}`,
+            display: "flex", flexDirection: "column", gap: 10,
+          }}>
+            <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.14em" }}>
+              REGRESSION INTERPRETATION
+            </div>
+            {r2Text && (
+              <div style={{ display: "flex", gap: 10 }}>
+                <span style={{
+                  fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                  padding: "2px 6px", borderRadius: 2, flexShrink: 0, height: "fit-content",
+                  background: r2 != null && r2 >= 0.80 ? HEX.greenBg : HEX.redBg,
+                  color: r2 != null && r2 >= 0.80 ? HEX.green : HEX.red,
+                  border: `1px solid ${r2 != null && r2 >= 0.80 ? HEX.greenBorder : HEX.redBorder}`,
+                }}>
+                  R² — {r2Text.level.toUpperCase()}
+                </span>
+                <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text2, lineHeight: 1.6 }}>
+                  {r2Text.detail}
+                </span>
+              </div>
+            )}
+            {slopeText && (
+              <div style={{ display: "flex", gap: 10 }}>
+                <span style={{
+                  fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                  padding: "2px 6px", borderRadius: 2, flexShrink: 0, height: "fit-content",
+                  background: slopeText.pass ? HEX.greenBg : HEX.redBg,
+                  color: slopeText.pass ? HEX.green : HEX.red,
+                  border: `1px solid ${slopeText.pass ? HEX.greenBorder : HEX.redBorder}`,
+                }}>
+                  β — {slopeText.pass ? "IN BAND" : "OUT OF BAND"}
+                </span>
+                <span style={{ fontFamily: S.ui, fontSize: 12, color: S.text2, lineHeight: 1.6 }}>
+                  {slopeText.detail}
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -1,7 +1,29 @@
 # Current Sprint
 
-Sprint: Sprint 11 — Runs Sort & Upload Intelligence
+Sprint: Sprint 12 — Standards Breakdown & Distribution
 Status: COMPLETE ✓
+Started: 2026-04-04
+Completed: 2026-04-04
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 12.1 | Overview: per-standard KPI tiles (pass rate % + mini bar per standard) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+| 12.2 | Overview: D.O. ratio distribution histogram (ECharts, 10 bins 0.5–1.5, green band, threshold markers) | DONE [PENDING BROWSER CONFIRMATION] | high |
+| 12.3 | Run detail: regression narrative panel (qualitative interpretation of R² and slope values) | DONE [PENDING BROWSER CONFIRMATION] | medium |
+
+## Completed: 3/3
+## Sprint Status: COMPLETE [PENDING BROWSER CONFIRMATION]
+
+## Notes
+- 12.1: `page.tsx` OverviewTab — groups runs by standard, shows only when ≥2 standards; % pass rate with green/amber/red, mini progress bar
+- 12.2: `page.tsx` OverviewTab — fixed bin edges [0.5..1.5], green bars for effective band, ECharts markArea green overlay, shows only when runs.length ≥ 3
+- 12.3: `runs/[run_id]/page.tsx` RegressionPanel — deterministic text for 4 R² tiers + slope in/out band; pill badge + prose sentence
+- tsc clean, next build clean
+
+---
+
+# Sprint: Sprint 11 — Runs Sort & Upload Intelligence — COMPLETE ✓
 Started: 2026-04-04
 Completed: 2026-04-04
 
