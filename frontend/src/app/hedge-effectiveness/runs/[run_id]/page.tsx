@@ -164,6 +164,27 @@ export default function HedgeEffectivenessRunPage() {
   const [downloading, setDownloading] = useState<"ifrs9" | "asc815" | null>(null);
   const [allRunIds, setAllRunIds] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [reRunning, setReRunning] = useState(false);
+
+  const handleReRun = async () => {
+    if (!token || !run || reRunning) return;
+    setReRunning(true);
+    try {
+      const res = await dashboardFetch("/v1/hedge-effectiveness/assess", token, {
+        method: "POST",
+        body: JSON.stringify({
+          dataset_id: run.dataset_id,
+          standard: run.standard,
+          method: "both",
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
+      router.push(`/hedge-effectiveness/runs/${result.run_id}`);
+    } catch {
+      setReRunning(false);
+    }
+  };
 
   const handleXmlDownload = async (fmt: "ifrs9" | "asc815") => {
     if (!token || !runId) return;
@@ -407,6 +428,40 @@ export default function HedgeEffectivenessRunPage() {
                 <rect x="6" y="14" width="12" height="8"/>
               </svg>
               PRINT
+            </button>
+            <button
+              onClick={handleReRun}
+              disabled={reRunning}
+              title="Re-run assessment on same dataset and standard"
+              style={{
+                fontFamily: S.mono, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
+                color: reRunning ? S.text3 : "#fff",
+                background: reRunning ? S.sub : HEX.cyan,
+                border: `1px solid ${reRunning ? S.rim : HEX.cyan}`,
+                padding: "4px 12px", borderRadius: 3,
+                cursor: reRunning ? "not-allowed" : "pointer",
+                display: "flex", alignItems: "center", gap: 5,
+                transition: "all 0.15s",
+                opacity: reRunning ? 0.6 : 1,
+                boxShadow: reRunning ? "none" : "0 1px 6px rgba(28,98,242,0.2)",
+              }}
+            >
+              {reRunning ? (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                    style={{ animation: "spin 0.8s linear infinite" }}>
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                  </svg>
+                  RUNNING…
+                </>
+              ) : (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
+                  </svg>
+                  RE-RUN
+                </>
+              )}
             </button>
           </div>
 

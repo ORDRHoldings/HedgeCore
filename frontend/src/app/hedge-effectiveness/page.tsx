@@ -1058,6 +1058,75 @@ function OverviewTab({
         );
       })()}
 
+      {/* Effectiveness streak */}
+      {runs.length >= 2 && (() => {
+        const recent10 = [...runs]
+          .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+          .slice(0, 10);
+        // Calculate current streak from newest run
+        const streakVerdict = recent10[0]?.overall_effective;
+        let streakCount = 0;
+        for (const r of recent10) {
+          if (r.overall_effective === streakVerdict) streakCount++;
+          else break;
+        }
+        const streakLabel = streakVerdict ? "EFFECTIVE" : "INEFFECTIVE";
+        const streakColor = streakVerdict ? HEX.green : HEX.red;
+        const streakBg = streakVerdict ? HEX.greenBg : HEX.redBg;
+        const streakBorder = streakVerdict ? HEX.greenBorder : HEX.redBorder;
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "14px 20px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`,
+            display: "flex", alignItems: "center", gap: 20,
+          }}>
+            <div>
+              <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 6 }}>
+                CURRENT STREAK
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{
+                  fontFamily: S.mono, fontSize: 26, fontWeight: 800,
+                  color: streakColor, lineHeight: 1,
+                }}>
+                  {streakCount}×
+                </span>
+                <span style={{
+                  fontFamily: S.mono, fontSize: 12, fontWeight: 800, letterSpacing: "0.1em",
+                  padding: "3px 10px", borderRadius: 3,
+                  background: streakBg, color: streakColor, border: `1px solid ${streakBorder}`,
+                }}>
+                  {streakLabel}
+                </span>
+              </div>
+            </div>
+            <div style={{ width: 1, height: 40, background: S.rim }} />
+            <div>
+              <div style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 8 }}>
+                LAST {recent10.length} RUNS
+              </div>
+              <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                {recent10.map((r, i) => (
+                  <div key={r.run_id} title={`${r.dataset_name} — ${r.overall_effective ? "EFFECTIVE" : "INEFFECTIVE"} (${r.created_at?.slice(0, 10) ?? ""})`} style={{
+                    width: i === 0 ? 14 : 10, height: i === 0 ? 14 : 10,
+                    borderRadius: "50%", flexShrink: 0,
+                    background: r.overall_effective ? HEX.green : HEX.red,
+                    opacity: 1 - i * 0.07,
+                    boxShadow: i === 0 ? `0 0 0 2px ${r.overall_effective ? HEX.greenBorder : HEX.redBorder}` : "none",
+                    transition: "transform 0.15s", cursor: "default",
+                  }} />
+                ))}
+                {recent10.length < runs.length && (
+                  <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3, marginLeft: 4 }}>
+                    +{runs.length - recent10.length} more
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* D.O. Ratio Trend sparkline */}
       {runs.length >= 3 && (() => {
         const sorted = [...runs]
@@ -1834,6 +1903,8 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [compareOpen, setCompareOpen] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     localStorage.setItem(STARRED_KEY, JSON.stringify([...starredIds]));
@@ -1873,6 +1944,11 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
     .filter((r) => stdFilter === "ALL" || r.standard === stdFilter)
     .filter((r) => verdictFilter === "ALL" || (verdictFilter === "EFFECTIVE" ? r.overall_effective : !r.overall_effective))
     .filter((r) => !showStarredOnly || starredIds.has(r.run_id))
+    .filter((r) => {
+      if (dateFrom && r.created_at && r.created_at.slice(0, 10) < dateFrom) return false;
+      if (dateTo && r.created_at && r.created_at.slice(0, 10) > dateTo) return false;
+      return true;
+    })
     .filter((r) => {
       const q = search.toLowerCase();
       return !q || r.dataset_name.toLowerCase().includes(q) || (r.currency_pair?.toLowerCase().includes(q) ?? false);
@@ -1948,6 +2024,18 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           <option value="ASC_815">ASC 815</option>
           <option value="IAS_39">IAS 39</option>
         </select>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>FROM</span>
+          <input
+            type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+            style={{ ...inputBase, cursor: "pointer", width: 130 }}
+          />
+          <span style={{ fontFamily: S.mono, fontSize: 11, color: S.text3 }}>TO</span>
+          <input
+            type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+            style={{ ...inputBase, cursor: "pointer", width: 130 }}
+          />
+        </div>
         {(["ALL", "EFFECTIVE", "INEFFECTIVE"] as const).map((v) => (
           <button
             key={v} onClick={() => setVerdictFilter(v)}
@@ -2074,7 +2162,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
         <div style={{ padding: "32px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
           <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>No runs match the current filters.</div>
           <button
-            onClick={() => { setSearch(""); setStdFilter("ALL"); setVerdictFilter("ALL"); setShowStarredOnly(false); }}
+            onClick={() => { setSearch(""); setStdFilter("ALL"); setVerdictFilter("ALL"); setShowStarredOnly(false); setDateFrom(""); setDateTo(""); }}
             style={{
               fontFamily: S.mono, fontSize: 11, padding: "5px 14px", borderRadius: 3, cursor: "pointer",
               background: "transparent", color: HEX.cyan, border: `1px solid rgba(28,98,242,0.25)`,
