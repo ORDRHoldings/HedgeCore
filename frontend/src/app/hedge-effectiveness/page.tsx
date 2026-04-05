@@ -589,6 +589,44 @@ function OverviewTab({
         );
       })()}
 
+      {/* ── 26.2 D.O. Distribution Statistics ── */}
+      {(() => {
+        const vals = runs.map((r) => r.dollar_offset_ratio).filter((v): v is number => v != null);
+        if (vals.length < 3) return null;
+        const sorted = [...vals].sort((a, b) => a - b);
+        const mean = vals.reduce((s, v) => s + v, 0) / vals.length;
+        const median = sorted.length % 2 === 0
+          ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+          : sorted[Math.floor(sorted.length / 2)];
+        const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length;
+        const stdDev = Math.sqrt(variance);
+        const min = sorted[0]; const max = sorted[sorted.length - 1];
+        const inBandCount = vals.filter((v) => v >= 0.80 && v <= 1.25).length;
+        const stats = [
+          { label: "MEAN",   value: mean.toFixed(4),   color: mean >= 0.80 && mean <= 1.25 ? HEX.green : HEX.amber },
+          { label: "MEDIAN", value: median.toFixed(4),  color: median >= 0.80 && median <= 1.25 ? HEX.green : HEX.amber },
+          { label: "STD DEV",value: stdDev.toFixed(4),  color: stdDev < 0.10 ? HEX.green : stdDev < 0.20 ? HEX.amber : HEX.red },
+          { label: "MIN",    value: min.toFixed(4),     color: min >= 0.80 ? HEX.green : HEX.red },
+          { label: "MAX",    value: max.toFixed(4),     color: max <= 1.25 ? HEX.green : HEX.red },
+          { label: "IN BAND",value: `${inBandCount}/${vals.length}`, color: inBandCount === vals.length ? HEX.green : inBandCount / vals.length >= 0.8 ? HEX.amber : HEX.red },
+        ];
+        return (
+          <div style={{ gridColumn: "1 / -1", background: S.panel, border: `1px solid ${S.rim}`, borderRadius: 4, padding: "14px 18px" }}>
+            <div style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: S.text3, textTransform: "uppercase", marginBottom: 12 }}>
+              D.O. Ratio Distribution Statistics
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8 }}>
+              {stats.map(({ label, value, color }) => (
+                <div key={label} style={{ textAlign: "center", padding: "8px 4px", borderRadius: 3, background: S.sub, border: `1px solid ${S.rim}` }}>
+                  <div style={{ fontFamily: S.mono, fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: S.text3, marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontFamily: S.mono, fontSize: 15, fontWeight: 800, color }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Risk alerts */}
       {(() => {
         const alerts: { level: "critical" | "warn" | "info"; text: string }[] = [];
@@ -2458,6 +2496,8 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   const toggleCol = (k: keyof typeof colVis) => setColVis((v) => ({ ...v, [k]: !v[k] }));
   // ── Hover popover ──
   const [hoverId, setHoverId] = useState<string | null>(null);
+  // ── 26.1 Tag filter ──
+  const [tagFilter, setTagFilter] = useState<"ALL" | "REVIEW" | "APPROVED" | "FLAGGED">("ALL");
 
   // ── 25.1 Keyboard navigation ──
   const [focusIdx, setFocusIdx] = useState<number>(-1);
@@ -2524,7 +2564,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
   }, [starredIds]);
 
   // Reset page whenever any filter changes
-  useEffect(() => { setPage(1); }, [search, stdFilter, verdictFilter, showStarredOnly, dateFrom, dateTo, doMin, doMax]);
+  useEffect(() => { setPage(1); }, [search, stdFilter, verdictFilter, showStarredOnly, dateFrom, dateTo, doMin, doMax, tagFilter]);
 
   const toggleStar = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -2573,7 +2613,8 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
       if (doMin !== "" && (r.dollar_offset_ratio == null || r.dollar_offset_ratio < parseFloat(doMin))) return false;
       if (doMax !== "" && (r.dollar_offset_ratio == null || r.dollar_offset_ratio > parseFloat(doMax))) return false;
       return true;
-    });
+    })
+    .filter((r) => tagFilter === "ALL" || tags[r.run_id] === tagFilter);
 
   const totalPages = Math.max(1, Math.ceil(filteredRuns.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -2723,6 +2764,23 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           </svg>
           STARRED{starredIds.size > 0 ? ` (${starredIds.size})` : ""}
         </button>
+        {/* ── 26.1 Tag filter ── */}
+        {(["ALL", "REVIEW", "APPROVED", "FLAGGED"] as const).map((t) => (
+          <button
+            key={t} onClick={() => setTagFilter(t)}
+            style={{
+              fontFamily: S.mono, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+              padding: "4px 9px", borderRadius: 3, cursor: "pointer", border: "none",
+              background: tagFilter === t
+                ? (t === "ALL" ? HEX.cyan : t === "REVIEW" ? "rgba(217,119,6,0.18)" : t === "APPROVED" ? HEX.greenBg : HEX.redBg)
+                : S.sub,
+              color: tagFilter === t
+                ? (t === "ALL" ? "#fff" : t === "REVIEW" ? HEX.amber : t === "APPROVED" ? HEX.green : HEX.red)
+                : S.text3,
+              transition: "all 0.15s",
+            }}
+          >{t === "ALL" ? "ALL TAGS" : t}</button>
+        ))}
         {/* Preset save */}
         <div style={{ display: "flex", alignItems: "center", gap: 5, position: "relative" }}>
           <button
@@ -2960,7 +3018,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
         <div style={{ padding: "32px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
           <div style={{ fontFamily: S.mono, fontSize: 12, color: S.text3 }}>No runs match the current filters.</div>
           <button
-            onClick={() => { setSearch(""); setStdFilter("ALL"); setVerdictFilter("ALL"); setShowStarredOnly(false); setDateFrom(""); setDateTo(""); setDoMin(""); setDoMax(""); }}
+            onClick={() => { setSearch(""); setStdFilter("ALL"); setVerdictFilter("ALL"); setShowStarredOnly(false); setDateFrom(""); setDateTo(""); setDoMin(""); setDoMax(""); setTagFilter("ALL"); }}
             style={{
               fontFamily: S.mono, fontSize: 11, padding: "5px 14px", borderRadius: 3, cursor: "pointer",
               background: "transparent", color: HEX.cyan, border: `1px solid rgba(28,98,242,0.25)`,

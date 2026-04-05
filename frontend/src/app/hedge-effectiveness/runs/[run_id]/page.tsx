@@ -167,6 +167,24 @@ export default function HedgeEffectivenessRunPage() {
   const [copied, setCopied] = useState(false);
   const [reRunning, setReRunning] = useState(false);
 
+  // ── 26.3 Per-run analyst note ──
+  const RUN_NOTES_KEY = "hec_run_notes";
+  const [runNote, setRunNote] = useState<string>(() => {
+    try { const n = JSON.parse(localStorage.getItem(RUN_NOTES_KEY) || "{}"); return n[runId] ?? ""; }
+    catch { return ""; }
+  });
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const saveRunNote = (note: string) => {
+    try {
+      const all = JSON.parse(localStorage.getItem(RUN_NOTES_KEY) || "{}");
+      if (note.trim()) all[runId] = note.trim(); else delete all[runId];
+      localStorage.setItem(RUN_NOTES_KEY, JSON.stringify(all));
+      setRunNote(note.trim());
+    } catch { /* ignore */ }
+    setEditingNote(false);
+  };
+
   const handleReRun = async () => {
     if (!token || !run || reRunning) return;
     setReRunning(true);
@@ -466,6 +484,45 @@ export default function HedgeEffectivenessRunPage() {
               )}
             </button>
           </div>
+
+          {/* ── 26.3 Per-run analyst note ── */}
+          {editingNote ? (
+            <div style={{ marginBottom: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+              <textarea
+                autoFocus
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                rows={2}
+                placeholder="Add an analyst note for this run…"
+                onKeyDown={(e) => { if (e.key === "Escape") setEditingNote(false); }}
+                style={{
+                  fontFamily: S.ui, fontSize: 12, color: S.text1, background: S.panel,
+                  border: `1px solid ${HEX.cyan}40`, borderRadius: 3, padding: "8px 10px",
+                  resize: "vertical", outline: "none", width: "100%",
+                }}
+              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => saveRunNote(noteDraft)} style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 3, background: HEX.cyan, color: "#fff", border: "none", cursor: "pointer" }}>SAVE</button>
+                <button onClick={() => setEditingNote(false)} style={{ fontFamily: S.mono, fontSize: 11, padding: "4px 10px", borderRadius: 3, background: "transparent", color: S.text3, border: `1px solid ${S.rim}`, cursor: "pointer" }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setNoteDraft(runNote); setEditingNote(true); }}
+              style={{
+                display: "flex", alignItems: "flex-start", gap: 8, width: "100%", marginBottom: 12,
+                background: "transparent", border: `1px dashed ${runNote ? HEX.amber + "60" : S.rim}`,
+                borderRadius: 3, padding: "7px 10px", cursor: "pointer", textAlign: "left",
+              }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={runNote ? HEX.amber : S.text3} strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              <span style={{ fontFamily: S.ui, fontSize: 11, color: runNote ? S.text1 : S.text3, fontStyle: runNote ? "normal" : "italic" }}>
+                {runNote || "Add analyst note…"}
+              </span>
+            </button>
+          )}
 
           {/* Title row with verdict */}
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14 }}>
