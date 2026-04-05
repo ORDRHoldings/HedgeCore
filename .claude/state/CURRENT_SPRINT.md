@@ -1,7 +1,30 @@
 # Current Sprint
 
-Sprint: Sprint 6 — Regulatory Reporting (IFRS 9 / ASC 815)
-Status: COMPLETE ✓
+Sprint: Sprint 7 — Analytics & Export
+Status: CODE COMPLETE — PENDING BROWSER CONFIRMATION
+Started: 2026-04-04
+
+## Items
+| # | Item | Status | Priority |
+|---|------|--------|----------|
+| 7.1 | PASS RATE KPI tile (5th tile in header strip, green ≥ 80%) | CODE COMPLETE | medium |
+| 7.2 | Effectiveness trend stacked bar chart in Overview tab (ECharts, last 20 runs) | CODE COMPLETE | medium |
+| 7.3 | Filter toolbar on ASSESSMENT RUNS tab (text search, standard, verdict) | CODE COMPLETE | high |
+| 7.4 | CSV export button on ASSESSMENT RUNS tab (exports filtered runs) | CODE COMPLETE | high |
+
+## Completed: 4/4 code-verified
+## Sprint Status: CODE COMPLETE — PENDING BROWSER CONFIRMATION
+
+## Notes
+- All work in: `frontend/src/app/hedge-effectiveness/page.tsx`
+- ECharts loaded via `dynamic(() => import("echarts-for-react"), { ssr: false })`
+- CSV export uses createObjectURL blob pattern (no backend call)
+- Filter is client-side only — no new API endpoints
+- tsc clean, next build clean (422f4ad)
+
+---
+
+# Sprint: Sprint 6 — Regulatory Reporting (IFRS 9 / ASC 815) — COMPLETE ✓
 Started: 2026-04-04
 Completed: 2026-04-04
 
