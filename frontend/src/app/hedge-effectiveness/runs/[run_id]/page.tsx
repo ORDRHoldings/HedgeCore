@@ -971,6 +971,32 @@ function CumulativeRatioChart({ periods }: { periods: PeriodData[] }) {
   option.series = [option.series[2]];
   option.visualMap = [];
 
+  // Mark out-of-band periods with a red diamond symbol
+  const outOfBandPoints = ratios
+    .map((v, i) => ({ v, i }))
+    .filter(({ v }) => v != null && (v < 0.80 || v > 1.25))
+    .map(({ v, i }) => ({
+      coord: [i, v],
+      symbol: "diamond",
+      symbolSize: 12,
+      itemStyle: { color: HEX.red, borderColor: "#fff", borderWidth: 1.5 },
+      label: { show: false },
+    }));
+  if (outOfBandPoints.length > 0) {
+    ratioSeries.markPoint = {
+      silent: false,
+      data: outOfBandPoints,
+      tooltip: {
+        formatter: (p: { data: { coord: [number, number] } }) => {
+          const idx = p.data.coord[0];
+          const label = labels[idx];
+          const val = (ratios[idx] as number).toFixed(4);
+          return `<b style="color:${HEX.text2}">${label}</b><br/><span style="color:${HEX.red};font-weight:700">OUT OF BAND: ${val}</span>`;
+        },
+      },
+    };
+  }
+
   return (
     <ReactECharts
       option={option}

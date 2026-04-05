@@ -1235,6 +1235,92 @@ function OverviewTab({
           </div>
         );
       })()}
+
+      {/* Dataset health matrix */}
+      {datasets.length >= 2 && runs.length >= 1 && (() => {
+        const standards = Array.from(new Set(runs.map((r) => r.standard))).sort();
+        if (standards.length === 0) return null;
+        // For each dataset × standard: find latest run result or null
+        const cellData = (dsId: string, std: string): "pass" | "fail" | "none" => {
+          const dsStdRuns = runs
+            .filter((r) => r.dataset_id === dsId && r.standard === std)
+            .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+          if (dsStdRuns.length === 0) return "none";
+          return dsStdRuns[0].overall_effective ? "pass" : "fail";
+        };
+        return (
+          <div style={{
+            gridColumn: "1 / -1", padding: "16px 20px", borderRadius: 6,
+            background: S.panel, border: `1px solid ${S.rim}`,
+          }}>
+            <div style={{ fontFamily: S.mono, fontSize: 12, fontWeight: 700, color: S.text3, letterSpacing: "0.14em", marginBottom: 12 }}>
+              DATASET HEALTH MATRIX
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 400 }}>
+                <thead>
+                  <tr>
+                    <th style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.1em", padding: "4px 12px 8px 0", textAlign: "left" }}>
+                      DATASET
+                    </th>
+                    {standards.map((std) => (
+                      <th key={std} style={{ fontFamily: S.mono, fontSize: 11, fontWeight: 700, color: S.text3, letterSpacing: "0.1em", padding: "4px 12px 8px", textAlign: "center", whiteSpace: "nowrap" }}>
+                        {std.replace("_", " ")}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {datasets.map((ds, di) => (
+                    <tr key={ds.id} style={{ background: di % 2 === 0 ? "transparent" : S.sub }}>
+                      <td style={{ fontFamily: S.ui, fontSize: 12, fontWeight: 600, color: S.text1, padding: "7px 12px 7px 0", whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {ds.name}
+                        {ds.currency_pair && (
+                          <span style={{ fontFamily: S.mono, fontSize: 11, color: HEX.cyan, marginLeft: 6 }}>{ds.currency_pair}</span>
+                        )}
+                      </td>
+                      {standards.map((std) => {
+                        const cell = cellData(ds.id, std);
+                        return (
+                          <td key={std} style={{ padding: "7px 12px", textAlign: "center" }}>
+                            {cell === "pass" ? (
+                              <span style={{
+                                display: "inline-block", padding: "2px 10px", borderRadius: 2,
+                                fontFamily: S.mono, fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
+                                background: HEX.greenBg, color: HEX.green, border: `1px solid ${HEX.greenBorder}`,
+                              }}>✓</span>
+                            ) : cell === "fail" ? (
+                              <span style={{
+                                display: "inline-block", padding: "2px 10px", borderRadius: 2,
+                                fontFamily: S.mono, fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
+                                background: HEX.redBg, color: HEX.red, border: `1px solid ${HEX.redBorder}`,
+                              }}>✗</span>
+                            ) : (
+                              <span style={{
+                                display: "inline-block", padding: "2px 10px", borderRadius: 2,
+                                fontFamily: S.mono, fontSize: 10, color: S.text3,
+                                background: S.sub, border: `1px solid ${S.rim}`,
+                              }}>—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
+              {([["✓", HEX.green, HEX.greenBg, HEX.greenBorder, "Effective (latest)"], ["✗", HEX.red, HEX.redBg, HEX.redBorder, "Ineffective (latest)"], ["—", S.text3, S.sub, S.rim, "No run"]] as const).map(([sym, col, bg, border, label]) => (
+                <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ fontFamily: S.mono, fontSize: 10, fontWeight: 800, padding: "1px 6px", borderRadius: 2, background: bg, color: col, border: `1px solid ${border}` }}>{sym}</span>
+                  <span style={{ fontFamily: S.ui, fontSize: 11, color: S.text3 }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1965,9 +2051,12 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
     return sortDir === "asc" ? cmp : -cmp;
   });
 
-  const handleExportCsv = () => {
+  const handleExportCsv = (onlySelected = false) => {
+    const source = onlySelected
+      ? filteredRuns.filter((r) => selectedIds.has(r.run_id))
+      : filteredRuns;
     const header = "run_id,dataset_name,currency_pair,standard,dollar_offset_ratio,regression_r_squared,overall_effective,run_hash,created_at";
-    const rows = filteredRuns.map((r) =>
+    const rows = source.map((r) =>
       [
         r.run_id, `"${r.dataset_name}"`, r.currency_pair ?? "",
         r.standard, r.dollar_offset_ratio ?? "", r.regression_r_squared ?? "",
@@ -1978,7 +2067,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `hedge-effectiveness-runs-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `hedge-effectiveness-runs${onlySelected ? "-selected" : ""}-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
   };
@@ -2071,7 +2160,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           {filteredRuns.length} OF {runs.length} RUNS
         </span>
         <button
-          onClick={handleExportCsv}
+          onClick={() => handleExportCsv(selectedIds.size > 0)}
           style={{
             fontFamily: S.mono, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em",
             padding: "5px 14px", borderRadius: 3, cursor: "pointer",
@@ -2086,7 +2175,7 @@ function RunsTab({ runs, onNavigateRun }: { runs: Run[]; onNavigateRun: (id: str
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
           </svg>
-          EXPORT CSV
+          {selectedIds.size > 0 ? `EXPORT SELECTED (${selectedIds.size})` : "EXPORT CSV"}
         </button>
         {selectedIds.size >= 2 && (
           <button
